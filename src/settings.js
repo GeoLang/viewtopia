@@ -55,13 +55,17 @@ function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
 }
 
-export function initSettings() {
+/** Load settings from localStorage (call early, before renderer init) */
+export function loadSettings() {
   load();
-
   // Sync Google API key with the google-3d-tiles module's storage
   if (settings.googleApiKey) {
     localStorage.setItem('viewtopia_google_api_key', settings.googleApiKey);
   }
+}
+
+export function initSettings() {
+  load();
 
   // Add settings button to header
   const header = document.getElementById('header');

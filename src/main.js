@@ -8,7 +8,7 @@ import 'cesium/Build/Cesium/Widgets/widgets.css';
 import './style.css';
 
 import { discoverBackends, startPolling, hasTileTopia, hasGeoLang } from './backends.js';
-import { setCesiumViewer, initRendererSelector } from './renderers.js';
+import { setCesiumViewer, initRendererSelector, switchRenderer } from './renderers.js';
 import { initViewerCommands } from './viewer-commands.js';
 import { initChat } from './chat.js';
 import { initTabs, showTab } from './tabs.js';
@@ -76,17 +76,42 @@ import { initTimelapse } from './timelapse.js';
 import { initPanelManager } from './panel-manager.js';
 import { initToolbarMenus } from './toolbar-menu.js';
 import { initGoogle3DTiles } from './google-3d-tiles.js';
-import { initSettings } from './settings.js';
+import { initSettings, loadSettings, getSetting } from './settings.js';
 import { initGlobalTerrain } from './global-terrain.js';
 import { initShareLinks } from './share-links.js';
 
 async function main() {
+  // Load settings early — needed before renderer init
+  loadSettings();
+
   // Discover which backends are available
   const backends = await discoverBackends();
   startPolling();
 
+  // Read saved preferences
+  const savedRenderer = getSetting('defaultRenderer') || 'cesium';
+  const savedBasemap = getSetting('defaultBasemap') || 'osm';
+
   // Initialize CesiumJS in the globe container
   let viewer = null;
+  // Build initial basemap imagery from saved preference
+  const basemapProviders = {
+    osm: () => new Cesium.OpenStreetMapImageryProvider({ url: 'https://tile.openstreetmap.org/' }),
+    satellite: () => new Cesium.UrlTemplateImageryProvider({
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      maximumLevel: 19, credit: '© Esri',
+    }),
+    topo: () => new Cesium.UrlTemplateImageryProvider({
+      url: 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
+      maximumLevel: 17, credit: '© OpenTopoMap',
+    }),
+    dark: () => new Cesium.UrlTemplateImageryProvider({
+      url: 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+      maximumLevel: 19, credit: '© CARTO',
+    }),
+  };
+  const initialBasemap = (basemapProviders[savedBasemap] || basemapProviders.osm)();
+
   try {
     viewer = new Cesium.Viewer('globe-container', {
       terrain: undefined,
@@ -100,11 +125,7 @@ async function main() {
       infoBox: true,
       selectionIndicator: true,
       creditContainer: document.createElement('div'),
-      baseLayer: new Cesium.ImageryLayer(
-        new Cesium.OpenStreetMapImageryProvider({
-          url: 'https://tile.openstreetmap.org/',
-        })
-      ),
+      baseLayer: new Cesium.ImageryLayer(initialBasemap),
     });
     setCesiumViewer(viewer);
     setAssetViewer(viewer);
@@ -112,6 +133,18 @@ async function main() {
     console.warn('CesiumJS failed to initialize (no WebGL?):', e.message);
   }
   initRendererSelector();
+
+  // Apply saved renderer preference
+  if (savedRenderer !== 'cesium') {
+    switchRenderer(savedRenderer);
+    const rendererSelect = document.getElementById('renderer-choice');
+    if (rendererSelect) rendererSelect.value = savedRenderer;
+  }
+
+  // Sync basemap dropdown with saved preference
+  const basemapSelect = document.getElementById('basemap-select');
+  if (basemapSelect) basemapSelect.value = savedBasemap;
+
   initViewerCommands();
   initToolbarMenus();
   initTabs();
