@@ -68,6 +68,11 @@ import { initSolarPlacement } from './solar-placement.js';
 import { initTrafficFlow } from './traffic-flow.js';
 import { initDronePlanner } from './drone-planner.js';
 import { initWebXR } from './webxr.js';
+import { initAccessibility } from './accessibility.js';
+import { init3DExport } from './3d-export.js';
+import { initFlythrough } from './flythrough.js';
+import { initHeatmapLayer } from './heatmap-layer.js';
+import { initTimelapse } from './timelapse.js';
 
 async function main() {
   // Discover which backends are available
@@ -161,6 +166,11 @@ async function main() {
   initTrafficFlow();
   initDronePlanner();
   initWebXR();
+  initAccessibility();
+  init3DExport();
+  initFlythrough();
+  initHeatmapLayer();
+  initTimelapse();
 
   // If TileTopia is available, try loading open terrain
   if (backends.tiletopia && viewer) {
