@@ -26,6 +26,7 @@
       <button id="clear-session-btn" class="header-btn danger">Clear</button>
     </div>
     <button id="toggle-chat-btn" class="header-btn" title="Toggle chat panel">☰</button>
+    <button id="auth-btn" class="header-btn" title="Login / Account">🔑 Login</button>
     <span id="status" class="status">connecting…</span>
   </header>
 
@@ -46,10 +47,15 @@
             <option value="deckgl">deck.gl</option>
             <option value="maplibre">MapLibre</option>
           </select>
+          <button class="map-action-btn" id="osm-buildings-btn" title="Load OSM buildings in view">🏢 Buildings</button>
           <button class="map-action-btn" id="draw-btn" title="Draw on map">✏ Draw</button>
           <button class="map-action-btn" id="measure-btn" title="Measure distance">📏 Measure</button>
           <button class="map-action-btn" id="annotate-btn" title="Annotate">📌 Annotate</button>
           <button class="map-action-btn" id="pick-btn" title="Feature info">ℹ Info</button>
+          <button class="map-action-btn" id="clipping-btn" title="3D clipping plane">✂ Clip</button>
+          <button class="map-action-btn" id="cross-section-btn" title="Cross-section">📐 Section</button>
+          <button class="map-action-btn" id="photo-btn" title="Street-level photos">📷 Photo</button>
+          <button class="map-action-btn" id="offline-btn" title="Offline tile cache">💾 Offline</button>
           <select id="basemap-select" class="basemap-select" title="Switch basemap">
             <option value="osm">OSM</option>
             <option value="satellite">Satellite</option>

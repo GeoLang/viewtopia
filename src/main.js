@@ -51,6 +51,12 @@ import { initClassificationUI } from './classification-ui.js';
 import { initVectorTiles } from './vector-tiles.js';
 import { initRasterViewer } from './raster-viewer.js';
 import { initSpatialStats } from './spatial-stats.js';
+import { initOsmBuildings } from './open-data.js';
+import { initClippingPlanes } from './clipping-planes.js';
+import { initCrossSection } from './cross-section.js';
+import { initPhotoViewer } from './photo-viewer.js';
+import { initOfflineCache } from './offline-cache.js';
+import { initAuth } from './auth.js';
 
 async function main() {
   // Discover which backends are available
@@ -127,6 +133,12 @@ async function main() {
   initVectorTiles();
   initRasterViewer();
   initSpatialStats();
+  initOsmBuildings();
+  initClippingPlanes();
+  initCrossSection();
+  initPhotoViewer();
+  initOfflineCache();
+  initAuth();
 
   // If TileTopia is available, try loading open terrain
   if (backends.tiletopia && viewer) {
