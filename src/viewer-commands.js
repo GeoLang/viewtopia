@@ -7,6 +7,7 @@
 import * as Cesium from 'cesium';
 import { getCesiumViewer } from './renderers.js';
 import { getLeafletMap } from './leaflet-view.js';
+import { createHeatmapLayer, createHexagonLayer, createArcLayer, createScatterLayer, createScreenGridLayer } from './deck-layers.js';
 
 const handlers = {};
 
@@ -164,6 +165,63 @@ export function initViewerCommands() {
         a.click();
         URL.revokeObjectURL(url);
       });
+    }
+  });
+
+  // ─── deck.gl visualization commands ──────────────────────────────────────
+  registerCommand('add_heatmap', (params) => {
+    const { data, radius, intensity } = params;
+    const layer = createHeatmapLayer({ data, radius, intensity });
+    addDeckLayer(layer);
+  });
+
+  registerCommand('add_hexbin', (params) => {
+    const { data, radius, elevationScale, extruded } = params;
+    const layer = createHexagonLayer({ data, radius, elevationScale, extruded });
+    addDeckLayer(layer);
+  });
+
+  registerCommand('add_arcs', (params) => {
+    const { data, width } = params;
+    const layer = createArcLayer({ data, width });
+    addDeckLayer(layer);
+  });
+
+  registerCommand('add_scatter', (params) => {
+    const { data, radius, color } = params;
+    const layer = createScatterLayer({ data, radius, color });
+    addDeckLayer(layer);
+  });
+
+  registerCommand('add_screengrid', (params) => {
+    const { data, cellSize } = params;
+    const layer = createScreenGridLayer({ data, cellSize });
+    addDeckLayer(layer);
+  });
+}
+
+/** Add a deck.gl layer — switches to deck.gl renderer if needed */
+function addDeckLayer(layer) {
+  // Import dynamically to avoid circular dependency
+  import('./renderers.js').then(({ switchRenderer, getRendererInfo }) => {
+    const info = getRendererInfo();
+    if (info.type !== 'deckgl') {
+      switchRenderer('deckgl');
+      // After switch, set layer on the new deck instance
+      setTimeout(() => setDeckLayers([layer]), 300);
+    } else {
+      setDeckLayers([layer]);
+    }
+  });
+}
+
+/** Set layers on the active deck.gl instance */
+function setDeckLayers(layers) {
+  import('./renderers.js').then(({ getActiveDeck }) => {
+    const deck = getActiveDeck?.();
+    if (deck) {
+      const existing = deck.props.layers || [];
+      deck.setProps({ layers: [...existing, ...layers] });
     }
   });
 }

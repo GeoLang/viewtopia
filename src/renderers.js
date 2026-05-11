@@ -94,6 +94,11 @@ export function getRendererInfo() {
   return { type: 'none' };
 }
 
+export function getActiveDeck() {
+  if (activeRenderer?.type === 'deckgl') return activeRenderer.deck;
+  return null;
+}
+
 function showCesium(container) {
   const overlay = container.querySelector('.renderer-overlay');
   if (overlay) overlay.remove();
@@ -179,12 +184,11 @@ function initDeckGL(container) {
 function initMapLibre(container) {
   const overlay = document.createElement('div');
   overlay.className = 'renderer-overlay';
-  overlay.id = 'maplibre-container';
   overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;';
   container.appendChild(overlay);
 
   const map = new maplibregl.Map({
-    container: 'maplibre-container',
+    container: overlay,
     style: {
       version: 8,
       name: 'ViewTopia Dark',
@@ -211,6 +215,10 @@ function initMapLibre(container) {
   });
 
   map.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+  // MapLibre needs a resize after the container is in the DOM and visible
+  map.on('load', () => map.resize());
+  setTimeout(() => map.resize(), 200);
 
   activeRenderer = { type: 'maplibre', map };
 }

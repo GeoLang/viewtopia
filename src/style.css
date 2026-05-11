@@ -616,9 +616,9 @@ body {
 
 /* ── Asset Panel ──────────────────────────────── */
 #asset-panel {
-  position: absolute; top: 40px; left: 8px; z-index: 500;
+  position: absolute; bottom: 8px; left: 8px; z-index: 500;
   background: rgba(15,17,23,0.92); border: 1px solid #2d3148;
-  border-radius: 8px; width: 240px; max-height: 50vh;
+  border-radius: 8px; width: 220px; max-height: 40vh;
   display: flex; flex-direction: column; backdrop-filter: blur(8px);
   font-size: .85rem; overflow: hidden;
 }
