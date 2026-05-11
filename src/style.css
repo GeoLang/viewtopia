@@ -1213,3 +1213,75 @@ body.light-theme .gc-name { color: #1e293b; }
   from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
   to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
+
+/* ── Terrain analysis panel ───────────────────── */
+#terrain-analysis-panel {
+  position: absolute; top: 50px; left: 10px; z-index: 70;
+  width: 240px; background: rgba(30,32,53,0.97);
+  border: 1px solid #3d4166; border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.ta-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; font-weight: 600; border-bottom: 1px solid #3d4166;
+}
+.ta-header button { background: none; border: none; color: #94a3b8; cursor: pointer; }
+.ta-body { padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; }
+.ta-legend { font-size: 0.8rem; margin-top: 6px; }
+.ta-legend-title { font-weight: 600; margin-bottom: 4px; }
+.ta-legend-bar { display: flex; gap: 10px; }
+.ta-status { font-size: 0.8rem; color: #94a3b8; }
+
+/* ── Model import panel ───────────────────────── */
+#model-import-panel {
+  position: absolute; top: 50px; right: 10px; z-index: 70;
+  width: 300px; background: rgba(30,32,53,0.97);
+  border: 1px solid #3d4166; border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.mi-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; font-weight: 600; border-bottom: 1px solid #3d4166;
+}
+.mi-header button { background: none; border: none; color: #94a3b8; cursor: pointer; }
+.mi-body { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.mi-body label { display: flex; flex-direction: column; gap: 2px; font-size: 0.8rem; color: #94a3b8; }
+.mi-body input[type="text"], .mi-body input[type="number"] {
+  background: #161829; border: 1px solid #3d4166; color: #e2e8f0;
+  border-radius: 4px; padding: 4px 8px; font-size: 0.8rem;
+}
+.mi-coords, .mi-transform { display: flex; gap: 8px; }
+.mi-coords label, .mi-transform label { flex: 1; }
+.mi-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+#mi-status { font-size: 0.8rem; color: #a78bfa; }
+
+/* ── Classification panel ─────────────────────── */
+#classify-panel {
+  position: absolute; top: 50px; right: 10px; z-index: 70;
+  width: 320px; background: rgba(30,32,53,0.97);
+  border: 1px solid #3d4166; border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.clf-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; font-weight: 600; border-bottom: 1px solid #3d4166;
+}
+.clf-header button { background: none; border: none; color: #94a3b8; cursor: pointer; }
+.clf-body { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.clf-body label { font-size: 0.8rem; color: #94a3b8; }
+.clf-body select {
+  background: #161829; border: 1px solid #3d4166; color: #e2e8f0;
+  border-radius: 4px; padding: 4px 8px; font-size: 0.8rem; width: 100%;
+}
+.clf-options { display: flex; flex-direction: column; gap: 6px; }
+.clf-actions { display: flex; gap: 6px; }
+.clf-progress {
+  display: flex; align-items: center; gap: 8px;
+}
+.clf-progress-bar {
+  flex: 1; height: 8px; background: #1e2035; border-radius: 4px; overflow: hidden;
+}
+.clf-progress-fill {
+  height: 100%; background: #7c3aed; border-radius: 4px; transition: width 0.3s;
+}
+#clf-status { font-size: 0.8rem; color: #a78bfa; }

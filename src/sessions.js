@@ -11,8 +11,39 @@
 import { getGeoLangBase, hasGeoLang } from './backends.js';
 import { switchBasemap, getLeafletMap, toggleClickQuery, toggleDraw } from './leaflet-view.js';
 import { getCesiumViewer } from './renderers.js';
+import * as Cesium from 'cesium';
 
 let currentSessionId = null;
+
+function switchCesiumBasemap(name) {
+  const viewer = getCesiumViewer();
+  if (!viewer) return;
+
+  // Remove all existing imagery layers
+  viewer.imageryLayers.removeAll();
+
+  const providers = {
+    osm: () => new Cesium.OpenStreetMapImageryProvider({ url: 'https://tile.openstreetmap.org/' }),
+    satellite: () => new Cesium.UrlTemplateImageryProvider({
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      maximumLevel: 19,
+      credit: '© Esri',
+    }),
+    topo: () => new Cesium.UrlTemplateImageryProvider({
+      url: 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
+      maximumLevel: 17,
+      credit: '© OpenTopoMap',
+    }),
+    dark: () => new Cesium.UrlTemplateImageryProvider({
+      url: 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+      maximumLevel: 19,
+      credit: '© CARTO',
+    }),
+  };
+
+  const factory = providers[name] || providers.osm;
+  viewer.imageryLayers.addImageryProvider(factory());
+}
 
 export function getCurrentSessionId() {
   return currentSessionId;
@@ -313,7 +344,9 @@ export function initSessionsAndUI() {
   const basemapSelect = document.getElementById('basemap-select');
   if (basemapSelect) {
     basemapSelect.addEventListener('change', () => {
-      switchBasemap(basemapSelect.value);
+      const name = basemapSelect.value;
+      switchBasemap(name);
+      switchCesiumBasemap(name);
     });
   }
 

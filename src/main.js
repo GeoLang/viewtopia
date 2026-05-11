@@ -45,6 +45,9 @@ import { initViewshed } from './viewshed.js';
 import { initVolumeMeasurement } from './volume.js';
 import { initPointCloudCompare } from './point-cloud-compare.js';
 import { initPlugins } from './plugins.js';
+import { initTerrainAnalysis } from './terrain-analysis.js';
+import { initModelImport } from './model-import.js';
+import { initClassificationUI } from './classification-ui.js';
 
 async function main() {
   // Discover which backends are available
@@ -111,6 +114,9 @@ async function main() {
   initVolumeMeasurement();
   initPointCloudCompare();
   initPlugins();
+  initTerrainAnalysis();
+  initModelImport();
+  initClassificationUI();
 
   // If TileTopia is available, try loading open terrain
   if (backends.tiletopia) {
