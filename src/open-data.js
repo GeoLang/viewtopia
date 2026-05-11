@@ -23,8 +23,8 @@ export async function loadOsmBuildings(viewer, opts = {}) {
   const height = carto.height;
 
   // Calculate span based on camera height — lower = smaller area = more detail
-  // At 500m height, span ~0.005° (~500m); at 5000m, span ~0.03° (~3km)
-  let span = Math.min(Math.max(height * 0.00001, 0.002), 0.05);
+  // At 500m height, span ~0.005° (~500m); at 5000m, span ~0.02° (~2km)
+  let span = Math.min(Math.max(height * 0.000005, 0.002), 0.02);
   console.log(`OSM Buildings: camera at ${centerLat.toFixed(5)},${centerLon.toFixed(5)} h=${height.toFixed(0)}m span=${span.toFixed(5)}°`);
 
   const south = centerLat - span;
@@ -97,13 +97,19 @@ export async function loadOsmBuildings(viewer, opts = {}) {
     const levels = parseInt(way.tags?.['building:levels'] ?? '3', 10);
     const height = parseFloat(way.tags?.['height'] ?? String(levels * 3.2));
 
+    let material;
+    try {
+      material = Cesium.Color.fromCssColorString(way.tags?.['building:colour'] || '#c8b896').withAlpha(0.85);
+    } catch { material = Cesium.Color.fromCssColorString('#c8b896').withAlpha(0.85); }
+    if (!material) material = Cesium.Color.fromCssColorString('#c8b896').withAlpha(0.85);
+
     entities.push(
       viewer.entities.add({
         polygon: {
           hierarchy: Cesium.Cartesian3.fromDegreesArray(coords),
           height: 0,
           extrudedHeight: height,
-          material: Cesium.Color.fromCssColorString(way.tags?.['building:colour'] ?? '#c8b896').withAlpha(0.85),
+          material,
           outline: true,
           outlineColor: Cesium.Color.BLACK.withAlpha(0.3),
         },
