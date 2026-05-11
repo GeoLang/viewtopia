@@ -13,41 +13,26 @@ import { getCesiumViewer } from './renderers.js';
  * extruded Cesium entities.  Works entirely client-side — no server needed.
  */
 export async function loadOsmBuildings(viewer, opts = {}) {
-  const maxArea = opts.maxArea ?? 2.0;
-  let rect = viewer.camera.computeViewRectangle();
+  // Always use camera center + height-based span to avoid the
+  // computeViewRectangle() issue in 3D (returns entire hemisphere)
+  const carto = viewer.camera.positionCartographic;
+  if (!carto) { console.warn('OSM Buildings: no camera position'); return []; }
 
-  if (!rect) {
-    const carto = viewer.camera.positionCartographic;
-    if (!carto) { console.warn('OSM Buildings: no camera position'); return []; }
-    const span = 0.005;
-    rect = new Cesium.Rectangle(
-      carto.longitude - span,
-      carto.latitude - span,
-      carto.longitude + span,
-      carto.latitude + span,
-    );
-  }
+  const centerLon = Cesium.Math.toDegrees(carto.longitude);
+  const centerLat = Cesium.Math.toDegrees(carto.latitude);
+  const height = carto.height;
 
-  const south = Cesium.Math.toDegrees(rect.south);
-  const west = Cesium.Math.toDegrees(rect.west);
-  const north = Cesium.Math.toDegrees(rect.north);
-  const east = Cesium.Math.toDegrees(rect.east);
+  // Calculate span based on camera height — lower = smaller area = more detail
+  // At 500m height, span ~0.005° (~500m); at 5000m, span ~0.03° (~3km)
+  let span = Math.min(Math.max(height * 0.00001, 0.002), 0.05);
+  console.log(`OSM Buildings: camera at ${centerLat.toFixed(5)},${centerLon.toFixed(5)} h=${height.toFixed(0)}m span=${span.toFixed(5)}°`);
 
-  const area = (north - south) * (east - west);
-  console.log(`OSM Buildings: bbox ${south.toFixed(4)},${west.toFixed(4)},${north.toFixed(4)},${east.toFixed(4)} area=${area.toFixed(4)} deg²`);
+  const south = centerLat - span;
+  const north = centerLat + span;
+  const west = centerLon - span;
+  const east = centerLon + span;
 
-  if (area > maxArea) {
-    console.warn(`View too wide (${area.toFixed(2)} deg²) for OSM building query — zoom in more`);
-    return [];
-  }
-
-  // Clamp bbox to reasonable size for Overpass (max ~0.1 deg span if very large)
-  const clampedSouth = Math.max(south, (south + north) / 2 - 0.05);
-  const clampedNorth = Math.min(north, (south + north) / 2 + 0.05);
-  const clampedWest = Math.max(west, (east + west) / 2 - 0.05);
-  const clampedEast = Math.min(east, (east + west) / 2 + 0.05);
-
-  const bbox = `${clampedSouth},${clampedWest},${clampedNorth},${clampedEast}`;
+  const bbox = `${south},${west},${north},${east}`;
   const query = `[out:json][timeout:25];way["building"](${bbox});out body;>;out skel qt;`;
   console.log(`OSM Buildings: querying Overpass for bbox ${bbox}`);
   
@@ -106,6 +91,19 @@ let osmEntities = [];
 export function initOsmBuildings() {
   const btn = document.getElementById('osm-buildings-btn');
   if (!btn) return;
+
+  // Disable when not in 3D globe mode
+  const rendererSelect = document.getElementById('renderer-choice');
+  if (rendererSelect) {
+    const updateState = () => {
+      const is3D = rendererSelect.value === 'cesium';
+      btn.disabled = !is3D;
+      btn.style.opacity = is3D ? '1' : '0.4';
+      btn.title = is3D ? 'Load OSM buildings in view' : 'OSM Buildings (3D Globe only)';
+    };
+    rendererSelect.addEventListener('change', updateState);
+    updateState();
+  }
 
   btn.addEventListener('click', async () => {
     const viewer = getCesiumViewer();
