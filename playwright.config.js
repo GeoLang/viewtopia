@@ -11,5 +11,6 @@ export default defineConfig({
     command: 'npx vite --port 5174',
     port: 5174,
     reuseExistingServer: true,
+    timeout: 60000,
   },
 });
