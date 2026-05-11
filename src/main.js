@@ -129,6 +129,10 @@ async function main() {
     });
     setCesiumViewer(viewer);
     setAssetViewer(viewer);
+
+    // Hide the placeholder now that we have a working viewer
+    const placeholder = document.getElementById('placeholder');
+    if (placeholder) placeholder.style.display = 'none';
   } catch (e) {
     console.warn('CesiumJS failed to initialize (no WebGL?):', e.message);
   }
