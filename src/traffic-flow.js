@@ -105,13 +105,17 @@ function startTraffic() {
   const centerLat = Cesium.Math.toDegrees(carto.latitude);
   const congestion = document.getElementById('traffic-congestion')?.value || 'mixed';
 
-  const roads = generateDemoRoads(centerLon, centerLat);
+  // Scale road span based on camera height
+  const height = carto.height;
+  const span = Math.max(0.002, Math.min(0.05, height * 0.000008));
+
+  const roads = generateDemoRoads(centerLon, centerLat, span);
 
   // Draw static road lines with traffic colors
   for (const road of roads) {
     const level = congestion === 'mixed' ? randomCongestion() : congestion;
     const color = congestionColor(level);
-    const width = road.major ? 4 : 2;
+    const width = road.major ? 6 : 3;
 
     const entity = viewer.entities.add({
       polyline: {
@@ -125,13 +129,19 @@ function startTraffic() {
     trafficEntities.push(entity);
   }
 
+  // Fly camera to see the traffic grid
+  viewer.camera.flyTo({
+    destination: Cesium.Cartesian3.fromDegrees(centerLon, centerLat, Math.max(500, span * 111000 * 3)),
+    orientation: { heading: 0, pitch: Cesium.Math.toRadians(-60), roll: 0 },
+    duration: 1.5,
+  });
+
   // Animate "cars" moving along roads
-  animateTraffic(viewer, roads);
+  animateTraffic(viewer, roads, span);
 }
 
-function generateDemoRoads(centerLon, centerLat) {
+function generateDemoRoads(centerLon, centerLat, span) {
   const roads = [];
-  const span = 0.01;
 
   // Main roads (grid pattern)
   for (let i = -2; i <= 2; i++) {
@@ -162,7 +172,7 @@ function generateDemoRoads(centerLon, centerLat) {
   return roads;
 }
 
-function animateTraffic(viewer, roads) {
+function animateTraffic(viewer, roads, span) {
   const speed = parseInt(document.getElementById('traffic-speed')?.value || '5');
   const cars = [];
 
@@ -194,8 +204,8 @@ function animateTraffic(viewer, roads) {
         viewer.entities.remove(car.entity);
       }
       car.entity = viewer.entities.add({
-        position: Cesium.Cartesian3.fromDegrees(lon, lat, 2),
-        point: { pixelSize: 4, color: Cesium.Color.WHITE },
+        position: Cesium.Cartesian3.fromDegrees(lon, lat, 5),
+        point: { pixelSize: 6, color: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 1 },
       });
       trafficEntities.push(car.entity);
     }
