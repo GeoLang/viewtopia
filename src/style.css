@@ -1285,3 +1285,82 @@ body.light-theme .gc-name { color: #1e293b; }
   height: 100%; background: #7c3aed; border-radius: 4px; transition: width 0.3s;
 }
 #clf-status { font-size: 0.8rem; color: #a78bfa; }
+
+/* ── Vector tiles panel ───────────────────────── */
+#mvt-panel {
+  position: absolute; top: 50px; right: 10px; z-index: 70;
+  width: 300px; background: rgba(30,32,53,0.97);
+  border: 1px solid #3d4166; border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.mvt-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; font-weight: 600; border-bottom: 1px solid #3d4166;
+}
+.mvt-header button { background: none; border: none; color: #94a3b8; cursor: pointer; }
+.mvt-body { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.mvt-body label { display: flex; flex-direction: column; gap: 2px; font-size: 0.8rem; color: #94a3b8; }
+.mvt-body input, .mvt-body select {
+  background: #161829; border: 1px solid #3d4166; color: #e2e8f0;
+  border-radius: 4px; padding: 4px 8px; font-size: 0.8rem;
+}
+.mvt-style-row { display: flex; gap: 8px; }
+.mvt-style-row label { flex: 1; }
+.mvt-presets { display: flex; gap: 4px; flex-wrap: wrap; }
+.mvt-preset {
+  background: #1e2035; border: 1px solid #3d4166; color: #94a3b8;
+  border-radius: 4px; padding: 2px 8px; font-size: 0.7rem; cursor: pointer;
+}
+.mvt-preset:hover { background: #2d3060; }
+#mvt-status { font-size: 0.8rem; color: #a78bfa; }
+
+/* ── Raster panel ─────────────────────────────── */
+#raster-panel {
+  position: absolute; top: 50px; left: 10px; z-index: 70;
+  width: 300px; background: rgba(30,32,53,0.97);
+  border: 1px solid #3d4166; border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.raster-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; font-weight: 600; border-bottom: 1px solid #3d4166;
+}
+.raster-header button { background: none; border: none; color: #94a3b8; cursor: pointer; }
+.raster-body { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.raster-body label { display: flex; flex-direction: column; gap: 2px; font-size: 0.8rem; color: #94a3b8; }
+.raster-body input, .raster-body select {
+  background: #161829; border: 1px solid #3d4166; color: #e2e8f0;
+  border-radius: 4px; padding: 4px 8px; font-size: 0.8rem;
+}
+.raster-options { display: flex; gap: 8px; }
+.raster-options label { flex: 1; }
+.raster-presets { display: flex; gap: 4px; flex-wrap: wrap; }
+.raster-preset {
+  background: #1e2035; border: 1px solid #3d4166; color: #94a3b8;
+  border-radius: 4px; padding: 2px 8px; font-size: 0.7rem; cursor: pointer;
+}
+.raster-preset:hover { background: #2d3060; }
+.raster-actions { display: flex; gap: 6px; }
+#raster-status { font-size: 0.8rem; color: #a78bfa; }
+#raster-info { font-size: 0.75rem; color: #64748b; }
+
+/* ── Spatial stats panel ──────────────────────── */
+#spatial-stats-panel {
+  position: absolute; bottom: 40px; right: 10px; z-index: 70;
+  width: 320px; background: rgba(30,32,53,0.97);
+  border: 1px solid #3d4166; border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.ss-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; font-weight: 600; border-bottom: 1px solid #3d4166;
+}
+.ss-header button { background: none; border: none; color: #94a3b8; cursor: pointer; }
+.ss-body { padding: 10px 12px; max-height: 400px; overflow-y: auto; }
+.ss-row { display: flex; justify-content: space-between; font-size: 0.8rem; padding: 2px 0; }
+.ss-row span { color: #94a3b8; }
+.ss-row strong { color: #e2e8f0; }
+.ss-bbox { font-size: 0.75rem; color: #64748b; padding: 4px 0; }
+.ss-section-title { font-size: 0.8rem; font-weight: 600; margin-top: 8px; padding-bottom: 4px; border-bottom: 1px solid #3d4166; }
+.ss-empty { color: #64748b; font-size: 0.8rem; }
+#ss-density-canvas { width: 100%; border: 1px solid #3d4166; border-radius: 4px; }

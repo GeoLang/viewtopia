@@ -48,6 +48,9 @@ import { initPlugins } from './plugins.js';
 import { initTerrainAnalysis } from './terrain-analysis.js';
 import { initModelImport } from './model-import.js';
 import { initClassificationUI } from './classification-ui.js';
+import { initVectorTiles } from './vector-tiles.js';
+import { initRasterViewer } from './raster-viewer.js';
+import { initSpatialStats } from './spatial-stats.js';
 
 async function main() {
   // Discover which backends are available
@@ -121,6 +124,9 @@ async function main() {
   initTerrainAnalysis();
   initModelImport();
   initClassificationUI();
+  initVectorTiles();
+  initRasterViewer();
+  initSpatialStats();
 
   // If TileTopia is available, try loading open terrain
   if (backends.tiletopia && viewer) {
