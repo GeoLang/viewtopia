@@ -19,4 +19,15 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    chunkSizeWarningLimit: 800,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          deckgl: ['@deck.gl/core', '@deck.gl/geo-layers', '@deck.gl/layers', '@deck.gl/aggregation-layers'],
+          maplibre: ['maplibre-gl'],
+        },
+      },
+    },
+  },
 });
