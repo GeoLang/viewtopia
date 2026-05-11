@@ -57,6 +57,12 @@ import { initCrossSection } from './cross-section.js';
 import { initPhotoViewer } from './photo-viewer.js';
 import { initOfflineCache } from './offline-cache.js';
 import { initAuth } from './auth.js';
+import { initWeather } from './weather.js';
+import { initFloodSim } from './flood-sim.js';
+import { initWindViz } from './wind-viz.js';
+import { initDayLighting } from './day-lighting.js';
+import { initNoiseMap } from './noise-map.js';
+import { initEnergyHeatmap } from './energy-heatmap.js';
 
 async function main() {
   // Discover which backends are available
@@ -139,6 +145,12 @@ async function main() {
   initPhotoViewer();
   initOfflineCache();
   initAuth();
+  initWeather();
+  initFloodSim();
+  initWindViz();
+  initDayLighting();
+  initNoiseMap();
+  initEnergyHeatmap();
 
   // If TileTopia is available, try loading open terrain
   if (backends.tiletopia && viewer) {
