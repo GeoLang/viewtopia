@@ -4,14 +4,31 @@
   "private": false,
   "type": "module",
   "description": "All-in-one geospatial viewer — 3D globe, 2D maps, AI agent, and professional GIS tools",
-  "keywords": ["gis", "geospatial", "cesium", "maplibre", "deckgl", "3d-tiles", "viewer", "map"],
+  "keywords": [
+    "gis",
+    "geospatial",
+    "cesium",
+    "maplibre",
+    "deckgl",
+    "3d-tiles",
+    "viewer",
+    "map"
+  ],
   "license": "AGPL-3.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/TileTopia-HQ/viewtopia.git"
   },
   "homepage": "https://github.com/TileTopia-HQ/viewtopia",
-  "files": ["dist", "src", "index.html", "public", "vite.config.js", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "src",
+    "index.html",
+    "public",
+    "vite.config.js",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -28,6 +45,7 @@
     "@deck.gl/layers": "^9.3.2",
     "@loaders.gl/3d-tiles": "^4.4.1",
     "cesium": "^1.123.0",
+    "html2canvas": "^1.4.1",
     "leaflet": "^1.9.4",
     "leaflet-draw": "^1.0.4",
     "leaflet.markercluster": "^1.5.3",
