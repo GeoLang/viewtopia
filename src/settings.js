@@ -4,11 +4,18 @@
  * Persists all settings to localStorage. Backends can be reconfigured
  * without page reload (re-probes after save).
  */
-import { discoverBackends } from './backends.js';
+import { discoverBackends, startPolling } from './backends.js';
 
 const STORAGE_KEY = 'viewtopia_settings';
 
+/**
+ * Preference schema version. Bump this when adding new fields so that
+ * users with older saved prefs automatically pick up the new defaults.
+ */
+const PREFS_VERSION = 2;
+
 const defaults = {
+  _version: PREFS_VERSION,
   tiletopiaUrl: '/api/v1',
   geolangUrl: '/agent',
   googleApiKey: '',
@@ -44,7 +51,18 @@ function load() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
+      // Merge saved prefs on top of current defaults.
+      // Any new fields added in a newer PREFS_VERSION will get their default
+      // value automatically because { ...defaults, ...parsed } keeps defaults
+      // for keys that don't exist in parsed.
       settings = { ...defaults, ...parsed };
+
+      // If the saved version is older, stamp the new version and persist so
+      // the migration only runs once.
+      if ((parsed._version || 0) < PREFS_VERSION) {
+        settings._version = PREFS_VERSION;
+        save();
+      }
     }
   } catch {
     settings = { ...defaults };
@@ -61,6 +79,10 @@ export function loadSettings() {
   // Sync Google API key with the google-3d-tiles module's storage
   if (settings.googleApiKey) {
     localStorage.setItem('viewtopia_google_api_key', settings.googleApiKey);
+  }
+  // Sync theme with theme-toggle module's own localStorage key
+  if (settings.theme) {
+    localStorage.setItem('viewtopia-theme', settings.theme);
   }
 }
 
@@ -158,6 +180,12 @@ function toggleSettingsPanel() {
     <!-- Display -->
     <fieldset style="border:1px solid #2d3148;border-radius:8px;padding:12px;margin-bottom:12px">
       <legend style="color:#a78bfa;font-size:0.8rem;font-weight:600;padding:0 6px">Display</legend>
+      <label class="settings-label">Theme
+        <select id="set-theme" class="settings-input">
+          <option value="dark" ${settings.theme === 'dark' ? 'selected' : ''}>Dark</option>
+          <option value="light" ${settings.theme === 'light' ? 'selected' : ''}>Light</option>
+        </select>
+      </label>
       <label class="settings-label">Default renderer
         <select id="set-renderer" class="settings-input">
           <option value="cesium" ${settings.defaultRenderer === 'cesium' ? 'selected' : ''}>CesiumJS (3D Globe)</option>
@@ -222,6 +250,7 @@ function toggleSettingsPanel() {
     settings.cesiumIonToken = document.getElementById('set-ion-token').value.trim();
     settings.mapboxToken = document.getElementById('set-mapbox-token').value.trim();
     settings.maptilerKey = document.getElementById('set-maptiler-key').value.trim();
+    settings.theme = document.getElementById('set-theme').value;
     settings.defaultRenderer = document.getElementById('set-renderer').value;
     settings.defaultBasemap = document.getElementById('set-basemap').value;
     settings.showMinimap = document.getElementById('set-minimap').checked;
@@ -234,6 +263,28 @@ function toggleSettingsPanel() {
     if (settings.googleApiKey) {
       localStorage.setItem('viewtopia_google_api_key', settings.googleApiKey);
     }
+
+    // Sync theme with theme-toggle module
+    localStorage.setItem('viewtopia-theme', settings.theme || 'dark');
+    // Apply theme immediately
+    if (settings.theme === 'light') {
+      document.body.classList.add('light-theme');
+    } else {
+      document.body.classList.remove('light-theme');
+    }
+    const themeBtn = document.getElementById('theme-toggle');
+    if (themeBtn) themeBtn.textContent = settings.theme === 'light' ? '🌙' : '☀';
+
+    // Update probe interval
+    startPolling(settings.probeIntervalSec * 1000);
+
+    // Apply minimap visibility immediately
+    const minimapEl = document.getElementById('minimap');
+    if (minimapEl) minimapEl.style.display = settings.showMinimap ? '' : 'none';
+
+    // Apply coord readout visibility immediately
+    const coordEl = document.getElementById('coord-readout');
+    if (coordEl) coordEl.style.display = settings.showCoordReadout ? '' : 'none';
 
     // Re-probe backends with new URLs
     discoverBackends();

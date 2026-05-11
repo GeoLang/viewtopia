@@ -7,6 +7,7 @@
  */
 import * as Cesium from 'cesium';
 import { hasTileTopia, getTileTopiaBase, onBackendChange } from './backends.js';
+import { getSetting } from './settings.js';
 
 let cesiumViewer = null;
 const loadedTilesets = new Map();
@@ -154,6 +155,15 @@ async function loadTileset(assetId) {
 async function handleUpload(e) {
   const file = e.target.files[0];
   if (!file || !hasTileTopia()) return;
+
+  // Enforce max upload size from settings
+  const maxMb = getSetting('maxUploadMb') || 500;
+  if (file.size > maxMb * 1024 * 1024) {
+    const statusEl = document.getElementById('asset-status');
+    if (statusEl) statusEl.textContent = `File too large (max ${maxMb} MB)`;
+    e.target.value = '';
+    return;
+  }
 
   const ext = file.name.split('.').pop().toLowerCase();
   const assetType = ['las', 'laz', 'e57', 'ply'].includes(ext) ? 'pointcloud'

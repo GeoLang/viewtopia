@@ -86,7 +86,7 @@ async function main() {
 
   // Discover which backends are available
   const backends = await discoverBackends();
-  startPolling();
+  startPolling(getSetting('probeIntervalSec') * 1000);
 
   // Read saved preferences
   const savedRenderer = getSetting('defaultRenderer') || 'cesium';
@@ -162,7 +162,7 @@ async function main() {
   initGeoJSONEditor();
   initPrintExport();
   initSplitView();
-  initMinimap();
+  if (getSetting('showMinimap')) initMinimap();
   initStories();
   initCollaboration();
   initKeyboardShortcuts();
@@ -173,7 +173,7 @@ async function main() {
   initTrackImport();
   initTour();
   initDragDrop();
-  initCoordReadout();
+  if (getSetting('showCoordReadout')) initCoordReadout();
   initContextMenu();
   initLayerManager();
   initCesiumIon();
