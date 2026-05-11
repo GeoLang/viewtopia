@@ -61,6 +61,20 @@
       <!-- Layer panel -->
       <div id="layer-panel"></div>
 
+      <!-- Asset panel (TileTopia data catalogue) -->
+      <div id="asset-panel">
+        <div class="asset-panel-header">
+          <span class="asset-panel-title">📦 Assets</span>
+          <span class="asset-panel-status" id="asset-status"></span>
+        </div>
+        <div id="asset-list-items"></div>
+        <div id="asset-upload-section">
+          <button class="map-action-btn" id="asset-upload-btn">⬆ Upload &amp; Tile</button>
+          <input type="file" id="asset-upload-input" hidden
+            accept=".las,.laz,.e57,.ply,.tif,.tiff,.hgt,.gltf,.glb,.obj,.fbx,.ifc,.geojson,.shp,.kml,.gpkg" />
+        </div>
+      </div>
+
       <!-- View containers -->
       <div id="viz-content" class="viz-content">
         <div id="globe-container" class="view-container active"></div>

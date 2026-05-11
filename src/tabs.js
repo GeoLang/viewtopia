@@ -84,6 +84,10 @@ export function showTab(tab) {
   if (annotateBtn) annotateBtn.style.display = is3D ? '' : 'none';
   if (pickBtn) pickBtn.style.display = is3D ? '' : 'none';
   if (drawBtn) drawBtn.style.display = isMap ? '' : 'none';
+
+  // Asset panel only visible on 3D Globe tab
+  const assetPanel = document.getElementById('asset-panel');
+  if (assetPanel) assetPanel.style.display = is3D ? '' : 'none';
 }
 
 // Tracks which layers have already been synced to Cesium to avoid duplicates

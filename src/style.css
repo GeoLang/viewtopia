@@ -613,3 +613,39 @@ body {
 .map-action-btn.active {
   background: rgba(124,58,237,0.2); border-color: #7c3aed; color: #a78bfa;
 }
+
+/* ── Asset Panel ──────────────────────────────── */
+#asset-panel {
+  position: absolute; top: 40px; left: 8px; z-index: 500;
+  background: rgba(15,17,23,0.92); border: 1px solid #2d3148;
+  border-radius: 8px; width: 240px; max-height: 50vh;
+  display: flex; flex-direction: column; backdrop-filter: blur(8px);
+  font-size: .85rem; overflow: hidden;
+}
+.asset-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; border-bottom: 1px solid #2d3148;
+}
+.asset-panel-title { font-weight: 600; color: #e2e8f0; }
+.asset-panel-status { font-size: .75rem; color: #64748b; }
+#asset-list-items {
+  overflow-y: auto; flex: 1; padding: 4px 0;
+}
+.asset-item {
+  padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #1e2235;
+  transition: background .15s;
+}
+.asset-item:hover { background: rgba(124,58,237,0.1); }
+.asset-item.active { background: rgba(124,58,237,0.15); border-left: 3px solid #7c3aed; }
+.asset-name { color: #e2e8f0; font-weight: 500; font-size: .85rem; }
+.asset-meta { display: flex; gap: 6px; margin-top: 2px; font-size: .75rem; color: #64748b; }
+.asset-type { text-transform: capitalize; }
+.asset-status.ready { color: #3fb950; }
+.asset-status.tiling { color: #f0b429; }
+.asset-status.error { color: #f85149; }
+.asset-empty { padding: 16px 12px; color: #64748b; font-size: .8rem; text-align: center; }
+#asset-upload-section {
+  padding: 8px 12px; border-top: 1px solid #2d3148;
+}
+#asset-upload-section.disabled { opacity: 0.4; pointer-events: none; }
+#asset-upload-btn { width: 100%; }

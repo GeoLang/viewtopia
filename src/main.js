@@ -13,6 +13,7 @@ import { initViewerCommands } from './viewer-commands.js';
 import { initChat } from './chat.js';
 import { initTabs, showTab } from './tabs.js';
 import { initSessionsAndUI } from './sessions.js';
+import { setAssetViewer, initAssetCatalogue } from './asset-catalogue.js';
 
 async function main() {
   // Discover which backends are available
@@ -45,6 +46,8 @@ async function main() {
   initTabs();
   initChat();
   initSessionsAndUI();
+  setAssetViewer(viewer);
+  initAssetCatalogue();
 
   // If TileTopia is available, try loading open terrain
   if (backends.tiletopia) {
