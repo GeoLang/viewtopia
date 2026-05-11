@@ -1,4 +1,4 @@
-const CACHE_NAME = 'viewtopia-v1';
+const CACHE_NAME = 'viewtopia-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -26,26 +26,19 @@ self.addEventListener('fetch', (event) => {
   // Don't cache API/agent calls or WebSocket
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/agent/')) return;
 
+  // Network-first for everything — avoids stale JS/CSS after deploys.
+  // Falls back to cache only when offline.
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      // Network-first for HTML, cache-first for assets
-      if (event.request.mode === 'navigate') {
-        return fetch(event.request)
-          .then(response => {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-            return response;
-          })
-          .catch(() => cached || new Response('Offline', { status: 503 }));
-      }
-
-      return cached || fetch(event.request).then(response => {
+    fetch(event.request)
+      .then(response => {
         if (response.ok && url.origin === self.location.origin) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
-      });
-    })
+      })
+      .catch(() => caches.match(event.request).then(cached =>
+        cached || new Response('Offline', { status: 503 })
+      ))
   );
 });
