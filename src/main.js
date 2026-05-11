@@ -74,6 +74,7 @@ import { initFlythrough } from './flythrough.js';
 import { initHeatmapLayer } from './heatmap-layer.js';
 import { initTimelapse } from './timelapse.js';
 import { initPanelManager } from './panel-manager.js';
+import { initToolbarMenus } from './toolbar-menu.js';
 
 async function main() {
   // Discover which backends are available
@@ -108,6 +109,7 @@ async function main() {
   }
   initRendererSelector();
   initViewerCommands();
+  initToolbarMenus();
   initTabs();
   initChat();
   initSessionsAndUI();

@@ -47,31 +47,61 @@
             <option value="deckgl">deck.gl</option>
             <option value="maplibre">MapLibre</option>
           </select>
+
+          <!-- Core tools (always visible) -->
           <button class="map-action-btn" id="osm-buildings-btn" title="Load OSM buildings in view">🏢 Buildings</button>
           <button class="map-action-btn" id="draw-btn" title="Draw on map">✏ Draw</button>
           <button class="map-action-btn" id="measure-btn" title="Measure distance">📏 Measure</button>
           <button class="map-action-btn" id="annotate-btn" title="Annotate">📌 Annotate</button>
           <button class="map-action-btn" id="pick-btn" title="Feature info">ℹ Info</button>
-          <button class="map-action-btn" id="clipping-btn" title="3D clipping plane">✂ Clip</button>
-          <button class="map-action-btn" id="cross-section-btn" title="Cross-section">📐 Section</button>
-          <button class="map-action-btn" id="photo-btn" title="Street-level photos">📷 Photo</button>
-          <button class="map-action-btn" id="offline-btn" title="Offline tile cache">💾 Offline</button>
-          <button class="map-action-btn" id="weather-btn" title="Weather effects">🌦 Weather</button>
-          <button class="map-action-btn" id="flood-btn" title="Flood simulation">🌊 Flood</button>
-          <button class="map-action-btn" id="wind-btn" title="Wind visualization">💨 Wind</button>
-          <button class="map-action-btn" id="lighting-btn" title="Time-of-day lighting">☀ Light</button>
-          <button class="map-action-btn" id="noise-btn" title="Noise map">🔊 Noise</button>
-          <button class="map-action-btn" id="energy-btn" title="Building energy heatmap">🔋 Energy</button>
-          <button class="map-action-btn" id="indoor-btn" title="Indoor navigation">🏛 Indoor</button>
-          <button class="map-action-btn" id="solar-btn" title="Solar panel planner">☀ Solar</button>
-          <button class="map-action-btn" id="traffic-btn" title="Traffic flow">🚗 Traffic</button>
-          <button class="map-action-btn" id="drone-btn" title="Drone flight planner">🛸 Drone</button>
-          <button class="map-action-btn" id="webxr-btn" title="VR/AR mode">🥽</button>
-          <button class="map-action-btn" id="a11y-btn" title="Accessibility">♿</button>
-          <button class="map-action-btn" id="export3d-btn" title="3D Print Export">🖨</button>
-          <button class="map-action-btn" id="flythrough-btn" title="Terrain flythrough">🎬</button>
-          <button class="map-action-btn" id="heatmap-btn" title="Heatmap layer">🔥</button>
-          <button class="map-action-btn" id="timelapse-btn" title="Time-lapse comparison">⏳</button>
+
+          <!-- Analysis dropdown -->
+          <div class="toolbar-dropdown" id="analysis-menu">
+            <button class="map-action-btn toolbar-dropdown-toggle" title="Analysis tools">🔍 Analysis ▾</button>
+            <div class="toolbar-dropdown-content">
+              <button class="map-action-btn" id="clipping-btn" title="3D clipping plane">✂ Clip</button>
+              <button class="map-action-btn" id="cross-section-btn" title="Cross-section">📐 Section</button>
+              <button class="map-action-btn" id="heatmap-btn" title="Heatmap layer">🔥 Heatmap</button>
+              <button class="map-action-btn" id="timelapse-btn" title="Time-lapse comparison">⏳ Timelapse</button>
+            </div>
+          </div>
+
+          <!-- Simulation dropdown -->
+          <div class="toolbar-dropdown" id="simulation-menu">
+            <button class="map-action-btn toolbar-dropdown-toggle" title="Simulation tools">🌍 Simulate ▾</button>
+            <div class="toolbar-dropdown-content">
+              <button class="map-action-btn" id="weather-btn" title="Weather effects">🌦 Weather</button>
+              <button class="map-action-btn" id="flood-btn" title="Flood simulation">🌊 Flood</button>
+              <button class="map-action-btn" id="wind-btn" title="Wind visualization">💨 Wind</button>
+              <button class="map-action-btn" id="lighting-btn" title="Time-of-day lighting">☀ Light</button>
+              <button class="map-action-btn" id="noise-btn" title="Noise map">🔊 Noise</button>
+              <button class="map-action-btn" id="energy-btn" title="Building energy heatmap">🔋 Energy</button>
+              <button class="map-action-btn" id="solar-btn" title="Solar panel planner">☀ Solar</button>
+              <button class="map-action-btn" id="traffic-btn" title="Traffic flow">🚗 Traffic</button>
+            </div>
+          </div>
+
+          <!-- Tools dropdown -->
+          <div class="toolbar-dropdown" id="tools-menu">
+            <button class="map-action-btn toolbar-dropdown-toggle" title="More tools">🧰 Tools ▾</button>
+            <div class="toolbar-dropdown-content">
+              <button class="map-action-btn" id="photo-btn" title="Street-level photos">📷 Photo</button>
+              <button class="map-action-btn" id="offline-btn" title="Offline tile cache">💾 Offline</button>
+              <button class="map-action-btn" id="indoor-btn" title="Indoor navigation">🏛 Indoor</button>
+              <button class="map-action-btn" id="drone-btn" title="Drone flight planner">🛸 Drone</button>
+              <button class="map-action-btn" id="webxr-btn" title="VR/AR mode">🥽 WebXR</button>
+              <button class="map-action-btn" id="a11y-btn" title="Accessibility">♿ A11y</button>
+              <button class="map-action-btn" id="export3d-btn" title="3D Print Export">🖨 3D Print</button>
+              <button class="map-action-btn" id="flythrough-btn" title="Terrain flythrough">🎬 Flythrough</button>
+            </div>
+          </div>
+
+          <!-- Extras container for dynamically-added buttons -->
+          <div class="toolbar-dropdown" id="extras-menu" style="display:none">
+            <button class="map-action-btn toolbar-dropdown-toggle" title="More features">⋯ More ▾</button>
+            <div class="toolbar-dropdown-content" id="extras-menu-content"></div>
+          </div>
+
           <select id="basemap-select" class="basemap-select" title="Switch basemap">
             <option value="osm">OSM</option>
             <option value="satellite">Satellite</option>
