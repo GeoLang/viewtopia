@@ -306,6 +306,67 @@ body {
   flex-direction: column;
   background: #0f1117;
   overflow: hidden;
+  position: relative;
+}
+
+.floating-panel {
+  position: absolute;
+  top: 50px;
+  left: 8px;
+  z-index: 600;
+  background: rgba(15, 17, 23, 0.95);
+  border: 1px solid #2d3148;
+  border-radius: 8px;
+  width: 280px;
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+  font-size: 0.85rem;
+}
+
+.floating-panel .panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid #2d3148;
+  font-weight: 600;
+  color: #e2e8f0;
+  position: sticky;
+  top: 0;
+  background: rgba(15, 17, 23, 0.98);
+  border-radius: 8px 8px 0 0;
+}
+
+.floating-panel .panel-close {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.floating-panel .panel-close:hover {
+  background: rgba(248, 81, 73, 0.2);
+  color: #f85149;
+}
+
+.floating-panel .panel-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.floating-panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: #94a3b8;
 }
 
 .viz-toolbar {
