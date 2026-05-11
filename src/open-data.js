@@ -36,14 +36,44 @@ export async function loadOsmBuildings(viewer, opts = {}) {
   const query = `[out:json][timeout:25];way["building"](${bbox});out body;>;out skel qt;`;
   console.log(`OSM Buildings: querying Overpass for bbox ${bbox}`);
   
-  const res = await fetch('https://overpass-api.de/api/interpreter', {
-    method: 'POST',
-    body: `data=${encodeURIComponent(query)}`,
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-  });
+  // Try multiple Overpass endpoints (primary can be overloaded)
+  const endpoints = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+  ];
   
-  if (!res.ok) {
-    console.error(`OSM Buildings: Overpass returned ${res.status}`);
+  let res = null;
+  for (const endpoint of endpoints) {
+    try {
+      console.log(`OSM Buildings: trying ${endpoint}...`);
+      res = await fetch(endpoint, {
+        method: 'POST',
+        body: `data=${encodeURIComponent(query)}`,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        signal: AbortSignal.timeout(20000),
+      });
+      if (res.ok) {
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('json')) {
+          console.log(`OSM Buildings: got response from ${endpoint}`);
+          break;
+        } else {
+          console.warn(`OSM Buildings: ${endpoint} returned non-JSON (server busy), trying next...`);
+          res = null;
+        }
+      } else {
+        console.warn(`OSM Buildings: ${endpoint} returned ${res.status}, trying next...`);
+        res = null;
+      }
+    } catch (e) {
+      console.warn(`OSM Buildings: ${endpoint} failed: ${e.message}, trying next...`);
+      res = null;
+    }
+  }
+  
+  if (!res) {
+    console.error('OSM Buildings: all Overpass endpoints failed');
     return [];
   }
 
@@ -92,18 +122,20 @@ export function initOsmBuildings() {
   const btn = document.getElementById('osm-buildings-btn');
   if (!btn) return;
 
-  // Disable when not in 3D globe mode
-  const rendererSelect = document.getElementById('renderer-choice');
-  if (rendererSelect) {
-    const updateState = () => {
-      const is3D = rendererSelect.value === 'cesium';
-      btn.disabled = !is3D;
-      btn.style.opacity = is3D ? '1' : '0.4';
-      btn.title = is3D ? 'Load OSM buildings in view' : 'OSM Buildings (3D Globe only)';
-    };
-    rendererSelect.addEventListener('change', updateState);
-    updateState();
-  }
+  // Disable when not in 3D globe tab
+  const updateBtnState = () => {
+    const activeTab = document.querySelector('.viz-toolbar .tab.active');
+    const is3D = !activeTab || activeTab.dataset.tab === 'globe';
+    btn.disabled = !is3D;
+    btn.style.opacity = is3D ? '1' : '0.4';
+    btn.title = is3D ? 'Load OSM buildings in view' : 'OSM Buildings (3D Globe only)';
+  };
+
+  // Listen for tab clicks
+  document.querySelectorAll('.viz-toolbar .tab').forEach(tab => {
+    tab.addEventListener('click', () => setTimeout(updateBtnState, 50));
+  });
+  updateBtnState();
 
   btn.addEventListener('click', async () => {
     const viewer = getCesiumViewer();
