@@ -13,12 +13,12 @@ import { getCesiumViewer } from './renderers.js';
  * extruded Cesium entities.  Works entirely client-side — no server needed.
  */
 export async function loadOsmBuildings(viewer, opts = {}) {
-  const maxArea = opts.maxArea ?? 0.5;
+  const maxArea = opts.maxArea ?? 2.0;
   let rect = viewer.camera.computeViewRectangle();
 
   if (!rect) {
     const carto = viewer.camera.positionCartographic;
-    if (!carto) return [];
+    if (!carto) { console.warn('OSM Buildings: no camera position'); return []; }
     const span = 0.005;
     rect = new Cesium.Rectangle(
       carto.longitude - span,
@@ -33,19 +33,34 @@ export async function loadOsmBuildings(viewer, opts = {}) {
   const north = Cesium.Math.toDegrees(rect.north);
   const east = Cesium.Math.toDegrees(rect.east);
 
-  if ((north - south) * (east - west) > maxArea) {
-    console.warn('View too wide for OSM building query — zoom in');
+  const area = (north - south) * (east - west);
+  console.log(`OSM Buildings: bbox ${south.toFixed(4)},${west.toFixed(4)},${north.toFixed(4)},${east.toFixed(4)} area=${area.toFixed(4)} deg²`);
+
+  if (area > maxArea) {
+    console.warn(`View too wide (${area.toFixed(2)} deg²) for OSM building query — zoom in more`);
     return [];
   }
 
-  const bbox = `${south},${west},${north},${east}`;
-  const query = `[out:json][timeout:15];way["building"](${bbox});out body;>;out skel qt;`;
+  // Clamp bbox to reasonable size for Overpass (max ~0.1 deg span if very large)
+  const clampedSouth = Math.max(south, (south + north) / 2 - 0.05);
+  const clampedNorth = Math.min(north, (south + north) / 2 + 0.05);
+  const clampedWest = Math.max(west, (east + west) / 2 - 0.05);
+  const clampedEast = Math.min(east, (east + west) / 2 + 0.05);
+
+  const bbox = `${clampedSouth},${clampedWest},${clampedNorth},${clampedEast}`;
+  const query = `[out:json][timeout:25];way["building"](${bbox});out body;>;out skel qt;`;
+  console.log(`OSM Buildings: querying Overpass for bbox ${bbox}`);
+  
   const res = await fetch('https://overpass-api.de/api/interpreter', {
     method: 'POST',
     body: `data=${encodeURIComponent(query)}`,
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
   });
-  if (!res.ok) return [];
+  
+  if (!res.ok) {
+    console.error(`OSM Buildings: Overpass returned ${res.status}`);
+    return [];
+  }
 
   const data = await res.json();
   const nodes = new Map();
@@ -111,14 +126,16 @@ export function initOsmBuildings() {
     btn.classList.add('active');
     btn.textContent = '⏳ Loading…';
     try {
+      console.log('OSM Buildings: button clicked, starting load...');
       osmEntities = await loadOsmBuildings(viewer);
+      console.log(`OSM Buildings: got ${osmEntities.length} entities`);
       if (osmEntities.length > 0) {
         btn.textContent = `🏢 ${osmEntities.length}`;
         viewer.flyTo(viewer.entities);
       } else {
         btn.textContent = '🏢 Buildings';
         btn.classList.remove('active');
-        alert('No buildings found in current view. Try zooming in closer to a city area.');
+        alert('No buildings found in current view.\n\nTry zooming in closer to a city/town area.\nThe view is clamped to ~0.1° (~11km) around center.');
       }
     } catch (e) {
       console.error('Failed to load OSM buildings:', e);
