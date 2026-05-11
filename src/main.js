@@ -14,6 +14,19 @@ import { initChat } from './chat.js';
 import { initTabs, showTab } from './tabs.js';
 import { initSessionsAndUI } from './sessions.js';
 import { setAssetViewer, initAssetCatalogue } from './asset-catalogue.js';
+import { initMeasurement } from './measurement.js';
+import { initAnnotations } from './annotations.js';
+import { initFeaturePicker, initStyleEditor } from './feature-picker.js';
+import { initTerrainProfile } from './terrain-profile.js';
+import { initTimeline } from './timeline.js';
+import { initBookmarks } from './bookmarks.js';
+import { initDataTable } from './data-table.js';
+import { initGeoJSONEditor } from './geojson-editor.js';
+import { initPrintExport } from './print-export.js';
+import { initSplitView } from './split-view.js';
+import { initMinimap } from './minimap.js';
+import { initStories } from './stories.js';
+import { initCollaboration } from './collaboration.js';
 
 async function main() {
   // Discover which backends are available
@@ -48,6 +61,20 @@ async function main() {
   initSessionsAndUI();
   setAssetViewer(viewer);
   initAssetCatalogue();
+  initMeasurement();
+  initAnnotations();
+  initFeaturePicker();
+  initStyleEditor();
+  initTerrainProfile();
+  initTimeline();
+  initBookmarks();
+  initDataTable();
+  initGeoJSONEditor();
+  initPrintExport();
+  initSplitView();
+  initMinimap();
+  initStories();
+  initCollaboration();
 
   // If TileTopia is available, try loading open terrain
   if (backends.tiletopia) {
