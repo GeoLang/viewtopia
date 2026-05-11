@@ -217,8 +217,14 @@ async function main() {
   initGlobalTerrain();
   initShareLinks();
 
-  // Default view: show 3D globe if TileTopia is connected, otherwise 2D map
-  if (!backends.tiletopia && backends.geolang) {
+  // Default view: if user explicitly saved a 3D renderer preference, stay
+  // on the globe tab. Only fall back to 2D map if using defaults and
+  // TileTopia is disconnected (GeoLang-only mode).
+  const hasCustomPrefs = !!localStorage.getItem('viewtopia_settings');
+  if (hasCustomPrefs) {
+    // User has saved settings — respect their renderer choice
+    showTab('globe');
+  } else if (!backends.tiletopia && backends.geolang) {
     showTab('map');
   }
 }
