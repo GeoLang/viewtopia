@@ -55,32 +55,36 @@ async function main() {
   startPolling();
 
   // Initialize CesiumJS in the globe container
-  const viewer = new Cesium.Viewer('globe-container', {
-    terrain: undefined,
-    baseLayerPicker: false,
-    geocoder: true,
-    animation: false,
-    timeline: false,
-    homeButton: true,
-    sceneModePicker: true,
-    navigationHelpButton: false,
-    infoBox: true,
-    selectionIndicator: true,
-    creditContainer: document.createElement('div'),
-    baseLayer: new Cesium.ImageryLayer(
-      new Cesium.OpenStreetMapImageryProvider({
-        url: 'https://tile.openstreetmap.org/',
-      })
-    ),
-  });
-
-  setCesiumViewer(viewer);
+  let viewer = null;
+  try {
+    viewer = new Cesium.Viewer('globe-container', {
+      terrain: undefined,
+      baseLayerPicker: false,
+      geocoder: true,
+      animation: false,
+      timeline: false,
+      homeButton: true,
+      sceneModePicker: true,
+      navigationHelpButton: false,
+      infoBox: true,
+      selectionIndicator: true,
+      creditContainer: document.createElement('div'),
+      baseLayer: new Cesium.ImageryLayer(
+        new Cesium.OpenStreetMapImageryProvider({
+          url: 'https://tile.openstreetmap.org/',
+        })
+      ),
+    });
+    setCesiumViewer(viewer);
+    setAssetViewer(viewer);
+  } catch (e) {
+    console.warn('CesiumJS failed to initialize (no WebGL?):', e.message);
+  }
   initRendererSelector();
   initViewerCommands();
   initTabs();
   initChat();
   initSessionsAndUI();
-  setAssetViewer(viewer);
   initAssetCatalogue();
   initMeasurement();
   initAnnotations();
@@ -119,7 +123,7 @@ async function main() {
   initClassificationUI();
 
   // If TileTopia is available, try loading open terrain
-  if (backends.tiletopia) {
+  if (backends.tiletopia && viewer) {
     try {
       const terrainRes = await fetch('/api/v1/terrain/layer.json', { signal: AbortSignal.timeout(2000) });
       if (terrainRes.ok) {

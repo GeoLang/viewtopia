@@ -322,3 +322,70 @@ function setDeckLayers(layers) {
     }
   });
 }
+
+// ── New commands: terrain analysis, volume, model, classify ──
+function registerNewCommands() {
+  registerCommand('slope_map', () => {
+    import('./terrain-analysis.js').then(m => {
+      const btn = document.getElementById('terrain-analysis-btn');
+      if (btn) btn.click();
+      document.getElementById('ta-slope')?.click();
+    });
+  });
+
+  registerCommand('aspect_map', () => {
+    import('./terrain-analysis.js').then(m => {
+      document.getElementById('ta-aspect')?.click();
+    });
+  });
+
+  registerCommand('contour_lines', () => {
+    import('./terrain-analysis.js').then(m => {
+      document.getElementById('ta-contour')?.click();
+    });
+  });
+
+  registerCommand('volume', () => {
+    document.getElementById('volume-btn')?.click();
+  });
+
+  registerCommand('shadow_analysis', () => {
+    document.getElementById('shadow-btn')?.click();
+  });
+
+  registerCommand('viewshed', () => {
+    document.getElementById('viewshed-btn')?.click();
+  });
+
+  registerCommand('import_model', (params) => {
+    document.getElementById('model-import-btn')?.click();
+    if (params?.url) {
+      const urlInput = document.getElementById('mi-url');
+      if (urlInput) urlInput.value = params.url;
+      if (params.lon) document.getElementById('mi-lon').value = params.lon;
+      if (params.lat) document.getElementById('mi-lat').value = params.lat;
+      if (params.height) document.getElementById('mi-height').value = params.height;
+      document.getElementById('mi-load-url')?.click();
+    }
+  });
+
+  registerCommand('classify_pointcloud', (params) => {
+    document.getElementById('classify-btn')?.click();
+    if (params?.asset) {
+      setTimeout(() => {
+        const sel = document.getElementById('clf-asset-select');
+        if (sel) sel.value = params.asset;
+        document.getElementById('clf-run')?.click();
+      }, 500);
+    }
+  });
+
+  registerCommand('compare_pointclouds', (params) => {
+    document.getElementById('pc-compare-btn')?.click();
+    if (params?.scanA) document.getElementById('pcc-scan-a').value = params.scanA;
+    if (params?.scanB) document.getElementById('pcc-scan-b').value = params.scanB;
+    if (params?.scanA && params?.scanB) document.getElementById('pcc-load')?.click();
+  });
+}
+
+registerNewCommands();
