@@ -122,25 +122,17 @@ export function initOsmBuildings() {
   const btn = document.getElementById('osm-buildings-btn');
   if (!btn) return;
 
-  // Disable when not in 3D globe tab
-  const updateBtnState = () => {
-    const activeTab = document.querySelector('.viz-toolbar .tab.active');
-    const is3D = !activeTab || activeTab.dataset.tab === 'globe';
-    btn.disabled = !is3D;
-    btn.style.opacity = is3D ? '1' : '0.4';
-    btn.title = is3D ? 'Load OSM buildings in view' : 'OSM Buildings (3D Globe only)';
-  };
-
-  // Listen for tab clicks
-  document.querySelectorAll('.viz-toolbar .tab').forEach(tab => {
-    tab.addEventListener('click', () => setTimeout(updateBtnState, 50));
-  });
-  updateBtnState();
-
   btn.addEventListener('click', async () => {
+    // Check if we're in 3D globe tab
+    const activeTab = document.querySelector('.viz-toolbar .tab.active');
+    if (activeTab && activeTab.dataset.tab !== 'globe') {
+      alert('OSM Buildings only works in 3D Globe view.\nSwitch to the "3D Globe" tab first.');
+      return;
+    }
+
     const viewer = getCesiumViewer();
     if (!viewer) {
-      alert('OSM Buildings requires the 3D Globe view');
+      alert('OSM Buildings requires the 3D Globe view.\nCesium viewer not initialized.');
       return;
     }
 
