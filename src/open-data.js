@@ -86,6 +86,9 @@ export async function loadOsmBuildings(viewer, opts = {}) {
   }
   console.log(`OSM: fetched ${nodes.size} nodes, ${ways.length} ways for bbox ${bbox}`);
 
+  // Enable depth testing for solid building rendering
+  viewer.scene.globe.depthTestAgainstTerrain = true;
+
   const entities = [];
   for (const way of ways) {
     const coords = way.nodes
@@ -99,9 +102,9 @@ export async function loadOsmBuildings(viewer, opts = {}) {
 
     let material;
     try {
-      material = Cesium.Color.fromCssColorString(way.tags?.['building:colour'] || '#c8b896').withAlpha(0.85);
-    } catch { material = Cesium.Color.fromCssColorString('#c8b896').withAlpha(0.85); }
-    if (!material) material = Cesium.Color.fromCssColorString('#c8b896').withAlpha(0.85);
+      material = Cesium.Color.fromCssColorString(way.tags?.['building:colour'] || '#c8b896');
+    } catch { material = Cesium.Color.fromCssColorString('#c8b896'); }
+    if (!material) material = Cesium.Color.fromCssColorString('#c8b896');
 
     entities.push(
       viewer.entities.add({
@@ -112,6 +115,8 @@ export async function loadOsmBuildings(viewer, opts = {}) {
           material,
           outline: true,
           outlineColor: Cesium.Color.BLACK.withAlpha(0.3),
+          closeTop: true,
+          closeBottom: true,
         },
         properties: way.tags,
       }),
