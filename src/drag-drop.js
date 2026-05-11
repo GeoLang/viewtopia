@@ -1,6 +1,7 @@
 /**
  * Drag-and-drop file import — drop files onto the viz area to import.
  */
+import * as Cesium from 'cesium';
 import { getCesiumViewer } from './renderers.js';
 
 export function initDragDrop() {

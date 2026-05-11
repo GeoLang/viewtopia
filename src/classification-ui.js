@@ -2,6 +2,7 @@
  * Point cloud classification UI — trigger TileTopia's ML classifier from the viewer.
  * Shows progress and allows viewing classification results.
  */
+import * as Cesium from 'cesium';
 import { getCesiumViewer } from './renderers.js';
 import { hasTileTopia } from './backends.js';
 

@@ -2,6 +2,7 @@
  * Point cloud comparison — temporal diff visualization between two tilesets.
  * Colors points by distance from nearest point in the other scan.
  */
+import * as Cesium from 'cesium';
 import { getCesiumViewer } from './renderers.js';
 
 let panel;

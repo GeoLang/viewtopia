@@ -2,6 +2,7 @@
  * Volume measurement — cut/fill volume estimation from a drawn polygon.
  * Uses terrain sampling to compute the volume between a reference plane and terrain.
  */
+import * as Cesium from 'cesium';
 import { getCesiumViewer } from './renderers.js';
 
 let active = false;

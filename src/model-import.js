@@ -2,6 +2,7 @@
  * 3D model import — load glTF/GLB/IFC files into the 3D viewer.
  * Supports positioning models at a clicked location or at specified coordinates.
  */
+import * as Cesium from 'cesium';
 import { getCesiumViewer } from './renderers.js';
 
 let panel;

@@ -2,6 +2,7 @@
  * Spatial stats dashboard — summary statistics for loaded datasets.
  * Shows feature counts, bounding box, attribute histograms, spatial density.
  */
+import * as Cesium from 'cesium';
 import { getCesiumViewer } from './renderers.js';
 
 let panel;

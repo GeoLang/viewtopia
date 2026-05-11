@@ -1,6 +1,7 @@
 /**
  * Terrain analysis — slope map, aspect, and contour lines from Cesium terrain.
  */
+import * as Cesium from 'cesium';
 import { getCesiumViewer } from './renderers.js';
 
 let panel;

@@ -2,6 +2,7 @@
  * COG/Raster viewer — load Cloud-Optimized GeoTIFFs with band math.
  * Uses Cesium imagery layer with URL template for COG tiles.
  */
+import * as Cesium from 'cesium';
 import { getCesiumViewer } from './renderers.js';
 
 let panel;

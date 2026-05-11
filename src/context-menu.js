@@ -1,6 +1,7 @@
 /**
  * Right-click context menu — quick actions at the clicked location.
  */
+import * as Cesium from 'cesium';
 import { getCesiumViewer } from './renderers.js';
 import { getLeafletMap } from './leaflet-view.js';
 

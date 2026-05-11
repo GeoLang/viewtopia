@@ -5,6 +5,7 @@
  * renders it in the appropriate view container.
  */
 import { getLeafletMap, initLeafletMap } from './leaflet-view.js';
+import * as Cesium from 'cesium';
 import { getCesiumViewer } from './renderers.js';
 import { getGeoLangBase } from './backends.js';
 import { showTab } from './tabs.js';

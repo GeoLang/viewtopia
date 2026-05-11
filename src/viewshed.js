@@ -2,6 +2,7 @@
  * Viewshed analysis — line-of-sight visibility from a point.
  * Uses ray-casting against Cesium terrain/globe to build a visibility fan.
  */
+import * as Cesium from 'cesium';
 import { getCesiumViewer } from './renderers.js';
 
 let active = false;

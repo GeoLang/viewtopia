@@ -1,6 +1,7 @@
 /**
  * Shadows analysis — time-of-day shadow simulation with sun position slider.
  */
+import * as Cesium from 'cesium';
 import { getCesiumViewer } from './renderers.js';
 
 export function initShadows() {

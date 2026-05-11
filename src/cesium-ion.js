@@ -1,6 +1,7 @@
 /**
  * Cesium Ion integration — load assets from a Cesium Ion account.
  */
+import * as Cesium from 'cesium';
 import { getCesiumViewer } from './renderers.js';
 
 let ionToken = '';

@@ -1,6 +1,7 @@
 /**
  * Coordinate readout — show lat/lon/height under cursor in real time.
  */
+import * as Cesium from 'cesium';
 import { getCesiumViewer } from './renderers.js';
 import { getLeafletMap } from './leaflet-view.js';
 

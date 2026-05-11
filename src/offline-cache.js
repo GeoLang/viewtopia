@@ -1,3 +1,4 @@
+import * as Cesium from 'cesium';
 /**
  * Offline Tile Caching — download map tiles for offline use via Service Worker.
  */
