@@ -75,4 +75,79 @@ test.describe('ViewTopia UI', () => {
     await page.keyboard.press('Escape');
     await expect(page.locator('#shortcut-help')).not.toBeVisible();
   });
+
+  test('layer panel is present', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#layer-panel')).toBeVisible();
+  });
+
+  test('basemap selector works', async ({ page }) => {
+    await page.goto('/');
+    const select = page.locator('#basemap-select');
+    await expect(select).toBeVisible();
+    await select.selectOption('satellite');
+    await expect(select).toHaveValue('satellite');
+  });
+
+  test('new toolbar buttons are present', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#shadow-btn')).toBeVisible();
+    await expect(page.locator('#viewshed-btn')).toBeVisible();
+    await expect(page.locator('#volume-btn')).toBeVisible();
+    await expect(page.locator('#ion-btn')).toBeVisible();
+    await expect(page.locator('#pc-compare-btn')).toBeVisible();
+  });
+
+  test('Ion panel toggles', async ({ page }) => {
+    await page.goto('/');
+    const btn = page.locator('#ion-btn');
+    await btn.click();
+    await expect(page.locator('#ion-panel')).toBeVisible();
+    await page.locator('#ion-close').click();
+    await expect(page.locator('#ion-panel')).not.toBeVisible();
+  });
+
+  test('shadow panel toggles', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('#shadow-btn').click();
+    await expect(page.locator('#shadow-panel')).toBeVisible();
+    await page.locator('#shadow-close').click();
+    await expect(page.locator('#shadow-panel')).not.toBeVisible();
+  });
+
+  test('coordinate readout element exists', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#coord-readout')).toBeAttached();
+  });
+
+  test('draw button is present', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#draw-btn')).toBeVisible();
+  });
+
+  test('export PNG button is present', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#export-png-btn')).toBeVisible();
+  });
+
+  test('chat input and send button', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#chat-input')).toBeVisible();
+    await expect(page.locator('#chat-send')).toBeVisible();
+  });
+
+  test('example queries are clickable', async ({ page }) => {
+    await page.goto('/');
+    const examples = page.locator('.example-query');
+    await expect(examples.first()).toBeVisible();
+    const count = await examples.count();
+    expect(count).toBeGreaterThanOrEqual(2);
+  });
+
+  test('drag drop overlay exists but is hidden', async ({ page }) => {
+    await page.goto('/');
+    const overlay = page.locator('#drop-overlay');
+    await expect(overlay).toBeAttached();
+    await expect(overlay).not.toHaveClass(/visible/);
+  });
 });

@@ -42,6 +42,9 @@ import { initCesiumIon } from './cesium-ion.js';
 import { initCharts } from './charts.js';
 import { initShadows } from './shadows.js';
 import { initViewshed } from './viewshed.js';
+import { initVolumeMeasurement } from './volume.js';
+import { initPointCloudCompare } from './point-cloud-compare.js';
+import { initPlugins } from './plugins.js';
 
 async function main() {
   // Discover which backends are available
@@ -105,6 +108,9 @@ async function main() {
   initCharts();
   initShadows();
   initViewshed();
+  initVolumeMeasurement();
+  initPointCloudCompare();
+  initPlugins();
 
   // If TileTopia is available, try loading open terrain
   if (backends.tiletopia) {

@@ -1179,3 +1179,37 @@ body.light-theme .gc-name { color: #1e293b; }
   #toolbar-actions .map-action-btn { font-size: 0.65rem; }
   .tab { padding: 3px 6px; }
 }
+
+/* ── Point cloud compare panel ────────────────── */
+#pc-compare-panel {
+  position: absolute; top: 50px; right: 10px; z-index: 70;
+  width: 300px; background: rgba(30,32,53,0.97);
+  border: 1px solid #3d4166; border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.pcc-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; font-weight: 600; border-bottom: 1px solid #3d4166;
+}
+.pcc-header button { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1.1rem; }
+.pcc-body { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.pcc-body label { display: flex; flex-direction: column; gap: 2px; font-size: 0.8rem; color: #94a3b8; }
+.pcc-body input {
+  background: #161829; border: 1px solid #3d4166; color: #e2e8f0;
+  border-radius: 4px; padding: 4px 8px; font-size: 0.8rem;
+}
+.pcc-actions { display: flex; gap: 6px; }
+.pcc-legend { display: flex; gap: 10px; font-size: 0.75rem; color: #94a3b8; }
+#pcc-status { font-size: 0.8rem; color: #a78bfa; }
+
+/* ── Plugin notification ──────────────────────── */
+.plugin-notification {
+  position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+  background: #7c3aed; color: white; padding: 8px 20px;
+  border-radius: 6px; font-size: 0.85rem; z-index: 10000;
+  animation: slideDown 0.3s ease;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}

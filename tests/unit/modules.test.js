@@ -38,3 +38,43 @@ describe('track-import', () => {
     expect(mod.detectTrackFile({ name: 'data.csv' })).toBe(null);
   });
 });
+
+describe('plugins', () => {
+  it('should export registerPlugin and getPlugins', async () => {
+    const mod = await import('../../src/plugins.js');
+    expect(typeof mod.registerPlugin).toBe('function');
+    expect(typeof mod.getPlugins).toBe('function');
+    expect(typeof mod.loadPlugin).toBe('function');
+    expect(typeof mod.initPlugins).toBe('function');
+  });
+
+  it('should register a plugin', async () => {
+    const mod = await import('../../src/plugins.js');
+    const registered = [];
+    mod.registerPlugin({
+      name: 'test-plugin',
+      version: '1.0.0',
+      register(api) { registered.push(api); },
+    });
+    const list = mod.getPlugins();
+    expect(list.some(p => p.name === 'test-plugin')).toBe(true);
+  });
+});
+
+describe('charts', () => {
+  it('should export chart functions', async () => {
+    const mod = await import('../../src/charts.js');
+    expect(typeof mod.showHistogram).toBe('function');
+    expect(typeof mod.showScatter).toBe('function');
+    expect(typeof mod.showTimeSeries).toBe('function');
+  });
+});
+
+describe('layer-manager', () => {
+  it('should export layer functions', async () => {
+    const mod = await import('../../src/layer-manager.js');
+    expect(typeof mod.addLayer).toBe('function');
+    expect(typeof mod.removeLayer).toBe('function');
+    expect(typeof mod.getLayers).toBe('function');
+  });
+});
