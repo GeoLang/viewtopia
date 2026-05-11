@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ViewTopia</title>
+<link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- Header -->
+  <header id="header">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+    </svg>
+    <h1>ViewTopia</h1>
+    <div id="backend-badges"></div>
+    <div id="session-controls">
+      <select id="session-select"></select>
+      <input type="text" id="session-name" placeholder="Session name…" autocomplete="off" />
+      <button id="new-session-btn" class="header-btn">+ New</button>
+      <button id="clear-session-btn" class="header-btn danger">Clear</button>
+    </div>
+    <button id="toggle-chat-btn" class="header-btn" title="Toggle chat panel">☰</button>
+    <span id="status" class="status">connecting…</span>
+  </header>
+
+  <div id="main">
+
+    <!-- Visualization area (left) -->
+    <div id="viz-panel">
+      <div id="viz-toolbar" class="viz-toolbar">
+        <span class="tab active" data-tab="globe">3D Globe</span>
+        <span class="tab" data-tab="map">2D Map</span>
+        <span class="tab" data-tab="image">Image</span>
+        <span class="tab" data-tab="table">Table</span>
+        <span id="viz-label"></span>
+
+        <div id="toolbar-actions">
+          <select id="renderer-choice">
+            <option value="cesium">CesiumJS</option>
+            <option value="deckgl">deck.gl</option>
+            <option value="maplibre">MapLibre</option>
+          </select>
+          <button class="map-action-btn" id="draw-btn" title="Draw on map">✏ Draw</button>
+          <button class="map-action-btn" id="measure-btn" title="Measure distance">📏 Measure</button>
+          <button class="map-action-btn" id="annotate-btn" title="Annotate">📌 Annotate</button>
+          <button class="map-action-btn" id="pick-btn" title="Feature info">ℹ Info</button>
+          <select id="basemap-select" class="basemap-select" title="Switch basemap">
+            <option value="osm">OSM</option>
+            <option value="satellite">Satellite</option>
+            <option value="topo">Topo</option>
+            <option value="dark">Dark</option>
+          </select>
+          <button class="map-action-btn" id="export-png-btn" title="Export PNG">⬇ PNG</button>
+        </div>
+      </div>
+
+      <!-- Layer panel -->
+      <div id="layer-panel"></div>
+
+      <!-- View containers -->
+      <div id="viz-content" class="viz-content">
+        <div id="globe-container" class="view-container active"></div>
+
+        <div id="map-container" class="view-container">
+          <div id="leaflet-map"></div>
+          <div id="map-search-wrap">
+            <input id="map-search-input" type="text" placeholder="Fly to place…" autocomplete="off" />
+            <button id="map-search-btn" title="Fly to place">⌕</button>
+          </div>
+        </div>
+
+        <div id="image-view" class="view-container">
+          <span class="img-title" id="img-title"></span>
+          <img id="img-el" src="" alt="Output" />
+        </div>
+
+        <div id="table-view" class="view-container">
+          <h3 id="table-title"></h3>
+          <table id="data-table"><thead></thead><tbody></tbody></table>
+        </div>
+
+        <div class="placeholder" id="placeholder">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+          <p>Visualizations will appear here</p>
+        </div>
+
+        <div id="attr-table-modal" style="display:none">
+          <div id="attr-table-header">
+            <span id="attr-table-title">Attribute Table</span>
+            <button id="attr-table-close" title="Close">&times;</button>
+          </div>
+          <div id="attr-table-wrap">
+            <table id="attr-table"><thead></thead><tbody></tbody></table>
+          </div>
+        </div>
+
+        <div id="stats-window" style="display:none">
+          <div id="stats-win-header">
+            <span id="stats-win-title">Layer Stats</span>
+            <button id="stats-win-close" title="Close">&times;</button>
+          </div>
+          <div id="stats-win-layers" style="display:none"></div>
+          <div id="stats-win-body"></div>
+        </div>
+
+        <div id="choropleth-legend" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- Chat Panel (right) -->
+    <aside id="chat-panel">
+      <div id="data-section" class="data-section">
+        <div class="data-header" id="data-header">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span class="data-count" id="data-count">My Data</span>
+          <label for="file-input" class="upload-label">+ Upload</label>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               id="data-chevron" style="transition:transform 0.2s; flex-shrink:0">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+        <div class="data-list" id="data-list" style="display:none">
+          <div class="dataset-empty">No datasets yet — upload a file to get started</div>
+        </div>
+      </div>
+      <input type="file" id="file-input" hidden accept=".gpkg,.geojson,.zip,.csv,.shp,.las,.laz,.tif,.tiff,.gltf,.glb" />
+
+      <div id="messages" class="messages">
+        <div class="message system" id="welcome-msg">
+          <div style="margin-bottom:10px">What would you like to explore?</div>
+          <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start">
+            <button class="example-query">Coffee shops near Central Park, New York</button>
+            <button class="example-query">Fly to London and classify the point cloud</button>
+            <button class="example-query">Show 15 min walk isochrone from Waterloo Station</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="typing-indicator" class="typing" style="display:none">
+        <div class="typing-dots"><span></span><span></span><span></span></div>
+        <div class="typing-status" id="typing-status"></div>
+      </div>
+
+      <div class="input-area">
+        <textarea id="chat-input" placeholder="Ask the agent to analyze data, fly to locations, show layers…" rows="1"></textarea>
+        <button id="chat-send">Send</button>
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
