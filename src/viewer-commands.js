@@ -386,6 +386,36 @@ function registerNewCommands() {
     if (params?.scanB) document.getElementById('pcc-scan-b').value = params.scanB;
     if (params?.scanA && params?.scanB) document.getElementById('pcc-load')?.click();
   });
+
+  registerCommand('load_google_3d', () => {
+    document.getElementById('google3d-btn')?.click();
+  });
+
+  registerCommand('weather', (params) => {
+    document.getElementById('weather-btn')?.click();
+    if (params?.type) {
+      setTimeout(() => {
+        const sel = document.getElementById('weather-type');
+        if (sel) { sel.value = params.type; }
+        document.getElementById('weather-apply')?.click();
+      }, 200);
+    }
+  });
+
+  registerCommand('traffic', () => {
+    document.getElementById('traffic-btn')?.click();
+  });
+
+  registerCommand('flood', (params) => {
+    document.getElementById('flood-btn')?.click();
+    if (params?.level) {
+      setTimeout(() => {
+        const el = document.getElementById('flood-level');
+        if (el) el.value = params.level;
+        document.getElementById('flood-apply')?.click();
+      }, 200);
+    }
+  });
 }
 
 registerNewCommands();
