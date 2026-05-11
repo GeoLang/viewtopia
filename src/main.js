@@ -63,6 +63,11 @@ import { initWindViz } from './wind-viz.js';
 import { initDayLighting } from './day-lighting.js';
 import { initNoiseMap } from './noise-map.js';
 import { initEnergyHeatmap } from './energy-heatmap.js';
+import { initIndoorNav } from './indoor-nav.js';
+import { initSolarPlacement } from './solar-placement.js';
+import { initTrafficFlow } from './traffic-flow.js';
+import { initDronePlanner } from './drone-planner.js';
+import { initWebXR } from './webxr.js';
 
 async function main() {
   // Discover which backends are available
@@ -151,6 +156,11 @@ async function main() {
   initDayLighting();
   initNoiseMap();
   initEnergyHeatmap();
+  initIndoorNav();
+  initSolarPlacement();
+  initTrafficFlow();
+  initDronePlanner();
+  initWebXR();
 
   // If TileTopia is available, try loading open terrain
   if (backends.tiletopia && viewer) {
