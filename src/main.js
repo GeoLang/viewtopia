@@ -76,6 +76,7 @@ import { initTimelapse } from './timelapse.js';
 import { initPanelManager } from './panel-manager.js';
 import { initToolbarMenus } from './toolbar-menu.js';
 import { initGoogle3DTiles } from './google-3d-tiles.js';
+import { initSettings } from './settings.js';
 
 async function main() {
   // Discover which backends are available
@@ -177,6 +178,7 @@ async function main() {
   initTimelapse();
   initPanelManager();
   initGoogle3DTiles();
+  initSettings();
 
   // If TileTopia is available, try loading open terrain
   if (backends.tiletopia && viewer) {

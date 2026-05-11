@@ -466,6 +466,32 @@ body {
   color: #a78bfa;
 }
 
+/* ── Settings Panel ──────────────────────────── */
+.settings-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+.settings-input {
+  background: #0f1117;
+  border: 1px solid #2d3148;
+  border-radius: 6px;
+  color: #e2e8f0;
+  font-size: 0.78rem;
+  font-family: inherit;
+  padding: 6px 8px;
+  width: 100%;
+}
+
+.settings-input:focus {
+  outline: none;
+  border-color: #7c3aed;
+}
+
 /* ── View Containers ──────────────────────────── */
 .viz-content {
   flex: 1;
