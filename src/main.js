@@ -34,6 +34,14 @@ import { initOGCLayers } from './ogc-layers.js';
 import { initThemeToggle } from './theme-toggle.js';
 import { initTrackImport } from './track-import.js';
 import { initTour } from './tour.js';
+import { initDragDrop } from './drag-drop.js';
+import { initCoordReadout } from './coord-readout.js';
+import { initContextMenu } from './context-menu.js';
+import { initLayerManager } from './layer-manager.js';
+import { initCesiumIon } from './cesium-ion.js';
+import { initCharts } from './charts.js';
+import { initShadows } from './shadows.js';
+import { initViewshed } from './viewshed.js';
 
 async function main() {
   // Discover which backends are available
@@ -89,6 +97,14 @@ async function main() {
   initThemeToggle();
   initTrackImport();
   initTour();
+  initDragDrop();
+  initCoordReadout();
+  initContextMenu();
+  initLayerManager();
+  initCesiumIon();
+  initCharts();
+  initShadows();
+  initViewshed();
 
   // If TileTopia is available, try loading open terrain
   if (backends.tiletopia) {
