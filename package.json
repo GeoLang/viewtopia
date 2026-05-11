@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:all": "vitest run && playwright test"
   },
   "dependencies": {
     "@deck.gl/aggregation-layers": "^9.3.2",
@@ -21,7 +25,10 @@
     "maplibre-gl": "^5.24.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "jsdom": "^29.1.1",
     "vite": "^6.0.0",
-    "vite-plugin-cesium": "^1.2.23"
+    "vite-plugin-cesium": "^1.2.23",
+    "vitest": "^4.1.5"
   }
 }
