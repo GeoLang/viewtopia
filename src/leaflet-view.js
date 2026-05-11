@@ -12,6 +12,8 @@ import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 
+import { getSetting } from './settings.js';
+
 let map = null;
 let clickQueryActive = false;
 let mapClickHandler = null;
@@ -24,10 +26,17 @@ export function initLeafletMap(containerId = 'leaflet-map', center = [20, 0], zo
   if (map) return map;
 
   map = L.map(containerId, { center, zoom });
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap',
-    maxZoom: 19,
-  }).addTo(map);
+
+  // Apply saved basemap preference (default to OSM)
+  const savedBasemap = getSetting('defaultBasemap') || 'osm';
+  const tiles = {
+    osm: { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attr: '&copy; OpenStreetMap' },
+    satellite: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr: '&copy; Esri' },
+    topo: { url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', attr: '&copy; OpenTopoMap' },
+    dark: { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', attr: '&copy; CARTO' },
+  };
+  const t = tiles[savedBasemap] || tiles.osm;
+  L.tileLayer(t.url, { attribution: t.attr, maxZoom: 19 }).addTo(map);
 
   // Make L available globally for dynamic layer additions
   window.L = L;
