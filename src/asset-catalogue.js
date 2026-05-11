@@ -63,21 +63,62 @@ async function renderAssetPanel() {
       return;
     }
 
-    list.innerHTML = assets.map(a => `
-      <div class="asset-item" data-id="${sanitize(a.id)}">
-        <div class="asset-name">${sanitize(a.name)}</div>
-        <div class="asset-meta">
-          <span class="asset-type">${sanitize(a.asset_type || 'unknown')}</span>
-          <span class="asset-status ${sanitize(a.status)}">${sanitize(a.status)}</span>
-          ${a.size_bytes ? `<span class="asset-size">${formatBytes(a.size_bytes)}</span>` : ''}
-        </div>
-      </div>
-    `).join('');
+    list.innerHTML = assets.map(a => {
+      const isReady = a.status === 'ready' || a.status === 'complete';
+      const isProcessing = a.status === 'processing' || a.status === 'tiling';
+      const icon = getAssetIcon(a.asset_type);
+      const progress = isProcessing ? (a.progress ?? 0) : (isReady ? 100 : 0);
 
-    // Click to load tileset
-    list.querySelectorAll('.asset-item').forEach(el => {
+      return `
+      <div class="asset-item ${isReady ? '' : 'disabled'}" data-id="${sanitize(a.id)}">
+        <div class="asset-item-header">
+          <span class="asset-icon">${icon}</span>
+          <div class="asset-name-wrap">
+            <div class="asset-name">${sanitize(a.name)}</div>
+            <div class="asset-meta-row">
+              <span class="asset-type-badge">${sanitize(a.asset_type || 'unknown')}</span>
+              ${a.point_count ? `<span class="asset-stat">${formatNumber(a.point_count)} pts</span>` : ''}
+              ${a.tile_count ? `<span class="asset-stat">${a.tile_count} tiles</span>` : ''}
+              ${a.size_bytes ? `<span class="asset-stat">${formatBytes(a.size_bytes)}</span>` : ''}
+            </div>
+          </div>
+          <span class="asset-status-dot ${sanitize(a.status)}"></span>
+        </div>
+        ${isProcessing ? `
+          <div class="asset-progress-bar">
+            <div class="asset-progress-fill" style="width:${progress}%"></div>
+          </div>
+          <div class="asset-progress-text">${a.status_message || 'Tiling...'} ${progress}%</div>
+        ` : ''}
+        ${isReady ? `
+          <div class="asset-actions">
+            <button class="asset-action-btn asset-load-btn" data-id="${sanitize(a.id)}" title="Load in viewer">👁 View</button>
+            <button class="asset-action-btn asset-info-btn" data-id="${sanitize(a.id)}" title="Show details">ℹ Info</button>
+            <button class="asset-action-btn asset-remove-btn" data-id="${sanitize(a.id)}" title="Remove from viewer">✕</button>
+          </div>
+        ` : ''}
+      </div>`;
+    }).join('');
+
+    // Wire click handlers
+    list.querySelectorAll('.asset-load-btn').forEach(el => {
+      el.addEventListener('click', (e) => { e.stopPropagation(); loadTileset(el.dataset.id); });
+    });
+    list.querySelectorAll('.asset-info-btn').forEach(el => {
+      el.addEventListener('click', (e) => { e.stopPropagation(); showAssetInfo(el.dataset.id, assets); });
+    });
+    list.querySelectorAll('.asset-remove-btn').forEach(el => {
+      el.addEventListener('click', (e) => { e.stopPropagation(); unloadTileset(el.dataset.id); });
+    });
+    list.querySelectorAll('.asset-item:not(.disabled)').forEach(el => {
       el.addEventListener('click', () => loadTileset(el.dataset.id));
     });
+
+    // Auto-refresh if any assets are still processing
+    const hasProcessing = assets.some(a => a.status === 'processing' || a.status === 'tiling');
+    if (hasProcessing) {
+      setTimeout(renderAssetPanel, 3000);
+    }
   } catch (e) {
     list.innerHTML = `<div class="asset-empty">Failed to load assets: ${sanitize(e.message)}</div>`;
   }
@@ -123,6 +164,23 @@ async function handleUpload(e) {
   const statusEl = document.getElementById('asset-status');
   if (statusEl) statusEl.textContent = 'Uploading…';
 
+  // Show upload progress in the list
+  const list = document.getElementById('asset-list-items');
+  const progressEl = document.createElement('div');
+  progressEl.className = 'asset-item';
+  progressEl.innerHTML = `
+    <div class="asset-item-header">
+      <span class="asset-icon">${getAssetIcon(assetType)}</span>
+      <div class="asset-name-wrap">
+        <div class="asset-name">${sanitize(file.name)}</div>
+        <div class="asset-meta-row"><span class="asset-stat">${formatBytes(file.size)}</span></div>
+      </div>
+    </div>
+    <div class="asset-progress-bar"><div class="asset-progress-fill" id="upload-progress-fill" style="width:0%"></div></div>
+    <div class="asset-progress-text" id="upload-progress-text">Uploading 0%...</div>
+  `;
+  if (list) list.prepend(progressEl);
+
   try {
     // Create asset entry
     const createRes = await fetch(`${getTileTopiaBase()}/assets`, {
@@ -134,21 +192,42 @@ async function handleUpload(e) {
     if (!createRes.ok) throw new Error(`Create failed: ${createRes.status}`);
     const asset = await createRes.json();
 
-    // Upload file data
-    const formData = new FormData();
-    formData.append('file', file);
-    const uploadRes = await fetch(`${getTileTopiaBase()}/assets/${encodeURIComponent(asset.id)}/upload`, {
-      method: 'POST',
-      body: formData,
+    // Upload file with progress tracking via XMLHttpRequest
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${getTileTopiaBase()}/assets/${encodeURIComponent(asset.id)}/upload`);
+
+      xhr.upload.onprogress = (ev) => {
+        if (ev.lengthComputable) {
+          const pct = Math.round((ev.loaded / ev.total) * 100);
+          const fill = document.getElementById('upload-progress-fill');
+          const text = document.getElementById('upload-progress-text');
+          if (fill) fill.style.width = `${pct}%`;
+          if (text) text.textContent = `Uploading ${pct}%... (${formatBytes(ev.loaded)} / ${formatBytes(ev.total)})`;
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) resolve();
+        else reject(new Error(`Upload failed: ${xhr.status}`));
+      };
+      xhr.onerror = () => reject(new Error('Upload network error'));
+
+      const formData = new FormData();
+      formData.append('file', file);
+      xhr.send(formData);
     });
 
-    if (!uploadRes.ok) throw new Error(`Upload failed: ${uploadRes.status}`);
+    if (statusEl) statusEl.textContent = 'Tiling…';
+    const text = document.getElementById('upload-progress-text');
+    if (text) text.textContent = 'Upload complete — tiling in progress...';
 
-    if (statusEl) statusEl.textContent = 'Upload complete';
-    renderAssetPanel();
+    // Refresh panel to show tiling status
+    setTimeout(renderAssetPanel, 1000);
   } catch (err) {
     console.error('Upload error:', err);
     if (statusEl) statusEl.textContent = 'Upload failed';
+    progressEl.remove();
   }
 
   // Reset input
@@ -171,4 +250,69 @@ function formatBytes(bytes) {
   let val = bytes;
   while (val >= 1024 && i < units.length - 1) { val /= 1024; i++; }
   return `${val.toFixed(i ? 1 : 0)} ${units[i]}`;
+}
+
+/** Format large numbers with K/M suffixes */
+function formatNumber(n) {
+  if (!n) return '0';
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
+/** Get icon for asset type */
+function getAssetIcon(type) {
+  switch (type) {
+    case 'pointcloud': return '☁';
+    case 'terrain': return '⛰';
+    case 'model': return '🏗';
+    case 'vector': return '📐';
+    default: return '📦';
+  }
+}
+
+/** Unload a tileset from the viewer */
+function unloadTileset(assetId) {
+  if (!cesiumViewer) return;
+  const tileset = loadedTilesets.get(assetId);
+  if (tileset) {
+    cesiumViewer.scene.primitives.remove(tileset);
+    loadedTilesets.delete(assetId);
+    const el = document.querySelector(`.asset-item[data-id="${CSS.escape(assetId)}"]`);
+    if (el) el.classList.remove('active');
+  }
+}
+
+/** Show detailed asset info in a panel */
+async function showAssetInfo(assetId, assets) {
+  const asset = assets?.find(a => a.id === assetId);
+  if (!asset) return;
+
+  let detail = document.getElementById('asset-detail-panel');
+  if (detail) detail.remove();
+
+  detail = document.createElement('div');
+  detail.id = 'asset-detail-panel';
+  detail.className = 'floating-panel';
+  detail.innerHTML = `
+    <div class="panel-header">
+      <span>${getAssetIcon(asset.asset_type)} ${sanitize(asset.name)}</span>
+      <button class="panel-close" onclick="this.closest('.floating-panel').remove()">✕</button>
+    </div>
+    <div class="panel-body" style="font-size:0.75rem">
+      <table style="width:100%;border-collapse:collapse">
+        <tr><td style="color:#94a3b8;padding:2px 8px 2px 0">ID</td><td style="font-family:monospace;font-size:0.7rem">${sanitize(asset.id)}</td></tr>
+        <tr><td style="color:#94a3b8;padding:2px 8px 2px 0">Type</td><td>${sanitize(asset.asset_type)}</td></tr>
+        <tr><td style="color:#94a3b8;padding:2px 8px 2px 0">Status</td><td>${sanitize(asset.status)}</td></tr>
+        ${asset.size_bytes ? `<tr><td style="color:#94a3b8;padding:2px 8px 2px 0">File size</td><td>${formatBytes(asset.size_bytes)}</td></tr>` : ''}
+        ${asset.point_count ? `<tr><td style="color:#94a3b8;padding:2px 8px 2px 0">Points</td><td>${formatNumber(asset.point_count)}</td></tr>` : ''}
+        ${asset.tile_count ? `<tr><td style="color:#94a3b8;padding:2px 8px 2px 0">Tiles</td><td>${asset.tile_count}</td></tr>` : ''}
+        ${asset.geometric_error ? `<tr><td style="color:#94a3b8;padding:2px 8px 2px 0">Geometric error</td><td>${asset.geometric_error.toFixed(2)}</td></tr>` : ''}
+        ${asset.crs ? `<tr><td style="color:#94a3b8;padding:2px 8px 2px 0">CRS</td><td>${sanitize(asset.crs)}</td></tr>` : ''}
+        ${asset.created_at ? `<tr><td style="color:#94a3b8;padding:2px 8px 2px 0">Created</td><td>${new Date(asset.created_at).toLocaleString()}</td></tr>` : ''}
+      </table>
+    </div>
+  `;
+
+  document.getElementById('viz-panel').appendChild(detail);
 }

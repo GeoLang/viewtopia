@@ -77,6 +77,8 @@ import { initPanelManager } from './panel-manager.js';
 import { initToolbarMenus } from './toolbar-menu.js';
 import { initGoogle3DTiles } from './google-3d-tiles.js';
 import { initSettings } from './settings.js';
+import { initGlobalTerrain } from './global-terrain.js';
+import { initShareLinks } from './share-links.js';
 
 async function main() {
   // Discover which backends are available
@@ -179,17 +181,8 @@ async function main() {
   initPanelManager();
   initGoogle3DTiles();
   initSettings();
-
-  // If TileTopia is available, try loading open terrain
-  if (backends.tiletopia && viewer) {
-    try {
-      const terrainRes = await fetch('/api/v1/terrain/layer.json', { signal: AbortSignal.timeout(2000) });
-      if (terrainRes.ok) {
-        const provider = await Cesium.CesiumTerrainProvider.fromUrl('/api/v1/terrain');
-        viewer.scene.terrainProvider = provider;
-      }
-    } catch { /* ellipsoid fallback */ }
-  }
+  initGlobalTerrain();
+  initShareLinks();
 
   // Default view: show 3D globe if TileTopia is connected, otherwise 2D map
   if (!backends.tiletopia && backends.geolang) {

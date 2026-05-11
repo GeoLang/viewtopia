@@ -14,6 +14,7 @@ const defaults = {
   googleApiKey: '',
   cesiumIonToken: '',
   mapboxToken: '',
+  maptilerKey: '',
   theme: 'dark',
   defaultRenderer: 'cesium',
   defaultBasemap: 'osm',
@@ -144,6 +145,10 @@ function toggleSettingsPanel() {
         <input type="password" id="set-mapbox-token" class="settings-input" value="${esc(settings.mapboxToken)}" placeholder="pk.eyJ...">
         <span style="font-size:0.65rem;color:#64748b">For Mapbox basemaps. Not required — OSM tiles are used by default.</span>
       </label>
+      <label class="settings-label">Maptiler API Key (optional)
+        <input type="password" id="set-maptiler-key" class="settings-input" value="${esc(settings.maptilerKey)}" placeholder="Your Maptiler key...">
+        <span style="font-size:0.65rem;color:#64748b">For global terrain. Free at <a href="https://cloud.maptiler.com/account/keys/" target="_blank" style="color:#a78bfa">maptiler.com</a>.</span>
+      </label>
     </fieldset>
 
     <!-- Display -->
@@ -212,6 +217,7 @@ function toggleSettingsPanel() {
     settings.googleApiKey = document.getElementById('set-google-key').value.trim();
     settings.cesiumIonToken = document.getElementById('set-ion-token').value.trim();
     settings.mapboxToken = document.getElementById('set-mapbox-token').value.trim();
+    settings.maptilerKey = document.getElementById('set-maptiler-key').value.trim();
     settings.defaultRenderer = document.getElementById('set-renderer').value;
     settings.defaultBasemap = document.getElementById('set-basemap').value;
     settings.showMinimap = document.getElementById('set-minimap').checked;

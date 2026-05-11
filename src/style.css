@@ -766,9 +766,28 @@ body {
   padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #1e2235;
   transition: background .15s;
 }
-.asset-item:hover { background: rgba(124,58,237,0.1); }
+.asset-item.disabled { opacity: 0.6; cursor: default; }
+.asset-item:not(.disabled):hover { background: rgba(124,58,237,0.1); }
 .asset-item.active { background: rgba(124,58,237,0.15); border-left: 3px solid #7c3aed; }
-.asset-name { color: #e2e8f0; font-weight: 500; font-size: .85rem; }
+.asset-item-header { display: flex; align-items: center; gap: 8px; }
+.asset-icon { font-size: 1.2rem; flex-shrink: 0; }
+.asset-name-wrap { flex: 1; min-width: 0; }
+.asset-name { color: #e2e8f0; font-weight: 500; font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.asset-meta-row { display: flex; gap: 6px; margin-top: 2px; font-size: .68rem; color: #64748b; flex-wrap: wrap; }
+.asset-type-badge { text-transform: capitalize; background: rgba(124,58,237,0.15); color: #a78bfa; padding: 0 4px; border-radius: 3px; font-size: .65rem; }
+.asset-stat { color: #64748b; }
+.asset-status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.asset-status-dot.ready, .asset-status-dot.complete { background: #3fb950; }
+.asset-status-dot.processing, .asset-status-dot.tiling { background: #f0b429; animation: pulse 1.5s infinite; }
+.asset-status-dot.error, .asset-status-dot.failed { background: #f85149; }
+.asset-status-dot.pending, .asset-status-dot.queued { background: #64748b; }
+.asset-progress-bar { margin-top: 6px; height: 3px; background: #1e2235; border-radius: 2px; overflow: hidden; }
+.asset-progress-fill { height: 100%; background: linear-gradient(90deg, #7c3aed, #a78bfa); border-radius: 2px; transition: width 0.3s; }
+.asset-progress-text { font-size: .65rem; color: #94a3b8; margin-top: 2px; }
+.asset-actions { display: flex; gap: 4px; margin-top: 6px; }
+.asset-action-btn { background: #1e2235; border: 1px solid #2d3148; border-radius: 4px; color: #94a3b8; cursor: pointer; font-size: .65rem; padding: 2px 6px; transition: all 0.15s; }
+.asset-action-btn:hover { background: rgba(124,58,237,0.1); color: #a78bfa; border-color: #4c1d95; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 .asset-meta { display: flex; gap: 6px; margin-top: 2px; font-size: .75rem; color: #64748b; }
 .asset-type { text-transform: capitalize; }
 .asset-status.ready { color: #3fb950; }
