@@ -27,6 +27,13 @@ import { initSplitView } from './split-view.js';
 import { initMinimap } from './minimap.js';
 import { initStories } from './stories.js';
 import { initCollaboration } from './collaboration.js';
+import { initKeyboardShortcuts } from './keyboard-shortcuts.js';
+import { initGeocoding } from './geocoding.js';
+import { initRouting } from './routing.js';
+import { initOGCLayers } from './ogc-layers.js';
+import { initThemeToggle } from './theme-toggle.js';
+import { initTrackImport } from './track-import.js';
+import { initTour } from './tour.js';
 
 async function main() {
   // Discover which backends are available
@@ -75,6 +82,13 @@ async function main() {
   initMinimap();
   initStories();
   initCollaboration();
+  initKeyboardShortcuts();
+  initGeocoding();
+  initRouting();
+  initOGCLayers();
+  initThemeToggle();
+  initTrackImport();
+  initTour();
 
   // If TileTopia is available, try loading open terrain
   if (backends.tiletopia) {

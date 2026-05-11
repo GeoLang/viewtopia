@@ -1,0 +1,74 @@
+version: "3.8"
+
+# ViewTopia full stack — one command to run everything
+# Usage: docker compose up --build
+
+services:
+  # TileTopia — Rust geospatial server (3D Tiles, terrain, asset management)
+  tiletopia:
+    build:
+      context: ../tiletopia
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - tiletopia-data:/data
+    environment:
+      - TILETOPIA_DATA_DIR=/data
+      - TILETOPIA_HOST=0.0.0.0
+      - TILETOPIA_PORT=3000
+      - RUST_LOG=info
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # GeoLang — Python AI/NLP geospatial server
+  geolang:
+    build:
+      context: ../geolang
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - geolang-cache:/app/cache
+    environment:
+      - GEOLANG_HOST=0.0.0.0
+      - GEOLANG_PORT=8080
+    depends_on:
+      - letta
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Letta — AI agent memory server (used by GeoLang)
+  letta:
+    image: letta/letta:latest
+    ports:
+      - "8283:8283"
+    volumes:
+      - letta-data:/root/.letta
+
+  # ViewTopia — Vite dev server (or static build for production)
+  viewtopia:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5174:5174"
+    environment:
+      - VITE_TILETOPIA_URL=http://tiletopia:3000
+      - VITE_GEOLANG_URL=http://geolang:8080
+    depends_on:
+      tiletopia:
+        condition: service_healthy
+      geolang:
+        condition: service_healthy
+
+volumes:
+  tiletopia-data:
+  geolang-cache:
+  letta-data:

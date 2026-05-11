@@ -922,3 +922,112 @@ body {
   background: rgba(124,58,237,0.15); border: 1px solid #7c3aed; color: #a78bfa;
   padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: .8rem;
 }
+
+/* ── Geocoding ────────────────────────────────── */
+.geocode-wrap { position: relative; }
+.geocode-input {
+  background: #1e2235; border: 1px solid #2d3148; border-radius: 4px;
+  padding: 5px 8px; color: #e2e8f0; font-size: .8rem; width: 180px;
+}
+.geocode-input:focus { border-color: #7c3aed; outline: none; }
+.geocode-results {
+  position: absolute; top: 100%; left: 0; z-index: 700;
+  background: rgba(15,17,23,0.98); border: 1px solid #2d3148;
+  border-radius: 6px; width: 320px; max-height: 250px; overflow-y: auto;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+.gc-item {
+  padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #1e2235;
+  transition: background .15s;
+}
+.gc-item:hover { background: rgba(124,58,237,0.1); }
+.gc-name { color: #e2e8f0; font-size: .85rem; }
+.gc-type { color: #64748b; font-size: .75rem; margin-top: 2px; }
+.gc-empty { padding: 12px; color: #64748b; text-align: center; font-size: .8rem; }
+
+/* ── Shortcut Help ────────────────────────────── */
+.shortcut-help {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 10000; background: rgba(0,0,0,0.7);
+  display: flex; align-items: center; justify-content: center;
+}
+.sh-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px; border-bottom: 1px solid #2d3148;
+  font-weight: 600; color: #e2e8f0; font-size: 1rem;
+}
+.sh-close { background: none; border: none; color: #64748b; font-size: 1.2rem; cursor: pointer; }
+.sh-body {
+  background: rgba(15,17,23,0.98); border: 1px solid #2d3148;
+  border-radius: 12px; width: 400px; max-height: 80vh; overflow-y: auto;
+}
+.sh-group { padding: 10px 20px; }
+.sh-group h4 { color: #a78bfa; font-size: .8rem; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+.sh-row { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
+.sh-row kbd {
+  display: inline-block; min-width: 28px; text-align: center;
+  padding: 2px 6px; background: #1e2235; border: 1px solid #2d3148;
+  border-radius: 4px; color: #e2e8f0; font-family: monospace; font-size: .8rem;
+}
+.sh-row span { color: #94a3b8; font-size: .85rem; }
+
+/* ── Tour Overlay ─────────────────────────────── */
+.tour-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 10000; background: rgba(0,0,0,0.5);
+}
+.tour-tooltip {
+  position: fixed; width: 280px; background: rgba(15,17,23,0.98);
+  border: 1px solid #7c3aed; border-radius: 10px; padding: 16px;
+  box-shadow: 0 4px 20px rgba(124,58,237,0.3);
+  z-index: 10001;
+}
+.tour-step-num { color: #64748b; font-size: .7rem; margin-bottom: 4px; }
+.tour-title { color: #e2e8f0; font-size: .95rem; margin-bottom: 6px; }
+.tour-text { color: #94a3b8; font-size: .85rem; line-height: 1.4; margin-bottom: 12px; }
+.tour-actions { display: flex; justify-content: space-between; }
+.tour-skip {
+  background: none; border: none; color: #64748b; cursor: pointer; font-size: .8rem;
+}
+.tour-next {
+  background: rgba(124,58,237,0.2); border: 1px solid #7c3aed; color: #a78bfa;
+  padding: 5px 14px; border-radius: 6px; cursor: pointer; font-size: .8rem;
+}
+.tour-next:hover { background: rgba(124,58,237,0.4); }
+.tour-highlight { position: relative; z-index: 10001 !important; }
+
+/* ── Light Theme ──────────────────────────────── */
+body.light-theme { background: #f8fafc; color: #1e293b; }
+body.light-theme #header { background: #fff; border-bottom: 1px solid #e2e8f0; }
+body.light-theme #header h1 { color: #1e293b; }
+body.light-theme #chat-panel { background: #fff; border-left: 1px solid #e2e8f0; }
+body.light-theme .message.system { background: #f1f5f9; color: #475569; }
+body.light-theme .message.user { background: rgba(124,58,237,0.08); color: #1e293b; }
+body.light-theme .message.assistant { background: #f8fafc; border-color: #e2e8f0; color: #1e293b; }
+body.light-theme #chat-input-area { background: #f8fafc; border-top: 1px solid #e2e8f0; }
+body.light-theme #chat-input { background: #fff; border-color: #d1d5db; color: #1e293b; }
+body.light-theme .viz-toolbar { background: #fff; border-bottom: 1px solid #e2e8f0; }
+body.light-theme .tab { color: #475569; }
+body.light-theme .tab.active { color: #7c3aed; border-bottom-color: #7c3aed; }
+body.light-theme .header-btn { background: #f1f5f9; color: #475569; border-color: #d1d5db; }
+body.light-theme .map-action-btn { background: #f1f5f9; color: #475569; border-color: #d1d5db; }
+body.light-theme select { background: #fff; color: #1e293b; border-color: #d1d5db; }
+body.light-theme .data-section { background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+body.light-theme #asset-panel { background: rgba(255,255,255,0.95); border-color: #e2e8f0; }
+body.light-theme .feature-info-panel,
+body.light-theme .style-editor-panel,
+body.light-theme .bookmark-panel,
+body.light-theme .terrain-profile,
+body.light-theme .timeline-bar,
+body.light-theme .tour-tooltip,
+body.light-theme .collab-panel,
+body.light-theme .geojson-prop-panel,
+body.light-theme .measure-menu,
+body.light-theme .geocode-results,
+body.light-theme .shortcut-help .sh-body {
+  background: rgba(255,255,255,0.98); border-color: #e2e8f0; color: #1e293b;
+}
+body.light-theme .fip-key { color: #7c3aed; }
+body.light-theme .fip-val,
+body.light-theme .bk-name,
+body.light-theme .gc-name { color: #1e293b; }

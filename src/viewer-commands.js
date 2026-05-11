@@ -198,6 +198,103 @@ export function initViewerCommands() {
     const layer = createScreenGridLayer({ data, cellSize });
     addDeckLayer(layer);
   });
+
+  // ─── New pro-feature commands ────────────────────────────────────────
+  registerCommand('measure_distance', () => {
+    import('./measurement.js').then(({ getMeasurementTool }) => {
+      getMeasurementTool()?.startDistance();
+    });
+  });
+
+  registerCommand('measure_area', () => {
+    import('./measurement.js').then(({ getMeasurementTool }) => {
+      getMeasurementTool()?.startArea();
+    });
+  });
+
+  registerCommand('measure_height', () => {
+    import('./measurement.js').then(({ getMeasurementTool }) => {
+      getMeasurementTool()?.startHeight();
+    });
+  });
+
+  registerCommand('annotate', (params) => {
+    import('./annotations.js').then(({ getAnnotationTool }) => {
+      const at = getAnnotationTool();
+      if (at && params.text && params.lon != null && params.lat != null) {
+        at._addEntity(crypto.randomUUID(), params.text, params.lon, params.lat, params.height || 0);
+      } else if (at) {
+        at.enable();
+      }
+    });
+  });
+
+  registerCommand('style_by_height', () => {
+    import('./feature-picker.js').then(({ getStyleEditor }) => {
+      getStyleEditor()?.setColorByHeight();
+    });
+  });
+
+  registerCommand('style_by_classification', () => {
+    import('./feature-picker.js').then(({ getStyleEditor }) => {
+      getStyleEditor()?.setColorByClassification();
+    });
+  });
+
+  registerCommand('style_by_property', (params) => {
+    import('./feature-picker.js').then(({ getStyleEditor }) => {
+      if (params.property) getStyleEditor()?.setColorByProperty(params.property);
+    });
+  });
+
+  registerCommand('terrain_profile', (params) => {
+    import('./terrain-profile.js').then(({ showTerrainProfile }) => {
+      if (params.start_lon != null && params.start_lat != null && params.end_lon != null && params.end_lat != null) {
+        showTerrainProfile(params.start_lon, params.start_lat, params.end_lon, params.end_lat, params.samples || 100);
+      }
+    });
+  });
+
+  registerCommand('show_timeline', (params) => {
+    import('./timeline.js').then(({ showTimeline }) => {
+      if (params.start && params.end) showTimeline(params.start, params.end);
+    });
+  });
+
+  registerCommand('save_bookmark', (params) => {
+    const name = params.name || 'Saved View';
+    // Triggers the bookmark save from current camera
+    document.getElementById('bk-name')?.setAttribute('value', name);
+    document.getElementById('bk-save')?.click();
+  });
+
+  registerCommand('play_story', (params) => {
+    import('./stories.js').then(({ getStoryPlayer }) => {
+      const sp = getStoryPlayer();
+      if (sp && params.story) {
+        sp.load(params.story);
+        sp.play();
+      } else if (sp) {
+        sp.showList();
+      }
+    });
+  });
+
+  registerCommand('split_view', () => {
+    document.getElementById('split-btn')?.click();
+  });
+
+  registerCommand('switch_tab', (params) => {
+    import('./tabs.js').then(({ showTab }) => {
+      if (params.tab) showTab(params.tab);
+    });
+  });
+
+  registerCommand('switch_renderer', (params) => {
+    import('./renderers.js').then(({ switchRenderer }) => {
+      if (params.renderer) switchRenderer(params.renderer);
+    });
+  });
 }
 
 /** Add a deck.gl layer — switches to deck.gl renderer if needed */
