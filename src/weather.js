@@ -86,43 +86,61 @@ function applyWeather() {
   if (type === 'none') return;
 
   if (type === 'fog') {
-    // Use scene fog
     viewer.scene.fog.enabled = true;
     viewer.scene.fog.density = 0.0002 * (intensity / 50);
     viewer.scene.fog.minimumBrightness = 0.03;
     return;
   }
 
-  // Particle systems for rain/snow/storm
-  const emitterPosition = viewer.camera.positionWC.clone();
-  const config = getParticleConfig(type, intensity, wind);
+  // First, fly camera down to a reasonable altitude so particles are visible
+  const carto = viewer.camera.positionCartographic;
+  const currentHeight = carto.height;
 
-  particleSystem = new Cesium.ParticleSystem({
-    modelMatrix: Cesium.Matrix4.fromTranslation(emitterPosition),
-    emitter: new Cesium.BoxEmitter(new Cesium.Cartesian3(500, 500, 200)),
-    emissionRate: config.emissionRate,
-    startColor: config.startColor,
-    endColor: config.endColor,
-    startScale: config.startScale,
-    endScale: config.endScale,
-    minimumParticleLife: config.minLife,
-    maximumParticleLife: config.maxLife,
-    minimumSpeed: config.minSpeed,
-    maximumSpeed: config.maxSpeed,
-    imageSize: config.imageSize,
-    image: config.image,
-    lifetime: 600,
-    loop: true,
-    updateCallback: (particle) => {
-      // Apply wind drift
-      particle.position.x += wind * 0.1;
-    },
-  });
+  const proceed = () => {
+    const pos = viewer.camera.positionWC.clone();
+    const config = getParticleConfig(type, intensity, wind);
 
-  viewer.scene.primitives.add(particleSystem);
+    // Scale emitter box based on camera height
+    const h = viewer.camera.positionCartographic.height;
+    const boxSize = Math.max(100, Math.min(2000, h * 0.5));
 
-  // Follow camera
-  viewer.scene.preRender.addEventListener(updateParticlePosition);
+    particleSystem = new Cesium.ParticleSystem({
+      modelMatrix: Cesium.Matrix4.fromTranslation(pos),
+      emitter: new Cesium.BoxEmitter(new Cesium.Cartesian3(boxSize, boxSize, boxSize * 0.4)),
+      emissionRate: config.emissionRate,
+      startColor: config.startColor,
+      endColor: config.endColor,
+      startScale: config.startScale,
+      endScale: config.endScale,
+      minimumParticleLife: config.minLife,
+      maximumParticleLife: config.maxLife,
+      minimumSpeed: config.minSpeed,
+      maximumSpeed: config.maxSpeed,
+      imageSize: config.imageSize,
+      image: config.image,
+      lifetime: 600,
+      loop: true,
+    });
+
+    viewer.scene.primitives.add(particleSystem);
+    viewer.scene.preRender.addEventListener(updateParticlePosition);
+  };
+
+  // If camera is too high, fly down first
+  if (currentHeight > 5000) {
+    viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromRadians(carto.longitude, carto.latitude, 1000),
+      orientation: {
+        heading: viewer.camera.heading,
+        pitch: Cesium.Math.toRadians(-30),
+        roll: 0,
+      },
+      duration: 1.5,
+      complete: proceed,
+    });
+  } else {
+    proceed();
+  }
 }
 
 function updateParticlePosition() {
