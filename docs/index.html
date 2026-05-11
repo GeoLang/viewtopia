@@ -5,295 +5,347 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ViewTopia — Unified Geospatial Viewer</title>
 <style>
-:root {
-  --purple: #a78bfa;
-  --purple-dark: #7c3aed;
-  --bg: #0f1117;
-  --bg2: #1a1d2e;
-  --border: #2d3148;
-  --text: #e2e8f0;
-  --text-dim: #94a3b8;
-}
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  line-height: 1.6;
-}
-a { color: var(--purple); text-decoration: none; }
-a:hover { text-decoration: underline; }
-
-.hero {
-  text-align: center;
-  padding: 80px 20px 60px;
-  background: linear-gradient(180deg, #1a1030 0%, var(--bg) 100%);
-}
-.hero h1 {
-  font-size: 3.5rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, var(--purple), #06b6d4);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: 16px;
-}
-.hero p {
-  font-size: 1.3rem;
-  color: var(--text-dim);
-  max-width: 600px;
-  margin: 0 auto 32px;
-}
-.hero .badges {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-.hero .badges a img {
-  height: 24px;
-}
-.cta {
-  display: inline-flex;
-  gap: 12px;
-  margin-top: 32px;
-}
-.cta a {
-  padding: 12px 28px;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 1rem;
-  transition: all 0.2s;
-}
-.cta .primary {
-  background: var(--purple-dark);
-  color: white;
-}
-.cta .primary:hover { background: #6d28d9; text-decoration: none; }
-.cta .secondary {
-  background: var(--bg2);
-  color: var(--text);
-  border: 1px solid var(--border);
-}
-.cta .secondary:hover { border-color: var(--purple); text-decoration: none; }
-
-.features {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 60px 20px;
-}
-.features h2 {
-  text-align: center;
-  font-size: 2rem;
-  margin-bottom: 48px;
-  color: var(--purple);
-}
-.feature-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px;
-}
-.feature-card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 24px;
-  transition: border-color 0.2s, transform 0.2s;
-}
-.feature-card:hover {
-  border-color: var(--purple);
-  transform: translateY(-2px);
-}
-.feature-card .icon {
-  font-size: 2rem;
-  margin-bottom: 12px;
-}
-.feature-card h3 {
-  font-size: 1.1rem;
-  margin-bottom: 8px;
-  color: var(--text);
-}
-.feature-card p {
-  font-size: 0.9rem;
-  color: var(--text-dim);
-}
-
-.architecture {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 40px 20px 80px;
-}
-.architecture h2 {
-  text-align: center;
-  font-size: 2rem;
-  margin-bottom: 32px;
-  color: var(--purple);
-}
-.arch-diagram {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 32px;
-  font-family: "Courier New", monospace;
-  font-size: 0.85rem;
-  overflow-x: auto;
-  color: var(--text-dim);
-  line-height: 1.8;
-}
-.arch-diagram .highlight { color: var(--purple); font-weight: 600; }
-.arch-diagram .dim { color: #475569; }
-
-.quick-start {
-  max-width: 700px;
-  margin: 0 auto;
-  padding: 0 20px 80px;
-}
-.quick-start h2 {
-  text-align: center;
-  font-size: 2rem;
-  margin-bottom: 32px;
-  color: var(--purple);
-}
-.quick-start pre {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 20px;
-  overflow-x: auto;
-  font-size: 0.9rem;
-  color: var(--text);
-}
-.quick-start code .cmd { color: #34d399; }
-.quick-start code .comment { color: #475569; }
-
-footer {
-  text-align: center;
-  padding: 32px 20px;
-  border-top: 1px solid var(--border);
-  color: var(--text-dim);
-  font-size: 0.85rem;
-}
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#c9d1d9;--heading:#f0f6fc;--accent:#a78bfa;--accent2:#3fb950;--muted:#8b949e;--red:#f85149;--purple:#7c3aed}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;line-height:1.6}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.container{max-width:1100px;margin:0 auto;padding:0 24px}
+header{border-bottom:1px solid var(--border);padding:64px 0 40px;text-align:center;background:linear-gradient(180deg,#1a1030 0%,var(--bg) 100%)}
+header h1{font-size:3.5rem;font-weight:700;background:linear-gradient(135deg,var(--accent),#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px}
+header .tagline{font-size:1.3rem;color:var(--muted);max-width:750px;margin:0 auto}
+.badges{margin-top:20px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.badges img{height:24px}
+.hero-btns{display:flex;gap:16px;justify-content:center;margin-top:28px;flex-wrap:wrap}
+.hero-btns a{background:var(--purple);color:#fff;padding:12px 28px;border-radius:6px;font-weight:600;font-size:1rem;transition:opacity .2s}
+.hero-btns a:hover{text-decoration:none;opacity:.85}
+.hero-btns a.secondary{background:var(--card);border:1px solid var(--border)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;margin-top:24px}
+.stat{text-align:center;padding:20px;background:var(--card);border:1px solid var(--border);border-radius:8px}
+.stat .num{font-size:2rem;color:var(--heading);font-weight:bold}
+.stat .label{color:var(--muted);font-size:.85rem;margin-top:4px}
+section{padding:56px 0}
+section h2{font-size:1.9rem;color:var(--heading);margin-bottom:28px;border-bottom:1px solid var(--border);padding-bottom:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px;transition:border-color .2s,transform .2s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card h3{color:var(--heading);margin-bottom:8px;font-size:1.1rem}
+.card p{font-size:.9rem;color:var(--muted)}
+.card ul{list-style:none;padding:0;margin:0}
+.card ul li{padding:3px 0;color:var(--text);font-size:.9rem}
+.card ul li::before{content:"✓ ";color:var(--accent2);font-weight:bold}
+code{background:#1c2128;padding:2px 6px;border-radius:4px;font-size:.85em;color:#f0f6fc}
+pre{background:#1c2128;border:1px solid var(--border);border-radius:8px;padding:16px;overflow-x:auto;font-size:.85rem;color:#f0f6fc;margin:12px 0}
+table{width:100%;border-collapse:collapse;margin:12px 0}
+th,td{padding:12px 16px;text-align:left;border-bottom:1px solid var(--border);font-size:.9rem}
+th{color:var(--heading);background:var(--card);position:sticky;top:0}
+.check{color:var(--accent2)}
+.cross{color:var(--red)}
+footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color:var(--muted);font-size:.85rem}
+.arch-diagram{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:32px;font-family:"Courier New",monospace;font-size:.85rem;overflow-x:auto;color:var(--muted);line-height:1.8}
+.arch-diagram .hl{color:var(--accent);font-weight:600}
+.arch-diagram .dim{color:#475569}
+@media(max-width:600px){header h1{font-size:2.2rem}.grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
+<header>
+<div class="container">
+<h1>ViewTopia</h1>
+<p class="tagline">Unified geospatial viewer combining TileTopia's 3D globe with GeoLang's AI-powered spatial analysis — all in one interface.</p>
+<div class="badges">
+<a href="https://github.com/TileTopia-HQ/viewtopia"><img src="https://img.shields.io/github/stars/TileTopia-HQ/viewtopia?style=flat-square&color=7c3aed" alt="Stars"></a>
+<a href="https://github.com/TileTopia-HQ/viewtopia/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-7c3aed?style=flat-square" alt="License"></a>
+<img src="https://img.shields.io/badge/Vite-frontend-646CFF?style=flat-square" alt="Vite">
+<img src="https://img.shields.io/badge/CesiumJS-3D_Globe-6366f1?style=flat-square" alt="CesiumJS">
+<img src="https://img.shields.io/badge/Leaflet-2D_Map-199900?style=flat-square" alt="Leaflet">
+<img src="https://img.shields.io/badge/PRs-welcome-7c3aed?style=flat-square" alt="PRs Welcome">
+</div>
+<div class="hero-btns">
+<a href="https://github.com/TileTopia-HQ/viewtopia">GitHub</a>
+<a href="#quick-start" class="secondary">Quick Start</a>
+<a href="#comparison" class="secondary">vs Alternatives</a>
+</div>
+<div class="stats">
+<div class="stat"><div class="num">4</div><div class="label">Renderers</div></div>
+<div class="stat"><div class="num">2</div><div class="label">Backends</div></div>
+<div class="stat"><div class="num">20+</div><div class="label">AI Tools</div></div>
+<div class="stat"><div class="num">$0</div><div class="label">Per month</div></div>
+</div>
+</div>
+</header>
 
-<section class="hero">
-  <h1>ViewTopia</h1>
-  <p>Unified geospatial viewer combining TileTopia's 3D globe with GeoLang's AI-powered spatial analysis</p>
-  <div class="badges">
-    <a href="https://github.com/TileTopia-HQ/viewtopia"><img src="https://img.shields.io/github/stars/TileTopia-HQ/viewtopia?style=flat-square&color=7c3aed" alt="Stars"></a>
-    <a href="https://github.com/TileTopia-HQ/viewtopia/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-7c3aed?style=flat-square" alt="License"></a>
-    <a href="https://github.com/TileTopia-HQ/viewtopia"><img src="https://img.shields.io/badge/PRs-welcome-7c3aed?style=flat-square" alt="PRs Welcome"></a>
-  </div>
-  <div class="cta">
-    <a href="https://github.com/TileTopia-HQ/viewtopia" class="primary">View on GitHub</a>
-    <a href="#quick-start" class="secondary">Get Started</a>
-  </div>
+<section>
+<div class="container">
+<h2>Features</h2>
+<div class="grid">
+<div class="card">
+<h3>🌍 3D Globe</h3>
+<ul>
+<li>CesiumJS with real-time tile streaming</li>
+<li>deck.gl overlay rendering</li>
+<li>MapLibre GL vector tiles</li>
+<li>Fly-to animations with easing</li>
+<li>3D Tiles, terrain, point clouds</li>
+<li>ASPRS classification styling</li>
+</ul>
+</div>
+<div class="card">
+<h3>🗺️ 2D Map</h3>
+<ul>
+<li>Leaflet with dark basemap</li>
+<li>GeoJSON layers with popups</li>
+<li>Marker clustering</li>
+<li>Choropleth styling &amp; legends</li>
+<li>Draw tools (polygon, line, rectangle)</li>
+<li>Click-to-query AI integration</li>
+</ul>
+</div>
+<div class="card">
+<h3>🤖 AI Chat Agent</h3>
+<ul>
+<li>Natural language spatial analysis</li>
+<li>SSE streaming responses</li>
+<li>20+ chainable geospatial tools</li>
+<li>Persistent agent memory (Letta)</li>
+<li>Auto-renders maps from chat</li>
+<li>Follow-up action buttons</li>
+</ul>
+</div>
+<div class="card">
+<h3>💾 Session Persistence</h3>
+<ul>
+<li>Chat history survives refresh</li>
+<li>Click any old response to replay</li>
+<li>Named sessions with switching</li>
+<li>Per-session agent memory</li>
+<li>LocalStorage backed</li>
+</ul>
+</div>
+<div class="card">
+<h3>🔄 2D ↔ 3D Sync</h3>
+<ul>
+<li>Layers auto-sync between views</li>
+<li>Camera position transfers on tab switch</li>
+<li>GeoJSON loads in both Leaflet &amp; Cesium</li>
+<li>Unified layer panel</li>
+</ul>
+</div>
+<div class="card">
+<h3>📊 Multi-Format Data</h3>
+<ul>
+<li>GeoPackage, GeoJSON, Shapefile</li>
+<li>CSV with coordinate columns</li>
+<li>LAS/LAZ point clouds</li>
+<li>GeoTIFF rasters</li>
+<li>glTF/GLB 3D models</li>
+<li>Drag-and-drop upload</li>
+</ul>
+</div>
+<div class="card">
+<h3>🎨 Multi-Renderer</h3>
+<ul>
+<li>CesiumJS (globe, terrain, 3D Tiles)</li>
+<li>deck.gl (GPU-accelerated overlays)</li>
+<li>MapLibre GL (vector tiles)</li>
+<li>Leaflet (lightweight 2D)</li>
+<li>Shared camera state across all</li>
+</ul>
+</div>
+<div class="card">
+<h3>📐 Drawing &amp; Measurement</h3>
+<ul>
+<li>Polygon, polyline, rectangle, marker</li>
+<li>Area &amp; distance measurement</li>
+<li>Annotation points of interest</li>
+<li>Export drawn features</li>
+</ul>
+</div>
+<div class="card">
+<h3>📍 Click-to-Query</h3>
+<ul>
+<li>Click any map location to analyze</li>
+<li>Sends lat/lon to AI agent</li>
+<li>Elevation, flood risk, amenities</li>
+<li>Toast notification on click</li>
+</ul>
+</div>
+<div class="card">
+<h3>🔍 Map Search</h3>
+<ul>
+<li>Nominatim geocoding integration</li>
+<li>Fly to searched location</li>
+<li>Works in both 2D and 3D views</li>
+<li>Keyboard accessible</li>
+</ul>
+</div>
+<div class="card">
+<h3>🌙 Dark Interface</h3>
+<ul>
+<li>Custom dark theme for all components</li>
+<li>Purple accent throughout</li>
+<li>Dark Leaflet tile overrides</li>
+<li>Resizable chat panel (Ctrl+B)</li>
+</ul>
+</div>
+<div class="card">
+<h3>📸 Export &amp; Sharing</h3>
+<ul>
+<li>PNG screenshot of current view</li>
+<li>Basemap selector (Streets/Satellite/Topo)</li>
+<li>Layer visibility toggling</li>
+<li>Attribute table modal</li>
+</ul>
+</div>
+</div>
+</div>
 </section>
 
-<section class="features">
-  <h2>Features</h2>
-  <div class="feature-grid">
-    <div class="feature-card">
-      <div class="icon">🌍</div>
-      <h3>3D Globe</h3>
-      <p>CesiumJS with deck.gl and MapLibre GL renderer support. Fly anywhere, load 3D Tiles, terrain, and point clouds.</p>
-    </div>
-    <div class="feature-card">
-      <div class="icon">🗺️</div>
-      <h3>2D Map</h3>
-      <p>Leaflet-powered map with GeoJSON layers, marker clustering, choropleth styling, and interactive popups.</p>
-    </div>
-    <div class="feature-card">
-      <div class="icon">🤖</div>
-      <h3>AI Chat Agent</h3>
-      <p>Ask the GeoLang agent to analyze data, generate maps, compute isochrones, classify terrain — all in natural language.</p>
-    </div>
-    <div class="feature-card">
-      <div class="icon">💾</div>
-      <h3>Session Persistence</h3>
-      <p>Chat history persists across refreshes. Click any old response to instantly replay its map view.</p>
-    </div>
-    <div class="feature-card">
-      <div class="icon">📊</div>
-      <h3>Multi-Format Data</h3>
-      <p>Upload GeoPackage, GeoJSON, Shapefile, CSV, LAS/LAZ point clouds, GeoTIFF rasters, and glTF 3D models.</p>
-    </div>
-    <div class="feature-card">
-      <div class="icon">🎨</div>
-      <h3>Multiple Renderers</h3>
-      <p>Switch between CesiumJS, deck.gl, and MapLibre GL on the fly. Each with shared camera state and layer sync.</p>
-    </div>
-    <div class="feature-card">
-      <div class="icon">📐</div>
-      <h3>Drawing & Measurement</h3>
-      <p>Draw polygons, lines, rectangles on the 2D map. Measure distances and annotate points of interest.</p>
-    </div>
-    <div class="feature-card">
-      <div class="icon">📍</div>
-      <h3>Click-to-Query</h3>
-      <p>Click anywhere on the map to ask the AI about that location — elevation, flood risk, nearby amenities.</p>
-    </div>
-    <div class="feature-card">
-      <div class="icon">🔄</div>
-      <h3>2D ↔ 3D Sync</h3>
-      <p>Layers automatically sync between 2D Leaflet and 3D Cesium views. Camera position transfers on tab switch.</p>
-    </div>
-    <div class="feature-card">
-      <div class="icon">🗂️</div>
-      <h3>Session Management</h3>
-      <p>Create, switch, rename, and delete analysis sessions. Each session has its own agent memory and chat history.</p>
-    </div>
-    <div class="feature-card">
-      <div class="icon">🌙</div>
-      <h3>Dark Theme</h3>
-      <p>Beautiful dark interface optimized for map viewing with purple accent colors and smooth animations.</p>
-    </div>
-    <div class="feature-card">
-      <div class="icon">⌨️</div>
-      <h3>Keyboard Shortcuts</h3>
-      <p>Ctrl+B to toggle chat panel. Resizable panel with drag handle. Full-screen map when you need it.</p>
-    </div>
-  </div>
+<section id="comparison">
+<div class="container">
+<h2>ViewTopia vs The Alternatives</h2>
+<p style="color:var(--muted);margin-bottom:20px">There's nothing else that combines 3D globe, 2D map, and AI chat in a single open-source viewer.</p>
+<div style="overflow-x:auto">
+<table>
+<thead>
+<tr><th>Capability</th><th>ViewTopia</th><th>Cesium Ion Viewer</th><th>QGIS</th><th>kepler.gl</th><th>Mapbox Studio</th><th>Google Earth</th></tr>
+</thead>
+<tbody>
+<tr><td>3D Globe (CesiumJS)</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="check">✅</td></tr>
+<tr><td>2D Map (Leaflet)</td><td class="check">✅</td><td class="cross">❌</td><td class="check">✅</td><td class="cross">❌</td><td class="check">✅</td><td class="cross">❌</td></tr>
+<tr><td>AI chat agent</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
+<tr><td>Multi-renderer (4 engines)</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="check">✅ (deck.gl)</td><td class="cross">❌</td><td class="cross">❌</td></tr>
+<tr><td>2D ↔ 3D layer sync</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
+<tr><td>Chat-driven map generation</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
+<tr><td>Click-to-query AI</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
+<tr><td>Session persistence</td><td class="check">✅</td><td class="cross">❌</td><td class="check">✅</td><td class="cross">❌</td><td class="check">✅</td><td class="cross">❌</td></tr>
+<tr><td>Click-to-replay old maps</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
+<tr><td>Draw tools</td><td class="check">✅</td><td class="cross">❌</td><td class="check">✅</td><td class="cross">❌</td><td class="check">✅</td><td class="cross">❌</td></tr>
+<tr><td>Open source</td><td class="check">✅ AGPL-3.0</td><td class="cross">❌</td><td class="check">✅ GPL</td><td class="check">✅ MIT</td><td class="cross">❌</td><td class="cross">❌</td></tr>
+<tr><td>Self-hosted / offline</td><td class="check">✅</td><td class="cross">❌</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td></tr>
+<tr><td>Web-based (no install)</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌ (desktop)</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td></tr>
+<tr><td>3D Tiles support</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="check">✅</td></tr>
+<tr><td>GeoJSON upload</td><td class="check">✅</td><td class="cross">❌</td><td class="check">✅</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td></tr>
+<tr><td><strong>Price</strong></td><td class="check"><strong>$0</strong></td><td class="cross">$150+/mo</td><td class="check">$0</td><td class="check">$0</td><td class="cross">$0–$1,500+</td><td class="cross">$0 (limited)</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="grid" style="margin-top:28px">
+<div class="card">
+<h3>vs Cesium Ion Viewer</h3>
+<ul>
+<li>Ion = cloud-only, no self-hosting</li>
+<li>No 2D map view or Leaflet integration</li>
+<li>No AI agent or chat interface</li>
+<li>No draw tools or click-to-query</li>
+<li>$150+/month — ViewTopia is free</li>
+</ul>
+</div>
+<div class="card">
+<h3>vs QGIS</h3>
+<ul>
+<li>QGIS = desktop GIS, not web-based</li>
+<li>No 3D globe or CesiumJS</li>
+<li>No AI-driven analysis</li>
+<li>Steep learning curve</li>
+<li>ViewTopia runs in the browser</li>
+</ul>
+</div>
+<div class="card">
+<h3>vs kepler.gl</h3>
+<ul>
+<li>kepler.gl = deck.gl-only, no globe</li>
+<li>No AI chat or natural language</li>
+<li>No CesiumJS or 3D Tiles</li>
+<li>No session management</li>
+<li>ViewTopia has 4 renderers + AI</li>
+</ul>
+</div>
+</div>
+</div>
 </section>
 
-<section class="architecture">
-  <h2>Architecture</h2>
-  <div class="arch-diagram">
-    <span class="highlight">┌─────────────────────────────────────────────────────────────┐</span><br>
-    <span class="highlight">│  ViewTopia (Vite + JS)  :5174                               │</span><br>
-    <span class="highlight">└──────┬────────────────────────────────────────┬──────────────┘</span><br>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│ <span class="dim">/api → proxy</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│ <span class="dim">/agent → proxy</span><br>
-    <span class="highlight">┌──────▼──────────────┐</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">┌──────▼──────────────┐</span><br>
-    <span class="highlight">│  TileTopia (Rust)   │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">│  GeoLang (Python)   │</span><br>
-    <span class="highlight">│  :3000              │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">│  :8080              │</span><br>
-    <span class="highlight">│                     │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">│                     │</span><br>
-    <span class="highlight">│  • 3D Tiles         │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">│  • AI Agent (Letta) │</span><br>
-    <span class="highlight">│  • Terrain           │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">│  • GeoPandas        │</span><br>
-    <span class="highlight">│  • Point Clouds     │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">│  • OSM/Nominatim    │</span><br>
-    <span class="highlight">│  • Classification   │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">│  • Isochrones       │</span><br>
-    <span class="highlight">└─────────────────────┘</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">└─────────────────────┘</span><br>
-  </div>
+<section>
+<div class="container">
+<h2>Architecture</h2>
+<div class="arch-diagram">
+<span class="hl">┌─────────────────────────────────────────────────────────────┐</span><br>
+<span class="hl">│  ViewTopia (Vite + JS)  :5174                               │</span><br>
+<span class="hl">│                                                             │</span><br>
+<span class="hl">│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────┐   │</span><br>
+<span class="hl">│  │ CesiumJS │ │ deck.gl  │ │ MapLibre │ │   Leaflet    │   │</span><br>
+<span class="hl">│  └──────────┘ └──────────┘ └──────────┘ └──────────────┘   │</span><br>
+<span class="hl">│  ┌───────────────────┐  ┌──────────────────────────────┐   │</span><br>
+<span class="hl">│  │   Chat Panel      │  │   Viz Panel (tabs/toolbar)   │   │</span><br>
+<span class="hl">│  └───────────────────┘  └──────────────────────────────┘   │</span><br>
+<span class="hl">└──────┬────────────────────────────────────────┬──────────────┘</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│ <span class="dim">/api → proxy</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│ <span class="dim">/agent → proxy</span><br>
+<span class="hl">┌──────▼──────────────┐</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">┌──────▼──────────────┐</span><br>
+<span class="hl">│  TileTopia (Rust)   │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  GeoLang (Python)   │</span><br>
+<span class="hl">│  :3000              │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  :8080              │</span><br>
+<span class="hl">│                     │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│                     │</span><br>
+<span class="hl">│  • 3D Tiles server  │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • AI Agent (Letta) │</span><br>
+<span class="hl">│  • Terrain mesh     │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • GeoPandas        │</span><br>
+<span class="hl">│  • Point clouds     │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • OSM/Nominatim    │</span><br>
+<span class="hl">│  • Classification   │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • Isochrones       │</span><br>
+<span class="hl">│  • REST API         │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • SSE streaming    │</span><br>
+<span class="hl">└─────────────────────┘</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">└─────────────────────┘</span><br>
+</div>
+</div>
 </section>
 
-<section class="quick-start" id="quick-start">
-  <h2>Quick Start</h2>
-  <pre><code><span class="comment"># Clone the repo</span>
-<span class="cmd">git clone</span> https://github.com/TileTopia-HQ/viewtopia.git
-<span class="cmd">cd</span> viewtopia
+<section>
+<div class="container">
+<h2>Module Structure</h2>
+<pre>viewtopia/
+├── index.html              # Layout — viz panel + chat panel
+├── vite.config.js          # Dev server, proxies, Cesium plugin
+├── src/
+│   ├── main.js             # Entry — backend discovery, init
+│   ├── backends.js          # Probe TileTopia &amp; GeoLang health
+│   ├── renderers.js         # CesiumJS / deck.gl / MapLibre
+│   ├── leaflet-view.js      # Leaflet 2D map, draw tools
+│   ├── chat.js              # AI chat with SSE &amp; persistence
+│   ├── sessions.js          # Session management &amp; UI wiring
+│   ├── tabs.js              # 2D ↔ 3D view switching &amp; sync
+│   ├── viewer-commands.js   # Unified command protocol
+│   ├── ui-spec-renderer.js  # Render agent map/table/image specs
+│   ├── classification-viz.js # ASPRS point cloud styling
+│   └── style.css            # Dark theme, layout, animations
+└── docs/
+    └── index.html           # This page</pre>
+</div>
+</section>
 
-<span class="comment"># Install dependencies</span>
-<span class="cmd">npm install</span>
+<section id="quick-start">
+<div class="container">
+<h2>Quick Start</h2>
+<pre><span style="color:#475569"># Clone the repo</span>
+git clone https://github.com/TileTopia-HQ/viewtopia.git
+cd viewtopia
 
-<span class="comment"># Start dev server</span>
-<span class="cmd">npm run dev</span>
+<span style="color:#475569"># Install dependencies</span>
+npm install
 
-<span class="comment"># Open http://localhost:5174</span>
-<span class="comment"># Backends are optional — viewer adapts to what's available</span></code></pre>
+<span style="color:#475569"># Start dev server (port 5174)</span>
+npm run dev
+
+<span style="color:#475569"># Open http://localhost:5174</span>
+<span style="color:#475569"># Backends are optional — viewer adapts to what's available</span>
+
+<span style="color:#475569"># Optional: start TileTopia (3D Tiles)</span>
+cd ../tiletopia &amp;&amp; cargo run -- serve --port 3000
+
+<span style="color:#475569"># Optional: start GeoLang (AI agent)</span>
+cd ../geolang &amp;&amp; python -m uvicorn src.app:app --port 8080</pre>
+</div>
 </section>
 
 <footer>
-  <p>Built by <a href="https://github.com/TileTopia-HQ">TileTopia-HQ</a> &middot; AGPL-3.0 License</p>
+<div class="container">
+<p>ViewTopia is free software under the <a href="https://github.com/TileTopia-HQ/viewtopia/blob/master/LICENSE">AGPL-3.0 license</a>.</p>
+<p style="margin-top:8px">Part of the <a href="https://github.com/TileTopia-HQ">TileTopia-HQ</a> ecosystem.</p>
+</div>
 </footer>
 
 </body>
