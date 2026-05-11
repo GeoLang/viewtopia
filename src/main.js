@@ -73,6 +73,7 @@ import { init3DExport } from './3d-export.js';
 import { initFlythrough } from './flythrough.js';
 import { initHeatmapLayer } from './heatmap-layer.js';
 import { initTimelapse } from './timelapse.js';
+import { initPanelManager } from './panel-manager.js';
 
 async function main() {
   // Discover which backends are available
@@ -171,6 +172,7 @@ async function main() {
   initFlythrough();
   initHeatmapLayer();
   initTimelapse();
+  initPanelManager();
 
   // If TileTopia is available, try loading open terrain
   if (backends.tiletopia && viewer) {
