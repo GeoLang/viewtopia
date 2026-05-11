@@ -1,11 +1,14 @@
 /**
- * Weather & Atmosphere Effects — fog, rain, snow particle systems.
+ * Weather & Atmosphere Effects — canvas overlay for rain, snow, fog, storm.
+ * Uses a transparent canvas overlay on top of the globe for reliable rendering.
  */
 import * as Cesium from 'cesium';
 import { getCesiumViewer } from './renderers.js';
 
 let weatherActive = false;
-let particleSystem = null;
+let animFrameId = null;
+let weatherCanvas = null;
+let particles = [];
 
 export function initWeather() {
   const btn = document.getElementById('weather-btn');
@@ -85,155 +88,132 @@ function applyWeather() {
 
   if (type === 'none') return;
 
+  // Fog uses Cesium's built-in fog
   if (type === 'fog') {
     viewer.scene.fog.enabled = true;
-    viewer.scene.fog.density = 0.0002 * (intensity / 50);
-    viewer.scene.fog.minimumBrightness = 0.03;
+    viewer.scene.fog.density = 0.0003 * (intensity / 50);
+    viewer.scene.fog.minimumBrightness = 0.02;
+    // Also darken the sky
+    viewer.scene.skyAtmosphere.show = false;
     return;
   }
 
-  // First, fly camera down to a reasonable altitude so particles are visible
-  const carto = viewer.camera.positionCartographic;
-  const currentHeight = carto.height;
+  // Create canvas overlay for rain/snow/storm
+  const container = document.getElementById('globe-container') || viewer.container;
+  weatherCanvas = document.createElement('canvas');
+  weatherCanvas.id = 'weather-overlay';
+  weatherCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;';
+  container.style.position = 'relative';
+  container.appendChild(weatherCanvas);
 
-  const proceed = () => {
-    const pos = viewer.camera.positionWC.clone();
-    const config = getParticleConfig(type, intensity, wind);
+  // Match canvas resolution
+  const rect = container.getBoundingClientRect();
+  weatherCanvas.width = rect.width;
+  weatherCanvas.height = rect.height;
 
-    // Scale emitter box based on camera height
-    const h = viewer.camera.positionCartographic.height;
-    const boxSize = Math.max(100, Math.min(2000, h * 0.5));
-
-    particleSystem = new Cesium.ParticleSystem({
-      modelMatrix: Cesium.Matrix4.fromTranslation(pos),
-      emitter: new Cesium.BoxEmitter(new Cesium.Cartesian3(boxSize, boxSize, boxSize * 0.4)),
-      emissionRate: config.emissionRate,
-      startColor: config.startColor,
-      endColor: config.endColor,
-      startScale: config.startScale,
-      endScale: config.endScale,
-      minimumParticleLife: config.minLife,
-      maximumParticleLife: config.maxLife,
-      minimumSpeed: config.minSpeed,
-      maximumSpeed: config.maxSpeed,
-      imageSize: config.imageSize,
-      image: config.image,
-      lifetime: 600,
-      loop: true,
-    });
-
-    viewer.scene.primitives.add(particleSystem);
-    viewer.scene.preRender.addEventListener(updateParticlePosition);
-  };
-
-  // If camera is too high, fly down first
-  if (currentHeight > 5000) {
-    viewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromRadians(carto.longitude, carto.latitude, 1000),
-      orientation: {
-        heading: viewer.camera.heading,
-        pitch: Cesium.Math.toRadians(-30),
-        roll: 0,
-      },
-      duration: 1.5,
-      complete: proceed,
-    });
-  } else {
-    proceed();
-  }
-}
-
-function updateParticlePosition() {
-  const viewer = getCesiumViewer();
-  if (!viewer || !particleSystem) return;
-  particleSystem.modelMatrix = Cesium.Matrix4.fromTranslation(viewer.camera.positionWC);
-}
-
-function getParticleConfig(type, intensity, wind) {
-  const rate = intensity * 20;
-
-  if (type === 'rain') {
-    return {
-      emissionRate: rate,
-      startColor: new Cesium.Color(0.6, 0.7, 0.9, 0.6),
-      endColor: new Cesium.Color(0.4, 0.5, 0.7, 0.2),
-      startScale: 1.0,
-      endScale: 0.5,
-      minLife: 0.5,
-      maxLife: 1.5,
-      minSpeed: 20,
-      maxSpeed: 40 + wind,
-      imageSize: new Cesium.Cartesian2(2, 12),
-      image: createRainImage(),
-    };
+  // Create particles
+  const numParticles = Math.floor(intensity * (type === 'snow' ? 3 : 8));
+  particles = [];
+  for (let i = 0; i < numParticles; i++) {
+    particles.push(createParticle(type, weatherCanvas.width, weatherCanvas.height, wind));
   }
 
+  // Start animation
+  const ctx = weatherCanvas.getContext('2d');
+  function animate() {
+    ctx.clearRect(0, 0, weatherCanvas.width, weatherCanvas.height);
+
+    for (const p of particles) {
+      updateParticle(p, type, weatherCanvas.width, weatherCanvas.height, wind);
+      drawParticle(ctx, p, type);
+    }
+
+    animFrameId = requestAnimationFrame(animate);
+  }
+  animate();
+}
+
+function createParticle(type, w, h, wind) {
   if (type === 'snow') {
     return {
-      emissionRate: rate * 0.5,
-      startColor: Cesium.Color.WHITE.withAlpha(0.8),
-      endColor: Cesium.Color.WHITE.withAlpha(0.3),
-      startScale: 1.0,
-      endScale: 0.8,
-      minLife: 2.0,
-      maxLife: 6.0,
-      minSpeed: 2,
-      maxSpeed: 8 + wind * 0.5,
-      imageSize: new Cesium.Cartesian2(8, 8),
-      image: createSnowImage(),
+      x: Math.random() * w,
+      y: Math.random() * h,
+      size: 2 + Math.random() * 4,
+      speed: 0.5 + Math.random() * 1.5,
+      wobble: Math.random() * Math.PI * 2,
+      wobbleSpeed: 0.01 + Math.random() * 0.03,
+      opacity: 0.4 + Math.random() * 0.5,
     };
   }
 
-  // Storm
+  // Rain / Storm
   return {
-    emissionRate: rate * 2,
-    startColor: new Cesium.Color(0.5, 0.5, 0.6, 0.8),
-    endColor: new Cesium.Color(0.3, 0.3, 0.4, 0.2),
-    startScale: 1.2,
-    endScale: 0.6,
-    minLife: 0.3,
-    maxLife: 1.0,
-    minSpeed: 30,
-    maxSpeed: 60 + wind * 2,
-    imageSize: new Cesium.Cartesian2(3, 16),
-    image: createRainImage(),
+    x: Math.random() * (w + 100) - 50,
+    y: Math.random() * h,
+    length: type === 'storm' ? 15 + Math.random() * 25 : 8 + Math.random() * 15,
+    speed: type === 'storm' ? 12 + Math.random() * 18 : 6 + Math.random() * 10,
+    opacity: 0.2 + Math.random() * 0.4,
+    windDrift: wind * 0.3,
   };
 }
 
-function createRainImage() {
-  const c = document.createElement('canvas');
-  c.width = 4; c.height = 16;
-  const ctx = c.getContext('2d');
-  const grad = ctx.createLinearGradient(2, 0, 2, 16);
-  grad.addColorStop(0, 'rgba(180,200,220,0.8)');
-  grad.addColorStop(1, 'rgba(180,200,220,0.1)');
-  ctx.fillStyle = grad;
-  ctx.fillRect(1, 0, 2, 16);
-  return c.toDataURL();
+function updateParticle(p, type, w, h, wind) {
+  if (type === 'snow') {
+    p.y += p.speed;
+    p.wobble += p.wobbleSpeed;
+    p.x += Math.sin(p.wobble) * 0.5 + wind * 0.1;
+
+    if (p.y > h) { p.y = -5; p.x = Math.random() * w; }
+    if (p.x > w) p.x = 0;
+    if (p.x < 0) p.x = w;
+  } else {
+    // Rain / Storm
+    p.y += p.speed;
+    p.x += p.windDrift;
+
+    if (p.y > h) {
+      p.y = -p.length;
+      p.x = Math.random() * (w + 100) - 50;
+    }
+  }
 }
 
-function createSnowImage() {
-  const c = document.createElement('canvas');
-  c.width = 16; c.height = 16;
-  const ctx = c.getContext('2d');
-  ctx.beginPath();
-  ctx.arc(8, 8, 6, 0, Math.PI * 2);
-  const grad = ctx.createRadialGradient(8, 8, 0, 8, 8, 6);
-  grad.addColorStop(0, 'rgba(255,255,255,0.9)');
-  grad.addColorStop(1, 'rgba(255,255,255,0.1)');
-  ctx.fillStyle = grad;
-  ctx.fill();
-  return c.toDataURL();
+function drawParticle(ctx, p, type) {
+  if (type === 'snow') {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255, 255, 255, ${p.opacity})`;
+    ctx.fill();
+  } else {
+    // Rain / Storm
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(p.x + p.windDrift * 0.5, p.y + p.length);
+    ctx.strokeStyle = type === 'storm'
+      ? `rgba(180, 190, 220, ${p.opacity})`
+      : `rgba(174, 194, 224, ${p.opacity})`;
+    ctx.lineWidth = type === 'storm' ? 2 : 1;
+    ctx.stroke();
+  }
 }
 
 function clearWeather() {
-  const viewer = getCesiumViewer();
-  if (!viewer) return;
-
-  if (particleSystem) {
-    viewer.scene.primitives.remove(particleSystem);
-    particleSystem = null;
+  if (animFrameId) {
+    cancelAnimationFrame(animFrameId);
+    animFrameId = null;
   }
-  viewer.scene.fog.enabled = false;
-  viewer.scene.preRender.removeEventListener(updateParticlePosition);
+
+  if (weatherCanvas) {
+    weatherCanvas.remove();
+    weatherCanvas = null;
+  }
+
+  particles = [];
+
+  const viewer = getCesiumViewer();
+  if (viewer) {
+    viewer.scene.fog.enabled = false;
+    viewer.scene.fog.density = 0.0001;
+    viewer.scene.skyAtmosphere.show = true;
+  }
 }
