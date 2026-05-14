@@ -1620,3 +1620,36 @@ body.light-theme .gc-name { color: #1e293b; }
 .ld-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
 .ld-confirm { background: #4f46e5 !important; border-color: #6366f1 !important; }
 .ld-confirm:hover { background: #6366f1 !important; }
+
+/* ── Swimlane Panel ────────────────────────────── */
+.swimlane-panel {
+  position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+  width: 80vw; max-width: 1000px; max-height: 300px;
+  background: #1a1d2e; border: 1px solid #3d4166; border-radius: 8px;
+  z-index: 260; box-shadow: 0 4px 16px rgba(0,0,0,0.4); overflow: hidden;
+}
+.sl-header { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; border-bottom: 1px solid #3d4166; }
+.sl-header span { font-size: 0.85rem; font-weight: 600; color: #a78bfa; }
+.sl-canvas { display: block; }
+
+/* ── Audit Trail Panel ─────────────────────────── */
+.audit-trail-panel {
+  position: absolute; top: 50%; right: 20px; transform: translateY(-50%);
+  width: 380px; max-height: 70vh;
+  background: #1a1d2e; border: 1px solid #3d4166; border-radius: 8px;
+  z-index: 350; box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  display: flex; flex-direction: column;
+}
+.at-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid #3d4166; }
+.at-header h3 { font-size: 0.9rem; font-weight: 600; color: #a78bfa; }
+.at-close { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1rem; }
+.at-filters { display: flex; gap: 8px; padding: 6px 12px; border-bottom: 1px solid #2d3148; }
+.at-filters select { background: #161829; border: 1px solid #3d4166; color: #e2e8f0; border-radius: 4px; padding: 3px 6px; font-size: 0.75rem; }
+.at-export { background: #232640; border: 1px solid #3d4166; color: #e2e8f0; border-radius: 4px; padding: 3px 8px; font-size: 0.72rem; cursor: pointer; }
+.at-list { overflow-y: auto; flex: 1; padding: 6px 12px; }
+.at-entry { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; border-bottom: 1px solid #232640; font-size: 0.75rem; }
+.at-icon { font-size: 0.8rem; }
+.at-time { color: #64748b; white-space: nowrap; }
+.at-action { color: #a78bfa; font-weight: 500; text-transform: uppercase; font-size: 0.65rem; }
+.at-desc { color: #e2e8f0; }
+.at-empty { color: #64748b; padding: 20px 0; text-align: center; }

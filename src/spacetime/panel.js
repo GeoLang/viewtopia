@@ -19,6 +19,15 @@ import { showNetworkGraph } from './network-graph.js';
 import { showActivityHistogram } from './activity-histogram.js';
 import { saveSession, loadSession } from './persistence.js';
 import { ingestKML, ingestGeoJSON } from './ingest-formats.js';
+import { ingestCDR } from './ingest-cdr.js';
+import { showSwimlanePanelUI, hideSwimlanePanelUI } from './swimlanes.js';
+import { computeAllMetrics } from './network-metrics.js';
+import { exportKML, exportCSV, exportLinksCSV, downloadFile } from './export.js';
+import { detectQualityIssues, qualitySummary, removeQualityIssues } from './data-quality.js';
+import { clusterEntities } from './clustering.js';
+import { predictAllLocations } from './prediction.js';
+import { evaluateRules, getAlerts, clearAlerts } from './alerting.js';
+import { recordAction, showAuditPanel } from './audit-trail.js';
 
 /** @type {Map<string, import('./models.js').Entity>} */
 const entityMap = new Map();
@@ -89,17 +98,26 @@ export function loadSpaceTimeData(text, filename) {
     const trackMap = new Map(tracks.map(t => [t.id, t]));
     ingestKML(text, entityMap, trackMap);
     tracks = [...trackMap.values()];
+    recordAction('import', `Imported KML file: ${filename}`);
   } else if (ext === 'geojson') {
     const geojson = JSON.parse(text);
     const trackMap = new Map(tracks.map(t => [t.id, t]));
     ingestGeoJSON(geojson, entityMap, trackMap);
     tracks = [...trackMap.values()];
+    recordAction('import', `Imported GeoJSON file: ${filename}`);
+  } else if (ext === 'csv' && isCDRFile(text)) {
+    const trackMap = new Map(tracks.map(t => [t.entityId, t]));
+    const result = ingestCDR(text, entityMap, trackMap);
+    tracks = [...trackMap.values()];
+    links = links.concat(result.links || []);
+    recordAction('import', `Imported CDR file: ${filename} (${result.records?.length || 0} records)`);
   } else {
     const result = ingestFile(text, filename);
     for (const entity of result.entities) {
       entityMap.set(entity.id, entity);
     }
     tracks = tracks.concat(result.tracks);
+    recordAction('import', `Imported file: ${filename}`);
   }
 
   timeBounds = getTimeBounds(tracks);
@@ -242,6 +260,13 @@ function createPanel() {
       <button id="st-geofence" class="st-btn" title="Manage geo-fences">Geo-fences</button>
       <button id="st-add-entity" class="st-btn" title="Add new entity">+ Entity</button>
       <button id="st-link-entities" class="st-btn" title="Manually link two entities">+ Link</button>
+      <button id="st-swimlanes" class="st-btn" title="Entity timeline swimlanes">Swimlanes</button>
+      <button id="st-metrics" class="st-btn" title="Network centrality metrics">Metrics</button>
+      <button id="st-export" class="st-btn" title="Export data (KML/CSV)">Export</button>
+      <button id="st-quality" class="st-btn" title="Data quality check">Quality</button>
+      <button id="st-clustering" class="st-btn" title="Behavioral clustering">Clusters</button>
+      <button id="st-predict" class="st-btn" title="Predict future locations">Predict</button>
+      <button id="st-audit" class="st-btn" title="View audit trail">Audit</button>
     </div>
     <div class="st-search">
       <input type="text" id="st-search-input" placeholder="Search entities…">
@@ -320,6 +345,18 @@ function createPanel() {
     addEntity(name, kind);
   });
   panel.querySelector('#st-link-entities').addEventListener('click', () => showLinkDialog());
+  panel.querySelector('#st-swimlanes').addEventListener('click', () => {
+    showSwimlanePanelUI(tracks, entityMap, {
+      currentTime,
+      onTimeSelect: (t) => { currentTime = t; updateTimeSlider(); refreshLayers(); },
+    });
+  });
+  panel.querySelector('#st-metrics').addEventListener('click', runNetworkMetrics);
+  panel.querySelector('#st-export').addEventListener('click', runExportDialog);
+  panel.querySelector('#st-quality').addEventListener('click', runQualityCheck);
+  panel.querySelector('#st-clustering').addEventListener('click', runClustering);
+  panel.querySelector('#st-predict').addEventListener('click', runPrediction);
+  panel.querySelector('#st-audit').addEventListener('click', () => showAuditPanel());
   panel.querySelector('#st-search-input').addEventListener('input', (e) => {
     const q = e.target.value.trim();
     if (q.length < 2) { updateEntityList(); return; }
@@ -449,6 +486,102 @@ function runGeofenceUI() {
 }
 
 // --- KML/GeoJSON ingest handled in loadSpaceTimeData ---
+
+/** Heuristic to detect CDR-format CSV (has caller/callee or IMSI columns). */
+function isCDRFile(csvText) {
+  const header = csvText.split('\n')[0].toLowerCase();
+  return /caller|callee|imsi|msisdn|cell_id|tower|a_party|b_party/.test(header);
+}
+
+function runNetworkMetrics() {
+  if (entityMap.size === 0) { alert('No entities loaded.'); return; }
+  const ids = [...entityMap.keys()];
+  const metrics = computeAllMetrics(ids, links);
+  recordAction('analysis', 'Computed network metrics');
+
+  let msg = 'Network Metrics:\n\n';
+  for (const id of ids) {
+    const name = entityMap.get(id)?.name || id;
+    msg += `${name}: degree=${(metrics.degree.get(id) || 0).toFixed(2)}, ` +
+           `betweenness=${(metrics.betweenness.get(id) || 0).toFixed(3)}, ` +
+           `pageRank=${(metrics.pageRank.get(id) || 0).toFixed(3)}\n`;
+  }
+  const communities = metrics.communities;
+  msg += `\nCommunities: ${communities.size} detected`;
+  alert(msg);
+}
+
+function runExportDialog() {
+  if (tracks.length === 0 && entityMap.size === 0) { alert('No data to export.'); return; }
+  const format = prompt('Export format: (1) KML, (2) CSV Tracks, (3) CSV Links:', '1');
+  if (format === '1') {
+    const kml = exportKML(entityMap, tracks);
+    downloadFile(kml, 'viewtopia-export.kml', 'application/vnd.google-earth.kml+xml');
+    recordAction('export', 'Exported tracks as KML');
+  } else if (format === '2') {
+    const csv = exportCSV(entityMap, tracks);
+    downloadFile(csv, 'viewtopia-tracks.csv', 'text/csv');
+    recordAction('export', 'Exported tracks as CSV');
+  } else if (format === '3') {
+    const csv = exportLinksCSV(links, entityMap);
+    downloadFile(csv, 'viewtopia-links.csv', 'text/csv');
+    recordAction('export', 'Exported links as CSV');
+  }
+}
+
+function runQualityCheck() {
+  if (tracks.length === 0) { alert('No tracks loaded.'); return; }
+  const issues = detectQualityIssues(tracks);
+  const summary = qualitySummary(issues);
+  recordAction('analysis', `Data quality check: ${summary.total} issues (${summary.errors} errors, ${summary.warnings} warnings)`);
+
+  if (summary.total === 0) { alert('Data quality: No issues found!'); return; }
+
+  let msg = `Data Quality Report:\n${summary.errors} errors, ${summary.warnings} warnings\n\n`;
+  for (const [type, count] of Object.entries(summary.byType)) {
+    msg += `  ${type}: ${count}\n`;
+  }
+  const fix = confirm(msg + '\nRemove error-level issues (zero coords, invalid coords)?');
+  if (fix) {
+    const removed = removeQualityIssues(tracks, issues);
+    recordAction('modify', `Removed ${removed} quality-issue events`);
+    refreshLayers();
+    alert(`Removed ${removed} bad events.`);
+  }
+}
+
+function runClustering() {
+  if (tracks.length < 2) { alert('Need at least 2 tracks for clustering.'); return; }
+  const kStr = prompt('Number of clusters (k):', '3');
+  const k = parseInt(kStr) || 3;
+  const clusters = clusterEntities(tracks, { k });
+  recordAction('analysis', `Behavioral clustering (k=${k}): ${clusters.size} clusters`);
+
+  let msg = `Behavioral Clustering (k=${k}):\n\n`;
+  for (const [clusterId, entityIds] of clusters) {
+    const names = entityIds.map(id => entityMap.get(id)?.name || id).join(', ');
+    msg += `Cluster ${clusterId + 1}: ${names}\n`;
+  }
+  alert(msg);
+}
+
+function runPrediction() {
+  if (tracks.length === 0) { alert('No tracks loaded.'); return; }
+  const hoursAhead = parseFloat(prompt('Hours ahead to predict:', '1')) || 1;
+  const futureTime = Date.now() + hoursAhead * 3600000;
+  const predictions = predictAllLocations(tracks, entityMap, futureTime);
+  recordAction('analysis', `Location prediction (${hoursAhead}h ahead)`);
+
+  if (predictions.size === 0) { alert('Not enough data for predictions.'); return; }
+
+  let msg = `Location Predictions (${hoursAhead}h ahead):\n\n`;
+  for (const [entityId, preds] of predictions) {
+    const name = entityMap.get(entityId)?.name || entityId;
+    const best = preds[0];
+    msg += `${name}: (${best.lat.toFixed(4)}, ${best.lng.toFixed(4)}) — ${(best.confidence * 100).toFixed(0)}% confidence (${best.basis})\n`;
+  }
+  alert(msg);
+}
 
 // --- Manual Link Creation Dialog ---
 

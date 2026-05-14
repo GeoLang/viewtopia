@@ -65,3 +65,39 @@ export { saveSession, loadSession, clearSession, getStoredEventCount } from './p
 
 // Virtual scrolling
 export { createVirtualList, setVirtualListItems, scrollToItem, filterVirtualList } from './virtual-scroll.js';
+
+// Entity timeline swimlanes
+export { showSwimlanePanelUI, hideSwimlanePanelUI } from './swimlanes.js';
+
+// CDR import
+export { ingestCDR } from './ingest-cdr.js';
+
+// Social network metrics
+export {
+  computeDegree, computeBetweenness, computeCloseness,
+  computePageRank, detectCommunities, computeAllMetrics,
+} from './network-metrics.js';
+
+// Export (KML, CSV, video)
+export { exportKML, exportCSV, exportLinksCSV, downloadFile, captureVideo } from './export.js';
+
+// Data quality / GPS outlier detection
+export { detectQualityIssues, removeQualityIssues, qualitySummary } from './data-quality.js';
+
+// Behavioral clustering
+export { extractFeatures, clusterEntities } from './clustering.js';
+
+// Predictive location
+export { predictLocation, predictAllLocations } from './prediction.js';
+
+// Alerting rules
+export {
+  createGeofenceEntryRule, createProximityRule, createSpeedRule, createInactivityRule,
+  removeRule, getRules, getAlerts, clearAlerts, evaluateRules,
+} from './alerting.js';
+
+// Audit trail
+export {
+  recordAction, getAuditLog, getRecentActions, filterLog,
+  clearAuditLog, exportAuditCSV, showAuditPanel, hideAuditPanel,
+} from './audit-trail.js';
