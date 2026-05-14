@@ -7,6 +7,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 test.describe('Space-Time Panel', () => {
   test.beforeEach(async ({ page }) => {
+    // Dismiss the onboarding tour so it doesn't block clicks
+    await page.addInitScript(() => {
+      localStorage.setItem('viewtopia-tour-done', '1');
+    });
     await page.goto('/');
     // Wait for the app to initialize
     await page.waitForSelector('#header h1');

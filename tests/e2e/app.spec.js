@@ -1,6 +1,13 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('ViewTopia UI', () => {
+  test.beforeEach(async ({ page }) => {
+    // Dismiss the onboarding tour so it doesn't block clicks
+    await page.addInitScript(() => {
+      localStorage.setItem('viewtopia-tour-done', '1');
+    });
+  });
+
   test('page loads with title', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveTitle('ViewTopia');
