@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Paper,
   Text,
@@ -9,17 +8,32 @@ import {
   SegmentedControl,
   ColorSwatch,
   Slider,
+  Badge,
 } from '@mantine/core';
 import { IconPencil, IconX } from '@tabler/icons-react';
-
-type DrawMode = 'point' | 'line' | 'polygon' | 'circle' | 'rectangle';
+import { useDrawStore, type DrawMode } from '../../store/draw';
 
 const COLORS = ['#a78bfa', '#f472b6', '#34d399', '#60a5fa', '#fbbf24', '#f87171'];
 
 export function DrawPanel({ onClose }: { onClose: () => void }) {
-  const [mode, setMode] = useState<DrawMode>('polygon');
-  const [color, setColor] = useState(COLORS[0]);
-  const [lineWidth, setLineWidth] = useState(2);
+  const mode = useDrawStore((s) => s.mode);
+  const color = useDrawStore((s) => s.color);
+  const lineWidth = useDrawStore((s) => s.lineWidth);
+  const features = useDrawStore((s) => s.features);
+  const pending = useDrawStore((s) => s.pending);
+  const setMode = useDrawStore((s) => s.setMode);
+  const setColor = useDrawStore((s) => s.setColor);
+  const setLineWidth = useDrawStore((s) => s.setLineWidth);
+  const clearAll = useDrawStore((s) => s.clearAll);
+  const cancelPending = useDrawStore((s) => s.cancelPending);
+
+  const activateMode = (m: DrawMode) => {
+    if (mode === m) {
+      setMode(null);
+    } else {
+      setMode(m);
+    }
+  };
 
   return (
     <Paper
@@ -42,6 +56,11 @@ export function DrawPanel({ onClose }: { onClose: () => void }) {
           <Text size="sm" fw={600} c="white">
             Draw
           </Text>
+          {features.length > 0 && (
+            <Badge size="xs" variant="light" color="violet">
+              {features.length}
+            </Badge>
+          )}
         </Group>
         <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
           <IconX size={14} />
@@ -52,8 +71,8 @@ export function DrawPanel({ onClose }: { onClose: () => void }) {
         <SegmentedControl
           size="xs"
           fullWidth
-          value={mode}
-          onChange={(v) => setMode(v as DrawMode)}
+          value={mode === 'point' || mode === 'line' || mode === 'polygon' ? mode : ''}
+          onChange={(v) => v && activateMode(v as DrawMode)}
           data={[
             { value: 'point', label: 'Point' },
             { value: 'line', label: 'Line' },
@@ -63,8 +82,8 @@ export function DrawPanel({ onClose }: { onClose: () => void }) {
         <SegmentedControl
           size="xs"
           fullWidth
-          value={mode === 'circle' ? 'circle' : mode === 'rectangle' ? 'rectangle' : ''}
-          onChange={(v) => v && setMode(v as DrawMode)}
+          value={mode === 'circle' || mode === 'rectangle' ? mode : ''}
+          onChange={(v) => v && activateMode(v as DrawMode)}
           data={[
             { value: 'circle', label: 'Circle' },
             { value: 'rectangle', label: 'Rectangle' },
@@ -97,12 +116,37 @@ export function DrawPanel({ onClose }: { onClose: () => void }) {
           color="violet"
         />
 
-        <Text size="xs" c="dimmed" ta="center" py="xs">
-          Click on the map to start drawing. Double-click to finish.
-        </Text>
+        {mode && (
+          <Text size="xs" c="green" ta="center" py="xs">
+            {mode === 'point' && 'Click the map to place a point.'}
+            {mode === 'line' && `Click to add vertices (${pending.length} pts). Double-click to finish.`}
+            {mode === 'polygon' && `Click to add vertices (${pending.length} pts). Double-click to finish.`}
+            {mode === 'circle' && (pending.length === 0 ? 'Click center, then click edge.' : 'Click to set radius.')}
+            {mode === 'rectangle' && (pending.length === 0 ? 'Click first corner.' : 'Click opposite corner.')}
+          </Text>
+        )}
 
-        <Button size="xs" variant="light" color="red" fullWidth>
-          Clear All Drawings
+        {!mode && (
+          <Text size="xs" c="dimmed" ta="center" py="xs">
+            Select a shape above, then click on the map to draw.
+          </Text>
+        )}
+
+        {pending.length > 0 && (
+          <Button size="xs" variant="subtle" color="gray" onClick={cancelPending} fullWidth>
+            Cancel Current
+          </Button>
+        )}
+
+        <Button
+          size="xs"
+          variant="light"
+          color="red"
+          onClick={clearAll}
+          disabled={features.length === 0}
+          fullWidth
+        >
+          Clear All ({features.length})
         </Button>
       </Stack>
     </Paper>
