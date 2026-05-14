@@ -1602,3 +1602,21 @@ body.light-theme .gc-name { color: #1e293b; }
 .ah-header { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; border-bottom: 1px solid #3d4166; }
 .ah-header span { font-size: 0.85rem; font-weight: 600; color: #a78bfa; }
 .ah-canvas { display: block; padding: 8px; }
+
+/* ── Link Dialog ───────────────────────────────── */
+.link-dialog {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 360px; background: #1a1d2e; border: 1px solid #3d4166; border-radius: 8px;
+  z-index: 400; box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+.ld-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid #3d4166; }
+.ld-header span { font-size: 0.9rem; font-weight: 600; color: #a78bfa; }
+.ld-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.ld-body label { display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem; color: #94a3b8; }
+.ld-body select, .ld-body input, .ld-body textarea { background: #161829; border: 1px solid #3d4166; color: #e2e8f0; border-radius: 4px; padding: 6px 8px; font-size: 0.8rem; }
+.ld-body textarea { min-height: 50px; resize: vertical; }
+.ld-loc-row { display: flex; gap: 6px; }
+.ld-loc-row input { flex: 1; }
+.ld-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
+.ld-confirm { background: #4f46e5 !important; border-color: #6366f1 !important; }
+.ld-confirm:hover { background: #6366f1 !important; }

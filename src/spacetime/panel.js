@@ -9,6 +9,7 @@
  */
 
 import { createSpaceTimeLayers, createLinkLayer, getTimeBounds } from './layers.js';
+import { createLink } from './models.js';
 import { ingestFile } from './ingest.js';
 import { initEntityManager, showEntityDetail, searchEntities, addEntity } from './entity-manager.js';
 import { detectColocations, colocationLinks } from './colocation.js';
@@ -235,6 +236,7 @@ function createPanel() {
       <button id="st-histogram" class="st-btn" title="Activity timeline">Histogram</button>
       <button id="st-geofence" class="st-btn" title="Manage geo-fences">Geo-fences</button>
       <button id="st-add-entity" class="st-btn" title="Add new entity">+ Entity</button>
+      <button id="st-link-entities" class="st-btn" title="Manually link two entities">+ Link</button>
     </div>
     <div class="st-search">
       <input type="text" id="st-search-input" placeholder="Search entities…">
@@ -312,6 +314,7 @@ function createPanel() {
     const kind = prompt('Kind (person/vehicle/device/organization/location/custom):', 'person') || 'person';
     addEntity(name, kind);
   });
+  panel.querySelector('#st-link-entities').addEventListener('click', () => showLinkDialog());
   panel.querySelector('#st-search-input').addEventListener('input', (e) => {
     const q = e.target.value.trim();
     if (q.length < 2) { updateEntityList(); return; }
@@ -441,3 +444,96 @@ function runGeofenceUI() {
 }
 
 // --- KML/GeoJSON ingest handled in loadSpaceTimeData ---
+
+// --- Manual Link Creation Dialog ---
+
+let linkDialog = null;
+
+function showLinkDialog() {
+  const entityList = [...entityMap.values()];
+  if (entityList.length < 2) { alert('Need at least 2 entities to create a link.'); return; }
+
+  if (!linkDialog) {
+    linkDialog = document.createElement('div');
+    linkDialog.id = 'link-dialog';
+    linkDialog.className = 'link-dialog';
+    document.body.appendChild(linkDialog);
+  }
+
+  const options = entityList.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+  const now = new Date().toISOString().slice(0, 16);
+
+  linkDialog.style.display = '';
+  linkDialog.innerHTML = `
+    <div class="ld-header">
+      <span>Create Link</span>
+      <button class="st-btn ld-close">✕</button>
+    </div>
+    <div class="ld-body">
+      <label>From Entity<select id="ld-from">${options}</select></label>
+      <label>To Entity<select id="ld-to">${options.replace('selected', '')}</select></label>
+      <label>Link Type
+        <select id="ld-type">
+          <option value="colocation">Colocation (met in person)</option>
+          <option value="communication">Communication (call/message)</option>
+          <option value="financial">Financial (transaction)</option>
+          <option value="organizational">Organizational (same group)</option>
+          <option value="inferred">Inferred (analyst judgement)</option>
+        </select>
+      </label>
+      <label>Time<input type="datetime-local" id="ld-time" value="${now}"></label>
+      <label>Location (optional)
+        <div class="ld-loc-row">
+          <input type="number" id="ld-lng" placeholder="Longitude" step="any">
+          <input type="number" id="ld-lat" placeholder="Latitude" step="any">
+        </div>
+      </label>
+      <label>Notes<textarea id="ld-notes" placeholder="Evidence or description…"></textarea></label>
+      <div class="ld-actions">
+        <button class="st-btn ld-cancel">Cancel</button>
+        <button class="st-btn ld-confirm">Create Link</button>
+      </div>
+    </div>
+  `;
+
+  // Set second select to a different entity by default
+  if (entityList.length > 1) {
+    linkDialog.querySelector('#ld-to').selectedIndex = 1;
+  }
+
+  linkDialog.querySelector('.ld-close').onclick = () => linkDialog.style.display = 'none';
+  linkDialog.querySelector('.ld-cancel').onclick = () => linkDialog.style.display = 'none';
+  linkDialog.querySelector('.ld-confirm').onclick = () => {
+    const fromId = linkDialog.querySelector('#ld-from').value;
+    const toId = linkDialog.querySelector('#ld-to').value;
+    if (fromId === toId) { alert('Select two different entities.'); return; }
+
+    const kind = linkDialog.querySelector('#ld-type').value;
+    const timeStr = linkDialog.querySelector('#ld-time').value;
+    const timestamp = timeStr ? new Date(timeStr).getTime() : Date.now();
+    const lng = parseFloat(linkDialog.querySelector('#ld-lng').value) || null;
+    const lat = parseFloat(linkDialog.querySelector('#ld-lat').value) || null;
+    const notes = linkDialog.querySelector('#ld-notes').value.trim();
+
+    const link = createLink(fromId, toId, kind, {
+      firstSeen: timestamp,
+      lastSeen: timestamp,
+      evidenceCount: 1,
+      metadata: { notes, lng, lat },
+    });
+
+    links.push(link);
+    linkDialog.style.display = 'none';
+
+    // Refresh visualization with link
+    if (updateLayersCallback) {
+      const baseLayers = createSpaceTimeLayers({ tracks, entities: entityMap, timeMin: timeBounds.timeMin, timeMax: timeBounds.timeMax, elevationScale, currentTime, trailDuration });
+      const linkLayer = createLinkLayer({ links, entities: entityMap, tracks, currentTime });
+      updateLayersCallback([...baseLayers, ...(linkLayer ? [linkLayer] : [])]);
+    }
+
+    const fromName = entityMap.get(fromId)?.name || fromId;
+    const toName = entityMap.get(toId)?.name || toId;
+    alert(`Link created: ${fromName} ↔ ${toName} (${kind}) at ${new Date(timestamp).toLocaleString()}`);
+  };
+}
