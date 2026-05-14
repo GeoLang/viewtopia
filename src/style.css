@@ -1543,6 +1543,62 @@ body.light-theme .gc-name { color: #1e293b; }
 .st-import { border: 2px dashed #3d4166; border-radius: 6px; padding: 16px; text-align: center; margin-bottom: 10px; font-size: 0.8rem; color: #64748b; transition: border-color 0.2s; }
 .st-import.dragover { border-color: #a78bfa; color: #a78bfa; }
 .st-entities { display: flex; flex-direction: column; gap: 4px; }
-.st-entity { padding: 4px 8px; background: #232640; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+.st-entity { padding: 4px 8px; background: #232640; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+.st-entity:hover { background: #2d3060; }
 .st-entity-name { font-size: 0.8rem; color: #e2e8f0; }
 .st-entity-kind { font-size: 0.7rem; color: #64748b; text-transform: uppercase; }
+.st-entity-aliases { font-size: 0.65rem; color: #6b7280; font-style: italic; }
+.st-analysis { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+.st-analysis h4 { width: 100%; font-size: 0.8rem; color: #a78bfa; margin: 0; }
+.st-search { margin-bottom: 8px; }
+.st-search input { width: 100%; background: #161829; border: 1px solid #3d4166; color: #e2e8f0; border-radius: 4px; padding: 4px 8px; font-size: 0.8rem; }
+.st-btn.danger { border-color: #dc2626; color: #fca5a5; }
+.st-btn.danger:hover { background: #7f1d1d; }
+
+/* ── Entity Detail Panel ───────────────────────── */
+.entity-detail-panel {
+  position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+  width: 380px; max-height: calc(100vh - 100px); overflow-y: auto;
+  background: #1a1d2e; border: 1px solid #3d4166; border-radius: 8px;
+  z-index: 300; padding: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+.ed-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.ed-color { width: 14px; height: 14px; border-radius: 50%; }
+.ed-name { flex: 1; background: #161829; border: 1px solid #3d4166; color: #e2e8f0; border-radius: 4px; padding: 4px 8px; font-size: 0.9rem; }
+.ed-close { margin-left: auto; }
+.ed-section { margin-bottom: 10px; }
+.ed-section label { display: block; font-size: 0.7rem; color: #64748b; text-transform: uppercase; margin-bottom: 4px; }
+.ed-section select, .ed-section textarea, .ed-section input { width: 100%; background: #161829; border: 1px solid #3d4166; color: #e2e8f0; border-radius: 4px; padding: 4px 8px; font-size: 0.8rem; }
+.ed-section textarea { min-height: 60px; resize: vertical; }
+.ed-aliases { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+.ed-alias { background: #2d3060; border-radius: 12px; padding: 2px 8px; font-size: 0.72rem; color: #a78bfa; display: inline-flex; align-items: center; gap: 4px; }
+.ed-alias-rm { background: none; border: none; color: #f87171; cursor: pointer; font-size: 0.8rem; padding: 0; }
+.ed-alias-add, .ed-prop-add { display: flex; gap: 4px; }
+.ed-alias-add input, .ed-prop-add input { flex: 1; }
+.ed-props { display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px; }
+.ed-prop { display: flex; justify-content: space-between; font-size: 0.75rem; padding: 2px 4px; background: #232640; border-radius: 3px; }
+.ed-prop span:first-child { color: #94a3b8; }
+.ed-prop span:last-child { color: #e2e8f0; }
+.ed-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+/* ── Network Graph Panel ──────────────────────── */
+.network-graph-panel {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  background: #1a1d2e; border: 1px solid #3d4166; border-radius: 8px;
+  z-index: 350; padding: 0; box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+.ng-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid #3d4166; }
+.ng-header span { font-size: 0.9rem; font-weight: 600; color: #a78bfa; }
+.ng-canvas { display: block; background: #0f1019; border-radius: 0 0 8px 8px; }
+.ng-legend { display: flex; gap: 8px; padding: 6px 12px; font-size: 0.7rem; color: #94a3b8; }
+.ng-leg-item { background: #232640; border-radius: 3px; padding: 2px 6px; }
+
+/* ── Activity Histogram Panel ──────────────────── */
+.activity-histogram-panel {
+  position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+  background: #1a1d2e; border: 1px solid #3d4166; border-radius: 8px;
+  z-index: 250; padding: 0; box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.ah-header { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; border-bottom: 1px solid #3d4166; }
+.ah-header span { font-size: 0.85rem; font-weight: 600; color: #a78bfa; }
+.ah-canvas { display: block; padding: 8px; }

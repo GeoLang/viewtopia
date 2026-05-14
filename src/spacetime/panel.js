@@ -8,13 +8,22 @@
  * - Time scrubber with play/pause animation
  */
 
-import { createSpaceTimeLayers, getTimeBounds } from './layers.js';
+import { createSpaceTimeLayers, createLinkLayer, getTimeBounds } from './layers.js';
 import { ingestFile } from './ingest.js';
+import { initEntityManager, showEntityDetail, searchEntities, addEntity } from './entity-manager.js';
+import { detectColocations, colocationLinks } from './colocation.js';
+import { detectFrequentLocations, computeDailyPattern, detectAnomalies, classifyLocations } from './pattern-of-life.js';
+import { createCircleFence, getFences, clearFences, detectFenceCrossings, summarizeFenceActivity } from './geofence.js';
+import { showNetworkGraph } from './network-graph.js';
+import { showActivityHistogram } from './activity-histogram.js';
+import { ingestKML, ingestGeoJSON } from './ingest-formats.js';
 
 /** @type {Map<string, import('./models.js').Entity>} */
 const entityMap = new Map();
 /** @type {import('./models.js').Track[]} */
 let tracks = [];
+/** @type {import('./models.js').Link[]} */
+let links = [];
 /** @type {{timeMin: number, timeMax: number}} */
 let timeBounds = { timeMin: 0, timeMax: 0 };
 /** @type {number|null} */
@@ -44,6 +53,7 @@ export function initSpaceTime({ onLayersUpdate, onFlyTo, onTimeUpdate }) {
   updateLayersCallback = onLayersUpdate;
   flyToCallback = onFlyTo || null;
   timeUpdateCallback = onTimeUpdate || null;
+  initEntityManager(entityMap, () => { updateEntityList(); refreshLayers(); });
   createPanel();
 
   // Toolbar toggle button
@@ -70,12 +80,25 @@ export function initSpaceTime({ onLayersUpdate, onFlyTo, onTimeUpdate }) {
  * @param {string} filename - Filename for format detection
  */
 export function loadSpaceTimeData(text, filename) {
-  const result = ingestFile(text, filename);
+  const ext = filename.split('.').pop().toLowerCase();
 
-  for (const entity of result.entities) {
-    entityMap.set(entity.id, entity);
+  if (ext === 'kml') {
+    const trackMap = new Map(tracks.map(t => [t.id, t]));
+    ingestKML(text, entityMap, trackMap);
+    tracks = [...trackMap.values()];
+  } else if (ext === 'geojson') {
+    const geojson = JSON.parse(text);
+    const trackMap = new Map(tracks.map(t => [t.id, t]));
+    ingestGeoJSON(geojson, entityMap, trackMap);
+    tracks = [...trackMap.values()];
+  } else {
+    const result = ingestFile(text, filename);
+    for (const entity of result.entities) {
+      entityMap.set(entity.id, entity);
+    }
+    tracks = tracks.concat(result.tracks);
   }
-  tracks = tracks.concat(result.tracks);
+
   timeBounds = getTimeBounds(tracks);
   currentTime = timeBounds.timeMin;
 
@@ -200,9 +223,21 @@ function createPanel() {
       </div>
     </div>
     <div class="st-import">
-      <p>Drop CSV or GPX file here</p>
+      <p>Drop CSV, GPX, KML, or GeoJSON file here</p>
       <button id="st-browse" class="st-btn">Browse…</button>
-      <input type="file" id="st-file-input" accept=".csv,.gpx,.json" style="display:none">
+      <input type="file" id="st-file-input" accept=".csv,.gpx,.json,.kml,.geojson" style="display:none">
+    </div>
+    <div class="st-analysis">
+      <h4>Analysis Tools</h4>
+      <button id="st-colocation" class="st-btn" title="Detect entity colocations">Colocations</button>
+      <button id="st-network" class="st-btn" title="Link analysis graph">Network Graph</button>
+      <button id="st-pattern" class="st-btn" title="Pattern-of-life analysis">Patterns</button>
+      <button id="st-histogram" class="st-btn" title="Activity timeline">Histogram</button>
+      <button id="st-geofence" class="st-btn" title="Manage geo-fences">Geo-fences</button>
+      <button id="st-add-entity" class="st-btn" title="Add new entity">+ Entity</button>
+    </div>
+    <div class="st-search">
+      <input type="text" id="st-search-input" placeholder="Search entities…">
     </div>
     <div id="st-entity-list" class="st-entities"></div>
   `;
@@ -258,6 +293,31 @@ function createPanel() {
     reader.readAsText(file);
     fileInput.value = '';
   });
+
+  // --- Analysis tool buttons ---
+  panel.querySelector('#st-colocation').addEventListener('click', runColocationDetection);
+  panel.querySelector('#st-network').addEventListener('click', runNetworkGraph);
+  panel.querySelector('#st-pattern').addEventListener('click', runPatternOfLife);
+  panel.querySelector('#st-histogram').addEventListener('click', () => {
+    showActivityHistogram(tracks, entityMap, { onTimeSelect: (start, end) => {
+      currentTime = start;
+      updateTimeSlider();
+      refreshLayers();
+    }});
+  });
+  panel.querySelector('#st-geofence').addEventListener('click', runGeofenceUI);
+  panel.querySelector('#st-add-entity').addEventListener('click', () => {
+    const name = prompt('Entity name:');
+    if (!name) return;
+    const kind = prompt('Kind (person/vehicle/device/organization/location/custom):', 'person') || 'person';
+    addEntity(name, kind);
+  });
+  panel.querySelector('#st-search-input').addEventListener('input', (e) => {
+    const q = e.target.value.trim();
+    if (q.length < 2) { updateEntityList(); return; }
+    const results = searchEntities(q);
+    renderEntityList(results);
+  });
 }
 
 function showPanel() {
@@ -273,12 +333,24 @@ function hidePanel() {
 function updateEntityList() {
   const list = document.getElementById('st-entity-list');
   if (!list) return;
-  list.innerHTML = [...entityMap.values()].map(e => `
-    <div class="st-entity" style="border-left: 4px solid ${e.color}">
+  renderEntityList([...entityMap.values()]);
+}
+
+function renderEntityList(entities) {
+  const list = document.getElementById('st-entity-list');
+  if (!list) return;
+  list.innerHTML = entities.map(e => `
+    <div class="st-entity" style="border-left: 4px solid ${e.color}" data-entity-id="${e.id}">
       <span class="st-entity-name">${e.name}</span>
       <span class="st-entity-kind">${e.kind}</span>
+      ${e.aliases && e.aliases.length ? `<span class="st-entity-aliases">${e.aliases.join(', ')}</span>` : ''}
     </div>
   `).join('');
+
+  // Click to open entity detail
+  list.querySelectorAll('.st-entity').forEach(el => {
+    el.addEventListener('click', () => showEntityDetail(el.dataset.entityId));
+  });
 }
 
 function updateTimeSlider() {
@@ -294,3 +366,78 @@ function updateTimeLabel() {
   if (!label || currentTime == null) return;
   label.textContent = new Date(currentTime).toISOString().replace('T', ' ').slice(0, 19);
 }
+
+// --- Analysis Tool Runners ---
+
+function runColocationDetection() {
+  if (tracks.length < 2) { alert('Need at least 2 entity tracks for colocation detection.'); return; }
+  const distStr = prompt('Distance threshold (meters):', '100');
+  const dist = parseInt(distStr) || 100;
+  const timeStr = prompt('Time threshold (seconds):', '300');
+  const timeMs = (parseInt(timeStr) || 300) * 1000;
+
+  const colocations = detectColocations(tracks, { distanceThresholdM: dist, timeThresholdMs: timeMs });
+  links = colocationLinks(colocations);
+
+  // Add link layer
+  if (updateLayersCallback) {
+    const baseLayers = createSpaceTimeLayers({ tracks, entities: entityMap, timeMin: timeBounds.timeMin, timeMax: timeBounds.timeMax, elevationScale, currentTime, trailDuration });
+    const linkLayer = createLinkLayer({ links, entities: entityMap, tracks, currentTime });
+    updateLayersCallback([...baseLayers, linkLayer]);
+  }
+
+  alert(`Found ${colocations.length} colocation events → ${links.length} entity links.`);
+}
+
+function runNetworkGraph() {
+  if (entityMap.size === 0) { alert('No entities loaded.'); return; }
+  showNetworkGraph(entityMap, links, { onNodeClick: (id) => showEntityDetail(id) });
+}
+
+function runPatternOfLife() {
+  if (tracks.length === 0) { alert('No tracks loaded.'); return; }
+  const results = [];
+  for (const track of tracks) {
+    const entity = entityMap.get(track.entityId);
+    if (!entity) continue;
+    const locs = detectFrequentLocations(track);
+    classifyLocations(locs);
+    const pattern = computeDailyPattern(track);
+    const anomalies = detectAnomalies(track, pattern);
+    results.push({ entity: entity.name, locations: locs.length, anomalies: anomalies.length });
+  }
+  const summary = results.map(r => `${r.entity}: ${r.locations} frequent locations, ${r.anomalies} anomalies`).join('\n');
+  alert('Pattern-of-Life Analysis:\n\n' + summary);
+}
+
+function runGeofenceUI() {
+  const action = prompt('Geo-fence: (1) Add circle fence, (2) Run crossing detection, (3) Clear all:', '1');
+  if (action === '1') {
+    const name = prompt('Fence name:', 'Zone 1') || 'Zone 1';
+    const lng = parseFloat(prompt('Center longitude:', '0'));
+    const lat = parseFloat(prompt('Center latitude:', '0'));
+    const radius = parseFloat(prompt('Radius (meters):', '500')) || 500;
+    createCircleFence(name, lng, lat, radius);
+    alert(`Created geo-fence "${name}" at ${lat}, ${lng} (${radius}m radius).`);
+  } else if (action === '2') {
+    const fences = getFences();
+    if (fences.length === 0) { alert('No geo-fences defined.'); return; }
+    const crossings = detectFenceCrossings(tracks);
+    const summary = summarizeFenceActivity(crossings);
+    let msg = `${crossings.length} fence crossings detected.\n\n`;
+    for (const [fenceId, entityStats] of summary) {
+      const fence = fences.find(f => f.id === fenceId);
+      msg += `${fence?.name || fenceId}:\n`;
+      for (const [entityId, stats] of entityStats) {
+        const ent = entityMap.get(entityId);
+        msg += `  ${ent?.name || entityId}: ${stats.enters} enters, ${stats.exits} exits\n`;
+      }
+    }
+    alert(msg);
+  } else if (action === '3') {
+    clearFences();
+    alert('All geo-fences cleared.');
+  }
+}
+
+// --- KML/GeoJSON ingest handled in loadSpaceTimeData ---
