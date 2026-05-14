@@ -143,7 +143,64 @@ export function ingestFile(text, filename) {
   if (ext === 'gpx' || text.trimStart().startsWith('<?xml')) {
     return ingestGPX(text);
   }
+  if (ext === 'json' || text.trimStart().startsWith('[') || text.trimStart().startsWith('{')) {
+    try {
+      return ingestJSON(text);
+    } catch {
+      // Fall through to CSV if JSON parse fails
+    }
+  }
   return ingestCSV(text);
+}
+
+/**
+ * Parse JSON array of events into entities and tracks.
+ *
+ * Expected format: array of objects with entity_id/entity, timestamp, lat, lng/lon.
+ *
+ * @param {string} jsonText
+ * @returns {IngestResult}
+ */
+export function ingestJSON(jsonText) {
+  const data = JSON.parse(jsonText);
+  const records = Array.isArray(data) ? data : (data.events || data.features || []);
+
+  const entityMap = new Map();
+  const eventsMap = new Map();
+
+  for (const rec of records) {
+    const entityName = rec.entity_id || rec.entity || rec.name || rec.id || 'default';
+    const lng = rec.lng ?? rec.lon ?? rec.longitude ?? rec.x;
+    const lat = rec.lat ?? rec.latitude ?? rec.y;
+    if (lng == null || lat == null) continue;
+
+    let timestamp;
+    const raw = rec.timestamp || rec.time || rec.datetime || rec.date;
+    if (raw == null) continue;
+    if (typeof raw === 'number') {
+      timestamp = raw < 1e12 ? raw * 1000 : raw;
+    } else {
+      timestamp = new Date(raw).getTime();
+    }
+    if (isNaN(timestamp)) continue;
+
+    if (!entityMap.has(entityName)) {
+      entityMap.set(entityName, createEntity(String(entityName)));
+    }
+    const entity = entityMap.get(entityName);
+
+    const event = createEvent(entity.id, timestamp, lng, lat, {
+      altitudeM: rec.altitude ?? rec.alt ?? rec.elevation ?? null,
+      metadata: rec.metadata ?? {},
+    });
+
+    if (!eventsMap.has(entity.id)) eventsMap.set(entity.id, []);
+    eventsMap.get(entity.id).push(event);
+  }
+
+  const entities = [...entityMap.values()];
+  const tracks = entities.map(e => createTrack(e.id, eventsMap.get(e.id) || []));
+  return { entities, tracks };
 }
 
 // --- Helpers ---

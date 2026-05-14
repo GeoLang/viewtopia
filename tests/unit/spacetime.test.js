@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { createEntity, createEvent, createTrack, haversineM, trackDistanceM } from '../../src/spacetime/models.js';
-import { getTimeBounds } from '../../src/spacetime/layers.js';
-import { ingestCSV } from '../../src/spacetime/ingest.js';
+import {
+  createEntity, createEvent, createTrack, haversineM, trackDistanceM,
+  createLink, createTimeRange, timeRangeContains, timeRangeNormalize, timeRangeExpand,
+} from '../../src/spacetime/models.js';
+import { getTimeBounds, createLinkLayer } from '../../src/spacetime/layers.js';
+import { ingestCSV, ingestJSON } from '../../src/spacetime/ingest.js';
+import { SpaceTimeIndex } from '../../src/spacetime/index-spatial.js';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
@@ -86,5 +90,100 @@ describe('spacetime/layers', () => {
     const bounds = getTimeBounds(tracks);
     expect(bounds.timeMin).toBe(500);
     expect(bounds.timeMax).toBe(5000);
+  });
+});
+
+describe('spacetime/models — Link', () => {
+  it('createLink sets defaults', () => {
+    const link = createLink('src1', 'tgt1', 'colocation');
+    expect(link.sourceId).toBe('src1');
+    expect(link.targetId).toBe('tgt1');
+    expect(link.kind).toBe('colocation');
+    expect(link.strength).toBe(1.0);
+    expect(link.evidenceCount).toBe(1);
+  });
+});
+
+describe('spacetime/models — TimeRange', () => {
+  it('timeRangeContains checks boundaries', () => {
+    const range = createTimeRange(1000, 5000);
+    expect(timeRangeContains(range, 3000)).toBe(true);
+    expect(timeRangeContains(range, 1000)).toBe(true);
+    expect(timeRangeContains(range, 999)).toBe(false);
+  });
+
+  it('timeRangeNormalize maps to [0, 1]', () => {
+    const range = createTimeRange(0, 10000);
+    expect(timeRangeNormalize(range, 0)).toBe(0);
+    expect(timeRangeNormalize(range, 10000)).toBe(1);
+    expect(timeRangeNormalize(range, 5000)).toBe(0.5);
+  });
+
+  it('timeRangeExpand grows bounds', () => {
+    const range = createTimeRange(1000, 5000);
+    timeRangeExpand(range, 500);
+    expect(range.start).toBe(500);
+    timeRangeExpand(range, 9000);
+    expect(range.end).toBe(9000);
+  });
+});
+
+describe('spacetime/ingest JSON', () => {
+  it('parses JSON array of events', () => {
+    const json = JSON.stringify([
+      { entity_id: 'drone1', timestamp: '2024-01-15T10:00:00Z', lng: -122.4, lat: 37.7 },
+      { entity_id: 'drone1', timestamp: '2024-01-15T10:05:00Z', lng: -122.5, lat: 37.8 },
+      { entity_id: 'drone2', timestamp: '2024-01-15T10:00:00Z', lng: -122.3, lat: 37.6 },
+    ]);
+    const { entities, tracks } = ingestJSON(json);
+    expect(entities.length).toBe(2);
+    expect(tracks.length).toBe(2);
+    const d1 = entities.find(e => e.name === 'drone1');
+    const d1Track = tracks.find(t => t.entityId === d1.id);
+    expect(d1Track.events.length).toBe(2);
+  });
+});
+
+describe('spacetime/index-spatial', () => {
+  it('builds and queries by bounding box', () => {
+    const events = [
+      createEvent('e1', 1000, -122.4, 37.7),
+      createEvent('e1', 2000, -122.5, 37.8),
+      createEvent('e2', 1500, -100.0, 40.0), // far away
+    ];
+    const idx = new SpaceTimeIndex();
+    idx.build(events);
+    expect(idx.size).toBe(3);
+
+    const results = idx.query(-123, 37, -122, 38);
+    expect(results.length).toBe(2); // only the SF events
+  });
+
+  it('filters by time window', () => {
+    const events = [
+      createEvent('e1', 1000, -122.4, 37.7),
+      createEvent('e1', 5000, -122.4, 37.7),
+      createEvent('e1', 9000, -122.4, 37.7),
+    ];
+    const idx = new SpaceTimeIndex();
+    idx.build(events);
+
+    const results = idx.query(-123, 37, -122, 38, 2000, 6000);
+    expect(results.length).toBe(1);
+    expect(results[0].timestamp).toBe(5000);
+  });
+
+  it('kNearest returns closest events', () => {
+    const events = [
+      createEvent('e1', 1000, -122.4, 37.7),
+      createEvent('e1', 2000, -122.41, 37.71),
+      createEvent('e1', 3000, -100.0, 40.0),
+    ];
+    const idx = new SpaceTimeIndex();
+    idx.build(events);
+
+    const nearest = idx.kNearest(-122.4, 37.7, 2);
+    expect(nearest.length).toBe(2);
+    expect(nearest[0].lng).toBe(-122.4);
   });
 });

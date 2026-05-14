@@ -28,15 +28,36 @@ let elevationScale = 5000;
 
 /** @type {Function|null} Callback to update deck.gl layers */
 let updateLayersCallback = null;
+/** @type {Function|null} Callback to fly camera to [west, south, east, north] */
+let flyToCallback = null;
 
 /**
  * Initialize the space-time panel.
  * @param {Object} opts
  * @param {Function} opts.onLayersUpdate - Called with new deck.gl layers array
+ * @param {Function} [opts.onFlyTo] - Called with {west, south, east, north} bounding box
  */
-export function initSpaceTime({ onLayersUpdate }) {
+export function initSpaceTime({ onLayersUpdate, onFlyTo }) {
   updateLayersCallback = onLayersUpdate;
+  flyToCallback = onFlyTo || null;
   createPanel();
+
+  // Toolbar toggle button
+  const btn = document.getElementById('spacetime-btn');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const panel = document.getElementById('spacetime-panel');
+      if (panel) panel.style.display = panel.style.display === 'none' ? '' : 'none';
+    });
+  }
+
+  // Re-push layers when renderer switches (new deck instance won't have them)
+  const rendererSelect = document.getElementById('renderer-choice');
+  if (rendererSelect) {
+    rendererSelect.addEventListener('change', () => {
+      setTimeout(() => refreshLayers(), 200);
+    });
+  }
 }
 
 /**
@@ -58,6 +79,24 @@ export function loadSpaceTimeData(text, filename) {
   updateTimeSlider();
   refreshLayers();
   showPanel();
+
+  // Fly to data extent
+  if (flyToCallback) {
+    const allEvents = tracks.flatMap(t => t.events);
+    if (allEvents.length > 0) {
+      let west = Infinity, south = Infinity, east = -Infinity, north = -Infinity;
+      for (const e of allEvents) {
+        if (e.lng < west) west = e.lng;
+        if (e.lng > east) east = e.lng;
+        if (e.lat < south) south = e.lat;
+        if (e.lat > north) north = e.lat;
+      }
+      // Add a small padding
+      const padLng = (east - west) * 0.2 || 0.01;
+      const padLat = (north - south) * 0.2 || 0.01;
+      flyToCallback({ west: west - padLng, south: south - padLat, east: east + padLng, north: north + padLat });
+    }
+  }
 }
 
 /**
@@ -153,6 +192,8 @@ function createPanel() {
     </div>
     <div class="st-import">
       <p>Drop CSV or GPX file here</p>
+      <button id="st-browse" class="st-btn">Browse…</button>
+      <input type="file" id="st-file-input" accept=".csv,.gpx,.json" style="display:none">
     </div>
     <div id="st-entity-list" class="st-entities"></div>
   `;
@@ -195,6 +236,18 @@ function createPanel() {
     const reader = new FileReader();
     reader.onload = () => loadSpaceTimeData(reader.result, file.name);
     reader.readAsText(file);
+  });
+
+  // File browse button
+  const fileInput = panel.querySelector('#st-file-input');
+  panel.querySelector('#st-browse').addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => loadSpaceTimeData(reader.result, file.name);
+    reader.readAsText(file);
+    fileInput.value = '';
   });
 }
 

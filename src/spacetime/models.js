@@ -113,3 +113,71 @@ export function trackDistanceM(track) {
   }
   return total;
 }
+
+// --- Link Model (entity-to-entity connections) ---
+
+/**
+ * @typedef {'colocation'|'communication'|'financial'|'organizational'|'inferred'|string} LinkKind
+ */
+
+/**
+ * @typedef {Object} Link
+ * @property {string} id
+ * @property {string} sourceId
+ * @property {string} targetId
+ * @property {LinkKind} kind
+ * @property {number} strength - 0.0 to 1.0
+ * @property {number} firstSeen - Unix ms
+ * @property {number} lastSeen - Unix ms
+ * @property {number} evidenceCount
+ * @property {Object} metadata
+ */
+
+export function createLink(sourceId, targetId, kind = 'inferred', opts = {}) {
+  const now = Date.now();
+  return {
+    id: uuid(),
+    sourceId,
+    targetId,
+    kind,
+    strength: opts.strength ?? 1.0,
+    firstSeen: opts.firstSeen ?? now,
+    lastSeen: opts.lastSeen ?? now,
+    evidenceCount: opts.evidenceCount ?? 1,
+    metadata: opts.metadata ?? {},
+  };
+}
+
+// --- TimeRange utilities ---
+
+/**
+ * @typedef {Object} TimeRange
+ * @property {number} start - Unix ms
+ * @property {number} end - Unix ms
+ */
+
+export function createTimeRange(start, end) {
+  return { start, end };
+}
+
+export function timeRangeDurationMs(range) {
+  return range.end - range.start;
+}
+
+export function timeRangeContains(range, timestamp) {
+  return timestamp >= range.start && timestamp <= range.end;
+}
+
+export function timeRangeExpand(range, timestamp) {
+  if (timestamp < range.start) range.start = timestamp;
+  if (timestamp > range.end) range.end = timestamp;
+}
+
+/**
+ * Normalize a timestamp to [0.0, 1.0] within a time range.
+ */
+export function timeRangeNormalize(range, timestamp) {
+  const total = range.end - range.start;
+  if (total === 0) return 0.5;
+  return Math.max(0, Math.min(1, (timestamp - range.start) / total));
+}

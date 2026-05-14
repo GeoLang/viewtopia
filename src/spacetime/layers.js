@@ -6,7 +6,7 @@
  * XY plane being the map and Z representing temporal progression.
  */
 
-import { PathLayer, ScatterplotLayer } from '@deck.gl/layers';
+import { PathLayer, ScatterplotLayer, ArcLayer } from '@deck.gl/layers';
 
 /** @typedef {import('./models.js').Track} Track */
 /** @typedef {import('./models.js').Event} Event */
@@ -181,4 +181,82 @@ export function getTimeBounds(tracks) {
     if (track.endTime > max) max = track.endTime;
   }
   return { timeMin: min === Infinity ? 0 : min, timeMax: max === -Infinity ? 0 : max };
+}
+
+// --- Link visualization ---
+
+const LINK_COLORS = {
+  colocation: [255, 200, 0, 200],
+  communication: [0, 200, 255, 200],
+  financial: [0, 255, 100, 200],
+  organizational: [200, 100, 255, 200],
+  inferred: [180, 180, 180, 150],
+};
+
+/**
+ * Create an ArcLayer showing links between entities.
+ *
+ * Each arc connects the latest known position of two linked entities.
+ *
+ * @param {Object} opts
+ * @param {import('./models.js').Link[]} opts.links
+ * @param {Map<string, import('./models.js').Entity>} opts.entities
+ * @param {import('./models.js').Track[]} opts.tracks
+ * @param {number} [opts.currentTime] - Filter links by time
+ * @returns {ArcLayer|null}
+ */
+export function createLinkLayer({ links, entities, tracks, currentTime }) {
+  if (!links || links.length === 0) return null;
+
+  // Build entity → latest position map
+  const posMap = new Map();
+  for (const track of tracks) {
+    if (track.events.length === 0) continue;
+    let best = track.events[0];
+    if (currentTime != null) {
+      // Find event closest to currentTime
+      for (const e of track.events) {
+        if (Math.abs(e.timestamp - currentTime) < Math.abs(best.timestamp - currentTime)) {
+          best = e;
+        }
+      }
+    } else {
+      best = track.events[track.events.length - 1];
+    }
+    posMap.set(track.entityId, best);
+  }
+
+  const arcData = links
+    .filter(link => {
+      if (currentTime != null) {
+        if (link.firstSeen > currentTime || link.lastSeen < currentTime) return false;
+      }
+      return posMap.has(link.sourceId) && posMap.has(link.targetId);
+    })
+    .map(link => {
+      const src = posMap.get(link.sourceId);
+      const tgt = posMap.get(link.targetId);
+      return {
+        sourcePosition: [src.lng, src.lat],
+        targetPosition: [tgt.lng, tgt.lat],
+        color: LINK_COLORS[link.kind] || LINK_COLORS.inferred,
+        strength: link.strength,
+        kind: link.kind,
+      };
+    });
+
+  if (arcData.length === 0) return null;
+
+  return new ArcLayer({
+    id: 'spacetime-links',
+    data: arcData,
+    getSourcePosition: d => d.sourcePosition,
+    getTargetPosition: d => d.targetPosition,
+    getSourceColor: d => d.color,
+    getTargetColor: d => d.color,
+    getWidth: d => 1 + d.strength * 3,
+    widthUnits: 'pixels',
+    pickable: true,
+    getTooltip: d => d.kind,
+  });
 }

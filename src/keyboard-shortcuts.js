@@ -27,6 +27,36 @@ export function initKeyboardShortcuts() {
   bind('F2', 'deck.gl renderer', () => setRenderer('deckgl'));
   bind('F3', 'MapLibre renderer', () => setRenderer('maplibre'));
 
+  // Analysis tools
+  bind('x', 'Clipping plane', () => click('clipping-btn'));
+  bind('X', 'Cross-section', () => click('cross-section-btn'));
+  bind('h', 'Heatmap layer', () => click('heatmap-btn'));
+  bind('t', 'Timelapse', () => click('timelapse-btn'));
+  bind('T', 'Space-Time', () => click('spacetime-btn'));
+
+  // Simulation tools
+  bind('W', 'Weather effects', () => click('weather-btn'));
+  bind('F', 'Flood simulation', () => click('flood-btn'));
+  bind('w', 'Wind visualization', () => click('wind-btn'));
+  bind('l', 'Day lighting', () => click('lighting-btn'));
+  bind('n', 'Noise map', () => click('noise-btn'));
+  bind('e', 'Energy heatmap', () => click('energy-btn'));
+  bind('S', 'Solar placement', () => click('solar-btn'));
+  bind('r', 'Traffic flow', () => click('traffic-btn'));
+
+  // Tools
+  bind('P', 'Photo viewer', () => click('photo-btn'));
+  bind('o', 'Offline cache', () => click('offline-btn'));
+  bind('I', 'Indoor nav', () => click('indoor-btn'));
+  bind('D', 'Drone planner', () => click('drone-btn'));
+  bind('V', 'WebXR mode', () => click('webxr-btn'));
+  bind('A', 'Accessibility', () => click('a11y-btn'));
+  bind('E', '3D Print Export', () => click('export3d-btn'));
+  bind('f', 'Flythrough', () => click('flythrough-btn'));
+
+  // Core
+  bind('B', 'OSM Buildings', () => click('osm-buildings-btn'));
+
   // Misc
   bind('/', 'Focus search', () => focusSearch());
   bind('Escape', 'Close panels', () => closeAllPanels());
@@ -83,7 +113,7 @@ function focusSearch() {
 function closeAllPanels() {
   const panels = ['bookmark-panel', 'story-list-panel', 'feature-info-panel',
     'style-editor-panel', 'terrain-profile', 'geojson-prop-panel', 'collab-panel',
-    'dt-col-panel'];
+    'dt-col-panel', 'spacetime-panel'];
   for (const id of panels) {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
@@ -101,9 +131,12 @@ function createHelpOverlay() {
   helpOverlay.style.display = 'none';
 
   const groups = [
-    { label: 'Tools', items: shortcuts.filter(s => 'madidbscpv'.includes(s.key)) },
+    { label: 'Tools', items: shortcuts.filter(s => 'madidbscpv'.includes(s.key) && s.key.length === 1) },
     { label: 'Tabs', items: shortcuts.filter(s => '1234'.includes(s.key)) },
     { label: 'Renderers', items: shortcuts.filter(s => s.key.startsWith('F')) },
+    { label: 'Analysis', items: shortcuts.filter(s => ['x', 'X', 'h', 't', 'T'].includes(s.key)) },
+    { label: 'Simulate', items: shortcuts.filter(s => ['W', 'F', 'w', 'l', 'n', 'e', 'S', 'r'].includes(s.key)) },
+    { label: 'More Tools', items: shortcuts.filter(s => ['P', 'o', 'I', 'D', 'V', 'A', 'E', 'f', 'B'].includes(s.key)) },
     { label: 'Other', items: shortcuts.filter(s => ['/', 'Escape', '?'].includes(s.key)) },
   ];
 

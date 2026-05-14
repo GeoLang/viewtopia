@@ -80,7 +80,7 @@ import { initSettings, loadSettings, getSetting } from './settings.js';
 import { initGlobalTerrain } from './global-terrain.js';
 import { initShareLinks } from './share-links.js';
 import { initSpaceTime } from './spacetime/panel.js';
-import { getActiveDeck } from './renderers.js';
+import { getActiveDeck, getCesiumViewer, getMapLibreDeckOverlay, getActiveMapLibre } from './renderers.js';
 
 async function main() {
   // Load settings early — needed before renderer init
@@ -228,6 +228,31 @@ async function main() {
       if (deck) {
         const existing = deck.props.layers.filter(l => !l.id.startsWith('spacetime-'));
         deck.setProps({ layers: [...existing, ...layers] });
+      }
+      const overlay = getMapLibreDeckOverlay();
+      if (overlay) {
+        overlay.setProps({ layers });
+      }
+    },
+    onFlyTo: (bounds) => {
+      const cesium = getCesiumViewer();
+      if (cesium) {
+        cesium.camera.flyTo({
+          destination: Cesium.Rectangle.fromDegrees(bounds.west, bounds.south, bounds.east, bounds.north),
+          duration: 1.5,
+        });
+      }
+      const deck = getActiveDeck();
+      if (deck) {
+        const lng = (bounds.west + bounds.east) / 2;
+        const lat = (bounds.south + bounds.north) / 2;
+        const span = Math.max(bounds.east - bounds.west, bounds.north - bounds.south);
+        const zoom = Math.max(1, Math.min(18, Math.log2(360 / span) - 1));
+        deck.setProps({ initialViewState: { longitude: lng, latitude: lat, zoom, pitch: 45, bearing: 0, transitionDuration: 1500 } });
+      }
+      const map = getActiveMapLibre();
+      if (map) {
+        map.fitBounds([[bounds.west, bounds.south], [bounds.east, bounds.north]], { padding: 50, duration: 1500 });
       }
     },
   });

@@ -13,6 +13,7 @@ import { Deck } from '@deck.gl/core';
 import { Tile3DLayer, TileLayer } from '@deck.gl/geo-layers';
 import { BitmapLayer } from '@deck.gl/layers';
 import { Tiles3DLoader } from '@loaders.gl/3d-tiles';
+import { MapboxOverlay } from '@deck.gl/mapbox';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import * as Cesium from 'cesium';
@@ -96,6 +97,16 @@ export function getRendererInfo() {
 
 export function getActiveDeck() {
   if (activeRenderer?.type === 'deckgl') return activeRenderer.deck;
+  return null;
+}
+
+export function getActiveMapLibre() {
+  if (activeRenderer?.type === 'maplibre') return activeRenderer.map;
+  return null;
+}
+
+export function getMapLibreDeckOverlay() {
+  if (activeRenderer?.type === 'maplibre') return activeRenderer.deckOverlay;
   return null;
 }
 
@@ -216,9 +227,13 @@ function initMapLibre(container) {
 
   map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
+  // deck.gl overlay for rendering deck layers on MapLibre
+  const deckOverlay = new MapboxOverlay({ layers: [] });
+  map.addControl(deckOverlay);
+
   // MapLibre needs a resize after the container is in the DOM and visible
   map.on('load', () => map.resize());
   setTimeout(() => map.resize(), 200);
 
-  activeRenderer = { type: 'maplibre', map };
+  activeRenderer = { type: 'maplibre', map, deckOverlay };
 }
