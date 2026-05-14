@@ -8,6 +8,7 @@ import {
   Select,
   Slider,
   Divider,
+  TextInput,
 } from '@mantine/core';
 import { IconSettings, IconX } from '@tabler/icons-react';
 import { useAppStore, type Renderer, type Basemap } from '../../store/app';
@@ -91,6 +92,24 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
 
         <Divider color="#30363d" />
         <Text size="xs" c="dimmed" fw={600}>Backend</Text>
+
+        <TextInput
+          size="xs"
+          label="TileTopia URL"
+          placeholder="/api/v1"
+          value={settings.tiletopiaUrl}
+          onChange={(e) => updateSettings({ tiletopiaUrl: e.currentTarget.value })}
+          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
+        />
+
+        <TextInput
+          size="xs"
+          label="GeoLang URL"
+          placeholder="/agent"
+          value={settings.geolangUrl}
+          onChange={(e) => updateSettings({ geolangUrl: e.currentTarget.value })}
+          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
+        />
 
         <Text size="xs" c="dimmed">Probe Interval: {settings.probeIntervalSec}s</Text>
         <Slider

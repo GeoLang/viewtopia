@@ -89,6 +89,8 @@ interface Settings {
   defaultRenderer: Renderer;
   defaultBasemap: Basemap;
   probeIntervalSec: number;
+  tiletopiaUrl: string;
+  geolangUrl: string;
 }
 
 interface AppState {
@@ -151,6 +153,8 @@ const DEFAULT_SETTINGS: Settings = {
   defaultRenderer: 'cesium',
   defaultBasemap: 'dark',
   probeIntervalSec: 30,
+  tiletopiaUrl: '/api/v1',
+  geolangUrl: '/agent',
 };
 
 export const useAppStore = create<AppState>()(

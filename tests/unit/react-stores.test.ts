@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { useAppStore } from '../../src/store/app';
 import { useChatStore } from '../../src/store/chat';
 import { useSpaceTimeStore } from '../../src/features/spacetime/store';
+import { useCollabStore } from '../../src/store/collaboration';
 
 describe('app store', () => {
   it('toggles nav', () => {
@@ -138,5 +139,53 @@ describe('spacetime store', () => {
     expect(useSpaceTimeStore.getState().selectedEntityId).toBe('e1');
     store.selectEntity(null);
     expect(useSpaceTimeStore.getState().selectedEntityId).toBeNull();
+  });
+});
+
+describe('settings server URLs', () => {
+  it('has default TileTopia and GeoLang URLs', () => {
+    const { settings } = useAppStore.getState();
+    expect(settings.tiletopiaUrl).toBe('/api/v1');
+    expect(settings.geolangUrl).toBe('/agent');
+  });
+
+  it('updates server URLs', () => {
+    const { updateSettings } = useAppStore.getState();
+    updateSettings({ tiletopiaUrl: 'https://tiletopia.example.com/api/v1' });
+    updateSettings({ geolangUrl: 'https://geolang.example.com/agent' });
+    const { settings } = useAppStore.getState();
+    expect(settings.tiletopiaUrl).toBe('https://tiletopia.example.com/api/v1');
+    expect(settings.geolangUrl).toBe('https://geolang.example.com/agent');
+    // Reset
+    updateSettings({ tiletopiaUrl: '/api/v1', geolangUrl: '/agent' });
+  });
+});
+
+describe('collaboration store', () => {
+  it('has initial disconnected state', () => {
+    const state = useCollabStore.getState();
+    expect(state.connected).toBe(false);
+    expect(state.roomId).toBeNull();
+    expect(state.users).toEqual([]);
+    expect(state.messages).toEqual([]);
+    expect(state.followUserId).toBeNull();
+  });
+
+  it('sets user name', () => {
+    useCollabStore.getState().setUserName('TestUser');
+    expect(useCollabStore.getState().userName).toBe('TestUser');
+    useCollabStore.getState().setUserName('Anonymous');
+  });
+
+  it('sets follow user', () => {
+    useCollabStore.getState().setFollow('user-abc');
+    expect(useCollabStore.getState().followUserId).toBe('user-abc');
+    useCollabStore.getState().setFollow(null);
+    expect(useCollabStore.getState().followUserId).toBeNull();
+  });
+
+  it('generates a userId on init', () => {
+    const { userId } = useCollabStore.getState();
+    expect(userId).toMatch(/^user-[a-z0-9]+$/);
   });
 });
