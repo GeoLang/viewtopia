@@ -10,24 +10,21 @@ import {
 } from '@mantine/core';
 import {
   IconGlobe,
-  IconMenu2,
   IconMoon,
   IconSun,
   IconKey,
+  IconTrash,
 } from '@tabler/icons-react';
 import { useMantineColorScheme } from '@mantine/core';
 import { useAppStore } from '../store/app';
 
 export function Header() {
-  const { toggleNav, tiletopiaOnline, geolangOnline } = useAppStore();
+  const { tiletopiaOnline, geolangOnline } = useAppStore();
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
 
   return (
     <Group h="100%" px="md" justify="space-between" wrap="nowrap">
       <Group gap="xs" wrap="nowrap">
-        <ActionIcon variant="subtle" color="gray" onClick={toggleNav}>
-          <IconMenu2 size={18} />
-        </ActionIcon>
         <IconGlobe size={20} color="#a78bfa" />
         <Title order={4} c="white" fw={600} visibleFrom="xs">
           ViewTopia
@@ -35,16 +32,12 @@ export function Header() {
       </Group>
 
       <Group gap="xs" wrap="nowrap">
-        {tiletopiaOnline && (
-          <Badge variant="dot" color="green" size="xs">
-            TileTopia
-          </Badge>
-        )}
-        {geolangOnline && (
-          <Badge variant="dot" color="green" size="xs">
-            GeoLang
-          </Badge>
-        )}
+        <Badge variant="dot" color={tiletopiaOnline ? 'green' : 'red'} size="xs">
+          TileTopia
+        </Badge>
+        <Badge variant="dot" color={geolangOnline ? 'green' : 'yellow'} size="xs">
+          GeoLang
+        </Badge>
       </Group>
 
       <Group gap="xs" wrap="nowrap">
@@ -67,6 +60,9 @@ export function Header() {
         />
         <Button size="xs" variant="subtle" color="violet">
           + New
+        </Button>
+        <Button size="xs" variant="subtle" color="red">
+          Clear
         </Button>
 
         <Tooltip label="Toggle theme">

@@ -6,7 +6,7 @@ interface ShortcutMap {
 
 /**
  * Global keyboard shortcut hook.
- * Keys are matched case-insensitively, no modifiers required.
+ * Keys can be plain letters ("t") or modifier combos ("ctrl+b").
  */
 export function useKeyboardShortcuts(shortcuts: ShortcutMap) {
   const handler = useCallback(
@@ -16,9 +16,13 @@ export function useKeyboardShortcuts(shortcuts: ShortcutMap) {
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
 
       const key = e.key.toLowerCase();
-      if (shortcuts[key]) {
+      const combo = `${e.ctrlKey || e.metaKey ? 'ctrl+' : ''}${key}`;
+
+      // Try combo first, then plain key
+      const fn = shortcuts[combo] ?? shortcuts[key];
+      if (fn) {
         e.preventDefault();
-        shortcuts[key]();
+        fn();
       }
     },
     [shortcuts],

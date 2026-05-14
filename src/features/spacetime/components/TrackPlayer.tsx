@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   Stack,
   Group,
@@ -16,18 +17,61 @@ import {
 import { useSpaceTimeStore } from '../store';
 
 export function TrackPlayer() {
-  const {
-    timeRange,
-    currentTime,
-    playing,
-    trailDuration,
-    playbackSpeed,
-    setCurrentTime,
-    setPlaying,
-    setTrailDuration,
-    setPlaybackSpeed,
-    tracks,
-  } = useSpaceTimeStore();
+  const timeRange = useSpaceTimeStore((s) => s.timeRange);
+  const playing = useSpaceTimeStore((s) => s.playing);
+  const trailDuration = useSpaceTimeStore((s) => s.trailDuration);
+  const playbackSpeed = useSpaceTimeStore((s) => s.playbackSpeed);
+  const tracks = useSpaceTimeStore((s) => s.tracks);
+  const setCurrentTime = useSpaceTimeStore((s) => s.setCurrentTime);
+  const setPlaying = useSpaceTimeStore((s) => s.setPlaying);
+  const setTrailDuration = useSpaceTimeStore((s) => s.setTrailDuration);
+  const setPlaybackSpeed = useSpaceTimeStore((s) => s.setPlaybackSpeed);
+
+  // Local display state — updated at throttled rate to avoid 60fps re-renders
+  const [displayTime, setDisplayTime] = useState(0);
+  const rafRef = useRef<number>(0);
+  const lastFrameRef = useRef<number>(0);
+  const lastDisplayRef = useRef<number>(0);
+
+  // Sync display when not playing
+  useEffect(() => {
+    if (!playing) {
+      setDisplayTime(useSpaceTimeStore.getState().currentTime);
+    }
+  }, [playing]);
+
+  // Animation loop: advance currentTime while playing
+  useEffect(() => {
+    if (!playing || timeRange.max <= timeRange.min) return;
+
+    lastFrameRef.current = performance.now();
+    lastDisplayRef.current = 0;
+
+    const frame = (now: number) => {
+      const dt = now - lastFrameRef.current;
+      lastFrameRef.current = now;
+      const advance = dt * playbackSpeed * 60;
+      const cur = useSpaceTimeStore.getState().currentTime;
+      const next = cur + advance > timeRange.max ? timeRange.min : cur + advance;
+      setCurrentTime(next);
+
+      // Throttle display updates to ~10fps to avoid React churn
+      if (now - lastDisplayRef.current > 100) {
+        lastDisplayRef.current = now;
+        setDisplayTime(next);
+      }
+
+      rafRef.current = requestAnimationFrame(frame);
+    };
+
+    rafRef.current = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [playing, playbackSpeed, timeRange, setCurrentTime]);
+
+  const handleSliderChange = useCallback((v: number) => {
+    setCurrentTime(v);
+    setDisplayTime(v);
+  }, [setCurrentTime]);
 
   const hasData = timeRange.max > timeRange.min;
 
@@ -54,7 +98,7 @@ export function TrackPlayer() {
               {formatTime(timeRange.min)}
             </Text>
             <Badge size="xs" variant="light" color="violet">
-              {formatTime(currentTime)}
+              {formatTime(displayTime)}
             </Badge>
             <Text size="xs" c="dimmed">
               {formatTime(timeRange.max)}
@@ -65,8 +109,8 @@ export function TrackPlayer() {
             size="sm"
             min={timeRange.min}
             max={timeRange.max}
-            value={currentTime}
-            onChange={setCurrentTime}
+            value={displayTime}
+            onChange={handleSliderChange}
             label={(v) => formatTime(v)}
             color="violet"
           />
@@ -76,7 +120,7 @@ export function TrackPlayer() {
               size="sm"
               variant="subtle"
               color="gray"
-              onClick={() => setCurrentTime(timeRange.min)}
+              onClick={() => handleSliderChange(timeRange.min)}
             >
               <IconPlayerSkipBack size={14} />
             </ActionIcon>
@@ -96,7 +140,7 @@ export function TrackPlayer() {
               size="sm"
               variant="subtle"
               color="gray"
-              onClick={() => setCurrentTime(timeRange.max)}
+              onClick={() => handleSliderChange(timeRange.max)}
             >
               <IconPlayerSkipForward size={14} />
             </ActionIcon>

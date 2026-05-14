@@ -28,6 +28,7 @@ interface SpaceTimeState {
   // UI state
   panelOpen: boolean;
   selectedEntityId: string | null;
+  flyToTarget: { lng: number; lat: number; zoom?: number } | null;
 
   // Entity CRUD
   addEntity: (entity: Entity) => void;
@@ -65,6 +66,8 @@ interface SpaceTimeState {
   // UI
   togglePanel: () => void;
   selectEntity: (id: string | null) => void;
+  flyTo: (lng: number, lat: number, zoom?: number) => void;
+  clearFlyTo: () => void;
 }
 
 export const useSpaceTimeStore = create<SpaceTimeState>((set) => ({
@@ -83,6 +86,7 @@ export const useSpaceTimeStore = create<SpaceTimeState>((set) => ({
 
   panelOpen: false,
   selectedEntityId: null,
+  flyToTarget: null,
 
   addEntity: (entity) =>
     set((s) => {
@@ -136,4 +140,6 @@ export const useSpaceTimeStore = create<SpaceTimeState>((set) => ({
 
   togglePanel: () => set((s) => ({ panelOpen: !s.panelOpen })),
   selectEntity: (selectedEntityId) => set({ selectedEntityId }),
+  flyTo: (lng, lat, zoom) => set({ flyToTarget: { lng, lat, zoom } }),
+  clearFlyTo: () => set({ flyToTarget: null }),
 }));

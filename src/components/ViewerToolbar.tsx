@@ -1,4 +1,5 @@
-import { Tabs, Group, Select, Button, Menu, Box } from '@mantine/core';
+import { useState, useCallback } from 'react';
+import { Tabs, Group, Select, Button, Menu, Box, TextInput, ActionIcon, Tooltip } from '@mantine/core';
 import {
   IconGlobe,
   IconMap,
@@ -11,8 +12,27 @@ import {
   IconSearch,
   IconWorld,
   IconTool,
+  IconRoute,
+  IconBookmark,
+  IconDownload,
+  IconMapPins,
+  IconStack2,
+  IconBuildingSkyscraper,
+  IconColumns,
+  IconChartBar,
+  IconTimeline,
+  IconUsers,
+  IconLink,
+  IconSettings,
+  IconPackage,
+  IconFileExport,
+  IconBook,
+  IconCategory,
+  IconMountain,
+  IconChartAreaLine,
 } from '@tabler/icons-react';
-import { useAppStore, type Renderer, type ViewerTab } from '../store/app';
+import { useAppStore, type Renderer, type Basemap, type ViewerTab } from '../store/app';
+import { useSpaceTimeStore } from '../features/spacetime/store';
 
 const TAB_DATA: { value: ViewerTab; label: string; icon: React.ReactNode }[] = [
   { value: 'globe', label: '3D Globe', icon: <IconGlobe size={14} /> },
@@ -27,15 +47,60 @@ const RENDERER_OPTIONS: { value: Renderer; label: string }[] = [
   { value: 'maplibre', label: 'MapLibre' },
 ];
 
+const BASEMAP_OPTIONS: { value: Basemap; label: string }[] = [
+  { value: 'osm', label: 'OSM' },
+  { value: 'satellite', label: 'Satellite' },
+  { value: 'topo', label: 'Topo' },
+  { value: 'dark', label: 'Dark' },
+];
+
 export function ViewerToolbar() {
-  const { activeTab, setActiveTab, renderer, setRenderer } = useAppStore();
+  const { activeTab, setActiveTab, renderer, setRenderer, basemap, setBasemap, togglePanel } = useAppStore();
+  const toggleSpaceTime = useSpaceTimeStore((s) => s.togglePanel);
+  const flyTo = useSpaceTimeStore((s) => s.flyTo);
+
+  const [navQuery, setNavQuery] = useState('');
+
+  const handleNavigate = useCallback(async () => {
+    const q = navQuery.trim();
+    if (!q) return;
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`,
+      );
+      const data = await res.json();
+      if (data.length > 0) {
+        const lng = parseFloat(data[0].lon);
+        const lat = parseFloat(data[0].lat);
+        if (Number.isFinite(lng) && Number.isFinite(lat)) {
+          flyTo(lng, lat, 12);
+        }
+      }
+    } catch { /* ignore */ }
+  }, [navQuery, flyTo]);
+
+  const handleExportPng = useCallback(() => {
+    // Find the active canvas element and export it
+    const canvas = document.querySelector(
+      '#cesium-container canvas, #deckgl-container canvas, #maplibre-container canvas, #leaflet-container canvas',
+    ) as HTMLCanvasElement | null;
+    if (!canvas) return;
+    try {
+      const link = document.createElement('a');
+      link.download = `viewtopia-${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch {
+      // Canvas may be tainted by cross-origin tiles
+    }
+  }, []);
 
   return (
     <Group
       px="sm"
       py={4}
       justify="space-between"
-      style={{ borderBottom: '1px solid #30363d', background: '#161b22' }}
+      style={{ borderBottom: '1px solid #30363d', background: '#161b22', overflowX: 'auto' }}
       wrap="nowrap"
     >
       <Tabs
@@ -59,6 +124,19 @@ export function ViewerToolbar() {
       </Tabs>
 
       <Group gap="xs" wrap="nowrap">
+        <TextInput
+          size="xs"
+          w={180}
+          placeholder="Navigate to…"
+          value={navQuery}
+          onChange={(e) => setNavQuery(e.currentTarget.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleNavigate()}
+          leftSection={<IconSearch size={12} />}
+          styles={{
+            input: { background: '#0d1117', borderColor: '#30363d' },
+          }}
+        />
+
         <Select
           size="xs"
           w={110}
@@ -70,31 +148,48 @@ export function ViewerToolbar() {
           }}
         />
 
-        <Button size="xs" variant="subtle" leftSection={<IconRuler size={14} />}>
-          Measure
-        </Button>
-        <Button size="xs" variant="subtle" leftSection={<IconPencil size={14} />}>
-          Draw
-        </Button>
-        <Button size="xs" variant="subtle" leftSection={<IconMapPin size={14} />}>
-          Annotate
-        </Button>
-        <Button size="xs" variant="subtle" leftSection={<IconInfoCircle size={14} />}>
-          Info
-        </Button>
+        <Select
+          size="xs"
+          w={100}
+          data={BASEMAP_OPTIONS}
+          value={basemap}
+          onChange={(v) => v && setBasemap(v as Basemap)}
+          styles={{
+            input: { background: '#0d1117', borderColor: '#30363d' },
+          }}
+        />
 
-        <Menu shadow="md" width={160}>
+        <Tooltip label="Measure"><ActionIcon size="sm" variant="subtle" color="gray" onClick={() => togglePanel('measure')}><IconRuler size={14} /></ActionIcon></Tooltip>
+        <Tooltip label="Draw"><ActionIcon size="sm" variant="subtle" color="gray" onClick={() => togglePanel('draw')}><IconPencil size={14} /></ActionIcon></Tooltip>
+        <Tooltip label="Annotate"><ActionIcon size="sm" variant="subtle" color="gray" onClick={() => togglePanel('annotate')}><IconMapPin size={14} /></ActionIcon></Tooltip>
+        <Tooltip label="Route"><ActionIcon size="sm" variant="subtle" color="gray" onClick={() => togglePanel('routing')}><IconRoute size={14} /></ActionIcon></Tooltip>
+        <Tooltip label="Bookmarks"><ActionIcon size="sm" variant="subtle" color="gray" onClick={() => togglePanel('bookmark')}><IconBookmark size={14} /></ActionIcon></Tooltip>
+        <Tooltip label="Search"><ActionIcon size="sm" variant="subtle" color="gray" onClick={() => togglePanel('geocoding')}><IconSearch size={14} /></ActionIcon></Tooltip>
+        <Tooltip label="Layers"><ActionIcon size="sm" variant="subtle" color="gray" onClick={() => togglePanel('layers')}><IconStack2 size={14} /></ActionIcon></Tooltip>
+        <Tooltip label="Buildings"><ActionIcon size="sm" variant="subtle" color="gray" onClick={() => togglePanel('buildings')}><IconBuildingSkyscraper size={14} /></ActionIcon></Tooltip>
+        <Tooltip label="Export PNG"><ActionIcon size="sm" variant="subtle" color="gray" onClick={handleExportPng}><IconDownload size={14} /></ActionIcon></Tooltip>
+
+        <Menu shadow="md" width={180}>
           <Menu.Target>
-            <Button size="xs" variant="subtle" leftSection={<IconSearch size={14} />}>
+            <Button size="xs" variant="subtle" leftSection={<IconInfoCircle size={14} />}>
               Analysis
             </Button>
           </Menu.Target>
           <Menu.Dropdown>
-            <Menu.Item>Clip</Menu.Item>
-            <Menu.Item>Section</Menu.Item>
-            <Menu.Item>Heatmap</Menu.Item>
-            <Menu.Item>Timelapse</Menu.Item>
-            <Menu.Item>Space-Time</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('clipping')}>✂ Clip</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('crossSection')}>📐 Section</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('heatmap')}>🔥 Heatmap</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('timelapse')}>⏳ Timelapse</Menu.Item>
+            <Menu.Item onClick={toggleSpaceTime}>🕐 Space-Time</Menu.Item>
+            <Menu.Divider />
+            <Menu.Item onClick={() => togglePanel('shadows')}>🌑 Shadows</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('viewshed')}>👁 Viewshed</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('volume')}>📦 Volume</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('terrainAnalysis')}>⛰ Terrain</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('terrainProfile')}>📈 Profile</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('spatialStats')}>📊 Statistics</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('pointCloudCompare')}>🔄 Cloud Compare</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('classification')}>🏷 Classification</Menu.Item>
           </Menu.Dropdown>
         </Menu>
 
@@ -105,32 +200,74 @@ export function ViewerToolbar() {
             </Button>
           </Menu.Target>
           <Menu.Dropdown>
-            <Menu.Item>Weather</Menu.Item>
-            <Menu.Item>Flood</Menu.Item>
-            <Menu.Item>Wind</Menu.Item>
-            <Menu.Item>Lighting</Menu.Item>
-            <Menu.Item>Noise</Menu.Item>
-            <Menu.Item>Energy</Menu.Item>
-            <Menu.Item>Solar</Menu.Item>
-            <Menu.Item>Traffic</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('weather')}>🌦 Weather</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('flood')}>🌊 Flood</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('wind')}>💨 Wind</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('lighting')}>☀ Lighting</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('noise')}>🔊 Noise</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('energy')}>🔋 Energy</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('solar')}>☀ Solar</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('traffic')}>🚗 Traffic</Menu.Item>
           </Menu.Dropdown>
         </Menu>
 
-        <Menu shadow="md" width={160}>
+        <Menu shadow="md" width={180}>
           <Menu.Target>
             <Button size="xs" variant="subtle" leftSection={<IconTool size={14} />}>
               Tools
             </Button>
           </Menu.Target>
           <Menu.Dropdown>
-            <Menu.Item>Photo</Menu.Item>
-            <Menu.Item>Offline</Menu.Item>
-            <Menu.Item>Indoor</Menu.Item>
-            <Menu.Item>Drone</Menu.Item>
-            <Menu.Item>WebXR</Menu.Item>
-            <Menu.Item>Accessibility</Menu.Item>
-            <Menu.Item>3D Print</Menu.Item>
-            <Menu.Item>Flythrough</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('photo')}>📷 Photo</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('offline')}>💾 Offline</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('indoor')}>🏛 Indoor</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('drone')}>🛸 Drone</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('webxr')}>🥽 WebXR</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('accessibility')}>♿ A11y</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('export3d')}>🖨 3D Print</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('flythrough')}>🎬 Flythrough</Menu.Item>
+            <Menu.Divider />
+            <Menu.Item onClick={() => togglePanel('charts')}>📊 Charts</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('splitView')}>🔲 Split View</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('stories')}>📖 Stories</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('timeline')}>⏱ Timeline</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('dataTable')}>📋 Data Table</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('collaboration')}>👥 Collaborate</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('printExport')}>🖨 Print/Export</Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
+
+        <Menu shadow="md" width={180}>
+          <Menu.Target>
+            <Button size="xs" variant="subtle" leftSection={<IconPackage size={14} />}>
+              Data
+            </Button>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Item onClick={() => togglePanel('assets')}>📦 Assets</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('ogc')}>🌐 OGC Layers</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('import')}>📂 Import</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('modelImport')}>🧊 3D Models</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('trackImport')}>🗺 Tracks</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('vectorTiles')}>🔷 Vector Tiles</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('rasterViewer')}>🖼 Raster/COG</Menu.Item>
+            <Menu.Divider />
+            <Menu.Item onClick={() => togglePanel('cesiumIon')}>🌍 Cesium Ion</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('google3d')}>🏙 Google 3D</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('globalTerrain')}>⛰ Terrain</Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
+
+        <Menu shadow="md" width={160}>
+          <Menu.Target>
+            <Button size="xs" variant="subtle" leftSection={<IconSettings size={14} />}>
+              More
+            </Button>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Item onClick={() => togglePanel('settings')}>⚙ Settings</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('shareLink')}>🔗 Share Link</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('tour')}>🎓 Tour</Menu.Item>
           </Menu.Dropdown>
         </Menu>
       </Group>
