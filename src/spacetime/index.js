@@ -101,3 +101,54 @@ export {
   recordAction, getAuditLog, getRecentActions, filterLog,
   clearAuditLog, exportAuditCSV, showAuditPanel, hideAuditPanel,
 } from './audit-trail.js';
+
+// Ontology (schema definitions)
+export {
+  getOntology, getEntityTypes, getEntityType, getLinkTypes, getLinkType,
+  addEntityType, addLinkType, removeEntityType, removeLinkType,
+  validateEntity, validateLink, getAllowedLinkTypes, getPropertyDefs,
+  exportOntology, importOntology, resetOntology,
+} from './ontology.js';
+
+// Entity resolution (fuzzy dedup)
+export {
+  findDuplicates, autoResolve, showResolutionPanel,
+} from './entity-resolution.js';
+
+// Document/media attachments
+export {
+  addAttachment, getEntityAttachments, getAttachment, removeAttachment,
+  linkAttachment, unlinkAttachment, getAllAttachments, searchAttachments,
+  getAttachmentCounts, saveAttachments, loadAttachments, clearAttachments,
+  showAttachmentPanel,
+} from './attachments.js';
+
+// Timeline correlation
+export {
+  buildTimeline, filterTimeline, bucketTimeline,
+  showTimelinePanel, hideTimelinePanel,
+} from './timeline-correlation.js';
+
+// Classification & RBAC
+export {
+  setUserClearance, getUserClearance, getClassificationLevels, getCompartments,
+  checkAccess, checkPermission, classifyItem, formatMarking, filterByAccess,
+  showClassificationDialog,
+} from './classification.js';
+
+// Case management / investigations
+export {
+  createCase, getCase, getAllCases, updateCase, deleteCase,
+  addEntitiesToCase, addLinksToCase, addAttachmentsToCase,
+  addCaseNote, updatePhase, searchCases, filterCasesByStatus,
+  exportCase, importCase, clearCases, saveCases, loadCases,
+  showCasePanel,
+} from './case-management.js';
+
+// Multi-source data fusion
+export {
+  registerSource, getSources, getSource, removeSource,
+  recordProvenance, getProvenance, getEntitiesBySource,
+  getFieldConflicts, resolveConflict, fusionSummary,
+  clearFusionData, showSourcesPanel,
+} from './data-fusion.js';

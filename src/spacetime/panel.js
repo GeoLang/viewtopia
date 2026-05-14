@@ -11,7 +11,7 @@
 import { createSpaceTimeLayers, createLinkLayer, getTimeBounds } from './layers.js';
 import { createLink } from './models.js';
 import { ingestFile } from './ingest.js';
-import { initEntityManager, showEntityDetail, searchEntities, addEntity } from './entity-manager.js';
+import { initEntityManager, showEntityDetail, searchEntities, addEntity, mergeEntities } from './entity-manager.js';
 import { detectColocations, colocationLinks } from './colocation.js';
 import { detectFrequentLocations, computeDailyPattern, detectAnomalies, classifyLocations } from './pattern-of-life.js';
 import { createCircleFence, getFences, clearFences, detectFenceCrossings, summarizeFenceActivity } from './geofence.js';
@@ -28,6 +28,12 @@ import { clusterEntities } from './clustering.js';
 import { predictAllLocations } from './prediction.js';
 import { evaluateRules, getAlerts, clearAlerts } from './alerting.js';
 import { recordAction, showAuditPanel } from './audit-trail.js';
+import { findDuplicates, showResolutionPanel } from './entity-resolution.js';
+import { buildTimeline, showTimelinePanel } from './timeline-correlation.js';
+import { showCasePanel } from './case-management.js';
+import { showSourcesPanel } from './data-fusion.js';
+import { getAlerts as getAlertList } from './alerting.js';
+import { showAttachmentPanel } from './attachments.js';
 
 /** @type {Map<string, import('./models.js').Entity>} */
 const entityMap = new Map();
@@ -267,6 +273,10 @@ function createPanel() {
       <button id="st-clustering" class="st-btn" title="Behavioral clustering">Clusters</button>
       <button id="st-predict" class="st-btn" title="Predict future locations">Predict</button>
       <button id="st-audit" class="st-btn" title="View audit trail">Audit</button>
+      <button id="st-dedup" class="st-btn" title="Find duplicate entities">Dedup</button>
+      <button id="st-timeline" class="st-btn" title="Timeline correlation">Timeline</button>
+      <button id="st-cases" class="st-btn" title="Manage investigations">Cases</button>
+      <button id="st-sources" class="st-btn" title="Data source provenance">Sources</button>
     </div>
     <div class="st-search">
       <input type="text" id="st-search-input" placeholder="Search entities…">
@@ -357,6 +367,10 @@ function createPanel() {
   panel.querySelector('#st-clustering').addEventListener('click', runClustering);
   panel.querySelector('#st-predict').addEventListener('click', runPrediction);
   panel.querySelector('#st-audit').addEventListener('click', () => showAuditPanel());
+  panel.querySelector('#st-dedup').addEventListener('click', runDedup);
+  panel.querySelector('#st-timeline').addEventListener('click', runTimelineCorrelation);
+  panel.querySelector('#st-cases').addEventListener('click', () => showCasePanel(entityMap));
+  panel.querySelector('#st-sources').addEventListener('click', () => showSourcesPanel());
   panel.querySelector('#st-search-input').addEventListener('input', (e) => {
     const q = e.target.value.trim();
     if (q.length < 2) { updateEntityList(); return; }
@@ -581,6 +595,29 @@ function runPrediction() {
     msg += `${name}: (${best.lat.toFixed(4)}, ${best.lng.toFixed(4)}) — ${(best.confidence * 100).toFixed(0)}% confidence (${best.basis})\n`;
   }
   alert(msg);
+}
+
+function runDedup() {
+  if (entityMap.size < 2) { alert('Need at least 2 entities for deduplication.'); return; }
+  const candidates = findDuplicates(entityMap);
+  recordAction('analysis', `Entity resolution: ${candidates.length} potential duplicates`);
+  if (candidates.length === 0) { alert('No duplicate entities found.'); return; }
+  showResolutionPanel(entityMap, candidates, (idA, idB) => {
+    mergeEntities(idA, idB);
+    recordAction('merge', `Merged entities ${idA} → ${idB}`);
+    updateEntityList();
+    refreshLayers();
+  });
+}
+
+function runTimelineCorrelation() {
+  if (tracks.length === 0 && links.length === 0) { alert('No data for timeline.'); return; }
+  const alerts = getAlertList();
+  const items = buildTimeline(tracks, entityMap, links, alerts);
+  recordAction('analysis', `Timeline correlation: ${items.length} items`);
+  showTimelinePanel(items, {
+    onTimeSelect: (t) => { currentTime = t; updateTimeSlider(); refreshLayers(); },
+  });
 }
 
 // --- Manual Link Creation Dialog ---

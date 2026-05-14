@@ -59,6 +59,13 @@
 | **Export** | KML, CSV (tracks + links), video capture |
 | **Audit Trail** | Timestamped action log with filtering, CSV export, and UI panel |
 | **Manual Linking** | Dialog for analyst-created entity relationships with evidence |
+| **Ontology Engine** | Typed entity/link schema with 8 entity types, 10 link types, validation, import/export |
+| **Entity Resolution** | Fuzzy dedup via Levenshtein, token overlap, alias matching with scored candidates |
+| **Document Attachments** | Link files/media to entities with IndexedDB blob storage, search, multi-entity linking |
+| **Timeline Correlation** | Unified cross-entity temporal view — movements, links, alerts, fence crossings |
+| **Classification / RBAC** | 6 security levels (U through TS/SCI), 8 compartments, role-based access control |
+| **Case Management** | Investigation workflow — phases, notes, tags, entity/link/attachment assignment, export |
+| **Multi-Source Data Fusion** | Provenance tracking with 10 source types, field conflict detection, resolution |
 | **IndexedDB Persistence** | Auto-save/restore sessions with entities, tracks, and links |
 | **Binary Columnar Store** | Apache Arrow-backed storage for 100k+ event datasets |
 | **Web Worker Analysis** | Offload colocation, pattern, and geofence analysis to workers |
@@ -145,7 +152,7 @@ docker compose up
 └─────────────────────────────────────────────────┘
 ```
 
-### Source Modules (56 files)
+### Source Modules (63 files)
 
 ```
 src/
@@ -211,8 +218,15 @@ src/
 │   ├── analysis-worker.js # Worker entry point
 │   ├── viewport-tiling.js # Spatial viewport query
 │   ├── persistence.js   # IndexedDB save/restore
-│   └── virtual-scroll.js # Large list scrolling
-└── style.css            # All styles (~1700 lines)
+│   ├── virtual-scroll.js # Large list scrolling
+│   ├── ontology.js      # Typed entity/link schema engine
+│   ├── entity-resolution.js # Fuzzy dedup + merge
+│   ├── attachments.js   # Document/media blob storage
+│   ├── timeline-correlation.js # Cross-entity temporal view
+│   ├── classification.js # Security markings + RBAC
+│   ├── case-management.js # Investigation workflow
+│   └── data-fusion.js   # Multi-source provenance
+└── style.css            # All styles (~1900 lines)
 ```
 
 ---
@@ -254,7 +268,7 @@ npm run test:all   # Run all tests
 - **Frontend:** Vite, CesiumJS, deck.gl, MapLibre GL, Leaflet, Apache Arrow
 - **Backend:** [TileTopia](https://github.com/TileTopia-HQ/tiletopia) (Rust) + [GeoLang](https://gitlab.com/geolanghq/geolang) (Python)
 - **AI:** Letta-powered spatial agent
-- **Analysis:** 24 space-time intelligence modules (GeoTime-class)
+- **Analysis:** 31 space-time intelligence modules (Gotham-class)
 - **Deploy:** Docker Compose, Helm, Terraform
 
 ---
