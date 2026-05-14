@@ -31,6 +31,7 @@
   ],
   "scripts": {
     "dev": "vite",
+    "dev:react": "vite --config vite.config.js serve index-react.html --open /index-react.html",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
@@ -46,6 +47,11 @@
     "@deck.gl/layers": "^9.3.2",
     "@deck.gl/mapbox": "^9.3.2",
     "@loaders.gl/3d-tiles": "^4.4.1",
+    "@mantine/core": "^7.17.8",
+    "@mantine/hooks": "^7.17.8",
+    "@mantine/modals": "^7.17.8",
+    "@mantine/notifications": "^7.17.8",
+    "@tabler/icons-react": "^3.44.0",
     "apache-arrow": "^21.1.0",
     "cesium": "^1.123.0",
     "html2canvas": "^1.4.1",
@@ -54,11 +60,18 @@
     "leaflet-draw": "^1.0.4",
     "leaflet.markercluster": "^1.5.3",
     "maplibre-gl": "^5.24.0",
-    "rbush": "^4.0.1"
+    "rbush": "^4.0.1",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "zustand": "^5.0.13"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.7.0",
     "jsdom": "^29.1.1",
+    "typescript": "^6.0.3",
     "vite": "^6.0.0",
     "vite-plugin-cesium": "^1.2.23",
     "vitest": "^4.1.5"

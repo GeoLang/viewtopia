@@ -1,8 +1,14 @@
 import { defineConfig } from 'vite';
 import cesium from 'vite-plugin-cesium';
+import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  plugins: [cesium()],
+  plugins: [react(), cesium()],
+  resolve: {
+    alias: {
+      '@': '/src',
+    },
+  },
   server: {
     port: 5174,
     proxy: {
