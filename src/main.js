@@ -79,6 +79,8 @@ import { initGoogle3DTiles } from './google-3d-tiles.js';
 import { initSettings, loadSettings, getSetting } from './settings.js';
 import { initGlobalTerrain } from './global-terrain.js';
 import { initShareLinks } from './share-links.js';
+import { initSpaceTime } from './spacetime/panel.js';
+import { getActiveDeck } from './renderers.js';
 
 async function main() {
   // Load settings early — needed before renderer init
@@ -220,6 +222,15 @@ async function main() {
   initSettings();
   initGlobalTerrain();
   initShareLinks();
+  initSpaceTime({
+    onLayersUpdate: (layers) => {
+      const deck = getActiveDeck();
+      if (deck) {
+        const existing = deck.props.layers.filter(l => !l.id.startsWith('spacetime-'));
+        deck.setProps({ layers: [...existing, ...layers] });
+      }
+    },
+  });
 
   // Default view: if user explicitly saved a 3D renderer preference, stay
   // on the globe tab. Only fall back to 2D map if using defaults and
