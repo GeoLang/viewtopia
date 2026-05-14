@@ -31,8 +31,9 @@
   ],
   "scripts": {
     "dev": "vite",
-    "dev:react": "vite --config vite.config.js serve index-react.html --open /index-react.html",
+    "dev:react": "vite --open /index-react.html",
     "build": "vite build",
+    "build:react": "vite build --config vite.react.config.ts",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -10,9 +10,21 @@ import { Header } from './components/Header';
 import { ChatPanel } from './components/ChatPanel';
 import { ViewerToolbar } from './components/ViewerToolbar';
 import { ViewerArea } from './components/ViewerArea';
+import { SpaceTimePanel } from './features/spacetime/SpaceTimePanel';
+import { useBackendDiscovery } from './hooks/useBackendDiscovery';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { useSpaceTimeStore } from './features/spacetime/store';
 
 export function App() {
   const navOpened = useAppStore((s) => s.navOpened);
+  const toggleNav = useAppStore((s) => s.toggleNav);
+  const toggleSpaceTime = useSpaceTimeStore((s) => s.togglePanel);
+
+  useBackendDiscovery();
+  useKeyboardShortcuts({
+    'b': toggleNav,
+    't': toggleSpaceTime,
+  });
 
   return (
     <MantineProvider theme={theme} defaultColorScheme="dark">
@@ -49,6 +61,7 @@ export function App() {
           >
             <ViewerToolbar />
             <ViewerArea />
+            <SpaceTimePanel />
           </AppShell.Main>
         </AppShell>
       </ModalsProvider>
