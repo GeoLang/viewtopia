@@ -207,6 +207,53 @@ function binarySearchClosest(events, target) {
 }
 
 /**
+ * Lightweight per-frame update: only returns the time-varying layers
+ * (current-position markers + updated filter range).
+ *
+ * The PathLayer is static and should NOT be re-created each frame.
+ * Call this instead of createSpaceTimeLayers during animation.
+ *
+ * @returns {{currentLayer: ScatterplotLayer|null, filterRange: [number, number]}}
+ */
+export function createTimeUpdateLayers({ tracks, entities, currentTime, trailDuration, timeMin, timeMax, elevationScale }) {
+  const filterMin = (trailDuration != null && currentTime != null) ? currentTime - trailDuration : timeMin;
+  const filterMax = currentTime ?? timeMax;
+
+  // Current-position markers (one per entity — very small dataset)
+  let currentLayer = null;
+  if (currentTime != null) {
+    const currentPoints = [];
+    for (const track of tracks) {
+      if (track.events.length === 0) continue;
+      const entity = entities.get(track.entityId);
+      const closest = binarySearchClosest(track.events, currentTime);
+      if (!closest) continue;
+      currentPoints.push({
+        position: [closest.lng, closest.lat, timeToElevation(closest.timestamp, timeMin, timeMax, elevationScale)],
+        color: entity ? hexToRgba(entity.color) : [255, 255, 255, 255],
+        name: entity?.name ?? 'Unknown',
+      });
+    }
+
+    currentLayer = new ScatterplotLayer({
+      id: 'spacetime-current',
+      data: currentPoints,
+      getPosition: d => d.position,
+      getFillColor: d => d.color,
+      getRadius: 8,
+      radiusUnits: 'pixels',
+      stroked: true,
+      getLineColor: [255, 255, 255, 255],
+      getLineWidth: 2,
+      lineWidthUnits: 'pixels',
+      pickable: true,
+    });
+  }
+
+  return { currentLayer, filterRange: [filterMin, filterMax] };
+}
+
+/**
  * Get the time bounds for a set of tracks.
  */
 export function getTimeBounds(tracks) {

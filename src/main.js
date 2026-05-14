@@ -80,6 +80,7 @@ import { initSettings, loadSettings, getSetting } from './settings.js';
 import { initGlobalTerrain } from './global-terrain.js';
 import { initShareLinks } from './share-links.js';
 import { initSpaceTime } from './spacetime/panel.js';
+import { createTimeUpdateLayers } from './spacetime/layers.js';
 import { getActiveDeck, getCesiumViewer, getMapLibreDeckOverlay, getActiveMapLibre } from './renderers.js';
 
 async function main() {
@@ -231,6 +232,39 @@ async function main() {
       }
       const overlay = getMapLibreDeckOverlay();
       if (overlay) {
+        overlay.setProps({ layers });
+      }
+    },
+    onTimeUpdate: (params) => {
+      // Lightweight per-frame update: only rebuild current-position markers
+      // and update the filter range on the existing events layer.
+      const { currentLayer, filterRange } = createTimeUpdateLayers(params);
+      const deck = getActiveDeck();
+      if (deck) {
+        const layers = deck.props.layers.map(l => {
+          if (l.id === 'spacetime-events') {
+            return l.clone({ filterRange });
+          }
+          if (l.id === 'spacetime-current') {
+            return currentLayer;
+          }
+          return l;
+        }).filter(Boolean);
+        if (currentLayer && !layers.find(l => l.id === 'spacetime-current')) {
+          layers.push(currentLayer);
+        }
+        deck.setProps({ layers });
+      }
+      const overlay = getMapLibreDeckOverlay();
+      if (overlay) {
+        const layers = (overlay._props?.layers || []).map(l => {
+          if (l.id === 'spacetime-events') return l.clone({ filterRange });
+          if (l.id === 'spacetime-current') return currentLayer;
+          return l;
+        }).filter(Boolean);
+        if (currentLayer && !layers.find(l => l.id === 'spacetime-current')) {
+          layers.push(currentLayer);
+        }
         overlay.setProps({ layers });
       }
     },

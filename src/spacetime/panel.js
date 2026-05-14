@@ -30,16 +30,20 @@ let elevationScale = 5000;
 let updateLayersCallback = null;
 /** @type {Function|null} Callback to fly camera to [west, south, east, north] */
 let flyToCallback = null;
+/** @type {Function|null} Callback for lightweight time-only updates */
+let timeUpdateCallback = null;
 
 /**
  * Initialize the space-time panel.
  * @param {Object} opts
- * @param {Function} opts.onLayersUpdate - Called with new deck.gl layers array
+ * @param {Function} opts.onLayersUpdate - Called with new deck.gl layers array (full rebuild)
  * @param {Function} [opts.onFlyTo] - Called with {west, south, east, north} bounding box
+ * @param {Function} [opts.onTimeUpdate] - Called with {currentTime, trailDuration} for lightweight per-frame updates
  */
-export function initSpaceTime({ onLayersUpdate, onFlyTo }) {
+export function initSpaceTime({ onLayersUpdate, onFlyTo, onTimeUpdate }) {
   updateLayersCallback = onLayersUpdate;
   flyToCallback = onFlyTo || null;
+  timeUpdateCallback = onTimeUpdate || null;
   createPanel();
 
   // Toolbar toggle button
@@ -146,7 +150,12 @@ function startAnimation() {
       currentTime = timeBounds.timeMin; // loop
     }
     updateTimeSlider();
-    refreshLayers();
+    // Use lightweight time update during animation (avoid full layer rebuild)
+    if (timeUpdateCallback) {
+      timeUpdateCallback({ currentTime, trailDuration, tracks, entities: entityMap, timeMin: timeBounds.timeMin, timeMax: timeBounds.timeMax, elevationScale });
+    } else {
+      refreshLayers();
+    }
     animationId = requestAnimationFrame(frame);
   }
   animationId = requestAnimationFrame(frame);
