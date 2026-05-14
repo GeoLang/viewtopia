@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type ViewerTab = 'globe' | 'map' | 'image' | 'table';
+export type ViewerTab = 'globe' | 'map';
 export type Renderer = 'cesium' | 'deckgl' | 'maplibre';
 export type Basemap = 'osm' | 'satellite' | 'topo' | 'dark';
 export type ToolPanel =

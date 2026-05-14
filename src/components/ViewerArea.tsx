@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import { Box, Text } from '@mantine/core';
+import { Box } from '@mantine/core';
 import { Cartesian3 } from 'cesium';
 import { useAppStore } from '../store/app';
 import { useSpaceTimeStore } from '../features/spacetime/store';
@@ -191,38 +191,6 @@ export function ViewerArea() {
           display: activeTab === 'map' ? 'block' : 'none',
         }}
       />
-
-      {/* Image & Table placeholders */}
-      {activeTab === 'image' && (
-        <Box
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Text c="dimmed" size="lg">
-            Image Viewer (drop an image or load from catalogue)
-          </Text>
-        </Box>
-      )}
-      {activeTab === 'table' && (
-        <Box
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Text c="dimmed" size="lg">
-            Data Table (load a dataset to view attributes)
-          </Text>
-        </Box>
-      )}
 
       {/* Overlay widgets */}
       <Minimap />

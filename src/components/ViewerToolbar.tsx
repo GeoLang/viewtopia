@@ -3,8 +3,6 @@ import { Tabs, Group, Select, Button, Menu, Box, ActionIcon, Tooltip } from '@ma
 import {
   IconGlobe,
   IconMap,
-  IconPhoto,
-  IconTable,
   IconRuler,
   IconPencil,
   IconMapPin,
@@ -37,8 +35,6 @@ import { useSpaceTimeStore } from '../features/spacetime/store';
 const TAB_DATA: { value: ViewerTab; label: string; icon: React.ReactNode }[] = [
   { value: 'globe', label: '3D Globe', icon: <IconGlobe size={14} /> },
   { value: 'map', label: '2D Map', icon: <IconMap size={14} /> },
-  { value: 'image', label: 'Image', icon: <IconPhoto size={14} /> },
-  { value: 'table', label: 'Table', icon: <IconTable size={14} /> },
 ];
 
 const RENDERER_OPTIONS: { value: Renderer; label: string }[] = [
