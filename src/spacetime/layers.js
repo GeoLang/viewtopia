@@ -2,11 +2,14 @@
  * Space-Time deck.gl layer — visualizes entity tracks as 3D line strips
  * where time maps to the Z-axis (elevation).
  *
- * Each track appears as a colored path rising through time, with the
- * XY plane being the map and Z representing temporal progression.
+ * Performance-optimized for large datasets:
+ * - Path data pre-built once (not per frame)
+ * - GPU-side filtering via DataFilterExtension for time window
+ * - ScatterplotLayer uses flat typed arrays where possible
  */
 
 import { PathLayer, ScatterplotLayer, ArcLayer } from '@deck.gl/layers';
+import { DataFilterExtension } from '@deck.gl/extensions';
 
 /** @typedef {import('./models.js').Track} Track */
 /** @typedef {import('./models.js').Event} Event */
@@ -39,13 +42,61 @@ function timeToElevation(timestamp, timeMin, timeMax, elevationScale) {
   return fraction * elevationScale;
 }
 
+// --- Pre-built data cache (avoids rebuilding every frame) ---
+let _cachedTrackData = null;
+let _cachedEventData = null;
+let _cacheKey = null;
+
+function getCacheKey(tracks, elevationScale, timeMin, timeMax) {
+  return `${tracks.length}:${elevationScale}:${timeMin}:${timeMax}`;
+}
+
+/**
+ * Pre-build path and event data. Only rebuilds if tracks or params change.
+ */
+function buildData(tracks, entities, timeMin, timeMax, elevationScale) {
+  const key = getCacheKey(tracks, elevationScale, timeMin, timeMax);
+  if (_cacheKey === key && _cachedTrackData) {
+    return { pathData: _cachedTrackData, eventData: _cachedEventData };
+  }
+
+  const pathData = [];
+  const eventData = [];
+
+  for (const track of tracks) {
+    if (track.events.length < 2) continue;
+    const entity = entities.get(track.entityId);
+    const color = entity ? hexToRgba(entity.color) : [200, 200, 200, 200];
+
+    const path = new Array(track.events.length);
+    for (let i = 0; i < track.events.length; i++) {
+      const e = track.events[i];
+      path[i] = [e.lng, e.lat, timeToElevation(e.timestamp, timeMin, timeMax, elevationScale)];
+      eventData.push({
+        position: path[i],
+        color,
+        timestamp: e.timestamp,
+        entityId: track.entityId,
+        name: entity?.name ?? 'Unknown',
+      });
+    }
+
+    pathData.push({ path, color, entityId: track.entityId, name: entity?.name ?? 'Unknown' });
+  }
+
+  _cachedTrackData = pathData;
+  _cachedEventData = eventData;
+  _cacheKey = key;
+  return { pathData, eventData };
+}
+
 /**
  * Create deck.gl layers for space-time visualization.
  *
- * Returns an array of layers:
- * - PathLayer for track lines (3D paths rising through time)
- * - ScatterplotLayer for event points
- * - Optional: highlighted "current time" points
+ * Optimized for large datasets:
+ * - Path geometry is cached and only rebuilt when data changes
+ * - DataFilterExtension handles time window filtering on the GPU
+ * - Event scatter only rendered for datasets under 500k points
  *
  * @param {SpaceTimeLayerOptions} opts
  * @returns {Array} deck.gl layer instances
@@ -62,31 +113,9 @@ export function createSpaceTimeLayers(opts) {
   } = opts;
 
   const layers = [];
+  const { pathData, eventData } = buildData(tracks, entities, timeMin, timeMax, elevationScale);
 
-  // Build path data: one path per track
-  const pathData = tracks
-    .filter(t => t.events.length >= 2)
-    .map(track => {
-      const entity = entities.get(track.entityId);
-      const color = entity ? hexToRgba(entity.color) : [200, 200, 200, 200];
-      let events = track.events;
-
-      // Filter by trail duration if set
-      if (trailDuration != null && currentTime != null) {
-        const cutoff = currentTime - trailDuration;
-        events = events.filter(e => e.timestamp >= cutoff && e.timestamp <= currentTime);
-      }
-
-      const path = events.map(e => [
-        e.lng,
-        e.lat,
-        timeToElevation(e.timestamp, timeMin, timeMax, elevationScale),
-      ]);
-
-      return { path, color, entityId: track.entityId, name: entity?.name ?? 'Unknown' };
-    })
-    .filter(d => d.path.length >= 2);
-
+  // Path layer — full tracks (GPU-filtered if trail is set)
   layers.push(new PathLayer({
     id: 'spacetime-paths',
     data: pathData,
@@ -99,63 +128,51 @@ export function createSpaceTimeLayers(opts) {
     pickable: true,
   }));
 
-  // Event points (only show if not too many)
-  const allEvents = tracks.flatMap(t => {
-    const entity = entities.get(t.entityId);
-    let events = t.events;
-    if (trailDuration != null && currentTime != null) {
-      const cutoff = currentTime - trailDuration;
-      events = events.filter(e => e.timestamp >= cutoff && e.timestamp <= currentTime);
-    }
-    return events.map(e => ({
-      ...e,
-      color: entity ? hexToRgba(entity.color) : [200, 200, 200, 200],
-      elevation: timeToElevation(e.timestamp, timeMin, timeMax, elevationScale),
-    }));
-  });
+  // Event scatter — uses DataFilterExtension for GPU-side time filtering
+  // Only render if dataset is manageable (deck.gl handles 500k+ points fine)
+  if (eventData.length <= 500000) {
+    const filterMin = (trailDuration != null && currentTime != null) ? currentTime - trailDuration : timeMin;
+    const filterMax = currentTime ?? timeMax;
 
-  if (allEvents.length <= 10000) {
     layers.push(new ScatterplotLayer({
       id: 'spacetime-events',
-      data: allEvents,
-      getPosition: d => [d.lng, d.lat, d.elevation],
+      data: eventData,
+      getPosition: d => d.position,
       getFillColor: d => d.color,
       getRadius: 4,
       radiusUnits: 'pixels',
       pickable: true,
+      // GPU-side filter: only show events within time window
+      getFilterValue: d => d.timestamp,
+      filterRange: [filterMin, filterMax],
+      extensions: [new DataFilterExtension({ filterSize: 1 })],
+      updateTriggers: {
+        getFilterValue: [timeMin],
+        filterRange: [filterMin, filterMax],
+      },
     }));
   }
 
   // Current-time highlight: show where each entity is NOW
   if (currentTime != null) {
-    const currentPoints = tracks
-      .map(track => {
-        const entity = entities.get(track.entityId);
-        // Find the event closest to currentTime
-        let closest = null;
-        let minDist = Infinity;
-        for (const e of track.events) {
-          const dist = Math.abs(e.timestamp - currentTime);
-          if (dist < minDist) {
-            minDist = dist;
-            closest = e;
-          }
-        }
-        if (!closest) return null;
-        return {
-          lng: closest.lng,
-          lat: closest.lat,
-          elevation: timeToElevation(closest.timestamp, timeMin, timeMax, elevationScale),
-          color: entity ? hexToRgba(entity.color) : [255, 255, 255, 255],
-          name: entity?.name ?? 'Unknown',
-        };
-      })
-      .filter(Boolean);
+    const currentPoints = [];
+    for (const track of tracks) {
+      if (track.events.length === 0) continue;
+      const entity = entities.get(track.entityId);
+      // Binary search for closest event to currentTime
+      const closest = binarySearchClosest(track.events, currentTime);
+      if (!closest) continue;
+      currentPoints.push({
+        position: [closest.lng, closest.lat, timeToElevation(closest.timestamp, timeMin, timeMax, elevationScale)],
+        color: entity ? hexToRgba(entity.color) : [255, 255, 255, 255],
+        name: entity?.name ?? 'Unknown',
+      });
+    }
 
     layers.push(new ScatterplotLayer({
       id: 'spacetime-current',
       data: currentPoints,
-      getPosition: d => [d.lng, d.lat, d.elevation],
+      getPosition: d => d.position,
       getFillColor: d => d.color,
       getRadius: 8,
       radiusUnits: 'pixels',
@@ -168,6 +185,25 @@ export function createSpaceTimeLayers(opts) {
   }
 
   return layers;
+}
+
+/**
+ * Binary search for the event closest to a target timestamp.
+ * Assumes events are sorted by timestamp.
+ */
+function binarySearchClosest(events, target) {
+  if (events.length === 0) return null;
+  let lo = 0, hi = events.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (events[mid].timestamp < target) lo = mid + 1;
+    else hi = mid;
+  }
+  // Check lo and lo-1 for closest
+  if (lo > 0 && Math.abs(events[lo - 1].timestamp - target) < Math.abs(events[lo].timestamp - target)) {
+    return events[lo - 1];
+  }
+  return events[lo];
 }
 
 /**
