@@ -84,6 +84,9 @@ export function useCesium(opts: UseCesiumOptions = {}) {
         selectionIndicator: false,
         creditContainer: creditEl,
         baseLayer: false,
+        contextOptions: {
+          webgl: { preserveDrawingBuffer: true },
+        },
       });
     } catch (err) {
       console.error('[useCesium] Failed to create viewer:', err);

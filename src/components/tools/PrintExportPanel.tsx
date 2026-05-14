@@ -10,26 +10,48 @@ import {
   NumberInput,
 } from '@mantine/core';
 import { IconFileExport, IconX } from '@tabler/icons-react';
+import { useAppStore } from '../../store/app';
 
 export function PrintExportPanel({ onClose }: { onClose: () => void }) {
   const [format, setFormat] = useState<string | null>('png');
   const [width, setWidth] = useState<number | string>(1920);
   const [height, setHeight] = useState<number | string>(1080);
   const [dpi, setDpi] = useState<number | string>(150);
+  const [status, setStatus] = useState<string | null>(null);
+  const renderer = useAppStore((s) => s.renderer);
 
   const handleExport = () => {
-    const canvas = document.querySelector(
-      '#cesium-container canvas, #deckgl-container canvas, #maplibre-container canvas, #leaflet-container canvas',
-    ) as HTMLCanvasElement | null;
-    if (!canvas) return;
+    setStatus(null);
+
+    // Pick the container matching the active renderer
+    const containerIds: Record<string, string> = {
+      cesium: 'cesium-container',
+      deckgl: 'deckgl-container',
+      maplibre: 'maplibre-container',
+    };
+    const containerId = containerIds[renderer] ?? 'cesium-container';
+    const container = document.getElementById(containerId);
+    const canvas = container?.querySelector('canvas') as HTMLCanvasElement | null;
+
+    if (!canvas) {
+      setStatus('No canvas found — is the viewer loaded?');
+      return;
+    }
 
     try {
+      const mimeType = format === 'jpg' ? 'image/jpeg' : 'image/png';
+      const dataUrl = canvas.toDataURL(mimeType);
+      if (!dataUrl || dataUrl === 'data:,') {
+        setStatus('Export returned empty image');
+        return;
+      }
       const link = document.createElement('a');
-      link.download = `viewtopia-print.${format}`;
-      link.href = canvas.toDataURL(`image/${format === 'jpg' ? 'jpeg' : format}`);
+      link.download = `viewtopia-export.${format === 'jpg' ? 'jpg' : 'png'}`;
+      link.href = dataUrl;
       link.click();
-    } catch {
-      // Canvas may be cross-origin tainted
+      setStatus('Exported!');
+    } catch (e) {
+      setStatus('Export failed — canvas may be cross-origin tainted');
     }
   };
 
@@ -93,6 +115,12 @@ export function PrintExportPanel({ onClose }: { onClose: () => void }) {
         <Button size="xs" variant="filled" color="violet" onClick={handleExport} fullWidth>
           Export
         </Button>
+
+        {status && (
+          <Text size="xs" c={status === 'Exported!' ? 'green' : 'red'} ta="center">
+            {status}
+          </Text>
+        )}
       </Stack>
     </Paper>
   );

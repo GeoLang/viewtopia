@@ -44,6 +44,7 @@ export function useDeckGL(opts: UseDeckGLOptions = {}) {
       zoom: cam.zoom,
       pitch: cam.pitch,
       bearing: cam.bearing,
+      preserveDrawingBuffer: true,
     });
 
     map.on('moveend', () => {

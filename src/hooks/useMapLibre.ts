@@ -41,6 +41,7 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
       pitch: cam.pitch,
       bearing: cam.bearing,
       maxPitch: 85,
+      preserveDrawingBuffer: true,
     });
 
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
