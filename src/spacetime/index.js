@@ -46,3 +46,22 @@ export { computeHistogram, showActivityHistogram, hideActivityHistogram } from '
 
 // Additional ingest formats (KML, GeoJSON)
 export { ingestKML, ingestGeoJSON } from './ingest-formats.js';
+
+// Binary columnar store (performance)
+export {
+  createBinaryStore, appendEvent, appendTracks, sortByTimestamp,
+  getStoreBounds, queryTimeRange, querySpatioTemporal, toBinaryAttributes,
+  getEntityEventCounts,
+} from './binary-store.js';
+
+// Web Worker analysis pool
+export { runAnalysis, workersAvailable, terminateWorker } from './worker-pool.js';
+
+// Viewport tiling
+export { queryViewport, buildRenderData, viewportChanged, computeTimeWindow } from './viewport-tiling.js';
+
+// IndexedDB persistence
+export { saveSession, loadSession, clearSession, getStoredEventCount } from './persistence.js';
+
+// Virtual scrolling
+export { createVirtualList, setVirtualListItems, scrollToItem, filterVirtualList } from './virtual-scroll.js';

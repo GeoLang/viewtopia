@@ -17,6 +17,7 @@ import { detectFrequentLocations, computeDailyPattern, detectAnomalies, classify
 import { createCircleFence, getFences, clearFences, detectFenceCrossings, summarizeFenceActivity } from './geofence.js';
 import { showNetworkGraph } from './network-graph.js';
 import { showActivityHistogram } from './activity-histogram.js';
+import { saveSession, loadSession } from './persistence.js';
 import { ingestKML, ingestGeoJSON } from './ingest-formats.js';
 
 /** @type {Map<string, import('./models.js').Entity>} */
@@ -56,6 +57,7 @@ export function initSpaceTime({ onLayersUpdate, onFlyTo, onTimeUpdate }) {
   timeUpdateCallback = onTimeUpdate || null;
   initEntityManager(entityMap, () => { updateEntityList(); refreshLayers(); });
   createPanel();
+  restoreSession();
 
   // Toolbar toggle button
   const btn = document.getElementById('spacetime-btn');
@@ -125,6 +127,9 @@ export function loadSpaceTimeData(text, filename) {
       flyToCallback({ west: west - padLng, south: south - padLat, east: east + padLng, north: north + padLat });
     }
   }
+
+  // Auto-save to IndexedDB
+  persistSession();
 }
 
 /**
@@ -536,4 +541,34 @@ function showLinkDialog() {
     const toName = entityMap.get(toId)?.name || toId;
     alert(`Link created: ${fromName} ↔ ${toName} (${kind}) at ${new Date(timestamp).toLocaleString()}`);
   };
+}
+
+// --- Persistence ---
+
+function persistSession() {
+  const entities = [...entityMap.values()];
+  saveSession(entities, tracks, links).catch(() => {});
+}
+
+async function restoreSession() {
+  try {
+    const session = await loadSession();
+    if (!session.entities || session.entities.length === 0) return;
+
+    for (const entity of session.entities) {
+      entityMap.set(entity.id, entity);
+    }
+    tracks = session.tracks || [];
+    links = session.links || [];
+
+    if (tracks.length > 0) {
+      timeBounds = getTimeBounds(tracks);
+      currentTime = timeBounds.timeMin;
+      updateEntityList();
+      updateTimeSlider();
+      refreshLayers();
+    }
+  } catch {
+    // IndexedDB not available or empty — ignore
+  }
 }
