@@ -68,7 +68,9 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <div class="stats">
 <div class="stat"><div class="num">4</div><div class="label">Renderers</div></div>
 <div class="stat"><div class="num">2</div><div class="label">Backends</div></div>
-<div class="stat"><div class="num">20+</div><div class="label">AI Tools</div></div>
+<div class="stat"><div class="num">56</div><div class="label">Modules</div></div>
+<div class="stat"><div class="num">24</div><div class="label">SpaceTime Tools</div></div>
+<div class="stat"><div class="num">102</div><div class="label">Tests</div></div>
 <div class="stat"><div class="num">$0</div><div class="label">Per month</div></div>
 </div>
 </div>
@@ -200,6 +202,97 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 </div>
 </section>
 
+<section>
+<div class="container">
+<h2>🕵️ Space-Time Intelligence</h2>
+<p style="color:var(--muted);margin-bottom:20px">Professional GeoTime-class analyst toolset — entity tracking, link analysis, pattern-of-life, and predictive analytics. All running in the browser with Web Workers and Apache Arrow.</p>
+<div class="grid">
+<div class="card">
+<h3>👤 Entity Management</h3>
+<ul>
+<li>Create/edit/delete entities (person, vehicle, device)</li>
+<li>Aliases, metadata, color coding</li>
+<li>Entity merge and full-text search</li>
+<li>Detail panel with properties and notes</li>
+</ul>
+</div>
+<div class="card">
+<h3>📡 Track Visualization</h3>
+<ul>
+<li>Animated 3D arcs with time scrubber</li>
+<li>Configurable trail duration and elevation</li>
+<li>Smooth playback at adjustable speed</li>
+<li>deck.gl DataFilterExtension for GPU filtering</li>
+</ul>
+</div>
+<div class="card">
+<h3>🔗 Link Analysis</h3>
+<ul>
+<li>Automatic colocation detection</li>
+<li>Co-travel identification (multi-step patterns)</li>
+<li>Manual link creation with evidence metadata</li>
+<li>Force-directed network graph visualization</li>
+</ul>
+</div>
+<div class="card">
+<h3>📊 Network Metrics</h3>
+<ul>
+<li>Degree, betweenness, closeness centrality</li>
+<li>PageRank scoring</li>
+<li>Community detection (label propagation)</li>
+<li>Identify key connectors and brokers</li>
+</ul>
+</div>
+<div class="card">
+<h3>🏠 Pattern-of-Life</h3>
+<ul>
+<li>Frequent location detection</li>
+<li>Daily routine patterns (24-hour profile)</li>
+<li>Anomaly detection (unusual locations/times)</li>
+<li>Auto-classify Home/Work/Transit</li>
+</ul>
+</div>
+<div class="card">
+<h3>🎯 Geo-Fencing &amp; Alerting</h3>
+<ul>
+<li>Circle and polygon fence zones</li>
+<li>Enter/exit crossing detection</li>
+<li>Proximity, speed, inactivity alerts</li>
+<li>Real-time rule evaluation with callbacks</li>
+</ul>
+</div>
+<div class="card">
+<h3>🔮 Predictive Analytics</h3>
+<ul>
+<li>Future location prediction (3 strategies)</li>
+<li>Behavioral clustering (k-means on movement)</li>
+<li>Data quality detection (GPS outliers, teleportation)</li>
+<li>Confidence scoring for all predictions</li>
+</ul>
+</div>
+<div class="card">
+<h3>📥 Multi-Format Ingest</h3>
+<ul>
+<li>CSV, GPX, KML, GeoJSON, CDR</li>
+<li>Telecom CDR with auto column mapping</li>
+<li>Drag-and-drop or browse import</li>
+<li>Export to KML, CSV, video capture</li>
+</ul>
+</div>
+<div class="card">
+<h3>⚡ Performance at Scale</h3>
+<ul>
+<li>Apache Arrow binary columnar store</li>
+<li>Web Worker pool for analysis offloading</li>
+<li>Viewport tiling (render only visible)</li>
+<li>IndexedDB persistence (auto-save/restore)</li>
+<li>Virtual scroll for large entity lists</li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+
 <section id="comparison">
 <div class="container">
 <h2>ViewTopia vs The Alternatives</h2>
@@ -224,6 +317,9 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <tr><td>Self-hosted / offline</td><td class="check">✅</td><td class="cross">❌</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td></tr>
 <tr><td>Web-based (no install)</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌ (desktop)</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td></tr>
 <tr><td>3D Tiles support</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="check">✅</td></tr>
+<tr><td>Space-time entity tracking</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
+<tr><td>Link analysis / social network</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
+<tr><td>Pattern-of-life / predictive</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
 <tr><td>GeoJSON upload</td><td class="check">✅</td><td class="cross">❌</td><td class="check">✅</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td></tr>
 <tr><td><strong>Price</strong></td><td class="check"><strong>$0</strong></td><td class="cross">$150+/mo</td><td class="check">$0</td><td class="check">$0</td><td class="cross">$0–$1,500+</td><td class="cross">$0 (limited)</td></tr>
 </tbody>

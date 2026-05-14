@@ -37,6 +37,34 @@
 | **Isochrone** | Travel-time zones from any point |
 | **Charts** | Histogram, scatter, and time series |
 
+### Space-Time Intelligence
+| Feature | Description |
+|---------|-------------|
+| **Entity Management** | CRUD entities (person/vehicle/device), aliases, merge, search |
+| **Track Visualization** | Animated 3D arcs with time scrubber, trails, and elevation |
+| **Colocation Detection** | Find entities that were near each other at the same time |
+| **Co-Travel Detection** | Identify entities moving together over multiple time steps |
+| **Pattern-of-Life** | Detect frequent locations, daily routines, and anomalies |
+| **Geo-Fencing** | Circle/polygon fences with enter/exit crossing detection |
+| **Network Graph** | Force-directed entity relationship visualization |
+| **Activity Histogram** | Timeline showing event density across all entities |
+| **Entity Swimlanes** | Per-entity timeline with events, speed, and current-time cursor |
+| **Network Metrics** | Degree, betweenness, closeness, PageRank centrality + community detection |
+| **Behavioral Clustering** | K-means clustering on movement features (speed, spread, patterns) |
+| **Predictive Location** | Multi-strategy future location prediction with confidence scores |
+| **Data Quality** | GPS outlier, impossible speed, null island, altitude spike detection |
+| **Alerting Rules** | Geofence entry, proximity, speed, inactivity triggers with callbacks |
+| **CDR Import** | Telecom call-detail-record ingest with auto column mapping |
+| **Multi-Format Ingest** | CSV, GPX, KML, GeoJSON, CDR — drag & drop or browse |
+| **Export** | KML, CSV (tracks + links), video capture |
+| **Audit Trail** | Timestamped action log with filtering, CSV export, and UI panel |
+| **Manual Linking** | Dialog for analyst-created entity relationships with evidence |
+| **IndexedDB Persistence** | Auto-save/restore sessions with entities, tracks, and links |
+| **Binary Columnar Store** | Apache Arrow-backed storage for 100k+ event datasets |
+| **Web Worker Analysis** | Offload colocation, pattern, and geofence analysis to workers |
+| **Viewport Tiling** | Only render events visible in current map extent |
+| **Virtual Scroll** | Smooth scrolling for large entity lists |
+
 ### Data & Layers
 | Feature | Description |
 |---------|-------------|
@@ -117,7 +145,7 @@ docker compose up
 └─────────────────────────────────────────────────┘
 ```
 
-### Source Modules (36 files)
+### Source Modules (56 files)
 
 ```
 src/
@@ -157,7 +185,34 @@ src/
 ├── charts.js            # Histogram/scatter/timeseries
 ├── shadows.js           # Shadow analysis
 ├── viewshed.js          # Viewshed analysis
-└── style.css            # All styles (~1200 lines)
+├── spacetime/
+│   ├── index.js         # Barrel re-exports
+│   ├── models.js        # Entity, Event, Track, Link types
+│   ├── layers.js        # deck.gl layer factories
+│   ├── panel.js         # Main UI + analysis wiring
+│   ├── entity-manager.js # CRUD, merge, search
+│   ├── colocation.js    # Proximity + co-travel detection
+│   ├── pattern-of-life.js # Frequent locations, daily patterns
+│   ├── geofence.js      # Circle/polygon fences
+│   ├── network-graph.js # Force-directed graph viz
+│   ├── network-metrics.js # Centrality + community detection
+│   ├── activity-histogram.js # Timeline histogram
+│   ├── swimlanes.js     # Per-entity timelines
+│   ├── clustering.js    # Behavioral k-means
+│   ├── prediction.js    # Future location prediction
+│   ├── alerting.js      # Rule-based notifications
+│   ├── data-quality.js  # GPS outlier detection
+│   ├── audit-trail.js   # Action logging
+│   ├── export.js        # KML/CSV/video export
+│   ├── ingest-formats.js # KML + GeoJSON parsers
+│   ├── ingest-cdr.js    # CDR telecom import
+│   ├── binary-store.js  # Apache Arrow store
+│   ├── worker-pool.js   # Web Worker management
+│   ├── analysis-worker.js # Worker entry point
+│   ├── viewport-tiling.js # Spatial viewport query
+│   ├── persistence.js   # IndexedDB save/restore
+│   └── virtual-scroll.js # Large list scrolling
+└── style.css            # All styles (~1700 lines)
 ```
 
 ---
@@ -196,9 +251,10 @@ npm run test:all   # Run all tests
 
 ## Stack
 
-- **Frontend:** Vite, CesiumJS, deck.gl, MapLibre GL, Leaflet
+- **Frontend:** Vite, CesiumJS, deck.gl, MapLibre GL, Leaflet, Apache Arrow
 - **Backend:** [TileTopia](https://github.com/TileTopia-HQ/tiletopia) (Rust) + [GeoLang](https://gitlab.com/geolanghq/geolang) (Python)
 - **AI:** Letta-powered spatial agent
+- **Analysis:** 24 space-time intelligence modules (GeoTime-class)
 - **Deploy:** Docker Compose, Helm, Terraform
 
 ---
