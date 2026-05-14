@@ -111,6 +111,15 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
+        <TextInput
+          size="xs"
+          label="LiveKit URL"
+          placeholder="wss://livekit.example.com"
+          value={settings.livekitUrl}
+          onChange={(e) => updateSettings({ livekitUrl: e.currentTarget.value })}
+          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
+        />
+
         <Text size="xs" c="dimmed">Probe Interval: {settings.probeIntervalSec}s</Text>
         <Slider
           size="xs"

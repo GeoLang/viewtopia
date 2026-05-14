@@ -10,9 +10,23 @@ import {
   TextInput,
   Button,
   Divider,
+  Tooltip,
 } from '@mantine/core';
-import { IconUsers, IconX, IconSend, IconEye, IconEyeOff } from '@tabler/icons-react';
+import {
+  IconUsers,
+  IconX,
+  IconSend,
+  IconEye,
+  IconEyeOff,
+  IconMicrophone,
+  IconMicrophoneOff,
+  IconVideo,
+  IconVideoOff,
+  IconPhoneOff,
+} from '@tabler/icons-react';
 import { useCollabStore } from '../../store/collaboration';
+import { useLiveKitStore } from '../../store/livekit';
+import { useAppStore } from '../../store/app';
 
 export function CollaborationPanel({ onClose }: { onClose: () => void }) {
   const {
@@ -30,9 +44,13 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
     setFollow,
   } = useCollabStore();
 
+  const lk = useLiveKitStore();
+  const livekitUrl = useAppStore((s) => s.settings.livekitUrl);
+
   const [roomInput, setRoomInput] = useState('');
   const [nameInput, setNameInput] = useState(userName);
   const [chatInput, setChatInput] = useState('');
+  const [lkToken, setLkToken] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -115,10 +133,70 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
               <Text size="xs" c="dimmed">
                 Room: <Text span c="white" fw={500}>{roomId}</Text>
               </Text>
-              <Button size="xs" color="red" variant="subtle" onClick={disconnect}>
+              <Button size="xs" color="red" variant="subtle" onClick={() => { lk.leave(); disconnect(); }}>
                 Leave
               </Button>
             </Group>
+
+            {/* Voice / Video (LiveKit) */}
+            {livekitUrl && (
+              <>
+                <Divider color="#30363d" />
+                <Text size="xs" c="dimmed" fw={600}>Voice &amp; Video</Text>
+                {!lk.connected ? (
+                  <Group gap="xs">
+                    <TextInput
+                      size="xs"
+                      placeholder="LiveKit token…"
+                      value={lkToken}
+                      onChange={(e) => setLkToken(e.currentTarget.value)}
+                      style={{ flex: 1 }}
+                      styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
+                    />
+                    <Button
+                      size="xs"
+                      color="violet"
+                      variant="light"
+                      disabled={!lkToken.trim()}
+                      onClick={() => roomId && lk.join(roomId, lkToken.trim())}
+                    >
+                      Join Call
+                    </Button>
+                  </Group>
+                ) : (
+                  <Group gap="xs">
+                    <Tooltip label={lk.micEnabled ? 'Mute mic' : 'Unmute mic'}>
+                      <ActionIcon
+                        size="sm"
+                        variant="light"
+                        color={lk.micEnabled ? 'green' : 'gray'}
+                        onClick={() => lk.toggleMic()}
+                      >
+                        {lk.micEnabled ? <IconMicrophone size={14} /> : <IconMicrophoneOff size={14} />}
+                      </ActionIcon>
+                    </Tooltip>
+                    <Tooltip label={lk.camEnabled ? 'Turn off camera' : 'Turn on camera'}>
+                      <ActionIcon
+                        size="sm"
+                        variant="light"
+                        color={lk.camEnabled ? 'green' : 'gray'}
+                        onClick={() => lk.toggleCam()}
+                      >
+                        {lk.camEnabled ? <IconVideo size={14} /> : <IconVideoOff size={14} />}
+                      </ActionIcon>
+                    </Tooltip>
+                    <Tooltip label="Leave call">
+                      <ActionIcon size="sm" variant="light" color="red" onClick={() => lk.leave()}>
+                        <IconPhoneOff size={14} />
+                      </ActionIcon>
+                    </Tooltip>
+                    <Badge size="xs" variant="light" color="green">
+                      {lk.participants.length} in call
+                    </Badge>
+                  </Group>
+                )}
+              </>
+            )}
 
             <Divider color="#30363d" />
             <Text size="xs" c="dimmed" fw={600}>Users</Text>

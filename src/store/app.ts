@@ -91,6 +91,7 @@ interface Settings {
   probeIntervalSec: number;
   tiletopiaUrl: string;
   geolangUrl: string;
+  livekitUrl: string;
 }
 
 interface AppState {
@@ -155,6 +156,7 @@ const DEFAULT_SETTINGS: Settings = {
   probeIntervalSec: 30,
   tiletopiaUrl: '/api/v1',
   geolangUrl: '/agent',
+  livekitUrl: '',
 };
 
 export const useAppStore = create<AppState>()(

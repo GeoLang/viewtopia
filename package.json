@@ -60,6 +60,7 @@
     "leaflet": "^1.9.4",
     "leaflet-draw": "^1.0.4",
     "leaflet.markercluster": "^1.5.3",
+    "livekit-client": "^2.19.0",
     "maplibre-gl": "^5.24.0",
     "rbush": "^4.0.1",
     "react": "^19.2.6",
