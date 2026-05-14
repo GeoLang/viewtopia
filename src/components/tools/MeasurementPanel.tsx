@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Paper,
   Text,
@@ -9,35 +8,36 @@ import {
   Button,
   SegmentedControl,
 } from '@mantine/core';
-import { IconRuler, IconX } from '@tabler/icons-react';
-
-type MeasureMode = 'distance' | 'area' | 'elevation';
-
-interface MeasureResult {
-  mode: MeasureMode;
-  value: number;
-  unit: string;
-  points: [number, number][];
-}
+import { IconRuler, IconX, IconTrash } from '@tabler/icons-react';
+import { useMeasureStore, type MeasureMode } from '../../store/measure';
 
 export function MeasurementPanel({
   onClose,
 }: {
   onClose: () => void;
 }) {
-  const [mode, setMode] = useState<MeasureMode>('distance');
-  const [results, setResults] = useState<MeasureResult[]>([]);
-  const [measuring, setMeasuring] = useState(false);
+  const mode = useMeasureStore((s) => s.mode);
+  const pending = useMeasureStore((s) => s.pending);
+  const liveDistance = useMeasureStore((s) => s.liveDistance);
+  const results = useMeasureStore((s) => s.results);
+  const setMode = useMeasureStore((s) => s.setMode);
+  const finishMeasure = useMeasureStore((s) => s.finishMeasure);
+  const cancelPending = useMeasureStore((s) => s.cancelPending);
+  const clearAll = useMeasureStore((s) => s.clearAll);
+  const removeResult = useMeasureStore((s) => s.removeResult);
 
-  const handleStart = () => {
-    setMeasuring(true);
-    // TODO: Wire to map click handlers
+  const activateMode = (m: MeasureMode) => {
+    if (mode === m) {
+      setMode(null);
+    } else {
+      setMode(m);
+    }
   };
 
-  const handleClear = () => {
-    setResults([]);
-    setMeasuring(false);
-  };
+  const liveFmt =
+    liveDistance >= 1000
+      ? `${(liveDistance / 1000).toFixed(2)} km`
+      : `${liveDistance.toFixed(1)} m`;
 
   return (
     <Paper
@@ -60,6 +60,11 @@ export function MeasurementPanel({
           <Text size="sm" fw={600} c="white">
             Measurement
           </Text>
+          {results.length > 0 && (
+            <Badge size="xs" variant="light" color="violet">
+              {results.length}
+            </Badge>
+          )}
         </Group>
         <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
           <IconX size={14} />
@@ -69,41 +74,67 @@ export function MeasurementPanel({
       <SegmentedControl
         size="xs"
         fullWidth
-        value={mode}
-        onChange={(v) => setMode(v as MeasureMode)}
+        value={mode ?? ''}
+        onChange={(v) => v && activateMode(v as MeasureMode)}
         data={[
           { value: 'distance', label: 'Distance' },
           { value: 'area', label: 'Area' },
-          { value: 'elevation', label: 'Elevation' },
         ]}
         mb="xs"
       />
 
-      <Stack gap="xs">
-        {results.map((r, i) => (
-          <Group key={i} justify="space-between">
-            <Badge size="xs" variant="light" color="violet">
-              {r.mode}
-            </Badge>
-            <Text size="xs" c="white">
-              {r.value.toFixed(2)} {r.unit}
-            </Text>
+      {mode && (
+        <Text size="xs" c="green" ta="center" mb="xs">
+          {mode === 'distance' && `Click points (${pending.length}). Double-click to finish.`}
+          {mode === 'area' && `Click polygon vertices (${pending.length}). Double-click to finish.`}
+        </Text>
+      )}
+
+      {pending.length >= 2 && (
+        <Text size="xs" c="yellow" fw={600} ta="center" mb="xs">
+          Running total: {liveFmt}
+        </Text>
+      )}
+
+      {!mode && (
+        <Text size="xs" c="dimmed" ta="center" mb="xs">
+          Select Distance or Area, then click on the map.
+        </Text>
+      )}
+
+      <Stack gap={4}>
+        {results.map((r) => (
+          <Group key={r.id} justify="space-between" p="xs"
+            style={{ background: '#21262d', borderRadius: 4 }}
+          >
+            <Group gap="xs">
+              <Badge size="xs" variant="light" color="yellow">
+                {r.mode}
+              </Badge>
+              <Text size="xs" c="white" fw={600}>
+                {r.value.toFixed(2)} {r.unit}
+              </Text>
+            </Group>
+            <ActionIcon size="xs" variant="subtle" color="red" onClick={() => removeResult(r.id)}>
+              <IconTrash size={10} />
+            </ActionIcon>
           </Group>
         ))}
       </Stack>
 
       <Group mt="sm" gap="xs">
-        <Button
-          size="xs"
-          variant={measuring ? 'light' : 'filled'}
-          color="violet"
-          onClick={handleStart}
-          flex={1}
-        >
-          {measuring ? 'Click map…' : 'Start'}
-        </Button>
-        <Button size="xs" variant="subtle" color="gray" onClick={handleClear}>
-          Clear
+        {pending.length > 0 && (
+          <Button size="xs" variant="subtle" color="gray" onClick={cancelPending} flex={1}>
+            Cancel
+          </Button>
+        )}
+        {pending.length >= 2 && (
+          <Button size="xs" variant="filled" color="violet" onClick={finishMeasure} flex={1}>
+            Finish
+          </Button>
+        )}
+        <Button size="xs" variant="subtle" color="red" onClick={clearAll} disabled={results.length === 0}>
+          Clear All
         </Button>
       </Group>
     </Paper>
