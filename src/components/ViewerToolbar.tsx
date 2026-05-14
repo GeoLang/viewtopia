@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { Tabs, Group, Select, Button, Menu, Box, TextInput, ActionIcon, Tooltip } from '@mantine/core';
+import { useCallback } from 'react';
+import { Tabs, Group, Select, Button, Menu, Box, ActionIcon, Tooltip } from '@mantine/core';
 import {
   IconGlobe,
   IconMap,
@@ -57,27 +57,6 @@ const BASEMAP_OPTIONS: { value: Basemap; label: string }[] = [
 export function ViewerToolbar() {
   const { activeTab, setActiveTab, renderer, setRenderer, basemap, setBasemap, togglePanel } = useAppStore();
   const toggleSpaceTime = useSpaceTimeStore((s) => s.togglePanel);
-  const flyTo = useSpaceTimeStore((s) => s.flyTo);
-
-  const [navQuery, setNavQuery] = useState('');
-
-  const handleNavigate = useCallback(async () => {
-    const q = navQuery.trim();
-    if (!q) return;
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`,
-      );
-      const data = await res.json();
-      if (data.length > 0) {
-        const lng = parseFloat(data[0].lon);
-        const lat = parseFloat(data[0].lat);
-        if (Number.isFinite(lng) && Number.isFinite(lat)) {
-          flyTo(lng, lat, 12);
-        }
-      }
-    } catch { /* ignore */ }
-  }, [navQuery, flyTo]);
 
   const handleExportPng = useCallback(() => {
     // Find the active canvas element and export it
@@ -124,19 +103,6 @@ export function ViewerToolbar() {
       </Tabs>
 
       <Group gap="xs" wrap="nowrap">
-        <TextInput
-          size="xs"
-          w={180}
-          placeholder="Navigate to…"
-          value={navQuery}
-          onChange={(e) => setNavQuery(e.currentTarget.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleNavigate()}
-          leftSection={<IconSearch size={12} />}
-          styles={{
-            input: { background: '#0d1117', borderColor: '#30363d' },
-          }}
-        />
-
         <Select
           size="xs"
           w={110}
