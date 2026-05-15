@@ -204,6 +204,51 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 
 <section>
 <div class="container">
+<h2>🤝 Real-Time Collaboration</h2>
+<p style="color:var(--muted);margin-bottom:20px">Collaborate in real-time via Ptolemy's ephemeral room relay. Optional LiveKit WebRTC for voice and video.</p>
+<div class="grid">
+<div class="card">
+<h3>👁️ View Sync (Follow Mode)</h3>
+<ul>
+<li>Click the eye icon next to a user to follow their camera</li>
+<li>Camera state (lat, lng, zoom, bearing, pitch) synced in real-time</li>
+<li>Great for guided reviews and presentations</li>
+<li>Click again to stop following</li>
+</ul>
+</div>
+<div class="card">
+<h3>🖱️ Cursor &amp; Presence</h3>
+<ul>
+<li>See where other users are pointing on the map</li>
+<li>Online user list with coloured indicators</li>
+<li>Real-time text chat within the room</li>
+<li>Room-based sessions — share a room name to collaborate</li>
+</ul>
+</div>
+<div class="card">
+<h3>🎤 Voice &amp; Video (LiveKit)</h3>
+<ul>
+<li>LiveKit WebRTC integration for voice/video calls</li>
+<li>Mic and camera toggle with visual feedback</li>
+<li>Configure LiveKit URL in Settings</li>
+<li>Same room ID used for data relay and voice/video</li>
+</ul>
+</div>
+<div class="card">
+<h3>⚙️ Configuration</h3>
+<ul>
+<li>Server URLs in Settings panel (TileTopia/Ptolemy, GeoLang, LiveKit)</li>
+<li>Connects to Ptolemy's <code>/ws/rooms/{room_id}</code> relay</li>
+<li>Opaque JSON relay — any message format works</li>
+<li>Rooms auto-created on first connection, auto-cleaned on last disconnect</li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+
+<section>
+<div class="container">
 <h2>🕵️ Space-Time Intelligence</h2>
 <p style="color:var(--muted);margin-bottom:20px">Gotham-class analyst toolset — ontology-driven entity resolution, case management, classification, provenance tracking, pattern-of-life, and predictive analytics. All running in the browser with Web Workers and Apache Arrow.</p>
 <div class="grid">

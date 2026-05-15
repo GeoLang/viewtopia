@@ -107,9 +107,20 @@
 | **Print/Export** | PNG screenshot with title, scale bar, north arrow |
 | **Tour** | 12-step onboarding walkthrough |
 | **Stories** | Guided fly-through presentations |
-| **Collaboration** | Real-time cursors and chat |
+| **Collaboration** | Real-time view sync, cursors, chat, and voice/video |
 | **Responsive** | Mobile-friendly layout with collapsible panels |
 | **PWA** | Installable with offline support |
+
+### Collaboration
+| Feature | Description |
+|---------|-------------|
+| **Room-based sessions** | Join a named room — all participants see each other |
+| **View sync (Follow mode)** | Click the eye icon on a user to lock your camera to theirs in real-time |
+| **Cursor sharing** | See where other users are pointing on the map |
+| **Presence** | Online user list with coloured indicators |
+| **Chat** | Real-time text messaging within the room |
+| **Voice & Video** | LiveKit WebRTC — mic, camera, and screen share |
+| **Backend** | Connects to Ptolemy's `/ws/rooms/{room_id}` ephemeral relay |
 
 ---
 
@@ -227,6 +238,66 @@ src/
 │   ├── case-management.js # Investigation workflow
 │   └── data-fusion.js   # Multi-source provenance
 └── style.css            # All styles (~1900 lines)
+```
+
+---
+
+## Collaboration Guide
+
+ViewTopia supports real-time collaboration via Ptolemy's ephemeral room relay and
+optional LiveKit WebRTC for voice/video.
+
+### Setup
+
+1. **Configure server URLs** in the Settings panel (⚙️):
+   - **TileTopia / Ptolemy URL** — e.g. `https://ptolemy.example.com/api/v1`
+   - **LiveKit URL** (optional) — e.g. `wss://livekit.example.com`
+
+2. **Open the Collaboration panel** from the toolbar menu (👥 Collab).
+
+### Joining a Room
+
+1. Enter your **display name** and a **Room ID** (any string — share it with teammates).
+2. Click **Join Room**.
+3. All participants in the same room see each other in the user list.
+
+### View Sync (Follow Mode)
+
+Click the **eye icon** (👁) next to another user to follow their view. Your camera
+will mirror theirs in real-time — zoom, pan, pitch, bearing — all synced. Click again
+to stop following.
+
+This is great for guided reviews, presentations, or "show me what you see" workflows.
+
+### Chat
+
+Type a message in the chat box at the bottom of the panel. Messages appear in real-time
+for all participants. Your own messages are highlighted in purple.
+
+### Voice & Video (LiveKit)
+
+If a **LiveKit URL** is configured in Settings:
+
+1. After joining a room, a **Voice & Video** section appears.
+2. Paste a LiveKit access token (from your token broker) and click **Join Call**.
+3. Use the toolbar buttons to toggle **mic** 🎤 and **camera** 📹.
+4. Click the **phone icon** 📞 to leave the call (you stay in the collab room).
+
+> **Token broker**: LiveKit requires server-signed JWT tokens. You can add a
+> `/api/v1/livekit/token` endpoint to Ptolemy, or use LiveKit Cloud's token API,
+> or a standalone service. See [LiveKit docs](https://docs.livekit.io/home/).
+
+### Protocol
+
+The collaboration relay is at `{ptolemyUrl}/../../ws/rooms/{room_id}` (WebSocket).
+Messages are opaque JSON relayed to all other participants:
+
+```jsonc
+{ "type": "Join",   "user_id": "u1", "user_name": "Alice" }
+{ "type": "Camera", "user_id": "u1", "latitude": 40.7, "longitude": -73.9, "zoom": 14, "bearing": 0, "pitch": 45 }
+{ "type": "Cursor", "user_id": "u1", "latitude": 40.71, "longitude": -73.91 }
+{ "type": "Chat",   "user_id": "u1", "user_name": "Alice", "message": "Look here" }
+{ "type": "Leave",  "user_id": "u1" }
 ```
 
 ---
