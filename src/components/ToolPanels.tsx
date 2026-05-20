@@ -1,5 +1,6 @@
 import { useAppStore } from '../store/app';
 import { useSpaceTimeStore } from '../features/spacetime/store';
+import { PluginPanel } from '../plugins/PluginHost';
 import { MeasurementPanel } from './tools/MeasurementPanel';
 import { GeocodingPanel } from './tools/GeocodingPanel';
 import { RoutingPanel } from './tools/RoutingPanel';
@@ -229,6 +230,10 @@ export function ToolPanels() {
     case 'printExport':
       return <PrintExportPanel onClose={close} />;
     default:
+      // Check if it's a plugin panel
+      if (activePanel) {
+        return <PluginPanel pluginId={activePanel} onClose={close} />;
+      }
       return null;
   }
 }

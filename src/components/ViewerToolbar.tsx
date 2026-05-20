@@ -31,6 +31,7 @@ import {
 } from '@tabler/icons-react';
 import { useAppStore, type Renderer, type Basemap, type ViewerTab } from '../store/app';
 import { useSpaceTimeStore } from '../features/spacetime/store';
+import { getPlugins } from '../plugins/registry';
 
 const TAB_DATA: { value: ViewerTab; label: string; icon: React.ReactNode }[] = [
   { value: 'globe', label: '3D Globe', icon: <IconGlobe size={14} /> },
@@ -53,6 +54,7 @@ const BASEMAP_OPTIONS: { value: Basemap; label: string }[] = [
 export function ViewerToolbar() {
   const { activeTab, setActiveTab, renderer, setRenderer, basemap, setBasemap, togglePanel } = useAppStore();
   const toggleSpaceTime = useSpaceTimeStore((s) => s.togglePanel);
+  const plugins = getPlugins();
 
   const handleExportPng = useCallback(() => {
     // Find the active canvas element and export it
@@ -232,6 +234,23 @@ export function ViewerToolbar() {
             <Menu.Item onClick={() => togglePanel('tour')}>🎓 Tour</Menu.Item>
           </Menu.Dropdown>
         </Menu>
+
+        {plugins.length > 0 && (
+          <Menu shadow="md" width={200}>
+            <Menu.Target>
+              <Button size="xs" variant="subtle" leftSection={<IconCategory size={14} />}>
+                Plugins ({plugins.length})
+              </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+              {plugins.map((p) => (
+                <Menu.Item key={p.id} onClick={() => togglePanel(p.id as any)}>
+                  {p.icon || '🔌'} {p.name}
+                </Menu.Item>
+              ))}
+            </Menu.Dropdown>
+          </Menu>
+        )}
       </Group>
     </Group>
   );
