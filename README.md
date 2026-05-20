@@ -141,6 +141,20 @@
 | **API response cache** | GET responses cached with TTL for offline fallback |
 | **Service Worker** | Static assets cached, app loads even without internet |
 | **Sync indicator** | Real-time UI showing pending/synced/offline status |
+| **Three-way merge** | Conflict resolution: auto-merge when possible, UI for true conflicts |
+| **Column-level resolution** | Different-property changes merge automatically (like git) |
+
+### Projects & Workspaces
+| Feature | Description |
+|---------|-------------|
+| **Workspaces** | Team-level containers with shared branding and settings |
+| **Projects** | Self-contained contexts — layers, bookmarks, settings, offline scope |
+| **Share by email** | Invite collaborators with role (owner/editor/viewer) |
+| **Share by link** | Generate token-based join URLs |
+| **Role-based access** | Owner, Editor, Viewer permissions per project/workspace |
+| **Project switcher** | Header dropdown to create/switch/manage projects |
+| **Offline scope** | Mark projects for offline availability — caches only that project's data |
+| **Cross-device** | Projects sync via IndexedDB + server, available on any device |
 
 ### Collaboration
 | Feature | Description |
@@ -187,12 +201,21 @@ docker compose up
 │  Vite + React + Mantine  ·  CesiumJS  ·  deck.gl│
 │  MapLibre  ·  Plugin System  ·  Offline-First    │
 ├─────────────────────────────────────────────────┤
+│  Projects & Workspaces   │  Conflict Resolution  │
+│  ┌──────────────────┐    │  ┌─────────────────┐ │
+│  │ Workspace → Team │    │  │ Three-way merge │ │
+│  │ Project → Context│    │  │ Auto-resolve    │ │
+│  │ Share → Roles    │    │  │ Column merge    │ │
+│  └──────────────────┘    │  │ UI for conflicts│ │
+│                          │  └─────────────────┘ │
+├─────────────────────────────────────────────────┤
 │  IndexedDB (local)     │  Service Worker (cache) │
 │  ┌──────────────────┐  │  ┌───────────────────┐ │
 │  │ Layers/Features  │  │  │ Static assets     │ │
 │  │ Annotations      │  │  │ Map tiles         │ │
 │  │ Pending Ops ←────│──│──│→ Sync to server   │ │
-│  │ API Cache        │  │  │ Offline fallback  │ │
+│  │ Projects/WS      │  │  │ Offline fallback  │ │
+│  │ API Cache        │  │  │                   │ │
 │  └──────────────────┘  │  └───────────────────┘ │
 ├─────────────────────────────────────────────────┤
 │   /api → TileTopia        /agent → GeoLang      │

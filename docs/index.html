@@ -299,7 +299,97 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 
 <section>
 <div class="container">
-<h2>�🕵️ Space-Time Intelligence</h2>
+<h2>📡 Offline-First & Conflict Resolution</h2>
+<p style="color:var(--muted);margin-bottom:20px">Everything works without internet. Data syncs when you reconnect — conflicts are resolved automatically where possible, with a clear UI for true conflicts.</p>
+<div class="grid">
+<div class="card">
+<h3>Local-First Storage</h3>
+<ul>
+<li>All data in IndexedDB — reads never hit the network</li>
+<li>Mutations queued in an operation log</li>
+<li>Service Worker caches static assets + tiles</li>
+<li>App loads and functions fully offline</li>
+</ul>
+</div>
+<div class="card">
+<h3>Automatic Sync</h3>
+<ul>
+<li>Reconnects and pushes pending changes</li>
+<li>FIFO queue with retry and exponential backoff</li>
+<li>Real-time indicator: pending/synced/offline</li>
+<li>Pre-cache tiles for an area (bbox + zoom range)</li>
+</ul>
+</div>
+<div class="card">
+<h3>Three-Way Merge</h3>
+<ul>
+<li>Mirrors geogit's merge algorithm</li>
+<li>FastForward — only one side changed</li>
+<li>ColumnMerge — different properties → auto-merge</li>
+<li>Conflict UI for same-property divergence</li>
+</ul>
+</div>
+<div class="card">
+<h3>Conflict UI</h3>
+<ul>
+<li>Side-by-side diff per conflicting property</li>
+<li>Per-property "Keep Mine" / "Keep Server" toggle</li>
+<li>Bulk "Keep All Mine" / "Keep All Server" buttons</li>
+<li>Multi-feature navigation for batch conflicts</li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+
+<section>
+<div class="container">
+<h2>📁 Projects & Workspaces</h2>
+<p style="color:var(--muted);margin-bottom:20px">Organize your work into projects. Share with your team. Each project has its own layers, settings, and offline scope.</p>
+<div class="grid">
+<div class="card">
+<h3>Workspaces</h3>
+<ul>
+<li>Team-level container with shared branding</li>
+<li>Member management at workspace level</li>
+<li>Default settings inherited by projects</li>
+<li>Switch between workspaces in header dropdown</li>
+</ul>
+</div>
+<div class="card">
+<h3>Projects</h3>
+<ul>
+<li>Self-contained context: layers, bookmarks, settings</li>
+<li>Mark projects for offline availability</li>
+<li>Syncs across devices via IndexedDB + server</li>
+<li>Create/switch/delete from header dropdown</li>
+</ul>
+</div>
+<div class="card">
+<h3>Sharing</h3>
+<ul>
+<li>Invite by email with role (owner/editor/viewer)</li>
+<li>Generate shareable join link</li>
+<li>Role-based access control per project</li>
+<li>Revoke access or change roles anytime</li>
+</ul>
+</div>
+<div class="card">
+<h3>Use Cases</h3>
+<ul>
+<li>County GIS → Zoning, Infrastructure, Planning</li>
+<li>Site Monitoring → Site A, Site B, Site C</li>
+<li>Real Estate → San Francisco, Manhattan</li>
+<li>Fleet Ops → US-East, US-West regions</li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+
+<section>
+<div class="container">
+<h2>🕵️ Space-Time Intelligence</h2>
 <p style="color:var(--muted);margin-bottom:20px">Gotham-class analyst toolset — ontology-driven entity resolution, case management, classification, provenance tracking, pattern-of-life, and predictive analytics. All running in the browser with Web Workers and Apache Arrow.</p>
 <div class="grid">
 <div class="card">

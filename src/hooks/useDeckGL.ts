@@ -45,7 +45,7 @@ export function useDeckGL(opts: UseDeckGLOptions = {}) {
       pitch: cam.pitch,
       bearing: cam.bearing,
       preserveDrawingBuffer: true,
-    });
+    } as maplibregl.MapOptions);
 
     map.on('moveend', () => {
       const c = map.getCenter();

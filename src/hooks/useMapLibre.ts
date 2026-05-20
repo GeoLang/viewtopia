@@ -42,7 +42,7 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
       bearing: cam.bearing,
       maxPitch: 85,
       preserveDrawingBuffer: true,
-    });
+    } as maplibregl.MapOptions);
 
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
