@@ -72,6 +72,26 @@
 | **Viewport Tiling** | Only render events visible in current map extent |
 | **Virtual Scroll** | Smooth scrolling for large entity lists |
 
+### Plugin System
+| Feature | Description |
+|---------|-------------|
+| **Auto-discovery** | Drop a folder in `src/plugins/` — automatically loaded |
+| **Plugin SDK** | Full context: map control, store access, API proxy, settings |
+| **Settings UI** | Each plugin declares settings schema, rendered in Settings panel |
+| **8 built-in plugins** | Real Estate, Logistics, Environmental, Construction, Agriculture, Telecom, Emergency, Example |
+| **Hot reload** | Vite HMR — edit a plugin, see changes instantly |
+
+### Industry Verticals (Plugins)
+| Plugin | Description |
+|--------|-------------|
+| **Real Estate** | Parcel search (APN/address/owner), comparable sales, split/merge editing |
+| **Logistics** | Fleet tracking via WebSocket, multi-stop delivery optimization |
+| **Environmental** | Live IoT sensor monitoring with threshold alerts |
+| **Construction** | Survey comparison, cut/fill volumes, milestone tracking |
+| **Agriculture** | NDVI field health, soil moisture, crop status |
+| **Telecom** | Tower inventory, RF coverage simulation (Hata model) |
+| **Emergency** | Incident dispatch, evacuation routing, affected area analysis |
+
 ### Data & Layers
 | Feature | Description |
 |---------|-------------|
@@ -110,6 +130,17 @@
 | **Collaboration** | Real-time view sync, cursors, chat, and voice/video |
 | **Responsive** | Mobile-friendly layout with collapsible panels |
 | **PWA** | Installable with offline support |
+
+### Offline-First
+| Feature | Description |
+|---------|-------------|
+| **Local-first storage** | All data in IndexedDB — works without network |
+| **Operation queue** | Mutations queued locally, synced to server when online |
+| **Auto-sync** | Reconnects and pushes pending changes automatically |
+| **Tile caching** | Pre-download map tiles for offline viewing |
+| **API response cache** | GET responses cached with TTL for offline fallback |
+| **Service Worker** | Static assets cached, app loads even without internet |
+| **Sync indicator** | Real-time UI showing pending/synced/offline status |
 
 ### Collaboration
 | Feature | Description |
@@ -153,8 +184,16 @@ docker compose up
 ```
 ┌─────────────────────────────────────────────────┐
 │                   ViewTopia                      │
-│  Vite + Vanilla JS  ·  CesiumJS  ·  deck.gl     │
-│  MapLibre  ·  Leaflet  ·  30+ feature modules    │
+│  Vite + React + Mantine  ·  CesiumJS  ·  deck.gl│
+│  MapLibre  ·  Plugin System  ·  Offline-First    │
+├─────────────────────────────────────────────────┤
+│  IndexedDB (local)     │  Service Worker (cache) │
+│  ┌──────────────────┐  │  ┌───────────────────┐ │
+│  │ Layers/Features  │  │  │ Static assets     │ │
+│  │ Annotations      │  │  │ Map tiles         │ │
+│  │ Pending Ops ←────│──│──│→ Sync to server   │ │
+│  │ API Cache        │  │  │ Offline fallback  │ │
+│  └──────────────────┘  │  └───────────────────┘ │
 ├─────────────────────────────────────────────────┤
 │   /api → TileTopia        /agent → GeoLang      │
 │   Rust tile server        Python AI agent        │
@@ -302,6 +341,58 @@ Messages are opaque JSON relayed to all other participants:
 
 ---
 
+## Plugin Development
+
+ViewTopia uses a file-based plugin system — drop a folder in `src/plugins/` and it's automatically discovered.
+
+### Creating a Plugin
+
+```bash
+mkdir src/plugins/my-plugin
+```
+
+```tsx
+// src/plugins/my-plugin/index.tsx
+import type { PluginDefinition, PluginContext } from '../sdk';
+
+function MyPanel({ ctx }: { ctx: PluginContext }) {
+  return <div>
+    <button onClick={() => ctx.map.flyTo(-73.9, 40.7, 14)}>Fly to NYC</button>
+  </div>;
+}
+
+export default {
+  id: 'my-plugin',
+  name: 'My Plugin',
+  version: '1.0.0',
+  icon: '🔌',
+  category: 'plugins',
+  Panel: MyPanel,
+  settings: [
+    { key: 'apiKey', label: 'API Key', type: 'text', defaultValue: '' },
+  ],
+} satisfies PluginDefinition;
+```
+
+### Plugin Context API
+
+| Property | Description |
+|----------|-------------|
+| `ctx.map.flyTo(lng, lat, zoom)` | Fly the camera to coordinates |
+| `ctx.map.addGeoJsonLayer(id, geojson)` | Add a temporary data layer |
+| `ctx.map.removeLayer(id)` | Remove a layer |
+| `ctx.map.fitBounds(bbox)` | Fit view to bounding box |
+| `ctx.store.getLayers()` | Get current layer list |
+| `ctx.store.getSettings()` | Get app settings |
+| `ctx.api.fetch(path)` | Proxied fetch to backend |
+| `ctx.settings.get(key)` | Read plugin setting |
+| `ctx.settings.set(key, value)` | Write plugin setting (localStorage) |
+| `ctx.close()` | Close the plugin panel |
+
+See [docs/plugins.md](docs/plugins.md) for the full guide.
+
+---
+
 ## Scripts
 
 ```bash
@@ -336,7 +427,7 @@ npm run test:all   # Run all tests
 
 ## Stack
 
-- **Frontend:** Vite, CesiumJS, deck.gl, MapLibre GL, Leaflet, Apache Arrow
+- **Frontend:** Vite, React + Mantine UI, CesiumJS, deck.gl, MapLibre GL, Leaflet, Apache Arrow
 - **Backend:** [TileTopia](https://github.com/TileTopia-HQ/tiletopia) (Rust) + [GeoLang](https://gitlab.com/geolanghq/geolang) (Python)
 - **AI:** Letta-powered spatial agent
 - **Analysis:** 31 space-time intelligence modules (Gotham-class)

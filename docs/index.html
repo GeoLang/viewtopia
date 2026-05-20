@@ -67,6 +67,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <a href="real-estate.md" class="secondary">Real Estate MVP</a>
 <a href="logistics.md" class="secondary">Logistics MVP</a>
 <a href="verticals.md" class="secondary">All Verticals</a>
+<a href="plugins.md" class="secondary">Plugin Dev</a>
 </div>
 <div class="stats">
 <div class="stat"><div class="num">4</div><div class="label">Renderers</div></div>
@@ -252,7 +253,53 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 
 <section>
 <div class="container">
-<h2>🕵️ Space-Time Intelligence</h2>
+<h2>� Plugin System</h2>
+<p style="color:var(--muted);margin-bottom:20px">Extensible file-based plugin architecture — drop a folder in <code>src/plugins/</code> and your panel auto-appears. Full access to map, store, and API context.</p>
+<div class="grid">
+<div class="card">
+<h3>⚡ Zero Config</h3>
+<ul>
+<li>Create folder + index.tsx → done</li>
+<li>Vite import.meta.glob auto-discovery</li>
+<li>Hot Module Reload — instant preview</li>
+<li>No manual registration needed</li>
+</ul>
+</div>
+<div class="card">
+<h3>🧰 Plugin SDK</h3>
+<ul>
+<li><code>ctx.map</code> — flyTo, addGeoJsonLayer, fitBounds</li>
+<li><code>ctx.store</code> — layers, basemap, renderer state</li>
+<li><code>ctx.api</code> — proxied fetch to backends</li>
+<li><code>ctx.settings</code> — persisted key-value per plugin</li>
+</ul>
+</div>
+<div class="card">
+<h3>⚙️ Settings Schema</h3>
+<ul>
+<li>Declare settings in plugin definition</li>
+<li>Auto-rendered UI in Settings panel</li>
+<li>Types: text, number, boolean, select, color</li>
+<li>Persisted to localStorage per plugin</li>
+</ul>
+</div>
+<div class="card">
+<h3>🏢 Built-in Plugins</h3>
+<ul>
+<li>Real Estate — parcels, comps, split/merge</li>
+<li>Logistics — fleet tracking, delivery optimization</li>
+<li>Environmental — IoT sensor monitoring</li>
+<li>Construction, Agriculture, Telecom, Emergency</li>
+</ul>
+</div>
+</div>
+<p style="margin-top:20px"><a href="plugins.md">→ Full Plugin Development Guide</a></p>
+</div>
+</section>
+
+<section>
+<div class="container">
+<h2>�🕵️ Space-Time Intelligence</h2>
 <p style="color:var(--muted);margin-bottom:20px">Gotham-class analyst toolset — ontology-driven entity resolution, case management, classification, provenance tracking, pattern-of-life, and predictive analytics. All running in the browser with Web Workers and Apache Arrow.</p>
 <div class="grid">
 <div class="card">

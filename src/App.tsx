@@ -20,7 +20,9 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { useBackendDiscovery } from './hooks/useBackendDiscovery';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useSpaceTimeStore } from './features/spacetime/store';
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
+import { initNetworkMonitor } from './offline/network';
+import { initSync } from './offline/sync';
 
 export function App() {
   const navOpened = useAppStore((s) => s.navOpened);
@@ -28,6 +30,12 @@ export function App() {
   const setAsideWidth = useAppStore((s) => s.setAsideWidth);
   const toggleNav = useAppStore((s) => s.toggleNav);
   const toggleSpaceTime = useSpaceTimeStore((s) => s.togglePanel);
+
+  // Initialize offline-first system
+  useEffect(() => {
+    initNetworkMonitor();
+    initSync();
+  }, []);
 
   useBackendDiscovery();
   useKeyboardShortcuts({
