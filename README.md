@@ -78,7 +78,7 @@
 | **Auto-discovery** | Drop a folder in `src/plugins/` — automatically loaded |
 | **Plugin SDK** | Full context: map control, store access, API proxy, settings |
 | **Settings UI** | Each plugin declares settings schema, rendered in Settings panel |
-| **8 built-in plugins** | Real Estate, Logistics, Environmental, Construction, Agriculture, Telecom, Emergency, Example |
+| **23 built-in plugins** | Industry verticals + QGIS-equivalent tools (see below) |
 | **Hot reload** | Vite HMR — edit a plugin, see changes instantly |
 
 ### Industry Verticals (Plugins)
@@ -91,6 +91,27 @@
 | **Agriculture** | NDVI field health, soil moisture, crop status |
 | **Telecom** | Tower inventory, RF coverage simulation (Hata model) |
 | **Emergency** | Incident dispatch, evacuation routing, affected area analysis |
+
+### QGIS Plugin Equivalents (Plugins)
+Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
+
+| Plugin | QGIS Equivalent | Downloads | Key Tech |
+|--------|-----------------|-----------|----------|
+| **Basemap Catalog** | QuickMapServices | 11.3M | 30+ tile providers, category filter |
+| **OSM Downloader** | QuickOSM | 3.0M | Overpass API, 12 presets |
+| **Raster Classification** | Semi-Auto Classification | 2.6M | K-means, ISODATA in-browser |
+| **Coordinate Tools** | Lat Lon Tools | 1.7M | DD/DMS/UTM/Geohash/WKT/GeoJSON |
+| **Geoprocessing** | mmqgis | 1.7M | Turf.js: buffer, dissolve, intersect, union, voronoi |
+| **Terrain Profile** | Profile tool | 1.6M | Open-Elevation API, SVG chart |
+| **Export Map** | qgis2web | 1.6M | PNG/JPEG/HTML + embed codes |
+| **3D Viewer** | Qgis2threejs | 1.4M | deck.gl terrain + buildings |
+| **Street View** | Street View | 901K | Google + Mapillary integration |
+| **Data Catalog** | MetaSearch | 856K | STAC API (Earth Search, Planetary Computer) |
+| **KML Tools** | KML Tools | 771K | Import KML/KMZ/GPX, export KML |
+| **Shape Tools** | Shape Tools | 669K | Geodesic circles, ellipses, sectors, arcs |
+| **Point Sampling** | Point Sampling Tool | 662K | Multi-layer sampling + CSV export |
+| **Georeferencer** | Freehand Georeferencer | 664K | Control points + affine transform |
+| **Advanced Sketching** | Sketching Tools | 669K | Split, merge, offset, smooth, densify, snap |
 
 ### Data & Layers
 | Feature | Description |

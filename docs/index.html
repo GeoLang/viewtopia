@@ -71,10 +71,10 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 </div>
 <div class="stats">
 <div class="stat"><div class="num">4</div><div class="label">Renderers</div></div>
-<div class="stat"><div class="num">2</div><div class="label">Backends</div></div>
-<div class="stat"><div class="num">63</div><div class="label">Modules</div></div>
+<div class="stat"><div class="num">23</div><div class="label">Plugins</div></div>
+<div class="stat"><div class="num">15</div><div class="label">QGIS Ports</div></div>
 <div class="stat"><div class="num">31</div><div class="label">SpaceTime Tools</div></div>
-<div class="stat"><div class="num">106</div><div class="label">Tests</div></div>
+<div class="stat"><div class="num">172</div><div class="label">Tests</div></div>
 <div class="stat"><div class="num">$0</div><div class="label">Per month</div></div>
 </div>
 </div>
@@ -541,6 +541,123 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 </div>
 </section>
 
+<section>
+<div class="container">
+<h2>🔌 QGIS Plugin Equivalents</h2>
+<p style="color:var(--muted);margin-bottom:20px">Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads). All run natively in the browser — no desktop install needed.</p>
+<div class="grid">
+<div class="card">
+<h3>📍 Basemap Catalog</h3>
+<ul>
+<li>30+ tile providers in one click</li>
+<li>Streets, satellite, terrain, topo, dark, specialty</li>
+<li>Category filter + search</li>
+<li>Replaces: QuickMapServices (11.3M downloads)</li>
+</ul>
+</div>
+<div class="card">
+<h3>🗺️ OSM Downloader</h3>
+<ul>
+<li>Overpass API with 12 preset queries</li>
+<li>Custom Overpass QL editor</li>
+<li>Auto-converts to GeoJSON layers</li>
+<li>Replaces: QuickOSM (3M downloads)</li>
+</ul>
+</div>
+<div class="card">
+<h3>🧮 Geoprocessing</h3>
+<ul>
+<li>Buffer, dissolve, intersect, union, difference</li>
+<li>Voronoi, convex hull, centroids, simplify</li>
+<li>Powered by Turf.js — runs in browser</li>
+<li>Replaces: mmqgis (1.7M downloads)</li>
+</ul>
+</div>
+<div class="card">
+<h3>📐 Coordinate Tools</h3>
+<ul>
+<li>Parse & convert DD, DMS, DDM, UTM, Geohash</li>
+<li>WKT and GeoJSON output formats</li>
+<li>Click-to-copy, fly-to, pick from map</li>
+<li>Replaces: Lat Lon Tools (1.7M downloads)</li>
+</ul>
+</div>
+<div class="card">
+<h3>📈 Terrain Profile</h3>
+<ul>
+<li>Elevation profile with SVG mini-chart</li>
+<li>Distance, gain, loss statistics</li>
+<li>Open-Elevation API for DEM lookup</li>
+<li>Replaces: Profile tool (1.6M downloads)</li>
+</ul>
+</div>
+<div class="card">
+<h3>🏢 3D Viewer</h3>
+<ul>
+<li>3D terrain with configurable exaggeration</li>
+<li>Extruded buildings from height fields</li>
+<li>Lighting, fog, sky atmosphere controls</li>
+<li>Replaces: Qgis2threejs (1.4M downloads)</li>
+</ul>
+</div>
+<div class="card">
+<h3>🔬 Raster Classification</h3>
+<ul>
+<li>K-means and ISODATA clustering</li>
+<li>In-browser unsupervised classification</li>
+<li>Class statistics and color-mapped output</li>
+<li>Replaces: Semi-Auto Classification (2.6M downloads)</li>
+</ul>
+</div>
+<div class="card">
+<h3>📷 Street View</h3>
+<ul>
+<li>Google Street View + Mapillary integration</li>
+<li>Embedded viewer with heading/pitch/FOV</li>
+<li>Synced with map click location</li>
+<li>Replaces: Street View (901K downloads)</li>
+</ul>
+</div>
+<div class="card">
+<h3>📂 KML Tools</h3>
+<ul>
+<li>Import KML, KMZ, and GPX files</li>
+<li>Export GeoJSON as KML for Google Earth</li>
+<li>Auto-zoom to imported extent</li>
+<li>Replaces: KML Tools (771K downloads)</li>
+</ul>
+</div>
+<div class="card">
+<h3>⭕ Shape Tools</h3>
+<ul>
+<li>Geodesic circles, ellipses, sectors, arcs</li>
+<li>Lines of bearing, stars, regular polygons</li>
+<li>Configurable units and color</li>
+<li>Replaces: Shape Tools (669K downloads)</li>
+</ul>
+</div>
+<div class="card">
+<h3>📊 Data Catalog</h3>
+<ul>
+<li>STAC API search (Sentinel, Landsat, etc.)</li>
+<li>Microsoft Planetary Computer integration</li>
+<li>Browse collections, add to map</li>
+<li>Replaces: MetaSearch (856K downloads)</li>
+</ul>
+</div>
+<div class="card">
+<h3>✏️ Advanced Sketching</h3>
+<ul>
+<li>Split, merge, reshape polygons</li>
+<li>Parallel offset, Bezier smooth, densify</li>
+<li>Snapping with configurable tolerance</li>
+<li>Replaces: Sketching Tools (669K downloads)</li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+
 <section id="comparison">
 <div class="container">
 <h2>ViewTopia vs The Alternatives</h2>
@@ -588,10 +705,10 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <h3>vs QGIS</h3>
 <ul>
 <li>QGIS = desktop GIS, not web-based</li>
-<li>No 3D globe or CesiumJS</li>
-<li>No AI-driven analysis</li>
-<li>Steep learning curve</li>
-<li>ViewTopia runs in the browser</li>
+<li>Top 20 QGIS plugins ported to ViewTopia</li>
+<li>AI-driven analysis + notebooks</li>
+<li>Real-time collaboration built-in</li>
+<li>ViewTopia runs in the browser — no install</li>
 </ul>
 </div>
 <div class="card">
