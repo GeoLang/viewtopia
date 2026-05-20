@@ -156,6 +156,33 @@
 | **Offline scope** | Mark projects for offline availability — caches only that project's data |
 | **Cross-device** | Projects sync via IndexedDB + server, available on any device |
 
+### Raster Analysis
+| Feature | Description |
+|---------|-------------|
+| **COG Loader** | Load Cloud Optimized GeoTIFFs from URL or file (with overviews) |
+| **NDVI** | Normalized Difference Vegetation Index from multispectral imagery |
+| **Hillshade** | Sun-angle illumination model (Horn's method) |
+| **Slope** | Terrain slope in degrees or percent |
+| **Aspect** | Terrain aspect (compass direction of steepest descent) |
+| **Band Math** | Raster calculator — arbitrary expressions with band references |
+| **Contours** | Marching squares contour line generation |
+| **Reclassification** | Map value ranges to discrete classes |
+| **Color Ramps** | 11 built-in ramps (viridis, magma, terrain, spectral, etc.) |
+| **Legend** | Auto-generated color legends for any ramp |
+
+### Notebooks
+| Feature | Description |
+|---------|-------------|
+| **Browser-native cells** | JavaScript cells run instantly, no server needed |
+| **Python cells** | Execute via connected Jupyter kernel (pandas, geopandas, ML) |
+| **Map action cells** | Recorded map operations (flyTo, addLayer) — replayable |
+| **Markdown cells** | Documentation and notes inline |
+| **Run All / Run Up To** | Execute notebook sequentially or partially |
+| **Replay** | Animated step-by-step workflow replay |
+| **Outputs** | Text, JSON, images, errors displayed below cells |
+| **Offline** | Notebooks stored in IndexedDB, work without internet |
+| **Project-scoped** | Organize notebooks within projects |
+
 ### Collaboration
 | Feature | Description |
 |---------|-------------|

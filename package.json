@@ -55,6 +55,7 @@
     "@tabler/icons-react": "^3.44.0",
     "apache-arrow": "^21.1.0",
     "cesium": "^1.123.0",
+    "geotiff": "^3.0.5",
     "html2canvas": "^1.4.1",
     "idb": "^8.0.3",
     "leaflet": "^1.9.4",
