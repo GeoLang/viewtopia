@@ -6,19 +6,23 @@
  * - Each mutation also creates a PendingOperation
  * - When online, the sync engine processes pending ops in FIFO order
  * - Failed ops are retried with exponential backoff
+ * - Conflicts are detected via three-way merge (base vs local vs server)
  * - Like git: work offline, sync when you choose
  */
 
 import { pendingOps, type PendingOperation } from './db';
 import { isOnline } from './network';
+import { threeWayMerge, type MergeConflict, type FeatureVersion } from './conflicts';
 
-type SyncStatus = 'idle' | 'syncing' | 'error';
+type SyncStatus = 'idle' | 'syncing' | 'error' | 'conflicts';
 
 interface SyncState {
   status: SyncStatus;
   pendingCount: number;
   lastSyncAt: number | null;
   lastError: string | null;
+  /** Unresolved conflicts from last sync attempt */
+  conflicts: MergeConflict[];
 }
 
 type SyncListener = (state: SyncState) => void;
@@ -29,6 +33,7 @@ let syncState: SyncState = {
   pendingCount: 0,
   lastSyncAt: null,
   lastError: null,
+  conflicts: [],
 };
 let syncTimer: ReturnType<typeof setTimeout> | null = null;
 let isSyncing = false;
@@ -146,6 +151,33 @@ async function executeSync(op: PendingOperation): Promise<void> {
   const resourcePath = getResourcePath(op.resource, op.resourceId);
   const url = `${baseUrl}${resourcePath}`;
 
+  // For updates, check for conflicts first
+  if (op.type === 'update' && op.resource === 'feature') {
+    const payload = op.payload as { base?: FeatureVersion; ours?: FeatureVersion };
+    if (payload.base) {
+      // Fetch server's current version
+      const serverResp = await fetch(url);
+      if (serverResp.ok) {
+        const theirs: FeatureVersion = await serverResp.json();
+        // Three-way merge
+        const mergeResult = threeWayMerge(payload.base, payload.ours || null, theirs);
+        if (mergeResult.conflicts.length > 0) {
+          // Surface conflicts to UI
+          setState({ status: 'conflicts', conflicts: mergeResult.conflicts });
+          throw new ConflictError(mergeResult.conflicts);
+        }
+        // Auto-resolved — use merged version
+        if (mergeResult.resolved.length > 0) {
+          const merged = mergeResult.resolved[0];
+          (op.payload as Record<string, unknown>).properties = merged.mergedProperties;
+          if (merged.mergedGeometry) {
+            (op.payload as Record<string, unknown>).geometry = merged.mergedGeometry;
+          }
+        }
+      }
+    }
+  }
+
   let method: string;
   switch (op.type) {
     case 'create':
@@ -167,6 +199,15 @@ async function executeSync(op: PendingOperation): Promise<void> {
 
   if (!resp.ok) {
     throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+  }
+}
+
+/** Error thrown when conflicts are detected */
+export class ConflictError extends Error {
+  conflicts: MergeConflict[];
+  constructor(conflicts: MergeConflict[]) {
+    super(`${conflicts.length} conflict(s) detected`);
+    this.conflicts = conflicts;
   }
 }
 
@@ -243,5 +284,10 @@ export function initSync(): void {
 /** Discard all pending operations (e.g. user wants to reset) */
 export async function discardPending(): Promise<void> {
   await pendingOps.clear();
-  setState({ pendingCount: 0, status: 'idle', lastError: null });
+  setState({ pendingCount: 0, status: 'idle', lastError: null, conflicts: [] });
+}
+
+/** Clear conflicts (after user resolves them) */
+export function clearConflicts(): void {
+  setState({ conflicts: [], status: 'idle' });
 }
