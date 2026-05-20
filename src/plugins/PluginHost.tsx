@@ -12,7 +12,7 @@ import { useMemo } from 'react';
 import { useAppStore } from '../store/app';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { getPlugin } from './registry';
-import type { PluginContext, PluginMapContext, PluginStoreContext, PluginApiContext } from './sdk';
+import type { PluginContext, PluginMapContext, PluginStoreContext, PluginApiContext, PluginSettingsContext } from './sdk';
 
 interface PluginPanelProps {
   pluginId: string;
@@ -76,7 +76,33 @@ export function PluginPanel({ pluginId, onClose }: PluginPanelProps) {
       baseUrl: store.settings.tiletopiaUrl || '/api/v1',
     };
 
-    return { map: mapCtx, store: storeCtx, api: apiCtx, close: onClose };
+    const storageKey = `viewtopia-plugin-settings:${pluginId}`;
+    const settingsCtx: PluginSettingsContext = {
+      get: <T = unknown>(key: string, defaultValue?: T): T => {
+        try {
+          const data = JSON.parse(localStorage.getItem(storageKey) || '{}');
+          return key in data ? data[key] : (defaultValue as T);
+        } catch {
+          return defaultValue as T;
+        }
+      },
+      set: (key: string, value: unknown) => {
+        try {
+          const data = JSON.parse(localStorage.getItem(storageKey) || '{}');
+          data[key] = value;
+          localStorage.setItem(storageKey, JSON.stringify(data));
+        } catch { /* ignore */ }
+      },
+      getAll: () => {
+        try {
+          return JSON.parse(localStorage.getItem(storageKey) || '{}');
+        } catch {
+          return {};
+        }
+      },
+    };
+
+    return { map: mapCtx, store: storeCtx, api: apiCtx, settings: settingsCtx, close: onClose };
   }, [store, flyTo, onClose]);
 
   if (!plugin) {

@@ -12,6 +12,7 @@ import {
 } from '@mantine/core';
 import { IconSettings, IconX } from '@tabler/icons-react';
 import { useAppStore, type Renderer, type Basemap } from '../../store/app';
+import { PluginSettingsPanel } from '../../plugins/PluginSettings';
 
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const { settings, updateSettings } = useAppStore();
@@ -130,6 +131,10 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           onChange={(v) => updateSettings({ probeIntervalSec: v })}
           color="violet"
         />
+
+        <Divider color="#30363d" />
+        <Text size="xs" c="dimmed" fw={600}>Plugin Settings</Text>
+        <PluginSettingsPanel />
       </Stack>
     </Paper>
   );

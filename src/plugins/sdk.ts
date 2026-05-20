@@ -48,10 +48,21 @@ export interface PluginApiContext {
   baseUrl: string;
 }
 
+export interface PluginSettingsContext {
+  /** Get a setting value by key */
+  get: <T = unknown>(key: string, defaultValue?: T) => T;
+  /** Set a setting value */
+  set: (key: string, value: unknown) => void;
+  /** Get all settings for this plugin */
+  getAll: () => Record<string, unknown>;
+}
+
 export interface PluginContext {
   map: PluginMapContext;
   store: PluginStoreContext;
   api: PluginApiContext;
+  /** Plugin-specific persistent settings (stored in localStorage) */
+  settings: PluginSettingsContext;
   /** Close this plugin's panel */
   close: () => void;
 }
@@ -92,4 +103,26 @@ export interface PluginDefinition {
   onLoad?: (ctx: PluginContext) => void | (() => void);
   /** Optional: keyboard shortcut (e.g. "ctrl+shift+p") */
   shortcut?: string;
+  /** Optional: settings schema — defines configurable properties for this plugin */
+  settings?: PluginSettingField[];
+}
+
+// ─── Plugin Settings Schema ─────────────────────────────────────────
+
+export interface PluginSettingField {
+  /** Setting key (used in get/set) */
+  key: string;
+  /** Display label */
+  label: string;
+  /** Field type */
+  type: 'text' | 'number' | 'boolean' | 'select' | 'color';
+  /** Default value */
+  defaultValue?: unknown;
+  /** Description / help text */
+  description?: string;
+  /** Options for 'select' type */
+  options?: Array<{ value: string; label: string }>;
+  /** Min/max for 'number' type */
+  min?: number;
+  max?: number;
 }
