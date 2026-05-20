@@ -1,0 +1,195 @@
+# Full GIS Platform — All Industry Verticals
+#
+# Usage:
+#   docker compose -f docker-compose.verticals.yml up --build
+#
+# Services:
+#   - db:        PostGIS database
+#   - ptolemy:   Spatial feature server + RE + vertical endpoints (port 3000)
+#   - itinera:   Routing + delivery optimization (port 3002)
+#   - geokode:   Geocoding (port 3001)
+#   - viewtopia: Frontend (port 5174)
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: ptolemy
+      POSTGRES_PASSWORD: ptolemy
+      POSTGRES_DB: ptolemy
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ptolemy"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  ptolemy:
+    build:
+      context: ../ptolemy
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://ptolemy:ptolemy@db/ptolemy
+      RUST_LOG: info,ptolemy_api=debug
+    ports:
+      - "3000:3000"
+    command:
+      - ptolemy
+      - serve
+      - --bind
+      - "0.0.0.0:3000"
+      - --database-url
+      - "postgres://ptolemy:ptolemy@db/ptolemy"
+
+  itinera:
+    build:
+      context: ../itinera
+    ports:
+      - "3002:3000"
+    environment:
+      RUST_LOG: info
+    volumes:
+      - ./data:/data:ro
+    command:
+      - itinera
+      - serve
+      - --bind
+      - "0.0.0.0:3000"
+      - --osm
+      - /data/region.osm.pbf
+
+  geokode:
+    build:
+      context: ../geokode
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./data:/data:ro
+    command:
+      - serve
+      - --data
+      - /data/addresses.csv
+      - --bind
+      - "0.0.0.0:3000"
+
+  viewtopia:
+    build:
+      context: ../viewtopia
+      args:
+        VITE_PTOLEMY_URL: http://localhost:3000
+        VITE_GEOCODE_URL: http://localhost:3001
+        VITE_ROUTING_URL: http://localhost:3002
+    ports:
+      - "5174:5174"
+    depends_on:
+      - ptolemy
+      - geokode
+      - itinera
+
+  data-init:
+    image: curlimages/curl:latest
+    depends_on:
+      ptolemy:
+        condition: service_started
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Waiting for ptolemy..."
+        until curl -sf http://ptolemy:3000/api/v1/health; do sleep 1; done
+
+        # --- Real Estate: Parcels ---
+        DS=$$(curl -sf -X POST http://ptolemy:3000/api/v1/datasets \
+          -H 'Content-Type: application/json' -H 'Authorization: Bearer init' \
+          -d '{"name":"parcels","geometry_type":"polygon","srid":4326,"created_by":"init"}')
+        DS_ID=$$(echo $$DS | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+        BR=$$(curl -sf -X POST "http://ptolemy:3000/api/v1/datasets/$$DS_ID/branches" \
+          -H 'Content-Type: application/json' -H 'Authorization: Bearer init' \
+          -d '{"name":"main","created_by":"init"}')
+        BR_ID=$$(echo $$BR | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+        curl -sf -X POST "http://ptolemy:3000/api/v1/branches/$$BR_ID/batch" \
+          -H 'Content-Type: application/json' -H 'Authorization: Bearer init' \
+          -d "{\"message\":\"parcels\",\"author\":\"init\",\"operations\":[
+            {\"type\":\"insert\",\"geometry_wkb_hex\":\"0103000020E610000001000000050000009A9999999999F1BF9A999999999940409A9999999999F1BF0000000000004A4000000000000004400000000000004A40000000000000044000000000000040409A9999999999F1BF9A99999999994040\",\"properties\":{\"apn\":\"123-456-001\",\"address\":\"100 Main St\",\"owner\":\"Smith Trust\",\"zoning\":\"R-1\",\"sqft\":8500,\"lng\":-1.1,\"lat\":52.2}},
+            {\"type\":\"insert\",\"geometry_wkb_hex\":\"0103000020E6100000010000000500000000000000000004400000000000004040000000000000044000000000000049400000000000001440000000000000494000000000000014400000000000004040000000000000044000000000000040400\",\"properties\":{\"apn\":\"123-456-002\",\"address\":\"102 Main St\",\"owner\":\"Jones LLC\",\"zoning\":\"R-1\",\"sqft\":7200,\"lng\":-1.0,\"lat\":52.2}}
+          ]}"
+        echo "Parcels branch: $$BR_ID"
+
+        # --- Real Estate: Sales ---
+        SDS=$$(curl -sf -X POST http://ptolemy:3000/api/v1/datasets \
+          -H 'Content-Type: application/json' -H 'Authorization: Bearer init' \
+          -d '{"name":"sales","geometry_type":"point","srid":4326,"created_by":"init"}')
+        SDS_ID=$$(echo $$SDS | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+        SBR=$$(curl -sf -X POST "http://ptolemy:3000/api/v1/datasets/$$SDS_ID/branches" \
+          -H 'Content-Type: application/json' -H 'Authorization: Bearer init' \
+          -d '{"name":"main","created_by":"init"}')
+        SBR_ID=$$(echo $$SBR | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+        curl -sf -X POST "http://ptolemy:3000/api/v1/branches/$$SBR_ID/batch" \
+          -H 'Content-Type: application/json' -H 'Authorization: Bearer init' \
+          -d "{\"message\":\"sales\",\"author\":\"init\",\"operations\":[
+            {\"type\":\"insert\",\"geometry_wkb_hex\":\"0101000020E61000009A9999999999F1BF9A99999999994040\",\"properties\":{\"address\":\"100 Main St\",\"sale_price\":425000,\"sale_date\":\"2024-06-15\",\"sqft\":8500,\"lng\":-1.1,\"lat\":52.2}},
+            {\"type\":\"insert\",\"geometry_wkb_hex\":\"0101000020E6100000000000000000F0BF0000000000004A40\",\"properties\":{\"address\":\"105 Main St\",\"sale_price\":390000,\"sale_date\":\"2024-03-20\",\"sqft\":7800,\"lng\":-1.0,\"lat\":52.0}}
+          ]}"
+        echo "Sales branch: $$SBR_ID"
+
+        # --- Environmental: Sensors ---
+        EDS=$$(curl -sf -X POST http://ptolemy:3000/api/v1/datasets \
+          -H 'Content-Type: application/json' -H 'Authorization: Bearer init' \
+          -d '{"name":"sensors","geometry_type":"point","srid":4326,"created_by":"init"}')
+        EDS_ID=$$(echo $$EDS | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+        EBR=$$(curl -sf -X POST "http://ptolemy:3000/api/v1/datasets/$$EDS_ID/branches" \
+          -H 'Content-Type: application/json' -H 'Authorization: Bearer init' \
+          -d '{"name":"main","created_by":"init"}')
+        EBR_ID=$$(echo $$EBR | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+        curl -sf -X POST "http://ptolemy:3000/api/v1/branches/$$EBR_ID/batch" \
+          -H 'Content-Type: application/json' -H 'Authorization: Bearer init' \
+          -d "{\"message\":\"sensors\",\"author\":\"init\",\"operations\":[
+            {\"type\":\"insert\",\"geometry_wkb_hex\":\"0101000020E61000000000000000C052C00000000000804640\",\"properties\":{\"name\":\"River Level Station A\",\"sensor_type\":\"water_level\",\"status\":\"online\",\"lat\":45.0,\"lng\":-75.0}},
+            {\"type\":\"insert\",\"geometry_wkb_hex\":\"0101000020E610000000000000008052C00000000000404640\",\"properties\":{\"name\":\"Air Quality Monitor B\",\"sensor_type\":\"air_quality\",\"status\":\"online\",\"lat\":44.5,\"lng\":-74.0}}
+          ]}"
+        echo "Sensors branch: $$EBR_ID"
+
+        # --- Telecom: Towers ---
+        TDS=$$(curl -sf -X POST http://ptolemy:3000/api/v1/datasets \
+          -H 'Content-Type: application/json' -H 'Authorization: Bearer init' \
+          -d '{"name":"towers","geometry_type":"point","srid":4326,"created_by":"init"}')
+        TDS_ID=$$(echo $$TDS | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+        TBR=$$(curl -sf -X POST "http://ptolemy:3000/api/v1/datasets/$$TDS_ID/branches" \
+          -H 'Content-Type: application/json' -H 'Authorization: Bearer init' \
+          -d '{"name":"main","created_by":"init"}')
+        TBR_ID=$$(echo $$TBR | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+        curl -sf -X POST "http://ptolemy:3000/api/v1/branches/$$TBR_ID/batch" \
+          -H 'Content-Type: application/json' -H 'Authorization: Bearer init' \
+          -d "{\"message\":\"towers\",\"author\":\"init\",\"operations\":[
+            {\"type\":\"insert\",\"geometry_wkb_hex\":\"0101000020E610000000000000004053C00000000000004440\",\"properties\":{\"name\":\"Tower Alpha\",\"technology\":\"5G\",\"height_m\":45,\"frequency_mhz\":3500,\"lat\":40.0,\"lng\":-76.0}},
+            {\"type\":\"insert\",\"geometry_wkb_hex\":\"0101000020E610000000000000000053C00000000000804340\",\"properties\":{\"name\":\"Tower Beta\",\"technology\":\"4G LTE\",\"height_m\":30,\"frequency_mhz\":1800,\"lat\":39.0,\"lng\":-75.5}}
+          ]}"
+        echo "Towers branch: $$TBR_ID"
+
+        # --- Agriculture: Fields ---
+        ADS=$$(curl -sf -X POST http://ptolemy:3000/api/v1/datasets \
+          -H 'Content-Type: application/json' -H 'Authorization: Bearer init' \
+          -d '{"name":"fields","geometry_type":"polygon","srid":4326,"created_by":"init"}')
+        ADS_ID=$$(echo $$ADS | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+        ABR=$$(curl -sf -X POST "http://ptolemy:3000/api/v1/datasets/$$ADS_ID/branches" \
+          -H 'Content-Type: application/json' -H 'Authorization: Bearer init' \
+          -d '{"name":"main","created_by":"init"}')
+        ABR_ID=$$(echo $$ABR | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+        curl -sf -X POST "http://ptolemy:3000/api/v1/branches/$$ABR_ID/batch" \
+          -H 'Content-Type: application/json' -H 'Authorization: Bearer init' \
+          -d "{\"message\":\"fields\",\"author\":\"init\",\"operations\":[
+            {\"type\":\"insert\",\"geometry_wkb_hex\":\"0103000020E61000000100000005000000000000000000F03F000000000000444000000000000000400000000000004440000000000000004000000000000045400000000000000000000000000000454000000000000000000000000000004440\",\"properties\":{\"name\":\"North Field\",\"crop\":\"corn\",\"area_ha\":25.3,\"soil_type\":\"loam\",\"ndvi_mean\":0.72,\"ndvi_min\":0.45,\"ndvi_max\":0.85,\"ndvi_timestamp\":\"2024-07-15T10:00:00Z\"}}
+          ]}"
+        echo "Fields branch: $$ABR_ID"
+
+        echo ""
+        echo "=== All vertical demo data loaded ==="
+        echo "Endpoints available at http://localhost:3000/api/v1/"
+
+volumes:
+  pgdata:
