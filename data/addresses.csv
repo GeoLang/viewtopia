@@ -1,0 +1,10 @@
+address,lat,lng,city,state,zip
+100 Main St,52.2,-1.1,Demo City,DC,10001
+102 Main St,52.2,-1.0,Demo City,DC,10001
+105 Main St,52.0,-1.0,Demo City,DC,10001
+200 Oak Ave,52.3,-0.9,Demo City,DC,10002
+300 Elm St,52.1,-1.2,Demo City,DC,10003
+400 Pine Rd,52.4,-0.8,Demo City,DC,10004
+500 Cedar Blvd,52.15,-1.05,Demo City,DC,10001
+150 Maple Dr,52.25,-0.95,Demo City,DC,10002
+250 Birch Ln,52.35,-0.85,Demo City,DC,10003
