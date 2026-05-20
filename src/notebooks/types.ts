@@ -10,7 +10,7 @@
  */
 
 /** Supported cell types */
-export type CellType = 'code' | 'markdown' | 'map-action';
+export type CellType = 'code' | 'markdown' | 'map-action' | 'python';
 
 /** Execution status of a cell */
 export type CellStatus = 'idle' | 'running' | 'success' | 'error';

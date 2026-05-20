@@ -4,6 +4,7 @@
 import { create } from 'zustand';
 import type { Notebook, NotebookCell, CellOutput, CellType, MapAction } from './types';
 import { executeCodeCell, executeMapAction, type NotebookRuntime } from './runtime';
+import { getKernelClient, type JupyterOutput } from './jupyter';
 
 // IndexedDB storage for notebooks
 const DB_NAME = 'viewtopia-notebooks';
@@ -227,7 +228,6 @@ export const useNotebookStore = create<NotebookStoreState & NotebookStoreActions
 
   async runCell(notebookId, cellId) {
     const { runtime } = get();
-    if (!runtime) return;
     const nb = get().notebooks.find((n) => n.id === notebookId);
     if (!nb) return;
     const cellIdx = nb.cells.findIndex((c) => c.id === cellId);
@@ -241,10 +241,15 @@ export const useNotebookStore = create<NotebookStoreState & NotebookStoreActions
     set((s) => ({ notebooks: s.notebooks.map((n) => (n.id === notebookId ? runningNb : n)) }));
 
     let outputs: CellOutput[];
-    if (cell.type === 'map-action' && cell.action) {
-      outputs = await executeMapAction(cell.action, runtime);
+    if (cell.type === 'python') {
+      // Execute via Jupyter kernel
+      outputs = await executePythonCell(cell);
+    } else if (cell.type === 'map-action' && cell.action) {
+      if (!runtime) { outputs = [{ type: 'error', data: 'No runtime available', timestamp: Date.now() }]; }
+      else { outputs = await executeMapAction(cell.action, runtime); }
     } else {
-      outputs = await executeCodeCell(cell, runtime);
+      if (!runtime) { outputs = [{ type: 'error', data: 'No runtime available', timestamp: Date.now() }]; }
+      else { outputs = await executeCodeCell(cell, runtime); }
     }
 
     const hasError = outputs.some((o) => o.type === 'error');
@@ -306,3 +311,42 @@ export const useNotebookStore = create<NotebookStoreState & NotebookStoreActions
     set((s) => ({ notebooks: s.notebooks.map((n) => (n.id === notebookId ? updated : n)) }));
   },
 }));
+
+// ─── Python cell execution via Jupyter ────────────────────────────────
+
+function jupyterOutputToCellOutput(jOut: JupyterOutput): CellOutput {
+  switch (jOut.type) {
+    case 'stdout':
+    case 'stderr':
+      return { type: 'text', data: jOut.data, timestamp: Date.now() };
+    case 'result':
+      return { type: 'json', data: jOut.data, timestamp: Date.now() };
+    case 'image':
+      return { type: 'image', data: jOut.data, timestamp: Date.now() };
+    case 'html':
+      return { type: 'text', data: jOut.data, timestamp: Date.now() };
+    case 'error':
+      return { type: 'error', data: jOut.data, timestamp: Date.now() };
+    case 'display':
+      return { type: 'json', data: jOut.data, timestamp: Date.now() };
+    default:
+      return { type: 'text', data: jOut.data, timestamp: Date.now() };
+  }
+}
+
+async function executePythonCell(cell: NotebookCell): Promise<CellOutput[]> {
+  const client = getKernelClient();
+  if (!client) {
+    return [{ type: 'error', data: 'No Jupyter kernel connected. Go to Settings → Jupyter to connect.', timestamp: Date.now() }];
+  }
+  if (client.getStatus() === 'disconnected') {
+    return [{ type: 'error', data: 'Jupyter kernel is disconnected. Reconnect in Settings.', timestamp: Date.now() }];
+  }
+
+  try {
+    const jupyterOutputs = await client.execute(cell.source);
+    return jupyterOutputs.map(jupyterOutputToCellOutput);
+  } catch (err) {
+    return [{ type: 'error', data: err instanceof Error ? err.message : String(err), timestamp: Date.now() }];
+  }
+}

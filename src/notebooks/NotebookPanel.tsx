@@ -35,6 +35,7 @@ import {
   IconFileExport,
   IconClearAll,
   IconDotsVertical,
+  IconBrandPython,
 } from '@tabler/icons-react';
 import { useNotebookStore } from './notebookStore';
 import type { NotebookCell, CellType } from './types';
@@ -90,6 +91,7 @@ function Cell({
     code: <IconCode size={14} />,
     markdown: <IconMarkdown size={14} />,
     'map-action': <IconMapPin size={14} />,
+    python: <IconBrandPython size={14} />,
   }[cell.type];
 
   return (
@@ -298,6 +300,9 @@ export function NotebookPanel() {
       <Group justify="center" gap={8}>
         <Button size="xs" variant="light" leftSection={<IconCode size={14} />} onClick={() => addCell(activeNotebook.id, 'code')}>
           + Code
+        </Button>
+        <Button size="xs" variant="light" color="yellow" leftSection={<IconBrandPython size={14} />} onClick={() => addCell(activeNotebook.id, 'python')}>
+          + Python
         </Button>
         <Button size="xs" variant="light" leftSection={<IconMarkdown size={14} />} onClick={() => addCell(activeNotebook.id, 'markdown')}>
           + Markdown
