@@ -1,0 +1,144 @@
+# Real Estate MVP — full stack docker-compose
+#
+# Usage:
+#   docker compose -f docker-compose.re.yml up --build
+#
+# Services:
+#   - db:        PostGIS database
+#   - ptolemy:   Spatial feature server + RE endpoints (port 3000)
+#   - geokode:   Geocoding service (port 3001)
+#   - viewtopia: Frontend app (port 5174)
+#   - data-init: One-shot container that loads sample parcel + sales data
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: ptolemy
+      POSTGRES_PASSWORD: ptolemy
+      POSTGRES_DB: ptolemy
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ptolemy"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  ptolemy:
+    build:
+      context: ../ptolemy
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://ptolemy:ptolemy@db/ptolemy
+      RUST_LOG: info,ptolemy_api=debug
+    ports:
+      - "3000:3000"
+    command:
+      - ptolemy
+      - serve
+      - --bind
+      - "0.0.0.0:3000"
+      - --database-url
+      - "postgres://ptolemy:ptolemy@db/ptolemy"
+
+  geokode:
+    build:
+      context: ../geokode
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./data:/data:ro
+    command:
+      - serve
+      - --data
+      - /data/addresses.csv
+      - --bind
+      - "0.0.0.0:3000"
+
+  viewtopia:
+    build:
+      context: ../viewtopia
+      args:
+        VITE_PTOLEMY_URL: http://localhost:3000
+        VITE_GEOCODE_URL: http://localhost:3001
+    ports:
+      - "5174:5174"
+    depends_on:
+      - ptolemy
+      - geokode
+
+  data-init:
+    image: curlimages/curl:latest
+    depends_on:
+      ptolemy:
+        condition: service_started
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Waiting for ptolemy to be ready..."
+        until curl -sf http://ptolemy:3000/api/v1/health; do sleep 1; done
+        echo "Creating parcels dataset..."
+        DATASET=$$(curl -sf -X POST http://ptolemy:3000/api/v1/datasets \
+          -H 'Content-Type: application/json' \
+          -H 'Authorization: Bearer init' \
+          -d '{"name":"parcels","geometry_type":"polygon","srid":4326,"created_by":"init"}')
+        DS_ID=$$(echo $$DATASET | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+        echo "Dataset: $$DS_ID"
+
+        echo "Creating main branch..."
+        BRANCH=$$(curl -sf -X POST "http://ptolemy:3000/api/v1/datasets/$$DS_ID/branches" \
+          -H 'Content-Type: application/json' \
+          -H 'Authorization: Bearer init' \
+          -d '{"name":"main","created_by":"init"}')
+        BR_ID=$$(echo $$BRANCH | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+        echo "Branch: $$BR_ID"
+
+        echo "Inserting sample parcels..."
+        curl -sf -X POST "http://ptolemy:3000/api/v1/branches/$$BR_ID/batch" \
+          -H 'Content-Type: application/json' \
+          -H 'Authorization: Bearer init' \
+          -d "{\"message\":\"sample parcels\",\"author\":\"init\",\"operations\":[
+            {\"type\":\"insert\",\"geometry_wkb_hex\":\"0103000020E610000001000000050000009A9999999999F1BF9A999999999940409A9999999999F1BF0000000000004A4000000000000004400000000000004A40000000000000044000000000000040409A9999999999F1BF9A99999999994040\",\"properties\":{\"apn\":\"123-456-001\",\"address\":\"100 Main St\",\"owner\":\"Smith Trust\",\"zoning\":\"R-1\",\"sqft\":8500,\"lng\":-1.1,\"lat\":52.2}},
+            {\"type\":\"insert\",\"geometry_wkb_hex\":\"0103000020E6100000010000000500000000000000000004400000000000004040000000000000044000000000000049400000000000001440000000000000494000000000000014400000000000004040000000000000044000000000000040400\",\"properties\":{\"apn\":\"123-456-002\",\"address\":\"102 Main St\",\"owner\":\"Jones LLC\",\"zoning\":\"R-1\",\"sqft\":7200,\"lng\":-1.0,\"lat\":52.2}},
+            {\"type\":\"insert\",\"geometry_wkb_hex\":\"0103000020E610000001000000050000000000000000001440000000000000404000000000000014400000000000004940000000000000244000000000000049400000000000002440000000000000404000000000000014400000000000004040\",\"properties\":{\"apn\":\"123-456-003\",\"address\":\"200 Oak Ave\",\"owner\":\"City of Demo\",\"zoning\":\"C-2\",\"sqft\":15000,\"lng\":-0.9,\"lat\":52.3}}
+          ]}"
+
+        echo "Creating sales dataset..."
+        SALES=$$(curl -sf -X POST http://ptolemy:3000/api/v1/datasets \
+          -H 'Content-Type: application/json' \
+          -H 'Authorization: Bearer init' \
+          -d '{"name":"sales","geometry_type":"point","srid":4326,"created_by":"init"}')
+        SALES_ID=$$(echo $$SALES | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+
+        SALES_BR=$$(curl -sf -X POST "http://ptolemy:3000/api/v1/datasets/$$SALES_ID/branches" \
+          -H 'Content-Type: application/json' \
+          -H 'Authorization: Bearer init' \
+          -d '{"name":"main","created_by":"init"}')
+        SBR_ID=$$(echo $$SALES_BR | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+
+        echo "Inserting sample sales..."
+        curl -sf -X POST "http://ptolemy:3000/api/v1/branches/$$SBR_ID/batch" \
+          -H 'Content-Type: application/json' \
+          -H 'Authorization: Bearer init' \
+          -d "{\"message\":\"sample sales\",\"author\":\"init\",\"operations\":[
+            {\"type\":\"insert\",\"geometry_wkb_hex\":\"0101000020E61000009A9999999999F1BF9A99999999994040\",\"properties\":{\"address\":\"100 Main St\",\"sale_price\":425000,\"sale_date\":\"2024-06-15\",\"sqft\":8500,\"lng\":-1.1,\"lat\":52.2}},
+            {\"type\":\"insert\",\"geometry_wkb_hex\":\"0101000020E6100000000000000000F0BF0000000000004A40\",\"properties\":{\"address\":\"105 Main St\",\"sale_price\":390000,\"sale_date\":\"2024-03-20\",\"sqft\":7800,\"lng\":-1.0,\"lat\":52.0}},
+            {\"type\":\"insert\",\"geometry_wkb_hex\":\"0101000020E610000000000000000004400000000000004940\",\"properties\":{\"address\":\"210 Oak Ave\",\"sale_price\":750000,\"sale_date\":\"2024-09-01\",\"sqft\":15200,\"lng\":-0.9,\"lat\":52.3}}
+          ]}"
+
+        echo ""
+        echo "=== RE Demo data loaded! ==="
+        echo "Parcels branch: $$BR_ID"
+        echo "Sales branch:   $$SBR_ID"
+        echo ""
+        echo "Try: curl 'http://localhost:3000/api/v1/parcels/search?branch_id=$$BR_ID&type=apn&q=123'"
+        echo "Try: curl 'http://localhost:3000/api/v1/comps/search?branch_id=$$SBR_ID&lng=-1.0&lat=52.2&radius_m=50000'"
+
+volumes:
+  pgdata:
