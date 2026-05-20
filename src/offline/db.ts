@@ -6,7 +6,7 @@
  */
 
 const DB_NAME = 'viewtopia-offline';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export interface OfflineLayer {
   id: string;
@@ -109,6 +109,23 @@ function openDb(): Promise<IDBDatabase> {
       // Tile cache (map tiles for offline viewing)
       if (!db.objectStoreNames.contains('tileCache')) {
         db.createObjectStore('tileCache', { keyPath: 'key' });
+      }
+
+      // Projects
+      if (!db.objectStoreNames.contains('projects')) {
+        const store = db.createObjectStore('projects', { keyPath: 'id' });
+        store.createIndex('byWorkspace', 'workspaceId', { unique: false });
+      }
+
+      // Workspaces
+      if (!db.objectStoreNames.contains('workspaces')) {
+        db.createObjectStore('workspaces', { keyPath: 'id' });
+      }
+
+      // Share invites
+      if (!db.objectStoreNames.contains('shareInvites')) {
+        const store = db.createObjectStore('shareInvites', { keyPath: 'id' });
+        store.createIndex('byTarget', ['targetType', 'targetId'], { unique: false });
       }
     };
 
@@ -300,5 +317,58 @@ export const tileCache = {
   async size(): Promise<number> {
     const all = await getAll<CachedTile>('tileCache');
     return all.reduce((sum, t) => sum + t.blob.byteLength, 0);
+  },
+};
+
+// ─── Projects ────────────────────────────────────────────────────────
+
+import type { Project, Workspace, ShareInvite } from '../projects/types';
+
+export const projects = {
+  getAll: () => getAll<Project>('projects'),
+  get: (id: string) => getById<Project>('projects', id),
+  put: (project: Project) => put('projects', project),
+  remove: (id: string) => remove('projects', id),
+
+  async getByWorkspace(workspaceId: string): Promise<Project[]> {
+    const db = await openDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('projects', 'readonly');
+      const store = tx.objectStore('projects');
+      const index = store.index('byWorkspace');
+      const req = index.getAll(workspaceId);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  },
+};
+
+// ─── Workspaces ──────────────────────────────────────────────────────
+
+export const workspaces = {
+  getAll: () => getAll<Workspace>('workspaces'),
+  get: (id: string) => getById<Workspace>('workspaces', id),
+  put: (workspace: Workspace) => put('workspaces', workspace),
+  remove: (id: string) => remove('workspaces', id),
+};
+
+// ─── Share Invites ───────────────────────────────────────────────────
+
+export const shareInvites = {
+  getAll: () => getAll<ShareInvite>('shareInvites'),
+  get: (id: string) => getById<ShareInvite>('shareInvites', id),
+  put: (invite: ShareInvite) => put('shareInvites', invite),
+  remove: (id: string) => remove('shareInvites', id),
+
+  async getByTarget(targetType: 'project' | 'workspace', targetId: string): Promise<ShareInvite[]> {
+    const db = await openDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('shareInvites', 'readonly');
+      const store = tx.objectStore('shareInvites');
+      const index = store.index('byTarget');
+      const req = index.getAll([targetType, targetId]);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
   },
 };

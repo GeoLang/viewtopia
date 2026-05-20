@@ -18,6 +18,7 @@ import {
 import { useMantineColorScheme } from '@mantine/core';
 import { useAppStore } from '../store/app';
 import { OfflineIndicator } from '../offline/OfflineIndicator';
+import { ProjectSwitcher } from '../projects/ProjectSwitcher';
 
 export function Header() {
   const { tiletopiaOnline, geolangOnline } = useAppStore();
@@ -39,6 +40,7 @@ export function Header() {
         <Badge variant="dot" color={geolangOnline ? 'green' : 'yellow'} size="xs">
           GeoLang
         </Badge>
+        <ProjectSwitcher />
         <OfflineIndicator />
       </Group>
 
