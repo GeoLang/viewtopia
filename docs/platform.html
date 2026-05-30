@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TileTopia — Natural Language GIS Platform</title>
+<meta name="description" content="Enterprise geospatial platform powered by natural language. Ask questions, get maps. No GIS training required.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0e14;--card:#131820;--border:#1e2a3a;--text:#b8c4d0;--heading:#eaf0f6;--accent:#7c5cf5;--accent2:#00c896;--muted:#6b7a8d;--white:#fff}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;line-height:1.7}
+a{color:var(--accent);text-decoration:none}
+.container{max-width:1140px;margin:0 auto;padding:0 24px}
+
+/* Hero */
+.hero{padding:100px 0 80px;text-align:center;background:linear-gradient(180deg,#120a2e 0%,var(--bg) 100%);position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:800px;height:800px;background:radial-gradient(circle,rgba(124,92,245,.08) 0%,transparent 70%);pointer-events:none}
+.hero h1{font-size:4rem;font-weight:800;background:linear-gradient(135deg,#7c5cf5,#00c896);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:20px;letter-spacing:-1px}
+.hero .tagline{font-size:1.5rem;color:var(--muted);max-width:700px;margin:0 auto 16px}
+.hero .sub{font-size:1.1rem;color:var(--text);max-width:600px;margin:0 auto 40px}
+.hero-cta{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+.hero-cta a{padding:14px 36px;border-radius:8px;font-weight:600;font-size:1.05rem;transition:all .2s}
+.btn-primary{background:var(--accent);color:var(--white)}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+.btn-secondary{border:1px solid var(--border);color:var(--heading);background:transparent}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Demo */
+.demo{padding:80px 0;text-align:center}
+.demo h2{font-size:2rem;color:var(--heading);margin-bottom:12px}
+.demo p{color:var(--muted);margin-bottom:40px;font-size:1.1rem}
+.demo-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:40px;max-width:800px;margin:0 auto;text-align:left}
+.demo-prompt{background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'SF Mono',Monaco,Consolas,monospace;font-size:.95rem;color:var(--accent2);margin-bottom:24px}
+.demo-prompt::before{content:'💬 ';font-size:1.1rem}
+.demo-response{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.demo-map{background:linear-gradient(135deg,#1a2332,#0d1a2a);border-radius:8px;height:200px;display:flex;align-items:center;justify-content:center;color:var(--muted);border:1px solid var(--border)}
+.demo-table{background:#0d1117;border-radius:8px;padding:16px;font-size:.85rem;border:1px solid var(--border)}
+.demo-table table{width:100%;border-collapse:collapse}
+.demo-table th{text-align:left;color:var(--accent);padding:6px 8px;border-bottom:1px solid var(--border);font-weight:600}
+.demo-table td{padding:6px 8px;color:var(--text);border-bottom:1px solid #1a2030}
+
+/* Comparison */
+.compare{padding:80px 0}
+.compare h2{font-size:2rem;color:var(--heading);text-align:center;margin-bottom:40px}
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:32px;max-width:900px;margin:0 auto}
+.compare-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:32px}
+.compare-card h3{font-size:1.3rem;margin-bottom:16px}
+.compare-card.old h3{color:#f85149}
+.compare-card.new h3{color:var(--accent2)}
+.compare-card ul{list-style:none;padding:0}
+.compare-card li{padding:8px 0;border-bottom:1px solid #1a2030;font-size:.95rem}
+.compare-card li::before{margin-right:8px}
+.compare-card.old li::before{content:'✗';color:#f85149}
+.compare-card.new li::before{content:'✓';color:var(--accent2)}
+
+/* Features */
+.features{padding:80px 0}
+.features h2{font-size:2rem;color:var(--heading);text-align:center;margin-bottom:12px}
+.features .subtitle{text-align:center;color:var(--muted);margin-bottom:48px;font-size:1.1rem}
+.feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.feature-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px}
+.feature-card .icon{font-size:1.8rem;margin-bottom:12px}
+.feature-card h3{font-size:1.1rem;color:var(--heading);margin-bottom:8px}
+.feature-card p{font-size:.9rem;color:var(--muted);line-height:1.6}
+
+/* Pricing */
+.pricing{padding:80px 0}
+.pricing h2{font-size:2rem;color:var(--heading);text-align:center;margin-bottom:12px}
+.pricing .subtitle{text-align:center;color:var(--muted);margin-bottom:48px;font-size:1.1rem}
+.pricing-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.price-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:32px;text-align:center;position:relative}
+.price-card.featured{border-color:var(--accent);box-shadow:0 0 40px rgba(124,92,245,.15)}
+.price-card.featured::after{content:'Most Popular';position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--accent);color:var(--white);padding:4px 16px;border-radius:20px;font-size:.75rem;font-weight:600}
+.price-card h3{font-size:1.2rem;color:var(--heading);margin-bottom:8px}
+.price-card .price{font-size:2.5rem;font-weight:700;color:var(--heading);margin-bottom:4px}
+.price-card .price span{font-size:1rem;font-weight:400;color:var(--muted)}
+.price-card .period{color:var(--muted);font-size:.85rem;margin-bottom:20px}
+.price-card ul{list-style:none;padding:0;text-align:left;margin-bottom:24px}
+.price-card li{padding:6px 0;font-size:.88rem;color:var(--text)}
+.price-card li::before{content:'✓ ';color:var(--accent2)}
+.price-card a{display:block;padding:12px;border-radius:8px;font-weight:600;font-size:.95rem;transition:all .2s}
+.price-card a.primary{background:var(--accent);color:var(--white)}
+.price-card a.outline{border:1px solid var(--border);color:var(--heading)}
+.price-card a:hover{opacity:.9;transform:translateY(-1px);text-decoration:none}
+
+/* Stack */
+.stack{padding:80px 0}
+.stack h2{font-size:2rem;color:var(--heading);text-align:center;margin-bottom:40px}
+.stack-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;max-width:960px;margin:0 auto}
+.stack-item{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px 20px;display:flex;align-items:center;gap:12px}
+.stack-item .emoji{font-size:1.3rem}
+.stack-item .name{font-weight:600;color:var(--heading);font-size:.9rem}
+.stack-item .desc{font-size:.78rem;color:var(--muted)}
+
+/* CTA */
+.cta{padding:80px 0;text-align:center;border-top:1px solid var(--border)}
+.cta h2{font-size:2rem;color:var(--heading);margin-bottom:12px}
+.cta p{color:var(--muted);margin-bottom:32px;font-size:1.1rem}
+
+/* Footer */
+footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color:var(--muted);font-size:.85rem}
+
+@media(max-width:768px){
+.hero h1{font-size:2.5rem}
+.feature-grid,.pricing-grid{grid-template-columns:1fr}
+.compare-grid{grid-template-columns:1fr}
+.demo-response{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<section class="hero">
+<div class="container">
+<h1>TileTopia</h1>
+<p class="tagline">Enterprise GIS. Natural Language.</p>
+<p class="sub">Ask questions in plain English. Get maps, analysis, and custom interfaces — instantly. No GIS training. No expensive licenses.</p>
+<div class="hero-cta">
+<a href="#pricing" class="btn-primary">Get Started Free</a>
+<a href="https://github.com/TileTopia-HQ" class="btn-secondary">View on GitHub</a>
+</div>
+</div>
+</section>
+
+<!-- Demo -->
+<section class="demo">
+<div class="container">
+<h2>See It in Action</h2>
+<p>One prompt replaces 20 clicks in traditional GIS software.</p>
+<div class="demo-box">
+<div class="demo-prompt">Show me all parcels within 500m of the new transit stop that are zoned commercial and under 50% lot coverage</div>
+<div class="demo-response">
+<div class="demo-map">🗺️ Interactive map with 12 matching parcels highlighted</div>
+<div class="demo-table">
+<table>
+<tr><th>APN</th><th>Zone</th><th>Coverage</th><th>Area</th></tr>
+<tr><td>123-456-001</td><td>C-2</td><td>32%</td><td>8,500 ft²</td></tr>
+<tr><td>123-456-042</td><td>C-1</td><td>41%</td><td>12,300 ft²</td></tr>
+<tr><td>123-457-018</td><td>C-2</td><td>28%</td><td>6,900 ft²</td></tr>
+<tr><td colspan="4" style="color:var(--muted);text-align:center">… 9 more results</td></tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- Comparison -->
+<section class="compare">
+<div class="container">
+<h2>Traditional GIS vs TileTopia</h2>
+<div class="compare-grid">
+<div class="compare-card old">
+<h3>The Old Way</h3>
+<ul>
+<li>$50K+/yr software licenses</li>
+<li>6 months training to be productive</li>
+<li>Click through 20 menus for one analysis</li>
+<li>Hire a GIS specialist for every question</li>
+<li>Vendor lock-in to proprietary formats</li>
+<li>Desktop-only, no real-time collaboration</li>
+</ul>
+</div>
+<div class="compare-card new">
+<h3>The TileTopia Way</h3>
+<ul>
+<li>Free self-hosted, or $49/mo hosted</li>
+<li>Productive in 5 minutes — just type</li>
+<li>One sentence = complete analysis + map</li>
+<li>Anyone on the team can ask spatial questions</li>
+<li>Open formats, open source, no lock-in</li>
+<li>Real-time collaboration, web-native</li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+
+<!-- Features -->
+<section class="features">
+<div class="container">
+<h2>Platform Capabilities</h2>
+<p class="subtitle">19 Rust-native modules. One unified platform.</p>
+<div class="feature-grid">
+<div class="feature-card">
+<div class="icon">🤖</div>
+<h3>Natural Language Analysis</h3>
+<p>GeoLang AI agent translates your questions into spatial operations. Powered by Letta for persistent memory across sessions.</p>
+</div>
+<div class="feature-card">
+<div class="icon">🎨</div>
+<h3>Adaptive UI (A2UI)</h3>
+<p>Every response generates a custom interface — maps, charts, tables, forms — tailored to your specific question. No static dashboards.</p>
+</div>
+<div class="feature-card">
+<div class="icon">🗄️</div>
+<h3>Enterprise Geodatabase</h3>
+<p>Git-like versioning for spatial data. Branch, commit, merge, diff. Role-based access, OIDC SSO, audit trails. PostGIS-powered.</p>
+</div>
+<div class="feature-card">
+<div class="icon">🔬</div>
+<h3>Geoprocessing</h3>
+<p>19+ spatial analysis tools: buffer, clip, intersect, dissolve, voronoi, spatial join, nearest neighbor, distance matrix, and more.</p>
+</div>
+<div class="feature-card">
+<div class="icon">🌐</div>
+<h3>3D / Digital Twin</h3>
+<p>3D Tiles, terrain, point cloud visualization. Indoor mapping with BLE/WiFi positioning. Real-time streaming for IoT/sensor data.</p>
+</div>
+<div class="feature-card">
+<div class="icon">🚗</div>
+<h3>Routing & Navigation</h3>
+<p>Shortest path, isochrones, fleet optimization, indoor wayfinding with wheelchair-accessible routing. OpenStreetMap-powered.</p>
+</div>
+<div class="feature-card">
+<div class="icon">📡</div>
+<h3>Field Collection</h3>
+<p>Custom forms, offline-first sync, photo/document attachments. Collect data in the field, sync to the geodatabase automatically.</p>
+</div>
+<div class="feature-card">
+<div class="icon">📱</div>
+<h3>Mobile SDK</h3>
+<p>Rust-native mobile SDK for iOS and Android. Offline tile caching, gesture controls, annotation layers.</p>
+</div>
+<div class="feature-card">
+<div class="icon">🛰️</div>
+<h3>AI/ML Imagery</h3>
+<p>Object detection, change detection, land classification on satellite and aerial imagery. Panoptes-powered computer vision.</p>
+</div>
+</div>
+</div>
+</section>
+
+<!-- Pricing -->
+<section class="pricing" id="pricing">
+<div class="container">
+<h2>Pricing</h2>
+<p class="subtitle">Free forever for self-hosted. Managed plans for teams who want to focus on their work, not infrastructure.</p>
+<div class="pricing-grid">
+<div class="price-card">
+<h3>Community</h3>
+<div class="price">$0</div>
+<p class="period">forever</p>
+<ul>
+<li>Self-hosted (Docker Compose)</li>
+<li>All 19 modules</li>
+<li>Community support</li>
+<li>AGPL-3.0 license</li>
+<li>Unlimited users</li>
+</ul>
+<a href="https://github.com/TileTopia-HQ" class="outline">Get Started</a>
+</div>
+<div class="price-card">
+<h3>Pro</h3>
+<div class="price">$49<span>/mo</span></div>
+<p class="period">per user</p>
+<ul>
+<li>Managed hosting</li>
+<li>GeoLang AI agent</li>
+<li>10K queries/month</li>
+<li>A2UI adaptive interfaces</li>
+<li>Email support</li>
+</ul>
+<a href="#" class="outline">Coming Soon</a>
+</div>
+<div class="price-card featured">
+<h3>Team</h3>
+<div class="price">$199<span>/mo</span></div>
+<p class="period">up to 10 users</p>
+<ul>
+<li>Everything in Pro</li>
+<li>Ptolemy hosted geodatabase</li>
+<li>Real-time collaboration</li>
+<li>SSO / OIDC</li>
+<li>Priority support</li>
+</ul>
+<a href="#" class="primary">Coming Soon</a>
+</div>
+<div class="price-card">
+<h3>Enterprise</h3>
+<div class="price">$999<span>/mo</span></div>
+<p class="period">unlimited users</p>
+<ul>
+<li>Everything in Team</li>
+<li>Dedicated infrastructure</li>
+<li>SLA (99.9%)</li>
+<li>Migration assistance</li>
+<li>Custom model fine-tuning</li>
+</ul>
+<a href="#" class="outline">Contact Sales</a>
+</div>
+</div>
+</div>
+</section>
+
+<!-- Stack -->
+<section class="stack">
+<div class="container">
+<h2>Built on 19 Open-Source Modules</h2>
+<div class="stack-list">
+<div class="stack-item"><span class="emoji">🏗️</span><div><div class="name">TileTopia</div><div class="desc">3D Tiles server</div></div></div>
+<div class="stack-item"><span class="emoji">🌍</span><div><div class="name">ViewTopia</div><div class="desc">Unified viewer + A2UI</div></div></div>
+<div class="stack-item"><span class="emoji">🗄️</span><div><div class="name">Ptolemy</div><div class="desc">Enterprise geodatabase</div></div></div>
+<div class="stack-item"><span class="emoji">🚗</span><div><div class="name">Itinera</div><div class="desc">Routing + isochrones</div></div></div>
+<div class="stack-item"><span class="emoji">📍</span><div><div class="name">Geokode</div><div class="desc">Geocoding</div></div></div>
+<div class="stack-item"><span class="emoji">⛰️</span><div><div class="name">Terrano</div><div class="desc">Terrain analysis</div></div></div>
+<div class="stack-item"><span class="emoji">☁️</span><div><div class="name">Nubis</div><div class="desc">Point cloud</div></div></div>
+<div class="stack-item"><span class="emoji">👁️</span><div><div class="name">Panoptes</div><div class="desc">AI/ML imagery</div></div></div>
+<div class="stack-item"><span class="emoji">🔄</span><div><div class="name">Geodukt</div><div class="desc">ETL pipeline</div></div></div>
+<div class="stack-item"><span class="emoji">🌊</span><div><div class="name">Fluvius</div><div class="desc">Real-time streaming</div></div></div>
+<div class="stack-item"><span class="emoji">📐</span><div><div class="name">Projicio</div><div class="desc">CRS transforms</div></div></div>
+<div class="stack-item"><span class="emoji">🖨️</span><div><div class="name">Jung</div><div class="desc">Cartographic rendering</div></div></div>
+<div class="stack-item"><span class="emoji">📜</span><div><div class="name">GeoGit</div><div class="desc">Versioned geodata</div></div></div>
+<div class="stack-item"><span class="emoji">📐</span><div><div class="name">Topoi</div><div class="desc">Computational geometry</div></div></div>
+<div class="stack-item"><span class="emoji">🏢</span><div><div class="name">Interiora</div><div class="desc">Indoor mapping</div></div></div>
+<div class="stack-item"><span class="emoji">📋</span><div><div class="name">Collecta</div><div class="desc">Field data collection</div></div></div>
+<div class="stack-item"><span class="emoji">📱</span><div><div class="name">TerraVista</div><div class="desc">Mobile SDK</div></div></div>
+<div class="stack-item"><span class="emoji">🌐</span><div><div class="name">Fenestra</div><div class="desc">OGC services</div></div></div>
+<div class="stack-item"><span class="emoji">🤖</span><div><div class="name">GeoLang</div><div class="desc">AI agent</div></div></div>
+</div>
+</div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+<div class="container">
+<h2>Ready to simplify GIS?</h2>
+<p>Deploy the full platform in one command. Ask your first spatial question in minutes.</p>
+<div class="hero-cta">
+<a href="https://github.com/TileTopia-HQ" class="btn-primary">Get Started Free</a>
+</div>
+<p style="margin-top:20px;font-family:monospace;color:var(--muted);font-size:.9rem">
+docker compose -f docker-compose.platform.yml up --build
+</p>
+</div>
+</section>
+
+<footer>
+<div class="container">
+<p>&copy; 2025 TileTopia HQ. Open source under AGPL-3.0-or-later.</p>
+</div>
+</footer>
+
+</body>
+</html>
