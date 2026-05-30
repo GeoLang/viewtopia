@@ -1,4 +1,4 @@
-# TileTopia Industry Verticals
+# GeoLang Industry Verticals
 
 Self-hosted, open-source geospatial solutions for multiple industries.
 Each vertical leverages the same underlying platform with specialized panels.
@@ -124,7 +124,7 @@ VITE_SENSOR_WS_URL=ws://localhost:3004/ws/sensors
 
 ## Platform Comparison
 
-| Capability | Esri | Mapbox | TileTopia |
+| Capability | Esri | Mapbox | GeoLang |
 |-----------|------|--------|-----------|
 | Environmental monitoring | ✅ | ❌ | ✅ |
 | Construction progress | ✅ | ❌ | ✅ |

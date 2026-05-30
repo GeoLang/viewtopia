@@ -17,9 +17,9 @@
   "license": "AGPL-3.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/TileTopia-HQ/viewtopia.git"
+    "url": "https://github.com/GeoLang/viewtopia.git"
   },
-  "homepage": "https://github.com/TileTopia-HQ/viewtopia",
+  "homepage": "https://github.com/GeoLang/viewtopia",
   "files": [
     "dist",
     "src",

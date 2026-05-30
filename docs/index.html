@@ -51,17 +51,17 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <header>
 <div class="container">
 <h1>ViewTopia</h1>
-<p class="tagline">Unified geospatial viewer combining TileTopia's 3D globe with GeoLang's AI-powered spatial analysis — all in one interface.</p>
+<p class="tagline">Unified geospatial viewer combining GeoLang's 3D globe with GeoLang's AI-powered spatial analysis — all in one interface.</p>
 <div class="badges">
-<a href="https://github.com/TileTopia-HQ/viewtopia"><img src="https://img.shields.io/github/stars/TileTopia-HQ/viewtopia?style=flat-square&color=7c3aed" alt="Stars"></a>
-<a href="https://github.com/TileTopia-HQ/viewtopia/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-7c3aed?style=flat-square" alt="License"></a>
+<a href="https://github.com/GeoLang/viewtopia"><img src="https://img.shields.io/github/stars/GeoLang/viewtopia?style=flat-square&color=7c3aed" alt="Stars"></a>
+<a href="https://github.com/GeoLang/viewtopia/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-7c3aed?style=flat-square" alt="License"></a>
 <img src="https://img.shields.io/badge/Vite-frontend-646CFF?style=flat-square" alt="Vite">
 <img src="https://img.shields.io/badge/CesiumJS-3D_Globe-6366f1?style=flat-square" alt="CesiumJS">
 <img src="https://img.shields.io/badge/Leaflet-2D_Map-199900?style=flat-square" alt="Leaflet">
 <img src="https://img.shields.io/badge/PRs-welcome-7c3aed?style=flat-square" alt="PRs Welcome">
 </div>
 <div class="hero-btns">
-<a href="https://github.com/TileTopia-HQ/viewtopia">GitHub</a>
+<a href="https://github.com/GeoLang/viewtopia">GitHub</a>
 <a href="#quick-start" class="secondary">Quick Start</a>
 <a href="#comparison" class="secondary">vs Alternatives</a>
 <a href="real-estate.md" class="secondary">Real Estate MVP</a>
@@ -241,7 +241,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <div class="card">
 <h3>⚙️ Configuration</h3>
 <ul>
-<li>Server URLs in Settings panel (TileTopia/Ptolemy, GeoLang, LiveKit)</li>
+<li>Server URLs in Settings panel (GeoLang/Ptolemy, GeoLang, LiveKit)</li>
 <li>Connects to Ptolemy's <code>/ws/rooms/{room_id}</code> relay</li>
 <li>Opaque JSON relay — any message format works</li>
 <li>Rooms auto-created on first connection, auto-cleaned on last disconnect</li>
@@ -741,7 +741,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <span class="hl">└──────┬────────────────────────────────────────┬──────────────┘</span><br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│ <span class="dim">/api → proxy</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│ <span class="dim">/agent → proxy</span><br>
 <span class="hl">┌──────▼──────────────┐</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">┌──────▼──────────────┐</span><br>
-<span class="hl">│  TileTopia (Rust)   │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  GeoLang (Python)   │</span><br>
+<span class="hl">│  GeoLang (Rust)   │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  GeoLang (Python)   │</span><br>
 <span class="hl">│  :3000              │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  :8080              │</span><br>
 <span class="hl">│                     │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│                     │</span><br>
 <span class="hl">│  • 3D Tiles server  │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • AI Agent (Letta) │</span><br>
@@ -762,7 +762,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 ├── vite.config.js          # Dev server, proxies, Cesium plugin
 ├── src/
 │   ├── main.js             # Entry — backend discovery, init
-│   ├── backends.js          # Probe TileTopia &amp; GeoLang health
+│   ├── backends.js          # Probe GeoLang &amp; GeoLang health
 │   ├── renderers.js         # CesiumJS / deck.gl / MapLibre
 │   ├── leaflet-view.js      # Leaflet 2D map, draw tools
 │   ├── chat.js              # AI chat with SSE &amp; persistence
@@ -790,7 +790,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <div class="container">
 <h2>Quick Start</h2>
 <pre><span style="color:#475569"># Clone the repo</span>
-git clone https://github.com/TileTopia-HQ/viewtopia.git
+git clone https://github.com/GeoLang/viewtopia.git
 cd viewtopia
 
 <span style="color:#475569"># Install dependencies</span>
@@ -802,7 +802,7 @@ npm run dev
 <span style="color:#475569"># Open http://localhost:5174</span>
 <span style="color:#475569"># Backends are optional — viewer adapts to what's available</span>
 
-<span style="color:#475569"># Optional: start TileTopia (3D Tiles)</span>
+<span style="color:#475569"># Optional: start GeoLang (3D Tiles)</span>
 cd ../tiletopia &amp;&amp; cargo run -- serve --port 3000
 
 <span style="color:#475569"># Optional: start GeoLang (AI agent)</span>
@@ -812,8 +812,8 @@ cd ../geolang &amp;&amp; python -m uvicorn src.app:app --port 8080</pre>
 
 <footer>
 <div class="container">
-<p>ViewTopia is free software under the <a href="https://github.com/TileTopia-HQ/viewtopia/blob/master/LICENSE">AGPL-3.0 license</a>.</p>
-<p style="margin-top:8px">Part of the <a href="https://github.com/TileTopia-HQ">TileTopia-HQ</a> ecosystem.</p>
+<p>ViewTopia is free software under the <a href="https://github.com/GeoLang/viewtopia/blob/master/LICENSE">AGPL-3.0 license</a>.</p>
+<p style="margin-top:8px">Part of the <a href="https://github.com/GeoLang">GeoLang</a> ecosystem.</p>
 </div>
 </footer>
 

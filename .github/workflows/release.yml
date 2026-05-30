@@ -42,8 +42,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/tiletopia-hq/viewtopia:${{ github.ref_name }}
-            ghcr.io/tiletopia-hq/viewtopia:latest
+            ghcr.io/geolang/viewtopia:${{ github.ref_name }}
+            ghcr.io/geolang/viewtopia:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

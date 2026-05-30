@@ -1,4 +1,4 @@
-# TileTopia Real Estate MVP
+# GeoLang Real Estate MVP
 
 A self-hosted, open-source alternative to Esri for real estate professionals.
 Search parcels, run comparable sales analysis, split/merge lots, and generate reports — all without vendor lock-in.
@@ -162,7 +162,7 @@ services:
 
 ## Comparison with Esri
 
-| Feature | Esri ArcGIS | TileTopia RE |
+| Feature | Esri ArcGIS | GeoLang RE |
 |---------|------------|--------------|
 | Parcel viewer | ✅ | ✅ |
 | Geocoding | ✅ (hosted) | ✅ (self-hosted) |

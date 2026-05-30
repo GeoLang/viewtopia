@@ -1,4 +1,4 @@
-# TileTopia Logistics MVP
+# GeoLang Logistics MVP
 
 A self-hosted fleet management and delivery optimization platform.
 Track vehicles in real-time, optimize multi-stop routes, set up geofences, and manage deliveries — no per-vehicle SaaS fees.
@@ -123,7 +123,7 @@ Compatible with:
 
 ## Comparison with Alternatives
 
-| Feature | Esri Fleet | HERE Fleet | Samsara | TileTopia |
+| Feature | Esri Fleet | HERE Fleet | Samsara | GeoLang |
 |---------|-----------|-----------|---------|-----------|
 | Real-time tracking | ✅ | ✅ | ✅ | ✅ |
 | Route optimization | ✅ | ✅ | ✅ | ✅ |

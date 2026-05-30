@@ -2,7 +2,7 @@
 
 **The all-in-one geospatial viewer** — 3D globe, 2D maps, AI agent, and professional analysis tools in a single web app.
 
-[![CI](https://github.com/TileTopia-HQ/viewtopia/actions/workflows/ci.yml/badge.svg)](https://github.com/TileTopia-HQ/viewtopia/actions)
+[![CI](https://github.com/GeoLang/viewtopia/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoLang/viewtopia/actions)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
 
 ---
@@ -221,7 +221,7 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 
 ```bash
 # Clone
-git clone https://github.com/TileTopia-HQ/viewtopia.git
+git clone https://github.com/GeoLang/viewtopia.git
 cd viewtopia
 
 # Install dependencies
@@ -236,7 +236,7 @@ npm run dev
 
 ```bash
 docker compose up
-# → ViewTopia on :8080, TileTopia on :3000, GeoLang on :8081
+# → ViewTopia on :8080, GeoLang on :3000, GeoLang on :8081
 ```
 
 ---
@@ -266,7 +266,7 @@ docker compose up
 │  │ API Cache        │  │  │                   │ │
 │  └──────────────────┘  │  └───────────────────┘ │
 ├─────────────────────────────────────────────────┤
-│   /api → TileTopia        /agent → GeoLang      │
+│   /api → GeoLang        /agent → GeoLang      │
 │   Rust tile server        Python AI agent        │
 │   3D Tiles · Terrain      NL → spatial commands  │
 │   Point clouds · COGs     Letta memory           │
@@ -284,7 +284,7 @@ src/
 ├── sessions.js          # Session persistence
 ├── tabs.js              # View tab management
 ├── viewer-commands.js   # 30+ registered commands
-├── asset-catalogue.js   # TileTopia asset browser
+├── asset-catalogue.js   # GeoLang asset browser
 ├── cesium-ion.js        # Cesium Ion integration
 ├── measurement.js       # Distance/area/elevation
 ├── annotations.js       # Click-to-pin annotations
@@ -360,7 +360,7 @@ optional LiveKit WebRTC for voice/video.
 ### Setup
 
 1. **Configure server URLs** in the Settings panel (⚙️):
-   - **TileTopia / Ptolemy URL** — e.g. `https://ptolemy.example.com/api/v1`
+   - **GeoLang / Ptolemy URL** — e.g. `https://ptolemy.example.com/api/v1`
    - **LiveKit URL** (optional) — e.g. `wss://livekit.example.com`
 
 2. **Open the Collaboration panel** from the toolbar menu (👥 Collab).
@@ -499,7 +499,7 @@ npm run test:all   # Run all tests
 ## Stack
 
 - **Frontend:** Vite, React + Mantine UI, CesiumJS, deck.gl, MapLibre GL, Leaflet, Apache Arrow
-- **Backend:** [TileTopia](https://github.com/TileTopia-HQ/tiletopia) (Rust) + [GeoLang](https://gitlab.com/geolanghq/geolang) (Python)
+- **Backend:** [GeoLang](https://github.com/GeoLang/tiletopia) (Rust) + [GeoLang](https://gitlab.com/geolanghq/geolang) (Python)
 - **AI:** Letta-powered spatial agent
 - **Analysis:** 31 space-time intelligence modules (Gotham-class)
 - **Deploy:** Docker Compose, Helm, Terraform
