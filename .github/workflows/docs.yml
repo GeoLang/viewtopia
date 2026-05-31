@@ -22,17 +22,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Build documentation
-        run: cargo doc --all-features --workspace --no-deps
-        env:
-          RUSTDOCFLAGS: "--cfg docsrs -D warnings"
-      - name: Add redirect
-        run: echo '<meta http-equiv="refresh" content="0;url=viewtopia/index.html">' > target/doc/index.html
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build
+        run: npm run build
       - uses: actions/configure-pages@v4
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: target/doc
+          path: dist
       - id: deployment
         uses: actions/deploy-pages@v4
