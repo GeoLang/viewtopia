@@ -26,6 +26,8 @@ import { initPrintExport } from './print-export.js';
 import { initSplitView } from './split-view.js';
 import { initMinimap } from './minimap.js';
 import { initStories } from './stories.js';
+import { initPortal } from './portal.js';
+import { initDashboards } from './dashboards.js';
 import { initCollaboration } from './collaboration.js';
 import { initKeyboardShortcuts } from './keyboard-shortcuts.js';
 import { initGeocoding } from './geocoding.js';
@@ -171,6 +173,8 @@ async function main() {
   initSplitView();
   if (getSetting('showMinimap')) initMinimap();
   initStories();
+  initPortal();
+  initDashboards();
   initCollaboration();
   initKeyboardShortcuts();
   initGeocoding();
