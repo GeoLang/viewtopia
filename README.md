@@ -242,11 +242,29 @@ npm run dev
 # → http://localhost:5174
 ```
 
-### With backends (full stack)
+### Full platform (all services via Docker Compose)
 
 ```bash
-docker compose up
-# → ViewTopia on :8080, GeoLang on :3000, GeoLang on :8081
+docker compose -f docker-compose.platform.yml up --build
+# → PostGIS :5432, Ptolemy :3000, Fenestra(WMS/WFS) :3003,
+#   TileTopia :3100, Geokode :3001, Itinera :3002,
+#   GeoLang AI :8080, ViewTopia :5174
+```
+
+### All-in-One single container
+
+```bash
+docker build -f Dockerfile.allinone -t geolang-allinone .
+docker run -p 3000:3000 -p 3003:3003 -p 3100:3100 -p 5432:5432 geolang-allinone
+# → Ptolemy :3000, Fenestra(WMS/WFS) :3003, TileTopia :3100, PostGIS :5432
+```
+
+### Admin dashboard
+
+```bash
+cd dashboard
+npm install && npm run dev
+# → http://localhost:4000 — health monitoring, service management, logs, metrics
 ```
 
 ---

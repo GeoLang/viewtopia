@@ -1,0 +1,71 @@
+# GeoLang All-in-One
+#
+# Single Docker image bundling all core GeoLang services for simple deployments.
+# Use this when you want a single-container deployment instead of full compose.
+#
+# Build:  docker build -f Dockerfile.allinone -t geolang-allinone .
+# Run:    docker run -p 3000:3000 -p 3003:3003 -p 3100:3100 -p 5432:5432 geolang-allinone
+#
+# Included services:
+#   - PostgreSQL 16 + PostGIS 3.4
+#   - Ptolemy (geodatabase API, port 3000)
+#   - Fenestra (WMS/WFS/WMTS gateway, port 3003)
+#   - TileTopia (3D tiles + terrain, port 3100)
+
+FROM rust:latest AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    cmake g++ make \
+    && rm -rf /var/lib/apt/lists/*
+
+# Build Ptolemy
+WORKDIR /build/ptolemy
+COPY ptolemy/ .
+RUN cargo build --release
+
+# Build Fenestra
+WORKDIR /build/fenestra
+COPY fenestra/ .
+RUN cargo build --release -p fenestra-cli
+
+# Build TileTopia
+WORKDIR /build/tiletopia
+COPY tiletopia/ .
+RUN cargo build --release --bin tiletopia
+
+# ── Runtime image ─────────────────────────────────────────────────────────────
+FROM postgis/postgis:16-3.4
+
+# Install runtime deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl supervisor \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy binaries
+COPY --from=builder /build/ptolemy/target/release/ptolemy /usr/local/bin/ptolemy
+COPY --from=builder /build/fenestra/target/release/fenestra /usr/local/bin/fenestra
+COPY --from=builder /build/tiletopia/target/release/tiletopia /usr/local/bin/tiletopia
+
+# Supervisord config to run all services
+COPY viewtopia/deploy/supervisord-allinone.conf /etc/supervisor/conf.d/geolang.conf
+
+# Init script for PostGIS extensions
+COPY viewtopia/deploy/init-postgis.sh /docker-entrypoint-initdb.d/10-postgis.sh
+
+# Data directories
+RUN mkdir -p /data/tiles /data/ptolemy
+VOLUME /data
+VOLUME /var/lib/postgresql/data
+
+# Default environment
+ENV POSTGRES_USER=ptolemy \
+    POSTGRES_PASSWORD=ptolemy \
+    POSTGRES_DB=ptolemy \
+    RUST_LOG=info \
+    TILETOPIA_DATA_DIR=/data/tiles \
+    TILETOPIA_PORT=3100
+
+EXPOSE 5432 3000 3003 3100
+
+# Use supervisord as entrypoint (starts postgres + all Rust services)
+CMD ["supervisord", "-c", "/etc/supervisor/conf.d/geolang.conf"]

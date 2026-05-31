@@ -1,0 +1,59 @@
+name: Platform Docker Build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  # Allow manual trigger for testing
+  workflow_dispatch:
+  # Run weekly to catch upstream breakage
+  schedule:
+    - cron: "0 6 * * 1"
+
+jobs:
+  platform-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout viewtopia
+        uses: actions/checkout@v4
+        with:
+          path: viewtopia
+
+      - name: Checkout ptolemy
+        uses: actions/checkout@v4
+        with:
+          repository: GeoLang/ptolemy
+          path: ptolemy
+
+      - name: Checkout tiletopia
+        uses: actions/checkout@v4
+        with:
+          repository: GeoLang/tiletopia
+          path: tiletopia
+
+      - name: Checkout geokode
+        uses: actions/checkout@v4
+        with:
+          repository: GeoLang/geokode
+          path: geokode
+
+      - name: Checkout itinera
+        uses: actions/checkout@v4
+        with:
+          repository: GeoLang/itinera
+          path: itinera
+
+      - name: Checkout geolang
+        uses: actions/checkout@v4
+        with:
+          repository: GeoLang/geolang
+          path: geolang
+
+      - name: Build all platform Docker images
+        working-directory: viewtopia
+        run: docker compose -f docker-compose.platform.yml build
+
+      - name: Verify images created
+        run: |
+          docker images | grep -E "viewtopia-(ptolemy|tiletopia|geokode|itinera|geolang|viewtopia|db)"

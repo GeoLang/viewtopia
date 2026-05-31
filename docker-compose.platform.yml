@@ -6,6 +6,7 @@
 # Services:
 #   - db:         PostGIS 16 database (port 5432)
 #   - ptolemy:    Enterprise geodatabase + geoprocessing API (port 3000)
+#   - fenestra:   OGC WMS/WFS/WMTS gateway with server-side rendering (port 3003)
 #   - tiletopia:  3D Tiles / terrain / asset server (port 3100)
 #   - geokode:    Geocoding service (port 3001)
 #   - itinera:    Routing + isochrones (port 3002)
@@ -77,6 +78,25 @@ services:
       RUST_LOG: info
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  fenestra:
+    build:
+      context: ../fenestra
+    depends_on:
+      ptolemy:
+        condition: service_healthy
+    environment:
+      RUST_LOG: info,fenestra=debug
+      FENESTRA_HOST: 0.0.0.0
+      FENESTRA_PORT: "8080"
+      PTOLEMY_URL: http://ptolemy:3000
+    ports:
+      - "3003:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 10s
       timeout: 5s
       retries: 3
