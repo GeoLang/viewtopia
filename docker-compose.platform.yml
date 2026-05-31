@@ -52,12 +52,9 @@ services:
     ports:
       - "3000:3000"
     command:
-      - ptolemy
       - serve
       - --bind
       - "0.0.0.0:3000"
-      - --database-url
-      - "postgres://ptolemy:${POSTGRES_PASSWORD:-ptolemy}@db/ptolemy"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
       interval: 10s
@@ -125,14 +122,13 @@ services:
     environment:
       RUST_LOG: info
     volumes:
-      - ./data:/data:ro
+      - ./data:/data
     command:
-      - itinera
       - serve
       - --bind
       - "0.0.0.0:3000"
-      - --osm
-      - /data/region.osm.pbf
+      - --graph
+      - /data/graph.bin
 
   # ── AI / Agent Layer ──────────────────────────────────────────────
 
@@ -150,12 +146,12 @@ services:
       context: ../geolang
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8080:8283"
     volumes:
       - geolang-cache:/app/cache
     environment:
       GEOLANG_HOST: 0.0.0.0
-      GEOLANG_PORT: "8080"
+      GEOLANG_PORT: "8283"
       LETTA_BASE_URL: http://letta:8283
       PTOLEMY_URL: http://ptolemy:3000
       TILETOPIA_URL: http://tiletopia:3000
@@ -165,10 +161,11 @@ services:
       - letta
       - ptolemy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8283/v1/health"]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 30s
 
   # ── Frontend ──────────────────────────────────────────────────────
 

@@ -1,6 +1,6 @@
-address,lat,lng,city,state,zip
-100 Main St,52.2,-1.1,Demo City,DC,10001
-102 Main St,52.2,-1.0,Demo City,DC,10001
+LON,LAT,NUMBER,STREET,CITY,REGION,POSTCODE
+-1.1,52.2,100,Main St,Demo City,DC,10001
+-1.0,52.2,102,Main St,Demo City,DC,10001
 105 Main St,52.0,-1.0,Demo City,DC,10001
 200 Oak Ave,52.3,-0.9,Demo City,DC,10002
 300 Elm St,52.1,-1.2,Demo City,DC,10003
