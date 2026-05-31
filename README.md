@@ -244,11 +244,60 @@ npm run dev
 
 ### Full platform (all services via Docker Compose)
 
+The platform compose file builds each backend from its sibling repository.
+Ensure the following repos are cloned as peers of `viewtopia/`:
+
+```
+src/GeoLang/
+├── fenestra/
+├── geokode/
+├── geolang/      # optional — stub used if absent
+├── itinera/
+├── ptolemy/
+├── tiletopia/
+└── viewtopia/
+```
+
+**Build & run:**
+
 ```bash
 docker compose -f docker-compose.platform.yml up --build
-# → PostGIS :5432, Ptolemy :3000, Fenestra(WMS/WFS) :3003,
-#   TileTopia :3100, Geokode :3001, Itinera :3002,
-#   GeoLang AI :8080, ViewTopia :5174
+```
+
+**Services exposed:**
+
+| Service | Port | Notes |
+|---------|------|-------|
+| PostGIS | 5432 | PostgreSQL + PostGIS |
+| Ptolemy | 3000 | Feature store |
+| Geokode | 3001 | Geocoder (needs `data/addresses.csv`) |
+| Itinera | 3002 | Router (needs `data/region.osm.pbf`) |
+| Fenestra | 3003 | WMS/WFS gateway |
+| TileTopia | 3100 | Vector tile server |
+| GeoLang AI | 8080 | Letta AI agent (port 8283 internal) |
+| Letta | 8283 | Letta backend |
+| ViewTopia | 5174 | Web app (nginx reverse proxy) |
+
+**Optional data setup:**
+
+```bash
+# Geocoder — provide address data (OpenAddresses CSV format):
+#   LON,LAT,NUMBER,STREET,CITY,REGION,POSTCODE
+# A sample file is included at data/addresses.csv
+
+# Router — download an OSM extract for routing:
+wget -O data/region.osm.pbf \
+  https://download.geofabrik.de/europe/monaco-latest.osm.pbf
+docker compose -f docker-compose.platform.yml restart itinera
+```
+
+**Troubleshooting:**
+
+```bash
+# Stale network errors → clean up and restart:
+docker compose -f docker-compose.platform.yml down --remove-orphans
+docker network prune -f
+docker compose -f docker-compose.platform.yml up --build
 ```
 
 ### All-in-One single container
