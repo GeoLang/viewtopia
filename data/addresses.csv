@@ -1,10 +1,10 @@
 LON,LAT,NUMBER,STREET,CITY,REGION,POSTCODE
 -1.1,52.2,100,Main St,Demo City,DC,10001
 -1.0,52.2,102,Main St,Demo City,DC,10001
-105 Main St,52.0,-1.0,Demo City,DC,10001
-200 Oak Ave,52.3,-0.9,Demo City,DC,10002
-300 Elm St,52.1,-1.2,Demo City,DC,10003
-400 Pine Rd,52.4,-0.8,Demo City,DC,10004
-500 Cedar Blvd,52.15,-1.05,Demo City,DC,10001
-150 Maple Dr,52.25,-0.95,Demo City,DC,10002
-250 Birch Ln,52.35,-0.85,Demo City,DC,10003
+-1.0,52.0,105,Main St,Demo City,DC,10001
+-0.9,52.3,200,Oak Ave,Demo City,DC,10002
+-1.2,52.1,300,Elm St,Demo City,DC,10003
+-0.8,52.4,400,Pine Rd,Demo City,DC,10004
+-1.05,52.15,500,Cedar Blvd,Demo City,DC,10001
+-0.95,52.25,150,Maple Dr,Demo City,DC,10002
+-0.85,52.35,250,Birch Ln,Demo City,DC,10003
