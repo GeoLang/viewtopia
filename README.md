@@ -81,6 +81,16 @@
 | **23 built-in plugins** | Industry verticals + QGIS-equivalent tools (see below) |
 | **Hot reload** | Vite HMR — edit a plugin, see changes instantly |
 
+### Portal & Content Management
+| Feature | Description |
+|---------|-------------|
+| **Item Catalog** | Searchable inventory of maps, layers, datasets, stories, and apps |
+| **Sharing Model** | Private / organization / public sharing levels |
+| **Portal API** | REST-backed item CRUD with offline localStorage fallback |
+| **Dashboard Builder** | Configurable widget-based dashboards (map, chart, indicator, gauge, list, rich text) |
+| **Dashboard Grid** | CSS grid layout with per-widget positioning |
+| **Save/Load** | Persist dashboard configurations to localStorage or API |
+
 ### Industry Verticals (Plugins)
 | Plugin | Description |
 |--------|-------------|
