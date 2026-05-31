@@ -49,11 +49,23 @@ jobs:
         with:
           repository: GeoLang/geolang
           path: geolang
+        continue-on-error: true
 
-      - name: Build all platform Docker images
+      - name: Checkout fenestra
+        uses: actions/checkout@v4
+        with:
+          repository: GeoLang/fenestra
+          path: fenestra
+
+      - name: Build platform Docker images (excluding optional services)
         working-directory: viewtopia
-        run: docker compose -f docker-compose.platform.yml build
+        run: |
+          # Build only services whose repos are available
+          SERVICES="ptolemy tiletopia geokode itinera viewtopia"
+          if [ -d ../geolang ]; then SERVICES="$SERVICES geolang"; fi
+          if [ -d ../fenestra ]; then SERVICES="$SERVICES fenestra"; fi
+          docker compose -f docker-compose.platform.yml build $SERVICES
 
       - name: Verify images created
         run: |
-          docker images | grep -E "viewtopia-(ptolemy|tiletopia|geokode|itinera|geolang|viewtopia|db)"
+          docker images | grep -E "viewtopia-(ptolemy|tiletopia|geokode|itinera|viewtopia)"
