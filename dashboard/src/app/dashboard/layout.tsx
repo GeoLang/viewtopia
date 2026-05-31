@@ -14,11 +14,12 @@ import {
 const navItems = [
   { href: "/dashboard", label: "Status", icon: Activity },
   { href: "/dashboard/services", label: "Services", icon: Server },
+  { href: "/dashboard/datasets", label: "Datasets", icon: Database },
   { href: "/dashboard/layers", label: "Layers", icon: Layers },
   { href: "/dashboard/styles", label: "Styles", icon: Palette },
   { href: "/dashboard/logs", label: "Logs", icon: ScrollText },
   { href: "/dashboard/metrics", label: "Metrics", icon: BarChart3 },
-  { href: "/dashboard/migrations", label: "Migrations", icon: Database },
+  { href: "/dashboard/migrations", label: "Migrations", icon: Globe },
   { href: "/dashboard/config", label: "Configuration", icon: Settings },
 ];
 
