@@ -60,10 +60,14 @@ jobs:
       - name: Build platform Docker images (excluding optional services)
         working-directory: viewtopia
         run: |
+          # Create stub Dockerfile for unavailable repos so compose can parse
+          if [ ! -f ../geolang/Dockerfile ]; then
+            mkdir -p ../geolang
+            echo "FROM scratch" > ../geolang/Dockerfile
+          fi
+
           # Build only services whose repos are available
-          SERVICES="ptolemy tiletopia geokode itinera viewtopia"
-          if [ -d ../geolang ]; then SERVICES="$SERVICES geolang"; fi
-          if [ -d ../fenestra ]; then SERVICES="$SERVICES fenestra"; fi
+          SERVICES="ptolemy tiletopia geokode itinera fenestra viewtopia"
           docker compose -f docker-compose.platform.yml build $SERVICES
 
       - name: Verify images created
