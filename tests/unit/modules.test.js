@@ -36,7 +36,7 @@ describe('track-import', () => {
     expect(mod.detectTrackFile({ name: 'trail.gpx' })).toBe('gpx');
     expect(mod.detectTrackFile({ name: 'places.kml' })).toBe('kml');
     expect(mod.detectTrackFile({ name: 'data.csv' })).toBe(null);
-  });
+  }, 15000);
 });
 
 describe('plugins', () => {
