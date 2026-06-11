@@ -3,7 +3,7 @@
  */
 import { create } from 'zustand';
 import type { Notebook, NotebookCell, CellOutput, CellType, MapAction } from './types';
-import { executeCodeCell, executeMapAction, type NotebookRuntime } from './runtime';
+import { executeCodeCell, executeMapAction, executeSqlCell, type NotebookRuntime } from './runtime';
 import { getKernelClient, type JupyterOutput } from './jupyter';
 
 // IndexedDB storage for notebooks
@@ -102,6 +102,9 @@ export interface NotebookStoreActions {
 
   /** Clear all outputs */
   clearOutputs: (notebookId: string) => Promise<void>;
+
+  /** Run a SQL string and add the result as a GeoJSON layer on the map. */
+  showSqlAsLayer: (sql: string, layerId: string) => Promise<{ featureCount: number }>;
 }
 
 export const useNotebookStore = create<NotebookStoreState & NotebookStoreActions>((set, get) => ({
@@ -244,6 +247,8 @@ export const useNotebookStore = create<NotebookStoreState & NotebookStoreActions
     if (cell.type === 'python') {
       // Execute via Jupyter kernel
       outputs = await executePythonCell(cell);
+    } else if (cell.type === 'sql') {
+      outputs = await executeSqlCell(cell);
     } else if (cell.type === 'map-action' && cell.action) {
       if (!runtime) { outputs = [{ type: 'error', data: 'No runtime available', timestamp: Date.now() }]; }
       else { outputs = await executeMapAction(cell.action, runtime); }
@@ -310,7 +315,47 @@ export const useNotebookStore = create<NotebookStoreState & NotebookStoreActions
     await saveNotebook(updated);
     set((s) => ({ notebooks: s.notebooks.map((n) => (n.id === notebookId ? updated : n)) }));
   },
+
+  async showSqlAsLayer(sql, layerId) {
+    const { runtime } = get();
+    if (!runtime) throw new Error('No runtime available — open a map view before running map-bound queries.');
+    const { queryAsGeoJson } = await import('../duckdb');
+    const fc = await queryAsGeoJson(sql);
+    runtime.map.addGeoJsonLayer(layerId, fc);
+    if (fc.features.length > 0) {
+      const bbox = featureCollectionBbox(fc);
+      if (bbox) runtime.map.fitBounds(bbox);
+    }
+    return { featureCount: fc.features.length };
+  },
 }));
+
+function featureCollectionBbox(fc: import('geojson').FeatureCollection): [number, number, number, number] | null {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  const visit = (coords: unknown): void => {
+    if (typeof coords === 'number') return;
+    if (Array.isArray(coords)) {
+      if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+        const [x, y] = coords as [number, number];
+        if (x < minX) minX = x; if (y < minY) minY = y;
+        if (x > maxX) maxX = x; if (y > maxY) maxY = y;
+        return;
+      }
+      for (const c of coords) visit(c);
+    }
+  };
+  for (const f of fc.features) {
+    const g = f.geometry as { type: string; coordinates?: unknown; geometries?: unknown[] } | null;
+    if (!g) continue;
+    if (g.type === 'GeometryCollection' && Array.isArray(g.geometries)) {
+      for (const sub of g.geometries) visit((sub as { coordinates?: unknown }).coordinates);
+    } else {
+      visit(g.coordinates);
+    }
+  }
+  if (!isFinite(minX)) return null;
+  return [minX, minY, maxX, maxY];
+}
 
 // ─── Python cell execution via Jupyter ────────────────────────────────
 

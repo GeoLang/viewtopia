@@ -110,38 +110,47 @@ export function initViewerCommands() {
   });
 
   registerCommand('add_geojson', async (params) => {
-    const { url, color = '#3388ff', label } = params;
-    const viewer = getCesiumViewer();
-    if (viewer) {
-      try {
-        const ds = await Cesium.GeoJsonDataSource.load(url, {
-          stroke: Cesium.Color.fromCssColorString(color),
-          fill: Cesium.Color.fromCssColorString(color).withAlpha(0.3),
-          strokeWidth: 2,
-        });
-        viewer.dataSources.add(ds);
-        viewer.flyTo(ds);
-      } catch (e) {
-        console.error('Failed to load GeoJSON in 3D view:', e);
-      }
-    }
-    // Also add to 2D map if available
-    const map = getLeafletMap();
-    if (map && window.L) {
+    const { url, geojson, color = '#3388ff' } = params;
+    let data = geojson;
+    if (!data && url) {
       try {
         const res = await fetch(url);
-        if (res.ok) {
-          const geojson = await res.json();
-          window.L.geoJSON(geojson, {
-            style: { color, weight: 1.5, fillOpacity: 0.2 },
-            pointToLayer: (f, latlng) => window.L.circleMarker(latlng, {
-              radius: 5, fillColor: color, color: '#fff', weight: 1, fillOpacity: 0.8,
-            }),
-          }).addTo(map);
-        }
+        if (res.ok) data = await res.json();
       } catch (e) {
-        console.error('Failed to load GeoJSON in 2D view:', e);
+        console.error('Failed to fetch GeoJSON:', e);
+        return;
       }
+    }
+    if (!data) return;
+    await renderGeoJson(data, { color, sourceUrl: url });
+  });
+
+  registerCommand('sql_query', async (params) => {
+    const { sql, show_on_map = true, color = '#3388ff', fit = true } = params || {};
+    if (!sql || typeof sql !== 'string') {
+      console.warn('sql_query: missing sql parameter');
+      return;
+    }
+    const { query, queryAsGeoJson } = await import('./duckdb/index.ts');
+    try {
+      let featureCollection = null;
+      let rows = null;
+      if (show_on_map) {
+        featureCollection = await queryAsGeoJson(sql);
+        await renderGeoJson(featureCollection, { color, fit });
+        rows = featureCollection.features.map((f) => f.properties || {});
+      } else {
+        const result = await query(sql);
+        rows = result.rows;
+      }
+      const summary = { sql, rowCount: rows.length, columns: rows[0] ? Object.keys(rows[0]) : [], sample: rows.slice(0, 5) };
+      window.__viewtopiaSqlResults = window.__viewtopiaSqlResults || [];
+      window.__viewtopiaSqlResults.push({ ...summary, at: Date.now() });
+      if (window.__viewtopiaSqlResults.length > 20) window.__viewtopiaSqlResults.shift();
+      window.dispatchEvent(new CustomEvent('viewtopia:sql_result', { detail: summary }));
+    } catch (e) {
+      console.error('sql_query failed:', e);
+      window.dispatchEvent(new CustomEvent('viewtopia:sql_error', { detail: { sql, error: String(e) } }));
     }
   });
 
@@ -295,6 +304,42 @@ export function initViewerCommands() {
       if (params.renderer) switchRenderer(params.renderer);
     });
   });
+}
+
+async function renderGeoJson(geojson, opts = {}) {
+  const { color = '#3388ff', fit = true, sourceUrl } = opts;
+  const viewer = getCesiumViewer();
+  if (viewer) {
+    try {
+      const source = sourceUrl ?? geojson;
+      const ds = await Cesium.GeoJsonDataSource.load(source, {
+        stroke: Cesium.Color.fromCssColorString(color),
+        fill: Cesium.Color.fromCssColorString(color).withAlpha(0.3),
+        strokeWidth: 2,
+      });
+      viewer.dataSources.add(ds);
+      if (fit) viewer.flyTo(ds);
+    } catch (e) {
+      console.error('Failed to render GeoJSON in 3D view:', e);
+    }
+  }
+  const map = getLeafletMap();
+  if (map && window.L) {
+    try {
+      const layer = window.L.geoJSON(geojson, {
+        style: { color, weight: 1.5, fillOpacity: 0.2 },
+        pointToLayer: (_f, latlng) => window.L.circleMarker(latlng, {
+          radius: 5, fillColor: color, color: '#fff', weight: 1, fillOpacity: 0.8,
+        }),
+      }).addTo(map);
+      if (fit) {
+        const b = layer.getBounds();
+        if (b.isValid()) map.fitBounds(b, { padding: [20, 20] });
+      }
+    } catch (e) {
+      console.error('Failed to render GeoJSON in 2D view:', e);
+    }
+  }
 }
 
 /** Add a deck.gl layer — switches to deck.gl renderer if needed */

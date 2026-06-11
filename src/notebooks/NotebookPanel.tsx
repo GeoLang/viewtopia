@@ -36,13 +36,35 @@ import {
   IconClearAll,
   IconDotsVertical,
   IconBrandPython,
+  IconDatabase,
+  IconMap2,
 } from '@tabler/icons-react';
+import { Table as MantineTable } from '@mantine/core';
 import { useNotebookStore } from './notebookStore';
 import type { NotebookCell, CellType } from './types';
 
+function formatCell(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'object') return JSON.stringify(value);
+  if (typeof value === 'bigint') return value.toString();
+  return String(value);
+}
+
 /** Render a single cell's outputs */
-function CellOutputs({ outputs }: { outputs: NotebookCell['outputs'] }) {
+function CellOutputs({ outputs, onShowMap }: { outputs: NotebookCell['outputs']; onShowMap?: () => void | Promise<void> }) {
+  const [showMapError, setShowMapError] = useState<string | null>(null);
+  const [showingMap, setShowingMap] = useState(false);
   if (outputs.length === 0) return null;
+
+  const handleShowMap = onShowMap
+    ? async () => {
+        setShowMapError(null);
+        setShowingMap(true);
+        try { await onShowMap(); } catch (err) {
+          setShowMapError(err instanceof Error ? err.message : String(err));
+        } finally { setShowingMap(false); }
+      }
+    : null;
 
   return (
     <Stack gap={4} mt={8}>
@@ -56,6 +78,41 @@ function CellOutputs({ outputs }: { outputs: NotebookCell['outputs'] }) {
             return <Code key={i} block color="red">{String(out.data)}</Code>;
           case 'image':
             return <img key={i} src={String(out.data)} alt="output" style={{ maxWidth: '100%', borderRadius: 4 }} />;
+          case 'table': {
+            const tbl = out.data as { columns: string[]; rows: Record<string, unknown>[]; rowCount: number };
+            const preview = tbl.rows.slice(0, 100);
+            return (
+              <Stack key={i} gap={4}>
+                <Group justify="space-between">
+                  <Text size="xs" c="dimmed">{tbl.rowCount} row{tbl.rowCount === 1 ? '' : 's'}{tbl.rowCount > 100 ? ' (showing first 100)' : ''}</Text>
+                  {handleShowMap && (
+                    <Button size="compact-xs" variant="light" color="cyan" leftSection={<IconMap2 size={12} />} loading={showingMap} onClick={handleShowMap}>
+                      Show on map
+                    </Button>
+                  )}
+                </Group>
+                {showMapError && <Code block color="red">{showMapError}</Code>}
+                <ScrollArea.Autosize mah={320}>
+                  <MantineTable striped withTableBorder withColumnBorders fz="xs">
+                    <MantineTable.Thead>
+                      <MantineTable.Tr>
+                        {tbl.columns.map((c) => <MantineTable.Th key={c}>{c}</MantineTable.Th>)}
+                      </MantineTable.Tr>
+                    </MantineTable.Thead>
+                    <MantineTable.Tbody>
+                      {preview.map((row, r) => (
+                        <MantineTable.Tr key={r}>
+                          {tbl.columns.map((c) => (
+                            <MantineTable.Td key={c}>{formatCell(row[c])}</MantineTable.Td>
+                          ))}
+                        </MantineTable.Tr>
+                      ))}
+                    </MantineTable.Tbody>
+                  </MantineTable>
+                </ScrollArea.Autosize>
+              </Stack>
+            );
+          }
           case 'map-state':
             return <Code key={i} block>{JSON.stringify(out.data, null, 2)}</Code>;
           default:
@@ -78,7 +135,14 @@ function Cell({
   index: number;
   totalCells: number;
 }) {
-  const { updateCellSource, removeCell, moveCell, runCell, toggleCellCollapse, runUpTo } = useNotebookStore();
+  const { updateCellSource, removeCell, moveCell, runCell, toggleCellCollapse, runUpTo, showSqlAsLayer } = useNotebookStore();
+
+  const handleShowOnMap = cell.type === 'sql'
+    ? async () => {
+        const layerId = `sql:${cell.id}`;
+        await showSqlAsLayer(cell.source, layerId);
+      }
+    : undefined;
 
   const statusColor = {
     idle: 'gray',
@@ -92,6 +156,7 @@ function Cell({
     markdown: <IconMarkdown size={14} />,
     'map-action': <IconMapPin size={14} />,
     python: <IconBrandPython size={14} />,
+    sql: <IconDatabase size={14} />,
   }[cell.type];
 
   return (
@@ -152,7 +217,7 @@ function Cell({
               styles={{ input: { fontFamily: 'monospace', fontSize: '0.85rem', background: '#1c2128' } }}
             />
           )}
-          <CellOutputs outputs={cell.outputs} />
+          <CellOutputs outputs={cell.outputs} onShowMap={handleShowOnMap} />
         </>
       )}
     </Paper>
@@ -303,6 +368,9 @@ export function NotebookPanel() {
         </Button>
         <Button size="xs" variant="light" color="yellow" leftSection={<IconBrandPython size={14} />} onClick={() => addCell(activeNotebook.id, 'python')}>
           + Python
+        </Button>
+        <Button size="xs" variant="light" color="cyan" leftSection={<IconDatabase size={14} />} onClick={() => addCell(activeNotebook.id, 'sql')}>
+          + SQL
         </Button>
         <Button size="xs" variant="light" leftSection={<IconMarkdown size={14} />} onClick={() => addCell(activeNotebook.id, 'markdown')}>
           + Markdown

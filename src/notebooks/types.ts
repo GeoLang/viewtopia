@@ -10,7 +10,7 @@
  */
 
 /** Supported cell types */
-export type CellType = 'code' | 'markdown' | 'map-action' | 'python';
+export type CellType = 'code' | 'markdown' | 'map-action' | 'python' | 'sql';
 
 /** Execution status of a cell */
 export type CellStatus = 'idle' | 'running' | 'success' | 'error';
@@ -25,7 +25,7 @@ export interface MapAction {
 
 /** Output from running a cell */
 export interface CellOutput {
-  type: 'text' | 'json' | 'image' | 'map-state' | 'error';
+  type: 'text' | 'json' | 'image' | 'map-state' | 'error' | 'table';
   data: unknown;
   timestamp: number;
 }

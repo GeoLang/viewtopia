@@ -172,6 +172,15 @@
 - Routing & isochrones
 - Charts & data visualization
 
+### In-Browser SQL (DuckDB-WASM Spatial)
+- Embedded DuckDB-WASM with the spatial extension auto-loaded on first use
+- Notebook **SQL cells** with a Mantine table renderer (100-row preview, full row count)
+- **"Show on map"** button on any SQL result with a geometry column — auto-detects DuckDB `GEOMETRY`, WKT strings (`geom`/`geometry`/`wkt`/`shape`), or `lon`/`lat` numeric pairs
+- Server-side `ST_AsGeoJSON` wrapping so geometry conversion stays in the DuckDB worker
+- Auto-fits Cesium + Leaflet to the result extent
+- **Agent integration**: GeoLang agent can emit a `sql_query` viewer command to run analytical queries client-side without a Ptolemy round-trip — see [duckdb-wasm.md](duckdb-wasm.md)
+- ~5 MB worker bundle is lazy-loaded on first SQL use; subsequent queries hit the warm connection
+
 ### Space-Time Intelligence
 - Entity tracking
 - Colocation detection
