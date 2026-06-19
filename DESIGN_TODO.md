@@ -22,10 +22,11 @@
 - [ ] **itinera writes to host-mounted `data/` fail as default container user**
       (PermissionDenied). Fix Dockerfile user or volume ownership — currently worked
       around with `--user` for the one-off graph build.
-- [ ] **Reconcile geolang's run model with the platform stack.** geolang's own compose
-      runs an all-in-one `letta-gis` (Letta + Postgres in-container); the platform compose
-      builds it and points at a *separate* `letta` service. Decide one model and make the
-      platform compose match it (avoid double Letta / orphaned Postgres).
+- [x] **Reconcile geolang's run model with the platform stack.** geolang is all-in-one
+      (embedded Letta + Postgres, connects at `LETTA_URL`=localhost:8283). Removed the
+      redundant `letta` service + `letta-data` volume + bogus `LETTA_BASE_URL` env.
+- [ ] geolang's embedded Postgres is ephemeral (no volume) → re-`initdb` on every
+      recreate (~50s boot). Mount a volume at the container's PG data dir to persist it.
 - [ ] Transient `failed to set up container networking ... network not found` on `up`
       — needed a `down --remove-orphans` + `network prune`. Investigate / document.
 - [ ] Decide whether `fenestra` belongs in the default golden-path bring-up (skipped for now).

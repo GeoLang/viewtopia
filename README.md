@@ -274,8 +274,7 @@ docker compose -f docker-compose.platform.yml up --build
 | Itinera | 3002 | Router (needs `data/region.osm.pbf`) |
 | Fenestra | 3003 | WMS/WFS gateway |
 | TileTopia | 3100 | Vector tile server |
-| GeoLang AI | 8080 | Letta AI agent (port 8283 internal) |
-| Letta | 8283 | Letta backend |
+| GeoLang AI | 8080 | Letta AI agent — embeds its own Letta server (port 8283 internal) |
 | ViewTopia | 5174 | Web app (nginx reverse proxy) |
 
 **Optional data setup:**

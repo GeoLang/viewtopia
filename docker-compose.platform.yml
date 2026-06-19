@@ -10,8 +10,7 @@
 #   - tiletopia:  3D Tiles / terrain / asset server (port 3100)
 #   - geokode:    Geocoding service (port 3001)
 #   - itinera:    Routing + isochrones (port 3002)
-#   - geolang:    AI/NLP geospatial agent (port 8080)
-#   - letta:      Agent memory server (port 8283)
+#   - geolang:    AI/NLP geospatial agent (port 8080; embeds its own Letta server)
 #   - viewtopia:  Frontend viewer + A2UI (port 5174)
 #
 # Prerequisites:
@@ -131,15 +130,12 @@ services:
       - /data/graph.bin
 
   # ── AI / Agent Layer ──────────────────────────────────────────────
-
-  letta:
-    image: letta/letta:latest
-    ports:
-      - "8283:8283"
-    volumes:
-      - letta-data:/root/.letta
-    environment:
-      - LETTA_SERVER_PASSWORD=${LETTA_PASSWORD:-}
+  #
+  # NOTE: geolang is all-in-one — its entrypoint starts an embedded Letta server
+  # (+ Postgres) inside this container and connects to it at LETTA_URL
+  # (default http://localhost:8283). There is therefore NO separate `letta`
+  # service: a standalone letta/letta container would be unused dead weight, and
+  # geolang reads LETTA_URL (not LETTA_BASE_URL).
 
   geolang:
     build:
@@ -158,13 +154,11 @@ services:
       GEOLANG_PORT: "8283"
       TOOL_EXEC_DIR: "/app/geolang"
       TOOL_EXEC_VENV_NAME: "env"
-      LETTA_BASE_URL: http://letta:8283
       PTOLEMY_URL: http://ptolemy:3000
       TILETOPIA_URL: http://tiletopia:3000
       GEOKODE_URL: http://geokode:3000
       ITINERA_URL: http://itinera:3000
     depends_on:
-      - letta
       - ptolemy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8283/v1/health"]
@@ -201,4 +195,3 @@ volumes:
   pgdata:
   tiletopia-data:
   geolang-cache:
-  letta-data:
