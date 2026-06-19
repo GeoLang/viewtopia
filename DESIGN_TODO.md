@@ -66,15 +66,33 @@
 
 ## Track 2 — Collapse ViewTopia to one stack
 
-- [ ] Decide React as the canonical target (recommended) and record the decision
-- [ ] Make React the default build: point `vite.config.js` / Dockerfile / nginx at
-      `main.tsx` + `index-react.html`
-- [ ] Inventory features that exist only in the vanilla `main.js` path (not yet in the
-      React shell) — produce a parity checklist
-- [ ] Port remaining vanilla-only UI shells onto the shared `.js` feature modules
-- [ ] Delete `index.html` / `main.js` and the second Vite config once at parity
-- [ ] Update DESIGN.md §2.5 once the dual-stack note no longer applies
-- [ ] Burn down the ~123 TODO/stub markers in `src/` that block the golden path first
+- [x] **Decision (2026-06-19): React is the canonical front-end.** Port everything onto
+      `main.tsx`/`index-react.html`, then delete the vanilla `.js` shell.
+- [x] Make React independently buildable — created the missing `vite.react.config.ts`
+      (`npm run build:react` was broken). React now compiles (8399 modules, → `dist-react/`).
+- [x] **Parity audit done.** React already has 65 tool panels + full renderer hooks
+      (useCesium/useDeckGL/useMapLibre/useLeaflet), space-time, draw/measure/buildings,
+      and store-driven basemaps. Real vanilla-only GAPS to port (≈1900 LOC):
+
+  | Feature (vanilla module) | LOC | React status | Priority |
+  |---|---|---|---|
+  | `viewer-commands.js` (agent → map) | 466 | **missing** — useSSE only streams text | **P0 (headline)** |
+  | `feature-picker.js` (3D tiles inspect) | 255 | missing | P1 |
+  | `geojson-editor.js` | 163 | missing | P1 |
+  | `style-editor.js` | (n/a found) | missing | P1 |
+  | `theme-toggle.js` | 37 | missing (Header has theme?) | P2 |
+  | `auth.js` | 234 | partial (1 ref) | P2 |
+  | `portal.js` | 383 | missing | P2 |
+  | `dashboards.js` | 348 | missing | P2 |
+
+- [ ] **P0:** port agent→map command execution into React (parse agent actions in
+      `useSSE`/store and drive the renderer hooks)
+- [ ] **P1:** port feature-picker, geojson-editor, style-editor
+- [ ] **P2:** port theme-toggle, auth, portal, dashboards
+- [ ] **Only after parity:** flip default build/Dockerfile/nginx to React, then delete the
+      vanilla `.js` shell + `index.html` + this dual-stack note (DESIGN §2.5).
+- [ ] Do NOT flip the shipped deploy before the P0/P1 gaps close — it would regress the
+      live app (agent can't drive the map; missing editors).
 
 ---
 

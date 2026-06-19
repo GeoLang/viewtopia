@@ -208,10 +208,11 @@ You cannot ship what you cannot reproducibly run, and CI currently stubs geolang
 *Why first:* it converts the vague "~123 TODOs" into a concrete blocker list and tells
 us which backend gaps actually block the product vs. which are cosmetic.
 
-### Track 2 — Collapse ViewTopia to one stack
-1. Commit to **React** as the target (where the structure is going); make it the
-   default — point `vite.config.js`, the Dockerfile, and nginx at `main.tsx` /
-   `index-react.html`.
+### Track 2 — Collapse ViewTopia to one stack  *(active; started 2026-06-19)*
+**Decision: React is the canonical front-end** (user-confirmed). Port everything onto
+`main.tsx`/`index-react.html`, then delete the vanilla `.js` shell.
+1. Make React the default — point `vite.config.js`, the Dockerfile, and nginx at
+   `main.tsx` / `index-react.html`.
 2. Inventory features that still only exist in the vanilla path; finish their thin React
    shells (logic modules are already shared).
 3. Delete `index.html` / `main.js` once at parity. Ends double-maintenance.
