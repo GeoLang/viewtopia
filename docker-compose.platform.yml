@@ -149,9 +149,15 @@ services:
       - "8080:8283"
     volumes:
       - geolang-cache:/app/cache
+      # geolang runs its tools from a bind-mounted repo root (see geolang/docker-compose.yml)
+      - ../geolang:/app/geolang:z
+    env_file:
+      - ../geolang/.env
     environment:
       GEOLANG_HOST: 0.0.0.0
       GEOLANG_PORT: "8283"
+      TOOL_EXEC_DIR: "/app/geolang"
+      TOOL_EXEC_VENV_NAME: "env"
       LETTA_BASE_URL: http://letta:8283
       PTOLEMY_URL: http://ptolemy:3000
       TILETOPIA_URL: http://tiletopia:3000
