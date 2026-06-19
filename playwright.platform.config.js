@@ -1,0 +1,19 @@
+import { defineConfig } from '@playwright/test';
+
+// E2E for the FULL platform stack (docker-compose.platform.yml), NOT the dev server.
+// Bring the stack up first:
+//   docker compose -f docker-compose.platform.yml up -d
+// then:
+//   npm run test:e2e:platform
+//
+// Unlike playwright.config.js (which starts `vite`), this config has NO webServer:
+// it asserts the real nginx-served SPA + live backends on :5174.
+export default defineConfig({
+  testDir: 'tests/e2e',
+  testMatch: 'golden-path.spec.js',
+  timeout: 30000,
+  use: {
+    baseURL: 'http://localhost:5174',
+    headless: true,
+  },
+});
