@@ -89,6 +89,12 @@
       `src/viewer/commands.ts`, `useSSE` real protocol, chat-store `setLastContent`).
       Build + tsc clean. **Runtime not yet verified** (needs a live agent NL→map test).
       9 commands ported; deck-layer/analysis commands (add_heatmap, slope_map, …) remain.
+- [~] **Runtime verification harness** added: `tests/e2e/react-smoke.spec.js` +
+      `playwright.react.config.js` (`npm run test:e2e:react`, serves React on :5175).
+      **Currently FAILING (marked .fixme):** #react-root mounts but the app title isn't
+      visible — React likely throws at runtime / shows an ErrorBoundary fallback.
+      **NEXT: diagnose & fix this runtime crash first** (capture console/pageerror),
+      then un-fixme the smoke tests — they become the gate for P1/P2 ports.
 - [ ] **P1:** port feature-picker, geojson-editor, style-editor
 - [ ] **P2:** port theme-toggle, auth, portal, dashboards
 - [ ] **Only after parity:** flip default build/Dockerfile/nginx to React, then delete the

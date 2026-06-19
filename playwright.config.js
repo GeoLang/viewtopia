@@ -4,7 +4,7 @@ export default defineConfig({
   testDir: 'tests/e2e',
   // golden-path.spec.js targets the live docker-compose stack, not the dev server —
   // run it via `npm run test:e2e:platform` (playwright.platform.config.js).
-  testIgnore: 'golden-path.spec.js',
+  testIgnore: ['golden-path.spec.js', 'react-smoke.spec.js'],
   timeout: 30000,
   use: {
     baseURL: 'http://localhost:5174',

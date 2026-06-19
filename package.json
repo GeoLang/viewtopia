@@ -39,6 +39,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:platform": "playwright test --config=playwright.platform.config.js",
+    "test:e2e:react": "playwright test --config=playwright.react.config.js",
     "test:all": "vitest run && playwright test"
   },
   "dependencies": {
