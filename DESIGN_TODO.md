@@ -31,11 +31,14 @@
 - [ ] Decide whether `fenestra` belongs in the default golden-path bring-up (skipped for now).
 
 ### Functional findings (first run)
-- [ ] **geokode forward search is prefix-only on the house-number-led full address**
-      (`"100, Main St, Demo City, DC"`). `q=100` works; `q="Main St"` / place names
-      return `[]`. Add street-name / token / fuzzy matching so natural queries work —
-      otherwise the viewer's place search is unusable. (`geokode-core/src/geocode.rs`)
+- [x] **geokode forward search was prefix-only on the house-number-led full address**
+      (`q=100` worked; `q="Main St"` / place names returned `[]`). Fixed in
+      `geokode-core/src/geocode.rs`: index street, street+city, and city variants per
+      record (id-suffixed FST keys) + dedup results by id. Tests added; covered by the
+      golden-path E2E (street-name query).
 - [ ] geokode needs real address data beyond the 9-row sample CSV for a meaningful demo
+- [ ] geokode has a `fuzzy` module (Levenshtein/Soundex) that `forward()` doesn't use —
+      consider wiring fuzzy fallback for typo tolerance
 
 ### Golden journey (encode each as a step, then as Playwright E2E)
 - [x] Stack comes up; all 8 services report healthy

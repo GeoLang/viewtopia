@@ -59,15 +59,21 @@ test.describe('Golden path — live platform stack', () => {
 
   test('geocoding returns a hit via /api/geocode/ proxy', async ({ page }) => {
     await page.goto('/');
-    // NOTE: geokode forward is prefix-only on the house-number-led full address,
-    // so we query "100" (a known sample record). See DESIGN_TODO.md — street/place
-    // name search is a separate fix.
     const r = await fetchFromApp(page, '/api/geocode/forward?q=100');
     expect(r.status).toBe(200);
     expect(Array.isArray(r.json?.results)).toBe(true);
     expect(r.json.results.length).toBeGreaterThanOrEqual(1);
     expect(r.json.results[0]).toHaveProperty('lat');
     expect(r.json.results[0]).toHaveProperty('lon');
+  });
+
+  test('geocoding matches by street name (not just house number)', async ({ page }) => {
+    await page.goto('/');
+    // geokode now indexes street/city variants — querying a street name (the
+    // common case) must return hits. "Main St" exists in the sample dataset.
+    const r = await fetchFromApp(page, '/api/geocode/forward?q=Main%20St');
+    expect(r.status).toBe(200);
+    expect(r.json?.results?.length).toBeGreaterThanOrEqual(1);
   });
 
   test('routing returns a route via /api/route proxy', async ({ page }) => {

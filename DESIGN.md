@@ -255,9 +255,9 @@ here → encode as a Playwright E2E gate.
 - [x] Stack comes up; all 8 services healthy (geolang ~50s first-boot)
 - [x] Viewer loads at `:5174` (HTTP 200)
 - [x] ptolemy `/api/v1/health` → `ok`; tiletopia `/api/v1/health` → `{"status":"ok"}`
-- [~] Geocode a place (geokode) — endpoint works (`/forward?q=`), but **prefix-only
-      matching on the house-number-led full address**: `q=100` works, `q="Main St"`
-      returns `[]`. Street/place-name search is effectively broken (see DESIGN_TODO §T1).
+- [x] Geocode a place (geokode) — `/forward?q=` works for house numbers **and** street/
+      place names after the fix (was prefix-only on the number-led full address).
+      `geokode-core` now indexes street/city variants; covered by tests + E2E.
 - [x] Route between two points (itinera) — `/route?from=lat,lon&to=lat,lon` returns a
       real route (Monaco: 1453 m / 96 s with geometry) ✅
 - [x] **Same-origin proxy verified from the browser** (the real app path) for ptolemy,
