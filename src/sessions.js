@@ -10,7 +10,7 @@
  */
 import { getGeoLangBase, hasGeoLang } from './backends.js';
 import { switchBasemap, getLeafletMap, toggleClickQuery, toggleDraw } from './leaflet-view.js';
-import { getCesiumViewer } from './renderers.js';
+import { getCesiumViewer, switchRendererBasemap } from './renderers.js';
 import * as Cesium from 'cesium';
 
 let currentSessionId = null;
@@ -345,8 +345,9 @@ export function initSessionsAndUI() {
   if (basemapSelect) {
     basemapSelect.addEventListener('change', () => {
       const name = basemapSelect.value;
-      switchBasemap(name);
-      switchCesiumBasemap(name);
+      switchBasemap(name);          // Leaflet
+      switchCesiumBasemap(name);    // Cesium globe
+      switchRendererBasemap(name);  // deck.gl / MapLibre
     });
   }
 

@@ -25,6 +25,47 @@ let cesiumViewer = null;
 let sharedCamera = { longitude: -122.4, latitude: 37.8, zoom: 11, pitch: 45, bearing: 0 };
 let deckViewState = null;
 
+// Basemap tile templates shared by the deck.gl and MapLibre renderers.
+// NOTE: no {s} subdomain token — neither deck.gl TileLayer nor MapLibre raster
+// sources expand it. Esri imagery uses {z}/{y}/{x} ordering.
+const BASEMAP_TILES = {
+  osm: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  topo: 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
+  dark: 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+};
+// Remember the chosen basemap so a renderer initialized later starts on it.
+let currentBasemap = 'osm';
+
+// MapLibre raster paint: darken/desaturate only the plain & dark basemaps so the
+// satellite and topo imagery render at their natural colours.
+function basemapPaint(name) {
+  const stylize = name === 'osm' || name === 'dark';
+  return {
+    'raster-brightness-max': stylize ? 0.7 : 1,
+    'raster-saturation': stylize ? -0.4 : 0,
+  };
+}
+
+// deck.gl raster basemap as a TileLayer (stable id so it can be swapped in place).
+function makeDeckBasemapLayer(name) {
+  return new TileLayer({
+    id: 'basemap',
+    data: BASEMAP_TILES[name] || BASEMAP_TILES.osm,
+    minZoom: 0,
+    maxZoom: 19,
+    tileSize: 256,
+    renderSubLayers: (props) => {
+      const { boundingBox } = props.tile;
+      return new BitmapLayer(props, {
+        data: null,
+        image: props.data,
+        bounds: [boundingBox[0][0], boundingBox[0][1], boundingBox[1][0], boundingBox[1][1]],
+      });
+    },
+  });
+}
+
 function captureCamera() {
   if (activeRenderer?.type === 'deckgl') {
     const vs = deckViewState;
@@ -169,23 +210,7 @@ function initDeckGL(container) {
     onViewStateChange: ({ viewState }) => {
       deckViewState = viewState;
     },
-    layers: [
-      new TileLayer({
-        id: 'osm-basemap',
-        data: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-        minZoom: 0,
-        maxZoom: 19,
-        tileSize: 256,
-        renderSubLayers: (props) => {
-          const { boundingBox } = props.tile;
-          return new BitmapLayer(props, {
-            data: null,
-            image: props.data,
-            bounds: [boundingBox[0][0], boundingBox[0][1], boundingBox[1][0], boundingBox[1][1]],
-          });
-        },
-      }),
-    ],
+    layers: [makeDeckBasemapLayer(currentBasemap)],
     getTooltip: ({ object }) => object && JSON.stringify(object.properties),
   });
 
@@ -202,20 +227,21 @@ function initMapLibre(container) {
     container: overlay,
     style: {
       version: 8,
-      name: 'ViewTopia Dark',
+      name: 'ViewTopia Basemap',
       sources: {
-        'osm-raster': {
+        basemap: {
           type: 'raster',
-          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+          tiles: [BASEMAP_TILES[currentBasemap] || BASEMAP_TILES.osm],
           tileSize: 256,
-          attribution: '&copy; OpenStreetMap',
+          attribution: '&copy; OpenStreetMap, Esri, OpenTopoMap, CARTO',
         },
       },
       layers: [{
-        id: 'osm-raster-layer',
+        id: 'basemap-layer',
         type: 'raster',
-        source: 'osm-raster',
-        paint: { 'raster-brightness-max': 0.7, 'raster-saturation': -0.4 },
+        // Only stylize the plain/dark basemaps; show satellite/topo imagery as-is.
+        paint: basemapPaint(currentBasemap),
+        source: 'basemap',
       }],
     },
     center: [sharedCamera.longitude, sharedCamera.latitude],
@@ -236,4 +262,38 @@ function initMapLibre(container) {
   setTimeout(() => map.resize(), 200);
 
   activeRenderer = { type: 'maplibre', map, deckOverlay };
+}
+
+// Swap the deck.gl basemap in place, preserving any data layers on top of it.
+function switchDeckBasemap(name) {
+  const deck = activeRenderer?.deck;
+  if (!deck) return;
+  const others = (deck.props.layers || []).filter((l) => l && l.id !== 'basemap');
+  deck.setProps({ layers: [makeDeckBasemapLayer(name), ...others] });
+}
+
+// Swap the MapLibre raster basemap source + paint in place.
+function switchMapLibreBasemap(name) {
+  const map = activeRenderer?.map;
+  if (!map) return;
+  const apply = () => {
+    const src = map.getSource('basemap');
+    if (src && typeof src.setTiles === 'function') {
+      src.setTiles([BASEMAP_TILES[name] || BASEMAP_TILES.osm]);
+    }
+    const paint = basemapPaint(name);
+    for (const [prop, val] of Object.entries(paint)) {
+      map.setPaintProperty('basemap-layer', prop, val);
+    }
+  };
+  if (map.isStyleLoaded()) apply();
+  else map.once('idle', apply);
+}
+
+// Apply a basemap to whichever of the deck.gl / MapLibre renderers is active.
+// (Cesium and Leaflet have their own switchers; this fills the gap for the other two.)
+export function switchRendererBasemap(name) {
+  currentBasemap = name;
+  if (activeRenderer?.type === 'deckgl') switchDeckBasemap(name);
+  else if (activeRenderer?.type === 'maplibre') switchMapLibreBasemap(name);
 }
