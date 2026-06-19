@@ -31,6 +31,7 @@ interface ChatState {
   // Messages
   addMessage: (msg: Omit<Message, 'id' | 'timestamp'>) => void;
   appendToLast: (content: string) => void;
+  setLastContent: (content: string) => void;
   clearMessages: () => void;
 
   // Streaming state
@@ -114,6 +115,19 @@ export const useChatStore = create<ChatState>()(
                 ...last,
                 content: last.content + content,
               };
+            }
+            return { ...sess, messages: msgs, updatedAt: Date.now() };
+          }),
+        })),
+
+      setLastContent: (content) =>
+        set((s) => ({
+          sessions: s.sessions.map((sess) => {
+            if (sess.id !== s.activeSessionId) return sess;
+            const msgs = [...sess.messages];
+            const last = msgs[msgs.length - 1];
+            if (last && last.role === 'assistant') {
+              msgs[msgs.length - 1] = { ...last, content };
             }
             return { ...sess, messages: msgs, updatedAt: Date.now() };
           }),

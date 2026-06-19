@@ -10,6 +10,7 @@ import {
 import { useAppStore } from '../store/app';
 import { getSharedCamera, setSharedCamera } from './sharedCamera';
 import { BASEMAP_TILES } from './basemapTiles';
+import { setActiveCesiumViewer } from '../viewer/registry';
 
 interface UseCesiumOptions {
   containerId?: string;
@@ -51,6 +52,7 @@ export function useCesium(opts: UseCesiumOptions = {}) {
         viewerRef.current.destroy();
       }
       viewerRef.current = null;
+      setActiveCesiumViewer(null);
       return;
     }
 
@@ -135,6 +137,7 @@ export function useCesium(opts: UseCesiumOptions = {}) {
     }, 300);
 
     viewerRef.current = viewer;
+    setActiveCesiumViewer(viewer);
   }, [isActive, opts.containerId, opts.ionToken, basemap]);
 
   // Swap basemap imagery when already active
