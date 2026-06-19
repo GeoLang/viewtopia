@@ -1,0 +1,128 @@
+name: Platform E2E (golden path)
+
+# Runs the golden-path Playwright suite (tests/e2e/golden-path.spec.js) against the
+# REAL platform stack — no geolang stub. This is the "is it shippable?" gate.
+#
+# Required repository secrets:
+#   GEOLANG_TOKEN   - PAT / fine-grained token with read access to the private
+#                     GeoLang/geolang repo (used to check it out).
+#   XAI_API_KEY     - (optional) written into geolang/.env. The golden path does not
+#   OPENAI_API_KEY  - (optional) issue an LLM call, so empty values still pass; provide
+#                     them if you later add an agent NL->map step.
+#
+# Building six Rust service images from scratch is slow, so this does NOT run on every
+# PR — only master pushes, the weekly schedule, and manual dispatch.
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+  schedule:
+    - cron: "30 6 * * 1"
+
+concurrency:
+  group: platform-e2e
+  cancel-in-progress: true
+
+jobs:
+  golden-path:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout viewtopia
+        uses: actions/checkout@v4
+        with:
+          path: viewtopia
+
+      - name: Checkout ptolemy
+        uses: actions/checkout@v4
+        with: { repository: GeoLang/ptolemy, path: ptolemy }
+      - name: Checkout tiletopia
+        uses: actions/checkout@v4
+        with: { repository: GeoLang/tiletopia, path: tiletopia }
+      - name: Checkout geokode
+        uses: actions/checkout@v4
+        with: { repository: GeoLang/geokode, path: geokode }
+      - name: Checkout itinera
+        uses: actions/checkout@v4
+        with: { repository: GeoLang/itinera, path: itinera }
+
+      - name: Checkout geolang (private — requires GEOLANG_TOKEN)
+        uses: actions/checkout@v4
+        with:
+          repository: GeoLang/geolang
+          path: geolang
+          token: ${{ secrets.GEOLANG_TOKEN }}
+
+      - name: Write geolang/.env
+        run: |
+          cat > geolang/.env <<EOF
+          XAI_API_KEY=${{ secrets.XAI_API_KEY }}
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          EOF
+
+      - name: Download OSM extract for routing
+        working-directory: viewtopia
+        run: |
+          curl -sSL -o data/region.osm.pbf \
+            https://download.geofabrik.de/europe/monaco-latest.osm.pbf
+
+      - name: Build platform images (golden-path subset)
+        working-directory: viewtopia
+        run: |
+          docker compose -f docker-compose.platform.yml build \
+            ptolemy tiletopia geokode itinera geolang viewtopia
+
+      - name: Build itinera routing graph
+        working-directory: viewtopia
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -v "$PWD/data:/data" --entrypoint itinera \
+            viewtopia-itinera:latest \
+            import --input /data/region.osm.pbf --output /data/graph.bin
+
+      - name: Start the stack
+        working-directory: viewtopia
+        run: |
+          docker compose -f docker-compose.platform.yml up -d \
+            ptolemy tiletopia geokode itinera geolang viewtopia
+
+      - name: Wait for all services healthy
+        working-directory: viewtopia
+        run: |
+          services="ptolemy tiletopia geokode itinera geolang"
+          deadline=$(( $(date +%s) + 360 ))   # geolang first boot is slow (embedded Letta)
+          while :; do
+            pending=""
+            for s in $services; do
+              cid=$(docker compose -f docker-compose.platform.yml ps -q "$s")
+              st=$(docker inspect --format '{{.State.Health.Status}}' "$cid" 2>/dev/null || echo none)
+              [ "$st" = "healthy" ] || pending="$pending $s($st)"
+            done
+            # viewtopia has no healthcheck — probe its port directly
+            curl -sf -o /dev/null http://localhost:5174/ || pending="$pending viewtopia(down)"
+            [ -z "$pending" ] && { echo "all healthy"; break; }
+            [ "$(date +%s)" -ge "$deadline" ] && { echo "TIMEOUT waiting for:$pending"; exit 1; }
+            echo "waiting for:$pending"; sleep 5
+          done
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: viewtopia/package-lock.json
+
+      - name: Install deps + Playwright
+        working-directory: viewtopia
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Run golden-path E2E
+        working-directory: viewtopia
+        run: npm run test:e2e:platform
+
+      - name: Dump service logs on failure
+        if: failure()
+        working-directory: viewtopia
+        run: docker compose -f docker-compose.platform.yml logs --no-color --tail=200

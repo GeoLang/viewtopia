@@ -52,7 +52,11 @@
       (`npm run test:e2e:platform`), **5/5 passing**
 - [ ] Load a TileTopia layer (needs a tileset ingested; add as an E2E step)
 - [ ] Agent NL command drives the map (geolang → letta, viewer command protocol)
-- [ ] Wire `test:e2e:platform` into CI **without stubbing geolang** (CI currently stubs it)
+- [x] Wire `test:e2e:platform` into CI **without stubbing geolang** —
+      `.github/workflows/platform-e2e.yml` checks out all repos (incl. private geolang),
+      builds the stack, runs the golden-path suite. **Requires repo secrets:**
+      `GEOLANG_TOKEN` (read access to private geolang) and optional `XAI_API_KEY` /
+      `OPENAI_API_KEY`. Runs on master push + weekly + manual (too heavy for every PR).
 
 ### Reproducibility
 - [ ] Document the exact one-command bring-up (incl. data prep) in DESIGN.md / README
