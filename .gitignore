@@ -1,6 +1,8 @@
 node_modules/
 dist/
 dist-react/
+test-results/
+playwright-report/
 .vite/
 *.log
 .DS_Store
