@@ -85,8 +85,10 @@
   | `portal.js` | 383 | missing | P2 |
   | `dashboards.js` | 348 | missing | P2 |
 
-- [ ] **P0:** port agent→map command execution into React (parse agent actions in
-      `useSSE`/store and drive the renderer hooks)
+- [x] **P0:** agent→map command execution ported (`src/viewer/registry.ts`,
+      `src/viewer/commands.ts`, `useSSE` real protocol, chat-store `setLastContent`).
+      Build + tsc clean. **Runtime not yet verified** (needs a live agent NL→map test).
+      9 commands ported; deck-layer/analysis commands (add_heatmap, slope_map, …) remain.
 - [ ] **P1:** port feature-picker, geojson-editor, style-editor
 - [ ] **P2:** port theme-toggle, auth, portal, dashboards
 - [ ] **Only after parity:** flip default build/Dockerfile/nginx to React, then delete the
