@@ -198,6 +198,10 @@ services:
     environment:
       LETTA_URL: http://geolang:8283
       VLLM_API_BASE: http://embeddings:8000
+      # server.py runs in the image's /app/.venv (fastapi/uvicorn/letta) but its
+      # geo endpoints (e.g. /geojson) lazily import geopandas, which lives in the
+      # tool-exec venv. Bridge that venv's site-packages onto the path.
+      PYTHONPATH: /app/geolang/env/lib/python3.11/site-packages
       PTOLEMY_URL: http://ptolemy:3000
       TILETOPIA_URL: http://tiletopia:3000
       GEOKODE_URL: http://geokode:3000
