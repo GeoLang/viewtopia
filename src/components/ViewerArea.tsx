@@ -16,6 +16,7 @@ import { useBuildingsMapLibre } from '../hooks/useBuildingsMapLibre';
 import { useDrawCesium } from '../hooks/useDrawCesium';
 import { useDrawMapLibre } from '../hooks/useDrawMapLibre';
 import { useMeasureCesium } from '../hooks/useMeasureCesium';
+import { useFeaturePickerCesium } from '../hooks/useFeaturePickerCesium';
 import { useMeasureMapLibre } from '../hooks/useMeasureMapLibre';
 import { Minimap } from './Minimap';
 import { CoordReadout } from './CoordReadout';
@@ -54,6 +55,9 @@ export function ViewerArea() {
   useMeasureCesium(cesiumRef);
   useMeasureMapLibre(maplibreRef);
   useMeasureMapLibre(deckglMapRef);
+
+  // Feature picker — inspect 3D Tiles features (Cesium only)
+  useFeaturePickerCesium(cesiumRef);
 
   // React to flyTo requests from spacetime store
   useEffect(() => {

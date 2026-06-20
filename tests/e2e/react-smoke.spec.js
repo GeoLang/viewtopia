@@ -9,40 +9,53 @@ import { test, expect } from '@playwright/test';
  *
  * Run: npm run test:e2e:react   (serves the app on :5175 via Vite)
  *
- * STATUS (2026-06-19): currently FAILING and marked .fixme. Observed: #react-root
- * mounts with children, but the "ViewTopia" title is not visible — the React app
- * appears to render an ErrorBoundary fallback / throw at runtime when loaded.
- * NEXT SESSION: run this without .fixme, capture the console/pageerror, and fix the
- * runtime crash before continuing the P1/P2 feature ports.
+ * NOTE: served standalone (no platform backend), so backend probes like
+ * /api/health and /agent/health return 500 and /manifest.json 404 — those are
+ * expected network failures, NOT runtime errors. The gate is uncaught JS
+ * exceptions (page `pageerror`), which must stay empty.
  */
 
 const REACT_URL = '/index-react.html';
 
 test.describe('React shell smoke', () => {
-  test.fixme('app mounts and renders the shell without runtime errors', async ({ page }) => {
+  test('app mounts and renders the shell without runtime errors', async ({ page }) => {
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
 
     await page.goto(REACT_URL);
 
-    // React actually mounted into #react-root
-    await expect(page.locator('#react-root > *').first()).toBeVisible();
-
-    // Core shell: app title + a renderer container
+    // Core shell rendered: app title (in the header) + the Cesium renderer container.
+    // (Don't assert `#react-root > *` first — Mantine injects a non-visible <style>
+    // as the first child, which is never "visible".)
     await expect(page.getByText('ViewTopia').first()).toBeVisible();
     await expect(page.locator('#cesium-container')).toBeAttached();
 
-    // No uncaught runtime errors (Cesium WebGL warnings are not pageerrors)
+    // No uncaught runtime errors (failed backend probes / Cesium WebGL warnings
+    // are not pageerrors).
     expect(errors, `runtime errors:\n${errors.join('\n')}`).toEqual([]);
   });
 
-  test.fixme('a tool panel opens from the toolbar', async ({ page }) => {
+  test('a tool panel opens from the toolbar', async ({ page }) => {
     await page.goto(REACT_URL);
-    // The toolbar exposes tool buttons via tooltips (Measure, Draw, …).
+    // Tool buttons carry an aria-label matching their tooltip (Measure, Draw, …).
     const measure = page.getByRole('button', { name: 'Measure' });
     await expect(measure).toBeVisible();
     await measure.click();
-    // Opening a panel should render an aside/dialog region with content.
-    await expect(page.getByText(/measure/i).first()).toBeVisible();
+    // Opening the Measure tool renders its panel with a "Measurement" heading.
+    await expect(page.getByText('Measurement').first()).toBeVisible();
+  });
+
+  test('feature picker (Inspect) opens and toggles', async ({ page }) => {
+    await page.goto(REACT_URL);
+    const inspect = page.getByRole('button', { name: 'Inspect' });
+    await expect(inspect).toBeVisible();
+    await inspect.click();
+    // Panel renders with its "Feature Info" heading and the enable switch.
+    await expect(page.getByText('Feature Info').first()).toBeVisible();
+    const toggle = page.getByLabel('Click a 3D Tiles feature to inspect');
+    await expect(toggle).not.toBeChecked();
+    // Mantine hides the real <input>; toggle via its visible label.
+    await page.getByText('Click a 3D Tiles feature to inspect').click();
+    await expect(toggle).toBeChecked();
   });
 });

@@ -2,6 +2,7 @@ import { useAppStore } from '../store/app';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { PluginPanel } from '../plugins/PluginHost';
 import { MeasurementPanel } from './tools/MeasurementPanel';
+import { FeaturePickerPanel } from './tools/FeaturePickerPanel';
 import { GeocodingPanel } from './tools/GeocodingPanel';
 import { RoutingPanel } from './tools/RoutingPanel';
 import { DrawPanel } from './tools/DrawPanel';
@@ -79,6 +80,8 @@ export function ToolPanels() {
   switch (activePanel) {
     case 'measure':
       return <MeasurementPanel onClose={close} />;
+    case 'featurePicker':
+      return <FeaturePickerPanel onClose={close} />;
     case 'geocoding':
       return (
         <GeocodingPanel

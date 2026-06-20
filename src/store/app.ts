@@ -62,6 +62,7 @@ export type ToolPanel =
   | 'globalTerrain'
   | 'vectorTiles'
   | 'rasterViewer'
+  | 'featurePicker'
   | 'printExport';
 
 export interface LayerItem {

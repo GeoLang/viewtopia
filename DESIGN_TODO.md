@@ -89,13 +89,32 @@
       `src/viewer/commands.ts`, `useSSE` real protocol, chat-store `setLastContent`).
       Build + tsc clean. **Runtime not yet verified** (needs a live agent NL→map test).
       9 commands ported; deck-layer/analysis commands (add_heatmap, slope_map, …) remain.
-- [~] **Runtime verification harness** added: `tests/e2e/react-smoke.spec.js` +
+- [x] **Runtime verification harness** added: `tests/e2e/react-smoke.spec.js` +
       `playwright.react.config.js` (`npm run test:e2e:react`, serves React on :5175).
-      **Currently FAILING (marked .fixme):** #react-root mounts but the app title isn't
-      visible — React likely throws at runtime / shows an ErrorBoundary fallback.
-      **NEXT: diagnose & fix this runtime crash first** (capture console/pageerror),
-      then un-fixme the smoke tests — they become the gate for P1/P2 ports.
-- [ ] **P1:** port feature-picker, geojson-editor, style-editor
+      **No runtime crash — the `.fixme` was a misdiagnosis.** Captured console/pageerror:
+      the app mounts and renders the full shell (title, tabs, chat, 23 plugins); the only
+      failures are backend probes (`/api/health`, `/agent/health` → 500, `/manifest.json`
+      → 404), expected when served standalone without the platform backend. The smoke test
+      was failing on bad selectors: `#react-root > *` `.first()` matched Mantine's injected
+      non-visible `<style>`, and there was no accessible "Measure" button. Fixed: added
+      `aria-label`s to the toolbar tool ActionIcons (a11y + testability) and corrected the
+      assertions. **2/2 passing** — this is now the live gate for P1/P2 ports.
+### Porting organization (decided 2026-06-20)
+- **Work unit:** feature-by-feature, gated. Each feature lands in its natural React home
+  (panels → `src/components/tools/*Panel.tsx`; cross-cutting → `src/features/<name>/`;
+  Cesium interaction → a `hooks/use*Cesium.ts` + `store/*.ts`, mirroring the measure tool),
+  adds an assertion to `tests/e2e/react-smoke.spec.js`, must pass `tsc` + `build:react` +
+  `test:e2e:react`, then commits to master.
+- **Order:** P1 in TODO order (feature-picker → geojson-editor → style-editor), then P2.
+
+- [~] **P1:** port feature-picker, geojson-editor, style-editor
+  - [x] **feature-picker** — `store/featurePicker.ts`, `hooks/useFeaturePickerCesium.ts`,
+        `components/tools/FeaturePickerPanel.tsx`; toolbar "Inspect" button + `featurePicker`
+        panel key. Click a 3D Tiles feature → property table + yellow highlight. Gated by a
+        new smoke test (3/3 passing). NOTE: the vanilla `feature-picker.js` *also* contains
+        the **StyleEditor** class — port that when style-editor's turn comes (same source).
+  - [ ] geojson-editor
+  - [ ] style-editor (StyleEditor class lives in vanilla `feature-picker.js`)
 - [ ] **P2:** port theme-toggle, auth, portal, dashboards
 - [ ] **Only after parity:** flip default build/Dockerfile/nginx to React, then delete the
       vanilla `.js` shell + `index.html` + this dual-stack note (DESIGN §2.5).

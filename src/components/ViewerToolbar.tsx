@@ -28,6 +28,7 @@ import {
   IconCategory,
   IconMountain,
   IconChartAreaLine,
+  IconClick,
 } from '@tabler/icons-react';
 import { useAppStore, type Renderer, type Basemap, type ViewerTab } from '../store/app';
 import { useSpaceTimeStore } from '../features/spacetime/store';
@@ -123,15 +124,16 @@ export function ViewerToolbar() {
           }}
         />
 
-        <Tooltip label="Measure"><ActionIcon size="sm" variant="subtle" color="gray" onClick={() => togglePanel('measure')}><IconRuler size={14} /></ActionIcon></Tooltip>
-        <Tooltip label="Draw"><ActionIcon size="sm" variant="subtle" color="gray" onClick={() => togglePanel('draw')}><IconPencil size={14} /></ActionIcon></Tooltip>
-        <Tooltip label="Annotate"><ActionIcon size="sm" variant="subtle" color="gray" onClick={() => togglePanel('annotate')}><IconMapPin size={14} /></ActionIcon></Tooltip>
-        <Tooltip label="Route"><ActionIcon size="sm" variant="subtle" color="gray" onClick={() => togglePanel('routing')}><IconRoute size={14} /></ActionIcon></Tooltip>
-        <Tooltip label="Bookmarks"><ActionIcon size="sm" variant="subtle" color="gray" onClick={() => togglePanel('bookmark')}><IconBookmark size={14} /></ActionIcon></Tooltip>
-        <Tooltip label="Search"><ActionIcon size="sm" variant="subtle" color="gray" onClick={() => togglePanel('geocoding')}><IconSearch size={14} /></ActionIcon></Tooltip>
-        <Tooltip label="Layers"><ActionIcon size="sm" variant="subtle" color="gray" onClick={() => togglePanel('layers')}><IconStack2 size={14} /></ActionIcon></Tooltip>
-        <Tooltip label="Buildings"><ActionIcon size="sm" variant="subtle" color="gray" onClick={() => togglePanel('buildings')}><IconBuildingSkyscraper size={14} /></ActionIcon></Tooltip>
-        <Tooltip label="Export PNG"><ActionIcon size="sm" variant="subtle" color="gray" onClick={handleExportPng}><IconDownload size={14} /></ActionIcon></Tooltip>
+        <Tooltip label="Measure"><ActionIcon aria-label="Measure" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('measure')}><IconRuler size={14} /></ActionIcon></Tooltip>
+        <Tooltip label="Draw"><ActionIcon aria-label="Draw" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('draw')}><IconPencil size={14} /></ActionIcon></Tooltip>
+        <Tooltip label="Annotate"><ActionIcon aria-label="Annotate" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('annotate')}><IconMapPin size={14} /></ActionIcon></Tooltip>
+        <Tooltip label="Route"><ActionIcon aria-label="Route" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('routing')}><IconRoute size={14} /></ActionIcon></Tooltip>
+        <Tooltip label="Bookmarks"><ActionIcon aria-label="Bookmarks" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('bookmark')}><IconBookmark size={14} /></ActionIcon></Tooltip>
+        <Tooltip label="Search"><ActionIcon aria-label="Search" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('geocoding')}><IconSearch size={14} /></ActionIcon></Tooltip>
+        <Tooltip label="Layers"><ActionIcon aria-label="Layers" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('layers')}><IconStack2 size={14} /></ActionIcon></Tooltip>
+        <Tooltip label="Buildings"><ActionIcon aria-label="Buildings" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('buildings')}><IconBuildingSkyscraper size={14} /></ActionIcon></Tooltip>
+        <Tooltip label="Inspect"><ActionIcon aria-label="Inspect" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('featurePicker')}><IconClick size={14} /></ActionIcon></Tooltip>
+        <Tooltip label="Export PNG"><ActionIcon aria-label="Export PNG" size="sm" variant="subtle" color="gray" onClick={handleExportPng}><IconDownload size={14} /></ActionIcon></Tooltip>
 
         <Menu shadow="md" width={180}>
           <Menu.Target>
