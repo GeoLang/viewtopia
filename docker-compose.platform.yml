@@ -140,10 +140,22 @@ services:
   # service: a standalone letta/letta container would be unused dead weight, and
   # geolang reads LETTA_URL (not LETTA_BASE_URL).
 
+  # CPU embedding server for Letta memory recall (all-MiniLM-L6-v2, dim 384),
+  # OpenAI-compatible /v1/embeddings. geolang's agent embedding_config points here
+  # via VLLM_API_BASE. Downloads the (~90MB) model on first start.
+  embeddings:
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.6
+    command: ["--model-id", "sentence-transformers/all-MiniLM-L6-v2", "--port", "8000"]
+    volumes:
+      - embeddings-cache:/data
+    # (TEI's image has no curl/wget, so no in-container healthcheck; the agent only
+    # embeds on first chat, by which time the ~90MB model has loaded.)
+
   geolang:
     build:
       context: ../geolang
       dockerfile: Dockerfile
+    image: geolang-platform:latest
     ports:
       - "8080:8283"
     volumes:
@@ -169,6 +181,32 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+
+  # geolang's public FastAPI app (src/api/server.py — the /chat/stream SSE API the
+  # viewer talks to). Reuses the geolang image but bypasses the Letta entrypoint;
+  # it connects to the Letta server in the `geolang` container and embeds via the
+  # `embeddings` service. nginx routes /agent/ here (not at Letta).
+  geolang-api:
+    image: geolang-platform:latest
+    entrypoint: []
+    working_dir: /app/geolang
+    command: ["python3", "-m", "uvicorn", "src.api.server:app", "--host", "0.0.0.0", "--port", "8080"]
+    volumes:
+      - ../geolang:/app/geolang:z
+    env_file:
+      - ../geolang/.env
+    environment:
+      LETTA_URL: http://geolang:8283
+      VLLM_API_BASE: http://embeddings:8000
+      PTOLEMY_URL: http://ptolemy:3000
+      TILETOPIA_URL: http://tiletopia:3000
+      GEOKODE_URL: http://geokode:3000
+      ITINERA_URL: http://itinera:3000
+    depends_on:
+      geolang:
+        condition: service_healthy
+      embeddings:
+        condition: service_started
 
   # ── Frontend ──────────────────────────────────────────────────────
 
@@ -198,3 +236,4 @@ volumes:
   pgdata:
   tiletopia-data:
   geolang-cache:
+  embeddings-cache:
