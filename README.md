@@ -227,6 +227,57 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 
 ---
 
+## Requirements
+
+**Web app only (frontend dev):**
+
+- **Node.js ≥ 20** and npm (Vite 6 / React 19)
+- A modern WebGL2 browser
+
+**Full platform (all backends, via Docker):**
+
+- **Docker Engine + Docker Compose v2** (the `docker compose` subcommand)
+- **git** with access to the GeoLang repos — the compose file *builds each backend
+  from its sibling repository*, so you need them cloned as peers of `viewtopia/`.
+  Use the bootstrap script:
+  ```bash
+  scripts/clone-geolang.sh ~/src/GeoLang   # clones every platform repo
+  ```
+  (GeoLang GitHub repos clone over SSH by default — add `--https` for token-based
+  HTTPS. `geolang` is on a private GitLab via the `gitlab-rsa` SSH host alias.)
+- **An LLM API key for the agent:** put `XAI_API_KEY` (or `OPENAI_API_KEY`) in
+  `geolang/.env`.
+- **~Several GB of disk** for images (the geolang/Letta + QGIS image is large) plus
+  any OSM/address data and the embedding model.
+- **No GPU required** — the embedding server uses a CPU-only image.
+- **bash** for the helper scripts (`scripts/`).
+
+## Running on Windows
+
+**Yes — via Docker Desktop with the WSL2 backend (recommended).** The whole stack
+runs in Linux containers, so the heavy native dependencies (QGIS, GDAL, GEOS,
+GeoPandas) never touch the Windows host.
+
+1. Install **Docker Desktop** and enable the **WSL2 backend**; install a WSL2 distro
+   (e.g. Ubuntu).
+2. Do everything **inside WSL2**: clone into the Linux filesystem (e.g.
+   `~/src/GeoLang`, *not* `/mnt/c/...`), and run `scripts/clone-geolang.sh` and
+   `docker compose` from the WSL shell. Install Node/npm inside WSL2 too.
+
+Caveats:
+
+- **Work from the WSL2 (ext4) filesystem, not a `/mnt/c` Windows path** — bind-mount
+  performance and inode semantics (the single-file nginx mount) are much better, and
+  it avoids CRLF/permission issues.
+- **Keep shell scripts LF**, not CRLF (`git config core.autocrlf input`) — CRLF
+  breaks bash scripts.
+- The `:z` SELinux volume labels in the compose file are no-ops on Docker Desktop
+  (harmless).
+- Set up your **SSH keys / the `gitlab-rsa` alias inside WSL2** for cloning.
+
+Native Windows (PowerShell + Docker Desktop) can also run `docker compose up`, but
+the helper bash scripts need Git Bash or WSL — so WSL2 is the smoother path.
+
 ## Quick Start
 
 ```bash
@@ -245,7 +296,8 @@ npm run dev
 ### Full platform (all services via Docker Compose)
 
 The platform compose file builds each backend from its sibling repository.
-Ensure the following repos are cloned as peers of `viewtopia/`:
+Clone them all with `scripts/clone-geolang.sh` (see [Requirements](#requirements)),
+or ensure at least these repos are cloned as peers of `viewtopia/`:
 
 ```
 src/GeoLang/
@@ -445,6 +497,13 @@ npm run build      # Production build
 npm test           # Run unit tests (vitest)
 npm run test:e2e   # Run E2E tests (Playwright)
 npm run test:all   # Run all tests
+```
+
+Shell helpers (`scripts/`):
+
+```bash
+scripts/clone-geolang.sh [DIR]   # bootstrap the full platform workspace (all repos)
+#   --pull   update existing repos    --https   clone GitHub repos over HTTPS
 ```
 
 ---
