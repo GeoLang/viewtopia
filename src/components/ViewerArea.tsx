@@ -32,29 +32,27 @@ export function ViewerArea() {
 
   // Initialize all viewer engines (they mount into DOM containers below)
   const cesiumRef = useCesium({ containerId: 'cesium-container' });
-  const { mapRef: deckglMapRef, overlayRef } = useDeckGL({ containerId: 'deckgl-container' });
+  const { deckRef, flyTo: deckFlyTo } = useDeckGL({ containerId: 'deckgl-container' });
   const maplibreRef = useMapLibre({ containerId: 'maplibre-container' });
   const leafletRef = useLeaflet({ containerId: 'leaflet-container' });
 
   // Render spacetime tracks on all renderers
   useSpaceTimeTracks(maplibreRef);
-  useSpaceTimeDeckLayers(overlayRef);
+  useSpaceTimeDeckLayers();
   useSpaceTimeCesium(cesiumRef);
 
   // Render OSM buildings on all 3D renderers
   useBuildingsCesium(cesiumRef);
-  useBuildingsDeck(overlayRef);
+  useBuildingsDeck();
   useBuildingsMapLibre(maplibreRef);
 
-  // Drawing tools on all renderers
+  // Drawing tools (Cesium + MapLibre; deck.gl is a standalone Deck, not a map)
   useDrawCesium(cesiumRef);
   useDrawMapLibre(maplibreRef);
-  useDrawMapLibre(deckglMapRef);
 
-  // Measurement tools on all renderers
+  // Measurement tools (Cesium + MapLibre)
   useMeasureCesium(cesiumRef);
   useMeasureMapLibre(maplibreRef);
-  useMeasureMapLibre(deckglMapRef);
 
   // Feature picker — inspect 3D Tiles features (Cesium only)
   useFeaturePickerCesium(cesiumRef);
@@ -78,8 +76,8 @@ export function ViewerArea() {
           destination: Cartesian3.fromDegrees(lng, lat, altitude),
           duration: 1.5,
         });
-      } else if (renderer === 'deckgl' && deckglMapRef.current) {
-        deckglMapRef.current.flyTo({ center: [lng, lat], zoom: zoom ?? 8, duration: 1500 });
+      } else if (renderer === 'deckgl') {
+        deckFlyTo(lng, lat, zoom);
       } else if (renderer === 'maplibre' && maplibreRef.current) {
         maplibreRef.current.flyTo({ center: [lng, lat], zoom: zoom ?? 8, duration: 1500 });
       }
@@ -88,7 +86,7 @@ export function ViewerArea() {
     }
 
     clearFlyTo();
-  }, [flyToTarget, clearFlyTo, activeTab, renderer, cesiumRef, deckglMapRef, maplibreRef, leafletRef]);
+  }, [flyToTarget, clearFlyTo, activeTab, renderer, cesiumRef, deckFlyTo, maplibreRef, leafletRef]);
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
@@ -126,8 +124,8 @@ export function ViewerArea() {
       if (activeTab === 'globe') {
         if (renderer === 'cesium' && cesiumRef.current && !cesiumRef.current.isDestroyed()) {
           cesiumRef.current.resize();
-        } else if (renderer === 'deckgl' && deckglMapRef.current) {
-          deckglMapRef.current.resize();
+        } else if (renderer === 'deckgl' && deckRef.current) {
+          deckRef.current.redraw('resize');
         } else if (renderer === 'maplibre' && maplibreRef.current) {
           maplibreRef.current.resize();
         }
@@ -136,7 +134,7 @@ export function ViewerArea() {
       }
     }, 150);
     return () => clearTimeout(timer);
-  }, [activeTab, renderer, cesiumRef, deckglMapRef, maplibreRef, leafletRef]);
+  }, [activeTab, renderer, cesiumRef, deckRef, maplibreRef, leafletRef]);
 
   return (
     <Box
@@ -164,7 +162,7 @@ export function ViewerArea() {
         }}
       />
 
-      {/* deck.gl overlay on MapLibre base */}
+      {/* deck.gl standalone renderer (own Deck instance) */}
       <div
         id="deckgl-container"
         style={{

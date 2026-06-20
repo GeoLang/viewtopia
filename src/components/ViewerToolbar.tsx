@@ -107,6 +107,7 @@ export function ViewerToolbar() {
         <Select
           size="xs"
           w={110}
+          aria-label="Renderer"
           data={RENDERER_OPTIONS}
           value={renderer}
           onChange={(v) => v && setRenderer(v as Renderer)}

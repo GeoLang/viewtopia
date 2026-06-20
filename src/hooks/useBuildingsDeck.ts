@@ -1,9 +1,8 @@
 import { useEffect } from 'react';
-import type { MutableRefObject } from 'react';
-import type { MapboxOverlay } from '@deck.gl/mapbox';
 import { PolygonLayer } from '@deck.gl/layers';
-import { useBuildingStore, type BuildingFeature } from '../store/buildings';
+import { useBuildingStore } from '../store/buildings';
 import { useAppStore } from '../store/app';
+import { useDeckLayersStore } from './deckLayers';
 
 function hexToRgba(hex: string): [number, number, number, number] {
   try {
@@ -20,23 +19,16 @@ interface BuildingDatum {
   color: [number, number, number, number];
 }
 
-export function useBuildingsDeck(
-  overlayRef: MutableRefObject<MapboxOverlay | null>,
-) {
+export function useBuildingsDeck() {
   const buildings = useBuildingStore((s) => s.buildings);
   const enabled = useBuildingStore((s) => s.enabled);
   const renderer = useAppStore((s) => s.renderer);
   const activeTab = useAppStore((s) => s.activeTab);
+  const setGroup = useDeckLayersStore((s) => s.setGroup);
 
   useEffect(() => {
-    const overlay = overlayRef.current;
-    if (!overlay) return;
-
     if (!enabled || buildings.length === 0) {
-      // Remove building layers, keep spacetime layers
-      const existing = (overlay as any)._props?.layers ?? [];
-      const filtered = existing.filter((l: any) => l.id !== 'osm-buildings');
-      overlay.setProps({ layers: filtered });
+      setGroup('buildings', []);
       return;
     }
 
@@ -66,9 +58,6 @@ export function useBuildingsDeck(
       pickable: true,
     });
 
-    // Merge with existing layers (keep spacetime layers)
-    const existing = (overlay as any)._props?.layers ?? [];
-    const otherLayers = existing.filter((l: any) => l.id !== 'osm-buildings');
-    overlay.setProps({ layers: [...otherLayers, buildingLayer] });
-  }, [buildings, enabled, overlayRef, renderer, activeTab]);
+    setGroup('buildings', [buildingLayer]);
+  }, [buildings, enabled, setGroup, renderer, activeTab]);
 }

@@ -1,8 +1,7 @@
 import { useEffect } from 'react';
-import type { MutableRefObject } from 'react';
-import type { MapboxOverlay } from '@deck.gl/mapbox';
 import { PathLayer, ScatterplotLayer } from '@deck.gl/layers';
 import { useSpaceTimeStore } from '../features/spacetime/store';
+import { useDeckLayersStore } from './deckLayers';
 
 function hexToRgba(hex: string, alpha = 255): [number, number, number, number] {
   const n = parseInt(hex.replace('#', ''), 16);
@@ -38,19 +37,16 @@ function findClosestEvent(
   return events[lo];
 }
 
-export function useSpaceTimeDeckLayers(
-  overlayRef: MutableRefObject<MapboxOverlay | null>,
-) {
+export function useSpaceTimeDeckLayers() {
   const tracks = useSpaceTimeStore((s) => s.tracks);
   const entities = useSpaceTimeStore((s) => s.entities);
   const timeRange = useSpaceTimeStore((s) => s.timeRange);
   const currentTime = useSpaceTimeStore((s) => s.currentTime);
+  const setGroup = useDeckLayersStore((s) => s.setGroup);
 
   useEffect(() => {
-    const overlay = overlayRef.current;
-    if (!overlay) return;
     if (tracks.length === 0) {
-      overlay.setProps({ layers: [] });
+      setGroup('spacetime', []);
       return;
     }
 
@@ -147,6 +143,6 @@ export function useSpaceTimeDeckLayers(
       );
     }
 
-    overlay.setProps({ layers });
-  }, [tracks, entities, timeRange, currentTime, overlayRef]);
+    setGroup('spacetime', layers);
+  }, [tracks, entities, timeRange, currentTime, setGroup]);
 }

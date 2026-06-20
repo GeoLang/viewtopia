@@ -111,6 +111,20 @@ test.describe('React shell smoke', () => {
     await expect(page.getByText(/no items found/i)).toBeVisible();
   });
 
+  test('deck.gl renderer activates as a standalone Deck (2.5D)', async ({ page }) => {
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await page.goto(REACT_URL);
+    // Switch renderer Cesium → deck.gl via the toolbar Select.
+    await page.locator('input[aria-label="Renderer"]').click();
+    await page.getByRole('option', { name: 'deck.gl' }).click();
+    // The standalone Deck mounts its own canvas into #deckgl-container.
+    await expect(page.locator('#deckgl-container canvas').first()).toBeVisible({
+      timeout: 10000,
+    });
+    expect(errors, `runtime errors:\n${errors.join('\n')}`).toEqual([]);
+  });
+
   test('dashboards: create one and add a widget', async ({ page }) => {
     // Start clean so the empty-state + create flow is deterministic.
     await page.addInitScript(() => localStorage.removeItem('viewtopia_dashboards'));
