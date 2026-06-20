@@ -111,6 +111,18 @@ test.describe('React shell smoke', () => {
     await expect(page.getByText(/no items found/i)).toBeVisible();
   });
 
+  test('fly-to box accepts a location without runtime errors', async ({ page }) => {
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await page.goto(REACT_URL);
+    const box = page.getByPlaceholder('Fly to place…');
+    await expect(box).toBeVisible();
+    // Raw coordinates take the direct path (no network); Enter flies the camera.
+    await box.fill('51.5, -0.12');
+    await box.press('Enter');
+    expect(errors, `runtime errors:\n${errors.join('\n')}`).toEqual([]);
+  });
+
   test('deck.gl renderer activates as a standalone Deck (2.5D)', async ({ page }) => {
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));

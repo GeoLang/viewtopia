@@ -35,6 +35,7 @@ import {
 import { useAppStore, type Renderer, type Basemap, type ViewerTab } from '../store/app';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { getPlugins } from '../plugins/registry';
+import { FlyToSearch } from './FlyToSearch';
 
 const TAB_DATA: { value: ViewerTab; label: string; icon: React.ReactNode }[] = [
   { value: 'globe', label: '3D Globe', icon: <IconGlobe size={14} /> },
@@ -104,6 +105,7 @@ export function ViewerToolbar() {
       </Tabs>
 
       <Group gap="xs" wrap="nowrap">
+        <FlyToSearch />
         <Select
           size="xs"
           w={110}
