@@ -255,42 +255,66 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 ## Developing on Windows
 
 **Yes — you can develop this on Windows natively, from PowerShell + Docker Desktop.
-No WSL distro required.**
+No WSL distro required.** The frontend runs natively (Node/Vite); the backends run as
+Linux containers that Docker Desktop hosts for you. This is "Option A": **everything
+on one Windows box.**
 
-**Frontend (the usual inner loop)** — ViewTopia is a Node/Vite app, so it runs
-natively on Windows with no containers at all. Install **Node ≥ 20**
-([nodejs.org](https://nodejs.org)) and **Git for Windows**, then from PowerShell:
+### 1. Install the prerequisites (from a terminal)
+
+You can install everything from a PowerShell terminal with **winget** (built into
+Windows 10/11) — no GUI clicking required:
 
 ```powershell
-git clone https://github.com/GeoLang/viewtopia.git
-cd viewtopia
+winget install OpenJS.NodeJS.LTS      # Node ≥ 20 (bundles corepack for pnpm)
+winget install Git.Git                 # git + Git Bash
+winget install Docker.DockerDesktop    # Docker Desktop (Linux-container backend)
+corepack enable                        # activates pnpm (this repo pins pnpm via packageManager)
+```
+
+> **Heads-up on Docker Desktop over SSH:** Docker Desktop is a desktop app — its
+> engine needs an **interactive logged-in Windows session** to run, and the first
+> launch may require accepting a prompt + a reboot (to enable virtualization /
+> Hyper-V or the WSL2 engine). You can *install* and drive `docker` from an SSH
+> terminal, but Docker Desktop must already be **running** in a desktop session.
+> (For fully headless Docker you'd run Docker Engine under WSL2 — out of scope here.)
+
+### 2. Clone the platform repos
+
+```powershell
+.\scripts\clone-geolang.ps1 C:\src\GeoLang   # native PowerShell helper (clones all repos)
+```
+
+(or run `scripts/clone-geolang.sh` under Git Bash). Then put your `XAI_API_KEY` /
+`OPENAI_API_KEY` in `C:\src\GeoLang\geolang\.env`.
+
+### 3a. Frontend inner loop (native, no containers)
+
+```powershell
+cd C:\src\GeoLang\viewtopia
 pnpm install
 pnpm run dev          # → http://localhost:5174
 pnpm test ; pnpm run build
 ```
 
-Vite proxies `/api` and `/agent` to the backends, so point those at a running stack
-(below) or a remote one.
+### 3b. Full platform (backends in Docker Desktop)
 
-**Full platform (backends)** — the backends are Linux containers, and **Docker
-Desktop runs them for you** via its own managed VM (the Hyper-V backend, or Docker
-Desktop's built-in WSL2 engine that you never open — *not* a WSL distro you install).
-Drive it all from PowerShell:
+With Docker Desktop running, from PowerShell:
 
 ```powershell
-# Clone every platform repo as peers (native PowerShell helper):
-.\scripts\clone-geolang.ps1 C:\src\GeoLang
 cd C:\src\GeoLang\viewtopia
-# Put XAI_API_KEY / OPENAI_API_KEY in ..\geolang\.env, then:
 docker compose -f docker-compose.platform.yml up --build   # → http://localhost:5174
 ```
 
-**Backend dev (optional)** — the Rust services (ptolemy, tiletopia, geokode, itinera,
+Docker Desktop runs the Linux containers via its own managed VM (the Hyper-V backend,
+or Docker Desktop's built-in WSL2 engine that you never open — *not* a WSL distro you
+install).
+
+**Backend dev (optional):** the Rust services (ptolemy, tiletopia, geokode, itinera,
 fenestra) build natively with [rustup](https://rustup.rs) (`cargo build` / `cargo run`).
 geolang (Python + QGIS/GDAL) is far easier to run via its container than to install
 natively on Windows.
 
-Caveats:
+### Caveats
 
 - **Share the drive** holding the repos with Docker Desktop (Settings → Resources →
   File Sharing) so the compose bind-mounts (`..\geolang`, `.\data`, `.\deploy`) work.
