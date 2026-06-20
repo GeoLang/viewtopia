@@ -63,6 +63,7 @@ export type ToolPanel =
   | 'vectorTiles'
   | 'rasterViewer'
   | 'featurePicker'
+  | 'geojsonEditor'
   | 'printExport';
 
 export interface LayerItem {

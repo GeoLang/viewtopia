@@ -113,7 +113,14 @@
         panel key. Click a 3D Tiles feature → property table + yellow highlight. Gated by a
         new smoke test (3/3 passing). NOTE: the vanilla `feature-picker.js` *also* contains
         the **StyleEditor** class — port that when style-editor's turn comes (same source).
-  - [ ] geojson-editor
+  - [x] **geojson-editor** — `components/tools/GeoJsonEditorPanel.tsx`; extended the draw
+        store with per-feature `properties` + `setFeatureProperties` + a `featuresToGeoJSON`
+        export helper. Toolbar "GeoJSON Editor" button + `geojsonEditor` panel key. Edits
+        the draw store's features (key/value add/edit/remove, delete feature, export
+        FeatureCollection) — works across ALL renderers, not just Leaflet like the vanilla
+        original. **Deferred:** in-place vertex/geometry editing (vanilla used leaflet-draw
+        Edit handlers; not worth a Leaflet-only path — revisit if geometry editing is needed).
+        Gated by a new smoke test (4/4 passing).
   - [ ] style-editor (StyleEditor class lives in vanilla `feature-picker.js`)
 - [ ] **P2:** port theme-toggle, auth, portal, dashboards
 - [ ] **Only after parity:** flip default build/Dockerfile/nginx to React, then delete the

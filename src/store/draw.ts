@@ -9,6 +9,8 @@ export interface DrawnFeature {
   radius?: number; // for circle, in meters
   color: string;
   lineWidth: number;
+  /** Free-form attributes, editable via the GeoJSON editor. */
+  properties?: Record<string, string>;
 }
 
 interface DrawState {
@@ -25,6 +27,8 @@ interface DrawState {
   finishFeature: () => void;
   cancelPending: () => void;
   removeFeature: (id: string) => void;
+  /** Replace a feature's full attribute map (GeoJSON editor). */
+  setFeatureProperties: (id: string, properties: Record<string, string>) => void;
   clearAll: () => void;
 }
 
@@ -120,5 +124,40 @@ export const useDrawStore = create<DrawState>((set, get) => ({
   removeFeature: (id) =>
     set((s) => ({ features: s.features.filter((f) => f.id !== id) })),
 
+  setFeatureProperties: (id, properties) =>
+    set((s) => ({
+      features: s.features.map((f) => (f.id === id ? { ...f, properties } : f)),
+    })),
+
   clearAll: () => set({ features: [], pending: [] }),
 }));
+
+/** Build a GeoJSON FeatureCollection from the drawn features (incl. edited properties). */
+export function featuresToGeoJSON(features: DrawnFeature[]) {
+  return {
+    type: 'FeatureCollection' as const,
+    features: features.map((f) => {
+      let geometry;
+      if (f.type === 'Point' || f.type === 'Circle') {
+        geometry = { type: 'Point' as const, coordinates: f.coords[0] };
+      } else if (f.type === 'LineString') {
+        geometry = { type: 'LineString' as const, coordinates: f.coords };
+      } else {
+        // Polygon: close the ring.
+        const ring = [...f.coords];
+        if (ring.length && (ring[0][0] !== ring[ring.length - 1][0] || ring[0][1] !== ring[ring.length - 1][1])) {
+          ring.push(ring[0]);
+        }
+        geometry = { type: 'Polygon' as const, coordinates: [ring] };
+      }
+      return {
+        type: 'Feature' as const,
+        geometry,
+        properties: {
+          ...(f.properties ?? {}),
+          ...(f.type === 'Circle' && f.radius != null ? { _radius_m: String(f.radius) } : {}),
+        },
+      };
+    }),
+  };
+}

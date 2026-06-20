@@ -58,4 +58,14 @@ test.describe('React shell smoke', () => {
     await page.getByText('Click a 3D Tiles feature to inspect').click();
     await expect(toggle).toBeChecked();
   });
+
+  test('GeoJSON editor opens with its empty state', async ({ page }) => {
+    await page.goto(REACT_URL);
+    const editor = page.getByRole('button', { name: 'GeoJSON Editor' });
+    await expect(editor).toBeVisible();
+    await editor.click();
+    // Panel renders its heading + the no-features empty state (nothing drawn yet).
+    await expect(page.getByText('GeoJSON Editor').first()).toBeVisible();
+    await expect(page.getByText(/no features yet/i)).toBeVisible();
+  });
 });
