@@ -132,7 +132,12 @@
         (`useMantineColorScheme` + Sun/Moon, Mantine's default localStorage scheme manager
         handles persistence). Added an `aria-label="Toggle theme"` (a11y + testability) and a
         smoke test that toggles dark→light and asserts it survives a reload (6/6 passing).
-  - [ ] auth
+  - [x] **auth** — `features/auth/store.ts` (login/register/API-key against
+        `/api/v1/auth/*`, localStorage-persisted `viewtopia_auth`, `getAuthToken`/
+        `isAuthenticated` exports for parity) + `features/auth/AuthControl.tsx` (header
+        control: login/register/API-key Modal when logged out, user Menu w/ logout when
+        logged in). Replaced the dead "Login / Account" icon in Header. Gated by a new
+        smoke test (7/7 passing).
   - [ ] portal
   - [ ] dashboards
 - [ ] **Only after parity:** flip default build/Dockerfile/nginx to React, then delete the

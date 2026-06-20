@@ -89,4 +89,15 @@ test.describe('React shell smoke', () => {
     await page.reload();
     await expect(html).toHaveAttribute('data-mantine-color-scheme', 'light');
   });
+
+  test('auth modal opens and switches between login / register', async ({ page }) => {
+    await page.goto(REACT_URL);
+    // Header trigger (aria-label "Login") opens the modal while logged out.
+    await page.getByRole('button', { name: 'Login' }).click();
+    await expect(page.getByLabel('Email or username')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Use API Key' })).toBeVisible();
+    // Switch to the register view → confirm-password field appears.
+    await page.getByText('Create account').click();
+    await expect(page.getByLabel('Confirm password')).toBeVisible();
+  });
 });

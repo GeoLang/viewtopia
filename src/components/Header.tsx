@@ -12,13 +12,13 @@ import {
   IconGlobe,
   IconMoon,
   IconSun,
-  IconKey,
   IconTrash,
 } from '@tabler/icons-react';
 import { useMantineColorScheme } from '@mantine/core';
 import { useAppStore } from '../store/app';
 import { OfflineIndicator } from '../offline/OfflineIndicator';
 import { ProjectSwitcher } from '../projects/ProjectSwitcher';
+import { AuthControl } from '../features/auth/AuthControl';
 
 export function Header() {
   const { tiletopiaOnline, geolangOnline } = useAppStore();
@@ -84,11 +84,7 @@ export function Header() {
           </ActionIcon>
         </Tooltip>
 
-        <Tooltip label="Login / Account">
-          <ActionIcon variant="subtle" color="gray">
-            <IconKey size={16} />
-          </ActionIcon>
-        </Tooltip>
+        <AuthControl />
       </Group>
     </Group>
   );
