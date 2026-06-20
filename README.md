@@ -271,12 +271,16 @@ winget install Docker.DockerDesktop    # Docker Desktop (Linux-container backend
 corepack enable                        # activates pnpm (this repo pins pnpm via packageManager)
 ```
 
-> **Heads-up on Docker Desktop over SSH:** Docker Desktop is a desktop app — its
-> engine needs an **interactive logged-in Windows session** to run, and the first
-> launch may require accepting a prompt + a reboot (to enable virtualization /
-> Hyper-V or the WSL2 engine). You can *install* and drive `docker` from an SSH
-> terminal, but Docker Desktop must already be **running** in a desktop session.
-> (For fully headless Docker you'd run Docker Engine under WSL2 — out of scope here.)
+> **Heads-up — Docker Desktop over SSH:** the `docker` / `docker compose` CLI is the
+> normal way to drive Docker and works fine from any Windows terminal. The one catch
+> is Docker Desktop's *engine*: it's started by the Docker Desktop app in your
+> **logged-in Windows desktop session**, and the first launch may need a prompt +
+> reboot (to enable virtualization). So you can drive `docker` over SSH, but Docker
+> Desktop must already be **running** in a desktop session — purely headless SSH with
+> no login won't reach the daemon. If you'd rather avoid this entirely, run the
+> containers on a **Linux host** (e.g. Fedora) with native Docker — see
+> [On Linux (Fedora)](#on-linux-fedora--the-recommended-docker-host); the daemon is a
+> systemd service with no session requirement.
 
 ### 2. Clone the platform repos
 
@@ -361,6 +365,28 @@ src/GeoLang/
 ```bash
 docker compose -f docker-compose.platform.yml up --build
 ```
+
+#### On Linux (Fedora) — the recommended Docker host
+
+This is the simplest, fully verified setup: run the stack on a Linux box with
+**native Docker Engine** — no Docker Desktop, and **no desktop-session caveat**.
+The daemon is a normal `systemd` service, so it works fully over plain SSH (no
+GUI / logged-in session required).
+
+```bash
+# Fedora: install Docker Engine + Compose v2 plugin
+sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+# (or Fedora's own packages: sudo dnf install -y moby-engine docker-compose)
+sudo systemctl enable --now docker
+sudo usermod -aG docker "$USER"   # log out/in once to use docker without sudo
+
+# then, from the viewtopia/ checkout:
+docker compose -f docker-compose.platform.yml up --build   # → http://localhost:5174
+```
+
+The Docker Desktop / interactive-session caveat in
+[Developing on Windows](#developing-on-windows) applies **only** to Docker Desktop
+on Windows — it does not apply to native Docker on Linux.
 
 **Services exposed:**
 
