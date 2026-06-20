@@ -106,21 +106,24 @@ jobs:
             echo "waiting for:$pending"; sleep 5
           done
 
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: viewtopia/package.json
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: viewtopia/package-lock.json
+          cache: pnpm
+          cache-dependency-path: viewtopia/pnpm-lock.yaml
 
       - name: Install deps + Playwright
         working-directory: viewtopia
         run: |
-          npm ci
-          npx playwright install --with-deps chromium
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
 
       - name: Run golden-path E2E
         working-directory: viewtopia
-        run: npm run test:e2e:platform
+        run: pnpm run test:e2e:platform
 
       - name: Dump service logs on failure
         if: failure()

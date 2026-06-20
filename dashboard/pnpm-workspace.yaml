@@ -1,0 +1,8 @@
+# pnpm settings for the dashboard (independent project root).
+#
+# Security: pnpm blocks dependency build scripts by default. Only these audited
+# packages may run install scripts — sharp (Next.js image optimisation native
+# lib) and unrs-resolver (native resolver used by eslint-config-next).
+allowBuilds:
+  sharp: true
+  unrs-resolver: true

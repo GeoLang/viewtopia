@@ -88,8 +88,8 @@ cp .env.example .env
 # VITE_GEOCODE_URL=http://localhost:3001
 # VITE_ROUTING_URL=http://localhost:3002
 
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
 Open http://localhost:5173

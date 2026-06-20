@@ -1,0 +1,11 @@
+# Keep the build context lean and avoid clobbering the image's installed deps.
+# (pnpm's node_modules is a symlink farm with host paths — must not be copied in.)
+node_modules
+**/node_modules
+dist
+dist-react
+.git
+test-results
+playwright-report
+*.log
+.vite

@@ -1,0 +1,9 @@
+# pnpm settings (pnpm 11 reads project settings from here, not package.json).
+#
+# Security: pnpm blocks dependency lifecycle/build scripts by default. Only the
+# packages listed here are allowed to run install scripts — keep this list small
+# and audited. esbuild downloads its platform binary (required by Vite);
+# protobufjs's postinstall is benign but flagged.
+allowBuilds:
+  esbuild: true
+  protobufjs: true

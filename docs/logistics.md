@@ -52,7 +52,7 @@ VITE_GEOCODE_URL=http://localhost:3001
 ### 3. Start frontend
 
 ```bash
-npm install && npm run dev
+pnpm install && pnpm run dev
 ```
 
 ## Features

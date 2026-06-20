@@ -36,7 +36,7 @@ const plugin: PluginDefinition = {
 export default plugin;
 ```
 
-3. Run `npm run dev` — your plugin appears in the **Plugins** toolbar menu.
+3. Run `pnpm run dev` — your plugin appears in the **Plugins** toolbar menu.
 
 ## Plugin Context API
 

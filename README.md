@@ -264,9 +264,9 @@ natively on Windows with no containers at all. Install **Node ≥ 20**
 ```powershell
 git clone https://github.com/GeoLang/viewtopia.git
 cd viewtopia
-npm install
-npm run dev          # → http://localhost:5174
-npm test ; npm run build
+pnpm install
+pnpm run dev          # → http://localhost:5174
+pnpm test ; pnpm run build
 ```
 
 Vite proxies `/api` and `/agent` to the backends, so point those at a running stack
@@ -308,10 +308,10 @@ git clone https://github.com/GeoLang/viewtopia.git
 cd viewtopia
 
 # Install dependencies
-npm install
+pnpm install
 
 # Start dev server
-npm run dev
+pnpm run dev
 # → http://localhost:5174
 ```
 
@@ -385,7 +385,7 @@ docker run -p 3000:3000 -p 3003:3003 -p 3100:3100 -p 5432:5432 geolang-allinone
 
 ```bash
 cd dashboard
-npm install && npm run dev
+pnpm install && pnpm run dev
 # → http://localhost:4000 — health monitoring, service management, logs, metrics
 ```
 
@@ -514,11 +514,11 @@ See [docs/plugins.md](docs/plugins.md) for the full guide.
 ## Scripts
 
 ```bash
-npm run dev        # Start dev server
-npm run build      # Production build
-npm test           # Run unit tests (vitest)
-npm run test:e2e   # Run E2E tests (Playwright)
-npm run test:all   # Run all tests
+pnpm run dev        # Start dev server
+pnpm run build      # Production build
+pnpm test           # Run unit tests (vitest)
+pnpm run test:e2e   # Run E2E tests (Playwright)
+pnpm run test:all   # Run all tests
 ```
 
 Workspace bootstrap (`scripts/`) — clone every platform repo:

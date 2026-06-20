@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": false,
   "type": "module",
+  "packageManager": "pnpm@11.8.0",
   "description": "All-in-one geospatial viewer — 3D globe, 2D maps, AI agent, and professional GIS tools",
   "keywords": [
     "gis",
@@ -77,6 +78,7 @@
     "@playwright/test": "^1.59.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
+    "@types/geojson": "^7946.0.16",
     "@types/leaflet": "^1.9.21",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
