@@ -3,11 +3,13 @@ import { TextInput, ActionIcon, Loader } from '@mantine/core';
 import { IconPlaneTilt } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useSpaceTimeStore } from '../features/spacetime/store';
+import { geocode } from '../services/geocode';
 
 /**
  * Always-visible "Fly to place…" box (restores the vanilla map-search box).
- * Accepts a place name (geocoded via Nominatim) or raw "lat, lng" coordinates,
- * and flies the active renderer there via the shared flyTo pipeline.
+ * Accepts a place name (geocoded via the platform geokode service, with a
+ * Nominatim fallback) or raw "lat, lng" coordinates, and flies the active
+ * renderer there via the shared flyTo pipeline.
  */
 export function FlyToSearch() {
   const [query, setQuery] = useState('');
@@ -32,13 +34,9 @@ export function FlyToSearch() {
     // Otherwise geocode the place name (top result).
     setLoading(true);
     try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`,
-        { headers: { 'Accept-Language': 'en' } },
-      );
-      const data = await res.json();
-      if (data.length > 0) {
-        flyTo(parseFloat(data[0].lon), parseFloat(data[0].lat), 12);
+      const hits = await geocode(q, 1);
+      if (hits.length > 0) {
+        flyTo(hits[0].lng, hits[0].lat, 12);
       } else {
         notifications.show({ title: 'Not found', message: `No place matching “${q}”`, color: 'yellow' });
       }

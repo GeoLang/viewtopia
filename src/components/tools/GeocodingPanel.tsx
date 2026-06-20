@@ -11,14 +11,7 @@ import {
   ScrollArea,
 } from '@mantine/core';
 import { IconSearch, IconX, IconMapPin } from '@tabler/icons-react';
-
-interface SearchResult {
-  placeId: string;
-  displayName: string;
-  lat: number;
-  lng: number;
-  type: string;
-}
+import { geocode, type GeoHit } from '../../services/geocode';
 
 interface GeocodingPanelProps {
   onFlyTo: (lat: number, lng: number, zoom?: number) => void;
@@ -27,27 +20,14 @@ interface GeocodingPanelProps {
 
 export function GeocodingPanel({ onFlyTo, onClose }: GeocodingPanelProps) {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchResult[]>([]);
+  const [results, setResults] = useState<GeoHit[]>([]);
   const [loading, setLoading] = useState(false);
 
   const handleSearch = async () => {
     if (!query.trim()) return;
     setLoading(true);
-
     try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=8&addressdetails=1`,
-      );
-      const data = await res.json();
-      setResults(
-        data.map((item: Record<string, string>) => ({
-          placeId: item.place_id,
-          displayName: item.display_name,
-          lat: parseFloat(item.lat),
-          lng: parseFloat(item.lon),
-          type: item.type,
-        })),
-      );
+      setResults(await geocode(query, 8));
     } catch {
       setResults([]);
     } finally {
@@ -105,9 +85,9 @@ export function GeocodingPanel({ onFlyTo, onClose }: GeocodingPanelProps) {
 
       <ScrollArea flex={1}>
         <Stack gap={4}>
-          {results.map((r) => (
+          {results.map((r, i) => (
             <Group
-              key={r.placeId}
+              key={`${r.lat},${r.lng},${i}`}
               p="xs"
               style={{
                 background: '#21262d',
@@ -120,7 +100,7 @@ export function GeocodingPanel({ onFlyTo, onClose }: GeocodingPanelProps) {
               <IconMapPin size={14} color="#a78bfa" />
               <Stack gap={0} flex={1}>
                 <Text size="xs" c="white" lineClamp={1}>
-                  {r.displayName}
+                  {r.label}
                 </Text>
                 <Text size="xs" c="dimmed">
                   {r.lat.toFixed(4)}, {r.lng.toFixed(4)}
