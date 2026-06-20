@@ -56,7 +56,12 @@
       — `tests/e2e/golden-path.spec.js` + `playwright.platform.config.js`
       (`npm run test:e2e:platform`), **5/5 passing**
 - [ ] Load a TileTopia layer (needs a tileset ingested; add as an E2E step)
-- [ ] Agent NL command drives the map (geolang → letta, viewer command protocol)
+- [x] **Agent NL command drives the map** (geolang → letta → viewer command protocol)
+      — verified end-to-end through nginx: POST `/agent/chat/stream` "Fly to Monaco" streams a
+      `viewer_cmd` `fly_to` event the viewer executes. Required wiring the platform stack to
+      actually run geolang's FastAPI app (`geolang-api` service) + a CPU embedding server
+      (`embeddings`), repointing nginx `/agent/` at the app, and fixing two geolang bugs
+      (viewer_control `json` import; missing embedding endpoint). See platform commit + geolang.
 - [x] Wire `test:e2e:platform` into CI **without stubbing geolang** —
       `.github/workflows/platform-e2e.yml` checks out all repos (incl. private geolang),
       builds the stack, runs the golden-path suite. **Requires repo secrets:**
@@ -168,10 +173,10 @@
       `*.test.js` unit suites. Dockerfile (`npx vite build` → `dist/`) and `nginx-platform.conf`
       (serves `dist/index.html`) need no change — they already pointed at the default build.
       Verified: tsc clean, `npm run build` → React `dist/`, `vitest` 56/56, smoke 9/9.
-- [!] **Caveat — verify on the live stack:** the full agent→map command set is now ported and
-      unit-tested, but the **NL→map round-trip against a live geolang agent** is still
-      unverified end-to-end. The shipped deploy serves React; drive the map with an agent NL
-      command against the live stack to confirm the SSE `viewer_cmd` protocol end-to-end.
+- [x] **Resolved (2026-06-20): NL→map verified end-to-end** against the live stack. The agent
+      command set is ported + unit-tested, AND the live round-trip works: "Fly to Monaco" →
+      `viewer_cmd` `fly_to` streamed through nginx. Needed the `geolang-api` + `embeddings`
+      services and the two geolang fixes (see golden-journey item above).
 
 ---
 
