@@ -37,7 +37,12 @@
       `geokode-core/src/geocode.rs`: index street, street+city, and city variants per
       record (id-suffixed FST keys) + dedup results by id. Tests added; covered by the
       golden-path E2E (street-name query).
-- [ ] geokode needs real address data beyond the 9-row sample CSV for a meaningful demo
+- [x] geokode needs real address data beyond the 9-row sample CSV for a meaningful demo
+      — added an **OSM PBF importer** to geokode (`geokode-ingest::osm::ingest_osm_pbf`,
+      `.pbf` branch in the CLI) and pointed the geokode service at `data/region.osm.pbf`
+      (the same Monaco extract as itinera routing). Now serves **426 real Monaco addresses**.
+      The viewer's fly-to / Search use geokode (Nominatim fallback for places outside the
+      extract). Widen coverage by swapping in a larger Geofabrik `.pbf`.
 - [ ] geokode has a `fuzzy` module (Levenshtein/Soundex) that `forward()` doesn't use —
       consider wiring fuzzy fallback for typo tolerance
 

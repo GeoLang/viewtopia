@@ -109,7 +109,10 @@ services:
     command:
       - serve
       - --data
-      - /data/addresses.csv
+      # Real Monaco addresses from the OSM extract (geokode's PBF importer),
+      # aligned with the itinera routing graph. Swap for an OpenAddresses CSV
+      # or a larger Geofabrik .pbf to widen coverage.
+      - /data/region.osm.pbf
       - --bind
       - "0.0.0.0:3000"
 
