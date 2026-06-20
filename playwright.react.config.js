@@ -1,9 +1,9 @@
 import { defineConfig } from '@playwright/test';
 
-// Smoke test for the REACT front-end (index-react.html). Boots a Vite dev server
-// on its own port (5175) so it can run alongside the platform stack's vanilla
-// container on 5174. Verifies the React app actually mounts and renders without
-// runtime errors — the gap that build + tsc cannot catch.
+// Smoke test for the React front-end (index.html, the default since the Track 2
+// cutover). Boots a Vite dev server on its own port (5175) so it can run
+// alongside a platform stack on 5174. Verifies the app actually mounts and
+// renders without runtime errors — the gap that build + tsc cannot catch.
 //
 //   npm run test:e2e:react
 export default defineConfig({

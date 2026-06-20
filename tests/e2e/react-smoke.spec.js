@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 /**
  * React front-end smoke test (Track 2 verification harness).
  *
- * Loads the React app (index-react.html) and asserts it mounts and renders its
+ * Loads the React app (index.html) and asserts it mounts and renders its
  * core shell without runtime errors — catching white-screen crashes that build +
  * tsc miss. This is the harness new React feature ports are verified against.
  *
@@ -15,7 +15,7 @@ import { test, expect } from '@playwright/test';
  * exceptions (page `pageerror`), which must stay empty.
  */
 
-const REACT_URL = '/index-react.html';
+const REACT_URL = '/';
 
 test.describe('React shell smoke', () => {
   test('app mounts and renders the shell without runtime errors', async ({ page }) => {

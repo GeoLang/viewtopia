@@ -2,7 +2,6 @@ const CACHE_NAME = 'viewtopia-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/index-react.html',
   '/manifest.json',
 ];
 

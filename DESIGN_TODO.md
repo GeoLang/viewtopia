@@ -150,10 +150,16 @@
         (`viewtopia_dashboards`); auto-saves on every edit (no explicit Save button needed —
         improvement over vanilla). Toolbar "Tools → 📈 Dashboards" + `dashboards` panel key.
         Gated by a new smoke test (9/9 passing).
-- [ ] **Only after parity:** flip default build/Dockerfile/nginx to React, then delete the
-      vanilla `.js` shell + `index.html` + this dual-stack note (DESIGN §2.5).
-- [ ] Do NOT flip the shipped deploy before the P0/P1 gaps close — it would regress the
-      live app (agent can't drive the map; missing editors).
+- [x] **Cutover done (2026-06-20): React is now the only stack.** `index.html` loads
+      `main.tsx`; the single `vite.config.js` builds React → `dist/` (default `npm run build`).
+      Deleted: all 115 vanilla `src/**/*.js`, `src/style.css`, `index-react.html`,
+      `vite.react.config.ts`, the `build:react`/`dev:react` scripts, and the 10 vanilla
+      `*.test.js` unit suites. Dockerfile (`npx vite build` → `dist/`) and `nginx-platform.conf`
+      (serves `dist/index.html`) need no change — they already pointed at the default build.
+      Verified: tsc clean, `npm run build` → React `dist/`, `vitest` 56/56, smoke 9/9.
+- [!] **Caveat — verify on the live stack:** P0 (agent→map) is still runtime-unverified, and
+      the deck-layer/analysis agent commands (add_heatmap, slope_map, …) remain unported. The
+      shipped deploy now serves React; smoke-test the agent NL→map path against the live stack.
 
 ---
 

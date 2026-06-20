@@ -23,14 +23,12 @@ Maturity is uneven — this is the headline risk:
 | geogit / fluvius / panoptes | 5–8k each | 0 | Untested |
 | geolang | ~10k | 3 | Agent under-tested |
 
-**Two structural issues in the active code:**
+**Structural issue in the active code:**
 
-1. **ViewTopia is mid-migration across two stacks.** Two entry points
-   (`index.html` → `main.js`, `index-react.html` → `main.tsx`), two Vite configs,
-   ~115 vanilla `.js` source files *and* ~113 React `.tsx` files. The React side is
-   a **UI shell that reuses the existing `.js` feature modules** (spacetime, plugins,
-   notebooks), not a parallel rewrite — so consolidation is *finishing a shell*, not a
-   from-scratch port. Vanilla `main.js` is still the `npm run dev` default.
+1. **ViewTopia front-end consolidation — DONE (2026-06-20).** ViewTopia was mid-migration
+   across two stacks (a vanilla `.js` shell and a React `.tsx` one). Track 2 completed the
+   cutover: `index.html` now loads `main.tsx`, a single `vite.config.js` builds React, and
+   all ~115 vanilla `.js` source files were deleted. React is the only front-end.
 2. **The integration loop is unproven.** `docker-compose.platform.yml` exists, but CI
    *stubs* geolang when its (private) repo is absent, and there is no end-to-end test
    that the agent → backends → viewer round-trip actually works against real services.
@@ -105,8 +103,8 @@ Maturity is uneven — this is the headline risk:
   (workspaces/projects/sharing), `store/` (Zustand), `duckdb/` (in-browser analytics).
 - **Offline-first by design:** all data in IndexedDB, mutations queued and synced when
   online, three-way/column-level merge for conflicts.
-- **Dual-stack caveat:** see §1 — `main.js` (vanilla, current default) and `main.tsx`
-  (React shell wrapping the shared `.js` feature modules) coexist; Track 2 collapses them.
+- **Single stack:** `main.tsx` (React) is the only front-end since the Track 2 cutover
+  (2026-06-20); the vanilla `.js` shell has been removed.
 
 ### 2.4 Data prerequisites (runtime)
 
@@ -119,8 +117,9 @@ Maturity is uneven — this is the headline risk:
 ### 2.5 Layered view & source module map
 
 > Moved here from `README.md` (this is internal design detail, not user-facing overview).
-> The tree below documents the **vanilla `.js` module set**; the React shell in
-> `components/`/`features/` wraps these same modules (see §1 dual-stack note). File
+> The tree below documents the **historical vanilla `.js` module set** (removed in the
+> Track 2 cutover); the React equivalents live in `components/`, `features/`, `hooks/`,
+> `store/`, and `viewer/`. Kept as a feature inventory / map of what was ported. File
 > count is now ~228 source files (the historical "63 files" label was pre-migration).
 
 ```
@@ -148,7 +147,7 @@ Maturity is uneven — this is the headline risk:
 
 ```
 src/
-├── main.js              # Entry point (vanilla; default today)
+├── main.js              # (removed) former vanilla entry — React is now main.tsx
 ├── main.tsx             # Entry point (React shell; migration target)
 ├── backends.js          # Backend discovery
 ├── renderers.js         # Cesium/deck.gl/MapLibre/Leaflet switching
@@ -208,14 +207,19 @@ You cannot ship what you cannot reproducibly run, and CI currently stubs geolang
 *Why first:* it converts the vague "~123 TODOs" into a concrete blocker list and tells
 us which backend gaps actually block the product vs. which are cosmetic.
 
-### Track 2 — Collapse ViewTopia to one stack  *(active; started 2026-06-19)*
-**Decision: React is the canonical front-end** (user-confirmed). Port everything onto
-`main.tsx`/`index-react.html`, then delete the vanilla `.js` shell.
-1. Make React the default — point `vite.config.js`, the Dockerfile, and nginx at
-   `main.tsx` / `index-react.html`.
-2. Inventory features that still only exist in the vanilla path; finish their thin React
-   shells (logic modules are already shared).
-3. Delete `index.html` / `main.js` once at parity. Ends double-maintenance.
+### Track 2 — Collapse ViewTopia to one stack  *(DONE 2026-06-20)*
+**React is the canonical front-end** (user-confirmed). The cutover is complete:
+1. ✅ React is the default — `index.html` loads `main.tsx`; a single `vite.config.js`
+   builds React → `dist/`; the Dockerfile (`vite build`) and nginx (serves `dist/`) needed
+   no change.
+2. ✅ All vanilla-only features ported (P0 agent→map; P1 feature-picker / geojson-editor /
+   style-editor; P2 theme-toggle / auth / portal / dashboards), each gated by a Playwright
+   smoke test (`npm run test:e2e:react`).
+3. ✅ Deleted the vanilla `.js` shell (115 source files), `index-react.html`, the second
+   Vite config, and the vanilla unit tests. Double-maintenance is over.
+
+*Remaining:* runtime-verify the agent NL→map path on the live stack and port the
+deck-layer/analysis agent commands (add_heatmap, slope_map, …). See DESIGN_TODO.md.
 
 ### Track 3 — De-risk the data backbone *(parallel / after T1)*
 `ptolemy` is 22k LOC behind 1 test and every service reads/writes through it. Add tests
