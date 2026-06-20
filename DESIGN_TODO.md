@@ -92,8 +92,14 @@
 
 - [x] **P0:** agent→map command execution ported (`src/viewer/registry.ts`,
       `src/viewer/commands.ts`, `useSSE` real protocol, chat-store `setLastContent`).
-      Build + tsc clean. **Runtime not yet verified** (needs a live agent NL→map test).
-      9 commands ported; deck-layer/analysis commands (add_heatmap, slope_map, …) remain.
+      **Command set now complete** (2026-06-20): the original 9 + the 5 deck.gl layers
+      (add_heatmap/hexbin/arcs/scatter/screengrid → my deck-layers registry, auto-switches to
+      the deck renderer), style_by_height/classification/property (reuse `viewer/tileStyles`),
+      measure_distance/area/height, and ~20 tool commands mapped to their React panels
+      (annotate, terrain_profile, slope_map, weather, flood, viewshed, …). Gated by a vitest
+      unit suite (`tests/unit/viewer-commands.test.ts`, 5 tests). **Still to do: end-to-end
+      runtime check against a live agent** (the dispatcher is unit-tested, but no NL→map test
+      against geolang yet).
 - [x] **Runtime verification harness** added: `tests/e2e/react-smoke.spec.js` +
       `playwright.react.config.js` (`npm run test:e2e:react`, serves React on :5175).
       **No runtime crash — the `.fixme` was a misdiagnosis.** Captured console/pageerror:
@@ -162,9 +168,10 @@
       `*.test.js` unit suites. Dockerfile (`npx vite build` → `dist/`) and `nginx-platform.conf`
       (serves `dist/index.html`) need no change — they already pointed at the default build.
       Verified: tsc clean, `npm run build` → React `dist/`, `vitest` 56/56, smoke 9/9.
-- [!] **Caveat — verify on the live stack:** P0 (agent→map) is still runtime-unverified, and
-      the deck-layer/analysis agent commands (add_heatmap, slope_map, …) remain unported. The
-      shipped deploy now serves React; smoke-test the agent NL→map path against the live stack.
+- [!] **Caveat — verify on the live stack:** the full agent→map command set is now ported and
+      unit-tested, but the **NL→map round-trip against a live geolang agent** is still
+      unverified end-to-end. The shipped deploy serves React; drive the map with an agent NL
+      command against the live stack to confirm the SSE `viewer_cmd` protocol end-to-end.
 
 ---
 
