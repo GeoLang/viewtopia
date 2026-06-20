@@ -30,6 +30,7 @@ import {
   IconChartAreaLine,
   IconClick,
   IconVectorTriangle,
+  IconPalette,
 } from '@tabler/icons-react';
 import { useAppStore, type Renderer, type Basemap, type ViewerTab } from '../store/app';
 import { useSpaceTimeStore } from '../features/spacetime/store';
@@ -135,6 +136,7 @@ export function ViewerToolbar() {
         <Tooltip label="Buildings"><ActionIcon aria-label="Buildings" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('buildings')}><IconBuildingSkyscraper size={14} /></ActionIcon></Tooltip>
         <Tooltip label="Inspect"><ActionIcon aria-label="Inspect" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('featurePicker')}><IconClick size={14} /></ActionIcon></Tooltip>
         <Tooltip label="GeoJSON Editor"><ActionIcon aria-label="GeoJSON Editor" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('geojsonEditor')}><IconVectorTriangle size={14} /></ActionIcon></Tooltip>
+        <Tooltip label="Style Editor"><ActionIcon aria-label="Style Editor" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('styleEditor')}><IconPalette size={14} /></ActionIcon></Tooltip>
         <Tooltip label="Export PNG"><ActionIcon aria-label="Export PNG" size="sm" variant="subtle" color="gray" onClick={handleExportPng}><IconDownload size={14} /></ActionIcon></Tooltip>
 
         <Menu shadow="md" width={180}>

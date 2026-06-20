@@ -64,6 +64,7 @@ export type ToolPanel =
   | 'rasterViewer'
   | 'featurePicker'
   | 'geojsonEditor'
+  | 'styleEditor'
   | 'printExport';
 
 export interface LayerItem {

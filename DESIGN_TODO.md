@@ -107,7 +107,7 @@
   `test:e2e:react`, then commits to master.
 - **Order:** P1 in TODO order (feature-picker → geojson-editor → style-editor), then P2.
 
-- [~] **P1:** port feature-picker, geojson-editor, style-editor
+- [x] **P1:** port feature-picker, geojson-editor, style-editor — **all done.**
   - [x] **feature-picker** — `store/featurePicker.ts`, `hooks/useFeaturePickerCesium.ts`,
         `components/tools/FeaturePickerPanel.tsx`; toolbar "Inspect" button + `featurePicker`
         panel key. Click a 3D Tiles feature → property table + yellow highlight. Gated by a
@@ -121,7 +121,12 @@
         original. **Deferred:** in-place vertex/geometry editing (vanilla used leaflet-draw
         Edit handlers; not worth a Leaflet-only path — revisit if geometry editing is needed).
         Gated by a new smoke test (4/4 passing).
-  - [ ] style-editor (StyleEditor class lives in vanilla `feature-picker.js`)
+  - [x] **style-editor** — `viewer/tileStyles.ts` (helpers ported from the StyleEditor
+        class in vanilla `feature-picker.js`) + `components/tools/StyleEditorPanel.tsx`.
+        Toolbar "Style Editor" button + `styleEditor` panel key. Color by property/height/
+        classification, reset, opacity + point-size sliders. Applies to every Cesium3DTileset
+        in `viewer.scene.primitives` (React has no central tileset store); warns when none are
+        loaded. Gated by a new smoke test (5/5 passing).
 - [ ] **P2:** port theme-toggle, auth, portal, dashboards
 - [ ] **Only after parity:** flip default build/Dockerfile/nginx to React, then delete the
       vanilla `.js` shell + `index.html` + this dual-stack note (DESIGN §2.5).

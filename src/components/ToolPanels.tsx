@@ -4,6 +4,7 @@ import { PluginPanel } from '../plugins/PluginHost';
 import { MeasurementPanel } from './tools/MeasurementPanel';
 import { FeaturePickerPanel } from './tools/FeaturePickerPanel';
 import { GeoJsonEditorPanel } from './tools/GeoJsonEditorPanel';
+import { StyleEditorPanel } from './tools/StyleEditorPanel';
 import { GeocodingPanel } from './tools/GeocodingPanel';
 import { RoutingPanel } from './tools/RoutingPanel';
 import { DrawPanel } from './tools/DrawPanel';
@@ -85,6 +86,8 @@ export function ToolPanels() {
       return <FeaturePickerPanel onClose={close} />;
     case 'geojsonEditor':
       return <GeoJsonEditorPanel onClose={close} />;
+    case 'styleEditor':
+      return <StyleEditorPanel onClose={close} />;
     case 'geocoding':
       return (
         <GeocodingPanel

@@ -68,4 +68,14 @@ test.describe('React shell smoke', () => {
     await expect(page.getByText('GeoJSON Editor').first()).toBeVisible();
     await expect(page.getByText(/no features yet/i)).toBeVisible();
   });
+
+  test('style editor opens with its controls', async ({ page }) => {
+    await page.goto(REACT_URL);
+    const style = page.getByRole('button', { name: 'Style Editor' });
+    await expect(style).toBeVisible();
+    await style.click();
+    // Panel renders its heading + the color-by-property control.
+    await expect(page.getByText('Style Editor').first()).toBeVisible();
+    await expect(page.getByText('Color by Property')).toBeVisible();
+  });
 });
