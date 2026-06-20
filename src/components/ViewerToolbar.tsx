@@ -198,6 +198,7 @@ export function ViewerToolbar() {
             <Menu.Item onClick={() => togglePanel('flythrough')}>🎬 Flythrough</Menu.Item>
             <Menu.Divider />
             <Menu.Item onClick={() => togglePanel('charts')}>📊 Charts</Menu.Item>
+            <Menu.Item onClick={() => togglePanel('dashboards')}>📈 Dashboards</Menu.Item>
             <Menu.Item onClick={() => togglePanel('splitView')}>🔲 Split View</Menu.Item>
             <Menu.Item onClick={() => togglePanel('stories')}>📖 Stories</Menu.Item>
             <Menu.Item onClick={() => togglePanel('timeline')}>⏱ Timeline</Menu.Item>

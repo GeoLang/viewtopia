@@ -66,6 +66,7 @@ export type ToolPanel =
   | 'geojsonEditor'
   | 'styleEditor'
   | 'portal'
+  | 'dashboards'
   | 'printExport';
 
 export interface LayerItem {

@@ -6,6 +6,7 @@ import { FeaturePickerPanel } from './tools/FeaturePickerPanel';
 import { GeoJsonEditorPanel } from './tools/GeoJsonEditorPanel';
 import { StyleEditorPanel } from './tools/StyleEditorPanel';
 import { PortalPanel } from '../features/portal/PortalPanel';
+import { DashboardPanel } from '../features/dashboards/DashboardPanel';
 import { GeocodingPanel } from './tools/GeocodingPanel';
 import { RoutingPanel } from './tools/RoutingPanel';
 import { DrawPanel } from './tools/DrawPanel';
@@ -91,6 +92,8 @@ export function ToolPanels() {
       return <StyleEditorPanel onClose={close} />;
     case 'portal':
       return <PortalPanel onClose={close} />;
+    case 'dashboards':
+      return <DashboardPanel onClose={close} />;
     case 'geocoding':
       return (
         <GeocodingPanel

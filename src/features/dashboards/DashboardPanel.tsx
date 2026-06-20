@@ -1,0 +1,248 @@
+import { useEffect, useState } from 'react';
+import {
+  Modal,
+  Stack,
+  Group,
+  Button,
+  Text,
+  Card,
+  ActionIcon,
+  TextInput,
+  SimpleGrid,
+  Box,
+  Progress,
+} from '@mantine/core';
+import { IconPlus, IconTrash, IconArrowLeft } from '@tabler/icons-react';
+import { useDashboardsStore } from './store';
+import type { DashboardWidget, WidgetType } from './types';
+
+const WIDGET_TYPES: { type: WidgetType; label: string; desc: string }[] = [
+  { type: 'map', label: '🗺️ Map', desc: 'Embedded map view' },
+  { type: 'chart', label: '📈 Chart', desc: 'Bar, line, or pie chart' },
+  { type: 'indicator', label: '🔢 Indicator', desc: 'Single value display' },
+  { type: 'gauge', label: '⏲️ Gauge', desc: 'Progress/percentage gauge' },
+  { type: 'list', label: '📋 List', desc: 'Feature or data list' },
+  { type: 'richtext', label: '📝 Rich Text', desc: 'Formatted text block' },
+];
+
+function WidgetContent({ widget }: { widget: DashboardWidget }) {
+  const c = widget.config;
+  switch (widget.type) {
+    case 'indicator':
+      return (
+        <Stack gap={0} align="center" py="sm">
+          <Text size="xl" fw={700} c="violet">
+            {(c.value as string) ?? '—'}
+          </Text>
+          <Text size="xs" c="dimmed">
+            {(c.label as string) || ''}
+          </Text>
+        </Stack>
+      );
+    case 'gauge':
+      return (
+        <Stack gap={4} py="sm">
+          <Progress value={(c.percent as number) ?? 0} color="violet" />
+          <Text size="xs" c="dimmed" ta="right">
+            {(c.percent as number) ?? 0}%
+          </Text>
+        </Stack>
+      );
+    case 'list':
+      return (
+        <Stack gap={2} py="xs">
+          {((c.items as string[]) || []).length === 0 ? (
+            <Text size="xs" c="dimmed">
+              No items
+            </Text>
+          ) : (
+            ((c.items as string[]) || []).map((i, idx) => (
+              <Text key={idx} size="xs" c="gray.4">
+                • {i}
+              </Text>
+            ))
+          )}
+        </Stack>
+      );
+    case 'richtext':
+      return (
+        <Box
+          fz="xs"
+          c="gray.4"
+          dangerouslySetInnerHTML={{ __html: (c.html as string) || '' }}
+        />
+      );
+    case 'chart':
+      return (
+        <Text size="xs" c="dimmed" ta="center" py="md">
+          [Chart: {(c.chartType as string) || 'bar'}]
+        </Text>
+      );
+    case 'map':
+      return (
+        <Text size="xs" c="dimmed" ta="center" py="md">
+          [Map Widget]
+        </Text>
+      );
+    default:
+      return (
+        <Text size="xs" c="dimmed">
+          Configure widget
+        </Text>
+      );
+  }
+}
+
+export function DashboardPanel({ onClose }: { onClose: () => void }) {
+  const { dashboards, activeId, refresh, create, open, back, remove, renameActive, addWidget, removeWidget } =
+    useDashboardsStore();
+  const [picking, setPicking] = useState(false);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const active = dashboards.find((d) => d.id === activeId) ?? null;
+
+  return (
+    <Modal
+      opened
+      onClose={onClose}
+      title={active ? 'Edit Dashboard' : 'Dashboards'}
+      size="xl"
+      centered
+    >
+      {!active ? (
+        // ---- List view ----
+        <Stack gap="sm">
+          {dashboards.length === 0 ? (
+            <Text size="sm" c="dimmed" py="lg" ta="center">
+              No dashboards yet. Create your first one!
+            </Text>
+          ) : (
+            dashboards.map((d) => (
+              <Card
+                key={d.id}
+                padding="sm"
+                radius="md"
+                withBorder
+                style={{ cursor: 'pointer', background: '#161b22', borderColor: '#30363d' }}
+                onClick={() => open(d.id)}
+              >
+                <Group justify="space-between">
+                  <Stack gap={0}>
+                    <Text size="sm" fw={600} c="white">
+                      {d.title}
+                    </Text>
+                    <Text size="xs" c="dimmed">
+                      {d.widgets.length} widget{d.widgets.length !== 1 ? 's' : ''} ·{' '}
+                      {new Date(d.modified).toLocaleDateString()}
+                    </Text>
+                  </Stack>
+                  <ActionIcon
+                    variant="subtle"
+                    color="red"
+                    aria-label="Delete dashboard"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      remove(d.id);
+                    }}
+                  >
+                    <IconTrash size={14} />
+                  </ActionIcon>
+                </Group>
+              </Card>
+            ))
+          )}
+          <Button
+            variant="light"
+            color="violet"
+            leftSection={<IconPlus size={14} />}
+            onClick={create}
+          >
+            New Dashboard
+          </Button>
+        </Stack>
+      ) : (
+        // ---- Editor view ----
+        <Stack gap="sm">
+          <Group gap="xs" wrap="nowrap">
+            <ActionIcon variant="subtle" color="gray" aria-label="Back" onClick={back}>
+              <IconArrowLeft size={16} />
+            </ActionIcon>
+            <TextInput
+              style={{ flex: 1 }}
+              value={active.title}
+              onChange={(e) => renameActive(e.currentTarget.value)}
+            />
+            <Button
+              size="xs"
+              variant="light"
+              color="violet"
+              leftSection={<IconPlus size={14} />}
+              onClick={() => setPicking((p) => !p)}
+            >
+              Widget
+            </Button>
+          </Group>
+
+          {picking && (
+            <SimpleGrid cols={{ base: 2, sm: 3 }} spacing="xs">
+              {WIDGET_TYPES.map((t) => (
+                <Button
+                  key={t.type}
+                  variant="default"
+                  size="xs"
+                  h="auto"
+                  py="xs"
+                  onClick={() => {
+                    addWidget(t.type);
+                    setPicking(false);
+                  }}
+                >
+                  <Stack gap={0} align="center">
+                    <Text size="xs">{t.label}</Text>
+                  </Stack>
+                </Button>
+              ))}
+            </SimpleGrid>
+          )}
+
+          {active.widgets.length === 0 ? (
+            <Text size="sm" c="dimmed" py="lg" ta="center">
+              No widgets yet. Add one with the “Widget” button.
+            </Text>
+          ) : (
+            <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="sm">
+              {active.widgets.map((w) => (
+                <Card
+                  key={w.id}
+                  padding="xs"
+                  radius="md"
+                  withBorder
+                  style={{ background: '#161b22', borderColor: '#30363d' }}
+                >
+                  <Group justify="space-between" mb={4} wrap="nowrap">
+                    <Text size="xs" fw={600} c="white" lineClamp={1}>
+                      {w.title}
+                    </Text>
+                    <ActionIcon
+                      size="xs"
+                      variant="subtle"
+                      color="red"
+                      aria-label="Remove widget"
+                      onClick={() => removeWidget(w.id)}
+                    >
+                      <IconTrash size={12} />
+                    </ActionIcon>
+                  </Group>
+                  <WidgetContent widget={w} />
+                </Card>
+              ))}
+            </SimpleGrid>
+          )}
+        </Stack>
+      )}
+    </Modal>
+  );
+}

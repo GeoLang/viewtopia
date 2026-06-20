@@ -127,7 +127,7 @@
         classification, reset, opacity + point-size sliders. Applies to every Cesium3DTileset
         in `viewer.scene.primitives` (React has no central tileset store); warns when none are
         loaded. Gated by a new smoke test (5/5 passing).
-- [~] **P2:** port theme-toggle, auth, portal, dashboards
+- [x] **P2:** port theme-toggle, auth, portal, dashboards — **all done.**
   - [x] **theme-toggle** — already present in React `components/Header.tsx`
         (`useMantineColorScheme` + Sun/Moon, Mantine's default localStorage scheme manager
         handles persistence). Added an `aria-label="Toggle theme"` (a11y + testability) and a
@@ -144,7 +144,12 @@
         token (reuses `features/auth` `getAuthToken`), localStorage fallback
         (`viewtopia_portal_items`). Toolbar "Data → 🗂 Catalog" + `portal` panel key.
         Gated by a new smoke test (8/8 passing).
-  - [ ] dashboards
+  - [x] **dashboards** — `features/dashboards/` (`types.ts`, `store.ts`, `DashboardPanel.tsx`).
+        Dashboard builder: list view + editor (rename, add/remove widgets, 6 widget types —
+        indicator/gauge/list/richtext/chart+map placeholders). localStorage-only
+        (`viewtopia_dashboards`); auto-saves on every edit (no explicit Save button needed —
+        improvement over vanilla). Toolbar "Tools → 📈 Dashboards" + `dashboards` panel key.
+        Gated by a new smoke test (9/9 passing).
 - [ ] **Only after parity:** flip default build/Dockerfile/nginx to React, then delete the
       vanilla `.js` shell + `index.html` + this dual-stack note (DESIGN §2.5).
 - [ ] Do NOT flip the shipped deploy before the P0/P1 gaps close — it would regress the

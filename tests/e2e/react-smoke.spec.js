@@ -110,4 +110,20 @@ test.describe('React shell smoke', () => {
     await expect(page.getByPlaceholder('Search items…')).toBeVisible();
     await expect(page.getByText(/no items found/i)).toBeVisible();
   });
+
+  test('dashboards: create one and add a widget', async ({ page }) => {
+    // Start clean so the empty-state + create flow is deterministic.
+    await page.addInitScript(() => localStorage.removeItem('viewtopia_dashboards'));
+    await page.goto(REACT_URL);
+    await page.getByRole('button', { name: 'Tools' }).click();
+    await page.getByText('📈 Dashboards').click();
+    await expect(page.getByText(/no dashboards yet/i)).toBeVisible();
+    // Create → enters the editor view.
+    await page.getByRole('button', { name: 'New Dashboard' }).click();
+    await expect(page.getByText(/no widgets yet/i)).toBeVisible();
+    // Add a widget via the picker.
+    await page.getByRole('button', { name: 'Widget' }).click();
+    await page.getByRole('button', { name: /Indicator/ }).click();
+    await expect(page.getByText('New indicator')).toBeVisible();
+  });
 });
