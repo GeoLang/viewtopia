@@ -127,7 +127,14 @@
         classification, reset, opacity + point-size sliders. Applies to every Cesium3DTileset
         in `viewer.scene.primitives` (React has no central tileset store); warns when none are
         loaded. Gated by a new smoke test (5/5 passing).
-- [ ] **P2:** port theme-toggle, auth, portal, dashboards
+- [~] **P2:** port theme-toggle, auth, portal, dashboards
+  - [x] **theme-toggle** — already present in React `components/Header.tsx`
+        (`useMantineColorScheme` + Sun/Moon, Mantine's default localStorage scheme manager
+        handles persistence). Added an `aria-label="Toggle theme"` (a11y + testability) and a
+        smoke test that toggles dark→light and asserts it survives a reload (6/6 passing).
+  - [ ] auth
+  - [ ] portal
+  - [ ] dashboards
 - [ ] **Only after parity:** flip default build/Dockerfile/nginx to React, then delete the
       vanilla `.js` shell + `index.html` + this dual-stack note (DESIGN §2.5).
 - [ ] Do NOT flip the shipped deploy before the P0/P1 gaps close — it would regress the

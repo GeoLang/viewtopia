@@ -71,6 +71,7 @@ export function Header() {
 
         <Tooltip label="Toggle theme">
           <ActionIcon
+            aria-label="Toggle theme"
             variant="subtle"
             color="gray"
             onClick={toggleColorScheme}

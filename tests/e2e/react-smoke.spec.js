@@ -78,4 +78,15 @@ test.describe('React shell smoke', () => {
     await expect(page.getByText('Style Editor').first()).toBeVisible();
     await expect(page.getByText('Color by Property')).toBeVisible();
   });
+
+  test('theme toggle switches and persists the color scheme', async ({ page }) => {
+    await page.goto(REACT_URL);
+    const html = page.locator('html');
+    await expect(html).toHaveAttribute('data-mantine-color-scheme', 'dark');
+    await page.getByRole('button', { name: 'Toggle theme' }).click();
+    await expect(html).toHaveAttribute('data-mantine-color-scheme', 'light');
+    // Mantine persists the choice to localStorage — survives a reload.
+    await page.reload();
+    await expect(html).toHaveAttribute('data-mantine-color-scheme', 'light');
+  });
 });
