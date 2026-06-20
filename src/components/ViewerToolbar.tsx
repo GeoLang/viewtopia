@@ -214,6 +214,8 @@ export function ViewerToolbar() {
             </Button>
           </Menu.Target>
           <Menu.Dropdown>
+            <Menu.Item onClick={() => togglePanel('portal')}>🗂 Catalog</Menu.Item>
+            <Menu.Divider />
             <Menu.Item onClick={() => togglePanel('assets')}>📦 Assets</Menu.Item>
             <Menu.Item onClick={() => togglePanel('ogc')}>🌐 OGC Layers</Menu.Item>
             <Menu.Item onClick={() => togglePanel('import')}>📂 Import</Menu.Item>

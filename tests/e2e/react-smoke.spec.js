@@ -100,4 +100,14 @@ test.describe('React shell smoke', () => {
     await page.getByText('Create account').click();
     await expect(page.getByLabel('Confirm password')).toBeVisible();
   });
+
+  test('portal catalog opens from the Data menu', async ({ page }) => {
+    await page.goto(REACT_URL);
+    await page.getByRole('button', { name: 'Data' }).click();
+    await page.getByText('🗂 Catalog').click();
+    // Modal renders with search + the no-items empty state (backend unreachable).
+    await expect(page.getByText('Content Catalog')).toBeVisible();
+    await expect(page.getByPlaceholder('Search items…')).toBeVisible();
+    await expect(page.getByText(/no items found/i)).toBeVisible();
+  });
 });

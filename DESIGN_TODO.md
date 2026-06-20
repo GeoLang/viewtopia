@@ -138,7 +138,12 @@
         control: login/register/API-key Modal when logged out, user Menu w/ logout when
         logged in). Replaced the dead "Login / Account" icon in Header. Gated by a new
         smoke test (7/7 passing).
-  - [ ] portal
+  - [x] **portal** — `features/portal/` (`types.ts`, `store.ts`, `PortalPanel.tsx`).
+        Content catalog: search + type/sharing filters, item grid (open → `portal:open-item`
+        event for parity), add/delete items. `/api/v1/portal/items` with the auth Bearer
+        token (reuses `features/auth` `getAuthToken`), localStorage fallback
+        (`viewtopia_portal_items`). Toolbar "Data → 🗂 Catalog" + `portal` panel key.
+        Gated by a new smoke test (8/8 passing).
   - [ ] dashboards
 - [ ] **Only after parity:** flip default build/Dockerfile/nginx to React, then delete the
       vanilla `.js` shell + `index.html` + this dual-stack note (DESIGN §2.5).
