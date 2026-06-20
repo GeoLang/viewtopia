@@ -252,31 +252,53 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 - **No GPU required** — the embedding server uses a CPU-only image.
 - **bash** for the helper scripts (`scripts/`).
 
-## Running on Windows
+## Developing on Windows
 
-**Yes — via Docker Desktop with the WSL2 backend (recommended).** The whole stack
-runs in Linux containers, so the heavy native dependencies (QGIS, GDAL, GEOS,
-GeoPandas) never touch the Windows host.
+**Yes — you can develop this on Windows natively, from PowerShell + Docker Desktop.
+No WSL distro required.**
 
-1. Install **Docker Desktop** and enable the **WSL2 backend**; install a WSL2 distro
-   (e.g. Ubuntu).
-2. Do everything **inside WSL2**: clone into the Linux filesystem (e.g.
-   `~/src/GeoLang`, *not* `/mnt/c/...`), and run `scripts/clone-geolang.sh` and
-   `docker compose` from the WSL shell. Install Node/npm inside WSL2 too.
+**Frontend (the usual inner loop)** — ViewTopia is a Node/Vite app, so it runs
+natively on Windows with no containers at all. Install **Node ≥ 20**
+([nodejs.org](https://nodejs.org)) and **Git for Windows**, then from PowerShell:
+
+```powershell
+git clone https://github.com/GeoLang/viewtopia.git
+cd viewtopia
+npm install
+npm run dev          # → http://localhost:5174
+npm test ; npm run build
+```
+
+Vite proxies `/api` and `/agent` to the backends, so point those at a running stack
+(below) or a remote one.
+
+**Full platform (backends)** — the backends are Linux containers, and **Docker
+Desktop runs them for you** via its own managed VM (the Hyper-V backend, or Docker
+Desktop's built-in WSL2 engine that you never open — *not* a WSL distro you install).
+Drive it all from PowerShell:
+
+```powershell
+# Clone every platform repo as peers (native PowerShell helper):
+.\scripts\clone-geolang.ps1 C:\src\GeoLang
+cd C:\src\GeoLang\viewtopia
+# Put XAI_API_KEY / OPENAI_API_KEY in ..\geolang\.env, then:
+docker compose -f docker-compose.platform.yml up --build   # → http://localhost:5174
+```
+
+**Backend dev (optional)** — the Rust services (ptolemy, tiletopia, geokode, itinera,
+fenestra) build natively with [rustup](https://rustup.rs) (`cargo build` / `cargo run`).
+geolang (Python + QGIS/GDAL) is far easier to run via its container than to install
+natively on Windows.
 
 Caveats:
 
-- **Work from the WSL2 (ext4) filesystem, not a `/mnt/c` Windows path** — bind-mount
-  performance and inode semantics (the single-file nginx mount) are much better, and
-  it avoids CRLF/permission issues.
-- **Keep shell scripts LF**, not CRLF (`git config core.autocrlf input`) — CRLF
-  breaks bash scripts.
-- The `:z` SELinux volume labels in the compose file are no-ops on Docker Desktop
-  (harmless).
-- Set up your **SSH keys / the `gitlab-rsa` alias inside WSL2** for cloning.
-
-Native Windows (PowerShell + Docker Desktop) can also run `docker compose up`, but
-the helper bash scripts need Git Bash or WSL — so WSL2 is the smoother path.
+- **Share the drive** holding the repos with Docker Desktop (Settings → Resources →
+  File Sharing) so the compose bind-mounts (`..\geolang`, `.\data`, `.\deploy`) work.
+- `git config --global core.autocrlf input` so shell scripts / config files keep LF
+  line endings.
+- The `:z` SELinux volume labels in the compose file are ignored on Windows (harmless).
+- Use the native `scripts\clone-geolang.ps1`, or run the bash `scripts/clone-geolang.sh`
+  under Git Bash (ships with Git for Windows).
 
 ## Quick Start
 
@@ -499,11 +521,15 @@ npm run test:e2e   # Run E2E tests (Playwright)
 npm run test:all   # Run all tests
 ```
 
-Shell helpers (`scripts/`):
+Workspace bootstrap (`scripts/`) — clone every platform repo:
 
 ```bash
-scripts/clone-geolang.sh [DIR]   # bootstrap the full platform workspace (all repos)
+scripts/clone-geolang.sh  [DIR]   # macOS/Linux/Git-Bash
 #   --pull   update existing repos    --https   clone GitHub repos over HTTPS
+```
+```powershell
+.\scripts\clone-geolang.ps1 [DIR]  # Windows (PowerShell)
+#   -Pull    update existing repos    -Https    clone GitHub repos over HTTPS
 ```
 
 ---
