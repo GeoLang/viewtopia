@@ -1,13 +1,15 @@
 import { useCallback, useRef } from 'react';
 import { useChatStore } from '../store/chat';
 import { executeViewerCommand } from '../viewer/commands';
+import { renderUISpec, type UiSpec } from '../viewer/uiSpec';
 
 /**
  * Hook for streaming responses from the GeoLang AI agent via SSE.
  *
  * Speaks the real backend protocol (POST /agent/chat/stream, SSE lines of
- * `data: {type, ...}`): `progress` | `text` | `viewer_cmd` | `followups` |
- * `done` | `error`. `viewer_cmd` events drive the map via executeViewerCommand.
+ * `data: {type, ...}`): `progress` | `text` | `viewer_cmd` | `ui_spec` |
+ * `followups` | `done` | `error`. `viewer_cmd` events drive the map via
+ * executeViewerCommand; `ui_spec` map results are rendered via renderUISpec.
  */
 export function useSSE() {
   const abortRef = useRef<AbortController | null>(null);
@@ -62,7 +64,12 @@ export function useSSE() {
             if (!line.startsWith('data: ')) continue;
             const data = line.slice(6);
             if (data === '[DONE]') continue;
-            let event: { type?: string; text?: string; cmd?: { action: string; params?: Record<string, unknown> } };
+            let event: {
+              type?: string;
+              text?: string;
+              cmd?: { action: string; params?: Record<string, unknown> };
+              spec?: UiSpec;
+            };
             try {
               event = JSON.parse(data);
             } catch {
@@ -81,6 +88,9 @@ export function useSSE() {
                 break;
               case 'viewer_cmd':
                 if (event.cmd) executeViewerCommand(event.cmd);
+                break;
+              case 'ui_spec':
+                if (event.spec) void renderUISpec(event.spec);
                 break;
               case 'error':
                 setLastContent(`Error: ${event.text ?? 'unknown'}`);
