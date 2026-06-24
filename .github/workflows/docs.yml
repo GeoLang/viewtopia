@@ -22,17 +22,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: Build
-        run: pnpm run build
+      # Serve the static landing page in docs/ as-is. (Do NOT build the app and
+      # deploy dist/ here: the app is a backend-driven viewer, not the public
+      # GitHub Pages site.)
       - uses: actions/configure-pages@v4
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: docs
       - id: deployment
         uses: actions/deploy-pages@v4
