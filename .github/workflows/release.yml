@@ -23,7 +23,7 @@ jobs:
       - run: pnpm run build
       - name: Package dist
         run: tar czf viewtopia-${{ github.ref_name }}.tar.gz dist/
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: viewtopia-dist
           path: viewtopia-${{ github.ref_name }}.tar.gz
