@@ -185,8 +185,10 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8283/v1/health"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 30s
+      retries: 10
+      # letta's first boot (embedded postgres initdb + slow lifespan) can take
+      # minutes on ci runners; probes during start_period don't count as failures
+      start_period: 300s
 
   # geolang's public FastAPI app (src/api/server.py — the /chat/stream SSE API the
   # viewer talks to). Reuses the geolang image but bypasses the Letta entrypoint;
