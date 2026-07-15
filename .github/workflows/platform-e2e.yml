@@ -3,9 +3,7 @@ name: Platform E2E (golden path)
 # Runs the golden-path Playwright suite (tests/e2e/golden-path.spec.js) against the
 # REAL platform stack — no geolang stub. This is the "is it shippable?" gate.
 #
-# Required repository secrets:
-#   GEOLANG_TOKEN   - PAT / fine-grained token with read access to the private
-#                     GeoLang/geolang repo (used to check it out).
+# Optional repository secrets:
 #   XAI_API_KEY     - (optional) written into geolang/.env. The golden path does not
 #   OPENAI_API_KEY  - (optional) issue an LLM call, so empty values still pass; provide
 #                     them if you later add an agent NL->map step.
@@ -47,12 +45,9 @@ jobs:
         uses: actions/checkout@v4
         with: { repository: GeoLang/itinera, path: itinera }
 
-      - name: Checkout geolang (private — requires GEOLANG_TOKEN)
+      - name: Checkout geolang
         uses: actions/checkout@v4
-        with:
-          repository: GeoLang/geolang
-          path: geolang
-          token: ${{ secrets.GEOLANG_TOKEN }}
+        with: { repository: GeoLang/geolang, path: geolang }
 
       - name: Write geolang/.env
         run: |

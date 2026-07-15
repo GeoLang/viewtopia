@@ -65,7 +65,7 @@
 - [x] Wire `test:e2e:platform` into CI **without stubbing geolang** —
       `.github/workflows/platform-e2e.yml` checks out all repos (incl. private geolang),
       builds the stack, runs the golden-path suite. **Requires repo secrets:**
-      `GEOLANG_TOKEN` (read access to private geolang) and optional `XAI_API_KEY` /
+      none required since geolang went public (2026-07-15); optional `XAI_API_KEY` /
       `OPENAI_API_KEY`. Runs on master push + weekly + manual (too heavy for every PR).
 
 ### Reproducibility

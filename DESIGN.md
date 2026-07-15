@@ -273,7 +273,7 @@ here → encode as a Playwright E2E gate.
 - [ ] Load a TileTopia layer (needs a tileset ingested; browser step)
 - [ ] Agent NL command drives the map (geolang → Letta; needs live LLM call + viewer)
 - [x] Wire `test:e2e:platform` into CI **without stubbing geolang** —
-      `.github/workflows/platform-e2e.yml` (needs `GEOLANG_TOKEN` secret)
+      `.github/workflows/platform-e2e.yml` (geolang is public now; no token needed)
 
 **Verdict:** the platform stack now comes up reproducibly, the deployed SPA can reach
 every backend through the (now-fixed) same-origin proxy, and the golden path is locked
