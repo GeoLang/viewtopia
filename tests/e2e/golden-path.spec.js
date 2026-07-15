@@ -59,7 +59,8 @@ test.describe('Golden path — live platform stack', () => {
 
   test('geocoding returns a hit via /api/geocode/ proxy', async ({ page }) => {
     await page.goto('/');
-    const r = await fetchFromApp(page, '/api/geocode/forward?q=100');
+    // geokode serves the Monaco OSM extract (see docker-compose.platform.yml)
+    const r = await fetchFromApp(page, '/api/geocode/forward?q=Boulevard%20Albert');
     expect(r.status).toBe(200);
     expect(Array.isArray(r.json?.results)).toBe(true);
     expect(r.json.results.length).toBeGreaterThanOrEqual(1);
@@ -69,9 +70,9 @@ test.describe('Golden path — live platform stack', () => {
 
   test('geocoding matches by street name (not just house number)', async ({ page }) => {
     await page.goto('/');
-    // geokode now indexes street/city variants — querying a street name (the
-    // common case) must return hits. "Main St" exists in the sample dataset.
-    const r = await fetchFromApp(page, '/api/geocode/forward?q=Main%20St');
+    // geokode indexes street/city variants — querying a street name (the
+    // common case) must return hits. "Rue Grimaldi" exists in the Monaco extract.
+    const r = await fetchFromApp(page, '/api/geocode/forward?q=Rue%20Grimaldi');
     expect(r.status).toBe(200);
     expect(r.json?.results?.length).toBeGreaterThanOrEqual(1);
   });

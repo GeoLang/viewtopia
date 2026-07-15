@@ -7,6 +7,9 @@ interface GeomColumn {
   kind: 'geometry' | 'wkt-string';
 }
 
+/** Thrown by queryAsGeoJson when no geometry column or lon/lat pair is found. */
+export class NoGeometryError extends Error {}
+
 async function detectGeomColumn(sql: string): Promise<GeomColumn | null> {
   const conn = await getConnection();
   const probe = await conn.query(`SELECT * FROM (${sql}) LIMIT 0;`);
@@ -57,7 +60,7 @@ export async function queryAsGeoJson(sql: string): Promise<FeatureCollection> {
   } else {
     const lonlat = await detectLonLat(trimmed);
     if (!lonlat) {
-      throw new Error(
+      throw new NoGeometryError(
         'No geometry detected. Expected a GEOMETRY column, a WKT column (geom/geometry/wkt/shape), or a lon/lat column pair.',
       );
     }

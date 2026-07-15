@@ -11,12 +11,8 @@ import {
   Loader,
 } from '@mantine/core';
 import { IconRoute, IconX, IconMapPin } from '@tabler/icons-react';
-
-interface RouteResult {
-  distance: number; // meters
-  duration: number; // seconds
-  geometry: [number, number][];
-}
+import { geocode } from '../../services/geocode';
+import { route, type RouteResult } from '../../services/route';
 
 export function RoutingPanel({ onClose }: { onClose: () => void }) {
   const [origin, setOrigin] = useState('');
@@ -32,40 +28,18 @@ export function RoutingPanel({ onClose }: { onClose: () => void }) {
     setResult(null);
 
     try {
-      // Geocode origin
-      const origRes = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(origin)}&format=json&limit=1`,
-      );
-      const origData = await origRes.json();
-
-      const destRes = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(destination)}&format=json&limit=1`,
-      );
-      const destData = await destRes.json();
-
-      if (!origData[0] || !destData[0]) {
+      const [[orig], [dest]] = await Promise.all([
+        geocode(origin, 1),
+        geocode(destination, 1),
+      ]);
+      if (!orig || !dest) {
         setError('Could not geocode one or both locations');
         return;
       }
 
-      const oLng = origData[0].lon;
-      const oLat = origData[0].lat;
-      const dLng = destData[0].lon;
-      const dLat = destData[0].lat;
-
-      // OSRM routing
-      const routeRes = await fetch(
-        `https://router.project-osrm.org/route/v1/driving/${oLng},${oLat};${dLng},${dLat}?geometries=geojson&overview=full`,
-      );
-      const routeData = await routeRes.json();
-
-      if (routeData.routes?.[0]) {
-        const route = routeData.routes[0];
-        setResult({
-          distance: route.distance,
-          duration: route.duration,
-          geometry: route.geometry.coordinates,
-        });
+      const r = await route(orig, dest);
+      if (r) {
+        setResult(r);
       } else {
         setError('No route found');
       }
@@ -149,6 +123,9 @@ export function RoutingPanel({ onClose }: { onClose: () => void }) {
               </Badge>
               <Badge size="xs" color="gray">
                 {Math.round(result.duration / 60)} min
+              </Badge>
+              <Badge size="xs" color={result.source === 'itinera' ? 'teal' : 'gray'} variant="light">
+                {result.source}
               </Badge>
             </Group>
             <Text size="xs" c="dimmed">

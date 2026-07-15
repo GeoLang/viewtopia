@@ -16,13 +16,14 @@ import {
   Color,
   Math as CesiumMath,
   VerticalOrigin,
-  GeoJsonDataSource,
   Cesium3DTileset,
 } from 'cesium';
 import { HeatmapLayer, HexagonLayer, ScreenGridLayer } from '@deck.gl/aggregation-layers';
 import { ArcLayer, ScatterplotLayer } from '@deck.gl/layers';
 import type { Layer } from '@deck.gl/core';
 import { getActiveCesiumViewer } from './registry';
+import { renderGeoJson } from './renderGeoJson';
+import { runSqlQuery } from '../duckdb/sqlCommand';
 import { useAppStore, type Renderer, type ViewerTab, type ToolPanel } from '../store/app';
 import { useDeckLayersStore } from '../hooks/deckLayers';
 import { colorByHeight, colorByClassification, colorByProperty } from './tileStyles';
@@ -108,8 +109,6 @@ const handlers: Record<string, Handler> = {
   },
 
   add_geojson: async (p) => {
-    const viewer = getActiveCesiumViewer();
-    if (!viewer) return;
     const color = typeof p.color === 'string' ? p.color : '#3388ff';
     let data: unknown = p.geojson;
     if (!data && typeof p.url === 'string') {
@@ -123,17 +122,13 @@ const handlers: Record<string, Handler> = {
     }
     if (!data) return;
     try {
-      const ds = await GeoJsonDataSource.load(data as object, {
-        stroke: Color.fromCssColorString(color),
-        fill: Color.fromCssColorString(color).withAlpha(0.4),
-        strokeWidth: 2,
-      });
-      await viewer.dataSources.add(ds);
-      await viewer.flyTo(ds);
+      await renderGeoJson(data as object, color, true);
     } catch (e) {
       console.error('add_geojson: failed to render', e);
     }
   },
+
+  sql_query: (p) => runSqlQuery(p),
 
   load_tileset: async (p) => {
     const viewer = getActiveCesiumViewer();
@@ -295,7 +290,6 @@ const PANEL_COMMANDS: Record<string, ToolPanel> = {
   flood: 'flood',
   save_bookmark: 'bookmark',
   play_story: 'stories',
-  sql_query: 'dataTable',
 };
 
 for (const [action, panel] of Object.entries(PANEL_COMMANDS)) {
