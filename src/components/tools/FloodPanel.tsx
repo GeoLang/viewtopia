@@ -1,19 +1,48 @@
-import { useState } from 'react';
-import {
-  Paper,
-  Text,
-  Stack,
-  Group,
-  ActionIcon,
-  Switch,
-  Slider,
-} from '@mantine/core';
+import { useEffect, useRef, useState } from 'react';
+import { Paper, Text, Stack, Group, ActionIcon, Slider, Button } from '@mantine/core';
 import { IconDroplet, IconX } from '@tabler/icons-react';
+import type { GeoJsonDataSource } from 'cesium';
+import { getActiveCesiumViewer } from '../../viewer/registry';
+import { renderGeoJson } from '../../viewer/renderGeoJson';
+import { currentBbox, flood } from '../../lib/terrainAnalysis';
 
 export function FloodPanel({ onClose }: { onClose: () => void }) {
-  const [enabled, setEnabled] = useState(false);
-  const [waterLevel, setWaterLevel] = useState(0);
-  const [opacity, setOpacity] = useState(70);
+  const [waterLevel, setWaterLevel] = useState(20);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [cells, setCells] = useState<number | null>(null);
+  const dsRef = useRef<GeoJsonDataSource | undefined>(undefined);
+
+  const clearResult = () => {
+    const viewer = getActiveCesiumViewer();
+    if (dsRef.current && viewer && !viewer.isDestroyed()) {
+      viewer.dataSources.remove(dsRef.current);
+    }
+    dsRef.current = undefined;
+    setCells(null);
+  };
+
+  useEffect(() => clearResult, []);
+
+  const run = async () => {
+    const bbox = currentBbox();
+    if (!bbox) {
+      setError('Cannot read the current map view');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      clearResult();
+      const fc = await flood(waterLevel, bbox);
+      setCells(fc.features.length ? (fc.features[0].properties?.flooded_cells ?? 0) : 0);
+      dsRef.current = await renderGeoJson(fc, '#3b82f6', false, 'flood-result');
+    } catch {
+      setError('Flood request failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Paper
@@ -43,23 +72,33 @@ export function FloodPanel({ onClose }: { onClose: () => void }) {
       </Group>
 
       <Stack gap="xs">
-        <Switch
-          size="xs"
-          label="Enable Flood Layer"
-          checked={enabled}
-          onChange={(e) => setEnabled(e.currentTarget.checked)}
-          color="violet"
-        />
+        <Text size="xs" c="dimmed">
+          Floods cells below the water level across the current map view.
+        </Text>
 
         <Text size="xs" c="dimmed">Water Level: {waterLevel}m</Text>
-        <Slider size="xs" min={0} max={50} step={0.5} value={waterLevel} onChange={setWaterLevel} color="blue" />
+        <Slider size="xs" min={0} max={100} step={1} value={waterLevel} onChange={setWaterLevel} color="blue" />
 
-        <Text size="xs" c="dimmed">Opacity: {opacity}%</Text>
-        <Slider size="xs" min={10} max={100} value={opacity} onChange={setOpacity} color="blue" />
+        <Group grow>
+          <Button size="xs" color="blue" onClick={run} loading={loading}>
+            Simulate
+          </Button>
+          <Button size="xs" variant="default" onClick={clearResult}>
+            Clear
+          </Button>
+        </Group>
 
-        <Text size="xs" c="dimmed" ta="center" py="xs">
-          Adjust water level to preview flood extent over the terrain.
-        </Text>
+        {cells !== null && (
+          <Text size="xs" c="dimmed">
+            {cells} flooded cell{cells === 1 ? '' : 's'}
+          </Text>
+        )}
+
+        {error && (
+          <Text size="xs" c="red">
+            {error}
+          </Text>
+        )}
       </Stack>
     </Paper>
   );

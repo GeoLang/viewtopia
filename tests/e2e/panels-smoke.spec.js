@@ -273,3 +273,121 @@ test.describe('local tool panels (batch 2)', () => {
     expect(hasSource).toBe(true);
   });
 });
+
+/**
+ * Weather, Wind, Traffic panels. These hit external free APIs (open-meteo,
+ * overpass) so the network is mocked via page.route with deterministic
+ * fixtures; the assertions check the observable render (SVG, deck.gl canvas,
+ * MapLibre source), not the mock itself.
+ */
+
+// open-meteo: single-coordinate request returns an object, the batched grid
+// request (comma-joined coords) returns an array, one entry per coordinate.
+async function mockOpenMeteo(page) {
+  await page.route(/open-meteo\.com/, (route) => {
+    const url = new URL(route.request().url());
+    const lats = (url.searchParams.get('latitude') || '').split(',');
+    if (lats.length > 1) {
+      const body = lats.map((_, i) => ({
+        current: {
+          temperature_2m: 15 + (i % 5),
+          precipitation: (i % 3) * 0.5,
+          wind_speed_10m: 8 + (i % 7) * 4,
+          wind_direction_10m: (i * 37) % 360,
+        },
+      }));
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
+    }
+    const times = Array.from({ length: 24 }, (_, h) => `2026-07-15T${String(h).padStart(2, '0')}:00`);
+    return route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        current: {
+          temperature_2m: 21.4,
+          relative_humidity_2m: 55,
+          precipitation: 0.2,
+          weather_code: 2,
+          cloud_cover: 40,
+          wind_speed_10m: 12,
+          wind_direction_10m: 210,
+        },
+        hourly: {
+          time: times,
+          temperature_2m: times.map((_, h) => 15 + Math.sin(h / 3) * 5),
+          precipitation: times.map((_, h) => (h % 6 === 0 ? 0.4 : 0)),
+        },
+      }),
+    });
+  });
+}
+
+test.describe('weather/wind/traffic panels', () => {
+  test('weather: shows current conditions, sparkline, and a grid overlay layer', async ({ page }) => {
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await mockOpenMeteo(page);
+    await page.goto(REACT_URL);
+
+    await page.getByRole('button', { name: 'Simulate' }).click();
+    await page.getByText('🌦 Weather').click();
+    await expect(page.getByText('Weather', { exact: true })).toBeVisible();
+
+    await expect(page.getByTestId('weather-current')).toContainText('21.4°C');
+    await expect(page.getByTestId('weather-sparkline')).toBeVisible();
+
+    await page.getByText('Grid overlay').click();
+    await expect(page.getByTestId('weather-grid-status')).toContainText('25 cells');
+    await expect(page.locator('#deckgl-container canvas').first()).toBeVisible({ timeout: 10000 });
+    expect(errors, `runtime errors:\n${errors.join('\n')}`).toEqual([]);
+  });
+
+  test('wind: samples a grid into a deck.gl arrow field with a legend', async ({ page }) => {
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await mockOpenMeteo(page);
+    await page.goto(REACT_URL);
+
+    await page.getByRole('button', { name: 'Simulate' }).click();
+    await page.getByText('💨 Wind').click();
+    await expect(page.getByText('Wind Field')).toBeVisible();
+
+    await expect(page.getByTestId('wind-status')).toContainText('arrows');
+    await expect(page.getByTestId('wind-legend')).toBeVisible();
+    await expect(page.locator('#deckgl-container canvas').first()).toBeVisible({ timeout: 10000 });
+    expect(errors, `runtime errors:\n${errors.join('\n')}`).toEqual([]);
+  });
+
+  test('traffic: demo mode adds an OSM-roads source to the live MapLibre map', async ({ page }) => {
+    await page.route(/overpass-api\.de/, (route) =>
+      route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          elements: [
+            { type: 'way', id: 100, geometry: [{ lat: 51.5, lon: -0.1 }, { lat: 51.51, lon: -0.09 }] },
+            { type: 'way', id: 101, geometry: [{ lat: 51.49, lon: -0.11 }, { lat: 51.5, lon: -0.1 }] },
+          ],
+        }),
+      }),
+    );
+    await page.goto(REACT_URL);
+
+    // traffic renders on MapLibre, so switch renderer and wait for the style
+    await page.getByRole('textbox', { name: 'Renderer' }).click();
+    await page.getByRole('option', { name: 'MapLibre' }).click();
+    await expect(page.locator('#maplibre-container canvas').first()).toBeVisible({ timeout: 15000 });
+    await page.waitForFunction(() => window.__viewtopiaMap && window.__viewtopiaMap.isStyleLoaded(), null, {
+      timeout: 15000,
+    });
+
+    await page.getByRole('button', { name: 'Simulate' }).click();
+    await page.getByText('🚗 Traffic').click();
+    await expect(page.getByText('Traffic', { exact: true })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Load demo traffic' }).click();
+    await expect(page.getByTestId('traffic-status')).toContainText('demo data');
+    const hasSource = await page.evaluate(() =>
+      Boolean(window.__viewtopiaMap.getSource('traffic-demo')),
+    );
+    expect(hasSource).toBe(true);
+  });
+});

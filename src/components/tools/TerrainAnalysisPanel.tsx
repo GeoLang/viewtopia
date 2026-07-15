@@ -1,20 +1,74 @@
-import { useState } from 'react';
-import {
-  Paper,
-  Text,
-  Stack,
-  Group,
-  ActionIcon,
-  Select,
-  Switch,
-  Slider,
-} from '@mantine/core';
+import { useEffect, useRef, useState } from 'react';
+import { Paper, Text, Stack, Group, ActionIcon, Select, Slider, Button } from '@mantine/core';
 import { IconMountain, IconX } from '@tabler/icons-react';
+import type { GeoJsonDataSource, ImageryLayer } from 'cesium';
+import { getActiveCesiumViewer } from '../../viewer/registry';
+import { renderGeoJson } from '../../viewer/renderGeoJson';
+import {
+  addRasterOverlay,
+  contours,
+  currentBbox,
+  removeOverlay,
+  terrainRaster,
+  type Bbox,
+} from '../../lib/terrainAnalysis';
+
+type Op = 'slope' | 'aspect' | 'hillshade' | 'contours';
 
 export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
-  const [analysis, setAnalysis] = useState<string | null>('slope');
-  const [enabled, setEnabled] = useState(false);
+  const [analysis, setAnalysis] = useState<Op>('slope');
   const [opacity, setOpacity] = useState(70);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const layerRef = useRef<ImageryLayer | null>(null);
+  const dsRef = useRef<GeoJsonDataSource | undefined>(undefined);
+  const urlRef = useRef<string | null>(null);
+
+  const clearResult = () => {
+    removeOverlay(layerRef.current);
+    layerRef.current = null;
+    if (urlRef.current) {
+      URL.revokeObjectURL(urlRef.current);
+      urlRef.current = null;
+    }
+    const viewer = getActiveCesiumViewer();
+    if (dsRef.current && viewer && !viewer.isDestroyed()) {
+      viewer.dataSources.remove(dsRef.current);
+    }
+    dsRef.current = undefined;
+  };
+
+  useEffect(() => clearResult, []);
+
+  // live opacity control for the raster overlay.
+  useEffect(() => {
+    if (layerRef.current) layerRef.current.alpha = opacity / 100;
+  }, [opacity]);
+
+  const run = async () => {
+    const bbox = currentBbox();
+    if (!bbox) {
+      setError('Cannot read the current map view');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      clearResult();
+      if (analysis === 'contours') {
+        const fc = await contours(bbox as Bbox);
+        dsRef.current = await renderGeoJson(fc, '#f59e0b', false, 'contours-result');
+      } else {
+        const url = await terrainRaster(analysis, bbox as Bbox);
+        urlRef.current = url;
+        layerRef.current = await addRasterOverlay(url, bbox as Bbox, opacity / 100);
+      }
+    } catch {
+      setError('Terrain request failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Paper
@@ -51,24 +105,38 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
             { value: 'slope', label: 'Slope' },
             { value: 'aspect', label: 'Aspect' },
             { value: 'hillshade', label: 'Hillshade' },
-            { value: 'contour', label: 'Contour Lines' },
-            { value: 'curvature', label: 'Curvature' },
+            { value: 'contours', label: 'Contour Lines' },
           ]}
           value={analysis}
-          onChange={setAnalysis}
+          onChange={(v) => setAnalysis((v as Op) ?? 'slope')}
           styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
-        <Switch
+        <Text size="xs" c="dimmed">Opacity: {opacity}%</Text>
+        <Slider
           size="xs"
-          label="Enable Layer"
-          checked={enabled}
-          onChange={(e) => setEnabled(e.currentTarget.checked)}
+          min={10}
+          max={100}
+          value={opacity}
+          onChange={setOpacity}
           color="violet"
+          disabled={analysis === 'contours'}
         />
 
-        <Text size="xs" c="dimmed">Opacity: {opacity}%</Text>
-        <Slider size="xs" min={10} max={100} value={opacity} onChange={setOpacity} color="violet" />
+        <Group grow>
+          <Button size="xs" color="violet" onClick={run} loading={loading}>
+            Run
+          </Button>
+          <Button size="xs" variant="default" onClick={clearResult}>
+            Clear
+          </Button>
+        </Group>
+
+        {error && (
+          <Text size="xs" c="red">
+            {error}
+          </Text>
+        )}
       </Stack>
     </Paper>
   );

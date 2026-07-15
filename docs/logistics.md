@@ -87,7 +87,7 @@ pnpm install && pnpm run dev
 
 ### Additional Tools (existing)
 - **RoutingPanel** — turn-by-turn directions
-- **TrafficPanel** — live traffic overlay
+- **TrafficPanel** — traffic overlay from your own provider tiles (TomTom/HERE key), or a zero-config demo mode coloring OSM roads by synthetic congestion
 - **HeatmapPanel** — delivery density visualization
 - **Isochrones** — service area planning (5/10/15 min drive-time)
 

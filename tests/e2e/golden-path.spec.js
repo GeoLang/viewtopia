@@ -57,6 +57,54 @@ test.describe('Golden path — live platform stack', () => {
     expect(r.json?.status).toBe('ok');
   });
 
+  test('tiletopia ingests a point cloud and serves its tileset', async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.goto('/');
+
+    // upload a small ascii ply through the proxy; point-cloud uploads auto-tile
+    const asset = await page.evaluate(async () => {
+      const n = 200;
+      const lines = [
+        'ply',
+        'format ascii 1.0',
+        `element vertex ${n}`,
+        'property float x',
+        'property float y',
+        'property float z',
+        'end_header',
+      ];
+      for (let i = 0; i < n; i++) {
+        const lon = 7.42 + (i % 20) * 0.0001;
+        const lat = 43.73 + Math.floor(i / 20) * 0.0001;
+        lines.push(`${lon} ${lat} ${10 + (i % 5)}`);
+      }
+      const form = new FormData();
+      form.append('name', `golden-path-${Date.now()}.ply`);
+      form.append('file', new Blob([lines.join('\n')], { type: 'application/octet-stream' }), 'cloud.ply');
+      const res = await fetch('/tiles/v1/assets', { method: 'POST', body: form });
+      return { status: res.status, json: await res.json() };
+    });
+    expect(asset.status).toBe(201);
+    const assetId = asset.json.id;
+
+    // the job worker polls every 2s; wait for the asset to go ready
+    await expect
+      .poll(
+        async () => (await fetchFromApp(page, `/tiles/v1/assets/${assetId}`)).json?.status,
+        { timeout: 90_000, intervals: [2000] },
+      )
+      .toBe('ready');
+
+    const tileset = await fetchFromApp(page, `/tiles/v1/assets/${assetId}/tileset.json`);
+    expect(tileset.status).toBe(200);
+    expect(tileset.json?.root).toBeTruthy();
+    expect(tileset.json?.asset?.version).toBeTruthy();
+
+    // cleanup so reruns don't accumulate assets
+    const del = await fetchFromApp(page, `/tiles/v1/assets/${assetId}`, { method: 'DELETE' });
+    expect([200, 204]).toContain(del.status);
+  });
+
   test('geocoding returns a hit via /api/geocode/ proxy', async ({ page }) => {
     await page.goto('/');
     // geokode serves the Monaco OSM extract (see docker-compose.platform.yml)

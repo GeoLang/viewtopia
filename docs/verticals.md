@@ -7,7 +7,7 @@ Each vertical leverages the same underlying platform with specialized panels.
 
 ### Components
 - **SensorPanel** — live sensor readings (temperature, humidity, air quality, water level) via WebSocket
-- **WeatherPanel** (existing) — weather overlay
+- **WeatherPanel** (existing) — current conditions and hourly forecast from open-meteo, optional temperature/precipitation grid overlay
 - **FloodPanel** (existing) — flood zone analysis
 - **HeatmapPanel** (existing) — sensor density/intensity visualization
 - **TimelinePanel** (existing) — temporal playback of sensor history
@@ -106,7 +106,7 @@ VITE_SENSOR_WS_URL=ws://localhost:3004/ws/sensors
 - **GeofencePanel** (existing) — exclusion zones, perimeters
 - **FloodPanel** (existing) — flood inundation
 - **RoutingPanel** (existing) — fastest route to incident
-- **TrafficPanel** (existing) — road blockages
+- **TrafficPanel** (existing) — user-provided traffic tiles or a demo mode over OSM roads (no live global feed without a key)
 
 ### Backend: itinera + geokode + ptolemy
 - itinera: evacuation route calculation, isochrones

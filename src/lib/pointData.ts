@@ -66,9 +66,9 @@ export function pointsFromDraw(featureId: string | null): PointRecord[] {
   return collectPoints(featuresToGeoJSON(selected));
 }
 
-/** Show a panel's deck layer, switching the app to the deck.gl globe renderer. */
-export function showPanelDeckLayer(group: string, layer: Layer): void {
-  useDeckLayersStore.getState().setGroup(group, [layer]);
+/** Show a panel's deck layer(s), switching the app to the deck.gl globe renderer. */
+export function showPanelDeckLayer(group: string, layer: Layer | Layer[]): void {
+  useDeckLayersStore.getState().setGroup(group, Array.isArray(layer) ? layer : [layer]);
   const app = useAppStore.getState();
   app.setActiveTab('globe');
   app.setRenderer('deckgl');

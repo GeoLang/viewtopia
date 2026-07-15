@@ -1,22 +1,51 @@
-import { useState } from 'react';
-import {
-  Paper,
-  Text,
-  Stack,
-  Group,
-  ActionIcon,
-  Switch,
-  Slider,
-  NumberInput,
-  Button,
-} from '@mantine/core';
+import { useEffect, useRef, useState } from 'react';
+import { Paper, Text, Stack, Group, ActionIcon, Slider, Button, TextInput } from '@mantine/core';
 import { IconSolarPanel, IconX } from '@tabler/icons-react';
+import type { ImageryLayer } from 'cesium';
+import { addRasterOverlay, currentBbox, removeOverlay, solarRaster, type Bbox } from '../../lib/terrainAnalysis';
 
 export function SolarPanel({ onClose }: { onClose: () => void }) {
-  const [enabled, setEnabled] = useState(false);
-  const [panelArea, setPanelArea] = useState<number | string>(20);
-  const [efficiency, setEfficiency] = useState(18);
-  const [tilt, setTilt] = useState(30);
+  const [date, setDate] = useState('2026-06-21');
+  const [opacity, setOpacity] = useState(70);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const layerRef = useRef<ImageryLayer | null>(null);
+  const urlRef = useRef<string | null>(null);
+
+  const clearResult = () => {
+    removeOverlay(layerRef.current);
+    layerRef.current = null;
+    if (urlRef.current) {
+      URL.revokeObjectURL(urlRef.current);
+      urlRef.current = null;
+    }
+  };
+
+  useEffect(() => clearResult, []);
+
+  useEffect(() => {
+    if (layerRef.current) layerRef.current.alpha = opacity / 100;
+  }, [opacity]);
+
+  const run = async () => {
+    const bbox = currentBbox();
+    if (!bbox) {
+      setError('Cannot read the current map view');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      clearResult();
+      const url = await solarRaster(bbox as Bbox, date);
+      urlRef.current = url;
+      layerRef.current = await addRasterOverlay(url, bbox as Bbox, opacity / 100);
+    } catch {
+      setError('Solar request failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Paper
@@ -46,33 +75,36 @@ export function SolarPanel({ onClose }: { onClose: () => void }) {
       </Group>
 
       <Stack gap="xs">
-        <Switch
-          size="xs"
-          label="Show Solar Irradiance"
-          checked={enabled}
-          onChange={(e) => setEnabled(e.currentTarget.checked)}
-          color="yellow"
-        />
+        <Text size="xs" c="dimmed">
+          Clear-sky irradiance at solar noon over the current map view.
+        </Text>
 
-        <NumberInput
+        <TextInput
           size="xs"
-          label="Panel Area (m²)"
-          value={panelArea}
-          onChange={setPanelArea}
-          min={1}
-          max={1000}
+          type="date"
+          label="Date"
+          value={date}
+          onChange={(e) => setDate(e.currentTarget.value)}
           styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
-        <Text size="xs" c="dimmed">Efficiency: {efficiency}%</Text>
-        <Slider size="xs" min={10} max={30} value={efficiency} onChange={setEfficiency} color="yellow" />
+        <Text size="xs" c="dimmed">Opacity: {opacity}%</Text>
+        <Slider size="xs" min={10} max={100} value={opacity} onChange={setOpacity} color="yellow" />
 
-        <Text size="xs" c="dimmed">Tilt Angle: {tilt}°</Text>
-        <Slider size="xs" min={0} max={90} value={tilt} onChange={setTilt} color="yellow" />
+        <Group grow>
+          <Button size="xs" color="yellow" onClick={run} loading={loading}>
+            Compute
+          </Button>
+          <Button size="xs" variant="default" onClick={clearResult}>
+            Clear
+          </Button>
+        </Group>
 
-        <Button size="xs" variant="filled" color="yellow" fullWidth>
-          Calculate Yield
-        </Button>
+        {error && (
+          <Text size="xs" c="red">
+            {error}
+          </Text>
+        )}
       </Stack>
     </Paper>
   );
