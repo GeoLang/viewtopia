@@ -18,6 +18,7 @@ import { useDrawMapLibre } from '../hooks/useDrawMapLibre';
 import { useMeasureCesium } from '../hooks/useMeasureCesium';
 import { useFeaturePickerCesium } from '../hooks/useFeaturePickerCesium';
 import { useMeasureMapLibre } from '../hooks/useMeasureMapLibre';
+import { useShareLinkHash } from '../hooks/useShareLinkHash';
 import { Minimap } from './Minimap';
 import { CoordReadout } from './CoordReadout';
 import { ContextMenu } from './ContextMenu';
@@ -56,6 +57,9 @@ export function ViewerArea() {
 
   // Feature picker — inspect 3D Tiles features (Cesium only)
   useFeaturePickerCesium(cesiumRef);
+
+  // Apply camera + renderer from a shared-link URL hash once on mount
+  useShareLinkHash();
 
   // React to flyTo requests from spacetime store
   useEffect(() => {

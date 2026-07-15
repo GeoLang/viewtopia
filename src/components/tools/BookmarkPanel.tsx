@@ -6,44 +6,53 @@ import {
   Group,
   ActionIcon,
   TextInput,
-  Button,
   ScrollArea,
-  Badge,
 } from '@mantine/core';
 import { IconBookmark, IconX, IconCamera, IconTrash } from '@tabler/icons-react';
+import { useAppStore } from '../../store/app';
+import { getActiveCesiumViewer } from '../../viewer/registry';
+import { getSharedCamera } from '../../hooks/sharedCamera';
+import { captureCameraState, flyToCameraState } from '../../store/cameraViews';
+import { useAccessibilityStore } from '../../store/accessibility';
 
-export interface Bookmark {
-  id: string;
-  name: string;
-  lat: number;
-  lng: number;
-  zoom: number;
-  heading?: number;
-  pitch?: number;
-  createdAt: number;
-}
-
-interface BookmarkPanelProps {
-  bookmarks: Bookmark[];
-  onFlyTo: (bm: Bookmark) => void;
-  onSave: (name: string) => void;
-  onDelete: (id: string) => void;
-  onClose: () => void;
-}
-
-export function BookmarkPanel({
-  bookmarks,
-  onFlyTo,
-  onSave,
-  onDelete,
-  onClose,
-}: BookmarkPanelProps) {
+export function BookmarkPanel({ onClose }: { onClose: () => void }) {
+  const bookmarks = useAppStore((s) => s.bookmarks);
+  const addBookmark = useAppStore((s) => s.addBookmark);
+  const removeBookmark = useAppStore((s) => s.removeBookmark);
+  const reduceMotion = useAccessibilityStore((s) => s.reduceMotion);
   const [name, setName] = useState('');
+  const [status, setStatus] = useState('');
 
   const handleSave = () => {
     if (!name.trim()) return;
-    onSave(name.trim());
+    const viewer = getActiveCesiumViewer();
+    const camera = viewer ? captureCameraState(viewer) : null;
+    const cam = getSharedCamera();
+    addBookmark({
+      id: crypto.randomUUID(),
+      name: name.trim(),
+      lat: camera?.lat ?? cam.latitude,
+      lng: camera?.lng ?? cam.longitude,
+      zoom: cam.zoom,
+      heading: camera?.heading,
+      pitch: camera?.pitch,
+      camera: camera ?? undefined,
+      createdAt: Date.now(),
+    });
     setName('');
+    setStatus(camera ? 'Saved current camera' : 'Saved (no viewer, view center)');
+  };
+
+  const handleFlyTo = (id: string) => {
+    const bm = bookmarks.find((b) => b.id === id);
+    if (!bm) return;
+    const viewer = getActiveCesiumViewer();
+    if (viewer && bm.camera) {
+      flyToCameraState(viewer, bm.camera, { reduceMotion });
+      setStatus(`Flew to ${bm.name}`);
+    } else {
+      setStatus('No active viewer for flyTo');
+    }
   };
 
   return (
@@ -84,9 +93,7 @@ export function BookmarkPanel({
           value={name}
           onChange={(e) => setName(e.currentTarget.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-          styles={{
-            input: { background: '#0d1117', borderColor: '#30363d' },
-          }}
+          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
         <ActionIcon
           size="sm"
@@ -94,10 +101,17 @@ export function BookmarkPanel({
           color="violet"
           onClick={handleSave}
           disabled={!name.trim()}
+          aria-label="Save bookmark"
         >
           <IconCamera size={14} />
         </ActionIcon>
       </Group>
+
+      {status && (
+        <Text size="xs" c="dimmed" mb="xs" data-testid="bookmark-status">
+          {status}
+        </Text>
+      )}
 
       <ScrollArea flex={1}>
         <Stack gap={4}>
@@ -111,12 +125,8 @@ export function BookmarkPanel({
                 key={bm.id}
                 justify="space-between"
                 p="xs"
-                style={{
-                  background: '#21262d',
-                  borderRadius: 4,
-                  cursor: 'pointer',
-                }}
-                onClick={() => onFlyTo(bm)}
+                style={{ background: '#21262d', borderRadius: 4, cursor: 'pointer' }}
+                onClick={() => handleFlyTo(bm.id)}
               >
                 <Stack gap={0}>
                   <Text size="xs" c="white" fw={500}>
@@ -132,7 +142,7 @@ export function BookmarkPanel({
                   color="red"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onDelete(bm.id);
+                    removeBookmark(bm.id);
                   }}
                 >
                   <IconTrash size={12} />

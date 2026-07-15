@@ -123,6 +123,9 @@ services:
       - "3002:3000"
     environment:
       RUST_LOG: info
+    # match the host user so the auto-import can write graph.bin
+    # into the bind-mounted ./data without a manual --user run
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     volumes:
       - ./data:/data
     command:
@@ -162,6 +165,9 @@ services:
       - geolang-cache:/app/cache
       # geolang runs its tools from a bind-mounted repo root (see geolang/docker-compose.yml)
       - ../geolang:/app/geolang:z
+      # persist the embedded letta postgres; without this every recreate
+      # re-runs initdb (~50s boot) and loses agent state
+      - geolang-pgdata:/var/lib/postgresql/data
     env_file:
       - ../geolang/.env
     environment:
@@ -261,4 +267,5 @@ volumes:
   pgdata:
   tiletopia-data:
   geolang-cache:
+  geolang-pgdata:
   embeddings-cache:

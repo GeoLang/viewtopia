@@ -7,29 +7,71 @@ import {
   ActionIcon,
   TextInput,
   Button,
-  Switch,
-  Select,
   ScrollArea,
-  Badge,
 } from '@mantine/core';
 import { IconVectorTriangle, IconX, IconPlus, IconTrash } from '@tabler/icons-react';
+import { getActiveMapLibre } from '../../viewer/registry';
 
 interface VTSource {
   id: string;
   name: string;
   url: string;
+  sourceLayer: string;
 }
+
+// ptolemy MVT endpoint shape, works when the platform stack runs
+const URL_PLACEHOLDER = '/api/v1/branches/{id}/tiles/{z}/{x}/{y}';
 
 export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
   const [sources, setSources] = useState<VTSource[]>([]);
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
+  const [sourceLayer, setSourceLayer] = useState('default');
+  const [status, setStatus] = useState('');
 
   const handleAdd = () => {
     if (!name.trim() || !url.trim()) return;
-    setSources((prev) => [...prev, { id: crypto.randomUUID(), name: name.trim(), url: url.trim() }]);
+    const map = getActiveMapLibre();
+    if (!map) {
+      setStatus('Switch renderer to MapLibre first');
+      return;
+    }
+    if (!map.isStyleLoaded()) {
+      setStatus('Map still loading, try again');
+      return;
+    }
+    const id = `vt-${crypto.randomUUID()}`;
+    const layer = sourceLayer.trim() || 'default';
+    map.addSource(id, { type: 'vector', tiles: [url.trim()], minzoom: 0, maxzoom: 22 });
+    map.addLayer({
+      id: `${id}-fill`,
+      type: 'fill',
+      source: id,
+      'source-layer': layer,
+      paint: { 'fill-color': '#a78bfa', 'fill-opacity': 0.25 },
+    });
+    map.addLayer({
+      id: `${id}-line`,
+      type: 'line',
+      source: id,
+      'source-layer': layer,
+      paint: { 'line-color': '#a78bfa', 'line-width': 1.5 },
+    });
+    setSources((prev) => [...prev, { id, name: name.trim(), url: url.trim(), sourceLayer: layer }]);
+    setStatus(`Added ${name.trim()}`);
     setName('');
     setUrl('');
+  };
+
+  const handleRemove = (id: string) => {
+    const map = getActiveMapLibre();
+    if (map) {
+      for (const layerId of [`${id}-fill`, `${id}-line`]) {
+        if (map.getLayer(layerId)) map.removeLayer(layerId);
+      }
+      if (map.getSource(id)) map.removeSource(id);
+    }
+    setSources((prev) => prev.filter((x) => x.id !== id));
   };
 
   return (
@@ -41,8 +83,8 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
         position: 'absolute',
         top: 60,
         right: 16,
-        width: 300,
-        maxHeight: '50vh',
+        width: 320,
+        maxHeight: '55vh',
         background: '#161b22',
         border: '1px solid #30363d',
         zIndex: 300,
@@ -72,10 +114,20 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
         />
         <TextInput
           size="xs"
-          placeholder="Tile URL (pbf/mvt)"
+          placeholder={URL_PLACEHOLDER}
           value={url}
           onChange={(e) => setUrl(e.currentTarget.value)}
           styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
+        />
+        <TextInput
+          size="xs"
+          label="Source layer"
+          value={sourceLayer}
+          onChange={(e) => setSourceLayer(e.currentTarget.value)}
+          styles={{
+            label: { color: '#8b949e' },
+            input: { background: '#0d1117', borderColor: '#30363d' },
+          }}
         />
         <Button
           size="xs"
@@ -87,21 +139,27 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
         >
           Add Source
         </Button>
+        {status && (
+          <Text size="xs" c="dimmed" data-testid="vt-status">
+            {status}
+          </Text>
+        )}
       </Stack>
 
       <ScrollArea flex={1}>
         {sources.length > 0 ? (
           sources.map((s) => (
-            <Group key={s.id} justify="space-between" p="xs"
+            <Group
+              key={s.id}
+              justify="space-between"
+              p="xs"
               style={{ background: '#21262d', borderRadius: 4, marginBottom: 4 }}
+              wrap="nowrap"
             >
-              <Text size="xs" c="white" lineClamp={1}>{s.name}</Text>
-              <ActionIcon
-                size="xs"
-                variant="subtle"
-                color="red"
-                onClick={() => setSources((p) => p.filter((x) => x.id !== s.id))}
-              >
+              <Text size="xs" c="white" lineClamp={1}>
+                {s.name}
+              </Text>
+              <ActionIcon size="xs" variant="subtle" color="red" onClick={() => handleRemove(s.id)}>
                 <IconTrash size={12} />
               </ActionIcon>
             </Group>

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { CameraState } from './cameraViews';
 
 export type ViewerTab = 'globe' | 'map';
 export type Renderer = 'cesium' | 'deckgl' | 'maplibre';
@@ -85,6 +86,8 @@ export interface Bookmark {
   zoom: number;
   heading?: number;
   pitch?: number;
+  // full camera state when saved from a live viewer (BookmarkPanel)
+  camera?: CameraState;
   createdAt: number;
 }
 

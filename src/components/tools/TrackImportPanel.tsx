@@ -8,17 +8,83 @@ import {
   Button,
   FileButton,
   Badge,
-  Switch,
+  ScrollArea,
 } from '@mantine/core';
-import { IconMapRoute, IconX, IconUpload } from '@tabler/icons-react';
+import { IconMapRoute, IconX, IconUpload, IconTrash } from '@tabler/icons-react';
+import { notifications } from '@mantine/notifications';
+import {
+  BoundingSphere,
+  Cartesian3,
+  Color,
+} from 'cesium';
+import { getActiveCesiumViewer } from '../../viewer/registry';
+import { parseTrack, type ParsedTrack } from '../../lib/trackParsers';
+
+interface ImportedTrack extends ParsedTrack {
+  id: string;
+}
 
 export function TrackImportPanel({ onClose }: { onClose: () => void }) {
-  const [files, setFiles] = useState<File[]>([]);
-  const [showElevation, setShowElevation] = useState(true);
-  const [showSpeed, setShowSpeed] = useState(false);
+  const [tracks, setTracks] = useState<ImportedTrack[]>([]);
+  const [status, setStatus] = useState('');
 
-  const handleFiles = (newFiles: File[]) => {
-    setFiles((prev) => [...prev, ...newFiles]);
+  const renderTrack = (track: ImportedTrack) => {
+    const viewer = getActiveCesiumViewer();
+    if (!viewer || track.points.length === 0) return;
+    const cartesians = track.points.map(([lng, lat, ele]) =>
+      Cartesian3.fromDegrees(lng, lat, ele ?? 0),
+    );
+    if (cartesians.length >= 2) {
+      viewer.entities.add({
+        id: `track-line-${track.id}`,
+        polyline: { positions: cartesians, width: 3, material: Color.fromCssColorString('#f97316').withAlpha(0.9) },
+      });
+    }
+    track.points.forEach(([lng, lat, ele], i) => {
+      viewer.entities.add({
+        id: `track-pt-${track.id}-${i}`,
+        position: Cartesian3.fromDegrees(lng, lat, ele ?? 0),
+        point: { pixelSize: 5, color: Color.fromCssColorString('#fbbf24'), outlineColor: Color.WHITE, outlineWidth: 1 },
+      });
+    });
+    // zoom to extent
+    const sphere = BoundingSphere.fromPoints(cartesians);
+    viewer.camera.flyToBoundingSphere(sphere, { duration: 1.5 });
+  };
+
+  const removeTrack = (id: string) => {
+    const viewer = getActiveCesiumViewer();
+    if (viewer) {
+      const gone = viewer.entities.values.filter((e) => e.id.startsWith(`track-line-${id}`) || e.id.startsWith(`track-pt-${id}`));
+      for (const e of gone) viewer.entities.remove(e);
+    }
+    setTracks((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  const handleFiles = async (files: File[]) => {
+    for (const file of files) {
+      try {
+        const text = await file.text();
+        const parsed = parseTrack(file.name, text);
+        if (parsed.points.length === 0) {
+          notifications.show({ title: 'No points', message: file.name, color: 'yellow' });
+          continue;
+        }
+        const track: ImportedTrack = { ...parsed, id: crypto.randomUUID() };
+        setTracks((prev) => [...prev, track]);
+        renderTrack(track);
+        const viewer = getActiveCesiumViewer();
+        setStatus(
+          `${file.name}: ${parsed.points.length} points${viewer ? ' rendered' : ' (no viewer)'}`,
+        );
+      } catch (err) {
+        notifications.show({
+          title: 'Import failed',
+          message: `${file.name}: ${err instanceof Error ? err.message : 'parse error'}`,
+          color: 'red',
+        });
+      }
+    }
   };
 
   return (
@@ -31,9 +97,12 @@ export function TrackImportPanel({ onClose }: { onClose: () => void }) {
         top: 60,
         right: 16,
         width: 280,
+        maxHeight: '60vh',
         background: '#161b22',
         border: '1px solid #30363d',
         zIndex: 300,
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
       <Group justify="space-between" mb="xs">
@@ -51,7 +120,7 @@ export function TrackImportPanel({ onClose }: { onClose: () => void }) {
       <Stack gap="xs">
         <FileButton
           onChange={(f) => f && handleFiles(Array.isArray(f) ? f : [f])}
-          accept=".gpx,.kml,.kmz,.fit,.tcx"
+          accept=".gpx,.kml,.csv"
           multiple
         >
           {(props) => (
@@ -63,38 +132,43 @@ export function TrackImportPanel({ onClose }: { onClose: () => void }) {
               fullWidth
               {...props}
             >
-              Import GPX/KML/FIT
+              Import GPX / KML / CSV
             </Button>
           )}
         </FileButton>
 
-        {files.length > 0 && (
-          <Stack gap={2}>
-            {files.map((f, i) => (
-              <Group key={i} justify="space-between">
-                <Text size="xs" c="white" lineClamp={1}>{f.name}</Text>
-                <Badge size="xs" variant="light">{(f.size / 1024).toFixed(0)}KB</Badge>
-              </Group>
-            ))}
-          </Stack>
+        {status && (
+          <Text size="xs" c="dimmed" data-testid="track-status">
+            {status}
+          </Text>
         )}
-
-        <Switch
-          size="xs"
-          label="Color by Elevation"
-          checked={showElevation}
-          onChange={(e) => setShowElevation(e.currentTarget.checked)}
-          color="violet"
-        />
-
-        <Switch
-          size="xs"
-          label="Color by Speed"
-          checked={showSpeed}
-          onChange={(e) => setShowSpeed(e.currentTarget.checked)}
-          color="violet"
-        />
       </Stack>
+
+      <ScrollArea flex={1} mt="xs">
+        <Stack gap={4}>
+          {tracks.map((t) => (
+            <Group
+              key={t.id}
+              justify="space-between"
+              p="xs"
+              style={{ background: '#21262d', borderRadius: 4 }}
+              wrap="nowrap"
+            >
+              <Text size="xs" c="white" lineClamp={1}>
+                {t.name}
+              </Text>
+              <Group gap={6} wrap="nowrap">
+                <Badge size="xs" variant="light" color="orange">
+                  {t.points.length} pts
+                </Badge>
+                <ActionIcon size="xs" variant="subtle" color="red" onClick={() => removeTrack(t.id)}>
+                  <IconTrash size={12} />
+                </ActionIcon>
+              </Group>
+            </Group>
+          ))}
+        </Stack>
+      </ScrollArea>
     </Paper>
   );
 }

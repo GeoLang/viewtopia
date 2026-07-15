@@ -73,9 +73,6 @@ export function ToolPanels() {
     setLayerOpacity,
     removeLayer,
     reorderLayers,
-    bookmarks,
-    addBookmark,
-    removeBookmark,
   } = useAppStore();
   const flyTo = useSpaceTimeStore((s) => s.flyTo);
 
@@ -110,24 +107,7 @@ export function ToolPanels() {
     case 'geofence':
       return <GeofencePanel onClose={close} />;
     case 'bookmark':
-      return (
-        <BookmarkPanel
-          bookmarks={bookmarks}
-          onFlyTo={(bm) => flyTo(bm.lng, bm.lat, bm.zoom)}
-          onSave={(name) =>
-            addBookmark({
-              id: crypto.randomUUID(),
-              name,
-              lat: 0,
-              lng: 0,
-              zoom: 8,
-              createdAt: Date.now(),
-            })
-          }
-          onDelete={removeBookmark}
-          onClose={close}
-        />
-      );
+      return <BookmarkPanel onClose={close} />;
     case 'layers':
       return (
         <LayerManager

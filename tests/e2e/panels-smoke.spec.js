@@ -141,3 +141,135 @@ test.describe('tool panels', () => {
     await expect(page.getByTestId('crosssection-stats')).toContainText('Distance:');
   });
 });
+
+const SAMPLE_GPX = `<?xml version="1.0"?><gpx><trk><trkseg>` +
+  `<trkpt lat="51.50" lon="-0.10"><ele>10</ele></trkpt>` +
+  `<trkpt lat="51.51" lon="-0.12"><ele>12</ele></trkpt>` +
+  `<trkpt lat="51.49" lon="-0.09"><ele>8</ele></trkpt>` +
+  `</trkseg></trk></gpx>`;
+
+test.describe('local tool panels (batch 2)', () => {
+  test('annotate: add at center appends an annotation and a live entity', async ({ page }) => {
+    await page.goto(REACT_URL);
+    await page.getByLabel('Annotate').click();
+    await expect(page.getByText('Annotations')).toBeVisible();
+
+    await page.getByPlaceholder('Annotation label…').fill('Site A');
+    await page.getByRole('button', { name: 'Add at center' }).click();
+
+    await expect(page.getByTestId('annotate-count')).toHaveText('1');
+    await expect(page.getByText('Site A')).toBeVisible();
+
+    const v = await readViewer(page, "v.entities.values.filter(e => e.id.indexOf('annot-') === 0).length");
+    if (v.present) expect(v.value).toBe(1);
+  });
+
+  test('bookmark: saving captures a named view into the list', async ({ page }) => {
+    await page.goto(REACT_URL);
+    await page.getByLabel('Bookmarks').click();
+    await expect(page.getByPlaceholder('Bookmark name…')).toBeVisible();
+
+    await page.getByPlaceholder('Bookmark name…').fill('Home View');
+    await page.getByLabel('Save bookmark').click();
+
+    await expect(page.getByText('Home View')).toBeVisible();
+    await expect(page.getByTestId('bookmark-status')).toContainText('Saved');
+  });
+
+  test('share link: generate encodes camera + renderer into the hash', async ({ page }) => {
+    await page.goto(REACT_URL);
+    await page.getByRole('button', { name: 'More' }).click();
+    await page.getByText('🔗 Share Link').click();
+    await expect(page.getByText('Share Link', { exact: true })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Generate Share Link' }).click();
+    const url = await page.getByTestId('sharelink-url').inputValue();
+    expect(url).toContain('#cam=');
+    expect(url).toContain('renderer=');
+    // cam carries five comma-separated numbers (lng,lat,height,heading,pitch)
+    const cam = new URL(url).hash.replace(/^#/, '');
+    const camParam = new URLSearchParams(cam).get('cam');
+    expect(camParam.split(',').length).toBe(5);
+  });
+
+  test('share link: hash on load applies the encoded renderer', async ({ page }) => {
+    await page.goto('/#cam=10,20,1000000,0,-30&renderer=maplibre');
+    await expect(page.getByRole('textbox', { name: 'Renderer' })).toHaveValue('MapLibre');
+    // renderer actually switched: the MapLibre canvas mounts
+    await expect(page.locator('#maplibre-container canvas').first()).toBeVisible({ timeout: 15000 });
+  });
+
+  test('stories: add step then toggle play mode', async ({ page }) => {
+    await page.goto(REACT_URL);
+    await page.getByRole('button', { name: 'Tools' }).click();
+    await page.getByText('📖 Stories').click();
+    await expect(page.getByText('Stories', { exact: true })).toBeVisible();
+
+    await page.getByPlaceholder('Step title…').fill('Intro');
+    await page.getByRole('button', { name: 'Add step at view' }).click();
+
+    await expect(page.getByTestId('stories-count')).toHaveText('1 steps');
+    await expect(page.getByText('1. Intro')).toBeVisible();
+
+    await page.getByTestId('stories-play').click();
+    await expect(page.getByTestId('stories-play')).toContainText('Stop Story');
+    await page.getByTestId('stories-play').click();
+    await expect(page.getByTestId('stories-play')).toContainText('Play Story');
+  });
+
+  test('accessibility: toggles set classes and root font-size on <html>', async ({ page }) => {
+    await page.goto(REACT_URL);
+    await page.getByRole('button', { name: 'Tools' }).click();
+    await page.getByText('♿ A11y').click();
+    await expect(page.getByText('Accessibility')).toBeVisible();
+
+    await page.getByText('High Contrast').click();
+    await expect(page.locator('html')).toHaveClass(/a11y-high-contrast/);
+
+    await page.getByText('Large Text').click();
+    const fontSize = await page.evaluate(() => document.documentElement.style.fontSize);
+    expect(fontSize).toBe('20px');
+  });
+
+  test('track import: parses inline GPX into listed points', async ({ page }) => {
+    await page.goto(REACT_URL);
+    await page.getByRole('button', { name: 'Data' }).click();
+    await page.getByText('🗺 Tracks').click();
+    await expect(page.getByText('Track Import')).toBeVisible();
+
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'walk.gpx',
+      mimeType: 'application/gpx+xml',
+      buffer: Buffer.from(SAMPLE_GPX),
+    });
+
+    await expect(page.getByTestId('track-status')).toContainText('3 points');
+    await expect(page.getByText('3 pts')).toBeVisible();
+
+    const v = await readViewer(page, "v.entities.values.filter(e => e.id.indexOf('track-pt-') === 0).length");
+    if (v.present) expect(v.value).toBe(3);
+  });
+
+  test('vector tiles: adds an MVT source+layer to the live MapLibre map', async ({ page }) => {
+    await page.goto(REACT_URL);
+    // switch to MapLibre and wait for the map to render
+    await page.getByRole('textbox', { name: 'Renderer' }).click();
+    await page.getByRole('option', { name: 'MapLibre' }).click();
+    await expect(page.locator('#maplibre-container canvas').first()).toBeVisible({ timeout: 15000 });
+    await page.waitForFunction(() => window.__viewtopiaMap && window.__viewtopiaMap.isStyleLoaded(), null, { timeout: 15000 });
+
+    await page.getByRole('button', { name: 'Data' }).click();
+    await page.getByText('🔷 Vector Tiles').click();
+    await expect(page.getByText('Vector Tiles', { exact: true })).toBeVisible();
+
+    await page.getByPlaceholder('Source name').fill('Parcels');
+    await page.getByPlaceholder('/api/v1/branches/{id}/tiles/{z}/{x}/{y}').fill('https://example.com/{z}/{x}/{y}.pbf');
+    await page.getByRole('button', { name: 'Add Source' }).click();
+
+    await expect(page.getByTestId('vt-status')).toContainText('Added Parcels');
+    const hasSource = await page.evaluate(() =>
+      Object.keys(window.__viewtopiaMap.getStyle().sources).some((k) => k.startsWith('vt-')),
+    );
+    expect(hasSource).toBe(true);
+  });
+});

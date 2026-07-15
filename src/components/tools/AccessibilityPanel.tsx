@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Paper,
   Text,
@@ -6,16 +5,17 @@ import {
   Group,
   ActionIcon,
   Switch,
-  Select,
 } from '@mantine/core';
 import { IconAccessible, IconX } from '@tabler/icons-react';
+import { useAccessibilityStore } from '../../store/accessibility';
 
 export function AccessibilityPanel({ onClose }: { onClose: () => void }) {
-  const [highContrast, setHighContrast] = useState(false);
-  const [largeText, setLargeText] = useState(false);
-  const [reducedMotion, setReducedMotion] = useState(false);
-  const [screenReader, setScreenReader] = useState(false);
-  const [colorMode, setColorMode] = useState<string | null>('normal');
+  const highContrast = useAccessibilityStore((s) => s.highContrast);
+  const largeText = useAccessibilityStore((s) => s.largeText);
+  const reduceMotion = useAccessibilityStore((s) => s.reduceMotion);
+  const setHighContrast = useAccessibilityStore((s) => s.setHighContrast);
+  const setLargeText = useAccessibilityStore((s) => s.setLargeText);
+  const setReduceMotion = useAccessibilityStore((s) => s.setReduceMotion);
 
   return (
     <Paper
@@ -62,31 +62,13 @@ export function AccessibilityPanel({ onClose }: { onClose: () => void }) {
         <Switch
           size="xs"
           label="Reduced Motion"
-          checked={reducedMotion}
-          onChange={(e) => setReducedMotion(e.currentTarget.checked)}
+          checked={reduceMotion}
+          onChange={(e) => setReduceMotion(e.currentTarget.checked)}
           color="violet"
         />
-        <Switch
-          size="xs"
-          label="Screen Reader Hints"
-          checked={screenReader}
-          onChange={(e) => setScreenReader(e.currentTarget.checked)}
-          color="violet"
-        />
-
-        <Select
-          size="xs"
-          label="Color Vision"
-          data={[
-            { value: 'normal', label: 'Normal' },
-            { value: 'protanopia', label: 'Protanopia' },
-            { value: 'deuteranopia', label: 'Deuteranopia' },
-            { value: 'tritanopia', label: 'Tritanopia' },
-          ]}
-          value={colorMode}
-          onChange={setColorMode}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
-        />
+        <Text size="xs" c="dimmed">
+          Reduced motion skips camera flight animations in bookmarks and stories.
+        </Text>
       </Stack>
     </Paper>
   );

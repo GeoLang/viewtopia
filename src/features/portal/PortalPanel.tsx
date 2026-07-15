@@ -45,6 +45,7 @@ export function PortalPanel({ onClose }: { onClose: () => void }) {
     addItem,
     deleteItem,
     filtered,
+    error,
   } = usePortalStore();
   const owner = useAuthStore((s) => s.user?.name);
 
@@ -106,6 +107,12 @@ export function PortalPanel({ onClose }: { onClose: () => void }) {
             onChange={(v) => setSharingFilter((v as PortalSharing) || '')}
           />
         </Group>
+
+        {error && (
+          <Text size="sm" c="red.4" ta="center">
+            {error}
+          </Text>
+        )}
 
         {items.length === 0 ? (
           <Text size="sm" c="dimmed" py="lg" ta="center">

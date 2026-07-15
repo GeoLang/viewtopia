@@ -3,6 +3,7 @@ import maplibregl from 'maplibre-gl';
 import { useAppStore } from '../store/app';
 import { getSharedCamera, setSharedCamera } from './sharedCamera';
 import { maplibreRasterStyle } from './basemapTiles';
+import { setActiveMapLibre } from '../viewer/registry';
 
 interface UseMapLibreOptions {
   containerId?: string;
@@ -22,6 +23,7 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
+        setActiveMapLibre(null);
       }
       return;
     }
@@ -58,6 +60,7 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
     });
 
     mapRef.current = map;
+    setActiveMapLibre(map);
   }, [isActive, opts.containerId, basemap]);
 
   // Swap basemap tiles when already active
