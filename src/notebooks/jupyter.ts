@@ -282,6 +282,39 @@ export class JupyterKernelClient {
   }
 }
 
+// Default kernel config for the platform stack: the same-origin /jupyter proxy
+// (deploy/nginx-platform.conf) and a fixed token that must match JUPYTER_TOKEN in
+// docker-compose.platform.yml. Users override both via Settings.
+const STORAGE_KEY = 'viewtopia-jupyter-config';
+export const DEFAULT_JUPYTER_TOKEN = 'viewtopia-local';
+
+function defaultBaseUrl(): string {
+  return typeof window !== 'undefined' ? `${window.location.origin}/jupyter` : 'http://localhost:8888';
+}
+
+/** Effective kernel config: saved override merged over the platform defaults. */
+export function loadKernelConfig(): KernelConfig {
+  let saved: Partial<KernelConfig> = {};
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
+    if (raw) saved = JSON.parse(raw);
+  } catch { /* ignore malformed storage */ }
+  return {
+    baseUrl: saved.baseUrl ?? defaultBaseUrl(),
+    token: saved.token ?? DEFAULT_JUPYTER_TOKEN,
+    kernelName: saved.kernelName ?? 'python3',
+  };
+}
+
+export function saveKernelConfig(config: KernelConfig): void {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    baseUrl: config.baseUrl,
+    token: config.token,
+    kernelName: config.kernelName,
+  }));
+}
+
 /** Singleton kernel client (one per ViewTopia session) */
 let kernelClient: JupyterKernelClient | null = null;
 

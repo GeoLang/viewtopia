@@ -1,9 +1,10 @@
 import { create } from 'zustand';
 
 /**
- * Authentication state (ported from vanilla auth.js). JWT login against the
- * TileTopia backend (`/api/v1/auth/*`), plus an API-key path. The session is
- * persisted to localStorage under `viewtopia_auth` and restored on load.
+ * Authentication state (ported from vanilla auth.js). JWT auth against the
+ * TileTopia backend: POST /api/v1/auth/login and /api/v1/auth/signup, both
+ * returning `{ token, user }`. Also an API-key path. The session is persisted
+ * to localStorage under `viewtopia_auth` and restored on load.
  */
 
 export interface AuthUser {
@@ -83,13 +84,17 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   register: async (name, email, password) => {
     try {
-      const res = await fetch('/api/v1/auth/register', {
+      const res = await fetch('/api/v1/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ email, password, name }),
       });
       if (res.ok) {
-        set({ error: null });
+        // signup returns { token, user }; log the new user straight in.
+        const data = await res.json();
+        const user: AuthUser = data.user || { name, email };
+        persist(user, data.token);
+        set({ loggedIn: true, user, token: data.token, error: null });
         return true;
       }
       const err = await res.json().catch(() => ({ message: 'Registration failed' }));

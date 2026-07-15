@@ -90,4 +90,48 @@ test.describe('Golden path — live platform stack', () => {
     expect(Array.isArray(r.json?.geometry)).toBe(true);
     expect(r.json.geometry.length).toBeGreaterThan(1);
   });
+
+  test('python cell round-trips via /jupyter/ proxy (REST + kernel WS)', async ({ page }) => {
+    await page.goto('/');
+    // Skip when the notebook kernel service isn't part of this stack.
+    const probe = await fetchFromApp(page, '/jupyter/api');
+    test.skip(probe.status !== 200, '/jupyter/ not available');
+
+    // Same browser-origin path the notebook uses (src/notebooks/jupyter.ts):
+    // start a kernel over REST, execute `1+1` over the kernel WebSocket.
+    const result = await page.evaluate(async (token) => {
+      const auth = { Authorization: `token ${token}` };
+      const start = await fetch('/jupyter/api/kernels', {
+        method: 'POST',
+        headers: { ...auth, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'python3' }),
+      });
+      const { id } = await start.json();
+      const wsBase = location.origin.replace(/^http/, 'ws');
+      const ws = new WebSocket(`${wsBase}/jupyter/api/kernels/${id}/channels?token=${encodeURIComponent(token)}`);
+      const msgId = crypto.randomUUID().replace(/-/g, '');
+      const value = await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('timeout')), 20000);
+        ws.onopen = () => ws.send(JSON.stringify({
+          header: { msg_id: msgId, msg_type: 'execute_request', username: 't', session: msgId, date: new Date().toISOString(), version: '5.3' },
+          parent_header: {}, metadata: {},
+          content: { code: '1+1', silent: false, store_history: true, user_expressions: {}, allow_stdin: false, stop_on_error: true },
+          channel: 'shell',
+        }));
+        ws.onerror = () => reject(new Error('ws error'));
+        ws.onmessage = (ev) => {
+          const msg = JSON.parse(ev.data);
+          if (msg.parent_header?.msg_id === msgId && msg.header.msg_type === 'execute_result') {
+            clearTimeout(timer);
+            resolve(msg.content.data['text/plain']);
+          }
+        };
+      });
+      ws.close();
+      await fetch(`/jupyter/api/kernels/${id}`, { method: 'DELETE', headers: auth });
+      return value;
+    }, 'viewtopia-local');
+
+    expect(String(result).trim()).toBe('2');
+  });
 });

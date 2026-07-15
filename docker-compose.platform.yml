@@ -212,6 +212,27 @@ services:
       embeddings:
         condition: service_started
 
+  # ── Notebooks (Python) ────────────────────────────────────────────
+  #
+  # Backs viewtopia's notebook python cells (src/notebooks/jupyter.ts) via the
+  # Jupyter kernel WebSocket API. scipy-notebook ships numpy/pandas/matplotlib so
+  # rich outputs (plots, DataFrame tables) render out of the box. nginx routes
+  # /jupyter/ here; base_url=/jupyter keeps kernel WS paths correct behind the proxy.
+  #
+  # Env vars:
+  #   JUPYTER_TOKEN — fixed auth token; MUST match DEFAULT_JUPYTER_TOKEN in
+  #                   src/notebooks/jupyter.ts (default: viewtopia-local).
+  jupyter:
+    image: quay.io/jupyter/scipy-notebook:latest
+    environment:
+      JUPYTER_TOKEN: ${JUPYTER_TOKEN:-viewtopia-local}
+    command:
+      - start-notebook.py
+      - --ServerApp.base_url=/jupyter
+      - --ServerApp.allow_origin=*
+      - --ServerApp.allow_remote_access=True
+      - --ServerApp.trust_xheaders=True
+
   # ── Frontend ──────────────────────────────────────────────────────
 
   viewtopia:

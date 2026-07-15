@@ -4,7 +4,7 @@
 import { create } from 'zustand';
 import type { Notebook, NotebookCell, CellOutput, CellType, MapAction } from './types';
 import { executeCodeCell, executeMapAction, executeSqlCell, type NotebookRuntime } from './runtime';
-import { getKernelClient, type JupyterOutput } from './jupyter';
+import { getKernelClient, createKernelClient, loadKernelConfig, type JupyterOutput } from './jupyter';
 
 // IndexedDB storage for notebooks
 const DB_NAME = 'viewtopia-notebooks';
@@ -380,15 +380,16 @@ function jupyterOutputToCellOutput(jOut: JupyterOutput): CellOutput {
 }
 
 async function executePythonCell(cell: NotebookCell): Promise<CellOutput[]> {
-  const client = getKernelClient();
-  if (!client) {
-    return [{ type: 'error', data: 'No Jupyter kernel connected. Go to Settings → Jupyter to connect.', timestamp: Date.now() }];
-  }
-  if (client.getStatus() === 'disconnected') {
-    return [{ type: 'error', data: 'Jupyter kernel is disconnected. Reconnect in Settings.', timestamp: Date.now() }];
-  }
-
   try {
+    // lazily connect to the platform kernel (or the user's saved override) so
+    // python cells run without a manual connect step.
+    let client = getKernelClient();
+    if (!client) {
+      client = createKernelClient(loadKernelConfig());
+    }
+    if (client.getStatus() === 'disconnected') {
+      await client.connect();
+    }
     const jupyterOutputs = await client.execute(cell.source);
     return jupyterOutputs.map(jupyterOutputToCellOutput);
   } catch (err) {

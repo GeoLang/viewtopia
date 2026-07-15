@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Paper,
   Text,
@@ -7,16 +7,48 @@ import {
   ActionIcon,
   Switch,
   Slider,
+  Select,
 } from '@mantine/core';
 import { IconSun, IconX } from '@tabler/icons-react';
+import { Cartesian3, DirectionalLight, SunLight, JulianDate } from 'cesium';
+import { getActiveCesiumViewer } from '../../viewer/registry';
+
+/** A downward light direction derived from the time of day (rough sun sweep). */
+function directionForHour(hour: number): Cartesian3 {
+  const a = (hour / 24) * Math.PI * 2 - Math.PI / 2;
+  return Cartesian3.normalize(new Cartesian3(Math.cos(a), Math.sin(a), -0.6), new Cartesian3());
+}
 
 export function LightingPanel({ onClose }: { onClose: () => void }) {
   const [enabled, setEnabled] = useState(false);
   const [hour, setHour] = useState(12);
-  const [month, setMonth] = useState(6);
-  const [shadowsOn, setShadowsOn] = useState(true);
+  const [lightType, setLightType] = useState<string>('sun');
+  const [hdr, setHdr] = useState(false);
+  const [atmosphere, setAtmosphere] = useState(true);
+  const [status, setStatus] = useState('No active viewer');
 
   const timeLabel = `${Math.floor(hour)}:${String(Math.round((hour % 1) * 60)).padStart(2, '0')}`;
+
+  useEffect(() => {
+    const viewer = getActiveCesiumViewer();
+    if (!viewer) {
+      setStatus('No active viewer');
+      return;
+    }
+    viewer.scene.globe.enableLighting = enabled;
+    viewer.scene.highDynamicRange = hdr;
+    if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = atmosphere;
+    viewer.scene.light =
+      lightType === 'directional'
+        ? new DirectionalLight({ direction: directionForHour(hour) })
+        : new SunLight();
+    viewer.clock.shouldAnimate = false;
+    const now = new Date();
+    viewer.clock.currentTime = JulianDate.fromDate(
+      new Date(now.getFullYear(), now.getMonth(), now.getDate(), Math.floor(hour), Math.round((hour % 1) * 60)),
+    );
+    setStatus(`lighting ${enabled ? 'on' : 'off'} (${lightType})`);
+  }, [enabled, hour, lightType, hdr, atmosphere]);
 
   return (
     <Paper
@@ -54,19 +86,38 @@ export function LightingPanel({ onClose }: { onClose: () => void }) {
           color="violet"
         />
 
+        <Select
+          size="xs"
+          label="Light Source"
+          data={[
+            { value: 'sun', label: 'Sun Light' },
+            { value: 'directional', label: 'Directional' },
+          ]}
+          value={lightType}
+          onChange={(v) => v && setLightType(v)}
+          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
+        />
+
         <Text size="xs" c="dimmed">Time of Day: {timeLabel}</Text>
         <Slider size="xs" min={0} max={24} step={0.25} value={hour} onChange={setHour} color="yellow" />
 
-        <Text size="xs" c="dimmed">Month: {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][month - 1]}</Text>
-        <Slider size="xs" min={1} max={12} value={month} onChange={setMonth} color="yellow" />
+        <Switch
+          size="xs"
+          label="HDR"
+          checked={hdr}
+          onChange={(e) => setHdr(e.currentTarget.checked)}
+          color="violet"
+        />
 
         <Switch
           size="xs"
-          label="Show Shadows"
-          checked={shadowsOn}
-          onChange={(e) => setShadowsOn(e.currentTarget.checked)}
+          label="Atmosphere"
+          checked={atmosphere}
+          onChange={(e) => setAtmosphere(e.currentTarget.checked)}
           color="violet"
         />
+
+        <Text size="xs" c="green" data-testid="lighting-status">{status}</Text>
       </Stack>
     </Paper>
   );

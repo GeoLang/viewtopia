@@ -31,11 +31,18 @@ function defaultConfig(type: WidgetType): Record<string, unknown> {
     case 'list':
       return { items: [] };
     case 'chart':
-      return { chartType: 'bar', data: [] };
+      return {
+        chartType: 'bar',
+        data: [
+          { label: 'A', value: 30 },
+          { label: 'B', value: 60 },
+          { label: 'C', value: 45 },
+        ],
+      };
     case 'richtext':
       return { html: '<p>Enter text...</p>' };
     case 'map':
-      return { center: [0, 0], zoom: 2 };
+      return { center: [0, 20], zoom: 1 };
     default:
       return {};
   }
@@ -52,6 +59,7 @@ interface DashboardsState {
   renameActive: (title: string) => void;
   addWidget: (type: WidgetType) => void;
   removeWidget: (widgetId: string) => void;
+  updateWidgetConfig: (widgetId: string, patch: Record<string, unknown>) => void;
 }
 
 /** Save the dashboards array and mirror it into state. */
@@ -136,6 +144,25 @@ export const useDashboardsStore = create<DashboardsState>((set, get) => ({
           ? {
               ...d,
               widgets: d.widgets.filter((w) => w.id !== widgetId),
+              modified: new Date().toISOString(),
+            }
+          : d,
+      ),
+    );
+  },
+
+  updateWidgetConfig: (widgetId, patch) => {
+    const { dashboards, activeId } = get();
+    if (!activeId) return;
+    commit(
+      set,
+      dashboards.map((d) =>
+        d.id === activeId
+          ? {
+              ...d,
+              widgets: d.widgets.map((w) =>
+                w.id === widgetId ? { ...w, config: { ...w.config, ...patch } } : w,
+              ),
               modified: new Date().toISOString(),
             }
           : d,

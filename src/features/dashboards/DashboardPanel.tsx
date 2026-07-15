@@ -11,10 +11,13 @@ import {
   SimpleGrid,
   Box,
   Progress,
+  Collapse,
 } from '@mantine/core';
-import { IconPlus, IconTrash, IconArrowLeft } from '@tabler/icons-react';
+import { IconPlus, IconTrash, IconArrowLeft, IconSettings } from '@tabler/icons-react';
 import { useDashboardsStore } from './store';
-import type { DashboardWidget, WidgetType } from './types';
+import { ChartView, ChartEditor } from './ChartWidget';
+import { MapView, MapEditor } from './MapWidget';
+import type { ChartDatum, ChartType, DashboardWidget, WidgetType } from './types';
 
 const WIDGET_TYPES: { type: WidgetType; label: string; desc: string }[] = [
   { type: 'map', label: '🗺️ Map', desc: 'Embedded map view' },
@@ -74,15 +77,14 @@ function WidgetContent({ widget }: { widget: DashboardWidget }) {
       );
     case 'chart':
       return (
-        <Text size="xs" c="dimmed" ta="center" py="md">
-          [Chart: {(c.chartType as string) || 'bar'}]
-        </Text>
+        <ChartView
+          chartType={(c.chartType as ChartType) ?? 'bar'}
+          data={(c.data as ChartDatum[]) ?? []}
+        />
       );
     case 'map':
       return (
-        <Text size="xs" c="dimmed" ta="center" py="md">
-          [Map Widget]
-        </Text>
+        <MapView center={(c.center as [number, number]) ?? [0, 0]} zoom={(c.zoom as number) ?? 1} />
       );
     default:
       return (
@@ -97,6 +99,7 @@ export function DashboardPanel({ onClose }: { onClose: () => void }) {
   const { dashboards, activeId, refresh, create, open, back, remove, renameActive, addWidget, removeWidget } =
     useDashboardsStore();
   const [picking, setPicking] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     refresh();
@@ -226,17 +229,35 @@ export function DashboardPanel({ onClose }: { onClose: () => void }) {
                     <Text size="xs" fw={600} c="white" lineClamp={1}>
                       {w.title}
                     </Text>
-                    <ActionIcon
-                      size="xs"
-                      variant="subtle"
-                      color="red"
-                      aria-label="Remove widget"
-                      onClick={() => removeWidget(w.id)}
-                    >
-                      <IconTrash size={12} />
-                    </ActionIcon>
+                    <Group gap={2} wrap="nowrap">
+                      {(w.type === 'chart' || w.type === 'map') && (
+                        <ActionIcon
+                          size="xs"
+                          variant="subtle"
+                          color="gray"
+                          aria-label="Widget settings"
+                          onClick={() => setEditingId((id) => (id === w.id ? null : w.id))}
+                        >
+                          <IconSettings size={12} />
+                        </ActionIcon>
+                      )}
+                      <ActionIcon
+                        size="xs"
+                        variant="subtle"
+                        color="red"
+                        aria-label="Remove widget"
+                        onClick={() => removeWidget(w.id)}
+                      >
+                        <IconTrash size={12} />
+                      </ActionIcon>
+                    </Group>
                   </Group>
                   <WidgetContent widget={w} />
+                  {(w.type === 'chart' || w.type === 'map') && (
+                    <Collapse in={editingId === w.id}>
+                      {w.type === 'chart' ? <ChartEditor widget={w} /> : <MapEditor widget={w} />}
+                    </Collapse>
+                  )}
                 </Card>
               ))}
             </SimpleGrid>

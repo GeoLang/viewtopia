@@ -15,26 +15,12 @@ import {
   Divider,
 } from '@mantine/core';
 import { IconBrandPython, IconPlugConnected, IconPlugConnectedX, IconRefresh } from '@tabler/icons-react';
-import { createKernelClient, getKernelClient, disconnectKernel, type KernelStatus, type KernelConfig } from './jupyter';
-
-const STORAGE_KEY = 'viewtopia-jupyter-config';
-
-function loadSavedConfig(): Partial<KernelConfig> {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch { /* ignore */ }
-  return {};
-}
-
-function saveConfig(config: Partial<KernelConfig>) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ baseUrl: config.baseUrl, kernelName: config.kernelName }));
-}
+import { createKernelClient, getKernelClient, disconnectKernel, loadKernelConfig, saveKernelConfig, type KernelStatus, type KernelConfig } from './jupyter';
 
 export function JupyterSettings() {
-  const saved = loadSavedConfig();
-  const [baseUrl, setBaseUrl] = useState(saved.baseUrl ?? 'http://localhost:8888');
-  const [token, setToken] = useState('');
+  const saved = loadKernelConfig();
+  const [baseUrl, setBaseUrl] = useState(saved.baseUrl);
+  const [token, setToken] = useState(saved.token);
   const [kernelName, setKernelName] = useState(saved.kernelName ?? 'python3');
   const [status, setStatus] = useState<KernelStatus>('disconnected');
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +42,7 @@ export function JupyterSettings() {
       const client = createKernelClient(config);
       client.onStatusChange(setStatus);
       await client.connect();
-      saveConfig(config);
+      saveKernelConfig(config);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Connection failed');
     } finally {
@@ -105,7 +91,7 @@ export function JupyterSettings() {
           <>
             <TextInput
               label="Jupyter Server URL"
-              placeholder="http://localhost:8888"
+              placeholder="/jupyter"
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.currentTarget.value)}
               size="xs"
@@ -133,7 +119,7 @@ export function JupyterSettings() {
               Connect
             </Button>
             <Text size="xs" c="dimmed">
-              Start a Jupyter server with: <code>jupyter notebook --NotebookApp.token=your-token</code>
+              Defaults to the platform's built-in kernel at <code>/jupyter</code>. Override to use your own server.
             </Text>
           </>
         ) : (

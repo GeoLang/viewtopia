@@ -6,10 +6,18 @@
  */
 import type { Viewer } from 'cesium';
 
+declare global {
+  interface Window {
+    // exposed for e2e/debug so tests can assert live viewer state
+    __viewtopiaViewer?: Viewer | null;
+  }
+}
+
 let cesiumViewer: Viewer | null = null;
 
 export function setActiveCesiumViewer(v: Viewer | null): void {
   cesiumViewer = v;
+  window.__viewtopiaViewer = v;
 }
 
 export function getActiveCesiumViewer(): Viewer | null {

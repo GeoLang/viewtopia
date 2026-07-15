@@ -1,20 +1,67 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Paper,
   Text,
   Stack,
   Group,
   ActionIcon,
-  Switch,
   Select,
   Slider,
+  Button,
+  TextInput,
 } from '@mantine/core';
 import { IconWorld, IconX } from '@tabler/icons-react';
+import {
+  createWorldTerrainAsync,
+  CesiumTerrainProvider,
+  EllipsoidTerrainProvider,
+} from 'cesium';
+import { getActiveCesiumViewer } from '../../viewer/registry';
 
 export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
-  const [enabled, setEnabled] = useState(false);
   const [provider, setProvider] = useState<string | null>('cesium');
+  const [url, setUrl] = useState('');
   const [exaggeration, setExaggeration] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState('Ellipsoid (default)');
+
+  // Vertical exaggeration is a scene setting: apply live, no provider needed.
+  useEffect(() => {
+    const viewer = getActiveCesiumViewer();
+    if (viewer) viewer.scene.verticalExaggeration = exaggeration;
+  }, [exaggeration]);
+
+  const enableTerrain = async () => {
+    const viewer = getActiveCesiumViewer();
+    if (!viewer) {
+      setStatus('No active viewer');
+      return;
+    }
+    setLoading(true);
+    try {
+      const tp =
+        provider === 'custom'
+          ? await CesiumTerrainProvider.fromUrl(url)
+          : await createWorldTerrainAsync();
+      viewer.terrainProvider = tp;
+      setStatus(provider === 'custom' ? 'Custom terrain enabled' : 'Cesium World Terrain enabled');
+    } catch (e) {
+      // World terrain needs an Ion token; a missing/invalid one rejects here.
+      setStatus(`Terrain failed: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetTerrain = () => {
+    const viewer = getActiveCesiumViewer();
+    if (!viewer) {
+      setStatus('No active viewer');
+      return;
+    }
+    viewer.terrainProvider = new EllipsoidTerrainProvider();
+    setStatus('Ellipsoid (default)');
+  };
 
   return (
     <Paper
@@ -44,20 +91,11 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
       </Group>
 
       <Stack gap="xs">
-        <Switch
-          size="xs"
-          label="Enable Terrain"
-          checked={enabled}
-          onChange={(e) => setEnabled(e.currentTarget.checked)}
-          color="violet"
-        />
-
         <Select
           size="xs"
           label="Provider"
           data={[
             { value: 'cesium', label: 'Cesium World Terrain' },
-            { value: 'mapzen', label: 'Mapzen/AWS' },
             { value: 'custom', label: 'Custom URL' },
           ]}
           value={provider}
@@ -65,8 +103,29 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
           styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
+        {provider === 'custom' && (
+          <TextInput
+            size="xs"
+            label="Terrain URL"
+            placeholder="https://…/terrain"
+            value={url}
+            onChange={(e) => setUrl(e.currentTarget.value)}
+            styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
+          />
+        )}
+
+        <Button size="xs" color="violet" onClick={enableTerrain} loading={loading} fullWidth>
+          Enable Terrain
+        </Button>
+
         <Text size="xs" c="dimmed">Exaggeration: {exaggeration.toFixed(1)}×</Text>
         <Slider size="xs" min={0.5} max={10} step={0.5} value={exaggeration} onChange={setExaggeration} color="violet" />
+
+        <Button size="xs" variant="subtle" color="gray" onClick={resetTerrain} fullWidth>
+          Reset to Ellipsoid
+        </Button>
+
+        <Text size="xs" c="green" data-testid="terrain-status">{status}</Text>
       </Stack>
     </Paper>
   );

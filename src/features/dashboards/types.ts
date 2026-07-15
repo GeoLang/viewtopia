@@ -1,5 +1,12 @@
 export type WidgetType = 'map' | 'chart' | 'indicator' | 'list' | 'gauge' | 'richtext';
 
+export type ChartType = 'bar' | 'line' | 'pie';
+
+export interface ChartDatum {
+  label: string;
+  value: number;
+}
+
 export interface WidgetLayout {
   x: number;
   y: number;

@@ -19,6 +19,9 @@ import {
   IconCurrencyDollar,
   IconMapPin,
 } from '@tabler/icons-react';
+import { searchComps } from '../../lib/realEstate';
+
+const METERS_PER_MILE = 1609.34;
 
 interface CompSale {
   address: string;
@@ -35,6 +38,7 @@ interface CompSale {
 }
 
 interface CompsPanelProps {
+  branchId: string | null;
   subjectLat: number | null;
   subjectLng: number | null;
   onFlyTo: (lat: number, lng: number, zoom?: number) => void;
@@ -43,6 +47,7 @@ interface CompsPanelProps {
 }
 
 export function CompsPanel({
+  branchId,
   subjectLat,
   subjectLng,
   onFlyTo,
@@ -62,36 +67,46 @@ export function CompsPanel({
       setError('Select a subject property first (use Parcel panel)');
       return;
     }
+    if (!branchId) {
+      setError('Sales dataset not loaded. Run scripts/seed-parcels.mjs.');
+      return;
+    }
     setLoading(true);
     setError(null);
 
     try {
-      const params = new URLSearchParams({
-        lat: subjectLat.toString(),
-        lng: subjectLng.toString(),
-        radius: radius.toString(),
-        months: months.toString(),
-        min_sqft: (minSqft || 0).toString(),
-        max_sqft: (maxSqft || 99999).toString(),
+      const num = (v: number | string, fallback: number): number => {
+        const n = typeof v === 'number' ? v : parseFloat(v);
+        return Number.isFinite(n) ? n : fallback;
+      };
+      const { comps: found } = await searchComps(branchId, {
+        lng: subjectLng,
+        lat: subjectLat,
+        radiusM: radius * METERS_PER_MILE,
+        maxDays: months * 30,
+        minSqft: num(minSqft, 0),
+        maxSqft: num(maxSqft, 99999),
       });
-      const res = await fetch(`/api/comps/search?${params}`);
-      if (!res.ok) throw new Error(`Search failed: ${res.statusText}`);
-      const data = await res.json();
-      const results: CompSale[] = (data.sales || []).map(
-        (s: Record<string, unknown>) => ({
-          address: s.address as string,
-          saleDate: s.sale_date as string,
-          salePrice: s.sale_price as number,
-          sqft: s.sqft as number,
-          pricePerSqft: (s.sale_price as number) / (s.sqft as number),
-          bedrooms: s.bedrooms as number,
-          bathrooms: s.bathrooms as number,
-          yearBuilt: s.year_built as number,
-          distance: s.distance as number,
-          lat: s.lat as number,
-          lng: s.lng as number,
-        }),
-      );
+      const results: CompSale[] = found.map((c) => {
+        const props = c.properties;
+        const propNum = (key: string): number => {
+          const v = props[key];
+          return typeof v === 'number' ? v : 0;
+        };
+        return {
+          address: c.address,
+          saleDate: c.saleDate,
+          salePrice: c.salePrice,
+          sqft: c.sqft,
+          pricePerSqft: c.pricePerSqft,
+          bedrooms: propNum('bedrooms'),
+          bathrooms: propNum('bathrooms'),
+          yearBuilt: propNum('year_built'),
+          distance: c.distanceM / METERS_PER_MILE,
+          lat: propNum('lat'),
+          lng: propNum('lng'),
+        };
+      });
       setComps(results);
       onHighlightComps(results.map((c) => ({ lat: c.lat, lng: c.lng })));
     } catch (e) {

@@ -21,7 +21,9 @@ import {
   IconBuilding,
   IconRuler2,
   IconCurrencyDollar,
+  IconPlus,
 } from '@tabler/icons-react';
+import { searchParcels, parcelCentroid, type ParcelRecord } from '../../lib/realEstate';
 
 interface ParcelInfo {
   apn: string;
@@ -41,9 +43,12 @@ interface ParcelInfo {
 }
 
 interface ParcelPanelProps {
+  branchId: string | null;
   onFlyTo: (lat: number, lng: number, zoom?: number) => void;
   onHighlightParcel: (geometry: GeoJSON.Geometry | null) => void;
   onClose: () => void;
+  onSubjectFound?: (lat: number, lng: number) => void;
+  onAddToSelection?: (parcel: ParcelRecord) => void;
 }
 
 const ZONING_COLORS: Record<string, string> = {
@@ -62,61 +67,67 @@ const ZONING_COLORS: Record<string, string> = {
 };
 
 export function ParcelPanel({
+  branchId,
   onFlyTo,
   onHighlightParcel,
   onClose,
+  onSubjectFound,
+  onAddToSelection,
 }: ParcelPanelProps) {
   const [searchType, setSearchType] = useState<string | null>('apn');
   const [query, setQuery] = useState('');
   const [parcel, setParcel] = useState<ParcelInfo | null>(null);
+  const [record, setRecord] = useState<ParcelRecord | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSearch = async () => {
     if (!query.trim()) return;
+    if (!branchId) {
+      setError('Parcel dataset not loaded. Run scripts/seed-parcels.mjs.');
+      return;
+    }
     setLoading(true);
     setError(null);
     setParcel(null);
+    setRecord(null);
 
     try {
-      const params = new URLSearchParams({
-        type: searchType || 'apn',
-        q: query.trim(),
-      });
-      const res = await fetch(`/api/parcels/search?${params}`);
-      if (!res.ok) {
-        throw new Error(`Search failed: ${res.statusText}`);
-      }
-      const data = await res.json();
-      if (data.features && data.features.length > 0) {
-        const feature = data.features[0];
-        const props = feature.properties;
-        setParcel({
-          apn: props.apn || props.parcel_id || '',
-          address: props.address || props.situs || '',
-          owner: props.owner || props.owner_name || '',
-          area: props.area_sqft || props.shape_area || 0,
-          areaUnit: 'sq ft',
-          zoning: props.zoning || props.zone_code || 'Unknown',
-          zoningColor: ZONING_COLORS[props.zoning] || '#757575',
-          landUse: props.land_use || props.use_code_desc || '',
-          assessedValue: props.assessed_value || props.total_av || 0,
-          marketValue: props.market_value || props.total_mv || 0,
-          yearBuilt: props.year_built || null,
-          buildingArea: props.building_sqft || props.bldg_area || null,
-          floodZone: props.flood_zone || 'X',
-          geometry: feature.geometry,
-        });
-        // Fly to parcel centroid
-        if (feature.geometry) {
-          const centroid = computeCentroid(feature.geometry);
-          if (centroid) {
-            onFlyTo(centroid[1], centroid[0], 18);
-          }
-          onHighlightParcel(feature.geometry);
-        }
-      } else {
+      const results = await searchParcels(branchId, searchType || 'apn', query.trim(), 1);
+      if (results.length === 0) {
         setError('No parcel found for this query.');
+        return;
+      }
+      const r = results[0];
+      const props = r.properties;
+      const num = (key: string): number => {
+        const v = props[key];
+        return typeof v === 'number' ? v : 0;
+      };
+      setRecord(r);
+      setParcel({
+        apn: r.apn,
+        address: r.address,
+        owner: r.owner,
+        area: r.sqft || num('area_sqft'),
+        areaUnit: 'sq ft',
+        zoning: r.zoning || 'Unknown',
+        zoningColor: ZONING_COLORS[r.zoning] || '#757575',
+        landUse: typeof props.land_use === 'string' ? props.land_use : '',
+        assessedValue: num('assessed_value'),
+        marketValue: num('market_value'),
+        yearBuilt: num('year_built') || null,
+        buildingArea: num('building_sqft') || null,
+        floodZone: typeof props.flood_zone === 'string' ? props.flood_zone : 'X',
+        geometry: r.geometry,
+      });
+      if (r.geometry) {
+        const centroid = parcelCentroid(r);
+        if (centroid) {
+          onFlyTo(centroid[1], centroid[0], 18);
+          onSubjectFound?.(centroid[1], centroid[0]);
+        }
+        onHighlightParcel(r.geometry);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Search failed');
@@ -312,14 +323,25 @@ export function ParcelPanel({
                   variant="light"
                   leftSection={<IconMapPin size={14} />}
                   onClick={() => {
-                    if (parcel.geometry) {
-                      const c = computeCentroid(parcel.geometry);
+                    if (record) {
+                      const c = parcelCentroid(record);
                       if (c) onFlyTo(c[1], c[0], 18);
                     }
                   }}
                 >
                   Zoom To
                 </Button>
+                {onAddToSelection && record && (
+                  <Button
+                    size="xs"
+                    variant="light"
+                    color="grape"
+                    leftSection={<IconPlus size={14} />}
+                    onClick={() => onAddToSelection(record)}
+                  >
+                    Add to selection
+                  </Button>
+                )}
               </Group>
             </Stack>
           </ScrollArea>
@@ -327,40 +349,4 @@ export function ParcelPanel({
       </Stack>
     </Paper>
   );
-}
-
-function computeCentroid(
-  geometry: GeoJSON.Geometry,
-): [number, number] | null {
-  const coords: number[][] = [];
-
-  function extractCoords(g: GeoJSON.Geometry) {
-    switch (g.type) {
-      case 'Point':
-        coords.push(g.coordinates as number[]);
-        break;
-      case 'MultiPoint':
-      case 'LineString':
-        (g.coordinates as number[][]).forEach((c) => coords.push(c));
-        break;
-      case 'MultiLineString':
-      case 'Polygon':
-        (g.coordinates as number[][][]).forEach((ring) =>
-          ring.forEach((c) => coords.push(c)),
-        );
-        break;
-      case 'MultiPolygon':
-        (g.coordinates as number[][][][]).forEach((poly) =>
-          poly.forEach((ring) => ring.forEach((c) => coords.push(c))),
-        );
-        break;
-    }
-  }
-
-  extractCoords(geometry);
-  if (coords.length === 0) return null;
-
-  const sumX = coords.reduce((s, c) => s + c[0], 0);
-  const sumY = coords.reduce((s, c) => s + c[1], 0);
-  return [sumX / coords.length, sumY / coords.length];
 }

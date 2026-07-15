@@ -7,18 +7,84 @@ import {
   ActionIcon,
   Slider,
   Select,
-  Switch,
+  Textarea,
+  Button,
   ColorInput,
 } from '@mantine/core';
 import { IconFlame, IconX } from '@tabler/icons-react';
+import { HeatmapLayer } from '@deck.gl/aggregation-layers';
+import { useDrawStore } from '../../store/draw';
+import {
+  collectPoints,
+  pointsFromDraw,
+  drawLayerOptions,
+  showPanelDeckLayer,
+  clearPanelDeckLayer,
+  type PointRecord,
+} from '../../lib/pointData';
+
+const GROUP = 'panel-heatmap';
+
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace('#', '');
+  return [
+    parseInt(h.slice(0, 2), 16) || 0,
+    parseInt(h.slice(2, 4), 16) || 0,
+    parseInt(h.slice(4, 6), 16) || 0,
+  ];
+}
 
 export function HeatmapPanel({ onClose }: { onClose: () => void }) {
-  const [radius, setRadius] = useState(25);
+  const features = useDrawStore((s) => s.features);
+  const [radius, setRadius] = useState(30);
   const [intensity, setIntensity] = useState(1);
-  const [enabled, setEnabled] = useState(false);
   const [colorLow, setColorLow] = useState('#0000ff');
   const [colorHigh, setColorHigh] = useState('#ff0000');
-  const [source, setSource] = useState<string | null>('loaded');
+  const [source, setSource] = useState<string>('pasted');
+  const [pasted, setPasted] = useState('');
+  const [status, setStatus] = useState<string | null>(null);
+
+  const sourceData: { value: string; label: string }[] = [
+    { value: 'pasted', label: 'Pasted GeoJSON' },
+    ...drawLayerOptions(features),
+  ];
+
+  const gatherPoints = (): PointRecord[] => {
+    if (source === 'pasted') {
+      try {
+        return collectPoints(JSON.parse(pasted));
+      } catch {
+        return [];
+      }
+    }
+    return pointsFromDraw(source);
+  };
+
+  const addLayer = () => {
+    const points = gatherPoints();
+    if (points.length === 0) {
+      setStatus('No points found in source');
+      return;
+    }
+    showPanelDeckLayer(
+      GROUP,
+      new HeatmapLayer<PointRecord>({
+        id: `panel-heatmap-${Date.now()}`,
+        data: points,
+        getPosition: (d) => d.position,
+        getWeight: (d) => Number(d.properties.weight) || 1,
+        radiusPixels: radius,
+        intensity,
+        colorRange: [hexToRgb(colorLow), hexToRgb(colorHigh)],
+      }),
+    );
+    setStatus(`Heatmap added: ${points.length} points`);
+  };
+
+  const removeLayer = () => {
+    clearPanelDeckLayer(GROUP);
+    setStatus('Heatmap removed');
+  };
 
   return (
     <Paper
@@ -48,25 +114,28 @@ export function HeatmapPanel({ onClose }: { onClose: () => void }) {
       </Group>
 
       <Stack gap="xs">
-        <Switch
-          size="xs"
-          label="Enable Heatmap"
-          checked={enabled}
-          onChange={(e) => setEnabled(e.currentTarget.checked)}
-          color="violet"
-        />
-
         <Select
           size="xs"
           label="Data Source"
-          data={[
-            { value: 'loaded', label: 'Loaded features' },
-            { value: 'density', label: 'Point density' },
-          ]}
+          data={sourceData}
           value={source}
-          onChange={setSource}
+          onChange={(v) => v && setSource(v)}
           styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
+
+        {source === 'pasted' && (
+          <Textarea
+            size="xs"
+            label="GeoJSON"
+            placeholder='{"type":"FeatureCollection","features":[…]}'
+            autosize
+            minRows={2}
+            maxRows={5}
+            value={pasted}
+            onChange={(e) => setPasted(e.currentTarget.value)}
+            styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
+          />
+        )}
 
         <Text size="xs" c="dimmed">Radius: {radius}px</Text>
         <Slider size="xs" min={5} max={100} value={radius} onChange={setRadius} color="violet" />
@@ -78,6 +147,15 @@ export function HeatmapPanel({ onClose }: { onClose: () => void }) {
           <ColorInput size="xs" label="Low" value={colorLow} onChange={setColorLow} />
           <ColorInput size="xs" label="High" value={colorHigh} onChange={setColorHigh} />
         </Group>
+
+        <Group gap="xs" grow>
+          <Button size="xs" color="violet" onClick={addLayer}>Add</Button>
+          <Button size="xs" variant="subtle" color="gray" onClick={removeLayer}>Remove</Button>
+        </Group>
+
+        {status && (
+          <Text size="xs" c="green" data-testid="heatmap-status">{status}</Text>
+        )}
       </Stack>
     </Paper>
   );

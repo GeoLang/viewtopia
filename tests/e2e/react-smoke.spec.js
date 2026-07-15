@@ -148,8 +148,14 @@ test.describe('React shell smoke', () => {
     await page.getByRole('button', { name: 'New Dashboard' }).click();
     await expect(page.getByText(/no widgets yet/i)).toBeVisible();
     // Add a widget via the picker.
-    await page.getByRole('button', { name: 'Widget' }).click();
+    await page.getByRole('button', { name: 'Widget', exact: true }).click();
     await page.getByRole('button', { name: /Indicator/ }).click();
     await expect(page.getByText('New indicator')).toBeVisible();
+    // Add a chart widget and confirm it renders a real svg, not placeholder text.
+    await page.getByRole('button', { name: 'Widget', exact: true }).click();
+    await page.getByRole('button', { name: /Chart/ }).click();
+    await expect(page.getByText('New chart')).toBeVisible();
+    await expect(page.locator('svg[aria-label$="chart"]')).toBeVisible();
+    await expect(page.getByText('[Chart: bar]')).toHaveCount(0);
   });
 });

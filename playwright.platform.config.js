@@ -10,7 +10,7 @@ import { defineConfig } from '@playwright/test';
 // it asserts the real nginx-served SPA + live backends on :5174.
 export default defineConfig({
   testDir: 'tests/e2e',
-  testMatch: 'golden-path.spec.js',
+  testMatch: ['golden-path.spec.js', 'realestate-smoke.spec.js'],
   timeout: 30000,
   use: {
     baseURL: 'http://localhost:5174',
