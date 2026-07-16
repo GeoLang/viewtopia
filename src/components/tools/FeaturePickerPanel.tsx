@@ -55,7 +55,7 @@ export function FeaturePickerPanel({ onClose }: { onClose: () => void }) {
           color="violet"
           checked={enabled}
           onChange={toggle}
-          label="Click a 3D Tiles feature to inspect"
+          label="Click a feature to inspect"
         />
 
         {selected === null ? (

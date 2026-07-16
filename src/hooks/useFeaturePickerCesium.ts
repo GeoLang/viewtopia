@@ -3,6 +3,7 @@ import type { MutableRefObject } from 'react';
 import {
   Viewer,
   Color,
+  Entity,
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
   Cesium3DTileFeature,
@@ -11,11 +12,18 @@ import {
 import type { Cartesian2 } from 'cesium';
 import { useFeaturePickerStore, type FeatureProp } from '../store/featurePicker';
 
+const toRow = (id: string, val: unknown): FeatureProp => ({
+  id,
+  value: typeof val === 'object' && val !== null ? JSON.stringify(val) : String(val),
+});
+
 /**
  * Cesium binding for the feature picker (ported from vanilla feature-picker.js).
- * While the picker is enabled, a left click on a 3D Tiles feature reads its
- * properties into the store and highlights it; the original colour is restored
- * when another feature is picked or the picker is disabled.
+ * While the picker is enabled, a left click reads the clicked feature's
+ * properties into the store. 3D Tiles features are also highlighted, and the
+ * original colour is restored when another feature is picked or the picker is
+ * disabled. Vector entities (GeoJSON loaded by the agent or sql_query) carry
+ * their properties in an entity property bag instead.
  */
 export function useFeaturePickerCesium(
   viewerRef: MutableRefObject<Viewer | null>,
@@ -45,19 +53,21 @@ export function useFeaturePickerCesium(
         const picked = v.scene.pick(click.position);
         if (defined(picked) && picked instanceof Cesium3DTileFeature) {
           const ids = picked.getPropertyIds();
-          const rows: FeatureProp[] = ids.map((id) => {
-            const val = picked.getProperty(id);
-            return {
-              id,
-              value: typeof val === 'object' ? JSON.stringify(val) : String(val),
-            };
-          });
+          const rows: FeatureProp[] = ids.map((id) => toRow(id, picked.getProperty(id)));
           useFeaturePickerStore.getState().setSelected(rows);
           originalColorRef.current = picked.color
             ? Color.clone(picked.color)
             : null;
           picked.color = Color.YELLOW.withAlpha(0.6);
           highlightedRef.current = picked;
+        } else if (defined(picked) && picked.id instanceof Entity) {
+          const entity: Entity = picked.id;
+          const bag = entity.properties?.getValue(v.clock.currentTime) ?? {};
+          const rows: FeatureProp[] = Object.entries(bag).map(([id, val]) => toRow(id, val));
+          if (entity.name) rows.unshift(toRow('name', entity.name));
+          useFeaturePickerStore
+            .getState()
+            .setSelected(rows.length > 0 ? rows : [toRow('(no properties)', '')]);
         } else {
           useFeaturePickerStore.getState().setSelected(null);
         }
