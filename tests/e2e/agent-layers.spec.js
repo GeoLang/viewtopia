@@ -127,6 +127,37 @@ test.describe('agent layers across renderers', () => {
     await expect.poll(() => cesiumLayerCount(page), { timeout: 30000 }).toBeGreaterThan(0);
   });
 
+  test('a result survives maplibre → deck.gl → maplibre', async ({ page }) => {
+    await seedAndReplay(page);
+
+    await switchRenderer(page, 'MapLibre');
+    await expect.poll(() => maplibreLayerIds(page), { timeout: 30000 }).not.toHaveLength(0);
+
+    await switchRenderer(page, 'deck.gl');
+    await expect
+      .poll(() => deckLayerIds(page), { timeout: 30000 })
+      .toEqual(expect.arrayContaining([expect.stringMatching(/^agent-layer-/)]));
+
+    // Returning rebuilds the map from scratch and re-sets its style.
+    await switchRenderer(page, 'MapLibre');
+    await expect.poll(() => maplibreLayerIds(page), { timeout: 30000 }).not.toHaveLength(0);
+  });
+
+  test('a basemap change keeps the agent layers', async ({ page }) => {
+    await seedAndReplay(page);
+    await switchRenderer(page, 'MapLibre');
+    await expect.poll(() => maplibreLayerIds(page), { timeout: 30000 }).not.toHaveLength(0);
+
+    // setStyle drops every source and layer; ours must come back.
+    await page
+      .locator('input[value="OSM"], input[value="Satellite"], input[value="Topo"], input[value="Dark"]')
+      .first()
+      .click();
+    await page.getByRole('option', { name: 'Satellite', exact: true }).click();
+
+    await expect.poll(() => maplibreLayerIds(page), { timeout: 30000 }).not.toHaveLength(0);
+  });
+
   test('renderUISpec leaves the active renderer alone', async ({ page }) => {
     await page.route('**/agent/geojson/**', (route) =>
       route.fulfill({ contentType: 'application/json', body: JSON.stringify(CAFES) }),
@@ -202,6 +233,23 @@ test.describe('feature picker on agent layers', () => {
     await expect.poll(tweens, { timeout: 30000, intervals: [100] }).toBe(0);
   }
 
+  /** deck's project() is canvas-relative; the canvas sits below the toolbar. */
+  const deckProject = (c) => {
+    const d = window.__viewtopiaDeck;
+    if (!d || !d.canvas) return null;
+    const [x, y] = d.getViewports()[0].project(c);
+    const r = d.canvas.getBoundingClientRect();
+    return { x: x + r.x, y: y + r.y };
+  };
+
+  const maplibreProject = (c) => {
+    const m = window.__viewtopiaMap;
+    if (!m) return null;
+    const p = m.project(c);
+    const r = m.getCanvas().getBoundingClientRect();
+    return { x: p.x + r.x, y: p.y + r.y };
+  };
+
   /** Project the cafe via Cesium's own entity — no Cesium global needed. */
   const cesiumProject = () => {
     const v = window.__viewtopiaViewer;
@@ -226,12 +274,28 @@ test.describe('feature picker on agent layers', () => {
   const featureInfo = (page) =>
     page.locator('div').filter({ hasText: /^Feature Info/ }).first();
 
+  /** The Inspect button is the picking mode — it arms the picker on its own. */
   async function enableInspect(page) {
     await page.getByRole('button', { name: 'Inspect' }).click();
-    // Mantine hides the real <input>; toggle via its visible label.
-    await page.getByText('Click a feature to inspect').click();
     await expect(page.getByLabel('Click a feature to inspect')).toBeChecked();
   }
+
+  test('the Inspect button arms picking on its own', async ({ page }) => {
+    await seedAndReplay(page);
+    await expect.poll(() => cesiumLayerCount(page), { timeout: 30000 }).toBeGreaterThan(0);
+    await waitForCesiumFlight(page);
+
+    // Opening the panel used to leave picking off, so a click did nothing.
+    await page.getByRole('button', { name: 'Inspect' }).click();
+    await expect(page.getByLabel('Click a feature to inspect')).toBeChecked();
+
+    await clickAt(page, cesiumProject);
+    await expect(featureInfo(page)).toContainText('Cafe Central');
+
+    // ...and clicking it again disarms.
+    await page.getByRole('button', { name: 'Inspect' }).click();
+    await expect(featureInfo(page)).toBeHidden();
+  });
 
   test('clicking a feature shows its properties on deck.gl', async ({ page }) => {
     await seedAndReplay(page);
@@ -242,17 +306,40 @@ test.describe('feature picker on agent layers', () => {
       .poll(() => deckLayerIds(page), { timeout: 30000 })
       .toEqual(expect.arrayContaining([expect.stringMatching(/^agent-layer-/)]));
 
-    await clickAt(page, () => {
-      const d = window.__viewtopiaDeck;
-      if (!d || !d.canvas) return null;
-      // project() is canvas-relative; the canvas sits below the toolbar.
-      const [x, y] = d.getViewports()[0].project([7.4246, 43.7384]);
-      const r = d.canvas.getBoundingClientRect();
-      return { x: x + r.x, y: y + r.y };
-    });
+    await clickAt(page, deckProject);
 
     await expect(featureInfo(page)).toContainText('Cafe Central');
     await expect(featureInfo(page)).toContainText('amenity');
+  });
+
+  // Agent points are 5px circles on deck/maplibre, vs Cesium's large pins. With
+  // no pick tolerance they need near-pixel aim, which reads as "only Cesium works".
+  test('a near-miss click still picks the feature on deck.gl', async ({ page }) => {
+    await seedAndReplay(page);
+    await enableInspect(page);
+    await switchRenderer(page, 'deck.gl');
+    await page.waitForFunction(() => !!window.__viewtopiaDeck, null, { timeout: 30000 });
+    await expect
+      .poll(() => deckLayerIds(page), { timeout: 30000 })
+      .toEqual(expect.arrayContaining([expect.stringMatching(/^agent-layer-/)]));
+
+    const pt = await settledPoint(page, deckProject);
+    await page.mouse.click(Math.round(pt.x) + 6, Math.round(pt.y) + 4);
+
+    await expect(featureInfo(page)).toContainText('Cafe Central');
+  });
+
+  test('a near-miss click still picks the feature on maplibre', async ({ page }) => {
+    await seedAndReplay(page);
+    await enableInspect(page);
+    await switchRenderer(page, 'MapLibre');
+    await page.waitForFunction(() => !!window.__viewtopiaMap, null, { timeout: 30000 });
+    await expect.poll(() => maplibreLayerIds(page), { timeout: 30000 }).not.toHaveLength(0);
+
+    const pt = await settledPoint(page, maplibreProject);
+    await page.mouse.click(Math.round(pt.x) + 6, Math.round(pt.y) + 4);
+
+    await expect(featureInfo(page)).toContainText('Cafe Central');
   });
 
   test('clicking a feature shows its properties on maplibre', async ({ page }) => {
@@ -280,9 +367,13 @@ test.describe('feature picker on agent layers', () => {
     await expect.poll(() => cesiumLayerCount(page), { timeout: 30000 }).toBeGreaterThan(0);
     await waitForCesiumFlight(page);
 
-    // Close the panel; picking stays on, so the result would otherwise be invisible.
-    await page.getByRole('button', { name: 'Inspect' }).click();
+    // Dismiss the panel without disarming (the Inspect button would do both),
+    // so a pick would otherwise land with nowhere to show.
+    await page.getByLabel('Close feature info').click();
     await expect(featureInfo(page)).toBeHidden();
+    await expect
+      .poll(() => page.evaluate(() => !!document.querySelector('input[role="switch"]')))
+      .toBe(false);
 
     await clickAt(page, cesiumProject);
     await expect(featureInfo(page)).toBeVisible();
@@ -310,6 +401,37 @@ test.describe('feature picker on agent layers', () => {
     await page.mouse.move(x - 40, y - 40);
     await page.mouse.move(x, y);
     await expect.poll(cursor, { timeout: 10000 }).toBe('pointer');
+  });
+
+  // A renderer switch rebuilds each viewer, so a picker bound to the old
+  // instance goes quietly dead. Arm first, switch away and back, then click.
+  test('picking still works on cesium after a renderer round trip', async ({ page }) => {
+    await seedAndReplay(page);
+    await enableInspect(page);
+
+    await switchRenderer(page, 'deck.gl');
+    await page.waitForFunction(() => !!window.__viewtopiaDeck, null, { timeout: 30000 });
+    await switchRenderer(page, 'CesiumJS');
+    await expect.poll(() => cesiumLayerCount(page), { timeout: 30000 }).toBeGreaterThan(0);
+    await waitForCesiumFlight(page);
+
+    await clickAt(page, cesiumProject);
+    await expect(featureInfo(page)).toContainText('Cafe Central');
+  });
+
+  test('picking still works on maplibre after a renderer round trip', async ({ page }) => {
+    await seedAndReplay(page);
+    await enableInspect(page);
+
+    await switchRenderer(page, 'MapLibre');
+    await page.waitForFunction(() => !!window.__viewtopiaMap, null, { timeout: 30000 });
+    await switchRenderer(page, 'deck.gl');
+    await page.waitForFunction(() => !!window.__viewtopiaDeck, null, { timeout: 30000 });
+    await switchRenderer(page, 'MapLibre');
+    await expect.poll(() => maplibreLayerIds(page), { timeout: 30000 }).not.toHaveLength(0);
+
+    await clickAt(page, maplibreProject);
+    await expect(featureInfo(page)).toContainText('Cafe Central');
   });
 
   test('clicking a feature still shows its properties on cesium', async ({ page }) => {
