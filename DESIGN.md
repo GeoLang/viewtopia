@@ -214,7 +214,7 @@ us which backend gaps actually block the product vs. which are cosmetic.
    no change.
 2. ✅ All vanilla-only features ported (P0 agent→map; P1 feature-picker / geojson-editor /
    style-editor; P2 theme-toggle / auth / portal / dashboards), each gated by a Playwright
-   smoke test (`npm run test:e2e:react`).
+   smoke test (`pnpm run test:e2e:react`).
 3. ✅ Deleted the vanilla `.js` shell (115 source files), `index-react.html`, the second
    Vite config, and the vanilla unit tests. Double-maintenance is over.
 
@@ -268,7 +268,7 @@ here → encode as a Playwright E2E gate.
 - [x] **Same-origin proxy verified from the browser** (the real app path) for ptolemy,
       tiletopia, geokode, itinera — after the nginx fix (#7)
 - [x] **Journey encoded as a Playwright E2E** — `tests/e2e/golden-path.spec.js` +
-      `playwright.platform.config.js`; run with `npm run test:e2e:platform`.
+      `playwright.platform.config.js`; run with `pnpm run test:e2e:platform`.
       **5/5 passing** against the live stack (2026-06-19)
 - [ ] Load a TileTopia layer (needs a tileset ingested; browser step)
 - [ ] Agent NL command drives the map (geolang → Letta; needs live LLM call + viewer)
