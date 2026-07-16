@@ -112,6 +112,9 @@ export function useDeckGL(opts: UseDeckGLOptions = {}) {
       initialViewState: viewState,
       viewState,
       controller: true,
+      // Agent points draw at a 5px radius; picking dead-centre only (deck's
+      // default) makes them near-unclickable next to Cesium's large pins.
+      pickingRadius: 8,
       onViewStateChange: ({ viewState: vs }) => {
         const next = vs as DeckViewState;
         viewStateRef.current = next;

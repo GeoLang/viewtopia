@@ -67,11 +67,25 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
       }
     };
 
+    // A basemap change calls setStyle, which drops every source and layer with
+    // it, so re-add ours whenever a reloaded style comes back without them.
+    // `styledata` only ever fires mid-load (isStyleLoaded false), so `idle` is
+    // the one that catches a settled style; it no-ops once ours are back.
+    const reapplyIfDropped = () => {
+      if (!map.isStyleLoaded()) return;
+      const sources = Object.keys(map.getStyle()?.sources ?? {});
+      if (layers.some((layer) => !sources.includes(`${PREFIX}${layer.id}`))) apply();
+    };
+
     if (map.isStyleLoaded()) apply();
     else map.on('load', apply);
+    map.on('styledata', reapplyIfDropped);
+    map.on('idle', reapplyIfDropped);
 
     return () => {
       map.off('load', apply);
+      map.off('styledata', reapplyIfDropped);
+      map.off('idle', reapplyIfDropped);
     };
   }, [layers, generation, mapRef, renderer, activeTab]);
 }

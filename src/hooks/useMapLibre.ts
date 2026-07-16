@@ -11,6 +11,8 @@ interface UseMapLibreOptions {
 
 export function useMapLibre(opts: UseMapLibreOptions = {}) {
   const mapRef = useRef<maplibregl.Map | null>(null);
+  /** Basemap the live style was built from, so activation doesn't re-set it. */
+  const styledBasemapRef = useRef<string | null>(null);
   const basemap = useAppStore((s) => s.basemap);
   const renderer = useAppStore((s) => s.renderer);
   const activeTab = useAppStore((s) => s.activeTab);
@@ -23,6 +25,7 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
+        styledBasemapRef.current = null;
         setActiveMapLibre(null);
       }
       return;
@@ -60,6 +63,7 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
     });
 
     mapRef.current = map;
+    styledBasemapRef.current = basemap;
     setActiveMapLibre(map);
   }, [isActive, opts.containerId, basemap]);
 
@@ -67,6 +71,10 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !isActive) return;
+    // The map is built with the current basemap, so re-setting it on activation
+    // would only race whatever else is adding layers to the style.
+    if (styledBasemapRef.current === basemap) return;
+    styledBasemapRef.current = basemap;
     const c = map.getCenter();
     const z = map.getZoom();
     const p = map.getPitch();

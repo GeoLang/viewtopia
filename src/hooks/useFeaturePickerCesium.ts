@@ -10,6 +10,7 @@ import {
   defined,
 } from 'cesium';
 import type { Cartesian2 } from 'cesium';
+import { useAppStore } from '../store/app';
 import {
   useFeaturePickerStore,
   toRow,
@@ -31,6 +32,10 @@ export function useFeaturePickerCesium(
   const handlerRef = useRef<ScreenSpaceEventHandler | null>(null);
   const highlightedRef = useRef<Cesium3DTileFeature | null>(null);
   const originalColorRef = useRef<Color | null>(null);
+  // A renderer switch destroys and rebuilds the viewer, so rebind to the new
+  // one — a handler left on the old canvas silently stops picking.
+  const renderer = useAppStore((s) => s.renderer);
+  const activeTab = useAppStore((s) => s.activeTab);
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -110,5 +115,5 @@ export function useFeaturePickerCesium(
       unsub();
       disable();
     };
-  }, [viewerRef]);
+  }, [viewerRef, renderer, activeTab]);
 }
