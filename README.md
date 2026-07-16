@@ -24,7 +24,7 @@
 | **Natural language queries** | "Fly to London and classify the point cloud" |
 | **30+ commands** | Measurement, routing, styling, analysis — all voice-driven |
 | **Session persistence** | Chat history saved and replayable |
-| **GeoLang integration** | AI-powered spatial reasoning via GeoLang backend |
+| **GeoLang agent (36 tools)** | Spatial reasoning backend: `sql_query` (DuckDB), `ptolemy_query`, `list_tilesets`, routing, QGIS (321 algorithms) |
 
 ### Analysis Tools
 | Feature | Description |
@@ -33,7 +33,7 @@
 | **Terrain Profile** | Cross-section elevation profiles |
 | **Shadow Analysis** | Time-of-day shadow simulation |
 | **Viewshed** | Line-of-sight visibility analysis |
-| **Routing** | OSRM point-to-point directions |
+| **Routing** | itinera point-to-point directions (public OSRM demo fallback) |
 | **Isochrone** | Travel-time zones from any point |
 | **Charts** | Histogram, scatter, and time series |
 
@@ -231,20 +231,21 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 
 **Web app only (frontend dev):**
 
-- **Node.js ≥ 20** and npm (Vite 6 / React 19)
+- **Node.js ≥ 20** and pnpm (pinned via `packageManager`; `corepack enable`)
 - A modern WebGL2 browser
 
 **Full platform (all backends, via Docker):**
 
 - **Docker Engine + Docker Compose v2** (the `docker compose` subcommand)
-- **git** with access to the GeoLang repos — the compose file *builds each backend
+- **git** to clone the GeoLang repos. The compose file *builds each backend
   from its sibling repository*, so you need them cloned as peers of `viewtopia/`.
   Use the bootstrap script:
   ```bash
   scripts/clone-geolang.sh ~/src/GeoLang   # clones every platform repo
   ```
-  (GeoLang GitHub repos clone over SSH by default — add `--https` for token-based
-  HTTPS. `geolang` is on a private GitLab via the `gitlab-rsa` SSH host alias.)
+  (every repo is public on GitHub, including
+  [geolang](https://github.com/GeoLang/geolang). They clone over SSH by default,
+  add `--https` for HTTPS.)
 - **An LLM API key for the agent:** put `XAI_API_KEY` (or `OPENAI_API_KEY`) in
   `geolang/.env`.
 - **~Several GB of disk** for images (the geolang/Letta + QGIS image is large) plus
@@ -353,14 +354,25 @@ or ensure at least these repos are cloned as peers of `viewtopia/`:
 src/GeoLang/
 ├── fenestra/
 ├── geokode/
-├── geolang/      # optional — stub used if absent
+├── geolang/      # AI agent (Python + Letta + QGIS)
 ├── itinera/
 ├── ptolemy/
 ├── tiletopia/
 └── viewtopia/
 ```
 
-**Build & run:**
+**Build & run** the whole stack with one command, the preferred path. It downloads
+an OSM extract, builds and starts every service, waits for them to report healthy,
+and seeds the real-estate demo data:
+
+```bash
+scripts/platform-up.sh
+# → viewer http://localhost:5174, agent /agent/health, notebooks /jupyter/api
+```
+
+It needs the sibling repos cloned and your LLM key in `../geolang/.env`. Pass a
+[Geofabrik](https://download.geofabrik.de) extract URL to route somewhere other
+than Monaco. To drive compose yourself instead:
 
 ```bash
 docker compose -f docker-compose.platform.yml up --build
@@ -394,25 +406,35 @@ on Windows — it does not apply to native Docker on Linux.
 |---------|------|-------|
 | PostGIS | 5432 | PostgreSQL + PostGIS |
 | Ptolemy | 3000 | Feature store |
-| Geokode | 3001 | Geocoder (needs `data/addresses.csv`) |
-| Itinera | 3002 | Router (needs `data/region.osm.pbf`) |
+| Geokode | 3001 | Geocoder (imports `data/region.osm.pbf`) |
+| Itinera | 3002 | Router + isochrones (needs `data/region.osm.pbf`) |
 | Fenestra | 3003 | WMS/WFS gateway |
-| TileTopia | 3100 | Vector tile server |
+| TileTopia | 3100 | 3D Tiles / terrain / assets, plus auth, portal, and terrain analysis |
 | GeoLang AI | 8080 | Letta AI agent — embeds its own Letta server (port 8283 internal) |
+| Jupyter | n/a | Python notebook kernels, proxied at `/jupyter/` (no host port) |
 | ViewTopia | 5174 | Web app (nginx reverse proxy) |
 
-**Optional data setup:**
+The nginx proxy fronts everything on 5174, so the app talks same-origin:
+`/api/` → Ptolemy, `/api/v1/auth` + `/api/v1/portal` → TileTopia, `/tiles/` →
+TileTopia (including `/tiles/v1/analysis`, backed by terrano), `/api/route` +
+`/api/isochrone` → Itinera, `/api/geocode/` → Geokode, `/agent/` → GeoLang,
+`/jupyter/` → Jupyter.
+
+**Data setup** (`scripts/platform-up.sh` does this for you):
 
 ```bash
-# Geocoder — provide address data (OpenAddresses CSV format):
-#   LON,LAT,NUMBER,STREET,CITY,REGION,POSTCODE
-# A sample file is included at data/addresses.csv
-
-# Router — download an OSM extract for routing:
+# Geokode and Itinera both read the OSM extract: geokode imports its addresses
+# from it, so the geocoder and the routing graph stay aligned.
 wget -O data/region.osm.pbf \
   https://download.geofabrik.de/europe/monaco-latest.osm.pbf
-docker compose -f docker-compose.platform.yml restart itinera
+docker compose -f docker-compose.platform.yml restart geokode itinera
+
+# Real-estate demo data (parcels + comparable sales) into Ptolemy:
+node scripts/seed-parcels.mjs
 ```
+
+Geokode also accepts an OpenAddresses CSV (`LON,LAT,NUMBER,STREET,CITY,REGION,POSTCODE`)
+instead: point its `--data` flag at one. A sample is at `data/addresses.csv`.
 
 **Troubleshooting:**
 
@@ -564,14 +586,28 @@ See [docs/plugins.md](docs/plugins.md) for the full guide.
 ## Scripts
 
 ```bash
-pnpm run dev        # Start dev server
-pnpm run build      # Production build
-pnpm test           # Run unit tests (vitest)
-pnpm run test:e2e   # Run E2E tests (Playwright)
-pnpm run test:all   # Run all tests
+pnpm run dev                 # Start dev server
+pnpm run build               # Production build
+pnpm test                    # Unit tests (vitest)
+pnpm run test:e2e            # E2E tests (Playwright)
+pnpm run test:e2e:react      # React suites (28 tests) on a throwaway Vite server :5175
+pnpm run test:e2e:platform   # Golden path (8), real-estate (5), analysis (5); needs the stack up
+pnpm run test:all            # Unit + E2E
 ```
 
-Workspace bootstrap (`scripts/`) — clone every platform repo:
+`test:e2e:platform` runs against a live platform stack, so bring it up with
+`scripts/platform-up.sh` first. The same golden-path suite is the CI gate in
+`.github/workflows/platform-e2e.yml` (master pushes, weekly, manual). It builds
+the real backends from their public repos, no tokens needed.
+
+Platform bring-up (`scripts/`):
+
+```bash
+scripts/platform-up.sh [GEOFABRIK_URL]   # full stack + data + demo seed
+node scripts/seed-parcels.mjs            # re-seed real-estate demo data only
+```
+
+Workspace bootstrap, clone every platform repo:
 
 ```bash
 scripts/clone-geolang.sh  [DIR]   # macOS/Linux/Git-Bash
@@ -607,8 +643,8 @@ scripts/clone-geolang.sh  [DIR]   # macOS/Linux/Git-Bash
 ## Stack
 
 - **Frontend:** Vite, React + Mantine UI, CesiumJS, deck.gl, MapLibre GL, Leaflet, Apache Arrow
-- **Backend:** [GeoLang](https://github.com/GeoLang/tiletopia) (Rust) + [GeoLang](https://gitlab.com/geolanghq/geolang) (Python)
-- **AI:** Letta-powered spatial agent
+- **Backend:** [GeoLang](https://github.com/GeoLang/tiletopia) (Rust) + [GeoLang](https://github.com/GeoLang/geolang) (Python)
+- **AI:** Letta-powered spatial agent, 36 tools
 - **Analysis:** 31 space-time intelligence modules (Gotham-class)
 - **Deploy:** Docker Compose, Helm, Terraform
 

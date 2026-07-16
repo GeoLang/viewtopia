@@ -74,7 +74,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <div class="stat"><div class="num">23</div><div class="label">Plugins</div></div>
 <div class="stat"><div class="num">15</div><div class="label">QGIS Ports</div></div>
 <div class="stat"><div class="num">31</div><div class="label">SpaceTime Tools</div></div>
-<div class="stat"><div class="num">172</div><div class="label">Tests</div></div>
+<div class="stat"><div class="num">145</div><div class="label">Tests</div></div>
 <div class="stat"><div class="num">$0</div><div class="label">Per month</div></div>
 </div>
 </div>
@@ -111,7 +111,8 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <ul>
 <li>Natural language spatial analysis</li>
 <li>SSE streaming responses</li>
-<li>20+ chainable geospatial tools</li>
+<li>36 chainable geospatial tools</li>
+<li>SQL, routing, QGIS (321 algorithms)</li>
 <li>Persistent agent memory (Letta)</li>
 <li>Auto-renders maps from chat</li>
 <li>Follow-up action buttons</li>
@@ -200,6 +201,43 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <li>Basemap selector (Streets/Satellite/Topo)</li>
 <li>Layer visibility toggling</li>
 <li>Attribute table modal</li>
+</ul>
+</div>
+<div class="card">
+<h3>🦆 In-Browser SQL</h3>
+<ul>
+<li>DuckDB-WASM with the spatial extension</li>
+<li>Query GeoJSON, Parquet, and CSV in place</li>
+<li>Results render straight to the map</li>
+<li>SQL notebook cells</li>
+<li>Agent emits <code>sql_query</code> over SSE</li>
+</ul>
+</div>
+<div class="card">
+<h3>⛰️ Terrain Analysis</h3>
+<ul>
+<li>Viewshed and flood level modelling</li>
+<li>Slope, aspect, hillshade, contours</li>
+<li>Solar irradiance rasters by date</li>
+<li>Served by tiletopia <code>/tiles/v1/analysis</code>, backed by terrano</li>
+</ul>
+</div>
+<div class="card">
+<h3>📓 Notebooks &amp; Dashboards</h3>
+<ul>
+<li>JavaScript and SQL cells run in the browser</li>
+<li>Python cells on the bundled Jupyter service</li>
+<li>Dashboard chart and map widgets</li>
+<li>Portal item catalog with sharing levels</li>
+</ul>
+</div>
+<div class="card">
+<h3>🌦️ Live Context Layers</h3>
+<ul>
+<li>Weather and wind via open-meteo (no key)</li>
+<li>Routing via itinera, OSRM demo fallback</li>
+<li>Traffic from your own tile key, or labeled demo mode</li>
+<li>Shadows, lighting, and global terrain</li>
 </ul>
 </div>
 </div>
@@ -758,29 +796,35 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <div class="container">
 <h2>Module Structure</h2>
 <pre>viewtopia/
-├── index.html              # Layout — viz panel + chat panel
+├── index.html              # Single page shell, mounts React
 ├── vite.config.js          # Dev server, proxies, Cesium plugin
 ├── src/
-│   ├── main.js             # Entry — backend discovery, init
-│   ├── backends.js          # Probe GeoLang &amp; GeoLang health
-│   ├── renderers.js         # CesiumJS / deck.gl / MapLibre
-│   ├── leaflet-view.js      # Leaflet 2D map, draw tools
-│   ├── chat.js              # AI chat with SSE &amp; persistence
-│   ├── sessions.js          # Session management &amp; UI wiring
-│   ├── tabs.js              # 2D ↔ 3D view switching &amp; sync
-│   ├── viewer-commands.js   # Unified command protocol
-│   ├── ui-spec-renderer.js  # Render agent map/table/image specs
-│   ├── classification-viz.js # ASPRS point cloud styling
-│   └── style.css            # Dark theme, layout, animations
-│   └── spacetime/           # 31 intelligence modules
-│       ├── ontology.js      # Typed entity/link schema
-│       ├── entity-resolution.js # Fuzzy dedup
-│       ├── attachments.js   # Document/media storage
-│       ├── timeline-correlation.js # Cross-entity timeline
-│       ├── classification.js # Security markings + RBAC
-│       ├── case-management.js # Investigation workflow
-│       ├── data-fusion.js   # Multi-source provenance
-│       └── …20 more modules
+│   ├── main.tsx            # Entry, mounts App
+│   ├── App.tsx             # Layout: viewer + chat + tool panels
+│   ├── components/
+│   │   ├── ViewerArea.tsx   # Renderer host, 2D ↔ 3D switching
+│   │   ├── ChatPanel.tsx    # AI chat with SSE &amp; persistence
+│   │   ├── tools/           # Tool panels (measure, terrain, SQL, …)
+│   │   └── layers/          # Layer tree and styling
+│   ├── viewer/
+│   │   ├── registry.ts      # Renderer registry (Cesium/deck.gl/MapLibre/Leaflet)
+│   │   ├── commands.ts      # Unified agent command protocol
+│   │   ├── uiSpec.ts        # Render agent map/table/image specs
+│   │   └── renderGeoJson.ts # Shared GeoJSON draw path
+│   ├── services/            # geocode.ts, route.ts: backend clients
+│   ├── duckdb/              # DuckDB-WASM: SQL over local data
+│   ├── notebooks/           # JS / SQL / Python (Jupyter) cells
+│   ├── features/
+│   │   ├── spacetime/       # Entities, tracks, analysis algorithms
+│   │   ├── dashboards/      # Chart + map widgets
+│   │   ├── portal/          # Item catalog
+│   │   └── auth/            # Login, tokens
+│   ├── store/               # Zustand state slices
+│   ├── lib/                 # Terrain, weather, real-estate, parsers
+│   └── plugins/             # Plugin API + built-ins
+├── tests/
+│   ├── unit/                # vitest
+│   └── e2e/                 # Playwright (react + live platform)
 └── docs/
     └── index.html           # This page</pre>
 </div>
@@ -802,18 +846,29 @@ pnpm run dev
 <span style="color:#475569"># Open http://localhost:5174</span>
 <span style="color:#475569"># Backends are optional — viewer adapts to what's available</span>
 
-<span style="color:#475569"># Optional: start GeoLang (3D Tiles)</span>
+<span style="color:#475569"># Full platform: clone every repo, then one command for the rest</span>
+<span style="color:#475569"># (downloads an OSM extract, builds, waits healthy, seeds demo data)</span>
+scripts/clone-geolang.sh ~/src/GeoLang
+scripts/platform-up.sh
+
+<span style="color:#475569"># Or run a single backend: tiletopia (3D Tiles, terrain, analysis)</span>
 cd ../tiletopia &amp;&amp; cargo run -- serve --port 3000
 
-<span style="color:#475569"># Optional: start GeoLang (AI agent)</span>
-cd ../geolang &amp;&amp; python -m uvicorn src.app:app --port 8080</pre>
+<span style="color:#475569"># Or the AI agent (geolang)</span>
+cd ../geolang &amp;&amp; python -m uvicorn src.api.server:app --port 8080</pre>
 </div>
 </section>
 
 <footer>
 <div class="container">
 <p>ViewTopia is free software under the <a href="https://github.com/GeoLang/viewtopia/blob/master/LICENSE">AGPL-3.0 license</a>.</p>
-<p style="margin-top:8px">Part of the <a href="https://github.com/GeoLang">GeoLang</a> ecosystem.</p>
+<p style="margin-top:8px">Part of the <a href="https://github.com/GeoLang">GeoLang</a> ecosystem. The backends are open source too:
+<a href="https://github.com/GeoLang/geolang">geolang</a> (AI agent),
+<a href="https://github.com/GeoLang/tiletopia">tiletopia</a>,
+<a href="https://github.com/GeoLang/ptolemy">ptolemy</a>,
+<a href="https://github.com/GeoLang/itinera">itinera</a>,
+<a href="https://github.com/GeoLang/geokode">geokode</a>,
+<a href="https://github.com/GeoLang/terrano">terrano</a>.</p>
 </div>
 </footer>
 
