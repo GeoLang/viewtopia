@@ -6,9 +6,8 @@
  * (GPKG/SHP/GeoJSON). We fetch each via the agent's `/geojson/<file>` endpoint
  * (which converts to GeoJSON) and render it on the Cesium globe.
  */
-import { Color, GeoJsonDataSource } from 'cesium';
-import { getActiveCesiumViewer } from './registry';
 import { useAppStore } from '../store/app';
+import { useAgentLayerStore, type AgentLayer } from '../store/agentLayers';
 
 const LAYER_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
@@ -27,34 +26,25 @@ export interface UiSpec {
   zoom?: number;
 }
 
-// Names of the Cesium data sources added for the last ui_spec, so we can clear them.
-let lastDataSourceNames: string[] = [];
-
-/** Render a map ui_spec from the agent onto the Cesium globe. */
+/**
+ * Fetch a map ui_spec's layers and hand them to the agent-layer store. The
+ * per-renderer hooks (useAgentLayers*) draw whatever is in the store, so the
+ * result survives a renderer switch and can be replayed from chat history.
+ */
 export async function renderUISpec(spec: UiSpec): Promise<void> {
   if (!spec || (spec.type !== 'map' && spec.ui_type !== 'map')) return;
 
-  // The agent's map output is a globe layer set — make sure Cesium is active.
+  // The agent's map output is a globe layer set; deck.gl has no GeoJSON drawing
+  // path here, so fall back to Cesium from it.
   const store = useAppStore.getState();
-  if (store.activeTab !== 'globe' || store.renderer !== 'cesium') {
-    store.setActiveTab('globe');
-    store.setRenderer('cesium');
-  }
+  if (store.activeTab !== 'globe') store.setActiveTab('globe');
+  if (store.renderer === 'deckgl') store.setRenderer('cesium');
 
-  const viewer = getActiveCesiumViewer();
-  if (!viewer) return; // renderer still spinning up; user can re-issue
+  const specLayers = spec.layers ?? [];
+  const loaded: AgentLayer[] = [];
 
-  // Clear the previous ui_spec's layers.
-  for (const name of lastDataSourceNames) {
-    for (const ds of viewer.dataSources.getByName(name)) {
-      viewer.dataSources.remove(ds);
-    }
-  }
-  lastDataSourceNames = [];
-
-  const layers = spec.layers ?? [];
-  for (let i = 0; i < layers.length; i++) {
-    const layer = layers[i];
+  for (let i = 0; i < specLayers.length; i++) {
+    const layer = specLayers[i];
     const file = (layer.file || layer.path || '').split('/').pop();
     if (!file) continue;
     const color = layer.color || LAYER_COLORS[i % LAYER_COLORS.length];
@@ -62,25 +52,12 @@ export async function renderUISpec(spec: UiSpec): Promise<void> {
     try {
       const res = await fetch(`/agent/geojson/${file}`);
       if (!res.ok) continue;
-      const geojson = await res.json();
-
-      const name = `agent-uispec-${i}-${Date.now()}`;
-      const ds = await GeoJsonDataSource.load(geojson, {
-        stroke: Color.fromCssColorString(color),
-        fill: Color.fromCssColorString(color).withAlpha(0.3),
-        strokeWidth: 2,
-        markerColor: Color.fromCssColorString(color),
-      });
-      ds.name = name;
-      await viewer.dataSources.add(ds);
-      lastDataSourceNames.push(name);
-
-      // Frame the final layer.
-      if (i === layers.length - 1) {
-        await viewer.flyTo(ds).catch(() => undefined);
-      }
+      const geojson = (await res.json()) as GeoJSON.FeatureCollection;
+      loaded.push({ id: `${i}-${file}`, name: layer.name || file, color, geojson });
     } catch (e) {
-      console.error('renderUISpec: failed to render layer', layer, e);
+      console.error('renderUISpec: failed to load layer', layer, e);
     }
   }
+
+  useAgentLayerStore.getState().setLayers(loaded);
 }

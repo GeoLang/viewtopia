@@ -13,6 +13,8 @@ import { useSpaceTimeCesium } from '../hooks/useSpaceTimeCesium';
 import { useBuildingsCesium } from '../hooks/useBuildingsCesium';
 import { useBuildingsDeck } from '../hooks/useBuildingsDeck';
 import { useBuildingsMapLibre } from '../hooks/useBuildingsMapLibre';
+import { useAgentLayersCesium } from '../hooks/useAgentLayersCesium';
+import { useAgentLayersMapLibre } from '../hooks/useAgentLayersMapLibre';
 import { useDrawCesium } from '../hooks/useDrawCesium';
 import { useDrawMapLibre } from '../hooks/useDrawMapLibre';
 import { useMeasureCesium } from '../hooks/useMeasureCesium';
@@ -46,6 +48,10 @@ export function ViewerArea() {
   useBuildingsCesium(cesiumRef);
   useBuildingsDeck();
   useBuildingsMapLibre(maplibreRef);
+
+  // Render the agent's ui_spec layers on whichever globe renderer is active
+  useAgentLayersCesium(cesiumRef);
+  useAgentLayersMapLibre(maplibreRef);
 
   // Drawing tools (Cesium + MapLibre; deck.gl is a standalone Deck, not a map)
   useDrawCesium(cesiumRef);
