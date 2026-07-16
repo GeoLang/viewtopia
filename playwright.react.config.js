@@ -8,7 +8,12 @@ import { defineConfig } from '@playwright/test';
 //   npm run test:e2e:react
 export default defineConfig({
   testDir: 'tests/e2e',
-  testMatch: ['react-smoke.spec.js', 'panels-smoke.spec.js', 'agent-layers.spec.js'],
+  testMatch: [
+    'react-smoke.spec.js',
+    'panels-smoke.spec.js',
+    'agent-layers.spec.js',
+    'tools-across-renderers.spec.js',
+  ],
   timeout: 60000,
   use: {
     baseURL: 'http://localhost:5175',
