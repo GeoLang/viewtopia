@@ -11,7 +11,8 @@ import {
   ScreenSpaceEventType,
   PolylineDashMaterialProperty,
 } from 'cesium';
-import { useMeasureStore } from '../store/measure';
+import { useMeasureStore, type MeasureMode } from '../store/measure';
+import { useAppStore } from '../store/app';
 
 function cartToLngLat(viewer: Viewer, x: number, y: number): [number, number] | null {
   const cart = viewer.camera.pickEllipsoid(new Cartesian2(x, y));
@@ -25,12 +26,16 @@ export function useMeasureCesium(
 ) {
   const entityIdsRef = useRef<string[]>([]);
   const handlerRef = useRef<ScreenSpaceEventHandler | null>(null);
+  // A renderer switch destroys and rebuilds the viewer, so rebind to the new
+  // one — handlers and entities left on the old canvas are dead.
+  const renderer = useAppStore((s) => s.renderer);
+  const activeTab = useAppStore((s) => s.activeTab);
 
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || viewer.isDestroyed()) return;
 
-    const unsub = useMeasureStore.subscribe((state) => {
+    const sync = (state: { mode: MeasureMode }) => {
       const v = viewerRef.current;
       if (!v || v.isDestroyed()) return;
 
@@ -58,7 +63,12 @@ export function useMeasureCesium(
         handlerRef.current = null;
         if (v && !v.isDestroyed()) v.scene.canvas.style.cursor = '';
       }
-    });
+    };
+
+    // Apply the mode that's already set: after a renderer switch the store won't
+    // fire again for a tool the user turned on before the switch.
+    sync(useMeasureStore.getState());
+    const unsub = useMeasureStore.subscribe(sync);
 
     return () => {
       unsub();
@@ -67,7 +77,7 @@ export function useMeasureCesium(
         handlerRef.current = null;
       }
     };
-  }, [viewerRef]);
+  }, [viewerRef, renderer, activeTab]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -138,7 +148,9 @@ export function useMeasureCesium(
     };
 
     const unsub = useMeasureStore.subscribe(render);
+    // Re-render onto the rebuilt viewer; the old entities went with it.
+    entityIdsRef.current = [];
     render();
     return () => { unsub(); };
-  }, [viewerRef]);
+  }, [viewerRef, renderer, activeTab]);
 }

@@ -11,7 +11,8 @@ import {
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
 } from 'cesium';
-import { useDrawStore, type DrawnFeature } from '../store/draw';
+import { useDrawStore, type DrawMode, type DrawnFeature } from '../store/draw';
+import { useAppStore } from '../store/app';
 import { Cartesian3 } from 'cesium';
 
 function cssToColor(hex: string, alpha = 0.8): Color {
@@ -34,13 +35,17 @@ export function useDrawCesium(
 ) {
   const entityIdsRef = useRef<string[]>([]);
   const handlerRef = useRef<ScreenSpaceEventHandler | null>(null);
+  // A renderer switch destroys and rebuilds the viewer, so rebind to the new
+  // one — handlers and entities left on the old canvas are dead.
+  const renderer = useAppStore((s) => s.renderer);
+  const activeTab = useAppStore((s) => s.activeTab);
 
   // Click handler
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || viewer.isDestroyed()) return;
 
-    const unsub = useDrawStore.subscribe((state, prev) => {
+    const sync = (state: { mode: DrawMode }) => {
       const viewer = viewerRef.current;
       if (!viewer || viewer.isDestroyed()) return;
 
@@ -81,7 +86,12 @@ export function useDrawCesium(
           viewer.scene.canvas.style.cursor = '';
         }
       }
-    });
+    };
+
+    // Apply the mode that's already set: after a renderer switch the store won't
+    // fire again for a tool the user turned on before the switch.
+    sync(useDrawStore.getState());
+    const unsub = useDrawStore.subscribe(sync);
 
     return () => {
       unsub();
@@ -90,7 +100,7 @@ export function useDrawCesium(
         handlerRef.current = null;
       }
     };
-  }, [viewerRef]);
+  }, [viewerRef, renderer, activeTab]);
 
   // Render drawn features as Cesium entities
   useEffect(() => {
@@ -197,10 +207,12 @@ export function useDrawCesium(
     };
 
     const unsub = useDrawStore.subscribe(render);
+    // Re-render onto the rebuilt viewer; the old entities went with it.
+    entityIdsRef.current = [];
     render();
 
     return () => {
       unsub();
     };
-  }, [viewerRef]);
+  }, [viewerRef, renderer, activeTab]);
 }

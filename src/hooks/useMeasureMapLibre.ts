@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import type maplibregl from 'maplibre-gl';
-import { useMeasureStore } from '../store/measure';
+import { useMeasureStore, type MeasureMode } from '../store/measure';
+import { useAppStore } from '../store/app';
 
 const SRC = 'measure-features';
 const SRC_PENDING = 'measure-pending';
@@ -55,13 +56,17 @@ export function useMeasureMapLibre(
 ) {
   const handlerRef = useRef<((e: maplibregl.MapMouseEvent) => void) | null>(null);
   const dblHandlerRef = useRef<((e: maplibregl.MapMouseEvent) => void) | null>(null);
+  // A renderer switch destroys and rebuilds the map, so rebind to the new one —
+  // handlers and layers left on the old instance are dead.
+  const renderer = useAppStore((s) => s.renderer);
+  const activeTab = useAppStore((s) => s.activeTab);
 
   // Click handler: register/unregister based on measure mode
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    const unsub = useMeasureStore.subscribe((state) => {
+    const sync = (state: { mode: MeasureMode }) => {
       const map = mapRef.current;
       if (!map) return;
 
@@ -94,7 +99,12 @@ export function useMeasureMapLibre(
         }
         map.getCanvas().style.cursor = '';
       }
-    });
+    };
+
+    // Apply the mode that's already set: after a renderer switch the store won't
+    // fire again for a tool the user turned on before the switch.
+    sync(useMeasureStore.getState());
+    const unsub = useMeasureStore.subscribe(sync);
 
     return () => {
       unsub();
@@ -105,7 +115,7 @@ export function useMeasureMapLibre(
       handlerRef.current = null;
       dblHandlerRef.current = null;
     };
-  }, [mapRef]);
+  }, [mapRef, renderer, activeTab]);
 
   // Render measurement features
   useEffect(() => {
@@ -174,6 +184,9 @@ export function useMeasureMapLibre(
     if (map.isStyleLoaded()) render();
     else map.on('load', render);
 
-    return () => { unsub(); };
-  }, [mapRef]);
+    return () => {
+      unsub();
+      map.off('load', render);
+    };
+  }, [mapRef, renderer, activeTab]);
 }

@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import type maplibregl from 'maplibre-gl';
-import { useDrawStore, type DrawnFeature } from '../store/draw';
+import { useDrawStore, type DrawMode, type DrawnFeature } from '../store/draw';
+import { useAppStore } from '../store/app';
 
 const SRC = 'draw-features';
 const SRC_PENDING = 'draw-pending';
@@ -77,6 +78,10 @@ export function useDrawMapLibre(
 ) {
   const handlerRef = useRef<((e: maplibregl.MapMouseEvent) => void) | null>(null);
   const dblHandlerRef = useRef<((e: maplibregl.MapMouseEvent) => void) | null>(null);
+  // A renderer switch destroys and rebuilds the map, so rebind to the new one —
+  // handlers and layers left on the old instance are dead.
+  const renderer = useAppStore((s) => s.renderer);
+  const activeTab = useAppStore((s) => s.activeTab);
 
   // Click handler: register/unregister based on draw mode
   useEffect(() => {
@@ -93,7 +98,7 @@ export function useDrawMapLibre(
       dblHandlerRef.current = null;
     }
 
-    const unsub = useDrawStore.subscribe((state, prev) => {
+    const sync = (state: { mode: DrawMode }) => {
       const map = mapRef.current;
       if (!map) return;
 
@@ -142,7 +147,12 @@ export function useDrawMapLibre(
         }
         map.getCanvas().style.cursor = '';
       }
-    });
+    };
+
+    // Apply the mode that's already set: after a renderer switch the store won't
+    // fire again for a tool the user turned on before the switch.
+    sync(useDrawStore.getState());
+    const unsub = useDrawStore.subscribe(sync);
 
     return () => {
       unsub();
@@ -153,7 +163,7 @@ export function useDrawMapLibre(
       handlerRef.current = null;
       dblHandlerRef.current = null;
     };
-  }, [mapRef]);
+  }, [mapRef, renderer, activeTab]);
 
   // Render drawn features + pending onto the map
   useEffect(() => {
@@ -249,6 +259,7 @@ export function useDrawMapLibre(
 
     return () => {
       unsub();
+      map.off('load', render);
     };
-  }, [mapRef]);
+  }, [mapRef, renderer, activeTab]);
 }

@@ -10,6 +10,7 @@ import {
   LabelStyle,
 } from 'cesium';
 import { useSpaceTimeStore } from '../features/spacetime/store';
+import { useAppStore } from '../store/app';
 
 function cssToColor(hex: string): Color {
   try {
@@ -62,6 +63,10 @@ export function useSpaceTimeCesium(
   const currentTime = useSpaceTimeStore((s) => s.currentTime);
   const staticIdsRef = useRef<string[]>([]);
   const markerIdsRef = useRef<string[]>([]);
+  // A renderer switch rebuilds the viewer, so redraw onto the new one — the old
+  // entities were destroyed with it.
+  const renderer = useAppStore((s) => s.renderer);
+  const activeTab = useAppStore((s) => s.activeTab);
 
   // Static geometry: track polylines, drop lines, event dots
   // Only rebuild when tracks/entities/timeRange change
@@ -152,7 +157,7 @@ export function useSpaceTimeCesium(
         staticIdsRef.current.push(ptId);
       }
     }
-  }, [tracks, entities, timeRange, viewerRef]);
+  }, [tracks, entities, timeRange, viewerRef, renderer, activeTab]);
 
   // Dynamic markers: update position when currentTime changes
   // Uses direct Cesium entity position updates to avoid React overhead
@@ -206,5 +211,5 @@ export function useSpaceTimeCesium(
         markerIdsRef.current.push(markerId);
       }
     }
-  }, [currentTime, tracks, entities, timeRange, viewerRef]);
+  }, [currentTime, tracks, entities, timeRange, viewerRef, renderer, activeTab]);
 }

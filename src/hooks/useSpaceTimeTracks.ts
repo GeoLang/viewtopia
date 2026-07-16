@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import type { MutableRefObject } from 'react';
 import type maplibregl from 'maplibre-gl';
 import { useSpaceTimeStore } from '../features/spacetime/store';
+import { useAppStore } from '../store/app';
 
 const SOURCE_ID = 'spacetime-tracks';
 const LINE_LAYER_ID = 'spacetime-tracks-line';
@@ -15,6 +16,8 @@ export function useSpaceTimeTracks(
 ) {
   const tracks = useSpaceTimeStore((s) => s.tracks);
   const entities = useSpaceTimeStore((s) => s.entities);
+  const renderer = useAppStore((s) => s.renderer);
+  const activeTab = useAppStore((s) => s.activeTab);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -100,5 +103,7 @@ export function useSpaceTimeTracks(
     return () => {
       map.off('load', applyTracks);
     };
-  }, [tracks, entities, mapRef]);
+    // renderer/activeTab: a switch rebuilds the map, so the tracks must be
+    // redrawn onto the new one.
+  }, [tracks, entities, mapRef, renderer, activeTab]);
 }
