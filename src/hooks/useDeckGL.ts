@@ -19,6 +19,13 @@ interface UseDeckGLOptions {
   containerId?: string;
 }
 
+/**
+ * Tilt deck shows for a flat camera, giving it the signature 2.5D view (parity
+ * with the vanilla renderer). It is a display default, not user intent, so it
+ * stays out of the shared camera.
+ */
+const SYNTHETIC_PITCH = 45;
+
 interface DeckViewState {
   longitude: number;
   latitude: number;
@@ -67,7 +74,27 @@ export function useDeckGL(opts: UseDeckGLOptions = {}) {
   const renderer = useAppStore((s) => s.renderer);
   const activeTab = useAppStore((s) => s.activeTab);
 
+  // True while the tilt on screen is the one deck invented rather than one the
+  // user chose. Publishing an invented tilt would let Cesium restore it as real
+  // and aim the globe off screen, so the entered pitch is published instead.
+  const syntheticPitchRef = useRef(false);
+  const enteredPitchRef = useRef(0);
+
   const isActive = activeTab === 'globe' && renderer === 'deckgl';
+
+  /** Write a camera to the shared state, keeping deck's invented tilt local. */
+  const publishCamera = useCallback((vs: DeckViewState) => {
+    if (syntheticPitchRef.current && vs.pitch !== SYNTHETIC_PITCH) {
+      syntheticPitchRef.current = false;
+    }
+    setSharedCamera({
+      longitude: vs.longitude,
+      latitude: vs.latitude,
+      zoom: vs.zoom,
+      pitch: syntheticPitchRef.current ? enteredPitchRef.current : vs.pitch,
+      bearing: vs.bearing,
+    });
+  }, []);
 
   // Compose basemap + registered layer groups into the Deck.
   const pushLayers = () => {
@@ -95,14 +122,15 @@ export function useDeckGL(opts: UseDeckGLOptions = {}) {
     if (!container || deckRef.current) return;
 
     const cam = getSharedCamera();
+    // A flat 0 arrives e.g. from a top-down Cesium camera; an explicit tilt is
+    // preserved. Remember which case this was, so an invented tilt stays local.
+    enteredPitchRef.current = cam.pitch;
+    syntheticPitchRef.current = !cam.pitch;
     const viewState: DeckViewState = {
       longitude: cam.longitude,
       latitude: cam.latitude,
       zoom: cam.zoom,
-      // Default to a 45° tilt for the 2.5D view (parity with the vanilla deck
-      // renderer, which floored a flat pitch back to 45). A flat 0 arrives e.g.
-      // from a top-down Cesium camera; an explicit tilt is preserved.
-      pitch: cam.pitch || 45,
+      pitch: cam.pitch || SYNTHETIC_PITCH,
       bearing: cam.bearing,
     };
     viewStateRef.current = viewState;
@@ -119,13 +147,7 @@ export function useDeckGL(opts: UseDeckGLOptions = {}) {
         const next = vs as DeckViewState;
         viewStateRef.current = next;
         deck.setProps({ viewState: next });
-        setSharedCamera({
-          longitude: next.longitude,
-          latitude: next.latitude,
-          zoom: next.zoom,
-          pitch: next.pitch,
-          bearing: next.bearing,
-        });
+        publishCamera(next);
       },
       // Deck tracks isHovering itself, but its default cursor ignores it.
       getCursor: ({ isDragging, isHovering }) => {
@@ -196,14 +218,8 @@ export function useDeckGL(opts: UseDeckGLOptions = {}) {
     };
     viewStateRef.current = next;
     deck.setProps({ viewState: next });
-    setSharedCamera({
-      longitude: next.longitude,
-      latitude: next.latitude,
-      zoom: next.zoom,
-      pitch: next.pitch,
-      bearing: next.bearing,
-    });
-  }, []);
+    publishCamera(next);
+  }, [publishCamera]);
 
   /** Animate the camera to a location (deck has no map.flyTo). */
   const flyTo = (lng: number, lat: number, zoom?: number) => {
