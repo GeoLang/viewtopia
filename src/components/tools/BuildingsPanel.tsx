@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Paper,
   Text,
@@ -18,16 +19,22 @@ export function BuildingsPanel({ onClose }: { onClose: () => void }) {
     useBuildingStore();
   const renderer = useAppStore((s) => s.renderer);
 
+  const [status, setStatus] = useState<string | null>(null);
+
   const handleLoad = async () => {
     setLoading(true);
+    setStatus(null);
     try {
       const cam = getSharedCamera();
       const height = 4e7 / Math.pow(2, cam.zoom);
       const result = await fetchOsmBuildings(cam.latitude, cam.longitude, height);
       setBuildings(result);
       setEnabled(true);
+      if (result.length === 0) {
+        setStatus('No buildings in this view. Zoom closer to a city and try again.');
+      }
     } catch (err) {
-      console.error('Failed to load buildings:', err);
+      setStatus(err instanceof Error ? err.message : 'Failed to load buildings.');
     } finally {
       setLoading(false);
     }
@@ -39,6 +46,11 @@ export function BuildingsPanel({ onClose }: { onClose: () => void }) {
     } else {
       setEnabled(true);
     }
+  };
+
+  const handleClear = () => {
+    clearBuildings();
+    setStatus(null);
   };
 
   return (
@@ -84,6 +96,12 @@ export function BuildingsPanel({ onClose }: { onClose: () => void }) {
           </Text>
         )}
 
+        {status && (
+          <Text size="xs" c="orange">
+            {status}
+          </Text>
+        )}
+
         <Switch
           size="xs"
           label="Show Buildings"
@@ -108,7 +126,7 @@ export function BuildingsPanel({ onClose }: { onClose: () => void }) {
             size="xs"
             variant="subtle"
             color="red"
-            onClick={clearBuildings}
+            onClick={handleClear}
             fullWidth
           >
             Clear Buildings

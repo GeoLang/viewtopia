@@ -68,7 +68,10 @@ export async function fetchOsmBuildings(
     }
   }
 
-  if (!res) return [];
+  // every mirror refused or timed out: that is a failure, not an empty area
+  if (!res) {
+    throw new Error('Overpass API unreachable. Try again in a moment.');
+  }
 
   const data = await res.json();
   const nodes = new Map<number, { lon: number; lat: number }>();
