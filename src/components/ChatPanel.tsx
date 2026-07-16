@@ -11,7 +11,7 @@ import {
   Tooltip,
 } from '@mantine/core';
 import { IconSend, IconPlus, IconTrash, IconSquare } from '@tabler/icons-react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { renderUISpec } from '../viewer/uiSpec';
 import { useChatStore } from '../store/chat';
 import { useSSE } from '../hooks/useSSE';
@@ -31,6 +31,19 @@ export function ChatPanel() {
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Prompts already sent in this session, most recent first. -1 means the input
+  // holds a fresh draft rather than a recalled prompt.
+  const promptHistory = useMemo(
+    () =>
+      messages
+        .filter((m) => m.role === 'user')
+        .map((m) => m.content)
+        .reverse(),
+    [messages],
+  );
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const draftRef = useRef('');
+
   // Auto-create first session
   useEffect(() => {
     if (sessions.length === 0) {
@@ -48,10 +61,40 @@ export function ChatPanel() {
     }
   }, [messages.length, messages[messages.length - 1]?.content]);
 
+  // Browsing back to an older session shouldn't leave the index pointing past
+  // the end of that session's history.
+  useEffect(() => {
+    setHistoryIndex(-1);
+    draftRef.current = '';
+  }, [activeSessionId]);
+
   const handleSend = () => {
     if (!input.trim() || streaming) return;
     send(input.trim());
     setInput('');
+    setHistoryIndex(-1);
+    draftRef.current = '';
+  };
+
+  /** Step through sent prompts: +1 goes further back, -1 back toward the draft. */
+  const recallPrompt = (delta: number) => {
+    const next = historyIndex + delta;
+    if (next < -1 || next >= promptHistory.length) return;
+    if (historyIndex === -1) draftRef.current = input;
+    setHistoryIndex(next);
+    setInput(next === -1 ? draftRef.current : promptHistory[next]);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSend();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      recallPrompt(1);
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      recallPrompt(-1);
+    }
   };
 
   const sessionOptions = sessions.map((s) => ({
@@ -144,7 +187,7 @@ export function ChatPanel() {
           placeholder="Type a message…"
           value={input}
           onChange={(e) => setInput(e.currentTarget.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+          onKeyDown={handleKeyDown}
           disabled={streaming}
           styles={{
             input: { background: '#0d1117', borderColor: '#30363d' },
