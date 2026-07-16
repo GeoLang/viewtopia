@@ -53,10 +53,11 @@ test.describe('React shell smoke', () => {
     // Panel renders with its "Feature Info" heading and the enable switch.
     await expect(page.getByText('Feature Info').first()).toBeVisible();
     const toggle = page.getByLabel('Click a feature to inspect');
-    await expect(toggle).not.toBeChecked();
+    // Inspect is the picking mode itself, so opening it arms the picker.
+    await expect(toggle).toBeChecked();
     // Mantine hides the real <input>; toggle via its visible label.
     await page.getByText('Click a feature to inspect').click();
-    await expect(toggle).toBeChecked();
+    await expect(toggle).not.toBeChecked();
   });
 
   test('GeoJSON editor opens with its empty state', async ({ page }) => {

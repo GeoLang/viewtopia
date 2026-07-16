@@ -33,6 +33,7 @@ import {
   IconPalette,
 } from '@tabler/icons-react';
 import { useAppStore, type Renderer, type Basemap, type ViewerTab } from '../store/app';
+import { useFeaturePickerStore } from '../store/featurePicker';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { getPlugins } from '../plugins/registry';
 import { FlyToSearch } from './FlyToSearch';
@@ -57,8 +58,18 @@ const BASEMAP_OPTIONS: { value: Basemap; label: string }[] = [
 
 export function ViewerToolbar() {
   const { activeTab, setActiveTab, renderer, setRenderer, basemap, setBasemap, togglePanel } = useAppStore();
+  const activePanel = useAppStore((s) => s.activePanel);
+  const setPickerEnabled = useFeaturePickerStore((s) => s.setEnabled);
   const toggleSpaceTime = useSpaceTimeStore((s) => s.togglePanel);
   const plugins = getPlugins();
+
+  // Inspect is the picking mode itself, not just a panel — opening it arms the
+  // picker (the panel's switch mirrors this), closing it disarms.
+  const toggleInspect = useCallback(() => {
+    const opening = activePanel !== 'featurePicker';
+    togglePanel('featurePicker');
+    setPickerEnabled(opening);
+  }, [activePanel, togglePanel, setPickerEnabled]);
 
   const handleExportPng = useCallback(() => {
     // Find the active canvas element and export it
@@ -137,7 +148,7 @@ export function ViewerToolbar() {
         <Tooltip label="Search"><ActionIcon aria-label="Search" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('geocoding')}><IconSearch size={14} /></ActionIcon></Tooltip>
         <Tooltip label="Layers"><ActionIcon aria-label="Layers" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('layers')}><IconStack2 size={14} /></ActionIcon></Tooltip>
         <Tooltip label="Buildings"><ActionIcon aria-label="Buildings" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('buildings')}><IconBuildingSkyscraper size={14} /></ActionIcon></Tooltip>
-        <Tooltip label="Inspect"><ActionIcon aria-label="Inspect" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('featurePicker')}><IconClick size={14} /></ActionIcon></Tooltip>
+        <Tooltip label="Inspect"><ActionIcon aria-label="Inspect" size="sm" variant="subtle" color="gray" onClick={toggleInspect}><IconClick size={14} /></ActionIcon></Tooltip>
         <Tooltip label="GeoJSON Editor"><ActionIcon aria-label="GeoJSON Editor" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('geojsonEditor')}><IconVectorTriangle size={14} /></ActionIcon></Tooltip>
         <Tooltip label="Style Editor"><ActionIcon aria-label="Style Editor" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('styleEditor')}><IconPalette size={14} /></ActionIcon></Tooltip>
         <Tooltip label="Export PNG"><ActionIcon aria-label="Export PNG" size="sm" variant="subtle" color="gray" onClick={handleExportPng}><IconDownload size={14} /></ActionIcon></Tooltip>

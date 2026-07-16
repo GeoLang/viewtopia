@@ -44,7 +44,13 @@ export function FeaturePickerPanel({ onClose }: { onClose: () => void }) {
             </Badge>
           )}
         </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
+        <ActionIcon
+          aria-label="Close feature info"
+          size="sm"
+          variant="subtle"
+          color="gray"
+          onClick={onClose}
+        >
           <IconX size={14} />
         </ActionIcon>
       </Group>
