@@ -1,9 +1,20 @@
 import { create } from 'zustand';
+import { useAppStore } from './app';
 
-/** One property row of a picked 3D Tiles feature. */
+/** One property row of a picked feature. */
 export interface FeatureProp {
   id: string;
   value: string;
+}
+
+export const toRow = (id: string, val: unknown): FeatureProp => ({
+  id,
+  value: typeof val === 'object' && val !== null ? JSON.stringify(val) : String(val),
+});
+
+/** Flatten a feature's property bag into display rows. */
+export function propsToRows(bag: Record<string, unknown>): FeatureProp[] {
+  return Object.entries(bag).map(([id, val]) => toRow(id, val));
 }
 
 interface FeaturePickerState {
@@ -22,5 +33,10 @@ export const useFeaturePickerStore = create<FeaturePickerState>((set) => ({
   toggle: () =>
     set((s) => ({ enabled: !s.enabled, selected: s.enabled ? null : s.selected })),
   setEnabled: (enabled) => set({ enabled }),
-  setSelected: (selected) => set({ selected }),
+  setSelected: (selected) => {
+    // The properties only render inside the picker panel, so a pick made while
+    // it's closed would be invisible.
+    if (selected) useAppStore.getState().setActivePanel('featurePicker');
+    set({ selected });
+  },
 }));

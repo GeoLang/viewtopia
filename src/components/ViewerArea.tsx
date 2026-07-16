@@ -14,11 +14,13 @@ import { useBuildingsCesium } from '../hooks/useBuildingsCesium';
 import { useBuildingsDeck } from '../hooks/useBuildingsDeck';
 import { useBuildingsMapLibre } from '../hooks/useBuildingsMapLibre';
 import { useAgentLayersCesium } from '../hooks/useAgentLayersCesium';
+import { useAgentLayersDeck } from '../hooks/useAgentLayersDeck';
 import { useAgentLayersMapLibre } from '../hooks/useAgentLayersMapLibre';
 import { useDrawCesium } from '../hooks/useDrawCesium';
 import { useDrawMapLibre } from '../hooks/useDrawMapLibre';
 import { useMeasureCesium } from '../hooks/useMeasureCesium';
 import { useFeaturePickerCesium } from '../hooks/useFeaturePickerCesium';
+import { useFeaturePickerMapLibre } from '../hooks/useFeaturePickerMapLibre';
 import { useMeasureMapLibre } from '../hooks/useMeasureMapLibre';
 import { useShareLinkHash } from '../hooks/useShareLinkHash';
 import { Minimap } from './Minimap';
@@ -35,7 +37,11 @@ export function ViewerArea() {
 
   // Initialize all viewer engines (they mount into DOM containers below)
   const cesiumRef = useCesium({ containerId: 'cesium-container' });
-  const { deckRef, flyTo: deckFlyTo } = useDeckGL({ containerId: 'deckgl-container' });
+  const {
+    deckRef,
+    flyTo: deckFlyTo,
+    fitBounds: deckFitBounds,
+  } = useDeckGL({ containerId: 'deckgl-container' });
   const maplibreRef = useMapLibre({ containerId: 'maplibre-container' });
   const leafletRef = useLeaflet({ containerId: 'leaflet-container' });
 
@@ -51,6 +57,7 @@ export function ViewerArea() {
 
   // Render the agent's ui_spec layers on whichever globe renderer is active
   useAgentLayersCesium(cesiumRef);
+  useAgentLayersDeck(deckFitBounds);
   useAgentLayersMapLibre(maplibreRef);
 
   // Drawing tools (Cesium + MapLibre; deck.gl is a standalone Deck, not a map)
@@ -61,8 +68,10 @@ export function ViewerArea() {
   useMeasureCesium(cesiumRef);
   useMeasureMapLibre(maplibreRef);
 
-  // Feature picker — inspect 3D Tiles features (Cesium only)
+  // Feature picker — inspect clicked features (deck.gl binds via useDeckGL,
+  // since picking is a Deck-level prop)
   useFeaturePickerCesium(cesiumRef);
+  useFeaturePickerMapLibre(maplibreRef);
 
   // Apply camera + renderer from a shared-link URL hash once on mount
   useShareLinkHash();

@@ -34,11 +34,10 @@ export interface UiSpec {
 export async function renderUISpec(spec: UiSpec): Promise<void> {
   if (!spec || (spec.type !== 'map' && spec.ui_type !== 'map')) return;
 
-  // The agent's map output is a globe layer set; deck.gl has no GeoJSON drawing
-  // path here, so fall back to Cesium from it.
+  // The agent's map output is a globe layer set. Every globe renderer draws from
+  // the agent-layer store, so whichever one is active is left alone.
   const store = useAppStore.getState();
   if (store.activeTab !== 'globe') store.setActiveTab('globe');
-  if (store.renderer === 'deckgl') store.setRenderer('cesium');
 
   const specLayers = spec.layers ?? [];
   const loaded: AgentLayer[] = [];

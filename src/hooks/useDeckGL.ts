@@ -1,8 +1,16 @@
-import { useEffect, useRef } from 'react';
-import { Deck, FlyToInterpolator, type Layer } from '@deck.gl/core';
+import { useCallback, useEffect, useRef } from 'react';
+import {
+  Deck,
+  FlyToInterpolator,
+  WebMercatorViewport,
+  type Layer,
+  type PickingInfo,
+} from '@deck.gl/core';
 import { TileLayer } from '@deck.gl/geo-layers';
 import { BitmapLayer } from '@deck.gl/layers';
 import { useAppStore } from '../store/app';
+import { useFeaturePickerStore, propsToRows } from '../store/featurePicker';
+import { setActiveDeck } from '../viewer/registry';
 import { getSharedCamera, setSharedCamera } from './sharedCamera';
 import { BASEMAP_TILES } from './basemapTiles';
 import { useDeckLayersStore, composedDeckLayers } from './deckLayers';
@@ -78,6 +86,7 @@ export function useDeckGL(opts: UseDeckGLOptions = {}) {
       if (deckRef.current) {
         deckRef.current.finalize();
         deckRef.current = null;
+        setActiveDeck(null);
       }
       return;
     }
@@ -115,10 +124,28 @@ export function useDeckGL(opts: UseDeckGLOptions = {}) {
           bearing: next.bearing,
         });
       },
+      // Deck tracks isHovering itself, but its default cursor ignores it.
+      getCursor: ({ isDragging, isHovering }) => {
+        if (isDragging) return 'grabbing';
+        return isHovering && useFeaturePickerStore.getState().enabled
+          ? 'pointer'
+          : 'grab';
+      },
+      // Picking is a Deck-level prop, so the feature picker binds here rather
+      // than in its own hook. Gated on the same toggle Cesium uses.
+      onClick: (info: PickingInfo) => {
+        if (!useFeaturePickerStore.getState().enabled) return;
+        const props = (info.object as { properties?: Record<string, unknown> } | null)
+          ?.properties;
+        useFeaturePickerStore
+          .getState()
+          .setSelected(props ? propsToRows(props) : null);
+      },
       layers: [],
     });
 
     deckRef.current = deck;
+    setActiveDeck(deck);
     pushLayers();
 
     // Recompose whenever a feature hook updates its layer group.
@@ -135,6 +162,45 @@ export function useDeckGL(opts: UseDeckGLOptions = {}) {
     pushLayers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [basemap, isActive]);
+
+  /**
+   * Frame a [w, s, e, n] box (deck has no map.fitBounds). The fit is computed on
+   * an unpitched viewport — deck's fitBounds is documented as non-perspective
+   * only — and the current tilt is kept.
+   */
+  const fitBounds = useCallback((bounds: [number, number, number, number]) => {
+    const deck = deckRef.current;
+    const cur = viewStateRef.current;
+    if (!deck || !cur || !deck.width || !deck.height) return;
+
+    const fitted = new WebMercatorViewport({
+      width: deck.width,
+      height: deck.height,
+    }).fitBounds(
+      [
+        [bounds[0], bounds[1]],
+        [bounds[2], bounds[3]],
+      ],
+      // minExtent keeps a single-point layer from fitting to zoom Infinity.
+      { padding: 60, maxZoom: 17, minExtent: 0.001 },
+    );
+
+    const next: DeckViewState = {
+      ...cur,
+      longitude: fitted.longitude,
+      latitude: fitted.latitude,
+      zoom: fitted.zoom,
+    };
+    viewStateRef.current = next;
+    deck.setProps({ viewState: next });
+    setSharedCamera({
+      longitude: next.longitude,
+      latitude: next.latitude,
+      zoom: next.zoom,
+      pitch: next.pitch,
+      bearing: next.bearing,
+    });
+  }, []);
 
   /** Animate the camera to a location (deck has no map.flyTo). */
   const flyTo = (lng: number, lat: number, zoom?: number) => {
@@ -153,5 +219,5 @@ export function useDeckGL(opts: UseDeckGLOptions = {}) {
     deck.setProps({ viewState: next });
   };
 
-  return { deckRef, flyTo };
+  return { deckRef, flyTo, fitBounds };
 }

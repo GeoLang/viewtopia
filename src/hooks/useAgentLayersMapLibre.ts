@@ -3,6 +3,7 @@ import type { MutableRefObject } from 'react';
 import type maplibregl from 'maplibre-gl';
 import { useAgentLayerStore } from '../store/agentLayers';
 import { useAppStore } from '../store/app';
+import { agentLayersBounds } from './agentLayerBounds';
 
 const PREFIX = 'agent-layer-';
 
@@ -26,9 +27,6 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
       for (const id of Object.keys(map.getStyle()?.sources ?? {})) {
         if (id.startsWith(PREFIX)) map.removeSource(id);
       }
-
-      const bounds: [number, number, number, number] = [180, 90, -180, -90];
-      let any = false;
 
       for (const layer of layers) {
         const src = `${PREFIX}${layer.id}`;
@@ -60,19 +58,10 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
             'circle-stroke-width': 1,
           },
         });
-
-        for (const f of layer.geojson.features ?? []) {
-          forEachPosition(f.geometry, ([lng, lat]) => {
-            any = true;
-            if (lng < bounds[0]) bounds[0] = lng;
-            if (lat < bounds[1]) bounds[1] = lat;
-            if (lng > bounds[2]) bounds[2] = lng;
-            if (lat > bounds[3]) bounds[3] = lat;
-          });
-        }
       }
 
-      if (any && framedRef.current !== generation) {
+      const bounds = agentLayersBounds(layers);
+      if (bounds && framedRef.current !== generation) {
         framedRef.current = generation;
         map.fitBounds(bounds, { padding: 60, maxZoom: 17, duration: 0 });
       }
@@ -85,23 +74,4 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
       map.off('load', apply);
     };
   }, [layers, generation, mapRef, renderer, activeTab]);
-}
-
-function forEachPosition(
-  geometry: GeoJSON.Geometry | null,
-  fn: (pos: GeoJSON.Position) => void,
-): void {
-  if (!geometry) return;
-  if (geometry.type === 'GeometryCollection') {
-    for (const g of geometry.geometries) forEachPosition(g, fn);
-    return;
-  }
-  const walk = (c: unknown): void => {
-    if (Array.isArray(c) && typeof c[0] === 'number' && typeof c[1] === 'number') {
-      fn(c as GeoJSON.Position);
-    } else if (Array.isArray(c)) {
-      for (const inner of c) walk(inner);
-    }
-  };
-  walk(geometry.coordinates);
 }

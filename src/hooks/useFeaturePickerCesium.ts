@@ -10,12 +10,12 @@ import {
   defined,
 } from 'cesium';
 import type { Cartesian2 } from 'cesium';
-import { useFeaturePickerStore, type FeatureProp } from '../store/featurePicker';
-
-const toRow = (id: string, val: unknown): FeatureProp => ({
-  id,
-  value: typeof val === 'object' && val !== null ? JSON.stringify(val) : String(val),
-});
+import {
+  useFeaturePickerStore,
+  toRow,
+  propsToRows,
+  type FeatureProp,
+} from '../store/featurePicker';
 
 /**
  * Cesium binding for the feature picker (ported from vanilla feature-picker.js).
@@ -63,8 +63,12 @@ export function useFeaturePickerCesium(
         } else if (defined(picked) && picked.id instanceof Entity) {
           const entity: Entity = picked.id;
           const bag = entity.properties?.getValue(v.clock.currentTime) ?? {};
-          const rows: FeatureProp[] = Object.entries(bag).map(([id, val]) => toRow(id, val));
-          if (entity.name) rows.unshift(toRow('name', entity.name));
+          const rows: FeatureProp[] = propsToRows(bag);
+          // GeoJSON entities usually carry `name` in the bag already; a second
+          // row would duplicate it (and its React key).
+          if (entity.name && !rows.some((r) => r.id === 'name')) {
+            rows.unshift(toRow('name', entity.name));
+          }
           useFeaturePickerStore
             .getState()
             .setSelected(rows.length > 0 ? rows : [toRow('(no properties)', '')]);
@@ -72,6 +76,13 @@ export function useFeaturePickerCesium(
           useFeaturePickerStore.getState().setSelected(null);
         }
       }, ScreenSpaceEventType.LEFT_CLICK);
+
+      // Hover affordance — Cesium has no picking cursor of its own.
+      handler.setInputAction((movement: { endPosition: Cartesian2 }) => {
+        const over = defined(v.scene.pick(movement.endPosition));
+        v.scene.canvas.style.cursor = over ? 'pointer' : '';
+      }, ScreenSpaceEventType.MOUSE_MOVE);
+
       handlerRef.current = handler;
     };
 
@@ -80,6 +91,8 @@ export function useFeaturePickerCesium(
         handlerRef.current.destroy();
         handlerRef.current = null;
       }
+      const v = viewerRef.current;
+      if (v && !v.isDestroyed()) v.scene.canvas.style.cursor = '';
       clearHighlight();
     };
 

@@ -6,17 +6,20 @@
  */
 import type { Viewer } from 'cesium';
 import type { Map as MapLibreMap } from 'maplibre-gl';
+import type { Deck } from '@deck.gl/core';
 
 declare global {
   interface Window {
     // exposed for e2e/debug so tests can assert live viewer state
     __viewtopiaViewer?: Viewer | null;
     __viewtopiaMap?: MapLibreMap | null;
+    __viewtopiaDeck?: Deck | null;
   }
 }
 
 let cesiumViewer: Viewer | null = null;
 let maplibreMap: MapLibreMap | null = null;
+let deckInstance: Deck | null = null;
 
 export function setActiveCesiumViewer(v: Viewer | null): void {
   cesiumViewer = v;
@@ -35,4 +38,13 @@ export function setActiveMapLibre(m: MapLibreMap | null): void {
 
 export function getActiveMapLibre(): MapLibreMap | null {
   return maplibreMap;
+}
+
+export function setActiveDeck(d: Deck | null): void {
+  deckInstance = d;
+  window.__viewtopiaDeck = d;
+}
+
+export function getActiveDeck(): Deck | null {
+  return deckInstance;
 }
