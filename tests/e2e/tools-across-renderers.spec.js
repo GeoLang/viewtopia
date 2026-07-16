@@ -39,6 +39,37 @@ const canvasPoint = (page, dx, dy) =>
     [dx, dy],
   );
 
+test.describe('camera across renderers', () => {
+  /** Is the globe under the middle of the screen? If not, every click is dropped. */
+  const centreHitsGlobe = (page) =>
+    page.evaluate(() => {
+      const v = window.__viewtopiaViewer;
+      if (!v || v.isDestroyed?.()) return null;
+      const r = v.scene.canvas.getBoundingClientRect();
+      return !!v.camera.pickEllipsoid({ x: r.width / 2, y: r.height / 2 });
+    });
+
+  // deck tilts a flat camera 45° for its 2.5D view. Publishing that invented
+  // tilt made Cesium restore it as real and aim at space, silently killing
+  // every click on the globe.
+  test('the globe stays under the cursor after a deck.gl round trip', async ({ page }) => {
+    await page.goto(REACT_URL);
+    await page.waitForFunction(() => !!window.__viewtopiaViewer, null, { timeout: 60000 });
+    await expect.poll(() => centreHitsGlobe(page), { timeout: 30000 }).toBe(true);
+
+    await switchRenderer(page, 'deck.gl');
+    await page.waitForFunction(() => !!window.__viewtopiaDeck, null, { timeout: 30000 });
+    // deck still shows its tilted 2.5D view.
+    expect(
+      await page.evaluate(() => window.__viewtopiaDeck?.props?.viewState?.pitch),
+    ).toBeGreaterThan(0);
+
+    await switchRenderer(page, 'CesiumJS');
+    await page.waitForFunction(() => !!window.__viewtopiaViewer, null, { timeout: 30000 });
+    await expect.poll(() => centreHitsGlobe(page), { timeout: 30000 }).toBe(true);
+  });
+});
+
 test.describe('draw tool across renderers', () => {
   test('drawn features survive a cesium → deck.gl → cesium round trip', async ({ page }) => {
     await page.goto(REACT_URL);
@@ -63,6 +94,12 @@ test.describe('draw tool across renderers', () => {
     await page.waitForFunction(() => !!window.__viewtopiaViewer, null, { timeout: 30000 });
 
     await expect.poll(() => drawEntityCount(page), { timeout: 30000 }).toBe(2);
+
+    // And drawing still works: the handler is rebound AND the camera still has
+    // the globe under the cursor, so the click resolves to a coordinate.
+    const pt = await canvasPoint(page, -40, -30);
+    await page.mouse.click(Math.round(pt.x), Math.round(pt.y));
+    await expect.poll(() => drawEntityCount(page), { timeout: 15000 }).toBe(3);
   });
 
   test('the draw handler rebinds to the rebuilt viewer', async ({ page }) => {
