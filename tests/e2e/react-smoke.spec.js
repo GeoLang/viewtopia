@@ -52,10 +52,10 @@ test.describe('React shell smoke', () => {
     await inspect.click();
     // Panel renders with its "Feature Info" heading and the enable switch.
     await expect(page.getByText('Feature Info').first()).toBeVisible();
-    const toggle = page.getByLabel('Click a 3D Tiles feature to inspect');
+    const toggle = page.getByLabel('Click a feature to inspect');
     await expect(toggle).not.toBeChecked();
     // Mantine hides the real <input>; toggle via its visible label.
-    await page.getByText('Click a 3D Tiles feature to inspect').click();
+    await page.getByText('Click a feature to inspect').click();
     await expect(toggle).toBeChecked();
   });
 

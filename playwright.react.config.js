@@ -8,11 +8,16 @@ import { defineConfig } from '@playwright/test';
 //   npm run test:e2e:react
 export default defineConfig({
   testDir: 'tests/e2e',
-  testMatch: ['react-smoke.spec.js', 'panels-smoke.spec.js'],
+  testMatch: ['react-smoke.spec.js', 'panels-smoke.spec.js', 'agent-layers.spec.js'],
   timeout: 60000,
   use: {
     baseURL: 'http://localhost:5175',
     headless: true,
+    // Software GL so Cesium gets a real WebGL context headless — without it the
+    // viewer is absent and renderer tests can only assert a no-viewer branch.
+    launchOptions: {
+      args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'],
+    },
   },
   webServer: {
     command: 'npx vite --port 5175 --strictPort',
