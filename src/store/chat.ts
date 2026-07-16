@@ -1,12 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { UiSpec } from '../viewer/uiSpec';
 
 export interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: number;
-  mapSpec?: unknown; // Optional rendered map/table/image specification
+  /** Map spec this reply rendered, kept so the reply can be replayed later. */
+  mapSpec?: UiSpec;
 }
 
 export interface Session {
@@ -32,6 +34,7 @@ interface ChatState {
   addMessage: (msg: Omit<Message, 'id' | 'timestamp'>) => void;
   appendToLast: (content: string) => void;
   setLastContent: (content: string) => void;
+  setLastMapSpec: (mapSpec: UiSpec) => void;
   clearMessages: () => void;
 
   // Streaming state
@@ -128,6 +131,19 @@ export const useChatStore = create<ChatState>()(
             const last = msgs[msgs.length - 1];
             if (last && last.role === 'assistant') {
               msgs[msgs.length - 1] = { ...last, content };
+            }
+            return { ...sess, messages: msgs, updatedAt: Date.now() };
+          }),
+        })),
+
+      setLastMapSpec: (mapSpec) =>
+        set((s) => ({
+          sessions: s.sessions.map((sess) => {
+            if (sess.id !== s.activeSessionId) return sess;
+            const msgs = [...sess.messages];
+            const last = msgs[msgs.length - 1];
+            if (last && last.role === 'assistant') {
+              msgs[msgs.length - 1] = { ...last, mapSpec };
             }
             return { ...sess, messages: msgs, updatedAt: Date.now() };
           }),

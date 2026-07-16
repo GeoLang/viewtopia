@@ -63,6 +63,28 @@ describe('chat store', () => {
     const msgs = useChatStore.getState().activeMessages();
     expect(msgs[msgs.length - 1].content).toBe('Start + more');
   });
+
+  // the spec must survive on the message: ChatPanel replays it on click, and it
+  // is persisted, so a reply stays replayable after a refresh
+  it('keeps a ui_spec on the last assistant message', () => {
+    const store = useChatStore.getState();
+    if (!store.activeSessionId) store.createSession('Spec Test');
+    const spec = {
+      type: 'map' as const,
+      layers: [{ name: 'Cafes', file: 'outputs/cafes.gpkg', color: '#ff8800' }],
+      center: [2.2945, 48.8584] as [number, number],
+      zoom: 16,
+    };
+
+    store.addMessage({ role: 'user', content: 'cafes near the Eiffel Tower' });
+    store.addMessage({ role: 'assistant', content: 'Here are the cafes.' });
+    useChatStore.getState().setLastMapSpec(spec);
+
+    const msgs = useChatStore.getState().activeMessages();
+    expect(msgs[msgs.length - 1].mapSpec).toEqual(spec);
+    // the user's prompt must not become replayable
+    expect(msgs[msgs.length - 2].mapSpec).toBeUndefined();
+  });
 });
 
 describe('spacetime store', () => {

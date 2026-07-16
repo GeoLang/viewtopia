@@ -13,7 +13,7 @@ import { renderUISpec, type UiSpec } from '../viewer/uiSpec';
  */
 export function useSSE() {
   const abortRef = useRef<AbortController | null>(null);
-  const { addMessage, setLastContent, setStreaming } = useChatStore();
+  const { addMessage, setLastContent, setLastMapSpec, setStreaming } = useChatStore();
 
   const send = useCallback(
     async (prompt: string) => {
@@ -90,7 +90,11 @@ export function useSSE() {
                 if (event.cmd) executeViewerCommand(event.cmd);
                 break;
               case 'ui_spec':
-                if (event.spec) void renderUISpec(event.spec);
+                if (event.spec) {
+                  // keep it on the message so clicking the reply replays it
+                  setLastMapSpec(event.spec);
+                  void renderUISpec(event.spec);
+                }
                 break;
               case 'error':
                 setLastContent(`Error: ${event.text ?? 'unknown'}`);
@@ -108,7 +112,7 @@ export function useSSE() {
         abortRef.current = null;
       }
     },
-    [addMessage, setLastContent, setStreaming],
+    [addMessage, setLastContent, setLastMapSpec, setStreaming],
   );
 
   const abort = useCallback(() => {

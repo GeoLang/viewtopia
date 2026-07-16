@@ -12,6 +12,7 @@ import {
 } from '@mantine/core';
 import { IconSend, IconPlus, IconTrash, IconSquare } from '@tabler/icons-react';
 import { useState, useEffect, useRef } from 'react';
+import { renderUISpec } from '../viewer/uiSpec';
 import { useChatStore } from '../store/chat';
 import { useSSE } from '../hooks/useSSE';
 
@@ -114,6 +115,8 @@ export function ChatPanel() {
               <Text
                 size="sm"
                 c={msg.role === 'user' ? 'white' : 'gray.3'}
+                title={msg.mapSpec ? 'Click to replay this result on the map' : undefined}
+                onClick={msg.mapSpec ? () => void renderUISpec(msg.mapSpec!) : undefined}
                 style={{
                   display: 'inline-block',
                   background:
@@ -122,6 +125,8 @@ export function ChatPanel() {
                   borderRadius: 8,
                   maxWidth: '85%',
                   whiteSpace: 'pre-wrap',
+                  cursor: msg.mapSpec ? 'pointer' : undefined,
+                  borderLeft: msg.mapSpec ? '2px solid #a78bfa' : undefined,
                 }}
               >
                 {msg.content || (streaming && msg.role === 'assistant' ? '…' : '')}
