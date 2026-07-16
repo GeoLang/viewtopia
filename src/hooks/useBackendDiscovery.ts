@@ -15,7 +15,7 @@ export function useBackendDiscovery() {
       let gl = false;
 
       try {
-        const res = await fetch('/api/health', { signal: AbortSignal.timeout(3000) });
+        const res = await fetch('/tiles/v1/health', { signal: AbortSignal.timeout(3000) });
         tt = res.ok;
       } catch {
         /* offline */
