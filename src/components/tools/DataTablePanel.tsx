@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Paper,
   Text,
-  Stack,
   Group,
   ActionIcon,
   Table,
@@ -12,24 +11,64 @@ import {
   Select,
 } from '@mantine/core';
 import { IconTable, IconX, IconSearch } from '@tabler/icons-react';
+import type { Entity } from 'cesium';
+import {
+  useEntityLayers,
+  getEntityLayer,
+  entityAttributes,
+  flyToEntity,
+} from '../../lib/entityLayers';
 
-interface DataRow {
-  [key: string]: string | number | boolean | null;
+const MAX_ROWS = 500;
+
+interface FeatureRow {
+  entity: Entity;
+  attrs: Record<string, unknown>;
 }
 
 export function DataTablePanel({ onClose }: { onClose: () => void }) {
+  const layers = useEntityLayers();
   const [filter, setFilter] = useState('');
-  const [columns] = useState<string[]>([]);
-  const [rows] = useState<DataRow[]>([]);
   const [selectedLayer, setSelectedLayer] = useState<string | null>(null);
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
+
+  const layerOptions = layers.map((l) => ({
+    value: String(l.index),
+    label: `${l.name} (${l.count})`,
+  }));
+
+  const { columns, rows } = useMemo((): { columns: string[]; rows: FeatureRow[] } => {
+    if (selectedLayer == null) return { columns: [], rows: [] };
+    const ds = getEntityLayer(Number(selectedLayer));
+    if (!ds) return { columns: [], rows: [] };
+    const entities = ds.entities.values.slice(0, MAX_ROWS);
+    const rows = entities.map((entity) => ({ entity, attrs: entityAttributes(entity) }));
+    const columns: string[] = [];
+    for (const row of rows) {
+      for (const key of Object.keys(row.attrs)) {
+        if (!columns.includes(key)) columns.push(key);
+      }
+    }
+    // entities without a property bag still get a row via their name/id
+    if (columns.length === 0 && rows.length > 0) {
+      for (const row of rows) row.attrs = { name: row.entity.name ?? row.entity.id };
+      columns.push('name');
+    }
+    return { columns, rows };
+  }, [selectedLayer, layers]);
 
   const filteredRows = filter
     ? rows.filter((r) =>
-        Object.values(r).some(
+        Object.values(r.attrs).some(
           (v) => v != null && String(v).toLowerCase().includes(filter.toLowerCase()),
         ),
       )
     : rows;
+
+  const selectRow = (row: FeatureRow) => {
+    setSelectedRowId(row.entity.id);
+    flyToEntity(row.entity);
+  };
 
   return (
     <Paper
@@ -64,9 +103,9 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
         <Group gap="xs">
           <Select
             size="xs"
-            w={160}
-            placeholder="Select layer…"
-            data={[]}
+            w={200}
+            placeholder={layers.length ? 'Select layer…' : 'No layers loaded'}
+            data={layerOptions}
             value={selectedLayer}
             onChange={setSelectedLayer}
             styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
@@ -99,11 +138,19 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {filteredRows.map((row, i) => (
-                <Table.Tr key={i}>
+              {filteredRows.map((row) => (
+                <Table.Tr
+                  key={row.entity.id}
+                  onClick={() => selectRow(row)}
+                  style={{
+                    cursor: 'pointer',
+                    background:
+                      row.entity.id === selectedRowId ? 'rgba(167,139,250,0.2)' : undefined,
+                  }}
+                >
                   {columns.map((col) => (
                     <Table.Td key={col}>
-                      <Text size="xs" c="gray.3">{String(row[col] ?? '')}</Text>
+                      <Text size="xs" c="gray.3">{String(row.attrs[col] ?? '')}</Text>
                     </Table.Td>
                   ))}
                 </Table.Tr>
@@ -112,7 +159,9 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
           </Table>
         ) : (
           <Text size="xs" c="dimmed" ta="center" py="xl">
-            No data loaded. Select a layer with attribute data to view its table.
+            {layers.length === 0
+              ? 'No layers loaded on the globe. Import data or ask the agent to add a layer.'
+              : 'Select a layer to view its features. Click a row to fly to the feature.'}
           </Text>
         )}
       </ScrollArea>

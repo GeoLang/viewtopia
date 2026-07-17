@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Tabs, Group, Select, Button, Menu, Box, ActionIcon, Tooltip } from '@mantine/core';
+import { Badge, Tabs, Group, Select, Button, Menu, Box, ActionIcon, Tooltip } from '@mantine/core';
 import {
   IconGlobe,
   IconMap,
@@ -36,6 +36,15 @@ import { useAppStore, type Renderer, type Basemap, type ViewerTab } from '../sto
 import { useFeaturePickerStore } from '../store/featurePicker';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { getPlugins } from '../plugins/registry';
+import {
+  ANALYSIS_MENU,
+  SIMULATE_MENU,
+  TOOLS_MENU,
+  DATA_MENU,
+  MORE_MENU,
+  visibleToolItems,
+  type ToolMenuItem,
+} from './toolMenus';
 import { FlyToSearch } from './FlyToSearch';
 
 const TAB_DATA: { value: ViewerTab; label: string; icon: React.ReactNode }[] = [
@@ -61,7 +70,25 @@ export function ViewerToolbar() {
   const activePanel = useAppStore((s) => s.activePanel);
   const setPickerEnabled = useFeaturePickerStore((s) => s.setEnabled);
   const toggleSpaceTime = useSpaceTimeStore((s) => s.togglePanel);
+  const showPreviewTools = useAppStore((s) => s.settings.showPreviewTools);
   const plugins = getPlugins();
+
+  const renderMenuItems = (items: ToolMenuItem[]) =>
+    visibleToolItems(items, showPreviewTools).map((item) => (
+      <Menu.Item
+        key={item.panel}
+        onClick={() => togglePanel(item.panel)}
+        rightSection={
+          item.preview ? (
+            <Badge size="xs" variant="light" color="orange">
+              Preview
+            </Badge>
+          ) : undefined
+        }
+      >
+        {item.label}
+      </Menu.Item>
+    ));
 
   // Inspect is the picking mode itself, not just a panel — opening it arms the
   // picker (the panel's switch mirrors this), closing it disarms.
@@ -160,20 +187,10 @@ export function ViewerToolbar() {
             </Button>
           </Menu.Target>
           <Menu.Dropdown>
-            <Menu.Item onClick={() => togglePanel('clipping')}>✂ Clip</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('crossSection')}>📐 Section</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('heatmap')}>🔥 Heatmap</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('timelapse')}>⏳ Timelapse</Menu.Item>
+            {renderMenuItems(ANALYSIS_MENU[0])}
             <Menu.Item onClick={toggleSpaceTime}>🕐 Space-Time</Menu.Item>
             <Menu.Divider />
-            <Menu.Item onClick={() => togglePanel('shadows')}>🌑 Shadows</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('viewshed')}>👁 Viewshed</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('volume')}>📦 Volume</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('terrainAnalysis')}>⛰ Terrain</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('terrainProfile')}>📈 Profile</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('spatialStats')}>📊 Statistics</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('pointCloudCompare')}>🔄 Cloud Compare</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('classification')}>🏷 Classification</Menu.Item>
+            {renderMenuItems(ANALYSIS_MENU[1])}
           </Menu.Dropdown>
         </Menu>
 
@@ -183,16 +200,7 @@ export function ViewerToolbar() {
               Simulate
             </Button>
           </Menu.Target>
-          <Menu.Dropdown>
-            <Menu.Item onClick={() => togglePanel('weather')}>🌦 Weather</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('flood')}>🌊 Flood</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('wind')}>💨 Wind</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('lighting')}>☀ Lighting</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('noise')}>🔊 Noise</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('energy')}>🔋 Energy</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('solar')}>☀ Solar</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('traffic')}>🚗 Traffic</Menu.Item>
-          </Menu.Dropdown>
+          <Menu.Dropdown>{renderMenuItems(SIMULATE_MENU[0])}</Menu.Dropdown>
         </Menu>
 
         <Menu shadow="md" width={180}>
@@ -202,23 +210,9 @@ export function ViewerToolbar() {
             </Button>
           </Menu.Target>
           <Menu.Dropdown>
-            <Menu.Item onClick={() => togglePanel('photo')}>📷 Photo</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('offline')}>💾 Offline</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('indoor')}>🏛 Indoor</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('drone')}>🛸 Drone</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('webxr')}>🥽 WebXR</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('accessibility')}>♿ A11y</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('export3d')}>🖨 3D Print</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('flythrough')}>🎬 Flythrough</Menu.Item>
+            {renderMenuItems(TOOLS_MENU[0])}
             <Menu.Divider />
-            <Menu.Item onClick={() => togglePanel('charts')}>📊 Charts</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('dashboards')}>📈 Dashboards</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('splitView')}>🔲 Split View</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('stories')}>📖 Stories</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('timeline')}>⏱ Timeline</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('dataTable')}>📋 Data Table</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('collaboration')}>👥 Collaborate</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('printExport')}>🖨 Print/Export</Menu.Item>
+            {renderMenuItems(TOOLS_MENU[1])}
           </Menu.Dropdown>
         </Menu>
 
@@ -229,19 +223,11 @@ export function ViewerToolbar() {
             </Button>
           </Menu.Target>
           <Menu.Dropdown>
-            <Menu.Item onClick={() => togglePanel('portal')}>🗂 Catalog</Menu.Item>
+            {renderMenuItems(DATA_MENU[0])}
             <Menu.Divider />
-            <Menu.Item onClick={() => togglePanel('assets')}>📦 Assets</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('ogc')}>🌐 OGC Layers</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('import')}>📂 Import</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('modelImport')}>🧊 3D Models</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('trackImport')}>🗺 Tracks</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('vectorTiles')}>🔷 Vector Tiles</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('rasterViewer')}>🖼 Raster/COG</Menu.Item>
+            {renderMenuItems(DATA_MENU[1])}
             <Menu.Divider />
-            <Menu.Item onClick={() => togglePanel('cesiumIon')}>🌍 Cesium Ion</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('google3d')}>🏙 Google 3D</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('globalTerrain')}>⛰ Terrain</Menu.Item>
+            {renderMenuItems(DATA_MENU[2])}
           </Menu.Dropdown>
         </Menu>
 
@@ -251,11 +237,7 @@ export function ViewerToolbar() {
               More
             </Button>
           </Menu.Target>
-          <Menu.Dropdown>
-            <Menu.Item onClick={() => togglePanel('settings')}>⚙ Settings</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('shareLink')}>🔗 Share Link</Menu.Item>
-            <Menu.Item onClick={() => togglePanel('tour')}>🎓 Tour</Menu.Item>
-          </Menu.Dropdown>
+          <Menu.Dropdown>{renderMenuItems(MORE_MENU[0])}</Menu.Dropdown>
         </Menu>
 
         {plugins.length > 0 && (

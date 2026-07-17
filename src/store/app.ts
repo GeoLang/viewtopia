@@ -94,6 +94,8 @@ export interface Bookmark {
 interface Settings {
   showMinimap: boolean;
   showCoordReadout: boolean;
+  /** reveal unfinished preview tools in the toolbar menus */
+  showPreviewTools: boolean;
   defaultRenderer: Renderer;
   defaultBasemap: Basemap;
   probeIntervalSec: number;
@@ -159,6 +161,7 @@ interface AppState {
 const DEFAULT_SETTINGS: Settings = {
   showMinimap: true,
   showCoordReadout: true,
+  showPreviewTools: false,
   defaultRenderer: 'cesium',
   defaultBasemap: 'dark',
   probeIntervalSec: 30,

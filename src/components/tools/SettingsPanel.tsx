@@ -60,6 +60,14 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           onChange={(e) => updateSettings({ showCoordReadout: e.currentTarget.checked })}
           color="violet"
         />
+        <Switch
+          size="xs"
+          label="Show Preview Tools"
+          description="Reveal unfinished tools, marked with a Preview badge"
+          checked={settings.showPreviewTools}
+          onChange={(e) => updateSettings({ showPreviewTools: e.currentTarget.checked })}
+          color="violet"
+        />
 
         <Divider color="#30363d" />
         <Text size="xs" c="dimmed" fw={600}>Defaults</Text>

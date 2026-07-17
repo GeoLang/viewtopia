@@ -1,5 +1,7 @@
-import { useAppStore } from '../store/app';
+import { Badge } from '@mantine/core';
+import { useAppStore, type ToolPanel } from '../store/app';
 import { useSpaceTimeStore } from '../features/spacetime/store';
+import { isPreviewPanel } from './toolMenus';
 import { PluginPanel } from '../plugins/PluginHost';
 import { MeasurementPanel } from './tools/MeasurementPanel';
 import { FeaturePickerPanel } from './tools/FeaturePickerPanel';
@@ -64,6 +66,26 @@ import { VectorTilesPanel } from './tools/VectorTilesPanel';
 import { RasterViewerPanel } from './tools/RasterViewerPanel';
 import { PrintExportPanel } from './tools/PrintExportPanel';
 
+/** floating marker over unfinished tools so they never pass as shipped features */
+function PreviewMarker({ panel }: { panel: ToolPanel }) {
+  if (!isPreviewPanel(panel)) return null;
+  return (
+    <Badge
+      size="sm"
+      color="orange"
+      style={{
+        position: 'absolute',
+        top: 68,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 400,
+      }}
+    >
+      Preview: not functional yet
+    </Badge>
+  );
+}
+
 export function ToolPanels() {
   const {
     activePanel,
@@ -78,7 +100,17 @@ export function ToolPanels() {
 
   const close = () => setActivePanel(null);
 
-  switch (activePanel) {
+  const panel = renderPanel();
+  if (!panel) return null;
+  return (
+    <>
+      {panel}
+      <PreviewMarker panel={activePanel} />
+    </>
+  );
+
+  function renderPanel() {
+    switch (activePanel) {
     case 'measure':
       return <MeasurementPanel onClose={close} />;
     case 'featurePicker':
@@ -230,5 +262,6 @@ export function ToolPanels() {
         return <PluginPanel pluginId={activePanel} onClose={close} />;
       }
       return null;
+    }
   }
 }

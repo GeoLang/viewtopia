@@ -10,20 +10,20 @@ import {
   Table,
   Select,
   RingProgress,
+  Loader,
 } from '@mantine/core';
 import { IconX, IconActivity, IconAlertTriangle } from '@tabler/icons-react';
+import { discoverBranch, listSensors, SENSORS_DATASET } from '../../lib/verticals';
 
-interface SensorReading {
+interface SensorRow {
   id: string;
   name: string;
-  type: string; // temperature, humidity, air_quality, water_level, etc.
-  value: number;
+  type: string;
+  value: number | null;
   unit: string;
-  threshold: number | null;
-  status: 'normal' | 'warning' | 'critical';
-  lat: number;
-  lng: number;
-  lastUpdate: string;
+  status: string;
+  lat: number | null;
+  lng: number | null;
 }
 
 interface SensorPanelProps {
@@ -31,26 +31,51 @@ interface SensorPanelProps {
   onClose: () => void;
 }
 
-const STATUS_COLORS = { normal: 'green', warning: 'yellow', critical: 'red' };
+const STATUS_COLORS: Record<string, string> = { normal: 'green', warning: 'yellow', critical: 'red' };
 
 export function SensorPanel({ onFlyTo, onClose }: SensorPanelProps) {
-  const [sensors, setSensors] = useState<SensorReading[]>([]);
+  const [sensors, setSensors] = useState<SensorRow[]>([]);
   const [typeFilter, setTypeFilter] = useState<string | null>('all');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const wsUrl = import.meta.env.VITE_SENSOR_WS_URL || 'ws://localhost:3004/ws/sensors';
-    const ws = new WebSocket(wsUrl);
-    ws.onmessage = (e) => {
-      const data = JSON.parse(e.data);
-      if (data.type === 'readings') setSensors(data.sensors);
-      else if (data.type === 'update') {
-        setSensors((prev) => prev.map((s) => (s.id === data.sensor.id ? data.sensor : s)));
+    let cancelled = false;
+    (async () => {
+      try {
+        const branchId = await discoverBranch(SENSORS_DATASET);
+        if (!branchId) {
+          if (!cancelled) setError('No sensor dataset configured');
+          return;
+        }
+        const rows = await listSensors(branchId);
+        if (cancelled) return;
+        setSensors(
+          rows.map((s) => {
+            const p = s.properties;
+            const value = typeof p.value === 'number' ? p.value : null;
+            const unit = typeof p.unit === 'string' ? p.unit : '';
+            return {
+              id: s.id,
+              name: s.name ?? s.id.slice(0, 8),
+              type: s.sensor_type ?? 'unknown',
+              value,
+              unit,
+              status: s.status ?? 'normal',
+              lat: s.lat,
+              lng: s.lng,
+            };
+          }),
+        );
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load sensors');
+      } finally {
+        if (!cancelled) setLoading(false);
       }
+    })();
+    return () => {
+      cancelled = true;
     };
-    ws.onerror = () => {
-      fetch('/api/sensors').then((r) => r.json()).then((d) => setSensors(d.sensors || [])).catch(() => {});
-    };
-    return () => ws.close();
   }, []);
 
   const filtered = sensors.filter((s) => typeFilter === 'all' || s.type === typeFilter);
@@ -79,26 +104,34 @@ export function SensorPanel({ onFlyTo, onClose }: SensorPanelProps) {
 
         <Select size="xs" value={typeFilter} onChange={setTypeFilter} data={[{ value: 'all', label: 'All Types' }, ...sensorTypes.map((t) => ({ value: t, label: t.replace(/_/g, ' ') }))]} />
 
-        <ScrollArea h={350}>
-          <Table striped highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Sensor</Table.Th>
-                <Table.Th>Value</Table.Th>
-                <Table.Th>Status</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {filtered.map((s) => (
-                <Table.Tr key={s.id} style={{ cursor: 'pointer' }} onClick={() => onFlyTo(s.lat, s.lng, 16)}>
-                  <Table.Td><Stack gap={0}><Text size="xs" fw={500}>{s.name}</Text><Text size="xs" c="dimmed">{s.type.replace(/_/g, ' ')}</Text></Stack></Table.Td>
-                  <Table.Td><Text size="xs" fw={500}>{s.value} {s.unit}</Text></Table.Td>
-                  <Table.Td><Badge size="xs" color={STATUS_COLORS[s.status]}>{s.status}</Badge></Table.Td>
+        {loading ? (
+          <Group justify="center" py="md"><Loader size="sm" /></Group>
+        ) : error ? (
+          <Text size="xs" c="dimmed" ta="center" py="md">{error}</Text>
+        ) : sensors.length === 0 ? (
+          <Text size="xs" c="dimmed" ta="center" py="md">No sensors found</Text>
+        ) : (
+          <ScrollArea h={350}>
+            <Table striped highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Sensor</Table.Th>
+                  <Table.Th>Value</Table.Th>
+                  <Table.Th>Status</Table.Th>
                 </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-        </ScrollArea>
+              </Table.Thead>
+              <Table.Tbody>
+                {filtered.map((s) => (
+                  <Table.Tr key={s.id} style={{ cursor: s.lat != null && s.lng != null ? 'pointer' : 'default' }} onClick={() => { if (s.lat != null && s.lng != null) onFlyTo(s.lat, s.lng, 16); }}>
+                    <Table.Td><Stack gap={0}><Text size="xs" fw={500}>{s.name}</Text><Text size="xs" c="dimmed">{s.type.replace(/_/g, ' ')}</Text></Stack></Table.Td>
+                    <Table.Td><Text size="xs" fw={500}>{s.value != null ? `${s.value} ${s.unit}` : '—'}</Text></Table.Td>
+                    <Table.Td><Badge size="xs" color={STATUS_COLORS[s.status] ?? 'gray'}>{s.status}</Badge></Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </ScrollArea>
+        )}
       </Stack>
     </Paper>
   );

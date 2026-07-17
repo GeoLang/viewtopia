@@ -361,22 +361,23 @@ src/GeoLang/
 └── viewtopia/
 ```
 
-**Build & run** the whole stack with one command, the preferred path. It downloads
-an OSM extract, builds and starts every service, waits for them to report healthy,
-and seeds the real-estate demo data:
+**One command** brings up the whole stack from the `viewtopia/` checkout:
 
 ```bash
-scripts/platform-up.sh
-# → viewer http://localhost:5174, agent /agent/health, notebooks /jupyter/api
+docker compose -f docker-compose.platform.yml up -d --build
+# → http://localhost:5174
 ```
 
-It needs the sibling repos cloned and your LLM key in `../geolang/.env`. Pass a
-[Geofabrik](https://download.geofabrik.de) extract URL to route somewhere other
-than Monaco. To drive compose yourself instead:
+**Data prerequisites** — drop these into `data/` before the router/geocoder come up:
 
-```bash
-docker compose -f docker-compose.platform.yml up --build
-```
+- `data/region.osm.pbf` — OSM extract that geokode (addresses) and itinera (routing
+  graph) both read. Grab one from [Geofabrik](https://download.geofabrik.de) (e.g.
+  Monaco), then `docker compose -f docker-compose.platform.yml restart geokode itinera`.
+- `data/addresses.csv` — optional OpenAddresses CSV geokode can import instead.
+
+`scripts/platform-up.sh` does all of that for you: fetches the OSM extract, builds,
+waits for every service to report healthy, and seeds the real-estate demo data. It
+needs the sibling repos cloned and your LLM key in `../geolang/.env`.
 
 #### On Linux (Fedora) — the recommended Docker host
 

@@ -141,9 +141,9 @@ test.describe('Golden path — live platform stack', () => {
 
   test('python cell round-trips via /jupyter/ proxy (REST + kernel WS)', async ({ page }) => {
     await page.goto('/');
-    // Skip when the notebook kernel service isn't part of this stack.
+    // The platform stack ships the jupyter service, so this is a hard requirement.
     const probe = await fetchFromApp(page, '/jupyter/api');
-    test.skip(probe.status !== 200, '/jupyter/ not available');
+    expect(probe.status, '/jupyter/ proxy unreachable — is the jupyter service up?').toBe(200);
 
     // Same browser-origin path the notebook uses (src/notebooks/jupyter.ts):
     // start a kernel over REST, execute `1+1` over the kernel WebSocket.

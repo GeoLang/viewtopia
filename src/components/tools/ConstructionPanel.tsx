@@ -14,23 +14,29 @@ import {
   Divider,
 } from '@mantine/core';
 import { IconX, IconCrane, IconCalendar, IconCamera } from '@tabler/icons-react';
+import {
+  discoverBranch,
+  listSurveys,
+  listMilestones,
+  compareSurveys,
+  CONSTRUCTION_DATASET,
+  type ElevationStats,
+} from '../../lib/verticals';
 
-interface SurveyComparison {
+interface Survey {
   id: string;
   name: string;
   date: string;
-  cutVolume: number; // cubic meters
-  fillVolume: number;
-  netVolume: number;
-  area: number; // sq meters
   pointCount: number;
+  meanElevation: number | null;
 }
 
 interface ProgressMilestone {
   id: string;
   name: string;
-  planned: number; // percentage
+  planned: number;
   actual: number;
+  status: string;
   date: string;
 }
 
@@ -41,26 +47,70 @@ interface ConstructionPanelProps {
 }
 
 export function ConstructionPanel({ onLoadSurvey, onCompareSurveys, onClose }: ConstructionPanelProps) {
-  const [surveys, setSurveys] = useState<SurveyComparison[]>([]);
+  const [branchId, setBranchId] = useState<string | null>(null);
+  const [surveys, setSurveys] = useState<Survey[]>([]);
   const [milestones, setMilestones] = useState<ProgressMilestone[]>([]);
   const [baseSurvey, setBaseSurvey] = useState<string | null>(null);
   const [compareSurvey, setCompareSurvey] = useState<string | null>(null);
+  const [comparison, setComparison] = useState<ElevationStats | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleLoadSurveys = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const res = await fetch('/api/construction/surveys');
-      const data = await res.json();
-      setSurveys(data.surveys || []);
-      setMilestones(data.milestones || []);
-    } catch { /* */ }
-    finally { setLoading(false); }
+      const branch = await discoverBranch(CONSTRUCTION_DATASET);
+      if (!branch) {
+        setError('No construction dataset configured');
+        setSurveys([]);
+        setMilestones([]);
+        return;
+      }
+      setBranchId(branch);
+      const [surveyRows, milestoneRows] = await Promise.all([
+        listSurveys(branch),
+        listMilestones(branch),
+      ]);
+      setSurveys(
+        surveyRows.map((s) => ({
+          id: s.id,
+          name: s.name ?? s.id.slice(0, 8),
+          date: s.date ?? '',
+          pointCount: s.point_count ?? 0,
+          meanElevation: s.mean_elevation,
+        })),
+      );
+      setMilestones(
+        milestoneRows.map((m) => {
+          const actual = m.completion_pct ?? 0;
+          return {
+            id: m.id,
+            name: m.name ?? m.id.slice(0, 8),
+            actual,
+            planned: m.planned_pct ?? actual,
+            status: m.status ?? '',
+            date: m.due_date ?? '',
+          };
+        }),
+      );
+      setLoaded(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load surveys');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleCompare = () => {
-    if (baseSurvey && compareSurvey) {
-      onCompareSurveys(baseSurvey, compareSurvey);
+  const handleCompare = async () => {
+    if (!branchId || !baseSurvey || !compareSurvey) return;
+    onCompareSurveys(baseSurvey, compareSurvey);
+    try {
+      const result = await compareSurveys(branchId, baseSurvey, compareSurvey);
+      setComparison(result.elevation_diff_stats);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Compare failed');
     }
   };
 
@@ -83,6 +133,11 @@ export function ConstructionPanel({ onLoadSurvey, onCompareSurveys, onClose }: C
           Load Surveys
         </Button>
 
+        {error && <Text size="xs" c="dimmed" ta="center">{error}</Text>}
+        {loaded && !error && surveys.length === 0 && milestones.length === 0 && (
+          <Text size="xs" c="dimmed" ta="center">No surveys or milestones found</Text>
+        )}
+
         {milestones.length > 0 && (
           <>
             <Divider label="Progress" labelPosition="left" />
@@ -97,7 +152,7 @@ export function ConstructionPanel({ onLoadSurvey, onCompareSurveys, onClose }: C
                   <Text size="xs">{m.name}</Text>
                   <Group gap={4}>
                     <Badge size="xs" variant="light" color={m.actual >= m.planned ? 'green' : 'red'}>
-                      {m.actual}% / {m.planned}%
+                      {m.actual.toFixed(0)}% / {m.planned.toFixed(0)}%
                     </Badge>
                   </Group>
                 </Group>
@@ -111,31 +166,37 @@ export function ConstructionPanel({ onLoadSurvey, onCompareSurveys, onClose }: C
             <Divider label="Cut/Fill Analysis" labelPosition="left" />
             <Group gap="xs" grow>
               <Select size="xs" label="Base" placeholder="Select..." value={baseSurvey} onChange={setBaseSurvey}
-                data={surveys.map((s) => ({ value: s.id, label: `${s.name} (${s.date})` }))} />
+                data={surveys.map((s) => ({ value: s.id, label: `${s.name}${s.date ? ` (${s.date})` : ''}` }))} />
               <Select size="xs" label="Compare" placeholder="Select..." value={compareSurvey} onChange={setCompareSurvey}
-                data={surveys.map((s) => ({ value: s.id, label: `${s.name} (${s.date})` }))} />
+                data={surveys.map((s) => ({ value: s.id, label: `${s.name}${s.date ? ` (${s.date})` : ''}` }))} />
             </Group>
             <Button size="xs" onClick={handleCompare} disabled={!baseSurvey || !compareSurvey} leftSection={<IconCalendar size={14} />}>
               Compare
             </Button>
+
+            {comparison && (
+              <Group gap="md">
+                <Text size="xs" c="red">Cut: {comparison.max_cut.toFixed(1)} m</Text>
+                <Text size="xs" c="green">Fill: {comparison.max_fill.toFixed(1)} m</Text>
+                <Text size="xs" fw={500}>Net: {comparison.net_volume_m3.toLocaleString(undefined, { maximumFractionDigits: 0 })} m³</Text>
+              </Group>
+            )}
 
             <ScrollArea h={150}>
               <Table striped>
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th>Survey</Table.Th>
-                    <Table.Th>Cut (m³)</Table.Th>
-                    <Table.Th>Fill (m³)</Table.Th>
-                    <Table.Th>Net</Table.Th>
+                    <Table.Th>Points</Table.Th>
+                    <Table.Th>Mean Elev</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
                   {surveys.map((s) => (
                     <Table.Tr key={s.id} style={{ cursor: 'pointer' }} onClick={() => onLoadSurvey(s.id)}>
                       <Table.Td><Text size="xs">{s.name}</Text></Table.Td>
-                      <Table.Td><Text size="xs" c="red">{s.cutVolume.toLocaleString()}</Text></Table.Td>
-                      <Table.Td><Text size="xs" c="green">{s.fillVolume.toLocaleString()}</Text></Table.Td>
-                      <Table.Td><Text size="xs" fw={500}>{s.netVolume.toLocaleString()}</Text></Table.Td>
+                      <Table.Td><Text size="xs">{s.pointCount.toLocaleString()}</Text></Table.Td>
+                      <Table.Td><Text size="xs">{s.meanElevation != null ? `${s.meanElevation.toFixed(1)} m` : '—'}</Text></Table.Td>
                     </Table.Tr>
                   ))}
                 </Table.Tbody>

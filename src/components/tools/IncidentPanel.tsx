@@ -10,42 +10,35 @@ import {
   ScrollArea,
   Table,
   TextInput,
+  NumberInput,
   Select,
   Divider,
-  Timeline,
 } from '@mantine/core';
 import {
   IconX,
   IconUrgent,
   IconAlertTriangle,
-  IconRoute,
   IconUsers,
   IconPlus,
 } from '@tabler/icons-react';
-
-type IncidentSeverity = 'low' | 'medium' | 'high' | 'critical';
-type IncidentStatus = 'reported' | 'dispatched' | 'on-scene' | 'resolved';
+import {
+  discoverBranch,
+  listIncidents,
+  createIncident,
+  INCIDENTS_DATASET,
+} from '../../lib/verticals';
 
 interface Incident {
   id: string;
-  type: string; // fire, flood, accident, hazmat, medical
+  type: string;
   description: string;
-  severity: IncidentSeverity;
-  status: IncidentStatus;
-  lat: number;
-  lng: number;
+  severity: string;
+  status: string;
+  lat: number | null;
+  lng: number | null;
   reportedAt: string;
   assignedUnits: string[];
   affectedPopulation: number;
-}
-
-interface EvacRoute {
-  id: string;
-  name: string;
-  capacity: number; // people/hour
-  distance: number; // km
-  estimatedTime: number; // minutes
-  status: 'clear' | 'congested' | 'blocked';
 }
 
 interface IncidentPanelProps {
@@ -55,47 +48,96 @@ interface IncidentPanelProps {
   onClose: () => void;
 }
 
-const SEVERITY_COLORS: Record<IncidentSeverity, string> = { low: 'blue', medium: 'yellow', high: 'orange', critical: 'red' };
+const SEVERITY_COLORS: Record<string, string> = { low: 'blue', medium: 'yellow', high: 'orange', critical: 'red' };
+const AUTHOR = 'viewtopia';
 
 export function IncidentPanel({ onFlyTo, onShowEvacRoutes, onShowAffectedArea, onClose }: IncidentPanelProps) {
+  const [branchId, setBranchId] = useState<string | null>(null);
   const [incidents, setIncidents] = useState<Incident[]>([]);
-  const [evacRoutes, setEvacRoutes] = useState<EvacRoute[]>([]);
-  const [selectedIncident, setSelectedIncident] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [newType, setNewType] = useState<string | null>('fire');
+  const [newSeverity, setNewSeverity] = useState<string | null>('medium');
   const [newDesc, setNewDesc] = useState('');
+  const [newLat, setNewLat] = useState<number | string>('');
+  const [newLng, setNewLng] = useState<number | string>('');
   const [loading, setLoading] = useState(false);
+
+  const toRow = (i: {
+    id: string;
+    incident_type: string | null;
+    severity: string | null;
+    status: string | null;
+    lat: number | null;
+    lng: number | null;
+    reported_at: string | null;
+    description: string | null;
+    properties: Record<string, unknown>;
+  }): Incident => {
+    const units = i.properties.assigned_units;
+    const pop = i.properties.affected_population;
+    return {
+      id: i.id,
+      type: i.incident_type ?? 'unknown',
+      description: i.description ?? '',
+      severity: i.severity ?? 'low',
+      status: i.status ?? 'active',
+      lat: i.lat,
+      lng: i.lng,
+      reportedAt: i.reported_at ?? '',
+      assignedUnits: Array.isArray(units) ? (units as string[]) : [],
+      affectedPopulation: typeof pop === 'number' ? pop : 0,
+    };
+  };
 
   const handleLoad = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const res = await fetch('/api/emergency/incidents');
-      const data = await res.json();
-      setIncidents(data.incidents || []);
-    } catch { /* */ }
-    finally { setLoading(false); }
-  };
-
-  const handleEvacRoutes = async (incidentId: string) => {
-    setSelectedIncident(incidentId);
-    onShowEvacRoutes(incidentId);
-    try {
-      const res = await fetch(`/api/emergency/incidents/${incidentId}/evacuation`);
-      const data = await res.json();
-      setEvacRoutes(data.routes || []);
-    } catch { /* */ }
+      const branch = await discoverBranch(INCIDENTS_DATASET);
+      if (!branch) {
+        setError('No incident dataset configured');
+        setIncidents([]);
+        return;
+      }
+      setBranchId(branch);
+      const rows = await listIncidents(branch);
+      setIncidents(rows.map(toRow));
+      setLoaded(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load incidents');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleReport = async () => {
-    if (!newDesc.trim()) return;
+    if (!newDesc.trim() || newLat === '' || newLng === '') return;
+    let branch = branchId;
+    if (!branch) {
+      branch = await discoverBranch(INCIDENTS_DATASET);
+      if (!branch) {
+        setError('No incident dataset configured');
+        return;
+      }
+      setBranchId(branch);
+    }
     try {
-      await fetch('/api/emergency/incidents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: newType, description: newDesc }),
+      const created = await createIncident({
+        branchId: branch,
+        incidentType: newType ?? 'other',
+        severity: newSeverity ?? 'medium',
+        lat: Number(newLat),
+        lng: Number(newLng),
+        description: newDesc.trim(),
+        author: AUTHOR,
       });
+      setIncidents((prev) => [toRow(created), ...prev]);
       setNewDesc('');
-      handleLoad();
-    } catch { /* */ }
+      setLoaded(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to report incident');
+    }
   };
 
   const activeIncidents = incidents.filter((i) => i.status !== 'resolved');
@@ -114,6 +156,8 @@ export function IncidentPanel({ onFlyTo, onShowEvacRoutes, onShowAffectedArea, o
 
         <Button size="xs" onClick={handleLoad} loading={loading}>Load Incidents</Button>
 
+        {error && <Text size="xs" c="dimmed" ta="center">{error}</Text>}
+
         <Group gap="xs">
           {criticalCount > 0 && <Badge color="red" size="sm" leftSection={<IconAlertTriangle size={10} />}>{criticalCount} critical</Badge>}
           <Badge color="gray" size="sm">{activeIncidents.length} active</Badge>
@@ -124,13 +168,23 @@ export function IncidentPanel({ onFlyTo, onShowEvacRoutes, onShowAffectedArea, o
         <Group gap="xs">
           <Select size="xs" value={newType} onChange={setNewType} w={100}
             data={['fire', 'flood', 'accident', 'hazmat', 'medical'].map((t) => ({ value: t, label: t }))} />
+          <Select size="xs" value={newSeverity} onChange={setNewSeverity} w={100}
+            data={['low', 'medium', 'high', 'critical'].map((t) => ({ value: t, label: t }))} />
           <TextInput size="xs" placeholder="Description..." value={newDesc} onChange={(e) => setNewDesc(e.currentTarget.value)} style={{ flex: 1 }} />
-          <ActionIcon size="sm" onClick={handleReport}><IconPlus size={14} /></ActionIcon>
         </Group>
+        <Group gap="xs">
+          <NumberInput size="xs" placeholder="Lat" value={newLat} onChange={setNewLat} decimalScale={6} style={{ flex: 1 }} />
+          <NumberInput size="xs" placeholder="Lng" value={newLng} onChange={setNewLng} decimalScale={6} style={{ flex: 1 }} />
+          <ActionIcon size="sm" onClick={handleReport} disabled={!newDesc.trim() || newLat === '' || newLng === ''}><IconPlus size={14} /></ActionIcon>
+        </Group>
+
+        {loaded && !error && activeIncidents.length === 0 && (
+          <Text size="xs" c="dimmed" ta="center">No active incidents</Text>
+        )}
 
         {/* Active incidents */}
         {activeIncidents.length > 0 && (
-          <ScrollArea h={200}>
+          <ScrollArea h={220}>
             <Table striped highlightOnHover>
               <Table.Thead>
                 <Table.Tr>
@@ -142,9 +196,15 @@ export function IncidentPanel({ onFlyTo, onShowEvacRoutes, onShowAffectedArea, o
               </Table.Thead>
               <Table.Tbody>
                 {activeIncidents.map((inc) => (
-                  <Table.Tr key={inc.id} style={{ cursor: 'pointer' }} onClick={() => { onFlyTo(inc.lat, inc.lng, 15); onShowAffectedArea(inc.lat, inc.lng, 1000); }}>
+                  <Table.Tr key={inc.id} style={{ cursor: 'pointer' }} onClick={() => {
+                    if (inc.lat != null && inc.lng != null) {
+                      onFlyTo(inc.lat, inc.lng, 15);
+                      onShowAffectedArea(inc.lat, inc.lng, 1000);
+                    }
+                    onShowEvacRoutes(inc.id);
+                  }}>
                     <Table.Td><Text size="xs" fw={500}>{inc.type}</Text></Table.Td>
-                    <Table.Td><Badge size="xs" color={SEVERITY_COLORS[inc.severity]}>{inc.severity}</Badge></Table.Td>
+                    <Table.Td><Badge size="xs" color={SEVERITY_COLORS[inc.severity] ?? 'gray'}>{inc.severity}</Badge></Table.Td>
                     <Table.Td><Text size="xs">{inc.status}</Text></Table.Td>
                     <Table.Td><Badge size="xs" variant="light"><IconUsers size={10} /> {inc.assignedUnits.length}</Badge></Table.Td>
                   </Table.Tr>
@@ -152,24 +212,6 @@ export function IncidentPanel({ onFlyTo, onShowEvacRoutes, onShowAffectedArea, o
               </Table.Tbody>
             </Table>
           </ScrollArea>
-        )}
-
-        {/* Evacuation routes for selected incident */}
-        {selectedIncident && evacRoutes.length > 0 && (
-          <>
-            <Divider label="Evacuation Routes" labelPosition="left" />
-            <Timeline active={-1} bulletSize={16} lineWidth={2}>
-              {evacRoutes.map((r) => (
-                <Timeline.Item key={r.id} title={r.name} bullet={<IconRoute size={10} />}>
-                  <Group gap="xs">
-                    <Text size="xs">{r.distance.toFixed(1)} km</Text>
-                    <Text size="xs">~{r.estimatedTime} min</Text>
-                    <Badge size="xs" color={r.status === 'clear' ? 'green' : r.status === 'congested' ? 'yellow' : 'red'}>{r.status}</Badge>
-                  </Group>
-                </Timeline.Item>
-              ))}
-            </Timeline>
-          </>
         )}
       </Stack>
     </Paper>

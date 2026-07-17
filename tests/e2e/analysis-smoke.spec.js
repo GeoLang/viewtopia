@@ -8,7 +8,8 @@ import { test, expect } from '@playwright/test';
  *   docker compose -f docker-compose.platform.yml up -d
  *   npx playwright test -c playwright.platform.config.js tests/e2e/analysis-smoke.spec.js
  *
- * Skips gracefully when /tiles/v1/analysis is not deployed.
+ * tiletopia serves /api/v1/analysis/{viewshed,flood,terrain,solar}; elevation falls
+ * back to a synthetic surface, so no tileset needs to be ingested first.
  */
 
 const BBOX = [7.4, 43.72, 7.45, 43.75]; // small area near Monaco
@@ -36,12 +37,6 @@ test.describe('Terrain analysis — live platform stack', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('viewtopia-tour-done', '1'));
     await page.goto('/');
-    const probe = await post(page, '/tiles/v1/analysis/viewshed', {
-      observer: [7.42, 43.73],
-      height_m: 2,
-      radius_m: 500,
-    });
-    test.skip(probe.status === 404, '/tiles/v1/analysis not deployed');
   });
 
   test('viewshed returns a visible-area polygon', async ({ page }) => {

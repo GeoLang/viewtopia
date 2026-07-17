@@ -14,6 +14,8 @@ import {
   Divider,
 } from '@mantine/core';
 import { IconX, IconPlant, IconDroplet, IconSun } from '@tabler/icons-react';
+import { discoverBranch, listFields, fieldNdvi, FIELDS_DATASET } from '../../lib/verticals';
+import type { NdviResponse } from '../../lib/verticals';
 
 interface Field {
   id: string;
@@ -55,15 +57,48 @@ export function FieldPanel({ onFlyTo, onHighlightField, onShowNdvi, onClose }: F
   const [fields, setFields] = useState<Field[]>([]);
   const [cropFilter, setCropFilter] = useState<string | null>('all');
   const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [branchId, setBranchId] = useState<string | null>(null);
+  const [ndviDetail, setNdviDetail] = useState<(NdviResponse & { fieldName: string }) | null>(null);
 
   const handleLoad = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const res = await fetch('/api/agriculture/fields');
-      const data = await res.json();
-      setFields(data.fields || []);
-    } catch { /* */ }
-    finally { setLoading(false); }
+      const branchId = await discoverBranch(FIELDS_DATASET);
+      if (!branchId) {
+        setError('No field dataset configured');
+        setFields([]);
+        return;
+      }
+      setBranchId(branchId);
+      const rows = await listFields(branchId);
+      setFields(
+        rows.map((f) => {
+          const p = f.properties;
+          const num = (k: string) => (typeof p[k] === 'number' ? (p[k] as number) : 0);
+          const str = (k: string) => (typeof p[k] === 'string' ? (p[k] as string) : '');
+          return {
+            id: f.id,
+            name: f.name ?? f.id.slice(0, 8),
+            crop: f.crop ?? 'unknown',
+            area: f.area_ha ?? 0,
+            ndvi: num('ndvi_mean'),
+            soilMoisture: num('soil_moisture'),
+            plantingDate: str('planting_date'),
+            harvestDate: str('harvest_date') || null,
+            status: (str('status') || 'planted') as Field['status'],
+            geometry: null,
+          };
+        }),
+      );
+      setLoaded(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load fields');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const crops = [...new Set(fields.map((f) => f.crop))];
@@ -83,6 +118,9 @@ export function FieldPanel({ onFlyTo, onHighlightField, onShowNdvi, onClose }: F
         </Group>
 
         <Button size="xs" onClick={handleLoad} loading={loading}>Load Fields</Button>
+
+        {error && <Text size="xs" c="dimmed" ta="center">{error}</Text>}
+        {loaded && !error && fields.length === 0 && <Text size="xs" c="dimmed" ta="center">No fields found</Text>}
 
         {fields.length > 0 && (
           <>
@@ -117,6 +155,11 @@ export function FieldPanel({ onFlyTo, onHighlightField, onShowNdvi, onClose }: F
                     <Table.Tr key={f.id} style={{ cursor: 'pointer' }} onClick={() => {
                       if (f.geometry) onHighlightField(f.geometry);
                       onShowNdvi(f.id);
+                      if (branchId) {
+                        fieldNdvi(branchId, f.id)
+                          .then((d) => setNdviDetail({ ...d, fieldName: f.name }))
+                          .catch(() => setNdviDetail(null));
+                      }
                     }}>
                       <Table.Td><Text size="xs" fw={500}>{f.name}</Text></Table.Td>
                       <Table.Td><Text size="xs">{f.crop}</Text></Table.Td>
@@ -133,6 +176,23 @@ export function FieldPanel({ onFlyTo, onHighlightField, onShowNdvi, onClose }: F
                 </Table.Tbody>
               </Table>
             </ScrollArea>
+
+            {ndviDetail && (
+              <>
+                <Divider label={`NDVI: ${ndviDetail.fieldName}`} labelPosition="left" />
+                <Group gap="md">
+                  <Badge size="sm" color={ndviDetail.health_classification === 'healthy' ? 'green' : ndviDetail.health_classification === 'moderate_stress' ? 'yellow' : ndviDetail.health_classification === 'severe_stress' ? 'red' : 'gray'}>
+                    {ndviDetail.health_classification.replace('_', ' ')}
+                  </Badge>
+                  <Text size="xs">
+                    mean {ndviDetail.mean_ndvi?.toFixed(2) ?? 'n/a'}
+                    {ndviDetail.min_ndvi != null && ndviDetail.max_ndvi != null &&
+                      ` (${ndviDetail.min_ndvi.toFixed(2)} to ${ndviDetail.max_ndvi.toFixed(2)})`}
+                  </Text>
+                  {ndviDetail.timestamp && <Text size="xs" c="dimmed">{ndviDetail.timestamp}</Text>}
+                </Group>
+              </>
+            )}
           </>
         )}
       </Stack>

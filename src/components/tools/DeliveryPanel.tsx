@@ -23,6 +23,7 @@ import {
   IconTrash,
   IconMapPin,
 } from '@tabler/icons-react';
+import { optimizeDelivery } from '../../lib/verticals';
 
 interface DeliveryStop {
   id: string;
@@ -60,6 +61,7 @@ export function DeliveryPanel({
   const [activeRoute, setActiveRoute] = useState<string | null>(null);
   const [newStop, setNewStop] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const currentRoute = routes.find((r) => r.id === activeRoute);
 
@@ -79,41 +81,25 @@ export function DeliveryPanel({
 
   const handleAddStop = async () => {
     if (!newStop.trim() || !activeRoute) return;
+    setError(null);
 
-    // Geocode the address
+    // Geocode the address via geokode (nginx /api/geocode → geokode /forward).
     try {
       const res = await fetch(
-        `/api/geocode?q=${encodeURIComponent(newStop.trim())}`,
+        `/api/geocode/forward?q=${encodeURIComponent(newStop.trim())}`,
       );
+      if (!res.ok) throw new Error(`geocode failed: ${res.status}`);
       const data = await res.json();
-      if (data.results && data.results.length > 0) {
-        const result = data.results[0];
-        const stop: DeliveryStop = {
-          id: crypto.randomUUID(),
-          address: result.display_name || newStop,
-          lat: result.lat,
-          lng: result.lng,
-          notes: '',
-          completed: false,
-          eta: null,
-          arrivedAt: null,
-        };
-        setRoutes(
-          routes.map((r) =>
-            r.id === activeRoute
-              ? { ...r, stops: [...r.stops, stop], optimized: false }
-              : r,
-          ),
-        );
-        setNewStop('');
+      const result = data.results?.[0];
+      if (!result) {
+        setError(`No location found for "${newStop.trim()}"`);
+        return;
       }
-    } catch {
-      // Add with placeholder coords
       const stop: DeliveryStop = {
         id: crypto.randomUUID(),
-        address: newStop,
-        lat: 0,
-        lng: 0,
+        address: result.address?.full || newStop,
+        lat: result.lat,
+        lng: result.lon,
         notes: '',
         completed: false,
         eta: null,
@@ -127,47 +113,45 @@ export function DeliveryPanel({
         ),
       );
       setNewStop('');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Geocoding failed');
     }
   };
 
   const handleOptimize = async () => {
     if (!currentRoute || currentRoute.stops.length < 2) return;
     setLoading(true);
+    setError(null);
 
+    // itinera's optimizer routes from a depot over the remaining stops; use the
+    // first stop as the depot so the ordering starts where the route begins.
+    const depot = { lat: currentRoute.stops[0].lat, lng: currentRoute.stops[0].lng };
     try {
-      const res = await fetch('/api/routing/optimize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          stops: currentRoute.stops.map((s) => ({
-            lat: s.lat,
-            lng: s.lng,
-          })),
-          return_to_depot: false,
-        }),
-      });
-      const data = await res.json();
-      if (data.order) {
-        const reordered = data.order.map(
-          (i: number) => currentRoute.stops[i],
-        );
-        setRoutes(
-          routes.map((r) =>
-            r.id === activeRoute
-              ? {
-                  ...r,
-                  stops: reordered,
-                  optimized: true,
-                  totalDistance: data.total_distance || 0,
-                  totalTime: data.total_time || 0,
-                }
-              : r,
-          ),
-        );
-        onShowRoute(reordered.map((s: DeliveryStop) => ({ lat: s.lat, lng: s.lng })));
-      }
-    } catch {
-      // optimization failed
+      const result = await optimizeDelivery(
+        depot,
+        currentRoute.stops.map((s) => ({ id: s.id, lat: s.lat, lng: s.lng })),
+        false,
+      );
+      const byId = new Map(currentRoute.stops.map((s) => [s.id, s]));
+      const reordered = result.ordered_stops
+        .map((o) => byId.get(o.id))
+        .filter((s): s is DeliveryStop => s != null);
+      setRoutes(
+        routes.map((r) =>
+          r.id === activeRoute
+            ? {
+                ...r,
+                stops: reordered,
+                optimized: true,
+                totalDistance: result.total_distance_m,
+                totalTime: result.estimated_duration_s,
+              }
+            : r,
+        ),
+      );
+      onShowRoute(reordered.map((s) => ({ lat: s.lat, lng: s.lng })));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Optimization failed');
     } finally {
       setLoading(false);
     }
@@ -296,6 +280,8 @@ export function DeliveryPanel({
             >
               {currentRoute.optimized ? 'Re-optimize' : 'Optimize Route'}
             </Button>
+
+            {error && <Text size="xs" c="red">{error}</Text>}
 
             {/* Stops list */}
             <ScrollArea h={300}>

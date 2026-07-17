@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Paper,
   Text,
@@ -6,12 +6,72 @@ import {
   Group,
   ActionIcon,
   Button,
+  Select,
+  NumberInput,
 } from '@mantine/core';
 import { IconChartAreaLine, IconX } from '@tabler/icons-react';
+import {
+  fetchElevations,
+  sampleAlongLine,
+  buildProfile,
+  ElevationChart,
+  type ProfilePoint,
+  type ProfileStats,
+} from '../../lib/elevationProfile';
+import { useDrawStore } from '../../store/draw';
+import { renderGeoJson } from '../../viewer/renderGeoJson';
 
 export function TerrainProfilePanel({ onClose }: { onClose: () => void }) {
-  const [drawing, setDrawing] = useState(false);
-  const [profile, setProfile] = useState<{ distance: number; elevation: number }[]>([]);
+  const features = useDrawStore((s) => s.features);
+  const drawMode = useDrawStore((s) => s.mode);
+  const setMode = useDrawStore((s) => s.setMode);
+  const lineFeatures = features.filter((f) => f.type === 'LineString');
+  const drawing = drawMode === 'line';
+
+  const [selectedLine, setSelectedLine] = useState<string | null>(null);
+  const [numSamples, setNumSamples] = useState(100);
+  const [loading, setLoading] = useState(false);
+  const [profile, setProfile] = useState<ProfilePoint[] | null>(null);
+  const [stats, setStats] = useState<ProfileStats | null>(null);
+
+  // when a line finishes while we armed drawing, select it and disarm
+  const prevLineCount = useRef(lineFeatures.length);
+  useEffect(() => {
+    if (drawing && lineFeatures.length > prevLineCount.current) {
+      setSelectedLine(lineFeatures[lineFeatures.length - 1].id);
+      setMode(null);
+    }
+    prevLineCount.current = lineFeatures.length;
+  }, [drawing, lineFeatures, setMode]);
+
+  const activeLine =
+    lineFeatures.find((f) => f.id === selectedLine) ?? lineFeatures[lineFeatures.length - 1];
+
+  const generate = async () => {
+    if (!activeLine || activeLine.coords.length < 2) return;
+    setLoading(true);
+    try {
+      const coords = sampleAlongLine(activeLine.coords, numSamples);
+      const elevations = await fetchElevations(coords);
+      const { points, stats: builtStats } = buildProfile(coords, elevations);
+      setProfile(points);
+      setStats(builtStats);
+      // mark the sampled line on the live scene
+      await renderGeoJson(
+        {
+          type: 'FeatureCollection',
+          features: [
+            { type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} },
+          ],
+        },
+        '#a78bfa',
+        false,
+        'terrain-profile-line',
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Paper
@@ -41,47 +101,75 @@ export function TerrainProfilePanel({ onClose }: { onClose: () => void }) {
         </ActionIcon>
       </Group>
 
-      {profile.length > 0 ? (
-        <Paper p="xs" style={{ background: '#21262d', borderRadius: 4, height: 120 }}>
-          <svg width="100%" height="100%" viewBox="0 0 500 100" preserveAspectRatio="none">
-            <polyline
-              fill="none"
-              stroke="#a78bfa"
-              strokeWidth="2"
-              points={profile
-                .map(
-                  (p, i) =>
-                    `${(i / (profile.length - 1)) * 500},${100 - (p.elevation / Math.max(...profile.map((pp) => pp.elevation))) * 90}`,
-                )
-                .join(' ')}
-            />
-            <polyline
-              fill="rgba(167,139,250,0.15)"
-              stroke="none"
-              points={`0,100 ${profile
-                .map(
-                  (p, i) =>
-                    `${(i / (profile.length - 1)) * 500},${100 - (p.elevation / Math.max(...profile.map((pp) => pp.elevation))) * 90}`,
-                )
-                .join(' ')} 500,100`}
-            />
-          </svg>
-        </Paper>
-      ) : (
-        <Stack gap="xs" align="center" py="sm">
-          <Text size="xs" c="dimmed">
-            Draw a line on the map to see the elevation profile.
-          </Text>
+      <Stack gap="xs">
+        <Group gap="xs" align="flex-end">
+          <Select
+            size="xs"
+            label="Profile Line"
+            flex={1}
+            placeholder={lineFeatures.length ? 'Latest drawn line' : 'No drawn lines yet'}
+            data={lineFeatures.map((f, i) => ({ value: f.id, label: `Drawn line #${i + 1}` }))}
+            value={activeLine?.id ?? null}
+            onChange={setSelectedLine}
+            styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
+          />
+          <NumberInput
+            size="xs"
+            label="Samples"
+            w={90}
+            value={numSamples}
+            onChange={(v) => setNumSamples(Number(v) || 100)}
+            min={10}
+            max={200}
+            styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
+          />
           <Button
             size="xs"
-            variant={drawing ? 'light' : 'filled'}
+            variant={drawing ? 'light' : 'default'}
             color="violet"
-            onClick={() => setDrawing(!drawing)}
+            onClick={() => setMode(drawing ? null : 'line')}
           >
-            {drawing ? 'Cancel' : 'Draw Profile Line'}
+            {drawing ? 'Cancel Drawing' : 'Draw Line'}
           </Button>
-        </Stack>
-      )}
+          <Button
+            size="xs"
+            color="violet"
+            onClick={generate}
+            loading={loading}
+            disabled={!activeLine}
+          >
+            Generate
+          </Button>
+        </Group>
+
+        {drawing && (
+          <Text size="xs" c="dimmed" ta="center">
+            Click points on the map, double-click to finish the line.
+          </Text>
+        )}
+
+        {profile && profile.length > 0 && (
+          <ElevationChart
+            profile={profile}
+            width={560}
+            height={140}
+            color="#a78bfa"
+            gradientId="terrain-profile-grad"
+          />
+        )}
+
+        {stats && (
+          <Text size="xs" c="dimmed" data-testid="terrainprofile-stats">
+            {`${(stats.totalDist / 1000).toFixed(2)} km · min ${stats.minElev.toFixed(0)} m · max ${stats.maxElev.toFixed(0)} m · +${stats.gain.toFixed(0)} m / -${stats.loss.toFixed(0)} m`}
+          </Text>
+        )}
+
+        {!profile && !drawing && (
+          <Text size="xs" c="dimmed" ta="center" py="xs">
+            Draw a line on the map, then generate its elevation profile.
+          </Text>
+        )}
+      </Stack>
     </Paper>
   );
 }

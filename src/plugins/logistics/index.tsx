@@ -31,8 +31,6 @@ const plugin: PluginDefinition = {
   category: 'plugins',
   Panel: LogisticsPanel,
   settings: [
-    { key: 'wsUrl', label: 'Fleet WebSocket URL', type: 'text', defaultValue: '/ws/fleet', description: 'WebSocket endpoint for vehicle positions' },
-    { key: 'refreshInterval', label: 'Refresh Interval (s)', type: 'number', defaultValue: 5, min: 1, max: 60 },
     { key: 'maxStops', label: 'Max Delivery Stops', type: 'number', defaultValue: 50, min: 2, max: 500 },
   ],
 };

@@ -14,6 +14,7 @@ import {
   Divider,
 } from '@mantine/core';
 import { IconX, IconAntenna, IconSignal4g, IconMapPin } from '@tabler/icons-react';
+import { discoverBranch, listTowers, TOWERS_DATASET } from '../../lib/verticals';
 
 interface TowerSite {
   id: string;
@@ -40,6 +41,8 @@ interface CoveragePanelProps {
 export function CoveragePanel({ onFlyTo, onShowCoverage, onShowViewshed, onClose }: CoveragePanelProps) {
   const [towers, setTowers] = useState<TowerSite[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [simHeight, setSimHeight] = useState<number | string>(30);
   const [simFreq, setSimFreq] = useState<string | null>('3500');
   const [simLat, setSimLat] = useState<number | string>('');
@@ -47,12 +50,42 @@ export function CoveragePanel({ onFlyTo, onShowCoverage, onShowViewshed, onClose
 
   const handleLoad = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const res = await fetch('/api/telecom/towers');
-      const data = await res.json();
-      setTowers(data.towers || []);
-    } catch { /* */ }
-    finally { setLoading(false); }
+      const branchId = await discoverBranch(TOWERS_DATASET);
+      if (!branchId) {
+        setError('No tower dataset configured');
+        setTowers([]);
+        return;
+      }
+      const rows = await listTowers(branchId);
+      setTowers(
+        rows.map((t) => {
+          const p = t.properties;
+          const num = (k: string) => (typeof p[k] === 'number' ? (p[k] as number) : 0);
+          const status = typeof p.status === 'string' ? (p.status as string) : 'active';
+          return {
+            id: t.id,
+            name: t.name ?? t.id.slice(0, 8),
+            lat: t.lat ?? 0,
+            lng: t.lng ?? 0,
+            height: t.height_m ?? 0,
+            technology: t.technology ?? 'unknown',
+            frequency: t.frequency_mhz ?? 0,
+            power: num('power_dbm'),
+            azimuth: num('azimuth'),
+            beamwidth: num('beamwidth'),
+            coverageRadius: num('coverage_radius_m'),
+            status: (status as TowerSite['status']),
+          };
+        }),
+      );
+      setLoaded(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load towers');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSimulate = () => {
@@ -77,6 +110,9 @@ export function CoveragePanel({ onFlyTo, onShowCoverage, onShowViewshed, onClose
         <Button size="xs" onClick={handleLoad} loading={loading} leftSection={<IconSignal4g size={14} />}>
           Load Towers
         </Button>
+
+        {error && <Text size="xs" c="dimmed" ta="center">{error}</Text>}
+        {loaded && !error && towers.length === 0 && <Text size="xs" c="dimmed" ta="center">No towers found</Text>}
 
         {towers.length > 0 && (
           <>
