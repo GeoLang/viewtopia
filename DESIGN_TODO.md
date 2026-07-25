@@ -9,14 +9,16 @@
 
 ## OPEN — correctness follow-ups
 
-- [ ] **ptolemy `qgis.rs:451` (`qgis_pull`) queries columns that don't exist.** It selects
-      `fv.branch_id` and `fv.is_deleted` from `feature_versions`; migrations define neither
-      (versions carry `changeset_id` + `operation`). Endpoint likely 500s at runtime;
-      untested. Surfaced 2026-07-25, needs a repro + fix or removal.
-- [ ] **ptolemy cql2 spatial branches don't sanitize like the rest.** `s_intersects`/
-      `s_within`/`s_contains` inline raw GeoJSON with only `'` doubling and ignore `args[0]`.
-      SQL is built by string interpolation throughout; the scalar ops look closed
-      (`sanitize_field`/`sanitize_value`), the spatial ones deserve a hard look.
+- [ ] **DECIDE: ptolemy auth is fail-open.** `AuthConfig::from_env` disables auth when
+      `PTOLEMY_JWT_SECRET` is unset, so a default deployment serves every endpoint
+      anonymously. Surfaced by the cql2 security audit 2026-07-25. Options: require the
+      secret to serve (like collecta's mandatory `COLLECTA_JWT_SECRET`), or keep dev-open
+      and make the platform compose set a secret. Needs a call, then a small fix.
+- [ ] **ptolemy cql2 minor gaps** (from the same audit, all non-exploitable): malformed
+      GeoJSON coordinate arrays still 500 via PostGIS parse errors; `limit`/`offset` are
+      unvalidated (negative → 500, no upper bound); `in` doesn't accept the CQL2 spec's
+      array form `args: [prop, [a, b]]`; `filter_lang` is accepted but ignored (cql2-text
+      parses as JSON and 400s).
 - [ ] **ptolemy `resolve_conflicts` resolves but never merges**: it commits resolution ops
       onto the *source* branch (`merge_id`) and creates no merge commit on the target.
       Existing behavior, pinned by tests; decide if the endpoint should finalize merges
@@ -25,7 +27,19 @@
       forms written in the same microsecond straddling the cursor could skip one. Switch to
       `(updated_at, rowid)` if it matters at scale.
 
-## DONE — Phase 2 correctness follow-ups (2026-07-25, uncommitted in ptolemy tree)
+## DONE — qgis + cql2 correctness/security (2026-07-25, pushed)
+
+- [x] **ptolemy qgis endpoints queried nonexistent columns** (`fv.branch_id`,
+      `fv.is_deleted`) — `qgis_pull`, `layer_definition`, and `qgis_push`'s existence
+      check all 500'd on every call. Rewritten against the fork-aware `features` view
+      (pull keeps an inline ancestor-chain CTE for its id tiebreaker). 5 new integration
+      tests incl. branch-scoping and delete semantics.
+- [x] **ptolemy cql2 parameterized.** Filter-to-SQL now emits bind parameters for property
+      names, literals, and GeoJSON (no request bytes reach SQL); spatial ops validate
+      GeoJSON structure, honor `args[0]`, and strip `crs`; short arg arrays 400 instead of
+      panicking the handler. 7 new tests incl. injection probes.
+
+## DONE — Phase 2 correctness follow-ups (2026-07-25, pushed)
 
 - [x] **ptolemy `conflicts.rs` (ResolutionStrategy::Theirs) cross-branch leak.** Theirs now
       resolves the target ('main' of the dataset, as `list_conflicts` does) and reads the
