@@ -70,6 +70,18 @@
 - [ ] geokode has a `fuzzy` module (Levenshtein/Soundex) `forward()` doesn't use — wire a
       fuzzy fallback for typo tolerance.
 
+## OPEN — trust & adoption
+
+- [ ] **"Your data is just PostGIS" docs section.** State plainly that ptolemy stores
+      features in plain PostGIS: readable with psql/GDAL/QGIS even without any GeoLang
+      service, standard pg_dump backup/restore. Inherited hardening is the trust pitch
+      for a young stack; make it explicit on the docs site and in ptolemy's README.
+- [ ] **Read-only entry point: viewtopia over an existing PostGIS.** Let a skeptical team
+      point the viewer at a database they already have (read-only connection, no
+      rip-and-replace, no writes) as the first touch. Likely shape: a ptolemy "external
+      schema" read-only dataset mode or a direct pg-to-GeoJSON adapter service; scope it
+      before building.
+
 ## OPEN — Phase 3 (mobile & ML breadth, after v1)
 
 - [ ] **terravista v0.2** — HTTP tile fetch + MVT decode (the SDK can't fetch/draw tiles yet).
