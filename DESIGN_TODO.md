@@ -55,9 +55,10 @@
 
 ## OPEN — platform hygiene
 
-- [ ] **viewtopia: 13 dependency vulns on master** (2 high, 8 moderate, 3 low). Resolve.
-- [ ] **Org Renovate app install still pending** — shared config exists in
-      `GeoLang/renovate-config`, each repo extends it, but the GitHub app isn't installed yet.
+- [x] **viewtopia dependency vulns resolved 2026-07-25** — dompurify 3.4.12, protobufjs
+      8.7.1, vite 6.4.3, all within existing ranges; alerts draining as dependabot rescans.
+- [x] **Renovate app installed on the org 2026-07-25** (Renovate Only, scan-and-alert,
+      silent mode off, all repos). Update PRs follow the shared schedule (Mon before 06:00).
 - [ ] itinera writes to host-mounted `data/` fail as the default container user
       (PermissionDenied); worked around with `--user`. Fix Dockerfile user / volume ownership.
 - [ ] geolang embedded Postgres is ephemeral (no volume) → re-`initdb` (~50s) on every
