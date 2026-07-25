@@ -74,8 +74,17 @@
       --remove-orphans` first; README troubleshooting updated.
 - [ ] geolang `startup.sh` runs postgres as a background child of PID 1, so `docker stop`
       never delivers a clean shutdown (harmless auto-recovery each boot). Fix = signal
-      handling in the startup chain. Also `letta/server/startup.sh` still invokes the
-      renamed base entrypoint path — works by accident, tidy someday.
+      handling in the startup chain. (Entrypoint shadowing fixed 2026-07-25, `544fffc`.)
+- [ ] **geolang rebuilds the tool-exec venv on every start (~44s).** The
+      `env/.populated` marker vanishes between starts (root cause unopened; Letta's own
+      pip-upgrade path touches `bin/`/`share/` but its rmtree shouldn't run). DECIDE: replace
+      the marker with a real state check (import-probe a requirements package) or drop the
+      entrypoint population and let Letta own the venv (contradicts the comment explaining
+      why it exists).
+- [ ] **geolang-api may mint a fresh Letta agent per process start** — `/agent/health`
+      returned a different `agent_id` after a recreate, suggesting agents accumulate in the
+      DB across restarts. Investigate `geolang/src/` agent bootstrap: reuse-by-name before
+      create.
 - [ ] geokode has a `fuzzy` module (Levenshtein/Soundex) `forward()` doesn't use — wire a
       fuzzy fallback for typo tolerance.
 
