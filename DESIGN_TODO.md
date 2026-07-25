@@ -3,28 +3,41 @@
 > Whole-platform backlog for the shipping plan in [DESIGN.md](DESIGN.md).
 > Status keys: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked.
 > **Open work is up top; completed phases are condensed at the bottom.**
-> Last brought current: **2026-07-17**.
+> Last brought current: **2026-07-25**.
 
 ---
 
-## OPEN — correctness follow-ups (from Phase 2 verification, fix next)
+## OPEN — correctness follow-ups
 
-These were surfaced by fresh-context verifiers against the Phase 2 work but are out of
-that work's committed scope. Ordered by severity.
-
-- [ ] **ptolemy `conflicts.rs:147` (ResolutionStrategy::Theirs) cross-branch leak.** Still
-      does an unscoped `FROM feature_versions WHERE feature_id=$1 ORDER BY created_at DESC
-      LIMIT 1` — the same any-branch leak shape that was fixed in `commit()`. Scope it to the
-      changeset ancestor chain. **Top priority.**
-- [ ] **ptolemy-api ~15 untied `DISTINCT ON` queries.** The `fv.id DESC` latest-version
-      tiebreaker fix stopped at the storage crate; `conflicts.rs`, `grpc.rs`,
-      `vector_search.rs`, `analytics.rs`, `ogc.rs`, `geoprocessing.rs`, `qgis.rs` still use
-      the untied `created_at DESC` pattern (nondeterministic on same-tx ops).
-- [ ] **ptolemy cql2 mixed-type 500.** `(properties->>'x')::numeric` throws on rows where
-      the property holds non-numeric text. Guard the cast (e.g. filter by `jsonb_typeof`).
+- [ ] **ptolemy `qgis.rs:451` (`qgis_pull`) queries columns that don't exist.** It selects
+      `fv.branch_id` and `fv.is_deleted` from `feature_versions`; migrations define neither
+      (versions carry `changeset_id` + `operation`). Endpoint likely 500s at runtime;
+      untested. Surfaced 2026-07-25, needs a repro + fix or removal.
+- [ ] **ptolemy cql2 spatial branches don't sanitize like the rest.** `s_intersects`/
+      `s_within`/`s_contains` inline raw GeoJSON with only `'` doubling and ignore `args[0]`.
+      SQL is built by string interpolation throughout; the scalar ops look closed
+      (`sanitize_field`/`sanitize_value`), the spatial ones deserve a hard look.
+- [ ] **ptolemy `resolve_conflicts` resolves but never merges**: it commits resolution ops
+      onto the *source* branch (`merge_id`) and creates no merge commit on the target.
+      Existing behavior, pinned by tests; decide if the endpoint should finalize merges
+      (the newer `/branches/{t}/merge/{s}/resolve` route does this properly).
 - [ ] **collecta forms `?since` cursor** uses strict `>` on microsecond `updated_at`; two
       forms written in the same microsecond straddling the cursor could skip one. Switch to
       `(updated_at, rowid)` if it matters at scale.
+
+## DONE — Phase 2 correctness follow-ups (2026-07-25, uncommitted in ptolemy tree)
+
+- [x] **ptolemy `conflicts.rs` (ResolutionStrategy::Theirs) cross-branch leak.** Theirs now
+      resolves the target ('main' of the dataset, as `list_conflicts` does) and reads the
+      version from the target head's recursive ancestor chain (`resolve_target_head`
+      helper); NotFound instead of unscoped fallback; a target-side `delete` now yields
+      `DiffOp::Delete`. Regression tests prove the old code fails them.
+- [x] **ptolemy-api untied latest-version queries.** `fv.id DESC` (or `id ASC` for the one
+      earliest-pick) appended across conflicts/grpc/vector_search/analytics/ogc/
+      geoprocessing/qgis (16 queries).
+- [x] **ptolemy cql2 mixed-type 500.** Numeric comparisons and `between` use a guarded
+      `CASE WHEN <numeric-regex> THEN ::numeric END` cast: non-numeric text drops out,
+      JSON numbers and numeric strings still match. Regression test covers `>`/`<`/between.
 
 ## OPEN — platform hygiene
 
