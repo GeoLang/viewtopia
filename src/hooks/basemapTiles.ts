@@ -2,7 +2,7 @@
  * Canonical basemap definitions used by all renderers.
  *
  * Raster basemaps work everywhere. Vector styles are MapLibre-only, so the
- * other renderers substitute VECTOR_RASTER_FALLBACK for them.
+ * other renderers substitute the closest raster (VECTOR_APPROX_RASTER) for them.
  */
 import type { StyleSpecification } from 'maplibre-gl';
 import { layers, namedFlavor } from '@protomaps/basemaps';
@@ -36,8 +36,30 @@ export const BASEMAP_TILES: Record<string, { url: string; attr: string }> = {
   },
 };
 
-/** Raster basemap the non-MapLibre renderers use for a vector selection. */
-export const VECTOR_RASTER_FALLBACK = 'dark';
+/**
+ * Cesium and deck.gl can't render vector styles, so when a vector basemap is
+ * selected they show the raster below that looks closest to it, keeping all
+ * three renderers approximately the same. Carto voyager/light/dark are global,
+ * key-free XYZ rasters. 'selfhosted' pmtiles renders with the dark flavor.
+ */
+export const VECTOR_APPROX_RASTER: Record<string, { url: string; attr: string }> = {
+  liberty: {
+    url: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+    attr: '© CARTO © OpenStreetMap',
+  },
+  bright: {
+    url: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+    attr: '© CARTO © OpenStreetMap',
+  },
+  positron: {
+    url: 'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+    attr: '© CARTO © OpenStreetMap',
+  },
+  selfhosted: {
+    url: 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+    attr: '© CARTO © OpenStreetMap',
+  },
+};
 
 /**
  * OpenFreeMap hosted vector styles: no registration, no API key, no request
@@ -93,9 +115,9 @@ export function isVectorBasemap(basemap: string): boolean {
   return basemap in VECTOR_BASEMAPS || basemap === 'selfhosted';
 }
 
-/** Raster tiles for a basemap; vector selections fall back to a raster one. */
+/** Raster tiles for a basemap; a vector selection resolves to its closest raster. */
 export function rasterTiles(basemap: string): { url: string; attr: string } {
-  return BASEMAP_TILES[basemap] ?? BASEMAP_TILES[VECTOR_RASTER_FALLBACK];
+  return BASEMAP_TILES[basemap] ?? VECTOR_APPROX_RASTER[basemap] ?? VECTOR_APPROX_RASTER.liberty;
 }
 
 export function isPmtilesUrl(url: string): boolean {

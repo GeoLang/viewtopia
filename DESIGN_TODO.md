@@ -21,19 +21,19 @@
       webhooks/permissions path check method-agnostic, ahead of the GET→Public rule); re-run the
       platform suite since it touches classify.
 
-- [ ] **tiletopia can't mint an editor/admin.** `signup` hardcodes `UserRole::Viewer`, and
-      a viewer gets 403 on every ptolemy write, so a real UI user can't edit until promoted.
-      Needs a tiletopia admin route or CLI to set a user's role (mirror collecta's admin-only
-      create-user pattern). Until then, promoting means editing sqlite by hand. The e2e only
-      passes because it mints editor tokens directly.
-- [ ] **geolang agent + fenestra call ptolemy with no token → 401 on writes.** Both read
-      `PTOLEMY_URL` but hold no JWT. Give each a service-account token minted from the shared
-      `PLATFORM_JWT_SECRET` (env-injected, editor role) and attach it on ptolemy calls. This
-      is what unblocks the agent NL→map write path the platform suite currently skips.
-- [ ] tiletopia `users.rs` leftover security debt (from the auth audit): a hardcoded
-      `"dev-secret-change-me"` jwt fallback still in the code (unreachable via serve now, but
-      delete it); passwords use unsalted HMAC-SHA256 with non-constant-time compare, should be
-      argon2id like collecta.
+- [x] **tiletopia user role management (done 2026-07-25).** Admin-only
+      `PUT /api/v1/admin/users/{id}/role` behind require_admin, plus `tiletopia set-role`
+      CLI to bootstrap the first admin offline. `update_me` can't change role (no
+      self-escalation), `signup` still viewer-only by design. Also fixed the two `users.rs`
+      security-debt items in the same pass: deleted the hardcoded dev jwt fallback, moved
+      passwords to argon2id with constant-time verify and transparent rehash-on-login of old
+      hashes. 338 tests pass.
+- [x] **service tokens: NOT NEEDED (verified 2026-07-25).** Premise was wrong. Neither
+      geolang nor fenestra writes to ptolemy — every call is a GET (geolang
+      `ptolemy_query.py`, fenestra `source.rs`), and ptolemy reads are public, so nothing
+      401s. The agent NL→map *write* path does not exist in code (the e2e step is
+      intentionally omitted, not skipped). No change made. If an agent-writes-to-ptolemy
+      feature is ever built, add self-signed editor tokens then.
 - [ ] ptolemy audit-trail fields (`granted_by`, `created_by`, `author`) come from the request
       body, not `claims.sub`; DB-backed `dataset_permissions`/`branch_permissions` tables exist
       but nothing enforces them (only the coarse JWT role gates writes). Both small follow-ups
@@ -83,6 +83,12 @@
 
 ## OPEN — platform hygiene
 
+- [x] **basemaps consistent across renderers (2026-07-25).** MapLibre keeps the OpenFreeMap
+      vector styles (Liberty/Bright/Positron) + self-hosted pmtiles; Cesium and deck.gl can't
+      render vector styles, so each vector pick resolves to its closest Carto raster
+      (`VECTOR_APPROX_RASTER`) so all three look approximately the same globally. Also fixed
+      the platform-e2e CI failure: fail-closed services need `PLATFORM_JWT_SECRET`, now set as
+      a throwaway job env in the workflow.
 - [x] **viewtopia dependency vulns resolved 2026-07-25** — dompurify 3.4.12, protobufjs
       8.7.1, vite 6.4.3, all within existing ranges; alerts draining as dependabot rescans.
 - [x] **Renovate app installed on the org 2026-07-25** (Renovate Only, scan-and-alert,
@@ -128,7 +134,7 @@
       schema" read-only dataset mode or a direct pg-to-GeoJSON adapter service; scope it
       before building.
 
-## OPEN — Letta upgrade compatibility test (after auth follow-ups land)
+## OPEN — Letta upgrade compatibility test
 
 - [ ] **Check the stack against latest Letta, then decide whether to move the pin.**
       Vendored `letta/` is 0.16.8 (2026-05-14); `geolang/requirements_client.txt` pins
@@ -136,11 +142,10 @@
       online at start (they drift). Do it in isolation (worktree/throwaway env), do NOT touch
       the committed pin unless it passes. Risk areas: client API drift post-Code-pivot, the
       embedded-server startup chain (`letta/server/startup.sh`), provider config (xAI wiring),
-      and geolang's agent bootstrap in `geolang/src/`. DEPENDS ON the geolang service-token
-      fix (auth follow-up #2): the platform suite skips the agent NL→map write step until the
-      agent can authenticate to ptolemy, so the upgrade can't be validated end to end before
-      that lands. Also fold in the "does 0.16.8→latest carry security fixes worth backporting"
-      and "did upstream relicense the server" checks while in there.
+      and geolang's agent bootstrap in `geolang/src/`. Validate against the platform suite plus
+      a direct agent NL→map exercise (needs an LLM key present). Also fold in the "does
+      0.16.8→latest carry security fixes worth backporting" and "did upstream relicense the
+      server" checks while in there.
 
 ## OPEN — Phase 3 (mobile & ML breadth, after v1)
 

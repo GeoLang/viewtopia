@@ -5,6 +5,7 @@ import {
   BASEMAP_OPTIONS,
   BASEMAP_SELECT_GROUPS,
   VECTOR_BASEMAPS,
+  VECTOR_APPROX_RASTER,
   isPmtilesUrl,
   isVectorBasemap,
   maplibreRasterStyle,
@@ -57,10 +58,10 @@ describe('raster basemaps', () => {
     expect(style.layers).toEqual([{ id: 'basemap', type: 'raster', source: 'basemap' }]);
   });
 
-  it('falls back to dark tiles for vector and unknown basemaps', () => {
-    expect(rasterTiles('liberty')).toBe(BASEMAP_TILES.dark);
-    expect(rasterTiles('selfhosted')).toBe(BASEMAP_TILES.dark);
-    expect(rasterTiles('nope')).toBe(BASEMAP_TILES.dark);
+  it('resolves vector selections to their approximating raster, unknown to liberty', () => {
+    expect(rasterTiles('liberty')).toBe(VECTOR_APPROX_RASTER.liberty);
+    expect(rasterTiles('selfhosted')).toBe(VECTOR_APPROX_RASTER.selfhosted);
+    expect(rasterTiles('nope')).toBe(VECTOR_APPROX_RASTER.liberty);
     expect(rasterTiles('topo')).toBe(BASEMAP_TILES.topo);
   });
 
@@ -151,7 +152,17 @@ describe('basemap defaults', () => {
     );
   });
 
-  it('leaves the other renderers on raster tiles by default', () => {
-    expect(rasterTiles(useAppStore.getState().basemap)).toBe(BASEMAP_TILES.dark);
+  it('approximates the default vector style with a raster for the other renderers', () => {
+    // MapLibre shows Liberty vector; Cesium/deck.gl show the closest raster so
+    // all three look approximately the same.
+    expect(rasterTiles(useAppStore.getState().basemap)).toBe(VECTOR_APPROX_RASTER.liberty);
+  });
+
+  it('maps each vector style to a distinct approximating raster', () => {
+    expect(rasterTiles('positron')).toBe(VECTOR_APPROX_RASTER.positron);
+    expect(rasterTiles('bright')).toBe(VECTOR_APPROX_RASTER.bright);
+    // raster basemaps resolve to themselves
+    expect(rasterTiles('satellite')).toBe(BASEMAP_TILES.satellite);
+    expect(rasterTiles('dark')).toBe(BASEMAP_TILES.dark);
   });
 });
