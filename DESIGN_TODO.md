@@ -9,17 +9,25 @@
 
 ## OPEN — auth follow-ups (queued after basemap lands, both security-role)
 
-- [ ] **tiletopia `/v1/` allowlist permits anonymous writes** (verifier-confirmed 2026-07-25):
-      `auth_middleware` exempts every `/v1/*` path, so `POST /v1/assets` and `POST /v1/tokens`
-      (ion_compat.rs) return 201 with no token. Not a ptolemy-escalation path (tokens are
-      random `tt_` strings, not JWTs) and the golden path is unaffected (nginx routes through
-      `/api/v1/`), but tighten the allowlist to tile-data GETs only. Top of the security batch.
-- [ ] **ptolemy anonymous config reads** (verifier-confirmed 2026-07-25): the signing-secret
-      disclosure is already fixed (`event.rs` `skip_serializing` on `Webhook.secret`, committed
-      `2e6b8e0`), but `GET /webhooks` still lists hooks and `GET /permissions` still returns the
-      ACL to anonymous callers. Gate these two reads as admin in `classify()` (make the
-      webhooks/permissions path check method-agnostic, ahead of the GET→Public rule); re-run the
-      platform suite since it touches classify.
+- [x] **tiletopia `/v1/` anonymous writes closed (2026-07-25).** Blanket `/v1/` exemption
+      removed; `POST /v1/assets` now needs editor, `POST /v1/tokens` needs admin, tile-data
+      GETs stay anonymous. ion routes split into read (anonymous) / write (role-layered) so a
+      future `/v1/` route defaults protected. 5 new tests.
+- [x] **ptolemy anonymous config reads gated (2026-07-25).** `classify()` now returns Admin
+      for any method on `/permissions`, `/webhooks`, `/orgs`, `/audit` (moved above the
+      GET→Public rule); map data reads stay public. Platform e2e 18/18 with it in. 6 new tests.
+
+## OPEN — security follow-ups (surfaced by the fixes above, lower severity)
+
+- [ ] **ptolemy `GET /metrics` is anonymous** and its Prometheus labels embed dataset/branch
+      UUIDs (request counts, latencies, event counters). Gate at the proxy (allowlist the
+      scraper) rather than in-app.
+- [ ] **ptolemy anonymous reads still open on** `GET .../events` (webhook delivery history)
+      and `/replication/feed/{branch}` (streams branch change data). Decide whether either is
+      sensitive enough to gate.
+- [ ] **tiletopia native `POST /api/v1/assets` (upload) only needs any valid JWT** — a viewer
+      can upload, looser than the Ion `POST /v1/assets` which now needs editor. Make asset
+      creation editor-gated everywhere.
 
 - [x] **tiletopia user role management (done 2026-07-25).** Admin-only
       `PUT /api/v1/admin/users/{id}/role` behind require_admin, plus `tiletopia set-role`
