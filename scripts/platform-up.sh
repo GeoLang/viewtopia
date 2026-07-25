@@ -27,8 +27,7 @@ docker compose -f docker-compose.platform.yml down --remove-orphans
 docker compose -f docker-compose.platform.yml up -d --build
 
 echo "waiting for services to report healthy..."
-for i in $(seq 1 60); do
-  unhealthy=$(docker compose -f docker-compose.platform.yml ps --format '{{.Name}} {{.Health}}' | grep -cv "healthy\|^\S* $" || true)
+for _ in $(seq 1 60); do
   starting=$(docker compose -f docker-compose.platform.yml ps --format '{{.Health}}' | grep -c starting || true)
   [ "$starting" -eq 0 ] && break
   sleep 5
