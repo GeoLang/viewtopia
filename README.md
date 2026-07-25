@@ -653,4 +653,6 @@ scripts/clone-geolang.sh  [DIR]   # macOS/Linux/Git-Bash
 
 ## License
 
-[AGPL-3.0](LICENSE)
+AGPL-3.0-or-later, see [LICENSE](LICENSE).
+
+Copyright (C) 2026 Grok Image Compression Inc.
