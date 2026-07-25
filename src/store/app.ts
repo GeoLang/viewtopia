@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { CameraState } from './cameraViews';
+import type { Basemap } from '../hooks/basemapTiles';
 
 export type ViewerTab = 'globe' | 'map';
 export type Renderer = 'cesium' | 'deckgl' | 'maplibre';
-export type Basemap = 'osm' | 'satellite' | 'topo' | 'dark';
+export type { Basemap };
 export type ToolPanel =
   | null
   | 'measure'
@@ -98,6 +99,8 @@ interface Settings {
   showPreviewTools: boolean;
   defaultRenderer: Renderer;
   defaultBasemap: Basemap;
+  /** MapLibre style JSON or .pmtiles URL for the 'selfhosted' basemap */
+  selfHostedBasemapUrl: string;
   probeIntervalSec: number;
   tiletopiaUrl: string;
   geolangUrl: string;
@@ -163,7 +166,8 @@ const DEFAULT_SETTINGS: Settings = {
   showCoordReadout: true,
   showPreviewTools: false,
   defaultRenderer: 'cesium',
-  defaultBasemap: 'dark',
+  defaultBasemap: 'liberty',
+  selfHostedBasemapUrl: '',
   probeIntervalSec: 30,
   tiletopiaUrl: '/api/v1',
   geolangUrl: '/agent',
@@ -184,7 +188,7 @@ export const useAppStore = create<AppState>()(
       setActiveTab: (tab) => set({ activeTab: tab }),
       renderer: 'cesium',
       setRenderer: (renderer) => set({ renderer }),
-      basemap: 'dark',
+      basemap: 'liberty',
       setBasemap: (basemap) => set({ basemap }),
 
       activePanel: null,

@@ -12,7 +12,7 @@ import { useAppStore } from '../store/app';
 import { useFeaturePickerStore, propsToRows } from '../store/featurePicker';
 import { setActiveDeck } from '../viewer/registry';
 import { getSharedCamera, setSharedCamera } from './sharedCamera';
-import { BASEMAP_TILES } from './basemapTiles';
+import { rasterTiles } from './basemapTiles';
 import { useDeckLayersStore, composedDeckLayers } from './deckLayers';
 
 interface UseDeckGLOptions {
@@ -38,7 +38,7 @@ interface DeckViewState {
 
 /** deck.gl raster basemap as a TileLayer (stable id so it can be swapped in place). */
 function makeBasemapLayer(name: string): Layer {
-  const tile = BASEMAP_TILES[name] ?? BASEMAP_TILES.osm;
+  const tile = rasterTiles(name);
   return new TileLayer({
     id: 'basemap',
     data: tile.url,

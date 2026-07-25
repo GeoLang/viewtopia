@@ -3,6 +3,7 @@ import { Box } from '@mantine/core';
 import L from 'leaflet';
 import { useAppStore } from '../store/app';
 import { getSharedCamera } from '../hooks/sharedCamera';
+import { rasterTiles } from '../hooks/basemapTiles';
 
 /**
  * Minimap — Leaflet overview map synced to the active renderer's camera
@@ -10,6 +11,7 @@ import { getSharedCamera } from '../hooks/sharedCamera';
  */
 export function Minimap() {
   const settings = useAppStore((s) => s.settings);
+  const basemap = useAppStore((s) => s.basemap);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const rectRef = useRef<L.Rectangle | null>(null);
@@ -29,9 +31,9 @@ export function Minimap() {
       keyboard: false,
     } as L.MapOptions).setView([37.8, -122.4], 4);
 
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 18,
-    }).addTo(map);
+    // follows the selected basemap so the overview isn't stuck on one provider
+    const tile = rasterTiles(basemap);
+    L.tileLayer(tile.url, { attribution: tile.attr, maxZoom: 18 }).addTo(map);
 
     const rect = L.rectangle(
       [
@@ -72,7 +74,7 @@ export function Minimap() {
       mapRef.current = null;
       rectRef.current = null;
     };
-  }, [settings.showMinimap]);
+  }, [settings.showMinimap, basemap]);
 
   if (!settings.showMinimap) return null;
 

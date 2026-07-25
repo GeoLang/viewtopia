@@ -3,7 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useAppStore } from '../store/app';
 import { getSharedCamera, setSharedCamera } from './sharedCamera';
-import { BASEMAP_TILES } from './basemapTiles';
+import { rasterTiles } from './basemapTiles';
 
 interface UseLeafletOptions {
   containerId?: string;
@@ -31,7 +31,7 @@ export function useLeaflet(opts: UseLeafletOptions = {}) {
       zoomControl: true,
     });
 
-    const tile = BASEMAP_TILES[useAppStore.getState().basemap] ?? BASEMAP_TILES.dark;
+    const tile = rasterTiles(useAppStore.getState().basemap);
     const layer = L.tileLayer(tile.url, {
       attribution: tile.attr,
       maxZoom: 19,
@@ -66,7 +66,7 @@ export function useLeaflet(opts: UseLeafletOptions = {}) {
     map.eachLayer((layer) => {
       if (layer instanceof L.TileLayer) map.removeLayer(layer);
     });
-    const tile = BASEMAP_TILES[basemap] ?? BASEMAP_TILES.dark;
+    const tile = rasterTiles(basemap);
     const layer = L.tileLayer(tile.url, {
       attribution: tile.attr,
       maxZoom: 19,

@@ -46,6 +46,7 @@ import {
   type ToolMenuItem,
 } from './toolMenus';
 import { FlyToSearch } from './FlyToSearch';
+import { BASEMAP_SELECT_GROUPS } from '../hooks/basemapTiles';
 
 const TAB_DATA: { value: ViewerTab; label: string; icon: React.ReactNode }[] = [
   { value: 'globe', label: '3D Globe', icon: <IconGlobe size={14} /> },
@@ -56,13 +57,6 @@ const RENDERER_OPTIONS: { value: Renderer; label: string }[] = [
   { value: 'cesium', label: 'CesiumJS' },
   { value: 'deckgl', label: 'deck.gl' },
   { value: 'maplibre', label: 'MapLibre' },
-];
-
-const BASEMAP_OPTIONS: { value: Basemap; label: string }[] = [
-  { value: 'osm', label: 'OSM' },
-  { value: 'satellite', label: 'Satellite' },
-  { value: 'topo', label: 'Topo' },
-  { value: 'dark', label: 'Dark' },
 ];
 
 export function ViewerToolbar() {
@@ -158,8 +152,10 @@ export function ViewerToolbar() {
 
         <Select
           size="xs"
-          w={100}
-          data={BASEMAP_OPTIONS}
+          w={110}
+          aria-label="Basemap"
+          comboboxProps={{ width: 190, position: 'bottom-start' }}
+          data={BASEMAP_SELECT_GROUPS}
           value={basemap}
           onChange={(v) => v && setBasemap(v as Basemap)}
           styles={{

@@ -9,7 +9,7 @@ import {
 } from 'cesium';
 import { useAppStore } from '../store/app';
 import { getSharedCamera, setSharedCamera } from './sharedCamera';
-import { BASEMAP_TILES } from './basemapTiles';
+import { rasterTiles } from './basemapTiles';
 import { setActiveCesiumViewer } from '../viewer/registry';
 
 interface UseCesiumOptions {
@@ -17,18 +17,14 @@ interface UseCesiumOptions {
   ionToken?: string;
 }
 
+/** Cesium is raster-only, so a vector basemap resolves to its raster fallback. */
 function cesiumImageryProvider(basemap: string) {
-  const tile = BASEMAP_TILES[basemap];
-  if (!tile) {
-    return new OpenStreetMapImageryProvider({
-      url: 'https://tile.openstreetmap.org/',
-    });
-  }
   if (basemap === 'osm') {
     return new OpenStreetMapImageryProvider({
       url: 'https://tile.openstreetmap.org/',
     });
   }
+  const tile = rasterTiles(basemap);
   return new UrlTemplateImageryProvider({
     url: tile.url,
     maximumLevel: basemap === 'topo' ? 17 : 19,

@@ -243,3 +243,27 @@ describe('settings livekitUrl', () => {
     useAppStore.getState().updateSettings({ livekitUrl: '' });
   });
 });
+
+describe('settings selfHostedBasemapUrl', () => {
+  it('has empty default', () => {
+    expect(useAppStore.getState().settings.selfHostedBasemapUrl).toBe('');
+  });
+
+  it('persists the URL to storage', () => {
+    const url = 'https://files.example.com/planet.pmtiles';
+    useAppStore.getState().updateSettings({ selfHostedBasemapUrl: url });
+    expect(useAppStore.getState().settings.selfHostedBasemapUrl).toBe(url);
+    const stored = JSON.parse(localStorage.getItem('viewtopia-app') ?? '{}');
+    expect(stored.state.settings.selfHostedBasemapUrl).toBe(url);
+    useAppStore.getState().updateSettings({ selfHostedBasemapUrl: '' });
+  });
+});
+
+describe('settings basemap', () => {
+  it('persists a vector basemap choice', () => {
+    useAppStore.getState().setBasemap('positron');
+    const stored = JSON.parse(localStorage.getItem('viewtopia-app') ?? '{}');
+    expect(stored.state.basemap).toBe('positron');
+    useAppStore.getState().setBasemap('liberty');
+  });
+});

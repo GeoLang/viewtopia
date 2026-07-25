@@ -149,10 +149,7 @@ test.describe('agent layers across renderers', () => {
     await expect.poll(() => maplibreLayerIds(page), { timeout: 30000 }).not.toHaveLength(0);
 
     // setStyle drops every source and layer; ours must come back.
-    await page
-      .locator('input[value="OSM"], input[value="Satellite"], input[value="Topo"], input[value="Dark"]')
-      .first()
-      .click();
+    await page.getByRole('textbox', { name: 'Basemap', exact: true }).click();
     await page.getByRole('option', { name: 'Satellite', exact: true }).click();
 
     await expect.poll(() => maplibreLayerIds(page), { timeout: 30000 }).not.toHaveLength(0);

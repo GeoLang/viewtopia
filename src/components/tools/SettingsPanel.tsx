@@ -12,6 +12,7 @@ import {
 } from '@mantine/core';
 import { IconSettings, IconX } from '@tabler/icons-react';
 import { useAppStore, type Renderer, type Basemap } from '../../store/app';
+import { BASEMAP_SELECT_GROUPS, isPmtilesUrl } from '../../hooks/basemapTiles';
 import { PluginSettingsPanel } from '../../plugins/PluginSettings';
 
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
@@ -88,14 +89,26 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         <Select
           size="xs"
           label="Default Basemap"
-          data={[
-            { value: 'osm', label: 'OpenStreetMap' },
-            { value: 'satellite', label: 'Satellite' },
-            { value: 'topo', label: 'Topo' },
-            { value: 'dark', label: 'Dark' },
-          ]}
+          description="Vector styles render in MapLibre only; Cesium, deck.gl and Leaflet use the Dark raster tiles instead"
+          data={BASEMAP_SELECT_GROUPS}
           value={settings.defaultBasemap}
           onChange={(v) => v && updateSettings({ defaultBasemap: v as Basemap })}
+          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
+        />
+
+        <TextInput
+          size="xs"
+          label="Self-hosted Basemap URL"
+          description={
+            settings.selfHostedBasemapUrl.trim()
+              ? isPmtilesUrl(settings.selfHostedBasemapUrl)
+                ? 'PMTiles archive, styled with the Protomaps basemap layers'
+                : 'Treated as a MapLibre style JSON URL'
+              : 'Style JSON or .pmtiles URL, used by the Self-hosted basemap'
+          }
+          placeholder="https://example.com/basemap.pmtiles"
+          value={settings.selfHostedBasemapUrl}
+          onChange={(e) => updateSettings({ selfHostedBasemapUrl: e.currentTarget.value })}
           styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
