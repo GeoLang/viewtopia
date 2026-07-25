@@ -21,7 +21,8 @@ import {
 import { HeatmapLayer, HexagonLayer, ScreenGridLayer } from '@deck.gl/aggregation-layers';
 import { ArcLayer, ScatterplotLayer } from '@deck.gl/layers';
 import type { Layer } from '@deck.gl/core';
-import { getActiveCesiumViewer } from './registry';
+import { getActiveCesiumViewer, getActiveMapLibre, getActiveDeck } from './registry';
+import { setSharedCamera } from '../hooks/sharedCamera';
 import { renderGeoJson } from './renderGeoJson';
 import { runSqlQuery } from '../duckdb/sqlCommand';
 import { useAppStore, type Renderer, type ViewerTab, type ToolPanel } from '../store/app';
@@ -61,28 +62,58 @@ function addAgentDeckLayer(layer: Layer): void {
   store.setRenderer('deckgl');
 }
 
-const handlers: Record<string, Handler> = {
-  fly_to: (p) => {
-    const viewer = getActiveCesiumViewer();
-    if (!viewer) return;
-    viewer.camera.flyTo({
-      destination: Cartesian3.fromDegrees(num(p.lon), num(p.lat), num(p.height, 1000)),
-      duration: num(p.duration, 2),
-    });
-  },
+// camera altitude (m) -> web-mercator zoom, so a Cesium-style fly_to also moves
+// the MapLibre globe / deck.gl view.
+const heightToZoom = (height: number): number =>
+  Math.max(3, Math.min(18, Math.round(Math.log2(59000000 / Math.max(height, 200)))));
 
-  set_view: (p) => {
-    const viewer = getActiveCesiumViewer();
-    if (!viewer) return;
-    viewer.camera.setView({
-      destination: Cartesian3.fromDegrees(num(p.lon), num(p.lat), num(p.height, 5000)),
-      orientation: {
-        heading: CesiumMath.toRadians(num(p.heading, 0)),
-        pitch: CesiumMath.toRadians(num(p.pitch, -45)),
-        roll: CesiumMath.toRadians(num(p.roll, 0)),
-      },
-    });
-  },
+// Move whichever renderer is live (Cesium, MapLibre, deck.gl), and record the
+// position in the shared camera so a later renderer switch keeps it. Camera
+// commands used to touch only Cesium, so they silently did nothing on the
+// MapLibre globe.
+function moveCamera(p: Record<string, unknown>, setView: boolean): void {
+  const lon = num(p.lon);
+  const lat = num(p.lat);
+  const height = num(p.height, setView ? 5000 : 1000);
+  const duration = num(p.duration, 2);
+  const zoom = heightToZoom(height);
+  const bearing = num(p.heading, 0);
+  setSharedCamera({ longitude: lon, latitude: lat, zoom, bearing });
+
+  const cesium = getActiveCesiumViewer();
+  if (cesium) {
+    const destination = Cartesian3.fromDegrees(lon, lat, height);
+    if (setView) {
+      cesium.camera.setView({
+        destination,
+        orientation: {
+          heading: CesiumMath.toRadians(bearing),
+          pitch: CesiumMath.toRadians(num(p.pitch, -45)),
+          roll: CesiumMath.toRadians(num(p.roll, 0)),
+        },
+      });
+    } else {
+      cesium.camera.flyTo({ destination, duration });
+    }
+    return;
+  }
+
+  const map = getActiveMapLibre();
+  if (map) {
+    map.flyTo({ center: [lon, lat], zoom, bearing, duration: setView ? 0 : duration * 1000 });
+    return;
+  }
+
+  const deck = getActiveDeck();
+  if (deck) {
+    deck.setProps({ viewState: { longitude: lon, latitude: lat, zoom, bearing, pitch: 0 } });
+  }
+}
+
+const handlers: Record<string, Handler> = {
+  fly_to: (p) => moveCamera(p, false),
+
+  set_view: (p) => moveCamera(p, true),
 
   add_marker: (p) => {
     const viewer = getActiveCesiumViewer();
