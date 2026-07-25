@@ -135,6 +135,23 @@
 - [ ] geokode has a `fuzzy` module (Levenshtein/Soundex) `forward()` doesn't use — wire a
       fuzzy fallback for typo tolerance.
 
+## DONE — AG-UI agent channel + panel close fix (2026-07-25)
+
+- [x] **AG-UI agent channel (behind a flag).** geolang serves `POST /chat/agui` next to the
+      legacy `/chat/stream` (shared event generator; `ag-ui-protocol` installed into the base
+      image's uv venv via the Dockerfile). viewtopia routes through `@ag-ui/client` `HttpAgent`
+      when `settings.useAgUiChannel` is on (default off), mapping AG-UI events to the existing
+      handlers. Standard events (text/lifecycle) for the chat, Custom events for viewer_cmd +
+      ui_spec. Verified end to end: client hit `/chat/agui`, agent "fly to Monaco" streamed
+      RUN_STARTED→TEXT→CUSTOM(viewer_cmd fly_to)→RUN_FINISHED and rendered. Legacy untouched.
+      Follow-up: the `__UI_SPEC__:`/`__VIEWER_CMD__:` Letta tool-return markers still feed the
+      generator (internal); AG-UI didn't replace those, clean up later. Prior chat turns aren't
+      sent yet (latest prompt only). Flip default + delete legacy after real-world use.
+- [x] **Panel close fix.** Escape closes any open tool panel (`ToolPanels.tsx`), and the
+      Settings panel z-index (500) now clears the nav toggle (400) so its close X is clickable.
+      Fixes the "can't close Settings" report. Also fixed the settings-panel black screen
+      (persist deep-merge backfills settings keys from older builds).
+
 ## DONE — data story: one-command regional bring-up (2026-07-25)
 
 - [x] `platform-up.sh <pbf-url>` now re-derives everything for any region: a `data/.region-url`

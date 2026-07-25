@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Badge } from '@mantine/core';
 import { useAppStore, type ToolPanel } from '../store/app';
 import { useSpaceTimeStore } from '../features/spacetime/store';
@@ -99,6 +100,17 @@ export function ToolPanels() {
   const flyTo = useSpaceTimeStore((s) => s.flyTo);
 
   const close = () => setActivePanel(null);
+
+  // a temporary panel can sit under other controls (e.g. the nav toggle over its
+  // close X), so Escape always closes whatever panel is open.
+  useEffect(() => {
+    if (!activePanel) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setActivePanel(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [activePanel, setActivePanel]);
 
   const panel = renderPanel();
   if (!panel) return null;

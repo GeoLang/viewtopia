@@ -1,15 +1,68 @@
 import { useCallback, useRef } from 'react';
+import { HttpAgent, type AgentSubscriber } from '@ag-ui/client';
+import type { Message } from '@ag-ui/core';
 import { useChatStore } from '../store/chat';
+import { useAppStore } from '../store/app';
 import { executeViewerCommand } from '../viewer/commands';
 import { renderUISpec, type UiSpec } from '../viewer/uiSpec';
 
+/** Store setters the AG-UI subscriber writes through, so it can be tested in isolation. */
+interface AgUiHandlers {
+  setLastContent: (content: string) => void;
+  setLastMapSpec: (spec: UiSpec) => void;
+}
+
 /**
- * Hook for streaming responses from the GeoLang AI agent via SSE.
+ * Build the AgentSubscriber that maps AG-UI events onto the same store setters /
+ * renderers the legacy SSE path uses. Exported so the mapping can be unit-tested
+ * without a live agent.
  *
- * Speaks the real backend protocol (POST /agent/chat/stream, SSE lines of
- * `data: {type, ...}`): `progress` | `text` | `viewer_cmd` | `ui_spec` |
- * `followups` | `done` | `error`. `viewer_cmd` events drive the map via
- * executeViewerCommand; `ui_spec` map results are rendered via renderUISpec.
+ * text delta → append to assistant message (setLastContent, like legacy `text`);
+ * custom `progress` → show only while no assistant text has arrived yet;
+ * custom `viewer_cmd` → executeViewerCommand; custom `ui_spec` → keep the spec on
+ * the message + renderUISpec; run error → setLastContent (legacy `error`).
+ */
+export function buildAgUiSubscriber({ setLastContent, setLastMapSpec }: AgUiHandlers): AgentSubscriber {
+  let lastText = '';
+  return {
+    onTextMessageContentEvent({ event }) {
+      lastText += event.delta;
+      setLastContent(lastText);
+    },
+    onCustomEvent({ event }) {
+      switch (event.name) {
+        case 'progress':
+          if (!lastText && event.value?.text) setLastContent(event.value.text);
+          break;
+        case 'viewer_cmd':
+          executeViewerCommand(event.value);
+          break;
+        case 'ui_spec':
+          // keep it on the message so clicking the reply replays it
+          setLastMapSpec(event.value);
+          void renderUISpec(event.value);
+          break;
+      }
+    },
+    onRunErrorEvent({ event }) {
+      setLastContent(event.message);
+    },
+    // onRunFinishedEvent: same as legacy `done`, streaming is cleared in the finally
+  };
+}
+
+/**
+ * Hook for streaming responses from the GeoLang AI agent.
+ *
+ * Default (legacy) path speaks the hand-rolled backend protocol (POST
+ * /agent/chat/stream, SSE lines of `data: {type, ...}`): `progress` | `text` |
+ * `viewer_cmd` | `ui_spec` | `followups` | `done` | `error`. `viewer_cmd` events
+ * drive the map via executeViewerCommand; `ui_spec` map results render via
+ * renderUISpec.
+ *
+ * When `settings.useAgUiChannel` is on, the same handlers run against the AG-UI
+ * client (POST /agent/chat/agui) instead. The flag is read per send, so it flips
+ * at runtime without a rebuild.
  */
 export function useSSE() {
   const abortRef = useRef<AbortController | null>(null);
@@ -27,7 +80,25 @@ export function useSSE() {
       const controller = new AbortController();
       abortRef.current = controller;
 
+      // read per-send so the flag flips at runtime without a rebuild
+      const useAgUi = useAppStore.getState().settings.useAgUiChannel;
+
       try {
+        if (useAgUi) {
+          // threadId stable per chat session, runId fresh per send. Only the latest
+          // user prompt is sent; the agent's RunAgentInput carries it over the wire.
+          const threadId = useChatStore.getState().activeSessionId ?? crypto.randomUUID();
+          const messages: Message[] = [
+            { id: crypto.randomUUID(), role: 'user', content: prompt },
+          ];
+          const agent = new HttpAgent({ url: '/agent/chat/agui', threadId, initialMessages: messages });
+          await agent.runAgent(
+            { runId: crypto.randomUUID(), abortController: controller },
+            buildAgUiSubscriber({ setLastContent, setLastMapSpec }),
+          );
+          return;
+        }
+
         const res = await fetch('/agent/chat/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

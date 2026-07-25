@@ -30,7 +30,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         width: 300,
         background: '#161b22',
         border: '1px solid #30363d',
-        zIndex: 300,
+        // above the nav toggle (zIndex 400) so the close X isn't covered
+        zIndex: 500,
       }}
     >
       <Group justify="space-between" mb="xs">
@@ -67,6 +68,13 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           description="Reveal unfinished tools, marked with a Preview badge"
           checked={settings.showPreviewTools}
           onChange={(e) => updateSettings({ showPreviewTools: e.currentTarget.checked })}
+          color="violet"
+        />
+        <Switch
+          size="xs"
+          label="Use AG-UI agent channel (beta)"
+          checked={settings.useAgUiChannel}
+          onChange={(e) => updateSettings({ useAgUiChannel: e.currentTarget.checked })}
           color="violet"
         />
 
