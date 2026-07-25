@@ -89,7 +89,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         <Select
           size="xs"
           label="Default Basemap"
-          description="Vector styles render in MapLibre only; Cesium, deck.gl and Leaflet use the Dark raster tiles instead"
+          description="Vector styles render in MapLibre (globe); Cesium and deck.gl show the closest raster"
           data={BASEMAP_SELECT_GROUPS}
           value={settings.defaultBasemap}
           onChange={(v) => v && updateSettings({ defaultBasemap: v as Basemap })}

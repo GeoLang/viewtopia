@@ -248,6 +248,16 @@ export const useAppStore = create<AppState>()(
         settings: state.settings,
         asideWidth: state.asideWidth,
       }),
+      // deep-merge settings so a persisted object from an older build backfills
+      // any settings key added since (a missing key would crash the panel)
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<AppState>;
+        return {
+          ...current,
+          ...p,
+          settings: { ...current.settings, ...(p.settings ?? {}) },
+        };
+      },
     },
   ),
 );

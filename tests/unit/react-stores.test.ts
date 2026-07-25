@@ -257,6 +257,22 @@ describe('settings selfHostedBasemapUrl', () => {
     expect(stored.state.settings.selfHostedBasemapUrl).toBe(url);
     useAppStore.getState().updateSettings({ selfHostedBasemapUrl: '' });
   });
+
+  it('backfills settings keys missing from an older persisted state', () => {
+    // an older build persisted settings without selfHostedBasemapUrl; rehydrating
+    // must fill it from defaults, not leave it undefined (that crashed SettingsPanel)
+    localStorage.setItem(
+      'viewtopia-app',
+      JSON.stringify({ state: { settings: { showMinimap: false } }, version: 0 }),
+    );
+    void useAppStore.persist.rehydrate();
+    const s = useAppStore.getState().settings;
+    expect(s.selfHostedBasemapUrl).toBe('');
+    expect(s.showMinimap).toBe(false); // persisted value still wins
+    expect(s.defaultBasemap).toBe('liberty'); // other defaults present
+    localStorage.removeItem('viewtopia-app');
+    void useAppStore.persist.rehydrate();
+  });
 });
 
 describe('settings basemap', () => {
