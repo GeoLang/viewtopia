@@ -174,7 +174,7 @@ const DEFAULT_SETTINGS: Settings = {
   tiletopiaUrl: '/api/v1',
   geolangUrl: '/agent',
   livekitUrl: '',
-  useAgUiChannel: false,
+  useAgUiChannel: true,
 };
 
 export const useAppStore = create<AppState>()(

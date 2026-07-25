@@ -102,8 +102,8 @@ describe('AG-UI subscriber mapping', () => {
 });
 
 describe('AG-UI channel flag', () => {
-  it('defaults to false', () => {
-    expect(useAppStore.getState().settings.useAgUiChannel).toBe(false);
+  it('defaults to true (AG-UI is the default channel)', () => {
+    expect(useAppStore.getState().settings.useAgUiChannel).toBe(true);
   });
 
   it('with the flag off, send() uses the legacy /agent/chat/stream request', async () => {
