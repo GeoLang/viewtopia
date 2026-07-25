@@ -68,6 +68,12 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
 
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
+    // MapLibre only renders on the 3D Globe tab, so project vector/raster tiles
+    // onto a globe. style.load re-fires after setStyle, so a basemap swap keeps it.
+    map.on('style.load', () => {
+      map.setProjection({ type: 'globe' });
+    });
+
     map.on('moveend', () => {
       const c = map.getCenter();
       setSharedCamera({

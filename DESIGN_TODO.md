@@ -89,6 +89,11 @@
       (`VECTOR_APPROX_RASTER`) so all three look approximately the same globally. Also fixed
       the platform-e2e CI failure: fail-closed services need `PLATFORM_JWT_SECRET`, now set as
       a throwaway job env in the workflow.
+- [x] **MapLibre globe projection (2026-07-25).** The MapLibre renderer (3D Globe tab only)
+      now projects its vector/raster basemap onto a globe via `setProjection({type:'globe'})`,
+      re-applied on `style.load` so basemap swaps keep it. Gives a true 3D vector globe (OSM
+      buildings via the OpenFreeMap style) as a Cesium-free option. maplibre-gl 5.24 already
+      installed; no dep change.
 - [x] **viewtopia dependency vulns resolved 2026-07-25** — dompurify 3.4.12, protobufjs
       8.7.1, vite 6.4.3, all within existing ranges; alerts draining as dependabot rescans.
 - [x] **Renovate app installed on the org 2026-07-25** (Renovate Only, scan-and-alert,
