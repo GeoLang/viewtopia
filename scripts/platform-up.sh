@@ -33,9 +33,21 @@ fi
 COMPOSE=(docker compose --env-file "$ENV_PLATFORM" -f docker-compose.platform.yml)
 
 mkdir -p data
-if [ ! -f data/region.osm.pbf ]; then
-  echo "downloading OSM extract: $PBF_URL"
-  curl -fL "$PBF_URL" -o data/region.osm.pbf
+# Marker of the region the derived data was built from. When the requested pbf
+# differs (or the pbf is missing), re-fetch and invalidate the stale routing
+# graph so itinera rebuilds it; geokode re-ingests the pbf on the recreate below.
+# Same region requested again -> keep the pbf and graph.bin, no rebuild.
+REGION_MARKER=data/.region-url
+REGION_CHANGED=0
+if [ "$(cat "$REGION_MARKER" 2>/dev/null || true)" != "$PBF_URL" ] || [ ! -f data/region.osm.pbf ]; then
+  echo "region changed -> downloading OSM extract: $PBF_URL"
+  curl -fL "$PBF_URL" -o data/region.osm.pbf.tmp
+  mv -f data/region.osm.pbf.tmp data/region.osm.pbf
+  rm -f data/graph.bin
+  printf '%s\n' "$PBF_URL" > "$REGION_MARKER"
+  REGION_CHANGED=1
+else
+  echo "region unchanged ($PBF_URL); reusing data/region.osm.pbf and graph.bin"
 fi
 
 # containers left over from an earlier (or renamed) project keep stale network
@@ -49,11 +61,27 @@ for _ in $(seq 1 60); do
   [ "$starting" -eq 0 ] && break
   sleep 5
 done
+
+# itinera builds its routing graph from the pbf on first start (or after a region
+# change invalidated graph.bin); for a big metro that import runs for minutes and
+# the container reports unhealthy meanwhile. Wait on the router and geocoder
+# directly so a fresh region fully takes effect before we seed / declare ready.
+echo "waiting for geokode + itinera to answer (graph build can take minutes)..."
+for probe in "geokode http://localhost:3001/health" "itinera http://localhost:3002/health"; do
+  name=${probe%% *}; url=${probe#* }
+  for _ in $(seq 1 96); do
+    curl -fsS "$url" >/dev/null 2>&1 && { echo "  $name ready"; break; }
+    sleep 5
+  done
+done
 "${COMPOSE[@]}" ps --format 'table {{.Name}}\t{{.Status}}'
 
 if [ -f scripts/seed-parcels.mjs ]; then
   echo "seeding real-estate demo data..."
-  node scripts/seed-parcels.mjs || echo "seed failed (ptolemy not ready yet?); rerun: node scripts/seed-parcels.mjs"
+  # on a region change, wipe the previous region's demo features so they don't
+  # linger at the old coordinates; the seed re-anchors on the new region.
+  SEED_RESET=$([ "$REGION_CHANGED" = 1 ] && echo 1 || true) \
+    node scripts/seed-parcels.mjs || echo "seed failed (ptolemy not ready yet?); rerun: node scripts/seed-parcels.mjs"
 fi
 
 echo

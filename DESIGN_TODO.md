@@ -135,6 +135,20 @@
 - [ ] geokode has a `fuzzy` module (Levenshtein/Soundex) `forward()` doesn't use — wire a
       fuzzy fallback for typo tolerance.
 
+## DONE — data story: one-command regional bring-up (2026-07-25)
+
+- [x] `platform-up.sh <pbf-url>` now re-derives everything for any region: a `data/.region-url`
+      marker detects a change, re-fetches the pbf, invalidates `graph.bin` (itinera rebuilds),
+      recreates geokode to re-ingest, and polls geokode/itinera health directly (metro graph
+      builds take minutes). Same URL skips all rebuilds.
+- [x] `seed-parcels.mjs` anchors the demo on the region (pbf header bbox → geokode `/reverse`
+      to snap onto a real address, Monaco fallback), and on a region change wipes the demo
+      datasets' branch first (scoped, versioned delete) so parcels don't linger offshore.
+      Verified end to end on Washington DC and Monaco; Monaco e2e still 18/18.
+- [ ] follow-up: demo property labels are still Monaco-flavored ("Grimaldi Holdings" etc.), so
+      on another region the coordinates are right but street/owner names read as Monaco.
+      Genericize the labels if the demo should look native per region.
+
 ## OPEN — trust & adoption
 
 - [ ] **"Your data is just PostGIS" docs section.** State plainly that ptolemy stores

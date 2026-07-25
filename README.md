@@ -361,23 +361,34 @@ src/GeoLang/
 └── viewtopia/
 ```
 
-**One command** brings up the whole stack from the `viewtopia/` checkout:
+**One command** brings up the whole stack for **any region** from the `viewtopia/`
+checkout — pass any [Geofabrik](https://download.geofabrik.de) extract URL:
 
 ```bash
-docker compose -f docker-compose.platform.yml up -d --build
+# default region is Monaco; pass any extract to point the stack at your city:
+bash scripts/platform-up.sh \
+  https://download.geofabrik.de/north-america/us/district-of-columbia-latest.osm.pbf
 # → http://localhost:5174
 ```
 
-**Data prerequisites** — drop these into `data/` before the router/geocoder come up:
+`platform-up.sh` generates the shared JWT secret, fetches the extract to
+`data/region.osm.pbf`, builds, waits for every service (including itinera's routing
+graph build) to answer, and seeds the real-estate demo. It needs the sibling repos
+cloned and your LLM key in `../geolang/.env`.
+
+**Switching regions re-derives everything automatically.** Run it again with a
+different extract URL and it re-downloads the pbf, rebuilds the itinera routing graph,
+re-ingests geokode's addresses, and re-anchors the seeded real-estate demo onto the
+new region. Pass the same URL again and it skips the rebuilds. Pick a mid-size metro
+(a US state/city or EU city extract) to keep the download and graph build quick;
+country/continent extracts are large and slow to import.
+
+**Alternative** — bring the stack up manually and manage `data/` yourself:
 
 - `data/region.osm.pbf` — OSM extract that geokode (addresses) and itinera (routing
-  graph) both read. Grab one from [Geofabrik](https://download.geofabrik.de) (e.g.
-  Monaco), then `docker compose -f docker-compose.platform.yml restart geokode itinera`.
+  graph) both read. Grab one from Geofabrik, then
+  `docker compose -f docker-compose.platform.yml restart geokode itinera`.
 - `data/addresses.csv` — optional OpenAddresses CSV geokode can import instead.
-
-`scripts/platform-up.sh` does all of that for you: fetches the OSM extract, builds,
-waits for every service to report healthy, and seeds the real-estate demo data. It
-needs the sibling repos cloned and your LLM key in `../geolang/.env`.
 
 #### On Linux (Fedora) — the recommended Docker host
 
@@ -421,7 +432,8 @@ TileTopia (including `/tiles/v1/analysis`, backed by terrano), `/api/route` +
 `/api/isochrone` → Itinera, `/api/geocode/` → Geokode, `/agent/` → GeoLang,
 `/jupyter/` → Jupyter.
 
-**Data setup** (`scripts/platform-up.sh` does this for you):
+**Data setup** (`scripts/platform-up.sh <extract-url>` does all of this for you,
+and re-does the derived parts whenever the extract URL changes):
 
 ```bash
 # Geokode and Itinera both read the OSM extract: geokode imports its addresses
@@ -430,7 +442,9 @@ wget -O data/region.osm.pbf \
   https://download.geofabrik.de/europe/monaco-latest.osm.pbf
 docker compose -f docker-compose.platform.yml restart geokode itinera
 
-# Real-estate demo data (parcels + comparable sales) into Ptolemy:
+# Real-estate demo data (parcels + comparable sales) into Ptolemy. It anchors on
+# the current region: it reads the pbf bbox and snaps to the nearest geocoded
+# address, so the demo lands on the actual city (Monaco by default).
 node scripts/seed-parcels.mjs
 ```
 

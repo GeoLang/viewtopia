@@ -7,10 +7,20 @@
 //   node scripts/seed-parcels.mjs
 
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { inflateSync } from 'node:zlib';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { platformAuthHeaders } from './platform-token.mjs';
 
 const BASE = (process.env.PTOLEMY_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 const API = `${BASE}/api/v1`;
+const GEOKODE = (process.env.GEOKODE_URL ?? 'http://localhost:3001').replace(/\/$/, '');
+const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const PBF = process.env.REGION_PBF ?? resolve(REPO, 'data/region.osm.pbf');
+// Monaco: the default region, and the fallback anchor when the pbf/geocoder are
+// unavailable (e.g. seeding against a remote ptolemy with no local pbf).
+const MONACO = [7.42, 43.734];
 // seeding writes, so it needs an editor token when the stack enforces auth
 const AUTH = platformAuthHeaders({ role: 'editor', sub: 'seed-parcels' });
 
@@ -58,6 +68,86 @@ function polygonWkbHex(ring) {
   return Buffer.concat(parts).toString('hex');
 }
 
+// ─── Region anchor ──────────────────────────────────────────────────
+//
+// Place the demo on the current region instead of hardcoded Monaco. Read the
+// bbox from the OSM pbf header, then snap its center to the nearest ingested
+// address via geokode (Geofabrik pads bboxes, so the raw center can sit offshore
+// / outside the data). Any step failing falls back to Monaco, keeping the demo
+// robust when seeding against a remote ptolemy with no local pbf/geocoder.
+
+function readVarint(buf, pos) {
+  let shift = 0n, result = 0n, b;
+  do {
+    b = buf[pos++];
+    result |= BigInt(b & 0x7f) << shift;
+    shift += 7n;
+  } while (b & 0x80);
+  return [result, pos];
+}
+
+// minimal protobuf: field number -> BigInt (varint) or Buffer (length-delimited)
+function protoFields(buf) {
+  const out = {};
+  let pos = 0;
+  while (pos < buf.length) {
+    let key;
+    [key, pos] = readVarint(buf, pos);
+    const field = Number(key >> 3n);
+    switch (Number(key & 7n)) {
+      case 0: { let v; [v, pos] = readVarint(buf, pos); out[field] = v; break; }
+      case 2: { let len; [len, pos] = readVarint(buf, pos); const l = Number(len); out[field] = buf.subarray(pos, pos + l); pos += l; break; }
+      case 1: pos += 8; break;
+      case 5: pos += 4; break;
+      default: return out;
+    }
+  }
+  return out;
+}
+
+// center [lng, lat] of the pbf header bbox, or null if it can't be read
+function pbfBboxCenter(path) {
+  let buf;
+  try { buf = readFileSync(path); } catch { return null; }
+  try {
+    const hdrLen = buf.readUInt32BE(0);
+    const blobHeader = protoFields(buf.subarray(4, 4 + hdrLen));
+    if (blobHeader[1]?.toString('utf8') !== 'OSMHeader') return null;
+    const start = 4 + hdrLen;
+    const blob = protoFields(buf.subarray(start, start + Number(blobHeader[3])));
+    const block = blob[1] ?? (blob[3] && inflateSync(blob[3]));
+    if (!block) return null;
+    const bboxBytes = protoFields(block)[1]; // HeaderBlock field 1 = HeaderBBox
+    if (!bboxBytes) return null;
+    const bbox = protoFields(bboxBytes); // fields 1..4 = left,right,top,bottom (sint64 nanodeg)
+    const zz = (v) => (v >> 1n) ^ -(v & 1n);
+    const dec = (v) => (v === undefined ? NaN : Number(zz(v)) / 1e9);
+    const [left, right, top, bottom] = [dec(bbox[1]), dec(bbox[2]), dec(bbox[3]), dec(bbox[4])];
+    if ([left, right, top, bottom].some((n) => !Number.isFinite(n))) return null;
+    return [(left + right) / 2, (top + bottom) / 2];
+  } catch { return null; }
+}
+
+async function regionAnchor() {
+  const center = pbfBboxCenter(PBF);
+  if (!center) {
+    console.log(`no readable pbf at ${PBF}; anchoring demo on Monaco`);
+    return MONACO;
+  }
+  try {
+    const res = await fetch(`${GEOKODE}/reverse?lon=${center[0]}&lat=${center[1]}&limit=1`);
+    const hit = res.ok ? (await res.json()).results?.[0] : null;
+    if (hit && Number.isFinite(hit.lon) && Number.isFinite(hit.lat)) {
+      console.log(`region anchor ${hit.lon.toFixed(5)},${hit.lat.toFixed(5)} (nearest address to pbf center)`);
+      return [hit.lon, hit.lat];
+    }
+  } catch {
+    // geokode down: bbox center still lands in-region for a well-cropped extract
+  }
+  console.log(`geokode unavailable; anchoring demo on pbf bbox center ${center[0].toFixed(5)},${center[1].toFixed(5)}`);
+  return center;
+}
+
 // ─── ptolemy helpers ────────────────────────────────────────────────
 
 async function ensureDataset(name, geometryType) {
@@ -98,8 +188,9 @@ async function commit(branchId, message, operations) {
 
 // ─── Demo data ──────────────────────────────────────────────────────
 
-const ORIGIN_LNG = 7.42;
-const ORIGIN_LAT = 43.734;
+// region anchor, set from regionAnchor() before any ops are built
+let ORIGIN_LNG = MONACO[0];
+let ORIGIN_LAT = MONACO[1];
 const CELL = 0.0009; // ~70m, parcels in a row share an edge so merges are contiguous
 
 const ZONINGS = ['R-1', 'R-2', 'R-3', 'C-1', 'C-2'];
@@ -182,9 +273,19 @@ function buildSales() {
 
 // Idempotent per feature: only inserts demo features whose key (apn/address) is
 // missing, so it restores the full demo set even after merges/splits removed some.
+// SEED_RESET (set by platform-up.sh on a region change) first wipes the branch so
+// stale features from the previous region don't linger at the old coordinates.
 async function seedDataset(name, geometryType, keyProp, buildOps) {
   const datasetId = await ensureDataset(name, geometryType);
   const branchId = await ensureBranch(datasetId, 'main');
+  if (process.env.SEED_RESET) {
+    const all = await api(`/branches/${branchId}/features`);
+    const dels = all.features.map((f) => ({ type: 'delete', feature_id: f.id }));
+    if (dels.length) {
+      await commit(branchId, `reset ${name} for new region`, dels);
+      console.log(`${name}: cleared ${dels.length} stale features (region changed)`);
+    }
+  }
   const have = await existingKeys(branchId, keyProp);
   const ops = buildOps().filter((op) => !have.has(op.properties[keyProp]));
   if (ops.length === 0) {
@@ -198,6 +299,7 @@ async function seedDataset(name, geometryType, keyProp, buildOps) {
 
 async function main() {
   console.log(`seeding real-estate demo data into ${API}`);
+  [ORIGIN_LNG, ORIGIN_LAT] = await regionAnchor();
   const parcels = await seedDataset('demo_parcels', 'polygon', 'apn', buildParcels);
   const sales = await seedDataset('demo_sales', 'point', 'address', buildSales);
   console.log(JSON.stringify({ parcels, sales }, null, 2));
