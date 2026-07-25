@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { platformAuthHeaders } from '../../scripts/platform-token.mjs';
 
 /**
  * Terrain-analysis endpoints against the live platform stack. Like the panels,
@@ -13,13 +14,16 @@ import { test, expect } from '@playwright/test';
  */
 
 const BBOX = [7.4, 43.72, 7.45, 43.75]; // small area near Monaco
+// tiletopia only exempts health, login and GET tile reads from auth, so the
+// analysis POSTs need a token when the stack enforces it
+const AUTH = platformAuthHeaders({ role: 'editor', sub: 'analysis-e2e' });
 
 async function post(page, path, body) {
   return page.evaluate(
-    async ({ p, b }) => {
+    async ({ p, b, h }) => {
       const res = await fetch(p, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...h },
         body: JSON.stringify(b),
       });
       const contentType = res.headers.get('content-type') || '';
@@ -29,7 +33,7 @@ async function post(page, path, body) {
       }
       return { status: res.status, ok: res.ok, contentType, json };
     },
-    { p: path, b: body },
+    { p: path, b: body, h: AUTH },
   );
 }
 

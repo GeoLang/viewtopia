@@ -1,7 +1,13 @@
 # TileTopia Full Platform — All Services
 #
 # One command to run the complete GIS platform:
-#   docker compose -f docker-compose.platform.yml up --build
+#   scripts/platform-up.sh
+#
+# Use that script (or pass --env-file .env.platform yourself): it generates the
+# shared PLATFORM_JWT_SECRET the JWT-validating services need. Without it
+# ptolemy and tiletopia refuse to start rather than serve unauthenticated
+# writes. Tokens minted by tiletopia's /api/v1/auth/login validate at ptolemy
+# because both sign the same secret with the same {sub, exp, role} claims.
 #
 # Services:
 #   - db:         PostGIS 16 database (port 5432)
@@ -48,6 +54,7 @@ services:
     environment:
       DATABASE_URL: postgres://ptolemy:${POSTGRES_PASSWORD:-ptolemy}@db/ptolemy
       RUST_LOG: info,ptolemy_api=debug
+      PTOLEMY_JWT_SECRET: ${PLATFORM_JWT_SECRET:-}
     ports:
       - "3000:3000"
     command:
@@ -72,6 +79,7 @@ services:
       TILETOPIA_HOST: 0.0.0.0
       TILETOPIA_PORT: "3000"
       RUST_LOG: info
+      TILETOPIA_JWT_SECRET: ${PLATFORM_JWT_SECRET:-}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
       interval: 10s

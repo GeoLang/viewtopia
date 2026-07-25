@@ -7,13 +7,41 @@
 
 ---
 
-## OPEN — correctness follow-ups
+## OPEN — auth follow-ups (queued after basemap lands, both security-role)
 
-- [ ] **DECIDE: ptolemy auth is fail-open.** `AuthConfig::from_env` disables auth when
-      `PTOLEMY_JWT_SECRET` is unset, so a default deployment serves every endpoint
-      anonymously. Surfaced by the cql2 security audit 2026-07-25. Options: require the
-      secret to serve (like collecta's mandatory `COLLECTA_JWT_SECRET`), or keep dev-open
-      and make the platform compose set a secret. Needs a call, then a small fix.
+- [ ] **tiletopia `/v1/` allowlist permits anonymous writes** (verifier-confirmed 2026-07-25):
+      `auth_middleware` exempts every `/v1/*` path, so `POST /v1/assets` and `POST /v1/tokens`
+      (ion_compat.rs) return 201 with no token. Not a ptolemy-escalation path (tokens are
+      random `tt_` strings, not JWTs) and the golden path is unaffected (nginx routes through
+      `/api/v1/`), but tighten the allowlist to tile-data GETs only. Top of the security batch.
+- [ ] **ptolemy anonymous config reads** (verifier-confirmed 2026-07-25): the signing-secret
+      disclosure is already fixed (`event.rs` `skip_serializing` on `Webhook.secret`, committed
+      `2e6b8e0`), but `GET /webhooks` still lists hooks and `GET /permissions` still returns the
+      ACL to anonymous callers. Gate these two reads as admin in `classify()` (make the
+      webhooks/permissions path check method-agnostic, ahead of the GET→Public rule); re-run the
+      platform suite since it touches classify.
+
+- [ ] **tiletopia can't mint an editor/admin.** `signup` hardcodes `UserRole::Viewer`, and
+      a viewer gets 403 on every ptolemy write, so a real UI user can't edit until promoted.
+      Needs a tiletopia admin route or CLI to set a user's role (mirror collecta's admin-only
+      create-user pattern). Until then, promoting means editing sqlite by hand. The e2e only
+      passes because it mints editor tokens directly.
+- [ ] **geolang agent + fenestra call ptolemy with no token → 401 on writes.** Both read
+      `PTOLEMY_URL` but hold no JWT. Give each a service-account token minted from the shared
+      `PLATFORM_JWT_SECRET` (env-injected, editor role) and attach it on ptolemy calls. This
+      is what unblocks the agent NL→map write path the platform suite currently skips.
+- [ ] tiletopia `users.rs` leftover security debt (from the auth audit): a hardcoded
+      `"dev-secret-change-me"` jwt fallback still in the code (unreachable via serve now, but
+      delete it); passwords use unsalted HMAC-SHA256 with non-constant-time compare, should be
+      argon2id like collecta.
+- [ ] ptolemy audit-trail fields (`granted_by`, `created_by`, `author`) come from the request
+      body, not `claims.sub`; DB-backed `dataset_permissions`/`branch_permissions` tables exist
+      but nothing enforces them (only the coarse JWT role gates writes). Both small follow-ups
+      now that claims are in request extensions.
+
+- [ ] **DECIDE: ptolemy auth is fail-open.** RESOLVED 2026-07-25 — required the secret to
+      serve (fail-closed startup), unified on one platform JWT, role-gated writes. Pending
+      verifier CONFIRM before commit. Keeping this line until committed.
 - [ ] **ptolemy cql2 minor gaps** (from the same audit, all non-exploitable): malformed
       GeoJSON coordinate arrays still 500 via PostGIS parse errors; `limit`/`offset` are
       unvalidated (negative → 500, no upper bound); `in` doesn't accept the CQL2 spec's
@@ -99,6 +127,20 @@
       rip-and-replace, no writes) as the first touch. Likely shape: a ptolemy "external
       schema" read-only dataset mode or a direct pg-to-GeoJSON adapter service; scope it
       before building.
+
+## OPEN — Letta upgrade compatibility test (after auth follow-ups land)
+
+- [ ] **Check the stack against latest Letta, then decide whether to move the pin.**
+      Vendored `letta/` is 0.16.8 (2026-05-14); `geolang/requirements_client.txt` pins
+      `letta_client==1.7.12` "pre-Letta-Code pivot". Verify current server + client versions
+      online at start (they drift). Do it in isolation (worktree/throwaway env), do NOT touch
+      the committed pin unless it passes. Risk areas: client API drift post-Code-pivot, the
+      embedded-server startup chain (`letta/server/startup.sh`), provider config (xAI wiring),
+      and geolang's agent bootstrap in `geolang/src/`. DEPENDS ON the geolang service-token
+      fix (auth follow-up #2): the platform suite skips the agent NL→map write step until the
+      agent can authenticate to ptolemy, so the upgrade can't be validated end to end before
+      that lands. Also fold in the "does 0.16.8→latest carry security fixes worth backporting"
+      and "did upstream relicense the server" checks while in there.
 
 ## OPEN — Phase 3 (mobile & ML breadth, after v1)
 

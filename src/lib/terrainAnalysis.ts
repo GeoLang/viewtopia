@@ -10,6 +10,7 @@ import {
   SingleTileImageryProvider,
 } from 'cesium';
 import { getActiveCesiumViewer } from '../viewer/registry';
+import { apiHeaders } from './apiAuth';
 
 const BASE = '/tiles/v1/analysis';
 
@@ -32,7 +33,7 @@ export function currentBbox(): Bbox | null {
 async function postJson<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: apiHeaders(),
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`${path} failed: ${res.status}`);
@@ -42,7 +43,7 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
 async function postBlobUrl(path: string, body: unknown): Promise<string> {
   const res = await fetch(`${BASE}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: apiHeaders(),
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`${path} failed: ${res.status}`);

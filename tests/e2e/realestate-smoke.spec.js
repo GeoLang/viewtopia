@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { platformAuthHeaders } from '../../scripts/platform-token.mjs';
 
 /**
  * Real-estate vertical E2E against the live platform stack (docker-compose.platform.yml).
@@ -20,6 +21,9 @@ import { dirname, resolve } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(__dirname, '../..');
+// commits are writes, so they need an editor token when the stack enforces auth.
+// the UI gets the equivalent header from the logged-in session (src/lib/apiAuth.ts).
+const AUTH = platformAuthHeaders({ role: 'editor', sub: 'realestate-e2e' });
 
 async function fetchFromApp(page, path, init) {
   return page.evaluate(
@@ -169,7 +173,7 @@ test.describe('Real-estate vertical — live platform stack', () => {
 
     const seedTwo = await fetchFromApp(page, `/api/v1/branches/${branch}/commit`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...AUTH },
       body: JSON.stringify({
         message: 'seed merge inputs',
         author: 'e2e',
@@ -205,7 +209,7 @@ test.describe('Real-estate vertical — live platform stack', () => {
     ];
     const commit = await fetchFromApp(page, `/api/v1/branches/${branch}/commit`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...AUTH },
       body: JSON.stringify({ message: 'merge e2e', author: 'e2e', operations: ops }),
     });
     expect(commit.status === 200 || commit.status === 201).toBe(true);

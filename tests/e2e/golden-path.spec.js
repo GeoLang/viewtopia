@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { platformAuthHeaders } from '../../scripts/platform-token.mjs';
 
 /**
  * Golden-path E2E against the live platform stack (docker-compose.platform.yml).
@@ -13,6 +14,10 @@ import { test, expect } from '@playwright/test';
  * The agent NL->map step is intentionally omitted (it spends real LLM credits);
  * see DESIGN_TODO.md Track 1.
  */
+
+// Asset upload and delete are writes, so they need a token when the stack
+// enforces auth; every other call here is a public read.
+const AUTH = platformAuthHeaders({ role: 'editor', sub: 'golden-path-e2e' });
 
 // Run all backend fetches from the SPA's browser origin, so we exercise the same
 // same-origin proxy + CORS behaviour the real app does.
@@ -62,7 +67,7 @@ test.describe('Golden path — live platform stack', () => {
     await page.goto('/');
 
     // upload a small ascii ply through the proxy; point-cloud uploads auto-tile
-    const asset = await page.evaluate(async () => {
+    const asset = await page.evaluate(async (auth) => {
       const n = 200;
       const lines = [
         'ply',
@@ -81,27 +86,36 @@ test.describe('Golden path — live platform stack', () => {
       const form = new FormData();
       form.append('name', `golden-path-${Date.now()}.ply`);
       form.append('file', new Blob([lines.join('\n')], { type: 'application/octet-stream' }), 'cloud.ply');
-      const res = await fetch('/tiles/v1/assets', { method: 'POST', body: form });
+      const res = await fetch('/tiles/v1/assets', { method: 'POST', headers: auth, body: form });
       return { status: res.status, json: await res.json() };
-    });
+    }, AUTH);
     expect(asset.status).toBe(201);
     const assetId = asset.json.id;
 
-    // the job worker polls every 2s; wait for the asset to go ready
+    // the job worker polls every 2s; wait for the asset to go ready.
+    // tiletopia only exempts tile-data GETs from auth, so asset metadata reads
+    // carry the token too.
     await expect
       .poll(
-        async () => (await fetchFromApp(page, `/tiles/v1/assets/${assetId}`)).json?.status,
+        async () =>
+          (await fetchFromApp(page, `/tiles/v1/assets/${assetId}`, { headers: AUTH })).json
+            ?.status,
         { timeout: 90_000, intervals: [2000] },
       )
       .toBe('ready');
 
-    const tileset = await fetchFromApp(page, `/tiles/v1/assets/${assetId}/tileset.json`);
+    const tileset = await fetchFromApp(page, `/tiles/v1/assets/${assetId}/tileset.json`, {
+      headers: AUTH,
+    });
     expect(tileset.status).toBe(200);
     expect(tileset.json?.root).toBeTruthy();
     expect(tileset.json?.asset?.version).toBeTruthy();
 
     // cleanup so reruns don't accumulate assets
-    const del = await fetchFromApp(page, `/tiles/v1/assets/${assetId}`, { method: 'DELETE' });
+    const del = await fetchFromApp(page, `/tiles/v1/assets/${assetId}`, {
+      method: 'DELETE',
+      headers: AUTH,
+    });
     expect([200, 204]).toContain(del.status);
   });
 

@@ -7,14 +7,17 @@
 //   node scripts/seed-parcels.mjs
 
 import { randomUUID } from 'node:crypto';
+import { platformAuthHeaders } from './platform-token.mjs';
 
 const BASE = (process.env.PTOLEMY_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 const API = `${BASE}/api/v1`;
+// seeding writes, so it needs an editor token when the stack enforces auth
+const AUTH = platformAuthHeaders({ role: 'editor', sub: 'seed-parcels' });
 
 async function api(path, init) {
   const res = await fetch(`${API}${path}`, {
     ...init,
-    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
+    headers: { 'Content-Type': 'application/json', ...AUTH, ...(init?.headers ?? {}) },
   });
   if (!res.ok) {
     const body = await res.text();
