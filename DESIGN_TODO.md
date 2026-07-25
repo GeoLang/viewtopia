@@ -59,14 +59,23 @@
       8.7.1, vite 6.4.3, all within existing ranges; alerts draining as dependabot rescans.
 - [x] **Renovate app installed on the org 2026-07-25** (Renovate Only, scan-and-alert,
       silent mode off, all repos). Update PRs follow the shared schedule (Mon before 06:00).
-- [ ] itinera writes to host-mounted `data/` fail as the default container user
-      (PermissionDenied); worked around with `--user`. Fix Dockerfile user / volume ownership.
-- [ ] geolang embedded Postgres is ephemeral (no volume) → re-`initdb` (~50s) on every
-      recreate. Mount a volume at the container PG data dir to persist it.
-- [ ] Editing `nginx-platform.conf` needs `up -d --force-recreate --no-deps viewtopia`
-      (single-file bind-mounts pin the inode). Document or switch to a directory mount.
-- [ ] Transient `failed to set up container networking … network not found` on `up` — needs
-      `down --remove-orphans` + `network prune`. Root-cause or document.
+- [x] **itinera data/ permissions fixed 2026-07-25.** Root cause: `USER itinera` in the
+      Dockerfile disabled the entrypoint's root branch, so the privilege-drop never ran.
+      Entrypoint now drops to the owner of `/data` (host user for bind mounts, itinera for
+      named volumes); `user:` override and CI graph workaround removed.
+- [x] **geolang embedded Postgres was already persistent** — the `geolang-pgdata` volume
+      mount at the image's PGDATA landed earlier; verified force-recreate skips initdb and
+      keeps Letta agent state. (Boot logs show a harmless ~300ms crash-recovery because
+      postgres never gets a clean shutdown signal; see open note below.)
+- [x] **nginx config now reload-safe 2026-07-25**: single-file mount replaced by a stub
+      include + `deploy/` directory mount; `nginx -s reload` picks up edits.
+- [x] **"network not found" on `up` root-caused 2026-07-25**: stopped containers from
+      renamed projects hold refs to deleted networks. `platform-up.sh` and CI now `down
+      --remove-orphans` first; README troubleshooting updated.
+- [ ] geolang `startup.sh` runs postgres as a background child of PID 1, so `docker stop`
+      never delivers a clean shutdown (harmless auto-recovery each boot). Fix = signal
+      handling in the startup chain. Also `letta/server/startup.sh` still invokes the
+      renamed base entrypoint path — works by accident, tidy someday.
 - [ ] geokode has a `fuzzy` module (Levenshtein/Soundex) `forward()` doesn't use — wire a
       fuzzy fallback for typo tolerance.
 

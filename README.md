@@ -440,10 +440,16 @@ instead: point its `--data` flag at one. A sample is at `data/addresses.csv`.
 **Troubleshooting:**
 
 ```bash
-# Stale network errors → clean up and restart:
+# "failed to set up container networking ... network not found" → usually a stopped
+# container from another compose project still pointing at a deleted network.
+# scripts/platform-up.sh already runs the `down` for you:
 docker compose -f docker-compose.platform.yml down --remove-orphans
 docker network prune -f
+docker container prune -f   # drops the stale containers holding the dead network
 docker compose -f docker-compose.platform.yml up --build
+
+# After editing deploy/nginx-platform.conf, no recreate needed:
+docker compose -f docker-compose.platform.yml exec viewtopia nginx -s reload
 ```
 
 ### All-in-One single container

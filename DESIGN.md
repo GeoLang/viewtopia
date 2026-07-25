@@ -62,8 +62,11 @@ Maturity as of the 2026-07-17 docs refresh (test-fn counts via
 ### 2.1 Platform topology
 
 The shipping unit is `docker-compose.platform.yml` (11 services), all fronted by
-ViewTopia's nginx (`deploy/nginx-platform.conf`) on `:5174` so the SPA talks to every
-backend same-origin via relative paths (`/api/*`, `/tiles/*`, `/agent/*`, `/jupyter/*`).
+ViewTopia's nginx on `:5174` so the SPA talks to every backend same-origin via relative
+paths (`/api/*`, `/tiles/*`, `/agent/*`, `/jupyter/*`). The nginx config is
+`deploy/nginx-platform.conf`, reached through a stub include
+(`deploy/nginx-platform-include.conf`) plus a `deploy/` directory mount, so config edits
+take effect with `nginx -s reload` instead of a force-recreate.
 
 ```
                     Browser (ViewTopia SPA, :5174, nginx)

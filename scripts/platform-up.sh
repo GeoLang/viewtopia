@@ -21,7 +21,9 @@ if [ ! -f data/region.osm.pbf ]; then
   curl -fL "$PBF_URL" -o data/region.osm.pbf
 fi
 
-export HOST_UID="$(id -u)" HOST_GID="$(id -g)"
+# containers left over from an earlier (or renamed) project keep stale network
+# references around, which makes `up` fail with "network not found"
+docker compose -f docker-compose.platform.yml down --remove-orphans
 docker compose -f docker-compose.platform.yml up -d --build
 
 echo "waiting for services to report healthy..."

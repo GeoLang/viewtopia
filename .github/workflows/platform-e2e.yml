@@ -68,17 +68,12 @@ jobs:
           docker compose -f docker-compose.platform.yml build \
             ptolemy tiletopia geokode itinera geolang viewtopia
 
-      - name: Build itinera routing graph
-        working-directory: viewtopia
-        run: |
-          docker run --rm --user "$(id -u):$(id -g)" \
-            -v "$PWD/data:/data" --entrypoint itinera \
-            viewtopia-itinera:latest \
-            import --input /data/region.osm.pbf --output /data/graph.bin
-
+      # itinera's entrypoint builds data/graph.bin from the extract on first start,
+      # so there is no separate graph-build step.
       - name: Start the stack
         working-directory: viewtopia
         run: |
+          docker compose -f docker-compose.platform.yml down --remove-orphans
           docker compose -f docker-compose.platform.yml up -d \
             ptolemy tiletopia geokode itinera geolang jupyter viewtopia
 
