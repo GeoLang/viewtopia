@@ -26,6 +26,11 @@ jobs:
   golden-path:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # throwaway secret for this ephemeral CI stack, not a real credential. the
+    # fail-closed services refuse to start without it, and the e2e mints editor
+    # tokens from the same value (scripts/platform-token.mjs reads this var).
+    env:
+      PLATFORM_JWT_SECRET: ci-platform-e2e-secret-not-for-production-use
     steps:
       - name: Checkout viewtopia
         uses: actions/checkout@v4
