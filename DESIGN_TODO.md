@@ -1,338 +1,75 @@
 # GeoLang — Planned Work (DESIGN_TODO)
 
 > Whole-platform backlog for the shipping plan in [DESIGN.md](DESIGN.md).
-> Status keys: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked.
-> **Open work is up top; completed phases are condensed at the bottom.**
+> Status keys: `[ ]` todo · `[~]` in progress · `[!]` blocked.
+> **Open work only** — completed items move to DESIGN.md (§4 history log).
 > Last brought current: **2026-07-26**.
 
 ---
 
-## OPEN — auth follow-ups (queued after basemap lands, both security-role)
+## IN PROGRESS — viewer test coverage (decided 2026-07-26)
 
-- [x] **tiletopia `/v1/` anonymous writes closed (2026-07-25).** Blanket `/v1/` exemption
-      removed; `POST /v1/assets` now needs editor, `POST /v1/tokens` needs admin, tile-data
-      GETs stay anonymous. ion routes split into read (anonymous) / write (role-layered) so a
-      future `/v1/` route defaults protected. 5 new tests.
-- [x] **ptolemy anonymous config reads gated (2026-07-25).** `classify()` now returns Admin
-      for any method on `/permissions`, `/webhooks`, `/orgs`, `/audit` (moved above the
-      GET→Public rule); map data reads stay public. Platform e2e 18/18 with it in. 6 new tests.
+- [ ] **Per-panel functional smoke suite (~42 panels).** Each panel's primary action
+      exercised against the live stack with an observable-effect assertion. Planned as a
+      fan-out workflow (one spec per panel, adversarially verified); runs nightly next to
+      platform-load, golden path stays the per-push gate. Sweep (done 2026-07-26,
+      a950870e: 50 tools, 49 pass) scoped the list below first.
+- [ ] **Sweep findings to fix:** (1) Catalog panel `GET /api/v1/portal/items` 401s
+      anonymously — handle logged-out state or authenticate the sweep; (2) Space-Time
+      panel ignores Escape (own store, outside ToolPanels); (3) delete-or-rewrite the
+      dead vanilla-era specs `app.spec.js` (18/21 fail) + `spacetime.spec.js` (4/4) —
+      selectors died with the June cutover, CI never runs that config; (4) vector-tiles
+      spec must mock its dead-host tile URL (tripwire now rightly fails it); (5) global
+      terrain spec only passes on a dev server, gate or fix; (6) 23 plugin panels are
+      unswept (`import.meta.glob` defeats collect-time enumeration — needs runtime
+      enumeration via the app).
+- [~] **Building-data toggle on MapLibre** (committed ea421a9d, browser verification
+      pending): disabled with tooltip when the loaded style has its own fill-extrusion
+      layers (Liberty); detection re-runs on style.load; hook skips duplicate layer.
 
-## OPEN — security follow-ups (surfaced by the fixes above, lower severity)
+## OPEN — geolang agent tools (found in 2026-07-26 viewer testing)
 
-- [x] **ptolemy `GET /metrics` gated (2026-07-25).** Gated in both places, not just the proxy
-      as first planned: platform nginx never proxied `/metrics` (the SPA fallback answered it),
-      and compose publishes ptolemy's 3000 to the host, so a proxy allowlist alone left the
-      endpoint open. nginx now returns 404 on `= /metrics` with a commented scraper allowlist,
-      and `classify()` returns Admin for `/metrics`. Labels turned out narrower than described
-      here: `normalize_path` collapses UUIDs to `{id}` and `record_domain_event` has no callers,
-      so what leaked was traffic shape plus non-UUID path segments (topology names, room ids).
-      ptolemy's own dev compose scrapes `/metrics`; `deploy/prometheus.yml` documents the bearer
-      token it now needs. 2 new tests.
-- [x] **ptolemy anonymous reads gated (2026-07-26, ece3faa).** `GET .../events` and
-      `/replication/feed/*` reads are Admin in classify(); event *emission* stays Write;
-      the lrs `/routes/{id}/events` map-data route stays public (dataset prefix in the
-      match). 401/403/200 ladder tests. Revisit the feed when replication gets a consumer.
-- [x] **ptolemy feature locks actually work now (2026-07-26, 9fb84ff).** Found while wiring
-      unlock: `lock_feature` 500'd on every request (`make_interval(mins =>)` is int4, the
-      duration was bound f64), masked by a test that accepted 422. Duration now clamped
-      1..43200 min and bound i32; unlock takes the Actor identity (JWT sub when auth on),
-      non-owner unlock 409s. The old "any editor can unlock" backlog claim was wrong.
-- [x] **tiletopia native asset writes editor-gated (2026-07-25, dd9ba8e).** POST/DELETE
-      assets, start-tiling, and the 3 streaming-upload routes moved to an editor-layered
-      router (same mechanism as the Ion split); reads unchanged. 6 new tests (anonymous
-      401 / viewer 403 / editor ok), 567 pass, clippy+fmt clean. Deliberately left
-      any-JWT: asset annotations (viewer commenting). Follow-ups worth a decision:
-      streaming upload has no per-asset ownership check (any editor can chunk-write into
-      any asset's input dir), and `upload/init` ignores its path `{id}` and mints its own.
-      → decided 2026-07-26, see the multi-tenant item below.
-- [x] **tiletopia asset ownership done (2026-07-26, 05f0949/1df7599/de88bff).** Streaming
-      upload routes deleted (zero consumers; README/roadmap corrected). `owner_id` (JWT
-      sub, never serialized) recorded on all three create paths; delete/start-tiling
-      require owner-or-admin; legacy NULL-owner assets stay any-editor for compat;
-      annotations stay any-JWT. Catalog `/{dataset_id}/add` was ungated entirely — now
-      require_editor + fail-closed owner. Behavior change: DELETE on a missing asset 404s
-      (was 204). Known holes, accepted: NULL-owner rule until legacy rows age out;
-      require_editor trusts the minted role until token expiry after a demotion.
-- [ ] **tiletopia pre-existing issues surfaced 2026-07-26:** (1) `cargo clippy
-      --all-features` fails in tiletopia-core (ort/ndarray version clash) — check whether
-      the full-features CI job is red on master independent of this work. (2)
-      `deploy/terraform/main.tf:235` CloudFront behavior for `/api/v1/catalog*` allows
-      only GET/HEAD and drops Authorization, so catalog-add can't work through that
-      distribution (fails closed).
-
-- [x] **tiletopia user role management (done 2026-07-25).** Admin-only
-      `PUT /api/v1/admin/users/{id}/role` behind require_admin, plus `tiletopia set-role`
-      CLI to bootstrap the first admin offline. `update_me` can't change role (no
-      self-escalation), `signup` still viewer-only by design. Also fixed the two `users.rs`
-      security-debt items in the same pass: deleted the hardcoded dev jwt fallback, moved
-      passwords to argon2id with constant-time verify and transparent rehash-on-login of old
-      hashes. 338 tests pass.
-- [x] **service tokens: NOT NEEDED (verified 2026-07-25).** Premise was wrong. Neither
-      geolang nor fenestra writes to ptolemy — every call is a GET (geolang
-      `ptolemy_query.py`, fenestra `source.rs`), and ptolemy reads are public, so nothing
-      401s. The agent NL→map *write* path does not exist in code (the e2e step is
-      intentionally omitted, not skipped). No change made. If an agent-writes-to-ptolemy
-      feature is ever built, add self-signed editor tokens then.
-- [x] **ptolemy audit identity from JWT claims (2026-07-25, b5b5f86).** `Actor` extractor;
-      19 handlers across 10 files (author/created_by/granted_by/locked_by) take the token
-      sub when auth is on, body only in disabled-auth dev mode. Left alone: unmounted
-      grpc bulk_import, hardcoded merge "api"/unlock "system" placeholders. Still open
-      below: permissions-table enforcement, and any-editor can unlock another's lock.
-- [x] **ptolemy permissions — DECIDED + DONE 2026-07-26: MVP is multi-tenant, enforced.**
-      Landed as 0486629..0f23716 (write ladder, creator auto-grant, visibility+404,
-      Actor/AuthEnabled), 5105ed7 (dataset-admin delegation, revoke lockout rules),
-      e8e43c9 (private datasets filtered from all six listings via one SQL predicate).
-      Platform e2e green on a fresh DB with enforcement on (realestate spec runs as
-      operator role since seed-parcels owns the demo datasets). Known accepted limits in
-      ptolemy README: org membership grants nothing; STAC raster search ungated (rasters
-      have no visibility concept yet). Original decision text follows.
-      (1) Writes (commit/merge/import/push/branch create+delete) check branch/dataset
-      permission via the existing check fns + the Actor extractor; dataset creator gets an
-      auto-granted admin row; a dataset with no permission rows stays any-editor so
-      existing data keeps working (a first grant flips it to enforced). (2) Per-dataset
-      `visibility: public|private`, default public: private requires a read permission
-      row (or admin) on all read paths; public keeps anonymous reads so the golden path
-      holds. (3) done 2026-07-26 (9fb84ff): Actor wired into unlock, see the locks item
-      above. (1) and (2) in progress.
-- [x] **ptolemy cql2 papercuts fixed (2026-07-25, 1a9b3a9).** Coordinate/ring validation
-      (malformed GeoJSON now 400 not 500), limit<=10000 and non-negative paging, spec
-      `in` array form supported (empty list → FALSE), `filter_lang` other than cql2-json
-      rejected with a clear 400. 8 new tests, suite at 200.
-- [x] **ptolemy legacy `resolve_conflicts` route deleted (2026-07-26, 85482c1).**
-      `POST /conflicts/{merge_id}/resolve` (committed onto source, no merge commit, zero
-      consumers) removed with its handler/types (147 lines); README documents the two real
-      endpoints. Both Theirs regression scenarios ported to
-      `/branches/{t}/merge/{s}/resolve` (note: that route computes ours=target, so
-      keeping the target side is strategy "ours"). `/qgis/.../conflicts/resolve` stays.
-- [x] **collecta forms cursor fixed (2026-07-25, e00bfa2).** Compound `(updated_at, rowid)`
-      cursor, token `<rfc3339>@<rowid>`, bare-timestamp cursors fall back to (ts, 0) which
-      re-delivers rather than skips. Regression test proven against old code; 57 pass.
-
-## DONE — qgis + cql2 correctness/security (2026-07-25, pushed)
-
-- [x] **ptolemy qgis endpoints queried nonexistent columns** (`fv.branch_id`,
-      `fv.is_deleted`) — `qgis_pull`, `layer_definition`, and `qgis_push`'s existence
-      check all 500'd on every call. Rewritten against the fork-aware `features` view
-      (pull keeps an inline ancestor-chain CTE for its id tiebreaker). 5 new integration
-      tests incl. branch-scoping and delete semantics.
-- [x] **ptolemy cql2 parameterized.** Filter-to-SQL now emits bind parameters for property
-      names, literals, and GeoJSON (no request bytes reach SQL); spatial ops validate
-      GeoJSON structure, honor `args[0]`, and strip `crs`; short arg arrays 400 instead of
-      panicking the handler. 7 new tests incl. injection probes.
-
-## DONE — Phase 2 correctness follow-ups (2026-07-25, pushed)
-
-- [x] **ptolemy `conflicts.rs` (ResolutionStrategy::Theirs) cross-branch leak.** Theirs now
-      resolves the target ('main' of the dataset, as `list_conflicts` does) and reads the
-      version from the target head's recursive ancestor chain (`resolve_target_head`
-      helper); NotFound instead of unscoped fallback; a target-side `delete` now yields
-      `DiffOp::Delete`. Regression tests prove the old code fails them.
-- [x] **ptolemy-api untied latest-version queries.** `fv.id DESC` (or `id ASC` for the one
-      earliest-pick) appended across conflicts/grpc/vector_search/analytics/ogc/
-      geoprocessing/qgis (16 queries).
-- [x] **ptolemy cql2 mixed-type 500.** Numeric comparisons and `between` use a guarded
-      `CASE WHEN <numeric-regex> THEN ::numeric END` cast: non-numeric text drops out,
-      JSON numbers and numeric strings still match. Regression test covers `>`/`<`/between.
+- [ ] **Tool cold-start exceeds Letta 180s sandbox cap.** First tool call after an image
+      rebuild pays schema re-registration + geo-stack import on top of an ~85s tool run
+      and times out (agent retry succeeds). Pre-warm with a throwaway tool call in the
+      entrypoint, or raise the sandbox timeout.
+- [ ] **assess_environmental_risk run-to-run variance.** Two identical "Monaco, 2km"
+      requests scored 4/10 (mean elev 14.1m, range 0–98) then 1/10 (mean 50.0m, range
+      0–322) — geocode anchor and/or sampling nondeterminism. Pin the geocode result and
+      make the grid deterministic so identical requests reproduce.
+- [ ] **download_population_grid pop_total ignores the clip polygon**: computed from the
+      radius bbox even when clip_layer_path is given, now visibly disagreeing with the
+      rendered clip polygon.
 
 ## OPEN — platform hygiene
 
-- [x] **basemaps consistent across renderers (2026-07-25).** MapLibre keeps the OpenFreeMap
-      vector styles (Liberty/Bright/Positron) + self-hosted pmtiles; Cesium and deck.gl can't
-      render vector styles, so each vector pick resolves to its closest Carto raster
-      (`VECTOR_APPROX_RASTER`) so all three look approximately the same globally. Also fixed
-      the platform-e2e CI failure: fail-closed services need `PLATFORM_JWT_SECRET`, now set as
-      a throwaway job env in the workflow.
-- [x] **MapLibre globe projection (2026-07-25).** The MapLibre renderer (3D Globe tab only)
-      now projects its vector/raster basemap onto a globe via `setProjection({type:'globe'})`,
-      re-applied on `style.load` so basemap swaps keep it. Gives a true 3D vector globe (OSM
-      buildings via the OpenFreeMap style) as a Cesium-free option. maplibre-gl 5.24 already
-      installed; no dep change.
-- [x] **viewtopia dependency vulns resolved 2026-07-25** — dompurify 3.4.12, protobufjs
-      8.7.1, vite 6.4.3, all within existing ranges; alerts draining as dependabot rescans.
-- [x] **Renovate app installed on the org 2026-07-25** (Renovate Only, scan-and-alert,
-      silent mode off, all repos). Update PRs follow the shared schedule (Mon before 06:00).
-- [x] **itinera data/ permissions fixed 2026-07-25.** Root cause: `USER itinera` in the
-      Dockerfile disabled the entrypoint's root branch, so the privilege-drop never ran.
-      Entrypoint now drops to the owner of `/data` (host user for bind mounts, itinera for
-      named volumes); `user:` override and CI graph workaround removed.
-- [x] **geolang embedded Postgres was already persistent** — the `geolang-pgdata` volume
-      mount at the image's PGDATA landed earlier; verified force-recreate skips initdb and
-      keeps Letta agent state. (Boot logs show a harmless ~300ms crash-recovery because
-      postgres never gets a clean shutdown signal; see open note below.)
-- [x] **nginx config now reload-safe 2026-07-25**: single-file mount replaced by a stub
-      include + `deploy/` directory mount; `nginx -s reload` picks up edits.
-- [x] **"network not found" on `up` root-caused 2026-07-25**: stopped containers from
-      renamed projects hold refs to deleted networks. `platform-up.sh` and CI now `down
-      --remove-orphans` first; README troubleshooting updated.
-- [x] **geolang lifecycle trio fixed (2026-07-25, 24d34a0/6fcb9b0/58de1c3).** (1) Agent
-      accumulation: `client.agents.get()` doesn't exist in letta_client 1.7.12
-      (AttributeError swallowed by a bare except → new agent every boot); now
-      `agents.retrieve` + reuse-by-exact-name fallback, same fix in `/sessions/switch`
-      which had always 404'd. 6 empty orphan agents deleted; 4 with real history kept.
-      (2) Venv rebuild: Letta's `prepare_local_sandbox(force_recreate=True)` rmtree'd
-      env/ every boot — `TOOL_EXEC_AUTORELOAD_VENV=false` in the Dockerfile + marker
-      replaced with an import probe. Recreate-to-healthy: ~2min → ~35s. (3) Clean
-      shutdown: entrypoint stays PID 1, forwards TERM, `pg_ctl -m fast` stops postgres;
-      verified "database system was shut down" on next boot. 2 recreates → same agent_id,
-      agents count flat, 6 unit + 18 e2e green.
-- [x] **geolang phantom sessions pruned (2026-07-25, 6c38252).** GET /sessions drops
-      entries whose agent raises NotFoundError (outages don't wipe the file); switch
-      prunes the stale entry before its 404. Live file went 7 phantoms → 1 real.
-- [x] geokode fuzzy fallback for forward geocoding shipped earlier (efea2b3); this line
-      was stale.
-
-## DONE — legacy chat channel retired (2026-07-25, pushed)
-
-- [x] **AG-UI is the only agent channel now.** geolang: deleted `POST /chat/stream` +
-      the legacy SSE renderer (c9393dc); the built-in static demo page migrated to
-      `/chat/agui`; docs (api_reference/architecture/viewer_integration) updated to the
-      AG-UI event vocabulary. viewtopia: deleted the legacy fetch/parse branch in useSSE
-      and the `useAgUiChannel` setting + toggle (a16f382). Verified live: `/agent/chat/stream`
-      404s, "fly to rome" works end to end. Still internal (kept): the `__UI_SPEC__:`/
-      `__VIEWER_CMD__:` tool-return markers feeding the shared event generator — retiring
-      those means redesigning the Letta tool→server signal, separate task if ever.
-
-## DONE — chat replay for viewer commands + multi-renderer markers (2026-07-25, pushed)
-
-- [x] **Clicking an old chat reply now replays its viewer commands.** Replay only covered
-      `ui_spec` map results; `fly_to`-style commands were executed live but never stored.
-      Both channels now keep each reply's `viewerCmds` on the message and a click re-runs
-      them (then re-renders the mapSpec). Browser-verified: Tokyo → click "Flown to
-      Monaco." → camera returns.
-- [x] **add_marker/clear_entities work on every renderer.** Markers moved into the
-      agent-layer store; Cesium/MapLibre/deck.gl hooks each draw them (dot + label), so
-      they survive renderer switches like ui_spec layers. Root-caused missing MapLibre
-      markers to `maplibre-gl.css` never being imported (markers/controls are DOM overlays);
-      importing it also fixed the unstyled zoom/attribution controls. Browser-verified on
-      all three renderers.
-- [x] **add_geojson/sql_query render on every renderer (2026-07-25).** Both now append an
-      agent layer to the store (any GeoJSON root normalized to a FeatureCollection);
-      sql_query's `fit:false` skips the reframe. `renderGeoJson` stays for the Cesium
-      analysis tool panels that track/remove their data sources. Browser-verified: agent
-      add_geojson polygon renders on the MapLibre globe. `load_tileset`/`screenshot`
-      remain inherently Cesium.
-
-## DONE — AG-UI agent channel + panel close fix (2026-07-25)
-
-- [x] **AG-UI agent channel (behind a flag).** geolang serves `POST /chat/agui` next to the
-      legacy `/chat/stream` (shared event generator; `ag-ui-protocol` installed into the base
-      image's uv venv via the Dockerfile). viewtopia routes through `@ag-ui/client` `HttpAgent`
-      when `settings.useAgUiChannel` is on (default off), mapping AG-UI events to the existing
-      handlers. Standard events (text/lifecycle) for the chat, Custom events for viewer_cmd +
-      ui_spec. Verified end to end: client hit `/chat/agui`, agent "fly to Monaco" streamed
-      RUN_STARTED→TEXT→CUSTOM(viewer_cmd fly_to)→RUN_FINISHED and rendered. Legacy untouched.
-      Follow-up: the `__UI_SPEC__:`/`__VIEWER_CMD__:` Letta tool-return markers still feed the
-      generator (internal); AG-UI didn't replace those, clean up later. Prior chat turns aren't
-      sent yet (latest prompt only). Flip default + delete legacy after real-world use.
-- [x] **Panel close fix.** Escape closes any open tool panel (`ToolPanels.tsx`), and the
-      Settings panel z-index (500) now clears the nav toggle (400) so its close X is clickable.
-      Fixes the "can't close Settings" report. Also fixed the settings-panel black screen
-      (persist deep-merge backfills settings keys from older builds).
-
-## DONE — data story: one-command regional bring-up (2026-07-25)
-
-- [x] `platform-up.sh <pbf-url>` now re-derives everything for any region: a `data/.region-url`
-      marker detects a change, re-fetches the pbf, invalidates `graph.bin` (itinera rebuilds),
-      recreates geokode to re-ingest, and polls geokode/itinera health directly (metro graph
-      builds take minutes). Same URL skips all rebuilds.
-- [x] `seed-parcels.mjs` anchors the demo on the region (pbf header bbox → geokode `/reverse`
-      to snap onto a real address, Monaco fallback), and on a region change wipes the demo
-      datasets' branch first (scoped, versioned delete) so parcels don't linger offshore.
-      Verified end to end on Washington DC and Monaco; Monaco e2e still 18/18.
-- [x] **demo labels genericized (2026-07-25, e7f36fd5).** Region-neutral owner pool,
-      parcel streets from the region's geokode reverse hit (neutral fallback); sales
-      street stays fixed — it's the seed's idempotency key. e2e owner search updated;
-      18/18 on the re-seeded stack.
-
-## OPEN — agent output shape
-
-- [ ] **assess_environmental_risk returns one centroid point, not an area.** The "flood
-      risk layer" for a city is a single point with score properties, so the map adds one
-      dot (invisible at max-zoom fit until 917bf31 padded degenerate bounds). Better: the
-      tool should also write the assessment area (the radius_km buffer polygon, styled by
-      risk score) so the rendered layer matches what the words promise. Same question for
-      any tool whose GPKG is a single summary feature. geolang
-      `src/agents/tools/assess_environmental_risk*`.
-
-## OPEN — trust & adoption
-
-- [x] **Load-test harness + published numbers (DONE 2026-07-26).** `loadtest/` (k6 pinned
-      image + seeder + run.sh), nightly `platform-load.yml` (cron+dispatch only). First
-      full baseline published in loadtest/README.md; thresholds tightened to ~2x measured.
-      **The data model is validated** — after the branch-scoping fix below, reads scale
-      with the queried dataset's own history only: 10k-commit chain p95 67ms bbox / 68ms
-      filter / 28ms item at 20 req/s, fenestra 15-17ms p95, 0% failures, ~277 req/s
-      aggregate on one box. No materialized branch heads needed for v1.
-- [x] **ptolemy read paths branch-scoped (2026-07-26, 0ee367c).** The baseline's first run
-      caught the `features` view walking every branch's chain before filtering: CQL2
-      filter was a flat ~5.7s for ANY versioned dataset once an 11k-commit neighbor
-      existed (fenestra queued to 25-36s). All view consumers (cql2/exports/sfcgal/h3/
-      qgis) now read a branch-scoped source; 100-feature dataset filter is history-
-      independent (8.9ms beside 89k unrelated commits). Same commit: OGC single-item GET
-      ignored the branch entirely (returned newest version globally, 200 for deleted
-      features) — fixed with regression tests; external-table bbox seq-scans when the
-      source SRID isn't 4326 (ST_Transform defeats the GiST index) — registration now
-      warns with the exact functional index; suite 248.
-- [ ] **ptolemy external-source predicate pushdown (deferred 2026-07-26).** Reproject
-      spatial predicates into the source SRID inside the ExternalSource builder so
-      non-4326 external tables use their raw-column index without the manual functional
-      index. Contract change touching bbox/intersects/within/MVT/OGC/CQL2 spatial ops;
-      measure against real polygon geometry.
-- [x] **"Your data is just PostGIS" docs section (2026-07-25).** ptolemy README gets a
-      section under Data Model (verified against migration 020 + 001: `feature_versions`
-      PostGIS geometry + JSONB properties, GIST index, `features` view; plain-SQL example,
-      GDAL/QGIS/pg_dump story); platform.html stack section links to it.
-- [x] **Read-only entry point: ptolemy external dataset mode (2026-07-25, c9f6096/
-      ced2fbb/43381be).** Register `external_table`/`external_id_column`/
-      `external_geometry_column` on dataset create; reads substitute a derived table for
-      the `features` view (two shared builders in postgres.rs), so listing/paging, bbox,
-      intersects/within, CQL2, OGC items, GeoJSON/CSV/FGB export, MVT tiles, and QGIS
-      layer definition all work unchanged. Writes (commit/merge/import/push/branch/
-      reproject) 409. Identifier validation via a single constructor type is the
-      injection barrier; optional `PTOLEMY_EXTERNAL_DATABASE_URL` second pool proven in
-      tests against ptolemy-test-db-2. 192 tests pass (17 new). Known behaviors:
-      changeset-dependent endpoints (history/diff/temporal/qgis-pull/h3/vector-search)
-      return empty/404 for external datasets, not 400; row keys are md5-hashed to UUIDs
-      (original key kept in properties); registration creates a `main` branch (ordinary
-      creation doesn't — viewer does it in a second call). CAVEAT for operators: every
-      non-geometry column is published and ptolemy reads are anonymous by default —
-      register a view, not the raw table, when columns are sensitive (in README).
-
-## DONE — Letta upgrade compatibility (resolved 2026-07-25, no test needed)
-
-- [x] **Verdict: stay pinned; there is nothing to upgrade to.** Server 0.16.8 (2026-05-14)
-      is still the latest release on GitHub/PyPI/Docker Hub as of 2026-07-25; the OSS
-      server line looks frozen post-"Letta Code" pivot (self-hosting docs now marked
-      legacy/unsupported). License unchanged Apache-2.0 at 0.16.8 and main. Client: pin
-      `letta_client==1.7.12` stays — 1.8–1.12 additions target cloud endpoints our server
-      lacks (and 1.8.0 removed isolated conversation blocks). Security: CVE-2026-4965
-      (eval injection in `resolve_type`, listed vs 0.16.4) — verified our vendored
-      `letta/functions/ast_parsers.py` has the allowlist + eval-behind-flag hardening;
-      0.16.8 also swapped pickle→JSON for sandbox transport. Watch item: upstream `main`
-      has unreleased commits (through 2026-07-22); if a 0.16.9+ ever ships, re-run this
-      check. Strategic note: plan around a frozen upstream (vendored fork is ours to
-      maintain), not around upgrades.
+- [ ] **tiletopia full-features clippy**: `cargo clippy --all-features` fails in
+      tiletopia-core (ort/ndarray version clash); CI runs `--features
+      draco,gpu,plugin-dylib,ml` — check whether that job is red on master and fix the
+      version clash.
+- [ ] **tiletopia CloudFront config**: `deploy/terraform/main.tf:235` gives
+      `/api/v1/catalog*` GET/HEAD only and drops Authorization, so catalog-add cannot
+      work through that distribution (fails closed).
+- [ ] **loadtest: tiletopia fixture seeder.** The scenario measures whatever assets the
+      stack holds; a fresh CI stack may have none and the ops skip with a warning.
+      Needs a small tiling job in the harness for a deterministic asset.
+- [ ] **fenestra has no platform nginx route** — the load scenario hits :3003 directly.
+      Decide whether fenestra belongs behind the same-origin proxy like everything else.
+- [ ] **ptolemy STAC raster search ungated**: `/api/v1/stac/search` returns raster tile
+      ids/bounds without naming a dataset; rasters have no visibility concept, so
+      dataset privacy does not cover them. Decide raster-catalog visibility.
 
 ## OPEN — post-v1: replace embedded Letta (decided 2026-07-25)
 
 - [ ] **Replace the embedded Letta server with a thin in-house agent loop behind
-      `agent_event_stream`.** Decision rationale: upstream's self-hosted line is
-      deprecated and release-frozen (functionality moving to their closed SaaS; no
-      security response), so long term we'd be sole maintainers of a large fork we
-      barely use. GeoLang needs only: an LLM call loop with tool dispatch, conversation
-      history, a couple of memory blocks, and an event stream — small code against our
-      own Postgres, direct provider calls (xAI/OpenAI-compatible). The seam is already
-      cut: `agent_event_stream` in geolang/src/api/server.py is the only place Letta
-      shapes exist, and the viewer speaks vendor-neutral AG-UI. Keep the existing tool
-      functions as-is. Memory audit (2026-07-25, embedded Letta pg, 11 agents / 401
-      messages): archival never used (0 passages, tools not even attached), core-memory
-      edit tools attached but never called, every gis_workflow block still at its initial
-      value — all 127 tool calls are domain tools. So the rewrite needs only message
-      history + summarize-on-overflow; no scratch blocks, no archival/embeddings (the
-      vllm embeddings container exists solely for unused archival and goes away too). Also retires in one move: the ~2min embedded-server boot, the
-      ~44s tool-venv rebuild, the agent-accumulation-per-restart bug, and the
-      eval/pickle-class attack surface. Do after MVP proves the golden path; until
-      then stay on vendored 0.16.8.
+      `agent_event_stream`.** Upstream's self-hosted line is deprecated and
+      release-frozen; GeoLang needs only an LLM call loop with tool dispatch, message
+      history + summarize-on-overflow, and an event stream (memory audit showed archival
+      and core-memory tools entirely unused; the embeddings container exists only for
+      unused archival and goes away too). The seam is already cut: `agent_event_stream`
+      in geolang/src/api/server.py is the only place Letta shapes exist, and the viewer
+      speaks vendor-neutral AG-UI. Also retires the ~2min embedded-server boot and the
+      cold-start timeout above. Do after MVP announcement; stay on vendored 0.16.8 until.
 
 ## OPEN — Phase 3 (mobile & ML breadth, after v1)
 
@@ -356,65 +93,7 @@
 - [ ] ptolemy re-merge of an already-merged branch creates a redundant merge changeset each
       time (merge commits record only one parent, so the base never advances). "Already up to
       date" detection needs second-parent bookkeeping.
+- [ ] ptolemy external-source pushdown non-goals (documented in README): near-global
+      windows fall back to unfiltered scans; `or`/`not` CQL2 spatial ops are never pushed.
+      Revisit only if a real workload hits them.
 - [ ] Raise jung from its rendering-only coverage into the v1 path *(only if it enters it)*.
-
----
-
-## DONE — Phase 2: harden the backbone (2026-07-17, verifier-confirmed)
-
-- [x] **ptolemy write/merge hardening.** Fixed a partial-update cross-branch leak in
-      `commit()` and a nondeterministic latest-version tie on same-tx `created_at` (added
-      `fv.id DESC` to 16 storage queries). Migration 020 makes the `features` view walk
-      `changesets.parent_id` recursively so forked branches see inherited data (was
-      fork-blind → served partial data to sfcgal/cql2/h3). `find_merge_base` depth-ordered.
-      Bonus: cql2 numeric comparison `::numeric` cast (was 500ing text-vs-int). +12
-      conflict-depth tests. (Test DB container `ptolemy-test-db` on port 5433, NOT the
-      platform db on 5432.)
-- [x] **collecta auth + sync.** HS256 JWT (claims sub/exp/role, 24h) mirroring tiletopia;
-      argon2id hashing (diverges from tiletopia's HMAC — chose a work factor); admin-only
-      `create-user` CLI seed (stdin pw), no signup endpoint; all data routes behind the JWT
-      layer, only `/health` + `/auth/login` public; `COLLECTA_JWT_SECRET` mandatory ≥32 bytes
-      (server refuses to start without it). Sync `push` idempotent on submission UUID
-      (first-write-wins), `forms?since` cursor. Picked jsonwebtoken 9 (10 pulls rsa 0.9 /
-      RUSTSEC-2023-0071, fails cargo-deny).
-- [x] **fenestra WCS.** Real routed `/wcs` 2.0.1 (GetCapabilities/DescribeCoverage/
-      GetCoverage) over a `COVERAGE_DIR` of GeoTIFFs via terrano-core; subset parsing, OWS
-      exception XML, spec-compliant Lat-first EPSG:4326 envelopes. Limits: single-band f64,
-      no reprojection/scaling. (The earlier route-or-delete pass had deleted the skeletal
-      module; reversed on request and built for real.)
-
-## DONE — Phase 1: finish v1 surface (2026-07-17, verifier-confirmed)
-
-- [x] Vertical panels (sensor/coverage/construction/field/incident) wired to ptolemy
-      `/api/v1/*`; delivery → itinera `/api/delivery/optimize`; geocode parse fixed.
-      FleetPanel → honest "no live feed" (nothing serves vehicle positions). Added ptolemy
-      `GET /construction/surveys` + milestone `planned_pct`.
-- [x] Implemented 4 stub panels for real: terrain profile, data table, charts, timeline
-      (reuse elevation lib / dashboard chart / Cesium clock). Row-click NDVI detail wired.
-- [x] Gated 18 experimental stub panels behind a persisted "Show Preview Tools" setting with
-      Preview badges — no dead buttons in the default UI.
-- [x] E2E: un-skipped `analysis-smoke` (tiletopia analysis endpoints), made the jupyter
-      python-cell step a hard requirement. Platform suite now **18/18, zero skips**.
-- [x] Docs site test counts recomputed; collecta/terravista cards de-oversold; README
-      one-command quickstart.
-
-## DONE — Phase 0b: collapse ViewTopia to one stack (2026-06-20)
-
-- [x] Decision: React is canonical. Ported P0 (agent→map commands), P1 (feature-picker,
-      geojson-editor, style-editor), P2 (theme-toggle, auth, portal, dashboards), each gated
-      by a smoke test.
-- [x] Cutover: `index.html` loads `main.tsx`; single `vite.config.js` → `dist/`; deleted all
-      115 vanilla `.js` files + `index-react.html` + the second Vite config + vanilla unit
-      tests. NL→map verified end-to-end ("Fly to Monaco" → `viewer_cmd fly_to` through nginx).
-
-## DONE — Phase 0: prove & lock the golden path (2026-06-19)
-
-- [x] Brought up `docker-compose.platform.yml` for real (no stubs). Fixed the critical
-      same-origin nginx proxy bug (variable `proxy_pass` dropped URI suffix + query string;
-      added per-location `rewrite … break`). Reconciled geolang's self-hosted-Letta run model
-      (removed the redundant `letta` service).
-- [x] geokode forward search fixed (was prefix-only); added an OSM `.pbf` importer (426 real
-      Monaco addresses).
-- [x] Encoded the golden journey as a Playwright suite against the live stack and wired it
-      into CI (`.github/workflows/platform-e2e.yml`) without stubbing geolang (public since
-      2026-07-15; LLM keys optional). Runs on master push + weekly + manual.

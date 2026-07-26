@@ -6,7 +6,7 @@
 >
 > Owner goal (since **2026-06-19**, still current): **ship a usable product** — the
 > ViewTopia viewer + AI agent + the backend service stack — not add more breadth.
-> Last brought current: **2026-07-17**.
+> Last brought current: **2026-07-26**.
 
 ---
 
@@ -181,3 +181,28 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
 - **2026-07-17** — Phase 1 (viewer polish, vertical wiring, preview gating, E2E un-skips)
   and Phase 2 (ptolemy hardening, collecta auth+sync, fenestra WCS) shipped and
   verifier-confirmed. Exposed xai key (from pre-squash history) rotated.
+- **2026-07-25** — Auth surface closed (tiletopia /v1 + native writes editor-gated, role
+  management + argon2id; ptolemy config reads/metrics admin-gated, audit identity from JWT).
+  Phase-2 correctness follow-ups all fixed (conflicts Theirs leak, untied latest-version
+  queries, cql2 mixed-type + injection-proof parameterization, qgis endpoints had queried
+  nonexistent columns). geolang lifecycle trio (agent reuse, venv rebuild, clean shutdown);
+  AG-UI became the only agent channel; chat replay + markers on all three renderers;
+  external dataset mode (read-only plain-PostGIS entry point); one-command regional
+  bring-up; MapLibre vector globe; Renovate installed; verdict: stay on vendored Letta
+  0.16.8, plan replacement post-v1.
+- **2026-07-26** — **Multi-tenant MVP decided and shipped.** ptolemy: write-permission
+  ladder + creator auto-grant, per-dataset visibility (private = 404), dataset-admin
+  delegation with revoke-lockout protection, private datasets filtered from all listings;
+  tiletopia: asset ownership (owner-or-admin on destructive writes), ungated catalog-add
+  closed, dead streaming-upload routes deleted. Load-test harness (loadtest/, nightly CI)
+  + first published baseline validated the data model — after fixing the biggest defect
+  testing found: every features-view consumer walked ALL branches' chains (5.7s flat
+  filters → 3-48ms branch-scoped). Also fixed: OGC single-item GET ignored branches,
+  feature locks had never worked over HTTP (make_interval type bug), per-dataset tiles
+  route mixed SRIDs (never worked), external-source predicate pushdown (3-15x, plain GiST
+  suffices), env-risk/population tools render area polygons (UTM buffers; 3857 shrank
+  them ~40%). Platform e2e green on fresh DB with enforcement on; 16 dependabot alerts
+  confirmed stale (anchored to deleted package-lock.json) and dismissed; ptolemy suite
+  1 → 262 tests since June. Viewer test coverage started: registry-derived panel sweep
+  (50 tools, 49 pass) + console-error tripwire across all e2e specs; building-data
+  toggle self-disables on styles with native 3D buildings.
