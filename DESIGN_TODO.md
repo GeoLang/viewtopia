@@ -9,33 +9,12 @@
 
 ## IN PROGRESS — viewer test coverage (decided 2026-07-26)
 
-- [ ] **Three panels have no functional coverage because they are inert UI** (marked
-      fixme in `tests/e2e/panels/`, one fixme each): `ClippingPanel` — the axis, position
-      and Enable Clip controls only set local React state and never reach
-      `viewer.scene.globe.clippingPlanes` (`analysis.spec.js:123`); `OGCLayersPanel` — is
-      rendered with `layers={[]}` and empty `onAdd`/`onRemove` (`ToolPanels.tsx:172`), so
-      an OGC service can never be added or even listed (`data.spec.js:201`);
-      `DragDropImport` — is rendered with `onImport={() => {}}` (`ToolPanels.tsx:181`), so
-      a dropped file is never parsed while the panel still reports "Imported"
-      (`data.spec.js:230`). Implement the handlers, then unmark the fixmes.
 - [ ] **Two plugin panels request a third-party API with no key** (found by the new
       plugin sweep, marked fixme in `tests/e2e/plugin-sweep.spec.js`): basemap-catalog
       fetches three jawg.io preview tiles that answer 400; street-view builds a Google
       embed URL with `key=` empty and gets 401. Both should detect the missing key and
       render a configure-a-key state instead of requesting, like the catalog panel's
       signed-out state.
-- [ ] **Product defects the per-panel functional suite recorded** (2026-07-26, one line
-      each, none fixed by that suite): `PrintExportPanel` ignores width/height/dpi and its
-      PDF option exports a PNG; `SpatialStatsPanel` ignores the aggregation-method and
-      property selects; the SplitView toggle is read by nothing; Tour steps 1-2 target
-      elements that do not exist; ShareLink encodes the hidden Cesium camera after a
-      renderer switch; VectorTiles rejects a root-relative tile template inside the
-      MapLibre worker (should resolve it against `location.origin`); `globalTerrain` has no
-      working provider on this deployment (no Ion token, and `/tiles` terrain 401s given a
-      URL alone); the SpaceTime import status disappears after 4s; the collaboration
-      WebSocket is unreachable (nginx routes `/api/` to ptolemy, and tiletopia never mounts
-      `ws_handler`); no app path loads time-dynamic data, so Timeline's Fit-to-Data cannot
-      succeed through the UI.
 - [~] **Building-data toggle on MapLibre** (committed ea421a9d, browser verification
       pending): disabled with tooltip when the loaded style has its own fill-extrusion
       layers (Liberty); detection re-runs on style.load; hook skips duplicate layer.
@@ -55,6 +34,22 @@
       rendered clip polygon.
 
 ## OPEN — platform hygiene
+
+- [ ] **tiletopia terrain contract unusable by Cesium** (found 2026-07-26 wiring the
+      terrain panel): `/tiles/v1/terrain/layer.json` now answers 200 anonymously but
+      omits `"format"`, so `CesiumTerrainProvider` rejects it; its `tiles` template
+      points at `/api/v1/terrain/{z}/{x}/{y}` (404 through the viewer proxy — the served
+      path is `/tiles/v1/terrain/…`); and `.terrain` root-tile requests answer 400. The
+      panel is written to the intended contract and shows its no-source state meanwhile.
+- [ ] **tiletopia realtime presence is not per-connection refcounted**
+      (`crates/tiletopia-server/src/realtime.rs`, `PresenceTracker::leave`): with two
+      tabs of one account, either tab leaving removes the account from every peer's
+      roster while the other tab is still connected.
+- [ ] **tiletopia realtime room count unbounded** — any authenticated user can create
+      rooms without limit; add a cap or an idle reaper.
+- [ ] **viewer collab connect URL only handles a root-relative `tiletopiaUrl`**: an
+      absolute `http(s)://` settings value builds an invalid `ws://http://…` URL
+      (`src/store/collaboration.ts`, pre-existing, noted 2026-07-26).
 
 - [ ] **tiletopia full-features clippy**: `cargo clippy --all-features` fails in
       tiletopia-core (ort/ndarray version clash); CI runs `--features

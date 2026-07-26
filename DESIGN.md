@@ -211,3 +211,21 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   with their one live assertion ported, vector-tile + terrain specs mocked and made
   minification-safe, and a runtime-enumerated plugin sweep covers all 23 plugin panels.
   The tripwire tolerates cold-upstream 502/503/504 in the platform config only.
+- **2026-07-26 (later)** — **Viewer feature push, all panel-suite defects cleared.**
+  tiletopia realtime shipped and pushed: collaboration WS mounted, JWT via WebSocket
+  subprotocol (query tokens rejected), sender identity server-stamped from the JWT sub,
+  SRTM fetches bounded per terrain request, terrain reads anonymous. Viewer collab client
+  rewritten to that contract: token from the session, no socket when signed out, identity
+  keyed off the JWT sub (a Presence roster has no self marker and names are spoofable);
+  found the old client's `Camera` frames were never in the server enum, so follow-view had
+  never worked — now sends `ViewChanged` with zoom↔height conversion; 18 unit tests + e2e.
+  Real synced split view: second pane per renderer, one shared-camera hub with re-entrancy
+  guard and subscribe-time snap, clean teardown (WebGL-context-limit toggle test). Imports
+  with timestamps (CSV/GeoJSON properties, GPX coordTimes) become playable CZML with
+  availability, so Timeline Fit-to-Data works through the UI. Terrain panel defaults to
+  the platform service with a graceful no-source state (live service's layer.json is
+  still un-consumable — tracked in DESIGN_TODO). WMTS (REST template) + WFS (GeoJSON →
+  agent layers) restored for real, verified against fenestra. Remaining recorded panel
+  defects fixed: print-export size/pdf, spatial-stats aggregation, tour selectors,
+  sharelink active camera, vector-tile origin-relative templates, space-time import
+  summary. Panels suite 36 passed + 3 starvation flakes (pass on retry); vitest 197.
