@@ -3,7 +3,7 @@
 > Whole-platform backlog for the shipping plan in [DESIGN.md](DESIGN.md).
 > Status keys: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked.
 > **Open work is up top; completed phases are condensed at the bottom.**
-> Last brought current: **2026-07-25**.
+> Last brought current: **2026-07-26**.
 
 ---
 
@@ -28,9 +28,12 @@
       so what leaked was traffic shape plus non-UUID path segments (topology names, room ids).
       ptolemy's own dev compose scrapes `/metrics`; `deploy/prometheus.yml` documents the bearer
       token it now needs. 2 new tests.
-- [ ] **ptolemy anonymous reads still open on** `GET .../events` (webhook delivery history)
-      and `/replication/feed/{branch}` (streams branch change data). Decide whether either is
-      sensitive enough to gate.
+- [~] **ptolemy anonymous reads — DECIDED 2026-07-26: gate both as Admin.** `GET .../events`
+      leaks no secrets (signing secret is serde-skipped) but exposes event payloads and
+      traffic shape; it is diagnostics, so it joins the /webhooks-config Admin gating.
+      `/replication/feed/{branch}` streams full branch change data and has zero consumers
+      in any repo. Both are classify() additions + tests; revisit the feed when replication
+      gets a real consumer.
 - [x] **tiletopia native asset writes editor-gated (2026-07-25, dd9ba8e).** POST/DELETE
       assets, start-tiling, and the 3 streaming-upload routes moved to an editor-layered
       router (same mechanism as the Ion split); reads unchanged. 6 new tests (anonymous
@@ -38,6 +41,14 @@
       any-JWT: asset annotations (viewer commenting). Follow-ups worth a decision:
       streaming upload has no per-asset ownership check (any editor can chunk-write into
       any asset's input dir), and `upload/init` ignores its path `{id}` and mints its own.
+      → decided 2026-07-26, see the multi-tenant item below.
+- [~] **tiletopia asset ownership — DECIDED 2026-07-26 (MVP is multi-tenant).** Delete the
+      3 streaming-upload routes: no consumer in any repo (viewtopia uploads via multipart
+      POST), `upload/init` ignores its path `{id}`, and there is no ownership model to
+      secure them against. The real gap is broader: assets have no owner column, so any
+      editor can delete or re-tile any asset. Add `owner_id` (JWT sub) on create, enforce
+      owner-or-admin on delete/start-tiling; legacy NULL-owner assets stay any-editor for
+      compat. Annotations stay any-JWT by design.
 
 - [x] **tiletopia user role management (done 2026-07-25).** Admin-only
       `PUT /api/v1/admin/users/{id}/role` behind require_admin, plus `tiletopia set-role`
@@ -57,17 +68,26 @@
       sub when auth is on, body only in disabled-auth dev mode. Left alone: unmounted
       grpc bulk_import, hardcoded merge "api"/unlock "system" placeholders. Still open
       below: permissions-table enforcement, and any-editor can unlock another's lock.
-- [ ] **DECIDE: enforce `dataset_permissions`/`branch_permissions`?** Rows are written and
-      readable but never consulted — any editor token writes to any branch. Related:
-      `unlock_feature` lets any editor release another user's feature lock.
+- [~] **ptolemy permissions — DECIDED 2026-07-26: MVP is multi-tenant, enforce.**
+      (1) Writes (commit/merge/import/push/branch create+delete) check branch/dataset
+      permission via the existing check fns + the Actor extractor; dataset creator gets an
+      auto-granted admin row; a dataset with no permission rows stays any-editor so
+      existing data keeps working (a first grant flips it to enforced). (2) Per-dataset
+      `visibility: public|private`, default public: private requires a read permission
+      row (or admin) on all read paths; public keeps anonymous reads so the golden path
+      holds. (3) Correction: the "any editor can unlock another's lock" claim was wrong —
+      storage checks `locked_by`, but the handler hardcodes actor "system", so nobody can
+      unlock their own lock over HTTP; wire Actor into the unlock handler.
 - [x] **ptolemy cql2 papercuts fixed (2026-07-25, 1a9b3a9).** Coordinate/ring validation
       (malformed GeoJSON now 400 not 500), limit<=10000 and non-negative paging, spec
       `in` array form supported (empty list → FALSE), `filter_lang` other than cql2-json
       rejected with a clear 400. 8 new tests, suite at 200.
-- [ ] **ptolemy `resolve_conflicts` resolves but never merges**: it commits resolution ops
-      onto the *source* branch (`merge_id`) and creates no merge commit on the target.
-      Existing behavior, pinned by tests; decide if the endpoint should finalize merges
-      (the newer `/branches/{t}/merge/{s}/resolve` route does this properly).
+- [~] **ptolemy `resolve_conflicts` — DECIDED 2026-07-26: delete the old route.**
+      `POST /conflicts/{merge_id}/resolve` commits resolutions onto the source branch with
+      no merge commit and has zero consumers in any repo; the newer
+      `/branches/{t}/merge/{s}/resolve` finalizes properly. Delete the handler and port its
+      two Theirs regression scenarios (target-not-newest-write, delete-propagation) to the
+      new route. The `/qgis/.../conflicts/resolve` endpoint is separate and stays.
 - [x] **collecta forms cursor fixed (2026-07-25, e00bfa2).** Compound `(updated_at, rowid)`
       cursor, token `<rfc3339>@<rowid>`, bare-timestamp cursors fall back to (ts, 0) which
       re-delivers rather than skips. Regression test proven against old code; 57 pass.
