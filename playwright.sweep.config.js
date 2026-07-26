@@ -12,6 +12,8 @@ export default defineConfig({
   testDir: 'tests/e2e',
   testMatch: ['panel-sweep.spec.js', 'plugin-sweep.spec.js'],
   timeout: 120000,
+  // 8 workers gives spurious timeouts on a loaded box; 4 is stable
+  workers: 4,
   use: {
     baseURL: 'http://localhost:5174',
     headless: true,

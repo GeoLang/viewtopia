@@ -50,6 +50,10 @@
 - [ ] **loadtest: tiletopia fixture seeder.** The scenario measures whatever assets the
       stack holds; a fresh CI stack may have none and the ops skip with a warning.
       Needs a small tiling job in the harness for a deterministic asset.
+- [ ] **tiletopia analysis endpoints throw transient 502s on cold CI runners** (surfaced
+      by the console tripwire, 2026-07-26; platform config now tolerates 502/503/504 as
+      warnings). Investigate the hiccup — nginx gets upstream-refused from tiletopia
+      under cold-start load — rather than tolerating it forever.
 - [ ] **fenestra has no platform nginx route** — the load scenario hits :3003 directly.
       Decide whether fenestra belongs behind the same-origin proxy like everything else.
 - [ ] **ptolemy STAC raster search ungated**: `/api/v1/stac/search` returns raster tile
