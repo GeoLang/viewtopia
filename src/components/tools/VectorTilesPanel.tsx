@@ -22,6 +22,15 @@ interface VTSource {
 // ptolemy MVT endpoint shape, works when the platform stack runs
 const URL_PLACEHOLDER = '/api/v1/branches/{id}/tiles/{z}/{x}/{y}';
 
+/**
+ * MapLibre builds tile requests in a worker, where a root-relative template has
+ * no base to resolve against and `new Request(url)` throws. Prefixing the origin
+ * keeps the {z}/{x}/{y} braces intact, which `new URL()` would percent-encode.
+ */
+function absoluteTemplate(template: string): string {
+  return template.startsWith('/') ? `${window.location.origin}${template}` : template;
+}
+
 export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
   const [sources, setSources] = useState<VTSource[]>([]);
   const [name, setName] = useState('');
@@ -42,7 +51,8 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
     }
     const id = `vt-${crypto.randomUUID()}`;
     const layer = sourceLayer.trim() || 'default';
-    map.addSource(id, { type: 'vector', tiles: [url.trim()], minzoom: 0, maxzoom: 22 });
+    const tileUrl = absoluteTemplate(url.trim());
+    map.addSource(id, { type: 'vector', tiles: [tileUrl], minzoom: 0, maxzoom: 22 });
     map.addLayer({
       id: `${id}-fill`,
       type: 'fill',
@@ -57,7 +67,7 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
       'source-layer': layer,
       paint: { 'line-color': '#a78bfa', 'line-width': 1.5 },
     });
-    setSources((prev) => [...prev, { id, name: name.trim(), url: url.trim(), sourceLayer: layer }]);
+    setSources((prev) => [...prev, { id, name: name.trim(), url: tileUrl, sourceLayer: layer }]);
     setStatus(`Added ${name.trim()}`);
     setName('');
     setUrl('');
