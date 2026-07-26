@@ -1,4 +1,8 @@
 import { test, expect } from './console-guard';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * E2E smoke for the six tool panels wired to real functionality:
@@ -250,7 +254,34 @@ test.describe('local tool panels (batch 2)', () => {
     if (v.present) expect(v.value).toBe(3);
   });
 
+  test('space-time: importing the sample CSV lists its entities', async ({ page }) => {
+    await page.goto(REACT_URL);
+    await page.getByRole('button', { name: 'Analysis' }).click();
+    await page.getByText('🕐 Space-Time').click();
+
+    const panel = page
+      .locator('main > [class*="mantine-Paper-root"]')
+      .filter({ hasText: 'Space-Time Intelligence' });
+    await expect(panel).toBeVisible();
+
+    await panel
+      .locator('input[type="file"]')
+      .setInputFiles(path.resolve(__dirname, '../fixtures/sample-tracks.csv'));
+
+    await expect(panel.getByText('Imported 3 entities, 15 positions')).toBeVisible();
+    await expect(panel.getByText('3 entities', { exact: true })).toBeVisible();
+    for (const name of ['Alice', 'Bob', 'Charlie']) {
+      await expect(panel.getByText(name, { exact: true })).toBeVisible();
+    }
+  });
+
   test('vector tiles: adds an MVT source+layer to the live MapLibre map', async ({ page }) => {
+    // The tile host below does not exist. Serve an empty tile body (a valid
+    // zero-field protobuf, i.e. a tile with no layers) so MapLibre walks its real
+    // load path without a failed request.
+    await page.route('https://tiles.test/**', (route) =>
+      route.fulfill({ contentType: 'application/x-protobuf', body: Buffer.alloc(0) }),
+    );
     await page.goto(REACT_URL);
     // switch to MapLibre and wait for the map to render
     await page.getByRole('textbox', { name: 'Renderer' }).click();
