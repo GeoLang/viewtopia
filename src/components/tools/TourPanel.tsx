@@ -17,8 +17,8 @@ interface TourStep {
 }
 
 const TOUR_STEPS: TourStep[] = [
-  { target: '#header', title: 'Welcome to ViewTopia', content: 'This is your geospatial viewer. Let\'s take a quick tour!' },
-  { target: '.viz-toolbar', title: 'Viewer Tabs', content: 'Switch between 3D Globe, 2D Map, Image, and Table views.' },
+  { target: '.mantine-AppShell-header', title: 'Welcome to ViewTopia', content: 'This is your geospatial viewer. Let\'s take a quick tour!' },
+  { target: '.mantine-Tabs-list', title: 'Viewer Tabs', content: 'Switch between the 3D Globe and 2D Map views.' },
   { target: '#cesium-container', title: '3D Globe', content: 'Explore the world in 3D with CesiumJS, deck.gl, or MapLibre.' },
   { target: '.mantine-AppShell-aside', title: 'Chat Panel', content: 'Ask the AI agent to analyze data, fly to locations, or load layers.' },
   { target: '.mantine-Menu-dropdown', title: 'Analysis Tools', content: 'Access analysis, simulation, and utility tools from the toolbar.' },
