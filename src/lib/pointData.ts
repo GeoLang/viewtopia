@@ -66,6 +66,56 @@ export function pointsFromDraw(featureId: string | null): PointRecord[] {
   return collectPoints(featuresToGeoJSON(selected));
 }
 
+export type GridAggregation = 'count' | 'sum' | 'mean';
+
+export interface GridSummary {
+  total: number;
+  cells: number;
+  min: number;
+  max: number;
+}
+
+/** Weight of one record, matching what the deck aggregation layers are given. */
+export function gridWeight(record: PointRecord, property: string | null): number {
+  return property ? Number(record.properties[property]) || 0 : 1;
+}
+
+/**
+ * Bin points into a rough metric grid and reduce each cell with `method`. sum and
+ * mean weigh the chosen numeric property; count ignores it. min/max are over the
+ * per-cell values, so they only match cell counts when the method is count.
+ */
+export function gridSummary(
+  points: PointRecord[],
+  cellMeters: number,
+  method: GridAggregation,
+  property: string | null,
+): GridSummary {
+  if (points.length === 0) return { total: 0, cells: 0, min: 0, max: 0 };
+  const avgLat = points.reduce((s, p) => s + p.position[1], 0) / points.length;
+  const latDeg = cellMeters / 111320;
+  const lngDeg = cellMeters / (111320 * Math.cos((avgLat * Math.PI) / 180) || 1);
+  const cells = new Map<string, { count: number; sum: number }>();
+  for (const p of points) {
+    const key = `${Math.floor(p.position[0] / lngDeg)}_${Math.floor(p.position[1] / latDeg)}`;
+    const cell = cells.get(key) ?? { count: 0, sum: 0 };
+    cell.count += 1;
+    cell.sum += gridWeight(p, property);
+    cells.set(key, cell);
+  }
+  const values = [...cells.values()].map((c) => {
+    if (method === 'sum') return c.sum;
+    if (method === 'mean') return c.sum / c.count;
+    return c.count;
+  });
+  return {
+    total: points.length,
+    cells: cells.size,
+    min: Math.min(...values),
+    max: Math.max(...values),
+  };
+}
+
 /** Show a panel's deck layer(s), switching the app to the deck.gl globe renderer. */
 export function showPanelDeckLayer(group: string, layer: Layer | Layer[]): void {
   useDeckLayersStore.getState().setGroup(group, Array.isArray(layer) ? layer : [layer]);

@@ -19,42 +19,30 @@ import {
   pointsFromDraw,
   drawLayerOptions,
   numericProperties,
+  gridSummary,
+  gridWeight,
   showPanelDeckLayer,
   clearPanelDeckLayer,
+  type GridAggregation,
   type PointRecord,
 } from '../../lib/pointData';
 
 const GROUP = 'panel-spatialstats';
 
-const AGG: Record<string, 'COUNT' | 'SUM' | 'MEAN'> = {
+const AGG: Record<GridAggregation, 'COUNT' | 'SUM' | 'MEAN'> = {
   count: 'COUNT',
   sum: 'SUM',
   mean: 'MEAN',
 };
 
-/** Bin points into a rough metric grid to summarise per-cell counts. */
-function gridSummary(points: PointRecord[], cellMeters: number) {
-  if (points.length === 0) return { total: 0, cells: 0, min: 0, max: 0 };
-  const avgLat = points.reduce((s, p) => s + p.position[1], 0) / points.length;
-  const latDeg = cellMeters / 111320;
-  const lngDeg = cellMeters / (111320 * Math.cos((avgLat * Math.PI) / 180) || 1);
-  const counts = new Map<string, number>();
-  for (const p of points) {
-    const key = `${Math.floor(p.position[0] / lngDeg)}_${Math.floor(p.position[1] / latDeg)}`;
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
-  const values = [...counts.values()];
-  return {
-    total: points.length,
-    cells: counts.size,
-    min: Math.min(...values),
-    max: Math.max(...values),
-  };
+/** Cell values can be fractional means, so trim them to something readable. */
+function fmt(n: number): string {
+  return Number.isInteger(n) ? String(n) : n.toFixed(2);
 }
 
 export function SpatialStatsPanel({ onClose }: { onClose: () => void }) {
   const features = useDrawStore((s) => s.features);
-  const [method, setMethod] = useState<string>('count');
+  const [method, setMethod] = useState<GridAggregation>('count');
   const [property, setProperty] = useState<string | null>(null);
   const [cellSize, setCellSize] = useState(500);
   const [source, setSource] = useState<string>('pasted');
@@ -89,6 +77,8 @@ export function SpatialStatsPanel({ onClose }: { onClose: () => void }) {
       setResult('No points found in source');
       return;
     }
+    // count has no weight to read, so the property only applies to sum/mean
+    const weightProperty = method === 'count' ? null : property;
     const agg = AGG[method];
     showPanelDeckLayer(
       GROUP,
@@ -96,18 +86,19 @@ export function SpatialStatsPanel({ onClose }: { onClose: () => void }) {
         id: `panel-grid-${Date.now()}`,
         data: points,
         getPosition: (d) => d.position,
-        getColorWeight: (d) => (property ? Number(d.properties[property]) || 0 : 1),
+        getColorWeight: (d) => gridWeight(d, weightProperty),
         colorAggregation: agg,
-        getElevationWeight: (d) => (property ? Number(d.properties[property]) || 0 : 1),
+        getElevationWeight: (d) => gridWeight(d, weightProperty),
         elevationAggregation: agg,
         cellSize,
         extruded: true,
         pickable: true,
       }),
     );
-    const s = gridSummary(points, cellSize);
+    const s = gridSummary(points, cellSize, method, weightProperty);
+    const label = weightProperty ? `${method}(${weightProperty})` : method;
     setResult(
-      `points: ${s.total}\ncells: ${s.cells}\nmin/cell: ${s.min}\nmax/cell: ${s.max}`,
+      `points: ${s.total}\ncells: ${s.cells}\nmethod: ${label}\nmin/cell: ${fmt(s.min)}\nmax/cell: ${fmt(s.max)}`,
     );
   };
 
@@ -176,7 +167,7 @@ export function SpatialStatsPanel({ onClose }: { onClose: () => void }) {
             { value: 'mean', label: 'Mean' },
           ]}
           value={method}
-          onChange={(v) => v && setMethod(v)}
+          onChange={(v) => v && setMethod(v as GridAggregation)}
           styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
