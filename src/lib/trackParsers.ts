@@ -40,13 +40,26 @@ function parseKml(text: string): TrackPoint[] {
   return points;
 }
 
+/** Column positions of the coordinate fields in a lower-cased CSV header. */
+export function csvCoordColumns(header: string[]): {
+  lonIdx: number;
+  latIdx: number;
+  eleIdx: number;
+} {
+  return {
+    lonIdx: header.findIndex((h) => ['lon', 'lng', 'longitude', 'x'].includes(h)),
+    latIdx: header.findIndex((h) => ['lat', 'latitude', 'y'].includes(h)),
+    eleIdx: header.findIndex((h) =>
+      ['ele', 'elevation', 'alt', 'altitude', 'z'].includes(h),
+    ),
+  };
+}
+
 function parseCsv(text: string): TrackPoint[] {
   const lines = text.trim().split(/\r?\n/);
   if (lines.length < 2) return [];
   const header = lines[0].split(',').map((h) => h.trim().toLowerCase());
-  const lonIdx = header.findIndex((h) => ['lon', 'lng', 'longitude', 'x'].includes(h));
-  const latIdx = header.findIndex((h) => ['lat', 'latitude', 'y'].includes(h));
-  const eleIdx = header.findIndex((h) => ['ele', 'elevation', 'alt', 'altitude', 'z'].includes(h));
+  const { lonIdx, latIdx, eleIdx } = csvCoordColumns(header);
   if (lonIdx < 0 || latIdx < 0) return [];
   const points: TrackPoint[] = [];
   for (const line of lines.slice(1)) {

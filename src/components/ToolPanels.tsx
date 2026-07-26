@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { Badge } from '@mantine/core';
 import { useAppStore, type ToolPanel } from '../store/app';
+import { useOgcLayerStore } from '../store/ogcLayers';
+import { useAgentLayerStore } from '../store/agentLayers';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { isPreviewPanel } from './toolMenus';
 import { PluginPanel } from '../plugins/PluginHost';
@@ -97,6 +99,10 @@ export function ToolPanels() {
     removeLayer,
     reorderLayers,
   } = useAppStore();
+  const ogcLayers = useOgcLayerStore((s) => s.layers);
+  const addOgcLayer = useOgcLayerStore((s) => s.addLayer);
+  const removeOgcLayer = useOgcLayerStore((s) => s.removeLayer);
+  const addAgentLayer = useAgentLayerStore((s) => s.addLayer);
   const flyTo = useSpaceTimeStore((s) => s.flyTo);
   // Space-Time lives in its own store but is one of the panels users open from
   // the toolbar, so Escape closes it here too rather than in a second listener.
@@ -172,14 +178,22 @@ export function ToolPanels() {
     case 'ogc':
       return (
         <OGCLayersPanel
-          layers={[]}
-          onAdd={() => {}}
-          onRemove={() => {}}
+          layers={ogcLayers}
+          onAdd={addOgcLayer}
+          onRemove={removeOgcLayer}
           onClose={close}
         />
       );
     case 'import':
-      return <DragDropImport onImport={() => {}} onClose={close} />;
+      return (
+        <DragDropImport
+          // imported files join the agent layers, so every renderer draws them
+          onImport={(name, geojson) =>
+            addAgentLayer({ id: crypto.randomUUID(), name, color: '#38bdf8', geojson })
+          }
+          onClose={close}
+        />
+      );
     case 'clipping':
       return <ClippingPanel onClose={close} />;
     case 'crossSection':

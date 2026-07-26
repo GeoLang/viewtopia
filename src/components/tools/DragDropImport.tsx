@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Paper,
   Text,
@@ -9,32 +10,50 @@ import {
 } from '@mantine/core';
 import { IconUpload, IconX, IconFile } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
+import { IMPORT_FORMATS, parseImport } from '../../lib/importGeoJson';
 
 interface DragDropImportProps {
-  onImport: (file: File) => void;
+  onImport: (name: string, geojson: GeoJSON.FeatureCollection) => void;
   onClose: () => void;
 }
 
-const SUPPORTED = ['.geojson', '.json', '.gpx', '.kml', '.csv', '.kmz'];
-
 export function DragDropImport({ onImport, onClose }: DragDropImportProps) {
-  const handleFiles = (files: File[]) => {
+  const [dragging, setDragging] = useState(false);
+  const [status, setStatus] = useState<{ text: string; failed: boolean } | null>(null);
+
+  const handleFiles = async (files: File[]) => {
     for (const file of files) {
       const ext = '.' + file.name.split('.').pop()?.toLowerCase();
-      if (!SUPPORTED.includes(ext)) {
+      if (!IMPORT_FORMATS.includes(ext)) {
+        setStatus({ text: `${file.name}: unsupported file`, failed: true });
         notifications.show({
           title: 'Unsupported file',
-          message: `${file.name} — supported: ${SUPPORTED.join(', ')}`,
+          message: `${file.name} — supported: ${IMPORT_FORMATS.join(', ')}`,
           color: 'red',
         });
         continue;
       }
-      onImport(file);
-      notifications.show({
-        title: 'Imported',
-        message: file.name,
-        color: 'green',
-      });
+      try {
+        const collection = parseImport(file.name, await file.text());
+        onImport(file.name, collection);
+        setStatus({
+          text: `${file.name}: ${collection.features.length} features`,
+          failed: false,
+        });
+        notifications.show({
+          title: 'Imported',
+          message: `${file.name} — ${collection.features.length} features`,
+          color: 'green',
+        });
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : 'parse error';
+        setStatus({ text: `${file.name}: ${reason}`, failed: true });
+        notifications.show({
+          title: 'Import failed',
+          message: `${file.name} — ${reason}`,
+          color: 'red',
+        });
+      }
     }
   };
 
@@ -70,8 +89,18 @@ export function DragDropImport({ onImport, onClose }: DragDropImportProps) {
         align="center"
         justify="center"
         p="xl"
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          void handleFiles([...e.dataTransfer.files]);
+        }}
         style={{
-          border: '2px dashed #30363d',
+          border: `2px dashed ${dragging ? '#a78bfa' : '#30363d'}`,
           borderRadius: 8,
           background: '#0d1117',
         }}
@@ -81,11 +110,11 @@ export function DragDropImport({ onImport, onClose }: DragDropImportProps) {
           Drop files here or click Browse
         </Text>
         <Text size="xs" c="dimmed">
-          {SUPPORTED.join(', ')}
+          {IMPORT_FORMATS.join(', ')}
         </Text>
         <FileButton
-          onChange={(files) => files && handleFiles(Array.isArray(files) ? files : [files])}
-          accept={SUPPORTED.join(',')}
+          onChange={(files) => files && void handleFiles(Array.isArray(files) ? files : [files])}
+          accept={IMPORT_FORMATS.join(',')}
           multiple
         >
           {(props) => (
@@ -95,6 +124,18 @@ export function DragDropImport({ onImport, onClose }: DragDropImportProps) {
           )}
         </FileButton>
       </Stack>
+
+      {status && (
+        <Text
+          size="xs"
+          mt="xs"
+          ta="center"
+          c={status.failed ? 'red' : 'green'}
+          data-testid="import-status"
+        >
+          {status.text}
+        </Text>
+      )}
     </Paper>
   );
 }

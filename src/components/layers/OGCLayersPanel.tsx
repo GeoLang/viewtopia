@@ -12,15 +12,8 @@ import {
 } from '@mantine/core';
 import { IconWorld, IconX, IconPlus } from '@tabler/icons-react';
 import { useState } from 'react';
-
-type OGCType = 'wms' | 'wmts' | 'wfs' | 'xyz';
-
-interface OGCLayer {
-  id: string;
-  name: string;
-  type: OGCType;
-  url: string;
-}
+import { useAppStore } from '../../store/app';
+import type { OGCLayer, OGCType } from '../../store/ogcLayers';
 
 interface OGCLayersPanelProps {
   layers: OGCLayer[];
@@ -38,6 +31,7 @@ export function OGCLayersPanel({
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   const [type, setType] = useState<OGCType>('wms');
+  const renderer = useAppStore((s) => s.renderer);
 
   const handleAdd = () => {
     if (!name.trim() || !url.trim()) return;
@@ -97,8 +91,6 @@ export function OGCLayersPanel({
             flex={1}
             data={[
               { value: 'wms', label: 'WMS' },
-              { value: 'wmts', label: 'WMTS' },
-              { value: 'wfs', label: 'WFS' },
               { value: 'xyz', label: 'XYZ Tiles' },
             ]}
             value={type}
@@ -115,6 +107,11 @@ export function OGCLayersPanel({
             Add
           </Button>
         </Group>
+        {renderer === 'deckgl' && (
+          <Text size="xs" c="dimmed" data-testid="ogc-note">
+            Added services draw on CesiumJS and MapLibre, not the deck.gl renderer.
+          </Text>
+        )}
       </Stack>
 
       <ScrollArea flex={1}>

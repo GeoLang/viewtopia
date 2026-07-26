@@ -16,6 +16,8 @@ import { useBuildingsMapLibre } from '../hooks/useBuildingsMapLibre';
 import { useAgentLayersCesium } from '../hooks/useAgentLayersCesium';
 import { useAgentLayersDeck } from '../hooks/useAgentLayersDeck';
 import { useAgentLayersMapLibre } from '../hooks/useAgentLayersMapLibre';
+import { useOgcLayersCesium } from '../hooks/useOgcLayersCesium';
+import { useOgcLayersMapLibre } from '../hooks/useOgcLayersMapLibre';
 import { useDrawCesium } from '../hooks/useDrawCesium';
 import { useDrawMapLibre } from '../hooks/useDrawMapLibre';
 import { useMeasureCesium } from '../hooks/useMeasureCesium';
@@ -59,6 +61,10 @@ export function ViewerArea() {
   useAgentLayersCesium(cesiumRef);
   useAgentLayersDeck(deckFitBounds);
   useAgentLayersMapLibre(maplibreRef);
+
+  // OGC/XYZ services the user added (raster imagery; no deck.gl equivalent)
+  useOgcLayersCesium(cesiumRef);
+  useOgcLayersMapLibre(maplibreRef);
 
   // Drawing tools (Cesium + MapLibre; deck.gl is a standalone Deck, not a map)
   useDrawCesium(cesiumRef);
