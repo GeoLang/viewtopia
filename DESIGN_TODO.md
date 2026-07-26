@@ -31,9 +31,13 @@
 - [ ] **ptolemy anonymous reads still open on** `GET .../events` (webhook delivery history)
       and `/replication/feed/{branch}` (streams branch change data). Decide whether either is
       sensitive enough to gate.
-- [ ] **tiletopia native `POST /api/v1/assets` (upload) only needs any valid JWT** — a viewer
-      can upload, looser than the Ion `POST /v1/assets` which now needs editor. Make asset
-      creation editor-gated everywhere.
+- [x] **tiletopia native asset writes editor-gated (2026-07-25, dd9ba8e).** POST/DELETE
+      assets, start-tiling, and the 3 streaming-upload routes moved to an editor-layered
+      router (same mechanism as the Ion split); reads unchanged. 6 new tests (anonymous
+      401 / viewer 403 / editor ok), 567 pass, clippy+fmt clean. Deliberately left
+      any-JWT: asset annotations (viewer commenting). Follow-ups worth a decision:
+      streaming upload has no per-asset ownership check (any editor can chunk-write into
+      any asset's input dir), and `upload/init` ignores its path `{id}` and mints its own.
 
 - [x] **tiletopia user role management (done 2026-07-25).** Admin-only
       `PUT /api/v1/admin/users/{id}/role` behind require_admin, plus `tiletopia set-role`
@@ -141,6 +145,17 @@
 - [ ] geokode has a `fuzzy` module (Levenshtein/Soundex) `forward()` doesn't use — wire a
       fuzzy fallback for typo tolerance.
 
+## DONE — legacy chat channel retired (2026-07-25, pushed)
+
+- [x] **AG-UI is the only agent channel now.** geolang: deleted `POST /chat/stream` +
+      the legacy SSE renderer (c9393dc); the built-in static demo page migrated to
+      `/chat/agui`; docs (api_reference/architecture/viewer_integration) updated to the
+      AG-UI event vocabulary. viewtopia: deleted the legacy fetch/parse branch in useSSE
+      and the `useAgUiChannel` setting + toggle (a16f382). Verified live: `/agent/chat/stream`
+      404s, "fly to rome" works end to end. Still internal (kept): the `__UI_SPEC__:`/
+      `__VIEWER_CMD__:` tool-return markers feeding the shared event generator — retiring
+      those means redesigning the Letta tool→server signal, separate task if ever.
+
 ## DONE — chat replay for viewer commands + multi-renderer markers (2026-07-25, pushed)
 
 - [x] **Clicking an old chat reply now replays its viewer commands.** Replay only covered
@@ -194,28 +209,34 @@
 
 ## OPEN — trust & adoption
 
-- [ ] **"Your data is just PostGIS" docs section.** State plainly that ptolemy stores
-      features in plain PostGIS: readable with psql/GDAL/QGIS even without any GeoLang
-      service, standard pg_dump backup/restore. Inherited hardening is the trust pitch
-      for a young stack; make it explicit on the docs site and in ptolemy's README.
-- [ ] **Read-only entry point: viewtopia over an existing PostGIS.** Let a skeptical team
-      point the viewer at a database they already have (read-only connection, no
-      rip-and-replace, no writes) as the first touch. Likely shape: a ptolemy "external
-      schema" read-only dataset mode or a direct pg-to-GeoJSON adapter service; scope it
-      before building.
+- [x] **"Your data is just PostGIS" docs section (2026-07-25).** ptolemy README gets a
+      section under Data Model (verified against migration 020 + 001: `feature_versions`
+      PostGIS geometry + JSONB properties, GIST index, `features` view; plain-SQL example,
+      GDAL/QGIS/pg_dump story); platform.html stack section links to it.
+- [ ] **Read-only entry point: viewtopia over an existing PostGIS.** SCOPED 2026-07-25,
+      build later. Shape: ptolemy "external dataset" mode, not a separate adapter service,
+      so the whole existing read stack (API, parameterized CQL2, OGC) is reused. Sketch:
+      nullable `datasets.external_table` (+ geometry column name, srid); storage read path
+      scans that relation directly instead of the changeset chain; every write/branch/merge
+      route rejects for external datasets; recommend connecting with a read-only postgres
+      role so safety doesn't depend on app guards. Zero viewtopia changes — the viewer
+      already talks to ptolemy. First touch for a skeptical team: point ptolemy at their
+      DB read-only, browse in viewtopia.
 
-## OPEN — Letta upgrade compatibility test
+## DONE — Letta upgrade compatibility (resolved 2026-07-25, no test needed)
 
-- [ ] **Check the stack against latest Letta, then decide whether to move the pin.**
-      Vendored `letta/` is 0.16.8 (2026-05-14); `geolang/requirements_client.txt` pins
-      `letta_client==1.7.12` "pre-Letta-Code pivot". Verify current server + client versions
-      online at start (they drift). Do it in isolation (worktree/throwaway env), do NOT touch
-      the committed pin unless it passes. Risk areas: client API drift post-Code-pivot, the
-      embedded-server startup chain (`letta/server/startup.sh`), provider config (xAI wiring),
-      and geolang's agent bootstrap in `geolang/src/`. Validate against the platform suite plus
-      a direct agent NL→map exercise (needs an LLM key present). Also fold in the "does
-      0.16.8→latest carry security fixes worth backporting" and "did upstream relicense the
-      server" checks while in there.
+- [x] **Verdict: stay pinned; there is nothing to upgrade to.** Server 0.16.8 (2026-05-14)
+      is still the latest release on GitHub/PyPI/Docker Hub as of 2026-07-25; the OSS
+      server line looks frozen post-"Letta Code" pivot (self-hosting docs now marked
+      legacy/unsupported). License unchanged Apache-2.0 at 0.16.8 and main. Client: pin
+      `letta_client==1.7.12` stays — 1.8–1.12 additions target cloud endpoints our server
+      lacks (and 1.8.0 removed isolated conversation blocks). Security: CVE-2026-4965
+      (eval injection in `resolve_type`, listed vs 0.16.4) — verified our vendored
+      `letta/functions/ast_parsers.py` has the allowlist + eval-behind-flag hardening;
+      0.16.8 also swapped pickle→JSON for sandbox transport. Watch item: upstream `main`
+      has unreleased commits (through 2026-07-22); if a 0.16.9+ ever ships, re-run this
+      check. Strategic note: plan around a frozen upstream (vendored fork is ours to
+      maintain), not around upgrades.
 
 ## OPEN — Phase 3 (mobile & ML breadth, after v1)
 

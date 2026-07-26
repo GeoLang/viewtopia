@@ -319,6 +319,13 @@ footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color
 <div class="stack-item"><span class="emoji">🌐</span><div><div class="name">Fenestra</div><div class="desc">OGC services</div></div></div>
 <div class="stack-item"><span class="emoji">🤖</span><div><div class="name">GeoLang</div><div class="desc">AI agent</div></div></div>
 </div>
+<p style="margin-top:24px;color:var(--muted,#8b949e);max-width:720px">
+<strong>Your data is just PostGIS.</strong> Ptolemy stores features in plain PostGIS
+tables: a <code>geometry</code> column, JSONB properties, standard
+<code>pg_dump</code> backups. psql, GDAL, and QGIS read the database directly,
+even with every GeoLang service switched off. No lock-in, no export step.
+<a href="https://github.com/GeoLang/ptolemy#your-data-is-just-postgis">Details&nbsp;→</a>
+</p>
 </div>
 </section>
 
