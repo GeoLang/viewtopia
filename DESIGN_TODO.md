@@ -19,9 +19,15 @@
 
 ## OPEN — security follow-ups (surfaced by the fixes above, lower severity)
 
-- [ ] **ptolemy `GET /metrics` is anonymous** and its Prometheus labels embed dataset/branch
-      UUIDs (request counts, latencies, event counters). Gate at the proxy (allowlist the
-      scraper) rather than in-app.
+- [x] **ptolemy `GET /metrics` gated (2026-07-25).** Gated in both places, not just the proxy
+      as first planned: platform nginx never proxied `/metrics` (the SPA fallback answered it),
+      and compose publishes ptolemy's 3000 to the host, so a proxy allowlist alone left the
+      endpoint open. nginx now returns 404 on `= /metrics` with a commented scraper allowlist,
+      and `classify()` returns Admin for `/metrics`. Labels turned out narrower than described
+      here: `normalize_path` collapses UUIDs to `{id}` and `record_domain_event` has no callers,
+      so what leaked was traffic shape plus non-UUID path segments (topology names, room ids).
+      ptolemy's own dev compose scrapes `/metrics`; `deploy/prometheus.yml` documents the bearer
+      token it now needs. 2 new tests.
 - [ ] **ptolemy anonymous reads still open on** `GET .../events` (webhook delivery history)
       and `/replication/feed/{branch}` (streams branch change data). Decide whether either is
       sensitive enough to gate.
