@@ -9,11 +9,15 @@
 
 ## IN PROGRESS — viewer test coverage (decided 2026-07-26)
 
-- [ ] **Per-panel functional smoke suite (~42 panels).** Each panel's primary action
-      exercised against the live stack with an observable-effect assertion. Planned as a
-      fan-out workflow (one spec per panel, adversarially verified); runs nightly next to
-      platform-load, golden path stays the per-push gate. The open/close sweeps
-      (51 tool panels + 23 plugin panels, all green) scoped the list first.
+- [ ] **Three panels have no functional coverage because they are inert UI** (marked
+      fixme in `tests/e2e/panels/`, one fixme each): `ClippingPanel` — the axis, position
+      and Enable Clip controls only set local React state and never reach
+      `viewer.scene.globe.clippingPlanes` (`analysis.spec.js:123`); `OGCLayersPanel` — is
+      rendered with `layers={[]}` and empty `onAdd`/`onRemove` (`ToolPanels.tsx:172`), so
+      an OGC service can never be added or even listed (`data.spec.js:201`);
+      `DragDropImport` — is rendered with `onImport={() => {}}` (`ToolPanels.tsx:181`), so
+      a dropped file is never parsed while the panel still reports "Imported"
+      (`data.spec.js:230`). Implement the handlers, then unmark the fixmes.
 - [ ] **Two plugin panels request a third-party API with no key** (found by the new
       plugin sweep, marked fixme in `tests/e2e/plugin-sweep.spec.js`): basemap-catalog
       fetches three jawg.io preview tiles that answer 400; street-view builds a Google

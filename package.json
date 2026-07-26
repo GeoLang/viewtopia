@@ -40,6 +40,7 @@
     "test:e2e:platform": "playwright test --config=playwright.platform.config.js",
     "test:e2e:react": "playwright test --config=playwright.react.config.js",
     "test:e2e:sweep": "playwright test --config=playwright.sweep.config.js",
+    "test:e2e:panels": "playwright test --config=playwright.panels.config.js",
     "test:all": "vitest run && playwright test"
   },
   "dependencies": {
