@@ -129,19 +129,20 @@
 - [x] **"network not found" on `up` root-caused 2026-07-25**: stopped containers from
       renamed projects hold refs to deleted networks. `platform-up.sh` and CI now `down
       --remove-orphans` first; README troubleshooting updated.
-- [ ] geolang `startup.sh` runs postgres as a background child of PID 1, so `docker stop`
-      never delivers a clean shutdown (harmless auto-recovery each boot). Fix = signal
-      handling in the startup chain. (Entrypoint shadowing fixed 2026-07-25, `544fffc`.)
-- [ ] **geolang rebuilds the tool-exec venv on every start (~44s).** The
-      `env/.populated` marker vanishes between starts (root cause unopened; Letta's own
-      pip-upgrade path touches `bin/`/`share/` but its rmtree shouldn't run). DECIDE: replace
-      the marker with a real state check (import-probe a requirements package) or drop the
-      entrypoint population and let Letta own the venv (contradicts the comment explaining
-      why it exists).
-- [ ] **geolang-api may mint a fresh Letta agent per process start** — `/agent/health`
-      returned a different `agent_id` after a recreate, suggesting agents accumulate in the
-      DB across restarts. Investigate `geolang/src/` agent bootstrap: reuse-by-name before
-      create.
+- [x] **geolang lifecycle trio fixed (2026-07-25, 24d34a0/6fcb9b0/58de1c3).** (1) Agent
+      accumulation: `client.agents.get()` doesn't exist in letta_client 1.7.12
+      (AttributeError swallowed by a bare except → new agent every boot); now
+      `agents.retrieve` + reuse-by-exact-name fallback, same fix in `/sessions/switch`
+      which had always 404'd. 6 empty orphan agents deleted; 4 with real history kept.
+      (2) Venv rebuild: Letta's `prepare_local_sandbox(force_recreate=True)` rmtree'd
+      env/ every boot — `TOOL_EXEC_AUTORELOAD_VENV=false` in the Dockerfile + marker
+      replaced with an import probe. Recreate-to-healthy: ~2min → ~35s. (3) Clean
+      shutdown: entrypoint stays PID 1, forwards TERM, `pg_ctl -m fast` stops postgres;
+      verified "database system was shut down" on next boot. 2 recreates → same agent_id,
+      agents count flat, 6 unit + 18 e2e green.
+- [ ] **geolang `.sessions.json` lists phantom sessions** — all 7 stored ids predate a
+      pgdata wipe and no longer exist in the DB; the sessions API happily lists them.
+      Prune ids whose agent 404s on load (surfaced by the lifecycle fix, 2026-07-25).
 - [ ] geokode has a `fuzzy` module (Levenshtein/Soundex) `forward()` doesn't use — wire a
       fuzzy fallback for typo tolerance.
 
