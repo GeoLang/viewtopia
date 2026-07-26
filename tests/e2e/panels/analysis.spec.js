@@ -117,10 +117,7 @@ async function nudgeSlider(page, slider, key, steps) {
 test.describe('Analysis panels', () => {
   test.describe.configure({ mode: 'parallel' });
 
-  // Enable Clip only flips the button label: ClippingPanel holds axis/position in
-  // local state and never touches the scene, so nothing here can pass until the
-  // panel drives scene.globe.clippingPlanes. Kept as the spec for that work.
-  test.fixme('clipping: the axis and position controls drive the scene clipping planes', async ({
+  test('clipping: the axis and position controls drive the scene clipping planes', async ({
     page,
   }) => {
     await openViewer(page);

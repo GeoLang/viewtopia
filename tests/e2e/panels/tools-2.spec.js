@@ -381,10 +381,13 @@ test.describe('Tools panels (batch 2)', () => {
     // a file: only Export does
     await panel.getByLabel('Width').fill('640');
     await panel.getByLabel('Height').fill('480');
-    await panel.getByLabel('DPI').fill('300');
+    await panel.getByLabel('DPI').fill('96');
     await expect(panel.getByLabel('Width')).toHaveValue('640');
     await expect(panel.getByLabel('Height')).toHaveValue('480');
-    await expect(panel.getByLabel('DPI')).toHaveValue('300');
+    await expect(panel.getByLabel('DPI')).toHaveValue('96');
+    expect(canvasSize).not.toEqual({ width: 640, height: 480 });
+    // 96 DPI is the CSS reference, so the file is exactly the size asked for
+    await expect(panel.getByTestId('printexport-size')).toContainText('Output: 640 × 480 px');
     expect(downloads).toHaveLength(0);
     await expect(panel.getByText('Exported!')).toHaveCount(0);
 
@@ -396,13 +399,8 @@ test.describe('Tools panels (batch 2)', () => {
     expect(downloads).toHaveLength(1);
     expect(pngDownload.suggestedFilename()).toBe('viewtopia-export.png');
 
-    // TODO: Width/Height/DPI are dead controls. handleExport calls
-    // canvas.toDataURL() and never resizes, so the file is the drawing buffer and
-    // the 640x480 asked for above is dropped. asserted, not just noted, so the
-    // day it starts working this fails instead of passing quietly
     const png = await fs.readFile(await pngDownload.path());
-    expect(pngSize(png)).toEqual(canvasSize);
-    expect(pngSize(png)).not.toEqual({ width: 640, height: 480 });
+    expect(pngSize(png)).toEqual({ width: 640, height: 480 });
 
     // a snapshot of the globe, not an empty frame: decode it back and count the
     // pixels that differ from the scene's background
@@ -437,20 +435,23 @@ test.describe('Tools panels (batch 2)', () => {
     expect([...jpg.subarray(0, 3)]).toEqual([0xff, 0xd8, 0xff]);
     expect(jpg.length).toBeGreaterThan(1000);
 
-    // TODO: the PDF option is not implemented. format 'pdf' misses both branches
-    // in handleExport, so it re-exports the PNG under a .png name. pinned here so
-    // the option cannot stay broken silently
+    // raster only: PDF was dropped rather than kept as a PNG under a .pdf name
     await panel.getByLabel('Format').click();
-    await page.getByRole('option', { name: 'PDF' }).click();
-    const [pdfDownload] = await Promise.all([
+    await expect(page.getByRole('option')).toHaveText(['PNG', 'JPEG']);
+    await page.getByRole('option', { name: 'PNG' }).click();
+
+    // DPI scales the raster: the same 640x480 at 300 DPI is 2000x1500 px
+    await panel.getByLabel('DPI').fill('300');
+    await expect(panel.getByTestId('printexport-size')).toContainText('Output: 2000 × 1500 px');
+    const [dpiDownload] = await Promise.all([
       page.waitForEvent('download'),
       panel.getByRole('button', { name: 'Export' }).click(),
     ]);
     expect(downloads).toHaveLength(3);
-    expect(pdfDownload.suggestedFilename()).toBe('viewtopia-export.png');
-    const pdf = await fs.readFile(await pdfDownload.path());
-    expect(pngSize(pdf)).toEqual(canvasSize);
-    expect([...pdf.subarray(0, 4)]).not.toEqual([0x25, 0x50, 0x44, 0x46]);
+    expect(pngSize(await fs.readFile(await dpiDownload.path()))).toEqual({
+      width: 2000,
+      height: 1500,
+    });
 
     await page.keyboard.press('Escape');
     await expect(panel).toHaveCount(0);

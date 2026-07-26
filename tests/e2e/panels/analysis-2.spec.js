@@ -174,8 +174,16 @@ test.describe('Analysis panels (batch 2)', () => {
     // taking clicks, so everything the run depends on is set above
     await panel.getByRole('button', { name: 'Run', exact: true }).click();
 
+    // the summary reduces each cell with the chosen method, so these are the mean
+    // "value" per cell (31/3 and 8/2), never the 3 and 2 points a count reports
     const result = panel.getByTestId('spatialstats-result');
-    for (const line of ['points: 5', 'cells: 2', 'min/cell: 2', 'max/cell: 3']) {
+    for (const line of [
+      'points: 5',
+      'cells: 2',
+      'method: mean(value)',
+      'min/cell: 4',
+      'max/cell: 10.33',
+    ]) {
       await expect(result).toContainText(line);
     }
 
@@ -219,6 +227,59 @@ test.describe('Analysis panels (batch 2)', () => {
     await expect(panel).toHaveCount(0);
   });
 
+  // the same points under Count, so the two summaries are pinned against each
+  // other: a panel that ignored the aggregation would print one of them twice.
+  // Its own boot because a run switches the renderer, and the panel takes no
+  // further clicks once deck.gl is drawing on swiftshader.
+  test('Statistics: Count summarises point counts, not the property', async ({ page }) => {
+    await openApp(page);
+    await openPanel(page, 'Statistics');
+
+    const panel = page.locator(PANEL).filter({ hasText: 'Spatial Statistics' });
+    await expect(panel).toBeVisible();
+
+    await panel.getByLabel('GeoJSON').fill(CLUSTERED_POINTS);
+    // count is the default, so the property picker is not even offered
+    await expect(panel.getByLabel('Aggregation')).toHaveValue('Count');
+    await expect(panel.getByLabel('Numeric Property')).toHaveCount(0);
+    await panel.getByRole('button', { name: 'Run', exact: true }).click();
+
+    const result = panel.getByTestId('spatialstats-result');
+    for (const line of [
+      'points: 5',
+      'cells: 2',
+      'method: count',
+      'min/cell: 2',
+      'max/cell: 3',
+    ]) {
+      await expect(result).toContainText(line);
+    }
+
+    // COUNT reaches the layer too, and with no property every point weighs 1
+    await page.waitForFunction(
+      () =>
+        (window.__viewtopiaDeck?.props?.layers ?? []).some((l) =>
+          String(l?.id).startsWith('panel-grid-'),
+        ),
+      null,
+      { timeout: 30000 },
+    );
+    expect(
+      await page.evaluate(() => {
+        const layer = (window.__viewtopiaDeck?.props?.layers ?? []).find((l) =>
+          String(l?.id).startsWith('panel-grid-'),
+        );
+        return {
+          colorAggregation: layer.props.colorAggregation,
+          weights: layer.props.data.map((d) => layer.props.getColorWeight(d)),
+        };
+      }),
+    ).toEqual({ colorAggregation: 'COUNT', weights: [1, 1, 1, 1, 1] });
+
+    await page.keyboard.press('Escape');
+    await expect(panel).toHaveCount(0);
+  });
+
   test('Space-Time: importing a CSV builds entities and tracks', async ({ page }) => {
     await openApp(page);
     await openPanel(page, 'Space-Time');
@@ -236,9 +297,8 @@ test.describe('Analysis panels (batch 2)', () => {
 
     await panel.locator('input[type="file"]').setInputFiles(TRACKS_CSV);
 
-    // the status clears itself 4 s after the FileReader resolves, so wait well
-    // past the default expect timeout for it to appear at all
-    await expect(panel.getByText('Imported 3 entities, 15 positions')).toBeVisible({
+    const importStatus = panel.getByTestId('spacetime-import-status');
+    await expect(importStatus).toHaveText('Imported 3 entities, 15 positions', {
       timeout: 30000,
     });
     await expect(panel.getByText('3 entities', { exact: true })).toBeVisible();
@@ -272,7 +332,26 @@ test.describe('Analysis panels (batch 2)', () => {
     await expect(panel.getByText(maxLabel, { exact: true })).toBeVisible();
     await expect(panel.getByText('3 tracks loaded')).toBeVisible();
 
+    // the summary is the record of what the import did, so it survives the tab
+    // trip above and any wait: nothing but a new import or a close clears it
+    await panel.getByRole('tab', { name: 'Entities' }).click();
+    await page.waitForTimeout(5000);
+    await expect(importStatus).toHaveText('Imported 3 entities, 15 positions');
+
+    // a second import replaces it rather than stacking a second line
+    await panel.locator('input[type="file"]').setInputFiles({
+      name: 'one.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from('name,lat,lng,timestamp\nDelta,1,2,2024-01-15T09:00:00Z'),
+    });
+    await expect(importStatus).toHaveText('Imported 1 entities, 1 positions');
+
     await page.keyboard.press('Escape');
     await expect(panel).toHaveCount(0);
+
+    // reopening starts clean: closing dropped the summary
+    await openPanel(page, 'Space-Time');
+    await expect(panel).toBeVisible();
+    await expect(panel.getByTestId('spacetime-import-status')).toHaveCount(0);
   });
 });

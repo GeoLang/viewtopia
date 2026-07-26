@@ -195,12 +195,17 @@ test.describe('Data panels', () => {
     await closePanel(page, panel);
   });
 
-  // ToolPanels renders this panel with `layers={[]}` and `onAdd={() => {}}`, so
-  // Add clears the form and nothing else: no imagery layer, no data source, not
-  // even a row in its own list. Kept as the spec for wiring it up.
-  test.fixme('ogc: Add renders the OGC service as a layer on the active renderer', async ({
+  test('ogc: Add renders the OGC service as a layer on the active renderer', async ({
     page,
   }) => {
+    // a public WMS is the use case, but its tiles are outside this stack and one
+    // failed request is a console error the guard fails on, so it answers here
+    const wmsRequests = [];
+    await page.route('https://ows.panel-e2e.test/**', (route) => {
+      wmsRequests.push(route.request().url());
+      return route.fulfill({ contentType: 'image/png', body: TILE });
+    });
+
     await openViewer(page);
     const panel = await openPanel(page, 'OGC Layers', 'OGC Layers');
 
@@ -209,13 +214,28 @@ test.describe('Data panels', () => {
     const before = await imageryCount();
 
     await panel.getByPlaceholder('Layer name').fill('panel-e2e wms');
-    await panel.getByPlaceholder('Service URL').fill('https://ows.terrestris.de/osm/service');
+    await panel
+      .getByPlaceholder('Service URL')
+      .fill('https://ows.panel-e2e.test/service?LAYERS=OSM-WMS');
     await panel.getByRole('button', { name: 'Add' }).click();
 
     // the added service is listed by the panel and draped on the globe
     await expect(panel.getByText('panel-e2e wms')).toBeVisible();
     await expect(panel.getByText('No OGC layers added')).toHaveCount(0);
     await expect.poll(imageryCount, { timeout: 30000 }).toBe(before + 1);
+
+    // the imagery is a real WMS provider aimed at the pasted url, asking for the
+    // layer the url named rather than the display name
+    await expect.poll(() => wmsRequests.length, { timeout: 30000 }).toBeGreaterThan(0);
+    const params = new URLSearchParams(new URL(wmsRequests[0]).search);
+    expect(params.get('request')).toBe('GetMap');
+    expect(params.get('layers')).toBe('OSM-WMS');
+    expect(
+      await page.evaluate(() => {
+        const layers = window.__viewtopiaViewer.imageryLayers;
+        return layers.get(layers.length - 1).imageryProvider.url;
+      }),
+    ).toContain('ows.panel-e2e.test');
 
     // the panel owns what it added: removing the row takes the layer off again
     await rowDeleteButton(panel, 'panel-e2e wms').click();
@@ -224,10 +244,7 @@ test.describe('Data panels', () => {
     await closePanel(page, panel);
   });
 
-  // ToolPanels renders this panel with `onImport={() => {}}`, so a dropped or
-  // browsed file only raises a toast: nothing is parsed and nothing reaches the
-  // scene. Kept as the spec for wiring it up.
-  test.fixme('import: a browsed GeoJSON file renders on the globe', async ({ page }) => {
+  test('import: a browsed GeoJSON file renders on the globe', async ({ page }) => {
     await openViewer(page);
     const panel = await openPanel(page, 'Import', 'Import Data');
 
@@ -235,24 +252,25 @@ test.describe('Data panels', () => {
       page.evaluate(() => window.__viewtopiaViewer.dataSources.length);
     expect(await dataSourceCount()).toBe(0);
 
-    await panel.locator('input[type="file"]').setInputFiles({
-      name: 'panel-import.geojson',
+    const geojsonFile = (name, features) => ({
+      name,
       mimeType: 'application/geo+json',
-      buffer: Buffer.from(
-        JSON.stringify({
-          type: 'FeatureCollection',
-          features: [
-            {
-              type: 'Feature',
-              geometry: { type: 'Point', coordinates: [MONACO.lon, MONACO.lat] },
-              properties: { name: 'panel-e2e point' },
-            },
-          ],
-        }),
-      ),
+      buffer: Buffer.from(JSON.stringify({ type: 'FeatureCollection', features })),
     });
 
-    await expect(page.getByText('panel-import.geojson')).toBeVisible();
+    await panel.locator('input[type="file"]').setInputFiles(
+      geojsonFile('panel-import.geojson', [
+        {
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [MONACO.lon, MONACO.lat] },
+          properties: { name: 'panel-e2e point' },
+        },
+      ]),
+    );
+
+    await expect(panel.getByTestId('import-status')).toHaveText(
+      'panel-import.geojson: 1 features',
+    );
     // the imported feature lands on the scene as one entity
     await expect.poll(dataSourceCount, { timeout: 30000 }).toBe(1);
     expect(
@@ -260,6 +278,17 @@ test.describe('Data panels', () => {
         () => window.__viewtopiaViewer.dataSources.get(0).entities.values.length,
       ),
     ).toBe(1);
+
+    // a file the parsers cannot read reports why and adds nothing
+    await panel.locator('input[type="file"]').setInputFiles({
+      name: 'broken.geojson',
+      mimeType: 'application/geo+json',
+      buffer: Buffer.from('{not json'),
+    });
+    await expect(panel.getByTestId('import-status')).toHaveText(
+      'broken.geojson: not valid JSON',
+    );
+    expect(await dataSourceCount()).toBe(1);
 
     await closePanel(page, panel);
   });
@@ -396,12 +425,14 @@ test.describe('Data panels', () => {
 
     expect(await source()).toBeNull();
 
-    // absolute, unlike the panel's own placeholder: MapLibre builds tile requests
-    // in a worker, where a root-relative template throws "Failed to parse URL"
+    // the panel's own placeholder shape: MapLibre builds tile requests in a
+    // worker, where a root-relative template has no base to resolve against, so
+    // the panel has to put the origin in front of it before adding the source
     const origin = await page.evaluate(() => location.origin);
-    const url = `${origin}/api/v1/branches/${branchId}/tiles/{z}/{x}/{y}`;
+    const template = `/api/v1/branches/${branchId}/tiles/{z}/{x}/{y}`;
+    const url = `${origin}${template}`;
     await panel.getByPlaceholder('Source name').fill('panel-e2e parcels');
-    await panel.getByPlaceholder('/api/v1/branches').fill(url);
+    await panel.getByPlaceholder('/api/v1/branches').fill(template);
     await panel.getByLabel('Source layer').fill('features');
     await panel.getByRole('button', { name: 'Add Source' }).click();
 

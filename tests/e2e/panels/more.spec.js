@@ -132,20 +132,53 @@ test.describe('More menu panels', () => {
 
     await closePanel(page, panel);
 
-    // the renderer field has to follow the active renderer, so switch it and
-    // regenerate: the two links differ in that field alone
+    // the camera and the renderer field both have to follow the renderer on
+    // screen, so switch it, put that map somewhere else and regenerate: the link
+    // must carry the MapLibre camera, not the Cesium one it replaced
     await page.getByRole('textbox', { name: 'Renderer' }).click();
     await page.getByRole('option', { name: 'MapLibre' }).click();
     await page.waitForFunction(() => window.__viewtopiaMap?.isStyleLoaded(), null, {
       timeout: 60000,
     });
+    const mapView = { lon: -73.98, lat: 40.75, zoom: 12, pitch: 55, bearing: 20 };
+    await page.evaluate(
+      (v) =>
+        window.__viewtopiaMap.jumpTo({
+          center: [v.lon, v.lat],
+          zoom: v.zoom,
+          pitch: v.pitch,
+          bearing: v.bearing,
+        }),
+      mapView,
+    );
 
     const mapPanel = await openPanel(page, 'Share Link', 'Share Link');
     await mapPanel.getByRole('button', { name: 'Generate Share Link' }).click();
     const mapValue = await mapPanel.getByTestId('sharelink-url').inputValue();
     expect(mapValue).not.toBe(value);
-    expect(parseShareUrl(mapValue).renderer).toBe('maplibre');
+    const mapLink = parseShareUrl(mapValue);
+    expect(mapLink.renderer).toBe('maplibre');
+    expect(mapLink.lon).toBeCloseTo(mapView.lon, 3);
+    expect(mapLink.lat).toBeCloseTo(mapView.lat, 3);
+    // zoom becomes the camera height the hash format carries, and MapLibre's
+    // map-style pitch becomes the Cesium one the link restores
+    expect(mapLink.height).toBeCloseTo(4e7 / 2 ** mapView.zoom, -1);
+    expect(mapLink.heading).toBeCloseTo(mapView.bearing, 3);
+    expect(mapLink.pitch).toBeCloseTo(mapView.pitch - 90, 3);
     await closePanel(page, mapPanel);
+
+    // back on Cesium the link is the Cesium camera again
+    await page.getByRole('textbox', { name: 'Renderer' }).click();
+    await page.getByRole('option', { name: 'CesiumJS' }).click();
+    await page.waitForFunction(() => !!window.__viewtopiaViewer, null, { timeout: 60000 });
+    await setView(page, MONACO);
+    const backPanel = await openPanel(page, 'Share Link', 'Share Link');
+    await backPanel.getByRole('button', { name: 'Generate Share Link' }).click();
+    const backLink = parseShareUrl(await backPanel.getByTestId('sharelink-url').inputValue());
+    expect(backLink.renderer).toBe('cesium');
+    expect(backLink.lon).toBeCloseTo(MONACO.lon, 1);
+    expect(backLink.pitch).toBeCloseTo(MONACO.pitch, 1);
+    await closePanel(page, backPanel);
 
     // opening the cesium link restores the camera it encoded. a hash-only
     // navigation stays in the same document, so reload to remount the app on it
@@ -181,12 +214,17 @@ test.describe('More menu panels', () => {
 
     const globe = '#cesium-container';
     const chat = '.mantine-AppShell-aside';
+    const header = '.mantine-AppShell-header';
+    const tabs = '.mantine-Tabs-list';
 
-    // steps 1 and 2 aim at selectors this build does not render, so the globe on
-    // step 3 is the first target that can take the outline
+    // every step aims at an element this build renders, starting with the header
+    await expect.poll(() => highlighted(header)).toBe(true);
+
     await panel.getByRole('button', { name: 'Next' }).click();
     await expect(panel).toContainText('Viewer Tabs');
     await expect(panel).toContainText('2/5');
+    await expect.poll(() => highlighted(tabs)).toBe(true);
+    expect(await outline(header)).toBe('');
 
     await panel.getByRole('button', { name: 'Next' }).click();
     await expect(panel).toContainText('3D Globe');
@@ -195,6 +233,7 @@ test.describe('More menu panels', () => {
     expect(await outline(globe)).toContain('rgb(167, 139, 250)');
     // one target at a time
     expect(await highlighted(chat)).toBe(false);
+    expect(await outline(tabs)).toBe('');
 
     // step 4 targets the chat panel: it gains the outline as the globe loses it
     await panel.getByRole('button', { name: 'Next' }).click();
