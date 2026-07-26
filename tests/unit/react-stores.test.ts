@@ -192,6 +192,7 @@ describe('collaboration store', () => {
     expect(state.users).toEqual([]);
     expect(state.messages).toEqual([]);
     expect(state.followUserId).toBeNull();
+    expect(state.error).toBeNull();
   });
 
   it('sets user name', () => {
@@ -207,9 +208,8 @@ describe('collaboration store', () => {
     expect(useCollabStore.getState().followUserId).toBeNull();
   });
 
-  it('generates a userId on init', () => {
-    const { userId } = useCollabStore.getState();
-    expect(userId).toMatch(/^user-[a-z0-9]+$/);
+  it('has no identity of its own: the server assigns one on connect', () => {
+    expect(useCollabStore.getState().userId).toBeNull();
   });
 });
 

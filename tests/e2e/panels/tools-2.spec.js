@@ -1,4 +1,5 @@
 import fs from 'fs/promises';
+import { test as unguarded } from '@playwright/test';
 import { test, expect } from '../console-guard';
 import { PANEL, MENU_ITEM, openApp } from '../panel-helpers.js';
 
@@ -62,6 +63,30 @@ const SESSION = {
 const LAYER_LABEL = 'agent-layer-0-parcels.geojson (4)';
 
 const PEER = { user_id: 'peer-42', user_name: 'Ada Peer', color: '#22d3ee' };
+
+/**
+ * A session JWT of the shape tiletopia issues. The room handshake offers the whole
+ * token as its second subprotocol and the client reads `sub` out of it, which is
+ * the id the server stamps on every frame it relays. Nothing here signs or
+ * verifies it, so a live service answers this token with a 401.
+ */
+const SUB = 'e2e-collab-user';
+const jwtSegment = (claims) => Buffer.from(JSON.stringify(claims)).toString('base64url');
+const TOKEN = [
+  jwtSegment({ alg: 'HS256', typ: 'JWT' }),
+  jwtSegment({ sub: SUB, role: 'editor', exp: 2000000000 }),
+  'not-a-real-signature',
+].join('.');
+
+/** Seed the logged-in session, without which the panel offers sign-in and no socket. */
+function signIn(page) {
+  return page.addInitScript((token) => {
+    localStorage.setItem(
+      'viewtopia_auth',
+      JSON.stringify({ user: { name: 'Playwright Tester' }, token }),
+    );
+  }, TOKEN);
+}
 
 /** Chat lines the room never fans out, fans out from a peer, and fans back to the sender. */
 const CHAT = {
@@ -212,14 +237,59 @@ test.describe('Tools panels (batch 2)', () => {
     await expect(panel).toHaveCount(0);
   });
 
+  test('Collaborate: signed out, the panel asks for sign-in and opens no socket', async ({
+    page,
+  }) => {
+    // no credential is a 401 before the upgrade, so the panel never offers a join
+    const socketUrls = [];
+    await page.routeWebSocket(/\/api\/v1\/realtime\//, (ws) => socketUrls.push(ws.url()));
+
+    await openApp(page);
+    await openPanel(page, 'Collaborate');
+
+    const panel = page.locator(PANEL).filter({ hasText: 'Collaboration' });
+    await expect(panel.getByTestId('collab-signin')).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'Join Room' })).toHaveCount(0);
+    await expect(panel.getByLabel('Room ID')).toHaveCount(0);
+    expect(socketUrls).toEqual([]);
+
+    await page.keyboard.press('Escape');
+    await expect(panel).toHaveCount(0);
+  });
+
+  // The console guard is off for this one: Chrome logs a rejected WebSocket
+  // handshake as a console error, and that rejection is what the test asserts.
+  unguarded(
+    'Collaborate: an unreachable realtime service leaves the panel on its join form',
+    async ({ page }) => {
+      await signIn(page);
+      await openApp(page);
+      await openPanel(page, 'Collaborate');
+
+      const panel = page.locator(PANEL).filter({ hasText: 'Collaboration' });
+      await panel.getByLabel('Room ID').fill('tools-2-live');
+      await panel.getByRole('button', { name: 'Join Room' }).click();
+
+      // The deployed tiletopia container predates the realtime route, so
+      // /api/v1/realtime/<room> 404s before the upgrade; once it ships, this
+      // unsigned token is a 401 there instead. Both are the same graceful state,
+      // so this case holds either side of the rebuild.
+      await expect(panel.getByTestId('collab-error')).toBeVisible();
+      await expect(panel.getByRole('button', { name: 'Join Room' })).toBeVisible();
+      await expect(panel.getByText('Users')).toHaveCount(0);
+
+      await page.keyboard.press('Escape');
+      await expect(panel).toHaveCount(0);
+    },
+  );
+
   test('Collaborate: joining a room lists peers and round-trips a chat message', async ({
     page,
   }) => {
-    // The room socket is the panel's only data path and nothing serves it:
-    // /api/v1/realtime/<room> 404s (nginx sends /api/ to ptolemy, and tiletopia
-    // never mounts its realtime ws_handler). So stand in for the server here: the
-    // frames the panel sends are recorded, and the replies are the shapes
-    // tiletopia's realtime module defines.
+    // The room socket is the panel's only data path and the deployed container
+    // does not serve it yet, so stand in for the server here: the frames the panel
+    // sends are recorded, and the replies are the shapes tiletopia's realtime
+    // module defines, sender ids included.
     const sent = [];
     const socketUrls = [];
     /** The room side of the socket, so this test can push frames at a chosen moment. */
@@ -230,23 +300,37 @@ test.describe('Tools panels (batch 2)', () => {
       ws.onMessage((raw) => {
         const msg = JSON.parse(String(raw));
         sent.push(msg);
+        // the server rewrites the sender id to the JWT subject before relaying
+        // anything, so what comes back carries that id and not the client's claim
+        const stamped = { ...msg, user_id: SUB };
         if (msg.type === 'Join') {
           ws.send(
             JSON.stringify({
               type: 'Presence',
-              users: [
-                { user_id: msg.user_id, user_name: msg.user_name, color: '#a78bfa' },
-                PEER,
-              ],
+              users: [{ user_id: SUB, user_name: msg.user_name, color: '#a78bfa' }, PEER],
             }),
           );
         }
         // fan-out is the room's call, not the sender's: only the line below comes
         // back, so anything the room drops must never show up in the panel
-        if (msg.type === 'Chat' && msg.message === CHAT.echoed) ws.send(JSON.stringify(msg));
+        if (msg.type === 'Chat' && msg.message === CHAT.echoed) ws.send(JSON.stringify(stamped));
       });
     });
 
+    // routeWebSocket installs its own WebSocket, so wrap that to record the
+    // handshake arguments: the marker first and the raw JWT second
+    await page.addInitScript(() => {
+      const Inner = window.WebSocket;
+      const recording = function (url, protocols) {
+        window.__wsProtocols = [...(window.__wsProtocols ?? []), protocols];
+        return new Inner(url, protocols);
+      };
+      recording.prototype = Inner.prototype;
+      Object.assign(recording, { CONNECTING: 0, OPEN: 1, CLOSING: 2, CLOSED: 3 });
+      window.WebSocket = recording;
+    });
+
+    await signIn(page);
     await openApp(page);
     await openPanel(page, 'Collaborate');
 
@@ -265,15 +349,20 @@ test.describe('Tools panels (batch 2)', () => {
     await expect(panel.getByText('Playwright Tester (you)')).toBeVisible();
     await expect(panel.getByText('Ada Peer', { exact: true })).toBeVisible();
 
-    // and the join frame carried the room and the name typed above, on the URL
-    // tiletopia's realtime module is mounted at
+    // the handshake carried the session token as a subprotocol, since a browser
+    // cannot put it in a header
+    expect(await page.evaluate(() => window.__wsProtocols)).toEqual([['bearer', TOKEN]]);
+
+    // and the join frame carried the room, the name typed above and the token
+    // subject, on the URL tiletopia's realtime module is mounted at
     expect(socketUrls).toEqual(['ws://localhost:5174/api/v1/realtime/tools-2-room']);
     expect(sent[0]).toMatchObject({
       type: 'Join',
+      user_id: SUB,
       asset_id: 'tools-2-room',
       user_name: 'Playwright Tester',
     });
-    const localUserId = sent[0].user_id;
+    const localUserId = SUB;
 
     /** One <p> per rendered chat line; the sender/message spans sit inside it. */
     const chatLines = panel.locator(
@@ -339,19 +428,33 @@ test.describe('Tools panels (batch 2)', () => {
     // the peer's chat line stays: presence and history are separate state
     await expect(chatLines).toHaveCount(2);
 
-    // joining also starts the camera broadcast the other clients follow
+    // presence is per user rather than per tab, so a second tab of this account
+    // closing takes the account's only entry with it. this tab is still in the
+    // room, and says so without re-joining, which would only fight that tab
+    await room.send(JSON.stringify({ type: 'Presence', users: [PEER] }));
+    await expect(panel.getByText('2 online')).toBeVisible();
+    await expect(panel.getByText('Ada Peer', { exact: true })).toBeVisible();
+    await expect(panel.getByText('Playwright Tester (you)')).toBeVisible();
+    expect(sent.filter((m) => m.type === 'Join')).toHaveLength(1);
+
+    // joining also starts the view broadcast the other clients follow
     await expect
-      .poll(() => sent.filter((m) => m.type === 'Camera').length, { timeout: 15000 })
+      .poll(() => sent.filter((m) => m.type === 'ViewChanged').length, { timeout: 15000 })
       .toBeGreaterThan(0);
-    const camera = sent.find((m) => m.type === 'Camera');
-    for (const key of ['latitude', 'longitude', 'zoom', 'bearing', 'pitch']) {
-      expect(Number.isFinite(camera[key]), `Camera.${key} is finite`).toBe(true);
+    const view = sent.find((m) => m.type === 'ViewChanged');
+    expect(view.user_id).toBe(localUserId);
+    for (const key of ['longitude', 'latitude', 'height', 'heading', 'pitch', 'roll']) {
+      expect(Number.isFinite(view.camera[key]), `ViewChanged camera.${key} is finite`).toBe(true);
     }
 
     // leaving tears the room down and returns the panel to its join form
     await panel.getByRole('button', { name: 'Leave' }).click();
     await expect(panel.getByRole('button', { name: 'Join Room' })).toBeVisible();
-    expect(sent.at(-1)).toMatchObject({ type: 'Leave', asset_id: 'tools-2-room' });
+    expect(sent.at(-1)).toMatchObject({
+      type: 'Leave',
+      user_id: localUserId,
+      asset_id: 'tools-2-room',
+    });
 
     await page.keyboard.press('Escape');
     await expect(panel).toHaveCount(0);
