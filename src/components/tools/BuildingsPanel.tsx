@@ -8,18 +8,31 @@ import {
   Switch,
   Button,
   Badge,
+  Tooltip,
 } from '@mantine/core';
 import { IconBuildingSkyscraper, IconX } from '@tabler/icons-react';
 import { useBuildingStore, fetchOsmBuildings } from '../../store/buildings';
 import { useAppStore } from '../../store/app';
 import { getSharedCamera } from '../../hooks/sharedCamera';
 
+const BASEMAP_NOTE = 'Buildings are part of this basemap style';
+
 export function BuildingsPanel({ onClose }: { onClose: () => void }) {
-  const { buildings, loading, enabled, setEnabled, setLoading, setBuildings, clearBuildings } =
-    useBuildingStore();
+  const {
+    buildings,
+    loading,
+    enabled,
+    styleHasBuildings,
+    setEnabled,
+    setLoading,
+    setBuildings,
+    clearBuildings,
+  } = useBuildingStore();
   const renderer = useAppStore((s) => s.renderer);
 
   const [status, setStatus] = useState<string | null>(null);
+
+  const fromBasemap = renderer === 'maplibre' && styleHasBuildings;
 
   const handleLoad = async () => {
     setLoading(true);
@@ -102,24 +115,38 @@ export function BuildingsPanel({ onClose }: { onClose: () => void }) {
           </Text>
         )}
 
-        <Switch
-          size="xs"
-          label="Show Buildings"
-          checked={enabled}
-          onChange={(e) => handleToggle(e.currentTarget.checked)}
-          color="violet"
-        />
+        {fromBasemap && (
+          <Text size="xs" c="orange">
+            {BASEMAP_NOTE}
+          </Text>
+        )}
 
-        <Button
-          size="xs"
-          variant="filled"
-          color="violet"
-          loading={loading}
-          onClick={handleLoad}
-          fullWidth
-        >
-          Load Buildings in View
-        </Button>
+        <Tooltip label={BASEMAP_NOTE} disabled={!fromBasemap}>
+          <div>
+            <Stack gap="xs">
+              <Switch
+                size="xs"
+                label="Show Buildings"
+                checked={enabled && !fromBasemap}
+                disabled={fromBasemap}
+                onChange={(e) => handleToggle(e.currentTarget.checked)}
+                color="violet"
+              />
+
+              <Button
+                size="xs"
+                variant="filled"
+                color="violet"
+                loading={loading}
+                disabled={fromBasemap}
+                onClick={handleLoad}
+                fullWidth
+              >
+                Load Buildings in View
+              </Button>
+            </Stack>
+          </div>
+        </Tooltip>
 
         {buildings.length > 0 && (
           <Button

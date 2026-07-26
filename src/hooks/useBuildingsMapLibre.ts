@@ -1,17 +1,18 @@
 import { useEffect } from 'react';
 import type { MutableRefObject } from 'react';
 import type maplibregl from 'maplibre-gl';
-import { useBuildingStore, type BuildingFeature } from '../store/buildings';
+import { useBuildingStore, BUILDINGS_LAYER_ID } from '../store/buildings';
 import { useAppStore } from '../store/app';
 
 const SOURCE_ID = 'osm-buildings';
-const LAYER_ID = 'osm-buildings-extrusion';
+const LAYER_ID = BUILDINGS_LAYER_ID;
 
 export function useBuildingsMapLibre(
   mapRef: MutableRefObject<maplibregl.Map | null>,
 ) {
   const buildings = useBuildingStore((s) => s.buildings);
   const enabled = useBuildingStore((s) => s.enabled);
+  const styleHasBuildings = useBuildingStore((s) => s.styleHasBuildings);
   const renderer = useAppStore((s) => s.renderer);
   const activeTab = useAppStore((s) => s.activeTab);
 
@@ -20,7 +21,7 @@ export function useBuildingsMapLibre(
     if (!map) return;
 
     const apply = () => {
-      if (!enabled || buildings.length === 0) {
+      if (!enabled || styleHasBuildings || buildings.length === 0) {
         if (map.getLayer(LAYER_ID)) map.removeLayer(LAYER_ID);
         if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
         return;
@@ -77,5 +78,5 @@ export function useBuildingsMapLibre(
     return () => {
       map.off('load', apply);
     };
-  }, [buildings, enabled, mapRef, renderer, activeTab]);
+  }, [buildings, enabled, styleHasBuildings, mapRef, renderer, activeTab]);
 }

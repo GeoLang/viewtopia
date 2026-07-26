@@ -7,6 +7,7 @@ import { useAppStore } from '../store/app';
 import { getSharedCamera, setSharedCamera } from './sharedCamera';
 import { maplibreStyle } from './basemapTiles';
 import { setActiveMapLibre } from '../viewer/registry';
+import { useBuildingStore, styleDrawsBuildings } from '../store/buildings';
 
 interface UseMapLibreOptions {
   containerId?: string;
@@ -44,6 +45,7 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
         mapRef.current = null;
         styledKeyRef.current = null;
         setActiveMapLibre(null);
+        useBuildingStore.getState().setStyleHasBuildings(false);
       }
       return;
     }
@@ -74,6 +76,11 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
     // onto a globe. style.load re-fires after setStyle, so a basemap swap keeps it.
     map.on('style.load', () => {
       map.setProjection({ type: 'globe' });
+      // vector styles like Liberty extrude their own buildings, so the OSM
+      // buildings tool has nothing to add on them
+      useBuildingStore
+        .getState()
+        .setStyleHasBuildings(styleDrawsBuildings(map.getStyle().layers));
     });
 
     map.on('moveend', () => {

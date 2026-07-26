@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { LayerSpecification } from 'maplibre-gl';
 
 export interface BuildingFeature {
   coords: number[];
@@ -7,13 +8,31 @@ export interface BuildingFeature {
   tags: Record<string, string>;
 }
 
+/** fill-extrusion layer this feature adds to a MapLibre style */
+export const BUILDINGS_LAYER_ID = 'osm-buildings-extrusion';
+
+/**
+ * True when a MapLibre style already draws 3D buildings of its own, like the
+ * OpenFreeMap Liberty style. Our own extrusion layer doesn't count.
+ */
+export function styleDrawsBuildings(
+  layers: readonly LayerSpecification[] | undefined,
+): boolean {
+  return (layers ?? []).some(
+    (l) => l.type === 'fill-extrusion' && l.id !== BUILDINGS_LAYER_ID,
+  );
+}
+
 interface BuildingState {
   buildings: BuildingFeature[];
   loading: boolean;
   enabled: boolean;
+  /** the loaded MapLibre style draws its own buildings, so ours are redundant */
+  styleHasBuildings: boolean;
   setEnabled: (v: boolean) => void;
   setLoading: (v: boolean) => void;
   setBuildings: (b: BuildingFeature[]) => void;
+  setStyleHasBuildings: (v: boolean) => void;
   clearBuildings: () => void;
 }
 
@@ -21,9 +40,11 @@ export const useBuildingStore = create<BuildingState>((set) => ({
   buildings: [],
   loading: false,
   enabled: false,
+  styleHasBuildings: false,
   setEnabled: (enabled) => set({ enabled }),
   setLoading: (loading) => set({ loading }),
   setBuildings: (buildings) => set({ buildings }),
+  setStyleHasBuildings: (styleHasBuildings) => set({ styleHasBuildings }),
   clearBuildings: () => set({ buildings: [], enabled: false }),
 }));
 
