@@ -1,0 +1,27 @@
+import { expect } from '@playwright/test';
+
+/**
+ * Shared pieces of the panel sweeps (panel-sweep.spec.js, plugin-sweep.spec.js).
+ */
+
+/** A panel is either a Paper appended next to the viewer or a modal in a portal. */
+export const PANEL = 'main > [class*="mantine-Paper-root"], [class*="mantine-Modal-content"]';
+
+export const MENU_ITEM = '[class*="mantine-Menu-dropdown"] [class*="mantine-Menu-item"]';
+
+/** Boot the app with preview tools visible and the default renderer up. */
+export async function openApp(page) {
+  await page.addInitScript(() => {
+    // zustand/persist store for useAppStore ('viewtopia-app'); merge() backfills
+    // every key we leave out
+    localStorage.setItem(
+      'viewtopia-app',
+      JSON.stringify({ state: { settings: { showPreviewTools: true } }, version: 0 }),
+    );
+  });
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Analysis' })).toBeVisible();
+  // let the default renderer finish booting, so its errors land in no test but
+  // this one and panels that read the live viewer see it
+  await page.waitForFunction(() => !!window.__viewtopiaViewer, null, { timeout: 60000 });
+}

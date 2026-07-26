@@ -29,6 +29,19 @@ for (const [path, module] of Object.entries(pluginModules)) {
   }
 }
 
+declare global {
+  interface Window {
+    // exposed for e2e/debug: import.meta.glob resolves at build time, so tests
+    // can only enumerate the plugins from a loaded app
+    __viewtopiaPlugins?: { id: string; name: string }[];
+  }
+}
+
+window.__viewtopiaPlugins = Array.from(pluginRegistry.values(), (p) => ({
+  id: p.id,
+  name: p.name,
+}));
+
 /** Get all plugins as an array, optionally filtered by category */
 export function getPlugins(category?: string): PluginDefinition[] {
   const all = Array.from(pluginRegistry.values());

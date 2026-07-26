@@ -1,6 +1,7 @@
 import { defineConfig } from '@playwright/test';
 
-// Registry sweep: every tool panel opened through the real menu path.
+// Panel sweeps: every registry tool panel, and every plugin panel, opened
+// through the real menu path.
 // Targets the platform stack on :5174 (docker-compose.platform.yml), like
 // playwright.platform.config.js, so there is no webServer here:
 //   npm run test:e2e:sweep
@@ -9,7 +10,7 @@ import { defineConfig } from '@playwright/test';
 // other e2e specs starves them: the renderer switches time out.
 export default defineConfig({
   testDir: 'tests/e2e',
-  testMatch: ['panel-sweep.spec.js'],
+  testMatch: ['panel-sweep.spec.js', 'plugin-sweep.spec.js'],
   timeout: 120000,
   use: {
     baseURL: 'http://localhost:5174',

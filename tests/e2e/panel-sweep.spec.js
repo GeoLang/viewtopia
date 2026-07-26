@@ -1,4 +1,5 @@
 import { test, expect } from './console-guard';
+import { PANEL, MENU_ITEM, openApp } from './panel-helpers';
 import {
   ANALYSIS_MENU,
   SIMULATE_MENU,
@@ -34,34 +35,8 @@ const TOOLS = MENU_BUTTONS.flatMap(([button, sections]) =>
   sections.flat().map((item) => ({ ...item, button })),
 );
 
-// A panel is either a Paper appended next to the viewer or, for Catalog and
-// Dashboards, a Mantine modal in a portal.
-const PANEL = 'main > [class*="mantine-Paper-root"], [class*="mantine-Modal-content"]';
-
-const MENU_ITEM = '[class*="mantine-Menu-dropdown"] [class*="mantine-Menu-item"]';
-
 /** Panels that fail this sweep today, keyed by panel with the error they hit. */
-const FIXME = {
-  // GET /api/v1/portal/items answers 401 Unauthorized, which the browser logs as
-  // console.error: "Failed to load resource ... 401 (Unauthorized)"
-  portal: 'catalog items request returns 401',
-};
-
-async function openApp(page) {
-  await page.addInitScript(() => {
-    // zustand/persist store for useAppStore ('viewtopia-app'); merge() backfills
-    // every key we leave out
-    localStorage.setItem(
-      'viewtopia-app',
-      JSON.stringify({ state: { settings: { showPreviewTools: true } }, version: 0 }),
-    );
-  });
-  await page.goto('/');
-  await expect(page.getByRole('button', { name: 'Analysis' })).toBeVisible();
-  // let the default renderer finish booting, so its errors land in no test but
-  // this one and panels that read the live viewer see it
-  await page.waitForFunction(() => !!window.__viewtopiaViewer, null, { timeout: 60000 });
-}
+const FIXME = {};
 
 test.describe('tool panel sweep', () => {
   // each case is an independent app boot, so let them share the workers
@@ -89,4 +64,20 @@ test.describe('tool panel sweep', () => {
     if (broken) test.fixme(title, body);
     else test(title, body);
   }
+
+  // Space-Time keeps its own store, so it is not in the registry above and the
+  // toolbar renders its item by hand. It still has to behave like every panel.
+  test('spaceTime — Analysis ▸ Space-Time', async ({ page }) => {
+    await openApp(page);
+
+    await page.getByRole('button', { name: 'Analysis' }).click();
+    await page.locator(MENU_ITEM).filter({ hasText: 'Space-Time' }).first().click();
+
+    const panel = page.locator(PANEL);
+    await expect(panel).toHaveCount(1);
+    await expect(panel).toHaveText(/Space-Time Intelligence/);
+
+    await page.keyboard.press('Escape');
+    await expect(panel).toHaveCount(0);
+  });
 });
