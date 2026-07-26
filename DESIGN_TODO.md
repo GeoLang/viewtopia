@@ -225,15 +225,21 @@
       section under Data Model (verified against migration 020 + 001: `feature_versions`
       PostGIS geometry + JSONB properties, GIST index, `features` view; plain-SQL example,
       GDAL/QGIS/pg_dump story); platform.html stack section links to it.
-- [ ] **Read-only entry point: viewtopia over an existing PostGIS.** SCOPED 2026-07-25,
-      build later. Shape: ptolemy "external dataset" mode, not a separate adapter service,
-      so the whole existing read stack (API, parameterized CQL2, OGC) is reused. Sketch:
-      nullable `datasets.external_table` (+ geometry column name, srid); storage read path
-      scans that relation directly instead of the changeset chain; every write/branch/merge
-      route rejects for external datasets; recommend connecting with a read-only postgres
-      role so safety doesn't depend on app guards. Zero viewtopia changes — the viewer
-      already talks to ptolemy. First touch for a skeptical team: point ptolemy at their
-      DB read-only, browse in viewtopia.
+- [x] **Read-only entry point: ptolemy external dataset mode (2026-07-25, c9f6096/
+      ced2fbb/43381be).** Register `external_table`/`external_id_column`/
+      `external_geometry_column` on dataset create; reads substitute a derived table for
+      the `features` view (two shared builders in postgres.rs), so listing/paging, bbox,
+      intersects/within, CQL2, OGC items, GeoJSON/CSV/FGB export, MVT tiles, and QGIS
+      layer definition all work unchanged. Writes (commit/merge/import/push/branch/
+      reproject) 409. Identifier validation via a single constructor type is the
+      injection barrier; optional `PTOLEMY_EXTERNAL_DATABASE_URL` second pool proven in
+      tests against ptolemy-test-db-2. 192 tests pass (17 new). Known behaviors:
+      changeset-dependent endpoints (history/diff/temporal/qgis-pull/h3/vector-search)
+      return empty/404 for external datasets, not 400; row keys are md5-hashed to UUIDs
+      (original key kept in properties); registration creates a `main` branch (ordinary
+      creation doesn't — viewer does it in a second call). CAVEAT for operators: every
+      non-geometry column is published and ptolemy reads are anonymous by default —
+      register a view, not the raw table, when columns are sensitive (in README).
 
 ## DONE — Letta upgrade compatibility (resolved 2026-07-25, no test needed)
 
