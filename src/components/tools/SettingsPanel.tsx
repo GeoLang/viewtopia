@@ -70,14 +70,6 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           onChange={(e) => updateSettings({ showPreviewTools: e.currentTarget.checked })}
           color="violet"
         />
-        <Switch
-          size="xs"
-          label="Use AG-UI agent channel (beta)"
-          checked={settings.useAgUiChannel}
-          onChange={(e) => updateSettings({ useAgUiChannel: e.currentTarget.checked })}
-          color="violet"
-        />
-
         <Divider color="#30363d" />
         <Text size="xs" c="dimmed" fw={600}>Defaults</Text>
 

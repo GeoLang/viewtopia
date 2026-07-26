@@ -10,7 +10,6 @@ vi.mock('../../src/viewer/uiSpec', () => ({ renderUISpec: vi.fn(() => Promise.re
 import { buildAgUiSubscriber, useSSE } from '../../src/hooks/useSSE';
 import { executeViewerCommand } from '../../src/viewer/commands';
 import { renderUISpec } from '../../src/viewer/uiSpec';
-import { useAppStore } from '../../src/store/app';
 import { useChatStore } from '../../src/store/chat';
 
 // synthetic AG-UI event params: only `event` matters to the mapping, the rest of
@@ -104,18 +103,13 @@ describe('AG-UI subscriber mapping', () => {
   });
 });
 
-describe('AG-UI channel flag', () => {
-  it('defaults to true (AG-UI is the default channel)', () => {
-    expect(useAppStore.getState().settings.useAgUiChannel).toBe(true);
-  });
-
-  it('with the flag off, send() uses the legacy /agent/chat/stream request', async () => {
-    useAppStore.getState().updateSettings({ useAgUiChannel: false });
-    useChatStore.getState().createSession('AG-UI off');
+describe('AG-UI channel', () => {
+  it('send() posts to /agent/chat/agui (the only channel)', async () => {
+    useChatStore.getState().createSession('AG-UI');
 
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
-      // bail right after the request so we only assert the legacy call shape
+      // bail right after the request so we only assert the call target
       .mockResolvedValue({ ok: false, status: 500, statusText: 'err' } as Response);
 
     const { result } = renderHook(() => useSSE());
@@ -123,13 +117,9 @@ describe('AG-UI channel flag', () => {
       await result.current.send('hello');
     });
 
-    expect(fetchSpy).toHaveBeenCalledWith(
-      '/agent/chat/stream',
-      expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({ message: 'hello' }),
-      }),
-    );
+    const urls = fetchSpy.mock.calls.map((c) => String(c[0]));
+    expect(urls.some((u) => u.includes('/agent/chat/agui'))).toBe(true);
+    expect(urls.some((u) => u.includes('/agent/chat/stream'))).toBe(false);
     fetchSpy.mockRestore();
   });
 });

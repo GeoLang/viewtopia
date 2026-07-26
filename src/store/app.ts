@@ -105,8 +105,6 @@ interface Settings {
   tiletopiaUrl: string;
   geolangUrl: string;
   livekitUrl: string;
-  /** route the agent chat through the AG-UI client instead of the legacy SSE reader */
-  useAgUiChannel: boolean;
 }
 
 interface AppState {
@@ -174,7 +172,6 @@ const DEFAULT_SETTINGS: Settings = {
   tiletopiaUrl: '/api/v1',
   geolangUrl: '/agent',
   livekitUrl: '',
-  useAgUiChannel: true,
 };
 
 export const useAppStore = create<AppState>()(
