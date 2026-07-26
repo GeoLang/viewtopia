@@ -12,6 +12,29 @@ import {
 import { IconFileExport, IconX } from '@tabler/icons-react';
 import { useAppStore } from '../../store/app';
 
+/** CSS reference resolution: at 96 DPI the requested pixels are the output pixels. */
+const CSS_DPI = 96;
+
+/** Chrome refuses to encode a canvas larger than this on a side. */
+const MAX_SIDE = 8192;
+
+/**
+ * Output pixels for a width/height in CSS pixels at the requested DPI. Both sides
+ * shrink by the same factor when the DPI would take one past MAX_SIDE, so the
+ * aspect ratio survives the clamp.
+ */
+export function exportPixelSize(
+  width: number,
+  height: number,
+  dpi: number,
+): { width: number; height: number } {
+  const scale = Math.max(dpi, 1) / CSS_DPI;
+  const w = Math.max(1, width) * scale;
+  const h = Math.max(1, height) * scale;
+  const clamp = Math.min(1, MAX_SIDE / Math.max(w, h));
+  return { width: Math.round(w * clamp), height: Math.round(h * clamp) };
+}
+
 export function PrintExportPanel({ onClose }: { onClose: () => void }) {
   const [format, setFormat] = useState<string | null>('png');
   const [width, setWidth] = useState<number | string>(1920);
@@ -19,6 +42,8 @@ export function PrintExportPanel({ onClose }: { onClose: () => void }) {
   const [dpi, setDpi] = useState<number | string>(150);
   const [status, setStatus] = useState<string | null>(null);
   const renderer = useAppStore((s) => s.renderer);
+
+  const output = exportPixelSize(Number(width) || 0, Number(height) || 0, Number(dpi) || 0);
 
   const handleExport = () => {
     setStatus(null);
@@ -40,7 +65,22 @@ export function PrintExportPanel({ onClose }: { onClose: () => void }) {
 
     try {
       const mimeType = format === 'jpg' ? 'image/jpeg' : 'image/png';
-      const dataUrl = canvas.toDataURL(mimeType);
+      // The renderers are not re-rendered at the output size: the live frame is
+      // scaled into it, so a larger export is the same view, not more detail.
+      const out = document.createElement('canvas');
+      out.width = output.width;
+      out.height = output.height;
+      const ctx = out.getContext('2d');
+      if (!ctx) {
+        setStatus('Export failed — no 2D context');
+        return;
+      }
+      if (mimeType === 'image/jpeg') {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, out.width, out.height);
+      }
+      ctx.drawImage(canvas, 0, 0, out.width, out.height);
+      const dataUrl = out.toDataURL(mimeType);
       if (!dataUrl || dataUrl === 'data:,') {
         setStatus('Export returned empty image');
         return;
@@ -50,7 +90,7 @@ export function PrintExportPanel({ onClose }: { onClose: () => void }) {
       link.href = dataUrl;
       link.click();
       setStatus('Exported!');
-    } catch (e) {
+    } catch {
       setStatus('Export failed — canvas may be cross-origin tainted');
     }
   };
@@ -89,7 +129,6 @@ export function PrintExportPanel({ onClose }: { onClose: () => void }) {
           data={[
             { value: 'png', label: 'PNG' },
             { value: 'jpg', label: 'JPEG' },
-            { value: 'pdf', label: 'PDF' },
           ]}
           value={format}
           onChange={setFormat}
@@ -111,6 +150,10 @@ export function PrintExportPanel({ onClose }: { onClose: () => void }) {
           min={72} max={600}
           styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
+
+        <Text size="xs" c="dimmed" data-testid="printexport-size">
+          Output: {output.width} × {output.height} px, scaled from the live view
+        </Text>
 
         <Button size="xs" variant="filled" color="violet" onClick={handleExport} fullWidth>
           Export
