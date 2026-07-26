@@ -46,6 +46,7 @@ export function PortalPanel({ onClose }: { onClose: () => void }) {
     deleteItem,
     filtered,
     error,
+    needsSignIn,
   } = usePortalStore();
   const owner = useAuthStore((s) => s.user?.name);
 
@@ -114,10 +115,18 @@ export function PortalPanel({ onClose }: { onClose: () => void }) {
           </Text>
         )}
 
-        {items.length === 0 ? (
-          <Text size="sm" c="dimmed" py="lg" ta="center">
-            No items found. Add your first item to get started.
+        {needsSignIn && (
+          <Text size="sm" c="dimmed" py="lg" ta="center" data-testid="portal-signin">
+            Sign in to browse the catalog.
           </Text>
+        )}
+
+        {items.length === 0 ? (
+          !needsSignIn && (
+            <Text size="sm" c="dimmed" py="lg" ta="center">
+              No items found. Add your first item to get started.
+            </Text>
+          )
         ) : (
           <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="sm">
             {items.map((item) => (

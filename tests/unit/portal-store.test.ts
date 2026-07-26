@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { usePortalStore } from '../../src/features/portal/store';
+import { useAuthStore } from '../../src/features/auth/store';
 import type { PortalItem } from '../../src/features/portal/types';
 
 const sample: PortalItem = {
@@ -20,7 +21,8 @@ function localItems(): PortalItem[] {
 describe('portal store fallback logic', () => {
   beforeEach(() => {
     localStorage.clear();
-    usePortalStore.setState({ items: [], error: null });
+    usePortalStore.setState({ items: [], error: null, needsSignIn: false });
+    useAuthStore.setState({ loggedIn: false, user: null, token: null });
   });
 
   afterEach(() => {
@@ -63,11 +65,40 @@ describe('portal store fallback logic', () => {
   });
 
   it('reports a forbidden delete without dropping the item', async () => {
+    // a 403 can only come back to a signed-in user
+    useAuthStore.setState({ loggedIn: true, token: 'test-token' });
     usePortalStore.setState({ items: [sample] });
     vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 403 })));
     await usePortalStore.getState().deleteItem(sample.id);
 
     expect(usePortalStore.getState().error).toBe('You can only delete your own items');
     expect(usePortalStore.getState().items).toHaveLength(1);
+  });
+
+  it('shows the signed-out state without requesting the catalog', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    localStorage.setItem('viewtopia_portal_items', JSON.stringify([sample]));
+
+    await usePortalStore.getState().refresh();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(usePortalStore.getState().needsSignIn).toBe(true);
+    expect(usePortalStore.getState().error).toBeNull();
+    // local items still browse offline
+    expect(usePortalStore.getState().items).toHaveLength(1);
+  });
+
+  it('requests the catalog once a token exists', async () => {
+    useAuthStore.setState({ loggedIn: true, token: 'test-token' });
+    const served = [{ ...sample, id: 'server-1' }];
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(served), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await usePortalStore.getState().refresh();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(usePortalStore.getState().needsSignIn).toBe(false);
+    expect(usePortalStore.getState().items).toEqual(served);
   });
 });

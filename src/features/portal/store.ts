@@ -17,6 +17,13 @@ function authHeaders(base: Record<string, string> = {}): Record<string, string> 
   return token ? { ...base, Authorization: `Bearer ${token}` } : base;
 }
 
+// without a token every portal call can only answer 401, and the browser logs
+// that response as a console error. so we never send one: the panel renders its
+// signed-out state instead.
+function signedOut(): boolean {
+  return !getAuthToken();
+}
+
 function getLocalItems(): PortalItem[] {
   try {
     const stored = localStorage.getItem(LOCAL_KEY);
@@ -34,6 +41,8 @@ interface PortalState {
   items: PortalItem[];
   loading: boolean;
   error: string | null;
+  /** signed out, so the platform catalog was never queried */
+  needsSignIn: boolean;
   query: string;
   typeFilter: PortalItemType | '';
   sharingFilter: PortalSharing | '';
@@ -54,6 +63,7 @@ export const usePortalStore = create<PortalState>((set, get) => ({
   items: [],
   loading: false,
   error: null,
+  needsSignIn: false,
   query: '',
   typeFilter: '',
   sharingFilter: '',
@@ -64,15 +74,19 @@ export const usePortalStore = create<PortalState>((set, get) => ({
   setError: (error) => set({ error }),
 
   refresh: async () => {
+    if (signedOut()) {
+      set({ items: getLocalItems(), loading: false, error: null, needsSignIn: true });
+      return;
+    }
     set({ loading: true, error: null });
     try {
       const resp = await fetch(`${API}/items`, { headers: authHeaders() });
       if (resp.ok) {
-        set({ items: await resp.json(), loading: false, error: null });
+        set({ items: await resp.json(), loading: false, error: null, needsSignIn: false });
         return;
       }
       if (resp.status === 401) {
-        set({ items: getLocalItems(), loading: false, error: 'Sign in to load your portal items' });
+        set({ items: getLocalItems(), loading: false, error: null, needsSignIn: true });
         return;
       }
     } catch {

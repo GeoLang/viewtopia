@@ -106,10 +106,11 @@ test.describe('React shell smoke', () => {
     await page.goto(REACT_URL);
     await page.getByRole('button', { name: 'Data' }).click();
     await page.getByText('🗂 Catalog').click();
-    // Modal renders with search + the no-items empty state (backend unreachable).
+    // Modal renders with search + the signed-out state (no token, so the catalog
+    // is never requested).
     await expect(page.getByText('Content Catalog')).toBeVisible();
     await expect(page.getByPlaceholder('Search items…')).toBeVisible();
-    await expect(page.getByText(/no items found/i)).toBeVisible();
+    await expect(page.getByTestId('portal-signin')).toBeVisible();
   });
 
   test('fly-to box accepts a location without runtime errors', async ({ page }) => {
