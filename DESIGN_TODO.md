@@ -135,6 +135,23 @@
 - [ ] geokode has a `fuzzy` module (Levenshtein/Soundex) `forward()` doesn't use — wire a
       fuzzy fallback for typo tolerance.
 
+## DONE — chat replay for viewer commands + multi-renderer markers (2026-07-25, pushed)
+
+- [x] **Clicking an old chat reply now replays its viewer commands.** Replay only covered
+      `ui_spec` map results; `fly_to`-style commands were executed live but never stored.
+      Both channels now keep each reply's `viewerCmds` on the message and a click re-runs
+      them (then re-renders the mapSpec). Browser-verified: Tokyo → click "Flown to
+      Monaco." → camera returns.
+- [x] **add_marker/clear_entities work on every renderer.** Markers moved into the
+      agent-layer store; Cesium/MapLibre/deck.gl hooks each draw them (dot + label), so
+      they survive renderer switches like ui_spec layers. Root-caused missing MapLibre
+      markers to `maplibre-gl.css` never being imported (markers/controls are DOM overlays);
+      importing it also fixed the unstyled zoom/attribution controls. Browser-verified on
+      all three renderers.
+- [ ] follow-up: `add_geojson`/`sql_query` still render through Cesium-only
+      `renderGeoJson` (no-op on MapLibre/deck.gl); `load_tileset`/`screenshot` are
+      inherently Cesium. Route add_geojson through the agent-layer store like ui_spec.
+
 ## DONE — AG-UI agent channel + panel close fix (2026-07-25)
 
 - [x] **AG-UI agent channel (behind a flag).** geolang serves `POST /chat/agui` next to the
