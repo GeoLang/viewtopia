@@ -37,11 +37,13 @@ import type { Entity } from './types';
 export function SpaceTimePanel() {
   const { panelOpen, togglePanel, entities, tracks, links, addEntity, addTrack, setTimeRange, flyTo } =
     useSpaceTimeStore();
+  const importStatus = useSpaceTimeStore((s) => s.importStatus);
+  const setImportStatus = useSpaceTimeStore((s) => s.setImportStatus);
   const [dragging, setDragging] = useState(false);
-  const [importStatus, setImportStatus] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleCsvFile = useCallback((file: File) => {
+    setImportStatus(null);
     if (!file.name.endsWith('.csv')) {
       setImportStatus('Only CSV files are supported');
       return;
@@ -151,10 +153,9 @@ export function SpaceTimePanel() {
       }
 
       setImportStatus(`Imported ${entityCount} entities, ${allLats.length} positions`);
-      setTimeout(() => setImportStatus(null), 4000);
     };
     reader.readAsText(file);
-  }, [addEntity, addTrack, setTimeRange, flyTo]);
+  }, [addEntity, addTrack, setTimeRange, flyTo, setImportStatus]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -270,7 +271,9 @@ export function SpaceTimePanel() {
               />
             </Box>
             {importStatus && (
-              <Text size="xs" c="violet" ta="center">{importStatus}</Text>
+              <Text size="xs" c="violet" ta="center" data-testid="spacetime-import-status">
+                {importStatus}
+              </Text>
             )}
             <EntityList />
           </Stack>

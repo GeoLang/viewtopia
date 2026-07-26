@@ -29,6 +29,8 @@ interface SpaceTimeState {
   panelOpen: boolean;
   selectedEntityId: string | null;
   flyToTarget: { lng: number; lat: number; zoom?: number } | null;
+  /** Result of the last CSV import; stays until the next import or a panel close. */
+  importStatus: string | null;
 
   // Entity CRUD
   addEntity: (entity: Entity) => void;
@@ -66,6 +68,7 @@ interface SpaceTimeState {
   // UI
   togglePanel: () => void;
   closePanel: () => void;
+  setImportStatus: (status: string | null) => void;
   selectEntity: (id: string | null) => void;
   flyTo: (lng: number, lat: number, zoom?: number) => void;
   clearFlyTo: () => void;
@@ -88,6 +91,7 @@ export const useSpaceTimeStore = create<SpaceTimeState>((set) => ({
   panelOpen: false,
   selectedEntityId: null,
   flyToTarget: null,
+  importStatus: null,
 
   addEntity: (entity) =>
     set((s) => {
@@ -139,8 +143,11 @@ export const useSpaceTimeStore = create<SpaceTimeState>((set) => ({
   setTrailDuration: (trailDuration) => set({ trailDuration }),
   setPlaybackSpeed: (playbackSpeed) => set({ playbackSpeed }),
 
-  togglePanel: () => set((s) => ({ panelOpen: !s.panelOpen })),
-  closePanel: () => set({ panelOpen: false }),
+  // closing drops the import summary, so a reopened panel starts clean
+  togglePanel: () =>
+    set((s) => (s.panelOpen ? { panelOpen: false, importStatus: null } : { panelOpen: true })),
+  closePanel: () => set({ panelOpen: false, importStatus: null }),
+  setImportStatus: (importStatus) => set({ importStatus }),
   selectEntity: (selectedEntityId) => set({ selectedEntityId }),
   flyTo: (lng, lat, zoom) => set({ flyToTarget: { lng, lat, zoom } }),
   clearFlyTo: () => set({ flyToTarget: null }),
