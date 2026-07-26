@@ -21,9 +21,11 @@ import { platformAuthHeaders } from '../../scripts/platform-token.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(__dirname, '../..');
-// commits are writes, so they need an editor token when the stack enforces auth.
+// commits are writes, so they need a token when the stack enforces auth.
 // the UI gets the equivalent header from the logged-in session (src/lib/apiAuth.ts).
-const AUTH = platformAuthHeaders({ role: 'editor', sub: 'realestate-e2e' });
+// admin role: the demo datasets are owned by seed-parcels, and an editor
+// without a grant can no longer write to them (per-dataset permissions).
+const AUTH = platformAuthHeaders({ role: 'admin', sub: 'realestate-e2e' });
 
 async function fetchFromApp(page, path, init) {
   return page.evaluate(
