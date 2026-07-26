@@ -130,7 +130,7 @@ test.describe('Real-estate vertical — live platform stack', () => {
     const branch = await discoverBranch(page, 'demo_parcels');
     const r = await fetchFromApp(
       page,
-      `/api/v1/parcels/search?branch_id=${branch}&type=owner&q=Grimaldi&limit=50`,
+      `/api/v1/parcels/search?branch_id=${branch}&type=owner&q=Harborview&limit=50`,
     );
     expect(r.status).toBe(200);
     expect(r.json.length).toBeGreaterThanOrEqual(1);

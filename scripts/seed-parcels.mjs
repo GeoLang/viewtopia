@@ -1,5 +1,5 @@
 // Seed a demo real-estate dataset into ptolemy so the real-estate vertical is
-// demonstrable end to end: ~10 Monaco-area parcel polygons + ~15 point sales.
+// demonstrable end to end: ~10 parcel polygons + ~15 point sales on the current region.
 //
 // Talks directly to ptolemy (default http://localhost:3000). Override with
 // PTOLEMY_URL. Idempotent: skips a dataset/branch that already holds features.
@@ -128,24 +128,26 @@ function pbfBboxCenter(path) {
   } catch { return null; }
 }
 
+// [lng, lat] plus the street the anchor address sits on, so parcel addresses read
+// like the region instead of a hardcoded city.
 async function regionAnchor() {
   const center = pbfBboxCenter(PBF);
   if (!center) {
     console.log(`no readable pbf at ${PBF}; anchoring demo on Monaco`);
-    return MONACO;
+    return { anchor: MONACO, street: null };
   }
   try {
     const res = await fetch(`${GEOKODE}/reverse?lon=${center[0]}&lat=${center[1]}&limit=1`);
     const hit = res.ok ? (await res.json()).results?.[0] : null;
     if (hit && Number.isFinite(hit.lon) && Number.isFinite(hit.lat)) {
       console.log(`region anchor ${hit.lon.toFixed(5)},${hit.lat.toFixed(5)} (nearest address to pbf center)`);
-      return [hit.lon, hit.lat];
+      return { anchor: [hit.lon, hit.lat], street: hit.address?.street ?? null };
     }
   } catch {
     // geokode down: bbox center still lands in-region for a well-cropped extract
   }
   console.log(`geokode unavailable; anchoring demo on pbf bbox center ${center[0].toFixed(5)},${center[1].toFixed(5)}`);
-  return center;
+  return { anchor: center, street: null };
 }
 
 // ─── ptolemy helpers ────────────────────────────────────────────────
@@ -191,10 +193,22 @@ async function commit(branchId, message, operations) {
 // region anchor, set from regionAnchor() before any ops are built
 let ORIGIN_LNG = MONACO[0];
 let ORIGIN_LAT = MONACO[1];
+// street the anchor address sits on; PARCEL_STREET_FALLBACK when geokode can't say
+let PARCEL_STREET = null;
 const CELL = 0.0009; // ~70m, parcels in a row share an edge so merges are contiguous
 
 const ZONINGS = ['R-1', 'R-2', 'R-3', 'C-1', 'C-2'];
-const OWNERS = ['Grimaldi Holdings', 'Monte Carlo SCI', 'Port Hercule Ltd', 'Larvotto Estates'];
+// region-neutral placeholders: the demo must read the same on any extract
+const OWNERS = [
+  'Harborview Holdings Ltd',
+  'Meridian Property Group',
+  'Northgate Land Trust',
+  'Silverbrook Estates',
+];
+const PARCEL_STREET_FALLBACK = 'Waterfront Way';
+// sales addresses are the dedup key in seedDataset, so they stay fixed: a
+// region-derived street would re-insert the whole set whenever it changed.
+const SALES_STREET = 'Market Street';
 
 function buildParcels() {
   const ops = [];
@@ -219,7 +233,7 @@ function buildParcels() {
       geometry_wkb_hex: polygonWkbHex(ring),
       properties: {
         apn,
-        address: `${10 + i} Avenue de Monaco`,
+        address: `${10 + i} ${PARCEL_STREET ?? PARCEL_STREET_FALLBACK}`,
         owner: OWNERS[i % OWNERS.length],
         zoning: ZONINGS[i % ZONINGS.length],
         acres: 1.2,
@@ -254,7 +268,7 @@ function buildSales() {
       feature_id: randomUUID(),
       geometry_wkb_hex: pointWkbHex(lng, lat),
       properties: {
-        address: `${20 + i} Rue des Ventes`,
+        address: `${20 + i} ${SALES_STREET}`,
         sale_price: Math.round(sqft * pricePerSqft),
         sale_date: saleDate,
         sqft,
@@ -299,7 +313,9 @@ async function seedDataset(name, geometryType, keyProp, buildOps) {
 
 async function main() {
   console.log(`seeding real-estate demo data into ${API}`);
-  [ORIGIN_LNG, ORIGIN_LAT] = await regionAnchor();
+  const { anchor, street } = await regionAnchor();
+  [ORIGIN_LNG, ORIGIN_LAT] = anchor;
+  PARCEL_STREET = street;
   const parcels = await seedDataset('demo_parcels', 'polygon', 'apn', buildParcels);
   const sales = await seedDataset('demo_sales', 'point', 'address', buildSales);
   console.log(JSON.stringify({ parcels, sales }, null, 2));
