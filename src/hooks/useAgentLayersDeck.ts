@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { GeoJsonLayer } from '@deck.gl/layers';
+import { GeoJsonLayer, ScatterplotLayer, TextLayer } from '@deck.gl/layers';
 import { useAgentLayerStore } from '../store/agentLayers';
 import { useAppStore } from '../store/app';
 import { useDeckLayersStore } from './deckLayers';
@@ -21,6 +21,7 @@ export function useAgentLayersDeck(
   fitBounds: (bounds: [number, number, number, number]) => void,
 ) {
   const layers = useAgentLayerStore((s) => s.layers);
+  const markers = useAgentLayerStore((s) => s.markers);
   const generation = useAgentLayerStore((s) => s.generation);
   const renderer = useAppStore((s) => s.renderer);
   const activeTab = useAppStore((s) => s.activeTab);
@@ -51,6 +52,34 @@ export function useAgentLayersDeck(
       }),
     );
   }, [layers, setGroup]);
+
+  useEffect(() => {
+    const dots = new ScatterplotLayer({
+      id: 'agent-markers',
+      data: markers,
+      getPosition: (m) => [m.lon, m.lat],
+      getFillColor: (m) => hexToRgb(m.color),
+      getRadius: 5,
+      radiusUnits: 'pixels',
+      stroked: true,
+      getLineColor: [255, 255, 255],
+      getLineWidth: 1,
+      lineWidthUnits: 'pixels',
+    });
+    const labels = new TextLayer({
+      id: 'agent-marker-labels',
+      data: markers.filter((m) => m.label),
+      getPosition: (m) => [m.lon, m.lat],
+      getText: (m) => m.label!,
+      getSize: 14,
+      getColor: [255, 255, 255],
+      getPixelOffset: [0, -14],
+      outlineWidth: 2,
+      outlineColor: [0, 0, 0],
+      fontSettings: { sdf: true },
+    });
+    setGroup('agent-markers', markers.length ? [dots, labels] : []);
+  }, [markers, setGroup]);
 
   // Frame once per spec, and only while deck is the live renderer — the Deck is
   // destroyed when it isn't, so framing then would be dropped and never retried.

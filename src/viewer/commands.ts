@@ -12,10 +12,8 @@
  */
 import {
   Cartesian3,
-  Cartesian2,
   Color,
   Math as CesiumMath,
-  VerticalOrigin,
   Cesium3DTileset,
 } from 'cesium';
 import { HeatmapLayer, HexagonLayer, ScreenGridLayer } from '@deck.gl/aggregation-layers';
@@ -26,6 +24,7 @@ import { setSharedCamera } from '../hooks/sharedCamera';
 import { renderGeoJson } from './renderGeoJson';
 import { runSqlQuery } from '../duckdb/sqlCommand';
 import { useAppStore, type Renderer, type ViewerTab, type ToolPanel } from '../store/app';
+import { useAgentLayerStore } from '../store/agentLayers';
 import { useDeckLayersStore } from '../hooks/deckLayers';
 import { colorByHeight, colorByClassification, colorByProperty } from './tileStyles';
 import { useMeasureStore, type MeasureMode } from '../store/measure';
@@ -115,28 +114,20 @@ const handlers: Record<string, Handler> = {
 
   set_view: (p) => moveCamera(p, true),
 
+  // Markers go through the agent-layer store so every renderer draws them and
+  // a renderer switch keeps them (same pattern as ui_spec layers).
   add_marker: (p) => {
-    const viewer = getActiveCesiumViewer();
-    if (!viewer) return;
-    const label = typeof p.label === 'string' ? p.label : undefined;
-    const color = typeof p.color === 'string' ? p.color : '#ff0000';
-    viewer.entities.add({
-      position: Cartesian3.fromDegrees(num(p.lon), num(p.lat)),
-      point: { pixelSize: 10, color: Color.fromCssColorString(color) },
-      label: label
-        ? {
-            text: label,
-            font: '14px sans-serif',
-            verticalOrigin: VerticalOrigin.BOTTOM,
-            pixelOffset: new Cartesian2(0, -12),
-          }
-        : undefined,
+    useAgentLayerStore.getState().addMarker({
+      lon: num(p.lon),
+      lat: num(p.lat),
+      color: typeof p.color === 'string' ? p.color : '#ff0000',
+      label: typeof p.label === 'string' ? p.label : undefined,
     });
   },
 
   clear_entities: () => {
-    const viewer = getActiveCesiumViewer();
-    if (viewer) viewer.entities.removeAll();
+    useAgentLayerStore.getState().clearMarkers();
+    getActiveCesiumViewer()?.entities.removeAll();
   },
 
   add_geojson: async (p) => {

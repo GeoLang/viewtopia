@@ -1,18 +1,52 @@
 import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
-import { Color, GeoJsonDataSource, Viewer } from 'cesium';
+import {
+  Cartesian2,
+  Cartesian3,
+  Color,
+  GeoJsonDataSource,
+  VerticalOrigin,
+  Viewer,
+} from 'cesium';
 import { useAgentLayerStore } from '../store/agentLayers';
 import { useAppStore } from '../store/app';
 
 const PREFIX = 'agent-layer-';
+const MARKER_PREFIX = 'agent-marker-';
 
-/** Draws the agent's ui_spec layers on Cesium, re-applying after a renderer switch. */
+/** Draws the agent's ui_spec layers and markers on Cesium, re-applying after a renderer switch. */
 export function useAgentLayersCesium(viewerRef: MutableRefObject<Viewer | null>) {
   const layers = useAgentLayerStore((s) => s.layers);
+  const markers = useAgentLayerStore((s) => s.markers);
   const generation = useAgentLayerStore((s) => s.generation);
   const renderer = useAppStore((s) => s.renderer);
   const activeTab = useAppStore((s) => s.activeTab);
   const framedRef = useRef(-1);
+
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed()) return;
+
+    // drop our markers, then redraw from the store
+    for (const e of viewer.entities.values.filter((e) => e.id.startsWith(MARKER_PREFIX))) {
+      viewer.entities.remove(e);
+    }
+    for (const m of markers) {
+      viewer.entities.add({
+        id: `${MARKER_PREFIX}${m.id}`,
+        position: Cartesian3.fromDegrees(m.lon, m.lat),
+        point: { pixelSize: 10, color: Color.fromCssColorString(m.color) },
+        label: m.label
+          ? {
+              text: m.label,
+              font: '14px sans-serif',
+              verticalOrigin: VerticalOrigin.BOTTOM,
+              pixelOffset: new Cartesian2(0, -12),
+            }
+          : undefined,
+      });
+    }
+  }, [markers, viewerRef, renderer, activeTab]);
 
   useEffect(() => {
     const viewer = viewerRef.current;

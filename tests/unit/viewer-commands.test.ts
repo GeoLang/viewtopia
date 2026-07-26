@@ -3,6 +3,7 @@ import { executeViewerCommand } from '../../src/viewer/commands';
 import { useAppStore } from '../../src/store/app';
 import { useMeasureStore } from '../../src/store/measure';
 import { useDeckLayersStore } from '../../src/hooks/deckLayers';
+import { useAgentLayerStore } from '../../src/store/agentLayers';
 import { getSharedCamera } from '../../src/hooks/sharedCamera';
 
 // registry is mocked so we can drive fly_to with no live Cesium viewer and a
@@ -43,6 +44,20 @@ describe('agent viewer commands', () => {
     expect(groups.agent?.length).toBe(1);
     expect(useAppStore.getState().renderer).toBe('deckgl');
     expect(useAppStore.getState().activeTab).toBe('globe');
+  });
+
+  it('add_marker stores the marker so every renderer can draw it; clear_entities empties it', () => {
+    useAgentLayerStore.setState({ markers: [] });
+    executeViewerCommand({
+      action: 'add_marker',
+      params: { lon: 7.42, lat: 43.74, label: 'Monaco', color: '#00ff00' },
+    });
+    const markers = useAgentLayerStore.getState().markers;
+    expect(markers).toHaveLength(1);
+    expect(markers[0]).toMatchObject({ lon: 7.42, lat: 43.74, label: 'Monaco', color: '#00ff00' });
+
+    executeViewerCommand({ action: 'clear_entities' });
+    expect(useAgentLayerStore.getState().markers).toHaveLength(0);
   });
 
   it('style_by_* runs without a live viewer (no tilesets → no-op)', () => {

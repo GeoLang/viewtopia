@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
+// markers and controls are DOM overlays that need maplibre's stylesheet
+import 'maplibre-gl/dist/maplibre-gl.css';
 import { Protocol } from 'pmtiles';
 import { useAppStore } from '../store/app';
 import { getSharedCamera, setSharedCamera } from './sharedCamera';

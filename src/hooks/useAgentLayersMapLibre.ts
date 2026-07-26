@@ -1,19 +1,50 @@
 import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
-import type maplibregl from 'maplibre-gl';
-import { useAgentLayerStore } from '../store/agentLayers';
+import maplibregl from 'maplibre-gl';
+import { useAgentLayerStore, type AgentMarker } from '../store/agentLayers';
 import { useAppStore } from '../store/app';
 import { agentLayersBounds } from './agentLayerBounds';
 
 const PREFIX = 'agent-layer-';
 
-/** Draws the agent's ui_spec layers on MapLibre, so switching renderers keeps them. */
+/** Colored dot + optional label, matching the Cesium marker look. */
+function markerElement(m: AgentMarker): HTMLElement {
+  const el = document.createElement('div');
+  el.style.cssText = 'display:flex;flex-direction:column;align-items:center;';
+  if (m.label) {
+    const text = document.createElement('div');
+    text.textContent = m.label;
+    text.style.cssText =
+      'color:#fff;font:14px sans-serif;text-shadow:0 0 3px #000;margin-bottom:2px;white-space:nowrap;';
+    el.appendChild(text);
+  }
+  const dot = document.createElement('div');
+  dot.style.cssText = `width:12px;height:12px;border-radius:50%;border:2px solid #fff;background:${m.color};`;
+  el.appendChild(dot);
+  return el;
+}
+
+/** Draws the agent's ui_spec layers and markers on MapLibre, so switching renderers keeps them. */
 export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map | null>) {
   const layers = useAgentLayerStore((s) => s.layers);
+  const markers = useAgentLayerStore((s) => s.markers);
   const generation = useAgentLayerStore((s) => s.generation);
   const renderer = useAppStore((s) => s.renderer);
   const activeTab = useAppStore((s) => s.activeTab);
   const framedRef = useRef(-1);
+
+  // Markers are DOM overlays, so they survive basemap setStyle; just rebuild
+  // the small set whenever the store changes or the map remounts.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const objs = markers.map((m) =>
+      new maplibregl.Marker({ element: markerElement(m) }).setLngLat([m.lon, m.lat]).addTo(map),
+    );
+    return () => {
+      for (const o of objs) o.remove();
+    };
+  }, [markers, mapRef, renderer, activeTab]);
 
   useEffect(() => {
     const map = mapRef.current;
