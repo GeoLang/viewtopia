@@ -38,16 +38,18 @@ export function ClippingPanel({ onClose }: { onClose: () => void }) {
 
   const onCesium = activeTab === 'globe' && renderer === 'cesium';
 
-  // One collection for the panel's lifetime: the button only toggles `enabled`,
-  // the controls edit the plane in place.
+  // One collection per Cesium viewer: the button only toggles `enabled` and the
+  // controls edit the plane in place. Switching to Cesium with the panel open
+  // destroys the old viewer, so the collection is rebuilt from the current
+  // controls (which is why they are read here but not tracked as deps).
   useEffect(() => {
-    const viewer = getActiveCesiumViewer();
+    const viewer = onCesium ? getActiveCesiumViewer() : null;
     if (!viewer) return;
-    const plane = new ClippingPlane(AXIS_NORMALS.z, planeDistance(50));
+    const plane = new ClippingPlane(AXIS_NORMALS[axis], planeDistance(position));
     planeRef.current = plane;
     viewer.scene.globe.clippingPlanes = new ClippingPlaneCollection({
       planes: [plane],
-      enabled: false,
+      enabled: active,
       edgeWidth: 1,
     });
     return () => {
@@ -56,7 +58,8 @@ export function ClippingPanel({ onClose }: { onClose: () => void }) {
       const planes = viewer.scene.globe.clippingPlanes;
       if (planes) planes.enabled = false;
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onCesium]);
 
   useEffect(() => {
     const viewer = getActiveCesiumViewer();
