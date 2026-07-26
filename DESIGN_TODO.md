@@ -249,7 +249,12 @@
       own Postgres, direct provider calls (xAI/OpenAI-compatible). The seam is already
       cut: `agent_event_stream` in geolang/src/api/server.py is the only place Letta
       shapes exist, and the viewer speaks vendor-neutral AG-UI. Keep the existing tool
-      functions as-is. Also retires in one move: the ~2min embedded-server boot, the
+      functions as-is. Memory audit (2026-07-25, embedded Letta pg, 11 agents / 401
+      messages): archival never used (0 passages, tools not even attached), core-memory
+      edit tools attached but never called, every gis_workflow block still at its initial
+      value — all 127 tool calls are domain tools. So the rewrite needs only message
+      history + summarize-on-overflow; no scratch blocks, no archival/embeddings (the
+      vllm embeddings container exists solely for unused archival and goes away too). Also retires in one move: the ~2min embedded-server boot, the
       ~44s tool-venv rebuild, the agent-accumulation-per-restart bug, and the
       eval/pickle-class attack surface. Do after MVP proves the golden path; until
       then stay on vendored 0.16.8.
