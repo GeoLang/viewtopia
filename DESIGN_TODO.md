@@ -210,6 +210,17 @@
 
 ## OPEN — trust & adoption
 
+- [ ] **Load-test harness + published numbers (scoped 2026-07-25).** A harness, not a
+      product: k6 (or oha) scenarios + a seeder that generates deep changeset chains and
+      wide datasets, run against the existing platform compose, with p95 pass/fail
+      thresholds so it doubles as a regression gate. Nightly/manual CI job, never
+      per-push. Data plane only (ptolemy, tiletopia, geokode, itinera, fenestra, external
+      read-only mode) — exclude the agent path, it's LLM-bound. The one number that
+      matters most: ptolemy read latency vs changeset-chain depth (100/1k/10k) — every
+      read walks a recursive CTE, and this either validates the data model or forces
+      materialized branch heads. Deliverable: numbers table in the docs ("on a 4-core
+      box, N reads/s at p95 X ms with 10k-changeset history"). Do after the external
+      dataset mode lands so it's in the benchmark set.
 - [x] **"Your data is just PostGIS" docs section (2026-07-25).** ptolemy README gets a
       section under Data Model (verified against migration 020 + 001: `feature_versions`
       PostGIS geometry + JSONB properties, GIST index, `features` view; plain-SQL example,
