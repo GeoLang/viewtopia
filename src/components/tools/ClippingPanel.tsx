@@ -135,7 +135,7 @@ export function ClippingPanel({ onClose }: { onClose: () => void }) {
 
         {!onCesium && (
           <Text size="xs" c="dimmed" data-testid="clipping-note">
-            Cesium only — switch renderer to CesiumJS to clip the globe.
+            Cesium only: switch renderer to CesiumJS to clip the globe.
           </Text>
         )}
       </Stack>
