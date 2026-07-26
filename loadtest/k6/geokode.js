@@ -13,8 +13,8 @@ import { ORIGIN } from '../geo.js';
 const GEOCODE = `${BASE}/api/geocode`;
 
 const SPECS = [
-  { op: 'forward', target: 'addresses', p95: 1000 },
-  { op: 'reverse', target: 'addresses', p95: 1000 },
+  { op: 'forward', target: 'addresses', p95: 50 },
+  { op: 'reverse', target: 'addresses', p95: 50 },
 ];
 
 export const options = {

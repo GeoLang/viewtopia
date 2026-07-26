@@ -10,8 +10,8 @@ import { BASE, get, probe, scenario, summaryTo, thresholds } from './lib.js';
 const TILES = `${BASE}/tiles/v1`;
 
 const SPECS = [
-  { op: 'tileset', target: 'asset', p95: 1000 },
-  { op: 'tile', target: 'asset', p95: 2000 },
+  { op: 'tileset', target: 'asset', p95: 50 },
+  { op: 'tile', target: 'asset', p95: 50 },
 ];
 
 export const options = {

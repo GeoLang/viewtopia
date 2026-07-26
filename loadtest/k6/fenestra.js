@@ -7,8 +7,8 @@
 // fenestra fetches a layer by exporting the whole branch as GeoJSON from
 // ptolemy and filtering in process, with no bbox pushdown. Its latency
 // therefore tracks the layer's total feature count, not the requested extent,
-// which is why the default layer is the smallest seeded chain and why the
-// budgets here are the loosest in the harness. Point it at loadtest-wide with
+// which is why the default layer is the smallest seeded chain. The budgets below
+// are sized for that layer. Point it at loadtest-wide with
 // LOADTEST_FENESTRA_LAYER to measure that cliff on purpose.
 
 import { API, DEPTHS, FENESTRA, get, probe, scenario, summaryTo, thresholds } from './lib.js';
@@ -17,8 +17,8 @@ import { CHAIN_BBOX, chainDataset } from '../geo.js';
 const BBOX = CHAIN_BBOX.join(',');
 
 const SPECS = [
-  { op: 'getmap', target: 'wms', p95: 10000 },
-  { op: 'getfeature', target: 'wfs', p95: 10000 },
+  { op: 'getmap', target: 'wms', p95: 50 },
+  { op: 'getfeature', target: 'wfs', p95: 50 },
 ];
 
 export const options = {

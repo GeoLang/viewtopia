@@ -15,8 +15,8 @@ import { BASE, get, probe, scenario, summaryTo, thresholds } from './lib.js';
 import { ORIGIN } from '../geo.js';
 
 const SPECS = [
-  { op: 'route', target: 'graph', p95: 3000 },
-  { op: 'isochrone', target: 'graph', p95: 5000 },
+  { op: 'route', target: 'graph', p95: 50 },
+  { op: 'isochrone', target: 'graph', p95: 50 },
 ];
 
 // Enough pairs that VUs are not all replaying one shortest path, few enough that

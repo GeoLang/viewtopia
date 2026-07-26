@@ -125,16 +125,16 @@ sub-metric thresholds tagged by op and target, so a breach names the exact
 op/target pair. Each scenario file builds its thresholds from the same spec table
 it iterates, so a target cannot be added without a budget attached.
 
-**The p95 values committed today are placeholders, deliberately generous.** They
-exist so the harness fails on an error-rate regression or an order-of-magnitude
-latency change, not to be meaningful. After the first full baseline run, fill in
-the table below and tighten each p95 to roughly 2x the measured value on the box
-that produced it. 2x leaves room for normal run-to-run variance on shared CI
-hardware while still catching a real regression.
+The committed p95 values reflect the 2026-07-26 baseline below: roughly 2x the
+measured p95, rounded up to a clean number, with a 50ms floor so ops that run in
+single-digit milliseconds do not flake on scheduler noise. 2x leaves room for
+normal run-to-run variance on shared CI hardware while still catching a real
+regression.
 
 ## Baseline numbers
 
-Empty until the first full baseline run. Fill from `loadtest/out/*.json`.
+First full baseline, 2026-07-26. Code state: ptolemy at `0ee367c` (branch-scoped
+reads). Filled from `loadtest/out/*.json`.
 
 Box spec disclosure: a latency number without the machine it came from is not a
 number. Record the CPU model and core count, RAM, disk type, docker version, and
@@ -145,33 +145,39 @@ purpose. That is the shape a single-box deployment actually has. Numbers from a
 GitHub-hosted runner and numbers from a workstation are not comparable, so label
 which is which.
 
-Box: _(unrecorded)_
+Box: workstation, AMD Ryzen 9 6900HX (16 threads), 27 GB RAM, single machine
+running the full docker compose stack and k6 together. Load shape: k6
+`constant-arrival-rate` at 20 iterations/s, `LOADTEST_DURATION=30s`.
 
 | scenario | p50 | p95 | req/s |
 | --- | --- | --- | --- |
-| ptolemy bbox chain-100 | | | |
-| ptolemy bbox chain-1000 | | | |
-| ptolemy bbox chain-10000 | | | |
-| ptolemy bbox wide | | | |
-| ptolemy bbox external | | | |
-| ptolemy filter chain-100 | | | |
-| ptolemy filter chain-1000 | | | |
-| ptolemy filter chain-10000 | | | |
-| ptolemy filter wide | | | |
-| ptolemy filter external | | | |
-| ptolemy item chain-100 | | | |
-| ptolemy item chain-1000 | | | |
-| ptolemy item chain-10000 | | | |
-| ptolemy item wide | | | |
-| ptolemy item external | | | |
-| tiletopia tileset | | | |
-| tiletopia tile | | | |
-| geokode forward | | | |
-| geokode reverse | | | |
-| itinera route | | | |
-| itinera isochrone | | | |
-| fenestra getmap | | | |
-| fenestra getfeature | | | |
+| ptolemy bbox chain-100 | 5 ms | 9 ms | 18.4 |
+| ptolemy bbox chain-1000 | 9 ms | 11 ms | 18.4 |
+| ptolemy bbox chain-10000 | 48 ms | 67 ms | 18.4 |
+| ptolemy bbox wide | 59 ms | 72 ms | 18.4 |
+| ptolemy bbox external | 57 ms | 66 ms | 18.4 |
+| ptolemy filter chain-100 | 3 ms | 8 ms | 18.4 |
+| ptolemy filter chain-1000 | 8 ms | 11 ms | 18.4 |
+| ptolemy filter chain-10000 | 48 ms | 68 ms | 18.4 |
+| ptolemy filter wide | 54 ms | 68 ms | 18.4 |
+| ptolemy filter external | 97 ms | 110 ms | 18.4 |
+| ptolemy item chain-100 | 3 ms | 6 ms | 18.4 |
+| ptolemy item chain-1000 | 5 ms | 7 ms | 18.4 |
+| ptolemy item chain-10000 | 19 ms | 28 ms | 18.4 |
+| ptolemy item wide | 3 ms | 5 ms | 18.4 |
+| ptolemy item external | 44 ms | 62 ms | 18.4 |
+| tiletopia tileset | 2 ms | 2 ms | 20.0 |
+| tiletopia tile | 1 ms | 1 ms | 20.0 |
+| geokode forward | 1 ms | 2 ms | 20.0 |
+| geokode reverse | 1 ms | 1 ms | 20.0 |
+| itinera route | 2 ms | 2 ms | 20.0 |
+| itinera isochrone | 1 ms | 1 ms | 20.0 |
+| fenestra getmap | 7 ms | 17 ms | 20.0 |
+| fenestra getfeature | 6 ms | 15 ms | 20.0 |
+
+Every scenario reported 0.00% failed requests. The ptolemy scenario sustained
+276.7 req/s in total across its 15 ops, the other scenarios ran at the rate their
+op count implies (about 40 req/s).
 
 ## Fixtures
 

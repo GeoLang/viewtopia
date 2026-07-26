@@ -35,12 +35,12 @@ import {
   chainDataset,
 } from '../geo.js';
 
-// Placeholder p95 budgets in ms, generous on purpose: the first full baseline
-// run replaces them with ~2x measured (see loadtest/README.md).
+// p95 budgets in ms, ~2x the 2026-07-26 baseline with a 50ms floor (see
+// loadtest/README.md). A tier's budget is 2x the slowest target in it.
 const P95 = {
-  bbox: { chain: 2000, deep: 20000, wide: 5000, external: 5000 },
-  filter: { chain: 2000, deep: 20000, wide: 5000, external: 5000 },
-  item: { chain: 1000, deep: 1000, wide: 1000, external: 2000 },
+  bbox: { chain: 50, deep: 150, wide: 150, external: 150 },
+  filter: { chain: 50, deep: 150, wide: 150, external: 250 },
+  item: { chain: 50, deep: 60, wide: 50, external: 150 },
 };
 
 // A depth past this is where the walk is expected to hurt, so it gets the
