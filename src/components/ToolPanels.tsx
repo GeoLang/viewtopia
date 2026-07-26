@@ -98,19 +98,25 @@ export function ToolPanels() {
     reorderLayers,
   } = useAppStore();
   const flyTo = useSpaceTimeStore((s) => s.flyTo);
+  // Space-Time lives in its own store but is one of the panels users open from
+  // the toolbar, so Escape closes it here too rather than in a second listener.
+  const spaceTimeOpen = useSpaceTimeStore((s) => s.panelOpen);
+  const closeSpaceTime = useSpaceTimeStore((s) => s.closePanel);
 
   const close = () => setActivePanel(null);
 
   // a temporary panel can sit under other controls (e.g. the nav toggle over its
   // close X), so Escape always closes whatever panel is open.
   useEffect(() => {
-    if (!activePanel) return;
+    if (!activePanel && !spaceTimeOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setActivePanel(null);
+      if (e.key !== 'Escape') return;
+      setActivePanel(null);
+      closeSpaceTime();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [activePanel, setActivePanel]);
+  }, [activePanel, spaceTimeOpen, setActivePanel, closeSpaceTime]);
 
   const panel = renderPanel();
   if (!panel) return null;

@@ -65,6 +65,7 @@ interface SpaceTimeState {
 
   // UI
   togglePanel: () => void;
+  closePanel: () => void;
   selectEntity: (id: string | null) => void;
   flyTo: (lng: number, lat: number, zoom?: number) => void;
   clearFlyTo: () => void;
@@ -139,6 +140,7 @@ export const useSpaceTimeStore = create<SpaceTimeState>((set) => ({
   setPlaybackSpeed: (playbackSpeed) => set({ playbackSpeed }),
 
   togglePanel: () => set((s) => ({ panelOpen: !s.panelOpen })),
+  closePanel: () => set({ panelOpen: false }),
   selectEntity: (selectedEntityId) => set({ selectedEntityId }),
   flyTo: (lng, lat, zoom) => set({ flyToTarget: { lng, lat, zoom } }),
   clearFlyTo: () => set({ flyToTarget: null }),
