@@ -3,6 +3,7 @@ dist/
 dist-react/
 test-results/
 playwright-report/
+loadtest/out/
 .vite/
 *.log
 .DS_Store

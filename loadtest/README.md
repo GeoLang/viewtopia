@@ -1,0 +1,220 @@
+# Platform load test
+
+k6 against the real platform stack, for two purposes: a reproducible performance
+baseline, and a nightly regression gate where the k6 thresholds are the pass/fail.
+
+The headline measurement is ptolemy read latency against changeset-chain depth.
+Every listing read resolves a branch by walking a recursive CTE from the branch
+head up `changesets.parent_id`, so read cost grows with the number of commits on
+the branch. Either the numbers show that is affordable, or they force
+materialized branch heads.
+
+## Running it
+
+Needs the platform stack up (`scripts/platform-up.sh`) and docker. No host k6
+install: everything runs in `grafana/k6:2.1.0`.
+
+```bash
+node loadtest/seed.mjs                  # depths 100,1000,10000 + wide + external
+loadtest/run.sh                         # every scenario
+loadtest/run.sh ptolemy                 # one scenario
+node loadtest/seed.mjs --teardown       # drop every loadtest-* dataset
+```
+
+Seeding depth 10000 is 10000 sequential commits and takes a long time. For a
+quick check:
+
+```bash
+node loadtest/seed.mjs --depths 10 --no-wide --no-external
+LOADTEST_VUS=5 LOADTEST_DURATION=10s LOADTEST_DEPTHS=10 loadtest/run.sh ptolemy
+node loadtest/seed.mjs --teardown
+```
+
+Summaries land in `loadtest/out/<scenario>.json`. Exit status is k6's, so a
+breached threshold fails the caller.
+
+| env | default | meaning |
+| --- | --- | --- |
+| `LOADTEST_BASE_URL` | `http://localhost:5174` | the nginx front, so numbers include the real proxy path |
+| `LOADTEST_FENESTRA_URL` | `http://localhost:3003` | fenestra is not behind the proxy |
+| `LOADTEST_FENESTRA_LAYER` | shallowest seeded chain | any ptolemy dataset name |
+| `LOADTEST_DEPTHS` | `100,1000,10000` | which chain datasets the scenarios target |
+| `LOADTEST_RATE` | `20` | iterations started per second |
+| `LOADTEST_VUS` | `5` | VUs pre-allocated to sustain that rate (max is 10x) |
+| `LOADTEST_DURATION` | `30s` | run length per scenario |
+| `K6_IMAGE` | `grafana/k6:2.1.0` | pinned, k6 2.0 was a breaking major |
+
+`LOADTEST_DEPTHS` must match what the seeder actually created. A depth with no
+dataset is skipped with a warning rather than failing the run, so a mismatch
+shows up as missing rows in the summary, not as a red build.
+
+## Load shape
+
+Scenarios use k6's `constant-arrival-rate`: `LOADTEST_RATE` iterations are started
+every second regardless of how fast they finish. That is deliberate. Looping VUs
+with no think time do not measure latency, they measure how fast the box can be
+saturated, and unpaced they push about 2900 req/s through the proxy, at which
+point nginx sheds connections and the 502s read as if a service regressed.
+
+One iteration issues every op in the scenario, so requests per second is roughly
+`LOADTEST_RATE` times the op count.
+
+If the stack cannot keep up, k6 warns that it ran out of VUs and drops iterations.
+That warning is a result. Read it before raising the VU ceiling.
+
+## What each scenario measures
+
+**ptolemy** is the point of the harness. The `chain-*` datasets each hold an
+identical 100-feature grid at a different commit depth, so a latency gap between
+them is the changeset walk and nothing else. One iteration touches every op on
+every target, which means all depths are measured under the same load and the
+same cache state: the depth comparison is valid within a single run in a way that
+comparing isolated runs would not be.
+
+- `bbox`: `GET /branches/{id}/features/bbox`, the read the map viewport issues.
+- `filter`: `POST /branches/{id}/features/filter` with a CQL2-JSON `=` on a
+  property that matches about 1 row in 20.
+- `item`: `GET /ogc/collections/{id}/items/{fid}`. This is the **control**: that
+  handler selects the newest `feature_versions` row for the feature directly and
+  never walks the chain, so it should stay flat as depth grows. If `bbox` climbs
+  and `item` does not, the CTE is the cost.
+
+Two things confound the `filter` numbers, both worth knowing before reading them:
+
+- `filter` runs against the `features` SQL view, and that view's recursive CTE
+  walks **every branch in the database**, not just the queried one, before the
+  `branch_id` predicate is applied. So `filter` on `chain-100` gets slower merely
+  because `chain-10000` exists alongside it. Read `filter` as a function of total
+  changeset count in the database, not of one branch's depth. `bbox` does not
+  have this problem, it walks the queried branch only.
+- `external` is a registered external PostGIS table, so it has no changesets at
+  all. It is the floor: what these reads cost with versioning out of the picture.
+
+**tiletopia** serves `tileset.json` and one content tile from whatever assets the
+stack already holds. There is no loadtest seeder for tiletopia assets, so on a
+stack with an empty catalog these ops are skipped and the run says so. Filling
+that gap needs a tiling job in the harness, which is not written.
+
+**geokode** forward and reverse geocoding against the addresses imported from the
+OSM extract. In-memory FST and R-tree lookups, so the fastest reads on the
+platform. The forward queries are derived from streets geokode actually holds,
+not hardcoded: the stack takes any OSM extract, a fixed query list would silently
+match nothing on a different region, and an empty 200 result measures no index
+work, so it would read as a speedup.
+
+**itinera** route and isochrone over the graph built from the same extract.
+Random coordinate pairs do not work here: itinera snaps an off-graph point to the
+nearest node, and on a small extract two snapped nodes often land in different
+connected components, so `/route` answers 404 "no route found". That is correct
+behaviour, but it makes the error-rate gate flap. So the scenario discovers pairs
+that actually route, by pulling addresses from geokode (which imported the same
+extract) and probing them, rather than hardcoding coordinates for one region. It
+logs how many pairs it found.
+
+**fenestra** WMS GetMap and WFS GetFeature. fenestra resolves a layer by
+exporting the whole ptolemy branch as GeoJSON and filtering in process, with no
+bbox pushdown, so its latency tracks the layer's total feature count rather than
+the requested extent. The default layer is the shallowest seeded chain (100
+features) for that reason. Point `LOADTEST_FENESTRA_LAYER` at `loadtest-wide` to
+measure the 50k-feature cliff deliberately.
+
+## Thresholds
+
+Every op carries a p95 budget and an error budget of `rate<0.01`, both as
+sub-metric thresholds tagged by op and target, so a breach names the exact
+op/target pair. Each scenario file builds its thresholds from the same spec table
+it iterates, so a target cannot be added without a budget attached.
+
+**The p95 values committed today are placeholders, deliberately generous.** They
+exist so the harness fails on an error-rate regression or an order-of-magnitude
+latency change, not to be meaningful. After the first full baseline run, fill in
+the table below and tighten each p95 to roughly 2x the measured value on the box
+that produced it. 2x leaves room for normal run-to-run variance on shared CI
+hardware while still catching a real regression.
+
+## Baseline numbers
+
+Empty until the first full baseline run. Fill from `loadtest/out/*.json`.
+
+Box spec disclosure: a latency number without the machine it came from is not a
+number. Record the CPU model and core count, RAM, disk type, docker version, and
+whether the stack and the load generator shared the box. **They do share it
+here**. `run.sh` uses `--network host` and k6 runs on the same host as the
+services, so every figure includes generator contention and proxy overhead on
+purpose. That is the shape a single-box deployment actually has. Numbers from a
+GitHub-hosted runner and numbers from a workstation are not comparable, so label
+which is which.
+
+Box: _(unrecorded)_
+
+| scenario | p50 | p95 | req/s |
+| --- | --- | --- | --- |
+| ptolemy bbox chain-100 | | | |
+| ptolemy bbox chain-1000 | | | |
+| ptolemy bbox chain-10000 | | | |
+| ptolemy bbox wide | | | |
+| ptolemy bbox external | | | |
+| ptolemy filter chain-100 | | | |
+| ptolemy filter chain-1000 | | | |
+| ptolemy filter chain-10000 | | | |
+| ptolemy filter wide | | | |
+| ptolemy filter external | | | |
+| ptolemy item chain-100 | | | |
+| ptolemy item chain-1000 | | | |
+| ptolemy item chain-10000 | | | |
+| ptolemy item wide | | | |
+| ptolemy item external | | | |
+| tiletopia tileset | | | |
+| tiletopia tile | | | |
+| geokode forward | | | |
+| geokode reverse | | | |
+| itinera route | | | |
+| itinera isochrone | | | |
+| fenestra getmap | | | |
+| fenestra getfeature | | | |
+
+## Fixtures
+
+`loadtest/seed.mjs` creates three kinds of dataset, all named `loadtest-*`, all
+idempotent. `loadtest/geo.js` holds the grid and bbox constants and is imported
+by both the seeder and the k6 scripts, so a bbox the seeder filled cannot drift
+from the bbox a scenario queries.
+
+- `loadtest-chain-<depth>`: 100 features, then `depth - 1` commits each editing
+  one feature. The commit counter rides in that feature's properties, because
+  `GET /branches/{id}/history` caps at 100 rows and cannot report a deeper chain.
+- `loadtest-wide`: ~50k features in batched commits of 2000 operations.
+  ptolemy applies operations one statement at a time, so a single 50k-operation
+  commit would hold a write transaction open for minutes.
+- `loadtest-external`: a registered external PostGIS table. Registration probes
+  the relation, so the table has to exist first, which needs SQL the HTTP API
+  does not expose. The seeder creates it with `psql` inside the compose `db`
+  container. Without docker access it substitutes an ordinary versioned dataset
+  and says so, because the two do not measure the same read path.
+
+## Teardown
+
+`--teardown` drops every `loadtest-*` dataset. Ptolemy has **no
+`DELETE /datasets/{id}` route**, so this goes through `psql` in the compose `db`
+container and relies on the schema's own cascades: `branches`, `changesets` and
+`feature_versions` all declare `ON DELETE CASCADE` on their dataset or changeset
+foreign key, so deleting the dataset row reclaims the feature rows with it. The
+seeder verifies that by counting `feature_versions` for loadtest datasets before
+and after, and also counts rows with no surviving dataset row at all. Every
+statement is scoped to the `loadtest-` prefix.
+
+Without docker access it falls back to committing deletes on each branch. That
+empties the branches but reclaims nothing: the datasets survive, and a delete
+operation appends another `feature_versions` row rather than removing one. The
+seeder says so when it takes that path. Do not use the soft path to clean up a
+deep chain, it makes the database bigger.
+
+## CI
+
+`.github/workflows/platform-load.yml`, nightly cron plus manual dispatch, never
+on push or pull request. The nightly seeds depths 100 and 1000 only, depth 10000
+is dispatch-only behind the `full` input. It starts the data plane without
+geolang, since the agent is not under test and is the slowest image to build. It
+records the runner's box spec to `loadtest/out/box.txt` and uploads
+`loadtest/out/` as an artifact. Thresholds are the gate, there is no separate
+comparison step and no stored history yet.
