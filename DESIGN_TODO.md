@@ -28,12 +28,15 @@
       so what leaked was traffic shape plus non-UUID path segments (topology names, room ids).
       ptolemy's own dev compose scrapes `/metrics`; `deploy/prometheus.yml` documents the bearer
       token it now needs. 2 new tests.
-- [~] **ptolemy anonymous reads — DECIDED 2026-07-26: gate both as Admin.** `GET .../events`
-      leaks no secrets (signing secret is serde-skipped) but exposes event payloads and
-      traffic shape; it is diagnostics, so it joins the /webhooks-config Admin gating.
-      `/replication/feed/{branch}` streams full branch change data and has zero consumers
-      in any repo. Both are classify() additions + tests; revisit the feed when replication
-      gets a real consumer.
+- [x] **ptolemy anonymous reads gated (2026-07-26, ece3faa).** `GET .../events` and
+      `/replication/feed/*` reads are Admin in classify(); event *emission* stays Write;
+      the lrs `/routes/{id}/events` map-data route stays public (dataset prefix in the
+      match). 401/403/200 ladder tests. Revisit the feed when replication gets a consumer.
+- [x] **ptolemy feature locks actually work now (2026-07-26, 9fb84ff).** Found while wiring
+      unlock: `lock_feature` 500'd on every request (`make_interval(mins =>)` is int4, the
+      duration was bound f64), masked by a test that accepted 422. Duration now clamped
+      1..43200 min and bound i32; unlock takes the Actor identity (JWT sub when auth on),
+      non-owner unlock 409s. The old "any editor can unlock" backlog claim was wrong.
 - [x] **tiletopia native asset writes editor-gated (2026-07-25, dd9ba8e).** POST/DELETE
       assets, start-tiling, and the 3 streaming-upload routes moved to an editor-layered
       router (same mechanism as the Ion split); reads unchanged. 6 new tests (anonymous
@@ -42,13 +45,20 @@
       streaming upload has no per-asset ownership check (any editor can chunk-write into
       any asset's input dir), and `upload/init` ignores its path `{id}` and mints its own.
       → decided 2026-07-26, see the multi-tenant item below.
-- [~] **tiletopia asset ownership — DECIDED 2026-07-26 (MVP is multi-tenant).** Delete the
-      3 streaming-upload routes: no consumer in any repo (viewtopia uploads via multipart
-      POST), `upload/init` ignores its path `{id}`, and there is no ownership model to
-      secure them against. The real gap is broader: assets have no owner column, so any
-      editor can delete or re-tile any asset. Add `owner_id` (JWT sub) on create, enforce
-      owner-or-admin on delete/start-tiling; legacy NULL-owner assets stay any-editor for
-      compat. Annotations stay any-JWT by design.
+- [x] **tiletopia asset ownership done (2026-07-26, 05f0949/1df7599/de88bff).** Streaming
+      upload routes deleted (zero consumers; README/roadmap corrected). `owner_id` (JWT
+      sub, never serialized) recorded on all three create paths; delete/start-tiling
+      require owner-or-admin; legacy NULL-owner assets stay any-editor for compat;
+      annotations stay any-JWT. Catalog `/{dataset_id}/add` was ungated entirely — now
+      require_editor + fail-closed owner. Behavior change: DELETE on a missing asset 404s
+      (was 204). Known holes, accepted: NULL-owner rule until legacy rows age out;
+      require_editor trusts the minted role until token expiry after a demotion.
+- [ ] **tiletopia pre-existing issues surfaced 2026-07-26:** (1) `cargo clippy
+      --all-features` fails in tiletopia-core (ort/ndarray version clash) — check whether
+      the full-features CI job is red on master independent of this work. (2)
+      `deploy/terraform/main.tf:235` CloudFront behavior for `/api/v1/catalog*` allows
+      only GET/HEAD and drops Authorization, so catalog-add can't work through that
+      distribution (fails closed).
 
 - [x] **tiletopia user role management (done 2026-07-25).** Admin-only
       `PUT /api/v1/admin/users/{id}/role` behind require_admin, plus `tiletopia set-role`
@@ -75,19 +85,18 @@
       existing data keeps working (a first grant flips it to enforced). (2) Per-dataset
       `visibility: public|private`, default public: private requires a read permission
       row (or admin) on all read paths; public keeps anonymous reads so the golden path
-      holds. (3) Correction: the "any editor can unlock another's lock" claim was wrong —
-      storage checks `locked_by`, but the handler hardcodes actor "system", so nobody can
-      unlock their own lock over HTTP; wire Actor into the unlock handler.
+      holds. (3) done 2026-07-26 (9fb84ff): Actor wired into unlock, see the locks item
+      above. (1) and (2) in progress.
 - [x] **ptolemy cql2 papercuts fixed (2026-07-25, 1a9b3a9).** Coordinate/ring validation
       (malformed GeoJSON now 400 not 500), limit<=10000 and non-negative paging, spec
       `in` array form supported (empty list → FALSE), `filter_lang` other than cql2-json
       rejected with a clear 400. 8 new tests, suite at 200.
-- [~] **ptolemy `resolve_conflicts` — DECIDED 2026-07-26: delete the old route.**
-      `POST /conflicts/{merge_id}/resolve` commits resolutions onto the source branch with
-      no merge commit and has zero consumers in any repo; the newer
-      `/branches/{t}/merge/{s}/resolve` finalizes properly. Delete the handler and port its
-      two Theirs regression scenarios (target-not-newest-write, delete-propagation) to the
-      new route. The `/qgis/.../conflicts/resolve` endpoint is separate and stays.
+- [x] **ptolemy legacy `resolve_conflicts` route deleted (2026-07-26, 85482c1).**
+      `POST /conflicts/{merge_id}/resolve` (committed onto source, no merge commit, zero
+      consumers) removed with its handler/types (147 lines); README documents the two real
+      endpoints. Both Theirs regression scenarios ported to
+      `/branches/{t}/merge/{s}/resolve` (note: that route computes ours=target, so
+      keeping the target side is strategy "ours"). `/qgis/.../conflicts/resolve` stays.
 - [x] **collecta forms cursor fixed (2026-07-25, e00bfa2).** Compound `(updated_at, rowid)`
       cursor, token `<rfc3339>@<rowid>`, bare-timestamp cursors fall back to (ts, 0) which
       re-delivers rather than skips. Regression test proven against old code; 57 pass.
