@@ -13,14 +13,16 @@ import {
 import { IconWorld, IconX, IconPlus } from '@tabler/icons-react';
 import { useState } from 'react';
 import { useAppStore } from '../../store/app';
-import type { OGCLayer, OGCType } from '../../store/ogcLayers';
+import { loadWfsLayer, type OGCLayer, type OGCType } from '../../store/ogcLayers';
 
 interface OGCLayersPanelProps {
   layers: OGCLayer[];
-  onAdd: (name: string, url: string, type: OGCType) => void;
+  onAdd: (name: string, url: string, type: OGCType) => OGCLayer;
   onRemove: (id: string) => void;
   onClose: () => void;
 }
+
+const WMTS_NOTE = 'WMTS: paste the RESTful tile template. KVP and GetCapabilities are not read yet.';
 
 export function OGCLayersPanel({
   layers,
@@ -31,13 +33,35 @@ export function OGCLayersPanel({
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   const [type, setType] = useState<OGCType>('wms');
+  const [status, setStatus] = useState<{ text: string; failed: boolean } | null>(null);
+  const [loading, setLoading] = useState(false);
   const renderer = useAppStore((s) => s.renderer);
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!name.trim() || !url.trim()) return;
-    onAdd(name.trim(), url.trim(), type);
+    const added = onAdd(name.trim(), url.trim(), type);
     setName('');
     setUrl('');
+    if (added.type !== 'wfs') {
+      setStatus({ text: `Added ${added.name}`, failed: false });
+      return;
+    }
+    // WFS is a request, not a tile template: it either answers with features or
+    // it fails, and the panel is where that has to show
+    setLoading(true);
+    setStatus({ text: `Loading ${added.name}…`, failed: false });
+    try {
+      const count = await loadWfsLayer(added);
+      setStatus({ text: `${added.name}: ${count} features`, failed: false });
+    } catch (e) {
+      onRemove(added.id);
+      setStatus({
+        text: `${added.name}: ${e instanceof Error ? e.message : 'request failed'}`,
+        failed: true,
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -89,8 +113,11 @@ export function OGCLayersPanel({
           <Select
             size="xs"
             flex={1}
+            aria-label="Type"
             data={[
               { value: 'wms', label: 'WMS' },
+              { value: 'wmts', label: 'WMTS' },
+              { value: 'wfs', label: 'WFS' },
               { value: 'xyz', label: 'XYZ Tiles' },
             ]}
             value={type}
@@ -102,14 +129,25 @@ export function OGCLayersPanel({
             color="violet"
             leftSection={<IconPlus size={12} />}
             onClick={handleAdd}
+            loading={loading}
             disabled={!name.trim() || !url.trim()}
           >
             Add
           </Button>
         </Group>
+        {type === 'wmts' && (
+          <Text size="xs" c="dimmed" data-testid="ogc-wmts-note">
+            {WMTS_NOTE}
+          </Text>
+        )}
+        {status && (
+          <Text size="xs" c={status.failed ? 'red' : 'dimmed'} data-testid="ogc-status">
+            {status.text}
+          </Text>
+        )}
         {renderer === 'deckgl' && (
           <Text size="xs" c="dimmed" data-testid="ogc-note">
-            Added services draw on CesiumJS and MapLibre, not the deck.gl renderer.
+            Raster services draw on CesiumJS and MapLibre, not the deck.gl renderer.
           </Text>
         )}
       </Stack>

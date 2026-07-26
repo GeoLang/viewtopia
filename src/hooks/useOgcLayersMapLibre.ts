@@ -15,6 +15,8 @@ export function useOgcLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map | n
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
+    // WFS is vector: its features are drawn from the agent layers instead
+    const rasterLayers = layers.filter((layer) => layer.type !== 'wfs');
 
     const apply = () => {
       for (const layer of map.getStyle()?.layers ?? []) {
@@ -23,7 +25,7 @@ export function useOgcLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map | n
       for (const id of Object.keys(map.getStyle()?.sources ?? {})) {
         if (id.startsWith(PREFIX)) map.removeSource(id);
       }
-      for (const layer of layers) {
+      for (const layer of rasterLayers) {
         const id = `${PREFIX}${layer.id}`;
         map.addSource(id, {
           type: 'raster',
@@ -39,7 +41,7 @@ export function useOgcLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map | n
     const reapplyIfDropped = () => {
       if (!map.isStyleLoaded()) return;
       const sources = Object.keys(map.getStyle()?.sources ?? {});
-      if (layers.some((layer) => !sources.includes(`${PREFIX}${layer.id}`))) apply();
+      if (rasterLayers.some((layer) => !sources.includes(`${PREFIX}${layer.id}`))) apply();
     };
 
     if (map.isStyleLoaded()) apply();

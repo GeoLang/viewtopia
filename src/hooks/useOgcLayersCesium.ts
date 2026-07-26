@@ -6,12 +6,21 @@ import {
   Viewer,
   type ImageryProvider,
 } from 'cesium';
-import { useOgcLayerStore, wmsLayerNames, type OGCLayer } from '../store/ogcLayers';
+import {
+  useOgcLayerStore,
+  rasterTileTemplate,
+  wmsLayerNames,
+  type OGCLayer,
+} from '../store/ogcLayers';
 import { useAppStore } from '../store/app';
 
 function imageryProvider(layer: OGCLayer): ImageryProvider {
-  if (layer.type === 'xyz') {
-    return new UrlTemplateImageryProvider({ url: layer.url, credit: layer.name });
+  // XYZ and WMTS are both tile templates once the WMTS placeholders are rewritten
+  if (layer.type === 'xyz' || layer.type === 'wmts') {
+    return new UrlTemplateImageryProvider({
+      url: rasterTileTemplate(layer),
+      credit: layer.name,
+    });
   }
   // Cesium merges its GetMap parameters into the pasted URL's own query, so a
   // service URL carrying extras keeps them.
@@ -34,9 +43,10 @@ export function useOgcLayersCesium(viewerRef: MutableRefObject<Viewer | null>) {
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || viewer.isDestroyed()) return;
-    const added = layers.map((layer) =>
-      viewer.imageryLayers.addImageryProvider(imageryProvider(layer)),
-    );
+    // WFS is vector: its features are drawn from the agent layers instead
+    const added = layers
+      .filter((layer) => layer.type !== 'wfs')
+      .map((layer) => viewer.imageryLayers.addImageryProvider(imageryProvider(layer)));
     return () => {
       if (viewer.isDestroyed()) return;
       for (const imagery of added) {

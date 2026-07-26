@@ -29,6 +29,8 @@ interface AgentLayerState {
   setLayers: (layers: AgentLayer[]) => void;
   /** Append one layer (add_geojson / sql_query); fit reframes the view to it. */
   addLayer: (layer: AgentLayer, fit?: boolean) => void;
+  /** Drop one layer by id (a panel taking back what it added). */
+  removeLayer: (id: string) => void;
   addMarker: (marker: Omit<AgentMarker, 'id'>) => void;
   clearMarkers: () => void;
   clear: () => void;
@@ -57,6 +59,7 @@ export const useAgentLayerStore = create<AgentLayerState>((set) => ({
       layers: [...s.layers, layer],
       generation: fit ? s.generation + 1 : s.generation,
     })),
+  removeLayer: (id) => set((s) => ({ layers: s.layers.filter((l) => l.id !== id) })),
   addMarker: (marker) =>
     set((s) => ({ markers: [...s.markers, { ...marker, id: crypto.randomUUID() }] })),
   clearMarkers: () => set({ markers: [] }),

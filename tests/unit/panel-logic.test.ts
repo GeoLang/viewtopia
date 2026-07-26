@@ -1,9 +1,15 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   useOgcLayerStore,
   wmsLayerNames,
+  wfsTypeNames,
+  wfsFeatureUrl,
+  wfsAgentLayerId,
+  wmtsTileTemplate,
+  loadWfsLayer,
   rasterTileTemplate,
 } from '../../src/store/ogcLayers';
+import { useAgentLayerStore } from '../../src/store/agentLayers';
 import { parseImport } from '../../src/lib/importGeoJson';
 import { gridSummary, collectPoints } from '../../src/lib/pointData';
 import { exportPixelSize } from '../../src/components/tools/PrintExportPanel';
@@ -20,16 +26,17 @@ describe('ogc layer store', () => {
     useOgcLayerStore.setState({ layers: [] });
   });
 
-  it('adds and removes layers', () => {
+  it('adds and removes layers, handing back what it added', () => {
     const { addLayer } = useOgcLayerStore.getState();
-    addLayer('osm wms', 'https://ows.example.org/service', 'wms');
+    const wms = addLayer('osm wms', 'https://ows.example.org/service', 'wms');
     addLayer('tiles', 'https://tiles.example.org/{z}/{x}/{y}.png', 'xyz');
 
     const { layers, removeLayer } = useOgcLayerStore.getState();
     expect(layers.map((l) => l.name)).toEqual(['osm wms', 'tiles']);
-    expect(layers[0].type).toBe('wms');
+    expect(layers[0]).toEqual(wms);
+    expect(wms.type).toBe('wms');
 
-    removeLayer(layers[0].id);
+    removeLayer(wms.id);
     expect(useOgcLayerStore.getState().layers.map((l) => l.name)).toEqual(['tiles']);
   });
 });
@@ -80,6 +87,152 @@ describe('rasterTileTemplate', () => {
     // the url's own LAYERS is replaced, not duplicated
     expect(params.getAll('layers')).toHaveLength(1);
     expect(template).not.toContain('LAYERS');
+  });
+});
+
+describe('wmtsTileTemplate', () => {
+  const wmts = (url: string, name = 'demo_parcels') => ({
+    id: 'a',
+    name,
+    url,
+    type: 'wmts' as const,
+  });
+
+  it('rewrites the RESTful placeholders into the xyz form', () => {
+    // TileRow is the y axis and TileCol the x axis, so the order is z/y/x
+    expect(
+      wmtsTileTemplate(
+        wmts('https://ogc.example.org/wmts/demo/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.png'),
+      ),
+    ).toBe('https://ogc.example.org/wmts/demo/WebMercatorQuad/{z}/{y}/{x}.png');
+  });
+
+  it('takes the matrix set from the url when it names one', () => {
+    expect(
+      wmtsTileTemplate(
+        wmts('https://x/wmts/demo/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.png?tileMatrixSet=GoogleMapsCompatible'),
+      ),
+    ).toContain('/GoogleMapsCompatible/{z}/{y}/{x}.png');
+  });
+
+  it('leaves a template that is already concrete alone, whatever the case', () => {
+    expect(wmtsTileTemplate(wmts('https://x/wmts/demo/WebMercatorQuad/{z}/{y}/{x}.png'))).toBe(
+      'https://x/wmts/demo/WebMercatorQuad/{z}/{y}/{x}.png',
+    );
+    expect(
+      wmtsTileTemplate(wmts('https://x/{tilematrixset}/{tilematrix}/{tilerow}/{tilecol}')),
+    ).toBe('https://x/WebMercatorQuad/{z}/{y}/{x}');
+  });
+
+  it('resolves a root-relative template against the origin', () => {
+    expect(wmtsTileTemplate(wmts('/wmts/demo/{TileMatrix}/{TileRow}/{TileCol}.png'))).toBe(
+      `${window.location.origin}/wmts/demo/{z}/{y}/{x}.png`,
+    );
+  });
+
+  it('is the template rasterTileTemplate hands the renderers', () => {
+    const layer = wmts('https://x/wmts/demo/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.png');
+    expect(rasterTileTemplate(layer)).toBe(wmtsTileTemplate(layer));
+  });
+});
+
+describe('wfs requests', () => {
+  const wfs = (url: string, name = 'demo_parcels') => ({
+    id: 'a',
+    name,
+    url,
+    type: 'wfs' as const,
+  });
+
+  it('takes the feature types from the url, else the layer name', () => {
+    expect(wfsTypeNames(wfs('https://x/wfs?typeNames=roads'))).toBe('roads');
+    expect(wfsTypeNames(wfs('https://x/wfs?TYPENAME=rail'))).toBe('rail');
+    expect(wfsTypeNames(wfs('https://x/wfs'))).toBe('demo_parcels');
+  });
+
+  it('builds a GetFeature url asking for GeoJSON and keeps the url extras', () => {
+    const url = new URL(wfsFeatureUrl(wfs('https://x/wfs?srsName=EPSG:4326&count=5')));
+    expect(url.pathname).toBe('/wfs');
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      srsName: 'EPSG:4326',
+      count: '5',
+      service: 'WFS',
+      version: '2.0.0',
+      request: 'GetFeature',
+      typenames: 'demo_parcels',
+      outputformat: 'application/json',
+    });
+  });
+});
+
+describe('loadWfsLayer', () => {
+  const layer = { id: 'wfs-1', name: 'demo_parcels', url: 'https://x/wfs', type: 'wfs' as const };
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    useAgentLayerStore.setState({ layers: [], markers: [] });
+    fetchMock.mockReset();
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('puts the returned features into the agent layers', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        type: 'FeatureCollection',
+        features: [
+          { type: 'Feature', geometry: { type: 'Point', coordinates: [1, 2] }, properties: {} },
+          { type: 'Feature', geometry: { type: 'Point', coordinates: [3, 4] }, properties: {} },
+        ],
+      }),
+    });
+
+    expect(await loadWfsLayer(layer)).toBe(2);
+    expect(fetchMock.mock.calls[0][0]).toBe(wfsFeatureUrl(layer));
+    const added = useAgentLayerStore.getState().layers;
+    expect(added).toHaveLength(1);
+    expect(added[0].id).toBe(wfsAgentLayerId(layer));
+    expect(added[0].name).toBe('demo_parcels');
+    expect(added[0].geojson.features).toHaveLength(2);
+  });
+
+  it('throws the status when the service refuses, adding nothing', async () => {
+    fetchMock.mockResolvedValue({ ok: false, status: 502, json: async () => ({}) });
+    await expect(loadWfsLayer(layer)).rejects.toThrow('WFS returned 502');
+    expect(useAgentLayerStore.getState().layers).toHaveLength(0);
+  });
+
+  it('throws when the service answers with nothing to draw', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ type: 'FeatureCollection', features: [] }),
+    });
+    await expect(loadWfsLayer(layer)).rejects.toThrow('no features');
+    expect(useAgentLayerStore.getState().layers).toHaveLength(0);
+  });
+
+  it('is taken off the agent layers again when the ogc entry is removed', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        type: 'FeatureCollection',
+        features: [
+          { type: 'Feature', geometry: { type: 'Point', coordinates: [1, 2] }, properties: {} },
+        ],
+      }),
+    });
+    useOgcLayerStore.setState({ layers: [] });
+    const added = useOgcLayerStore.getState().addLayer('demo_parcels', 'https://x/wfs', 'wfs');
+    await loadWfsLayer(added);
+    expect(useAgentLayerStore.getState().layers).toHaveLength(1);
+
+    useOgcLayerStore.getState().removeLayer(added.id);
+    expect(useAgentLayerStore.getState().layers).toHaveLength(0);
+    expect(useOgcLayerStore.getState().layers).toHaveLength(0);
   });
 });
 
