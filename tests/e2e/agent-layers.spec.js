@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './console-guard';
 
 /**
  * Agent layer (ui_spec) behaviour across renderers — two regressions from the

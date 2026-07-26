@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './console-guard';
 
 /**
  * React front-end smoke test (Track 2 verification harness).

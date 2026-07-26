@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './console-guard';
 
 /**
  * E2E smoke for the six tool panels wired to real functionality:

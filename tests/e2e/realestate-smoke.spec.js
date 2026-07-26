@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './console-guard';
 import * as turf from '@turf/turf';
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';

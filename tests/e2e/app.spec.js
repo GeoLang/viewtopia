@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './console-guard';
 
 test.describe('ViewTopia UI', () => {
   test.beforeEach(async ({ page }) => {
