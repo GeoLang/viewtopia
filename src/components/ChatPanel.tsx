@@ -13,8 +13,15 @@ import {
 import { IconSend, IconPlus, IconTrash, IconSquare } from '@tabler/icons-react';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { renderUISpec } from '../viewer/uiSpec';
-import { useChatStore } from '../store/chat';
+import { executeViewerCommand } from '../viewer/commands';
+import { useChatStore, type Message } from '../store/chat';
 import { useSSE } from '../hooks/useSSE';
+
+/** Re-run everything a reply did to the map: its viewer commands, then its map spec. */
+function replayMessage(msg: Message) {
+  for (const cmd of msg.viewerCmds ?? []) executeViewerCommand(cmd);
+  if (msg.mapSpec) void renderUISpec(msg.mapSpec);
+}
 
 export function ChatPanel() {
   const {
@@ -147,7 +154,9 @@ export function ChatPanel() {
             Ask the AI agent anything about the map…
           </Text>
         ) : (
-          messages.map((msg) => (
+          messages.map((msg) => {
+            const replayable = Boolean(msg.mapSpec || msg.viewerCmds?.length);
+            return (
             <div
               key={msg.id}
               style={{
@@ -158,8 +167,8 @@ export function ChatPanel() {
               <Text
                 size="sm"
                 c={msg.role === 'user' ? 'white' : 'gray.3'}
-                title={msg.mapSpec ? 'Click to replay this result on the map' : undefined}
-                onClick={msg.mapSpec ? () => void renderUISpec(msg.mapSpec!) : undefined}
+                title={replayable ? 'Click to replay this result on the map' : undefined}
+                onClick={replayable ? () => replayMessage(msg) : undefined}
                 style={{
                   display: 'inline-block',
                   background:
@@ -168,14 +177,15 @@ export function ChatPanel() {
                   borderRadius: 8,
                   maxWidth: '85%',
                   whiteSpace: 'pre-wrap',
-                  cursor: msg.mapSpec ? 'pointer' : undefined,
-                  borderLeft: msg.mapSpec ? '2px solid #a78bfa' : undefined,
+                  cursor: replayable ? 'pointer' : undefined,
+                  borderLeft: replayable ? '2px solid #a78bfa' : undefined,
                 }}
               >
                 {msg.content || (streaming && msg.role === 'assistant' ? '…' : '')}
               </Text>
             </div>
-          ))
+            );
+          })
         )}
       </ScrollArea>
 

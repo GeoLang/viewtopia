@@ -21,13 +21,15 @@ const ctx = { messages: [], state: {}, agent: {}, input: {} };
 describe('AG-UI subscriber mapping', () => {
   let setLastContent: ReturnType<typeof vi.fn>;
   let setLastMapSpec: ReturnType<typeof vi.fn>;
+  let addLastViewerCmd: ReturnType<typeof vi.fn>;
   let sub: AgentSubscriber;
 
   beforeEach(() => {
     vi.clearAllMocks();
     setLastContent = vi.fn();
     setLastMapSpec = vi.fn();
-    sub = buildAgUiSubscriber({ setLastContent, setLastMapSpec });
+    addLastViewerCmd = vi.fn();
+    sub = buildAgUiSubscriber({ setLastContent, setLastMapSpec, addLastViewerCmd });
   });
 
   it('appends text deltas via setLastContent', () => {
@@ -68,13 +70,14 @@ describe('AG-UI subscriber mapping', () => {
     expect(setLastContent).not.toHaveBeenCalled();
   });
 
-  it('dispatches a viewer_cmd custom event to executeViewerCommand', () => {
+  it('dispatches a viewer_cmd custom event and keeps it on the message for replay', () => {
     const cmd = { action: 'fly_to', params: { lat: 48.85, lng: 2.29, zoom: 14 } };
     sub.onCustomEvent!({
       ...ctx,
       event: { type: 'CUSTOM', name: 'viewer_cmd', value: cmd },
     } as unknown as P<'onCustomEvent'>);
     expect(executeViewerCommand).toHaveBeenCalledWith(cmd);
+    expect(addLastViewerCmd).toHaveBeenCalledWith(cmd);
   });
 
   it('keeps and renders a ui_spec custom event', () => {

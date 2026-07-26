@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { UiSpec } from '../viewer/uiSpec';
+import type { ViewerCommand } from '../viewer/commands';
 
 export interface Message {
   id: string;
@@ -9,6 +10,8 @@ export interface Message {
   timestamp: number;
   /** Map spec this reply rendered, kept so the reply can be replayed later. */
   mapSpec?: UiSpec;
+  /** Viewer commands this reply ran (fly_to etc.), in order, for replay. */
+  viewerCmds?: ViewerCommand[];
 }
 
 export interface Session {
@@ -35,6 +38,7 @@ interface ChatState {
   appendToLast: (content: string) => void;
   setLastContent: (content: string) => void;
   setLastMapSpec: (mapSpec: UiSpec) => void;
+  addLastViewerCmd: (cmd: ViewerCommand) => void;
   clearMessages: () => void;
 
   // Streaming state
@@ -144,6 +148,22 @@ export const useChatStore = create<ChatState>()(
             const last = msgs[msgs.length - 1];
             if (last && last.role === 'assistant') {
               msgs[msgs.length - 1] = { ...last, mapSpec };
+            }
+            return { ...sess, messages: msgs, updatedAt: Date.now() };
+          }),
+        })),
+
+      addLastViewerCmd: (cmd) =>
+        set((s) => ({
+          sessions: s.sessions.map((sess) => {
+            if (sess.id !== s.activeSessionId) return sess;
+            const msgs = [...sess.messages];
+            const last = msgs[msgs.length - 1];
+            if (last && last.role === 'assistant') {
+              msgs[msgs.length - 1] = {
+                ...last,
+                viewerCmds: [...(last.viewerCmds ?? []), cmd],
+              };
             }
             return { ...sess, messages: msgs, updatedAt: Date.now() };
           }),

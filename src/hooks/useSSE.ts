@@ -3,13 +3,14 @@ import { HttpAgent, type AgentSubscriber } from '@ag-ui/client';
 import type { Message } from '@ag-ui/core';
 import { useChatStore } from '../store/chat';
 import { useAppStore } from '../store/app';
-import { executeViewerCommand } from '../viewer/commands';
+import { executeViewerCommand, type ViewerCommand } from '../viewer/commands';
 import { renderUISpec, type UiSpec } from '../viewer/uiSpec';
 
 /** Store setters the AG-UI subscriber writes through, so it can be tested in isolation. */
 interface AgUiHandlers {
   setLastContent: (content: string) => void;
   setLastMapSpec: (spec: UiSpec) => void;
+  addLastViewerCmd: (cmd: ViewerCommand) => void;
 }
 
 /**
@@ -19,10 +20,11 @@ interface AgUiHandlers {
  *
  * text delta → append to assistant message (setLastContent, like legacy `text`);
  * custom `progress` → show only while no assistant text has arrived yet;
- * custom `viewer_cmd` → executeViewerCommand; custom `ui_spec` → keep the spec on
- * the message + renderUISpec; run error → setLastContent (legacy `error`).
+ * custom `viewer_cmd` → executeViewerCommand + keep it on the message for replay;
+ * custom `ui_spec` → keep the spec on the message + renderUISpec; run error →
+ * setLastContent (legacy `error`).
  */
-export function buildAgUiSubscriber({ setLastContent, setLastMapSpec }: AgUiHandlers): AgentSubscriber {
+export function buildAgUiSubscriber({ setLastContent, setLastMapSpec, addLastViewerCmd }: AgUiHandlers): AgentSubscriber {
   let lastText = '';
   return {
     onTextMessageContentEvent({ event }) {
@@ -35,6 +37,8 @@ export function buildAgUiSubscriber({ setLastContent, setLastMapSpec }: AgUiHand
           if (!lastText && event.value?.text) setLastContent(event.value.text);
           break;
         case 'viewer_cmd':
+          // keep it on the message so clicking the reply replays it
+          addLastViewerCmd(event.value);
           executeViewerCommand(event.value);
           break;
         case 'ui_spec':
@@ -66,7 +70,7 @@ export function buildAgUiSubscriber({ setLastContent, setLastMapSpec }: AgUiHand
  */
 export function useSSE() {
   const abortRef = useRef<AbortController | null>(null);
-  const { addMessage, setLastContent, setLastMapSpec, setStreaming } = useChatStore();
+  const { addMessage, setLastContent, setLastMapSpec, addLastViewerCmd, setStreaming } = useChatStore();
 
   const send = useCallback(
     async (prompt: string) => {
@@ -94,7 +98,7 @@ export function useSSE() {
           const agent = new HttpAgent({ url: '/agent/chat/agui', threadId, initialMessages: messages });
           await agent.runAgent(
             { runId: crypto.randomUUID(), abortController: controller },
-            buildAgUiSubscriber({ setLastContent, setLastMapSpec }),
+            buildAgUiSubscriber({ setLastContent, setLastMapSpec, addLastViewerCmd }),
           );
           return;
         }
@@ -158,7 +162,11 @@ export function useSSE() {
                 if (!lastText && event.text) setLastContent(`…${event.text}`);
                 break;
               case 'viewer_cmd':
-                if (event.cmd) executeViewerCommand(event.cmd);
+                if (event.cmd) {
+                  // keep it on the message so clicking the reply replays it
+                  addLastViewerCmd(event.cmd);
+                  executeViewerCommand(event.cmd);
+                }
                 break;
               case 'ui_spec':
                 if (event.spec) {
@@ -183,7 +191,7 @@ export function useSSE() {
         abortRef.current = null;
       }
     },
-    [addMessage, setLastContent, setLastMapSpec, setStreaming],
+    [addMessage, setLastContent, setLastMapSpec, addLastViewerCmd, setStreaming],
   );
 
   const abort = useCallback(() => {
