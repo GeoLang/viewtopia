@@ -35,8 +35,13 @@ const FIXME = {
   'street-view': 'google streetview embed requests without an API key',
 };
 
-/** let console events for the panel we just closed arrive before we read them */
-const SETTLE_MS = 200;
+/** how long a panel's own requests may stay on the wire before we give up on them */
+const DRAIN_MS = 15000;
+
+/** after the wire is quiet, the console events for the last responses still have to arrive */
+const SETTLE_MS = 300;
+
+const BOOT = 'app boot';
 
 const firstLine = (e) => String(e && e.message ? e.message : e).split('\n')[0];
 
@@ -45,12 +50,44 @@ test('plugin panel sweep', async ({ page }) => {
   test.setTimeout(300000);
 
   const errors = new Map();
-  let current = 'app boot';
-  const note = (line) => errors.set(current, [...(errors.get(current) ?? []), line]);
-  page.on('pageerror', (e) => note(`pageerror: ${e.message}`));
-  page.on('console', (msg) => {
-    if (msg.type() === 'error') note(`console.error: ${msg.text()}`);
+  /** request url -> whoever was open when it started */
+  const requester = new Map();
+  /** requests still on the wire -> whoever started them */
+  const pending = new Map();
+  let current = BOOT;
+
+  const note = (who, line) => errors.set(who, [...(errors.get(who) ?? []), line]);
+  const linesFor = (who) => errors.get(who) ?? [];
+
+  page.on('request', (req) => {
+    requester.set(req.url(), current);
+    pending.set(req, current);
   });
+  const offWire = (req) => pending.delete(req);
+  page.on('requestfinished', offWire);
+  page.on('requestfailed', offWire);
+
+  page.on('pageerror', (e) => note(current, `pageerror: ${e.message}`));
+  page.on('console', (msg) => {
+    if (msg.type() !== 'error') return;
+    // The browser logs a failed load against the request's own url, and that can
+    // land seconds after the panel that made it was closed. Blame the panel that
+    // started the request, not whatever is open when the response comes back.
+    const url = msg.location()?.url;
+    const who = (url && requester.get(url)) ?? current;
+    // name the resource too, so the summary says which request failed
+    const at = url && msg.text().startsWith('Failed to load resource') ? ` (${url})` : '';
+    note(who, `console.error: ${msg.text()}${at}`);
+  });
+
+  /** wait out `who`'s requests (all of them when `who` is undefined), then the console */
+  const drain = async (who) => {
+    const deadline = Date.now() + DRAIN_MS;
+    const busy = () =>
+      who === undefined ? pending.size > 0 : [...pending.values()].includes(who);
+    while (busy() && Date.now() < deadline) await page.waitForTimeout(50);
+    await page.waitForTimeout(SETTLE_MS);
+  };
 
   await openApp(page);
 
@@ -58,8 +95,7 @@ test('plugin panel sweep', async ({ page }) => {
   expect(plugins.length, 'plugins enumerated from the loaded app').toBeGreaterThan(0);
 
   const closed = await page.locator(PANEL).count();
-  const failed = [];
-  const known = [];
+  const stepFailure = new Map();
 
   for (const plugin of plugins) {
     current = plugin.id;
@@ -74,17 +110,17 @@ test('plugin panel sweep', async ({ page }) => {
         await expect(panel).toBeVisible();
         await expect(panel).toHaveText(/\S/);
 
+        // Drain while the panel is still mounted: closing it first cancels its
+        // in-flight requests, and a cancelled load never reaches the console.
+        await drain(plugin.id);
+
         await page.keyboard.press('Escape');
         await expect(page.locator(PANEL)).toHaveCount(closed);
 
-        await page.waitForTimeout(SETTLE_MS);
-        const lines = errors.get(plugin.id) ?? [];
-        expect(lines, 'browser errors').toEqual([]);
+        expect(linesFor(plugin.id), 'browser errors').toEqual([]);
       });
-      if (broken) known.push(`${plugin.id}: passes now, drop it from FIXME`);
     } catch (e) {
-      const reason = [firstLine(e), ...(errors.get(plugin.id) ?? [])].join(' | ');
-      (broken ? known : failed).push(`${plugin.id}: ${reason}`);
+      stepFailure.set(plugin.id, firstLine(e));
       // leave the app clean for the next plugin
       await page.keyboard.press('Escape').catch(() => {});
       await page
@@ -95,6 +131,19 @@ test('plugin panel sweep', async ({ page }) => {
     }
   }
 
+  // a slow response can still be out when its own step ends, so the verdict is
+  // taken once the wire is quiet — by then every error sits under its own plugin
+  current = 'after sweep';
+  await drain();
+
+  const failed = [];
+  const known = [];
+  for (const { id } of plugins) {
+    const reasons = [stepFailure.get(id), ...linesFor(id)].filter(Boolean);
+    if (reasons.length) (FIXME[id] ? known : failed).push(`${id}: ${reasons.join(' | ')}`);
+    else if (FIXME[id]) known.push(`${id}: passes now, drop it from FIXME`);
+  }
+
   if (known.length) {
     test.info().annotations.push({
       type: 'warning',
@@ -102,7 +151,7 @@ test('plugin panel sweep', async ({ page }) => {
     });
   }
 
-  const boot = errors.get('app boot') ?? [];
-  expect(boot, `browser errors before any plugin opened:\n${boot.join('\n')}`).toEqual([]);
+  const boot = [...linesFor(BOOT), ...linesFor('after sweep')];
+  expect(boot, `browser errors outside any plugin:\n${boot.join('\n')}`).toEqual([]);
   expect(failed, `plugin panels that failed the sweep:\n${failed.join('\n')}`).toEqual([]);
 });
