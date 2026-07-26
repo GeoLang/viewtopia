@@ -27,6 +27,7 @@ import {
 import { useCollabStore } from '../../store/collaboration';
 import { useLiveKitStore } from '../../store/livekit';
 import { useAppStore } from '../../store/app';
+import { useAuthStore } from '../../features/auth/store';
 
 export function CollaborationPanel({ onClose }: { onClose: () => void }) {
   const {
@@ -37,6 +38,7 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
     users,
     messages,
     followUserId,
+    error,
     connect,
     disconnect,
     setUserName,
@@ -46,6 +48,8 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
 
   const lk = useLiveKitStore();
   const livekitUrl = useAppStore((s) => s.settings.livekitUrl);
+  // the room handshake needs the session JWT, so signed out there is nothing to join
+  const loggedIn = useAuthStore((s) => s.loggedIn);
 
   const [roomInput, setRoomInput] = useState('');
   const [nameInput, setNameInput] = useState(userName);
@@ -104,8 +108,17 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
       </Group>
 
       <Stack gap="xs">
-        {!connected ? (
+        {!loggedIn ? (
+          <Text size="xs" c="dimmed" py="md" ta="center" data-testid="collab-signin">
+            Sign in to join a collaboration room.
+          </Text>
+        ) : !connected ? (
           <>
+            {error && (
+              <Text size="xs" c="red.4" data-testid="collab-error">
+                {error}
+              </Text>
+            )}
             <TextInput
               size="xs"
               label="Your Name"
@@ -212,7 +225,8 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
                       background: u.color,
                     }}
                   />
-                  <Text size="xs" c="white">
+                  {/* a peer picks its own display name, so cap the room it gets */}
+                  <Text size="xs" c="white" maw={200} truncate>
                     {u.userName}
                     {u.userId === userId ? ' (you)' : ''}
                   </Text>
@@ -242,7 +256,12 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
 
             <ScrollArea mah={150} style={{ background: '#0d1117', borderRadius: 4, padding: 4 }}>
               {messages.map((m, i) => (
-                <Text key={i} size="xs" c={m.userId === userId ? '#a78bfa' : 'white'}>
+                <Text
+                  key={i}
+                  size="xs"
+                  c={m.userId === userId ? '#a78bfa' : 'white'}
+                  style={{ overflowWrap: 'anywhere' }}
+                >
                   <Text span fw={600}>{m.userName}: </Text>
                   {m.message}
                 </Text>
