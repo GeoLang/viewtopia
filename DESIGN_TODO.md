@@ -238,6 +238,22 @@
       check. Strategic note: plan around a frozen upstream (vendored fork is ours to
       maintain), not around upgrades.
 
+## OPEN — post-v1: replace embedded Letta (decided 2026-07-25)
+
+- [ ] **Replace the embedded Letta server with a thin in-house agent loop behind
+      `agent_event_stream`.** Decision rationale: upstream's self-hosted line is
+      deprecated and release-frozen (functionality moving to their closed SaaS; no
+      security response), so long term we'd be sole maintainers of a large fork we
+      barely use. GeoLang needs only: an LLM call loop with tool dispatch, conversation
+      history, a couple of memory blocks, and an event stream — small code against our
+      own Postgres, direct provider calls (xAI/OpenAI-compatible). The seam is already
+      cut: `agent_event_stream` in geolang/src/api/server.py is the only place Letta
+      shapes exist, and the viewer speaks vendor-neutral AG-UI. Keep the existing tool
+      functions as-is. Also retires in one move: the ~2min embedded-server boot, the
+      ~44s tool-venv rebuild, the agent-accumulation-per-restart bug, and the
+      eval/pickle-class attack surface. Do after MVP proves the golden path; until
+      then stay on vendored 0.16.8.
+
 ## OPEN — Phase 3 (mobile & ML breadth, after v1)
 
 - [ ] **terravista v0.2** — HTTP tile fetch + MVT decode (the SDK can't fetch/draw tiles yet).
