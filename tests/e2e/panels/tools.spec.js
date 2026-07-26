@@ -162,8 +162,25 @@ const clockState = (page) =>
     };
   });
 
-/** CZML availability window the timeline's Fit to Data has to shrink-wrap onto. */
+/** Window of the imported fixture, which Fit to Data has to shrink-wrap onto. */
 const TIME_DYNAMIC = { start: '2024-03-01T00:00:00Z', stop: '2024-03-01T06:00:00Z' };
+
+/**
+ * Three timestamped pings spanning TIME_DYNAMIC. Import turns a file like this
+ * into CZML, which is what gives the entities availability and the clock a range.
+ */
+const TIMED_PINGS = {
+  type: 'FeatureCollection',
+  features: [
+    ['first', TIME_DYNAMIC.start],
+    ['second', '2024-03-01T03:00:00Z'],
+    ['third', TIME_DYNAMIC.stop],
+  ].map(([name, timestamp], i) => ({
+    type: 'Feature',
+    properties: { name, timestamp },
+    geometry: { type: 'Point', coordinates: [7.42 + i * 0.01, 43.73 + i * 0.01] },
+  })),
+};
 
 /** A clock range far from TIME_DYNAMIC, so fitting has to move both ends. */
 const OFF_RANGE = {
@@ -172,26 +189,29 @@ const OFF_RANGE = {
   current: '2024-06-01T00:00:00Z',
 };
 
-/**
- * Load a time-dynamic CZML point into the live viewer and park the clock away
- * from it. Nothing in the app loads CZML, so the data has to come from here.
- */
-async function loadTimeDynamicData(page) {
-  await page.evaluate(async (interval) => {
-    const ds = await window.Cesium.CzmlDataSource.load([
-      { id: 'document', name: 'probe', version: '1.0' },
-      {
-        id: 'probe-point',
-        availability: `${interval.start}/${interval.stop}`,
-        position: { cartographicDegrees: [7.42, 43.73, 500] },
-        point: { pixelSize: 8, color: { rgba: [255, 0, 0, 255] } },
-      },
-    ]);
-    await window.__viewtopiaViewer.dataSources.add(ds);
-  }, TIME_DYNAMIC);
-  // the viewer adopts the clock of every data source it is handed, so the range
-  // has to be pushed back off the data after the add
-  await page.evaluate((range) => {
+/** Import TIMED_PINGS through Data ▸ Import, the way a user brings time in. */
+async function importTimedPings(page) {
+  await page.getByRole('button', { name: 'Data' }).click();
+  await page.locator(MENU_ITEM).filter({ hasText: 'Import' }).first().click();
+  await expect(page.locator('[class*="mantine-Menu-dropdown"]')).toHaveCount(0);
+  const panel = page.locator(PANEL).filter({ hasText: 'Import Data' });
+  await expect(panel).toHaveCount(1);
+
+  await panel.locator('input[type="file"]').setInputFiles({
+    name: 'pings.geojson',
+    mimeType: 'application/geo+json',
+    buffer: Buffer.from(JSON.stringify(TIMED_PINGS)),
+  });
+  // the panel says how many features it put on the timeline, not just how many it read
+  await expect(panel.getByTestId('import-status')).toHaveText(
+    'pings.geojson: 3 features, 3 on the timeline',
+  );
+  await closePanel(page, panel);
+}
+
+/** Park the clock off the imported window, so fitting has to move both ends. */
+const parkClockOffRange = (page) =>
+  page.evaluate((range) => {
     const { JulianDate } = window.Cesium;
     const clock = window.__viewtopiaViewer.clock;
     clock.shouldAnimate = false;
@@ -199,7 +219,6 @@ async function loadTimeDynamicData(page) {
     clock.stopTime = JulianDate.fromIso8601(range.stop);
     clock.currentTime = JulianDate.fromIso8601(range.current);
   }, OFF_RANGE);
-}
 
 /** Live clock range as epoch millis, comparable with Date.parse of the CZML. */
 const clockMillis = (page) =>
@@ -539,12 +558,41 @@ test.describe('Tools panels', () => {
 
   test('timeline: play advances the live clock and the slider seeks it', async ({ page }) => {
     await openApp(page);
-    const panel = await openPanel(page, 'Timeline', 'Timeline');
 
+    // only one tool panel is up at a time, so the empty-data case is asserted
+    // before the import, on a boot with nothing time-dynamic loaded
+    const empty = await openPanel(page, 'Timeline', 'Timeline');
+    await empty.getByRole('button', { name: 'Fit to Data' }).click();
+    await expect(
+      empty.getByText('No time-dynamic data loaded; keeping current range'),
+    ).toBeVisible();
+    await closePanel(page, empty);
+
+    // time-dynamic data arrives the way a user brings it in: a timestamped file
+    // through the import panel, which turns it into CZML the clock can play
+    await importTimedPings(page);
+    expect(await clockMillis(page)).toEqual({
+      start: Date.parse(TIME_DYNAMIC.start),
+      stop: Date.parse(TIME_DYNAMIC.stop),
+      current: Date.parse(TIME_DYNAMIC.start),
+    });
+    // one data source of playable entities, not flat geometry
+    expect(
+      await page.evaluate(() => {
+        const ds = window.__viewtopiaViewer.dataSources.getByName('pings.geojson')[0];
+        if (!ds) return null;
+        return {
+          entities: ds.entities.values.length,
+          withAvailability: ds.entities.values.filter((e) => e.availability).length,
+        };
+      }),
+    ).toEqual({ entities: 3, withAvailability: 3 });
+
+    const panel = await openPanel(page, 'Timeline', 'Timeline');
     const label = panel.getByTestId('timeline-current');
     const before = await clockState(page);
     const beforeLabel = await label.textContent();
-    // the panel widens a zero-length range on mount, so there is room to animate
+    // the imported window is what the panel opens on, so there is room to animate
     expect(before.stop - before.start).toBeGreaterThan(0);
     expect(before.animating).toBe(false);
 
@@ -574,9 +622,9 @@ test.describe('Tools panels', () => {
     expect(seeked.current).toBeGreaterThan(paused.current);
     await expect(label).not.toHaveText(pausedLabel);
 
-    // Fit to Data reads the availability of the loaded entities, so hand the
-    // viewer a 6h CZML window while the clock sits on a whole year
-    await loadTimeDynamicData(page);
+    // Fit to Data has to shrink-wrap the clock back onto the imported window,
+    // so park it on a whole year first
+    await parkClockOffRange(page);
     expect(await clockMillis(page)).toEqual({
       start: Date.parse(OFF_RANGE.start),
       stop: Date.parse(OFF_RANGE.stop),

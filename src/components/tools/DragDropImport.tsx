@@ -11,6 +11,7 @@ import {
 import { IconUpload, IconX, IconFile } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { IMPORT_FORMATS, parseImport } from '../../lib/importGeoJson';
+import { timedImport, loadTimedImport } from '../../lib/importTime';
 
 interface DragDropImportProps {
   onImport: (name: string, geojson: GeoJSON.FeatureCollection) => void;
@@ -35,14 +36,21 @@ export function DragDropImport({ onImport, onClose }: DragDropImportProps) {
       }
       try {
         const collection = parseImport(file.name, await file.text());
-        onImport(file.name, collection);
-        setStatus({
-          text: `${file.name}: ${collection.features.length} features`,
-          failed: false,
-        });
+        const count = `${collection.features.length} features`;
+        // timestamped data goes in as CZML so the clock can play it. with no
+        // Cesium viewer it takes the plain-geometry path every renderer draws
+        const timed = timedImport(collection);
+        const onTimeline = timed ? await loadTimedImport(file.name, timed) : false;
+        if (!onTimeline) onImport(file.name, collection);
+        const summary = onTimeline
+          ? `${count}, ${timed?.features.length} on the timeline`
+          : timed
+            ? `${count}, timeline needs CesiumJS`
+            : count;
+        setStatus({ text: `${file.name}: ${summary}`, failed: false });
         notifications.show({
           title: 'Imported',
-          message: `${file.name} — ${collection.features.length} features`,
+          message: `${file.name} — ${summary}`,
           color: 'green',
         });
       } catch (err) {
