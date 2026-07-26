@@ -205,4 +205,9 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   confirmed stale (anchored to deleted package-lock.json) and dismissed; ptolemy suite
   1 → 262 tests since June. Viewer test coverage started: registry-derived panel sweep
   (50 tools, 49 pass) + console-error tripwire across all e2e specs; building-data
-  toggle self-disables on styles with native 3D buildings.
+  toggle self-disables on styles with native 3D buildings. Sweep findings then cleared:
+  catalog panel no longer fires an anonymous 401 (signed-out state instead), Escape closes
+  Space-Time through the shared handler, the two vanilla-era specs (22 dead tests) deleted
+  with their one live assertion ported, vector-tile + terrain specs mocked and made
+  minification-safe, and a runtime-enumerated plugin sweep covers all 23 plugin panels.
+  The tripwire tolerates cold-upstream 502/503/504 in the platform config only.

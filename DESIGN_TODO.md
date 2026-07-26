@@ -12,17 +12,14 @@
 - [ ] **Per-panel functional smoke suite (~42 panels).** Each panel's primary action
       exercised against the live stack with an observable-effect assertion. Planned as a
       fan-out workflow (one spec per panel, adversarially verified); runs nightly next to
-      platform-load, golden path stays the per-push gate. Sweep (done 2026-07-26,
-      a950870e: 50 tools, 49 pass) scoped the list below first.
-- [ ] **Sweep findings to fix:** (1) Catalog panel `GET /api/v1/portal/items` 401s
-      anonymously — handle logged-out state or authenticate the sweep; (2) Space-Time
-      panel ignores Escape (own store, outside ToolPanels); (3) delete-or-rewrite the
-      dead vanilla-era specs `app.spec.js` (18/21 fail) + `spacetime.spec.js` (4/4) —
-      selectors died with the June cutover, CI never runs that config; (4) vector-tiles
-      spec must mock its dead-host tile URL (tripwire now rightly fails it); (5) global
-      terrain spec only passes on a dev server, gate or fix; (6) 23 plugin panels are
-      unswept (`import.meta.glob` defeats collect-time enumeration — needs runtime
-      enumeration via the app).
+      platform-load, golden path stays the per-push gate. The open/close sweeps
+      (51 tool panels + 23 plugin panels, all green) scoped the list first.
+- [ ] **Two plugin panels request a third-party API with no key** (found by the new
+      plugin sweep, marked fixme in `tests/e2e/plugin-sweep.spec.js`): basemap-catalog
+      fetches three jawg.io preview tiles that answer 400; street-view builds a Google
+      embed URL with `key=` empty and gets 401. Both should detect the missing key and
+      render a configure-a-key state instead of requesting, like the catalog panel's
+      signed-out state.
 - [~] **Building-data toggle on MapLibre** (committed ea421a9d, browser verification
       pending): disabled with tooltip when the loaded style has its own fill-extrusion
       layers (Liberty); detection re-runs on style.load; hook skips duplicate layer.
