@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Paper,
   Text,
@@ -10,11 +10,63 @@ import {
   SegmentedControl,
 } from '@mantine/core';
 import { IconScissors, IconX } from '@tabler/icons-react';
+import { Cartesian3, ClippingPlane, ClippingPlaneCollection, Ellipsoid } from 'cesium';
+import { useAppStore } from '../../store/app';
+import { getActiveCesiumViewer } from '../../viewer/registry';
+
+type Axis = 'x' | 'y' | 'z';
+
+/** Globe clipping planes live in the earth-fixed frame, so the axes are ECEF. */
+const AXIS_NORMALS: Record<Axis, Cartesian3> = {
+  x: new Cartesian3(1, 0, 0),
+  y: new Cartesian3(0, 1, 0),
+  z: new Cartesian3(0, 0, 1),
+};
+
+/** 50% cuts through the earth's centre; the ends push the cut past the surface. */
+function planeDistance(position: number): number {
+  return ((50 - position) / 50) * Ellipsoid.WGS84.maximumRadius;
+}
 
 export function ClippingPanel({ onClose }: { onClose: () => void }) {
-  const [axis, setAxis] = useState<'x' | 'y' | 'z'>('z');
+  const renderer = useAppStore((s) => s.renderer);
+  const activeTab = useAppStore((s) => s.activeTab);
+  const [axis, setAxis] = useState<Axis>('z');
   const [position, setPosition] = useState(50);
   const [active, setActive] = useState(false);
+  const planeRef = useRef<ClippingPlane | null>(null);
+
+  const onCesium = activeTab === 'globe' && renderer === 'cesium';
+
+  // One collection for the panel's lifetime: the button only toggles `enabled`,
+  // the controls edit the plane in place.
+  useEffect(() => {
+    const viewer = getActiveCesiumViewer();
+    if (!viewer) return;
+    const plane = new ClippingPlane(AXIS_NORMALS.z, planeDistance(50));
+    planeRef.current = plane;
+    viewer.scene.globe.clippingPlanes = new ClippingPlaneCollection({
+      planes: [plane],
+      enabled: false,
+      edgeWidth: 1,
+    });
+    return () => {
+      planeRef.current = null;
+      if (viewer.isDestroyed()) return;
+      const planes = viewer.scene.globe.clippingPlanes;
+      if (planes) planes.enabled = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const viewer = getActiveCesiumViewer();
+    const plane = planeRef.current;
+    if (!viewer || !plane) return;
+    plane.normal = AXIS_NORMALS[axis];
+    plane.distance = planeDistance(position);
+    viewer.scene.globe.clippingPlanes.enabled = active;
+    viewer.scene.requestRender();
+  }, [axis, position, active]);
 
   return (
     <Paper
@@ -49,7 +101,7 @@ export function ClippingPanel({ onClose }: { onClose: () => void }) {
           size="xs"
           fullWidth
           value={axis}
-          onChange={(v) => setAxis(v as 'x' | 'y' | 'z')}
+          onChange={(v) => setAxis(v as Axis)}
           data={[
             { value: 'x', label: 'X' },
             { value: 'y', label: 'Y' },
@@ -73,9 +125,16 @@ export function ClippingPanel({ onClose }: { onClose: () => void }) {
           color="violet"
           onClick={() => setActive(!active)}
           fullWidth
+          disabled={!onCesium}
         >
           {active ? 'Disable Clip' : 'Enable Clip'}
         </Button>
+
+        {!onCesium && (
+          <Text size="xs" c="dimmed" data-testid="clipping-note">
+            Cesium only — switch renderer to CesiumJS to clip the globe.
+          </Text>
+        )}
       </Stack>
     </Paper>
   );
