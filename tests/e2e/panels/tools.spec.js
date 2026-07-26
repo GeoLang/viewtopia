@@ -52,6 +52,13 @@ const MONACO = { lon: 7.42, lat: 43.73, height: 12000 };
 const ICELAND = { lon: -21.9, lat: 64.14, height: 12000 };
 const SYDNEY = { lon: 151.2, lat: -33.86, height: 12000 };
 
+/** The same stops as map cameras, for the split-view panes. */
+const ICELAND_VIEW = { lon: ICELAND.lon, lat: ICELAND.lat, zoom: 6 };
+const SYDNEY_VIEW = { lon: SYDNEY.lon, lat: SYDNEY.lat, zoom: 4 };
+
+/** The zoom↔height conversion the renderers share, so a Cesium height sets a zoom. */
+const cameraHeight = (zoom) => 4e7 / Math.pow(2, zoom);
+
 async function openPanel(page, label, title) {
   await page.getByRole('button', { name: 'Tools' }).click();
   await page.locator(MENU_ITEM).filter({ hasText: label }).first().click();
@@ -112,6 +119,28 @@ const cameraPosition = (page) =>
     const deg = (r) => (r * 180) / Math.PI;
     return { lon: deg(carto.longitude), lat: deg(carto.latitude) };
   });
+
+/** Centre and zoom of a MapLibre instance published on window (active or pane). */
+const mapCamera = (page, key) =>
+  page.evaluate((k) => {
+    const map = window[k];
+    if (!map) return null;
+    const c = map.getCenter();
+    return { lon: c.lng, lat: c.lat, zoom: map.getZoom() };
+  }, key);
+
+const jumpMap = (page, key, view) =>
+  page.evaluate(
+    ({ k, v }) => window[k].jumpTo({ center: [v.lon, v.lat], zoom: v.zoom }),
+    { k: key, v: view },
+  );
+
+/** A map camera match that tolerates the float noise of a renderer round trip. */
+const nearView = (v) => ({
+  lon: expect.closeTo(v.lon, 3),
+  lat: expect.closeTo(v.lat, 3),
+  zoom: expect.closeTo(v.zoom, 2),
+});
 
 /** Great-circle-free distance in degrees between the camera and a view. */
 async function degreesFrom(page, view) {
@@ -378,37 +407,93 @@ test.describe('Tools panels', () => {
     await closePanel(page, panel);
   });
 
-  // TODO: nothing renders a second view off splitViewActive yet, so the split
-  // itself cannot be asserted. Extend this once the panel drives two renderers.
-  test('split view: the switch and renderer choices take effect in the panel', async ({ page }) => {
+  test('split view: two MapLibre panes share one camera, and closing tears the second down', async ({
+    page,
+  }) => {
     await openApp(page);
-    let panel = await openPanel(page, 'Split View', 'Split View');
-
-    // the switch is controlled by the app store, so it only reads back as
-    // checked if the store took the write. the checkbox is visually hidden, so
-    // the label is what takes clicks
-    const toggle = () => panel.getByRole('switch', { name: 'Enable Split View' });
+    const panel = await openPanel(page, 'Split View', 'Split View');
     const clickToggle = () => panel.getByText('Enable Split View').click();
-    await expect(toggle()).not.toBeChecked();
+    const leftPane = page.getByTestId('viewer-pane-left');
+    const rightPane = page.getByTestId('viewer-pane-right');
+
+    // MapLibre on both sides: same type in both panes, and two swiftshader
+    // Cesium contexts next to the stack are too slow to drive reliably
+    await selectOption(page, panel, 'Left pane', 'MapLibre');
+    await expect(panel.getByRole('textbox', { name: 'Left pane' })).toHaveValue('MapLibre');
+    await expect(panel.getByRole('textbox', { name: 'Right pane' })).toHaveValue('MapLibre');
+    await page.waitForFunction(() => !!window.__viewtopiaMap);
+
+    // unsplit: one renderer, filling the viewer area
+    await expect(rightPane).toHaveCount(0);
+    await expect(page.locator('canvas')).toHaveCount(1);
+
     await clickToggle();
-    await expect(toggle()).toBeChecked();
+    await expect(rightPane).toHaveCount(1);
+    await page.waitForFunction(() => !!window.__viewtopiaPaneMap);
+    await expect(leftPane.locator('canvas')).toHaveCount(1);
+    await expect(rightPane.locator('canvas')).toHaveCount(1);
+    // the panes divide the area rather than stacking
+    const [leftBox, rightBox] = [await leftPane.boundingBox(), await rightPane.boundingBox()];
+    expect(rightBox.x).toBeGreaterThanOrEqual(leftBox.x + leftBox.width - 2);
 
-    const left = panel.getByRole('textbox', { name: 'Left Panel' });
-    const right = panel.getByRole('textbox', { name: 'Right Panel' });
-    await expect(left).toHaveValue('CesiumJS (3D)');
-    await selectOption(page, panel, 'Left Panel', 'Leaflet (2D)');
-    await expect(left).toHaveValue('Leaflet (2D)');
-    // the two sides are independent: choosing one leaves the other alone
-    await expect(right).toHaveValue('MapLibre');
+    // a move on the left arrives on the right
+    await jumpMap(page, '__viewtopiaMap', ICELAND_VIEW);
+    await expect.poll(() => mapCamera(page, '__viewtopiaPaneMap')).toEqual(nearView(ICELAND_VIEW));
 
-    // a fresh mount reads the flag back out of the store
+    // and back the other way
+    await jumpMap(page, '__viewtopiaPaneMap', SYDNEY_VIEW);
+    await expect.poll(() => mapCamera(page, '__viewtopiaMap')).toEqual(nearView(SYDNEY_VIEW));
+
+    // closing the split destroys the second renderer, it does not just hide it
+    await clickToggle();
+    await expect(rightPane).toHaveCount(0);
+    await expect(page.locator('canvas')).toHaveCount(1);
+    expect(await page.evaluate(() => window.__viewtopiaPaneMap)).toBe(null);
+
+    // repeated toggling must not accumulate renderers: Chrome drops the oldest
+    // WebGL context past its limit, which would break the pane that is left and
+    // fail the console guard
+    for (let i = 0; i < 4; i++) {
+      await clickToggle();
+      await page.waitForFunction(() => !!window.__viewtopiaPaneMap);
+      await expect(page.locator('canvas')).toHaveCount(2);
+      await clickToggle();
+      await expect(page.locator('canvas')).toHaveCount(1);
+    }
+
+    // the surviving renderer still answers a move
+    await jumpMap(page, '__viewtopiaMap', ICELAND_VIEW);
+    await expect.poll(() => mapCamera(page, '__viewtopiaMap')).toEqual(nearView(ICELAND_VIEW));
+
     await closePanel(page, panel);
-    panel = await openPanel(page, 'Split View', 'Split View');
-    await expect(toggle()).toBeChecked();
+  });
 
-    await clickToggle();
-    await expect(toggle()).not.toBeChecked();
+  test('split view: a Cesium left pane and a MapLibre right pane share one camera', async ({
+    page,
+  }) => {
+    await openApp(page);
+    const panel = await openPanel(page, 'Split View', 'Split View');
+    await expect(panel.getByRole('textbox', { name: 'Left pane' })).toHaveValue('CesiumJS (3D)');
 
+    await panel.getByText('Enable Split View').click();
+    await page.waitForFunction(() => !!window.__viewtopiaPaneMap);
+    await expect(page.getByTestId('viewer-pane-left').locator('canvas')).toHaveCount(1);
+    await expect(page.getByTestId('viewer-pane-right').locator('canvas')).toHaveCount(1);
+
+    // Cesium's camera position translates into the map's centre and zoom
+    await setView(page, { ...ICELAND, height: cameraHeight(6) });
+    await expect
+      .poll(() => mapCamera(page, '__viewtopiaPaneMap'))
+      .toEqual(nearView({ lon: ICELAND.lon, lat: ICELAND.lat, zoom: 6 }));
+
+    // and the map's centre translates back into a Cesium camera position
+    await jumpMap(page, '__viewtopiaPaneMap', SYDNEY_VIEW);
+    await expect
+      .poll(() => cameraPosition(page))
+      .toEqual({ lon: expect.closeTo(SYDNEY_VIEW.lon, 3), lat: expect.closeTo(SYDNEY_VIEW.lat, 3) });
+
+    await panel.getByText('Enable Split View').click();
+    await expect(page.getByTestId('viewer-pane-right')).toHaveCount(0);
     await closePanel(page, panel);
   });
 
