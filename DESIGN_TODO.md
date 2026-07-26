@@ -208,6 +208,16 @@
       street stays fixed — it's the seed's idempotency key. e2e owner search updated;
       18/18 on the re-seeded stack.
 
+## OPEN — agent output shape
+
+- [ ] **assess_environmental_risk returns one centroid point, not an area.** The "flood
+      risk layer" for a city is a single point with score properties, so the map adds one
+      dot (invisible at max-zoom fit until 917bf31 padded degenerate bounds). Better: the
+      tool should also write the assessment area (the radius_km buffer polygon, styled by
+      risk score) so the rendered layer matches what the words promise. Same question for
+      any tool whose GPKG is a single summary feature. geolang
+      `src/agents/tools/assess_environmental_risk*`.
+
 ## OPEN — trust & adoption
 
 - [ ] **Load-test harness + published numbers (scoped 2026-07-25).** A harness, not a
