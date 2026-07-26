@@ -52,26 +52,25 @@
       401s. The agent NL→map *write* path does not exist in code (the e2e step is
       intentionally omitted, not skipped). No change made. If an agent-writes-to-ptolemy
       feature is ever built, add self-signed editor tokens then.
-- [ ] ptolemy audit-trail fields (`granted_by`, `created_by`, `author`) come from the request
-      body, not `claims.sub`; DB-backed `dataset_permissions`/`branch_permissions` tables exist
-      but nothing enforces them (only the coarse JWT role gates writes). Both small follow-ups
-      now that claims are in request extensions.
-
-- [ ] **DECIDE: ptolemy auth is fail-open.** RESOLVED 2026-07-25 — required the secret to
-      serve (fail-closed startup), unified on one platform JWT, role-gated writes. Pending
-      verifier CONFIRM before commit. Keeping this line until committed.
-- [ ] **ptolemy cql2 minor gaps** (from the same audit, all non-exploitable): malformed
-      GeoJSON coordinate arrays still 500 via PostGIS parse errors; `limit`/`offset` are
-      unvalidated (negative → 500, no upper bound); `in` doesn't accept the CQL2 spec's
-      array form `args: [prop, [a, b]]`; `filter_lang` is accepted but ignored (cql2-text
-      parses as JSON and 400s).
+- [x] **ptolemy audit identity from JWT claims (2026-07-25, b5b5f86).** `Actor` extractor;
+      19 handlers across 10 files (author/created_by/granted_by/locked_by) take the token
+      sub when auth is on, body only in disabled-auth dev mode. Left alone: unmounted
+      grpc bulk_import, hardcoded merge "api"/unlock "system" placeholders. Still open
+      below: permissions-table enforcement, and any-editor can unlock another's lock.
+- [ ] **DECIDE: enforce `dataset_permissions`/`branch_permissions`?** Rows are written and
+      readable but never consulted — any editor token writes to any branch. Related:
+      `unlock_feature` lets any editor release another user's feature lock.
+- [x] **ptolemy cql2 papercuts fixed (2026-07-25, 1a9b3a9).** Coordinate/ring validation
+      (malformed GeoJSON now 400 not 500), limit<=10000 and non-negative paging, spec
+      `in` array form supported (empty list → FALSE), `filter_lang` other than cql2-json
+      rejected with a clear 400. 8 new tests, suite at 200.
 - [ ] **ptolemy `resolve_conflicts` resolves but never merges**: it commits resolution ops
       onto the *source* branch (`merge_id`) and creates no merge commit on the target.
       Existing behavior, pinned by tests; decide if the endpoint should finalize merges
       (the newer `/branches/{t}/merge/{s}/resolve` route does this properly).
-- [ ] **collecta forms `?since` cursor** uses strict `>` on microsecond `updated_at`; two
-      forms written in the same microsecond straddling the cursor could skip one. Switch to
-      `(updated_at, rowid)` if it matters at scale.
+- [x] **collecta forms cursor fixed (2026-07-25, e00bfa2).** Compound `(updated_at, rowid)`
+      cursor, token `<rfc3339>@<rowid>`, bare-timestamp cursors fall back to (ts, 0) which
+      re-delivers rather than skips. Regression test proven against old code; 57 pass.
 
 ## DONE — qgis + cql2 correctness/security (2026-07-25, pushed)
 
@@ -140,11 +139,11 @@
       shutdown: entrypoint stays PID 1, forwards TERM, `pg_ctl -m fast` stops postgres;
       verified "database system was shut down" on next boot. 2 recreates → same agent_id,
       agents count flat, 6 unit + 18 e2e green.
-- [ ] **geolang `.sessions.json` lists phantom sessions** — all 7 stored ids predate a
-      pgdata wipe and no longer exist in the DB; the sessions API happily lists them.
-      Prune ids whose agent 404s on load (surfaced by the lifecycle fix, 2026-07-25).
-- [ ] geokode has a `fuzzy` module (Levenshtein/Soundex) `forward()` doesn't use — wire a
-      fuzzy fallback for typo tolerance.
+- [x] **geolang phantom sessions pruned (2026-07-25, 6c38252).** GET /sessions drops
+      entries whose agent raises NotFoundError (outages don't wipe the file); switch
+      prunes the stale entry before its 404. Live file went 7 phantoms → 1 real.
+- [x] geokode fuzzy fallback for forward geocoding shipped earlier (efea2b3); this line
+      was stale.
 
 ## DONE — legacy chat channel retired (2026-07-25, pushed)
 
@@ -204,9 +203,10 @@
       to snap onto a real address, Monaco fallback), and on a region change wipes the demo
       datasets' branch first (scoped, versioned delete) so parcels don't linger offshore.
       Verified end to end on Washington DC and Monaco; Monaco e2e still 18/18.
-- [ ] follow-up: demo property labels are still Monaco-flavored ("Grimaldi Holdings" etc.), so
-      on another region the coordinates are right but street/owner names read as Monaco.
-      Genericize the labels if the demo should look native per region.
+- [x] **demo labels genericized (2026-07-25, e7f36fd5).** Region-neutral owner pool,
+      parcel streets from the region's geokode reverse hit (neutral fallback); sales
+      street stays fixed — it's the seed's idempotency key. e2e owner search updated;
+      18/18 on the re-seeded stack.
 
 ## OPEN — trust & adoption
 
