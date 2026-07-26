@@ -29,6 +29,18 @@ const SAMPLE_POINTS = JSON.stringify({
   ],
 });
 
+/** Quantized-mesh terrain metadata with an empty availability list. */
+const LAYER_JSON = {
+  tilejson: '2.1.0',
+  format: 'quantized-mesh-1.0',
+  version: '1.0.0',
+  scheme: 'tms',
+  tiles: ['{z}/{x}/{y}.terrain?v={version}'],
+  projection: 'EPSG:4326',
+  bounds: [-180, -90, 180, 90],
+  available: [],
+};
+
 /** Read the live Cesium viewer handle exposed by the renderer registry, if any. */
 async function readViewer(page, expr) {
   return page.evaluate((e) => {
@@ -77,22 +89,47 @@ test.describe('tool panels', () => {
   });
 
   test('global terrain: enable runs the provider path and reset returns ellipsoid', async ({ page }) => {
+    // Cesium World Terrain needs an Ion token the stack does not have, so the
+    // enable path runs against a mocked custom endpoint instead: a real layer.json
+    // with no tiles in it, which builds a real CesiumTerrainProvider and then
+    // fetches nothing.
+    await page.route('https://terrain.test/**', (route) =>
+      route.fulfill({ contentType: 'application/json', body: JSON.stringify(LAYER_JSON) }),
+    );
     await page.goto(REACT_URL);
     await page.getByRole('button', { name: 'Data' }).click();
     await page.getByText('⛰ Terrain').click();
     await expect(page.getByText('Global Terrain')).toBeVisible();
 
+    // The viewer boots on the flat ellipsoid provider. Comparing against that
+    // class is minification-safe, unlike reading constructor.name, which is one
+    // or two letters in the production bundle.
+    await page.evaluate(() => {
+      window.__bootTerrainClass = window.__viewtopiaViewer?.terrainProvider?.constructor;
+    });
+
+    await page.getByRole('textbox', { name: 'Provider' }).click();
+    await page.getByRole('option', { name: 'Custom URL' }).click();
+    await page.getByRole('textbox', { name: 'Terrain URL' }).fill('https://terrain.test/');
     await page.getByRole('button', { name: 'Enable Terrain' }).click();
-    // Either the provider resolves/fails (Ion token dependent) or there's no viewer.
     await expect(page.getByTestId('terrain-status')).toHaveText(
-      /enabled|Terrain failed|No active viewer/,
+      /Custom terrain enabled|No active viewer/,
       { timeout: 15000 },
     );
 
+    const enabled = await readViewer(
+      page,
+      'v.terrainProvider.constructor !== window.__bootTerrainClass',
+    );
+    if (enabled.present) expect(enabled.value).toBe(true);
+
     await page.getByRole('button', { name: 'Reset to Ellipsoid' }).click();
-    const v = await readViewer(page, "v.terrainProvider.constructor.name");
-    if (v.present) {
-      expect(v.value).toBe('EllipsoidTerrainProvider');
+    const reset = await readViewer(
+      page,
+      'v.terrainProvider.constructor === window.__bootTerrainClass',
+    );
+    if (reset.present) {
+      expect(reset.value).toBe(true);
       await expect(page.getByTestId('terrain-status')).toHaveText('Ellipsoid (default)');
     } else {
       await expect(page.getByTestId('terrain-status')).toHaveText('No active viewer');
@@ -294,7 +331,7 @@ test.describe('local tool panels (batch 2)', () => {
     await expect(page.getByText('Vector Tiles', { exact: true })).toBeVisible();
 
     await page.getByPlaceholder('Source name').fill('Parcels');
-    await page.getByPlaceholder('/api/v1/branches/{id}/tiles/{z}/{x}/{y}').fill('https://example.com/{z}/{x}/{y}.pbf');
+    await page.getByPlaceholder('/api/v1/branches/{id}/tiles/{z}/{x}/{y}').fill('https://tiles.test/{z}/{x}/{y}.pbf');
     await page.getByRole('button', { name: 'Add Source' }).click();
 
     await expect(page.getByTestId('vt-status')).toContainText('Added Parcels');
