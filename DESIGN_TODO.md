@@ -24,6 +24,18 @@
       embed URL with `key=` empty and gets 401. Both should detect the missing key and
       render a configure-a-key state instead of requesting, like the catalog panel's
       signed-out state.
+- [ ] **Product defects the per-panel functional suite recorded** (2026-07-26, one line
+      each, none fixed by that suite): `PrintExportPanel` ignores width/height/dpi and its
+      PDF option exports a PNG; `SpatialStatsPanel` ignores the aggregation-method and
+      property selects; the SplitView toggle is read by nothing; Tour steps 1-2 target
+      elements that do not exist; ShareLink encodes the hidden Cesium camera after a
+      renderer switch; VectorTiles rejects a root-relative tile template inside the
+      MapLibre worker (should resolve it against `location.origin`); `globalTerrain` has no
+      working provider on this deployment (no Ion token, and `/tiles` terrain 401s given a
+      URL alone); the SpaceTime import status disappears after 4s; the collaboration
+      WebSocket is unreachable (nginx routes `/api/` to ptolemy, and tiletopia never mounts
+      `ws_handler`); no app path loads time-dynamic data, so Timeline's Fit-to-Data cannot
+      succeed through the UI.
 - [~] **Building-data toggle on MapLibre** (committed ea421a9d, browser verification
       pending): disabled with tooltip when the loaded style has its own fill-extrusion
       layers (Liberty); detection re-runs on style.load; hook skips duplicate layer.
