@@ -11,7 +11,9 @@ import { BitmapLayer } from '@deck.gl/layers';
 import { useAppStore } from '../store/app';
 import { useFeaturePickerStore, propsToRows } from '../store/featurePicker';
 import { setActiveDeck } from '../viewer/registry';
-import { getSharedCamera, setSharedCamera } from './sharedCamera';
+import { getSharedCamera, setSharedCamera, type SharedCamera } from './sharedCamera';
+import { useFollowSharedCamera } from './cameraSync';
+import { useSplitViewStore } from '../store/splitView';
 import { rasterTiles } from './basemapTiles';
 import { useDeckLayersStore, composedDeckLayers } from './deckLayers';
 
@@ -220,6 +222,41 @@ export function useDeckGL(opts: UseDeckGLOptions = {}) {
     deck.setProps({ viewState: next });
     publishCamera(next);
   }, [publishCamera]);
+
+  /** Deck as the left split pane: follow moves the other pane published. */
+  const splitActive = useSplitViewStore((s) => s.active);
+  useFollowSharedCamera(
+    splitActive,
+    () => {
+      const vs = viewStateRef.current;
+      if (!vs) return null;
+      return {
+        longitude: vs.longitude,
+        latitude: vs.latitude,
+        zoom: vs.zoom,
+        pitch: syntheticPitchRef.current ? enteredPitchRef.current : vs.pitch,
+        bearing: vs.bearing,
+      };
+    },
+    (cam: SharedCamera) => {
+      const deck = deckRef.current;
+      const cur = viewStateRef.current;
+      if (!deck || !cur) return;
+      const next: DeckViewState = {
+        ...cur,
+        longitude: cam.longitude,
+        latitude: cam.latitude,
+        zoom: cam.zoom,
+        // deck's invented tilt is local, so a flat camera must not flatten it
+        pitch: syntheticPitchRef.current && !cam.pitch ? cur.pitch : cam.pitch,
+        bearing: cam.bearing,
+        transitionDuration: undefined,
+        transitionInterpolator: undefined,
+      };
+      viewStateRef.current = next;
+      deck.setProps({ viewState: next });
+    },
+  );
 
   /** Animate the camera to a location (deck has no map.flyTo). */
   const flyTo = (lng: number, lat: number, zoom?: number) => {

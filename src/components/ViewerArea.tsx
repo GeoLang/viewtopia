@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react';
 import { Box } from '@mantine/core';
 import { Cartesian3 } from 'cesium';
 import { useAppStore } from '../store/app';
+import { useSplitViewStore } from '../store/splitView';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { useCesium } from '../hooks/useCesium';
 import { useDeckGL } from '../hooks/useDeckGL';
@@ -28,9 +29,14 @@ import { useShareLinkHash } from '../hooks/useShareLinkHash';
 import { Minimap } from './Minimap';
 import { CoordReadout } from './CoordReadout';
 import { ContextMenu } from './ContextMenu';
+import { SplitPane } from './SplitPane';
 
 export function ViewerArea() {
   const { activeTab, renderer } = useAppStore();
+  const splitActive = useSplitViewStore((s) => s.active);
+  const paneRenderer = useSplitViewStore((s) => s.paneRenderer);
+  // the second pane is a globe renderer, so the 2D map tab stays single
+  const split = splitActive && activeTab === 'globe';
   const setCursorCoords = useAppStore((s) => s.setCursorCoords);
   const showContextMenu = useAppStore((s) => s.showContextMenu);
   const hideContextMenu = useAppStore((s) => s.hideContextMenu);
@@ -143,7 +149,8 @@ export function ViewerArea() {
     hideContextMenu();
   }, [hideContextMenu]);
 
-  // Resize viewers when switching renderer/tab (containers go display:none→block)
+  // Resize viewers when switching renderer/tab or splitting (containers go
+  // display:none→block, and the left pane halves its width)
   useEffect(() => {
     const timer = setTimeout(() => {
       if (activeTab === 'globe') {
@@ -159,7 +166,7 @@ export function ViewerArea() {
       }
     }, 150);
     return () => clearTimeout(timer);
-  }, [activeTab, renderer, cesiumRef, deckRef, maplibreRef, leafletRef]);
+  }, [activeTab, renderer, split, cesiumRef, deckRef, maplibreRef, leafletRef]);
 
   return (
     <Box
@@ -173,51 +180,77 @@ export function ViewerArea() {
       onContextMenu={handleContextMenu}
       onClick={handleClick}
     >
-      {/* CesiumJS 3D Globe */}
-      <div
-        id="cesium-container"
+      {/* Left pane: the app's active renderer, and the whole view when unsplit */}
+      <Box
+        data-testid="viewer-pane-left"
         style={{
           position: 'absolute',
           top: 0,
+          bottom: 0,
           left: 0,
-          width: '100%',
-          height: '100%',
-          display:
-            activeTab === 'globe' && renderer === 'cesium' ? 'block' : 'none',
+          width: split ? '50%' : '100%',
         }}
-      />
+      >
+        {/* CesiumJS 3D Globe */}
+        <div
+          id="cesium-container"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display:
+              activeTab === 'globe' && renderer === 'cesium' ? 'block' : 'none',
+          }}
+        />
 
-      {/* deck.gl standalone renderer (own Deck instance) */}
-      <div
-        id="deckgl-container"
-        style={{
-          position: 'absolute',
-          inset: 0,
-          display:
-            activeTab === 'globe' && renderer === 'deckgl' ? 'block' : 'none',
-        }}
-      />
+        {/* deck.gl standalone renderer (own Deck instance) */}
+        <div
+          id="deckgl-container"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display:
+              activeTab === 'globe' && renderer === 'deckgl' ? 'block' : 'none',
+          }}
+        />
 
-      {/* MapLibre GL standalone */}
-      <div
-        id="maplibre-container"
-        style={{
-          position: 'absolute',
-          inset: 0,
-          display:
-            activeTab === 'globe' && renderer === 'maplibre' ? 'block' : 'none',
-        }}
-      />
+        {/* MapLibre GL standalone */}
+        <div
+          id="maplibre-container"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display:
+              activeTab === 'globe' && renderer === 'maplibre' ? 'block' : 'none',
+          }}
+        />
 
-      {/* Leaflet 2D Map */}
-      <div
-        id="leaflet-container"
-        style={{
-          position: 'absolute',
-          inset: 0,
-          display: activeTab === 'map' ? 'block' : 'none',
-        }}
-      />
+        {/* Leaflet 2D Map */}
+        <div
+          id="leaflet-container"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: activeTab === 'map' ? 'block' : 'none',
+          }}
+        />
+      </Box>
+
+      {/* Right pane: a second renderer instance, synced to the left one */}
+      {split && (
+        <Box
+          data-testid="viewer-pane-right"
+          style={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            right: 0,
+            width: '50%',
+            borderLeft: '2px solid #30363d',
+          }}
+        >
+          <SplitPane renderer={paneRenderer} />
+        </Box>
+      )}
 
       {/* Overlay widgets */}
       <Minimap />

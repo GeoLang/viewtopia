@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Paper,
   Text,
@@ -9,12 +8,26 @@ import {
   Switch,
 } from '@mantine/core';
 import { IconColumns, IconX } from '@tabler/icons-react';
-import { useAppStore } from '../../store/app';
+import { useAppStore, type Renderer } from '../../store/app';
+import { useSplitViewStore, type PaneRenderer } from '../../store/splitView';
+
+/** Left pane options: the app's globe renderers, since it is the active one. */
+const LEFT_RENDERERS = [
+  { value: 'cesium', label: 'CesiumJS (3D)' },
+  { value: 'maplibre', label: 'MapLibre' },
+  { value: 'deckgl', label: 'deck.gl' },
+];
+
+const RIGHT_RENDERERS = LEFT_RENDERERS.slice(0, 2);
 
 export function SplitViewPanel({ onClose }: { onClose: () => void }) {
-  const { splitViewActive, setSplitView } = useAppStore();
-  const [leftRenderer, setLeftRenderer] = useState<string | null>('cesium');
-  const [rightRenderer, setRightRenderer] = useState<string | null>('maplibre');
+  const renderer = useAppStore((s) => s.renderer);
+  const setRenderer = useAppStore((s) => s.setRenderer);
+  const activeTab = useAppStore((s) => s.activeTab);
+  const active = useSplitViewStore((s) => s.active);
+  const setActive = useSplitViewStore((s) => s.setActive);
+  const paneRenderer = useSplitViewStore((s) => s.paneRenderer);
+  const setPaneRenderer = useSplitViewStore((s) => s.setPaneRenderer);
 
   return (
     <Paper
@@ -47,36 +60,43 @@ export function SplitViewPanel({ onClose }: { onClose: () => void }) {
         <Switch
           size="xs"
           label="Enable Split View"
-          checked={splitViewActive}
-          onChange={(e) => setSplitView(e.currentTarget.checked)}
+          checked={active}
+          onChange={(e) => setActive(e.currentTarget.checked)}
           color="violet"
         />
 
         <Select
           size="xs"
-          label="Left Panel"
-          data={[
-            { value: 'cesium', label: 'CesiumJS (3D)' },
-            { value: 'maplibre', label: 'MapLibre' },
-            { value: 'leaflet', label: 'Leaflet (2D)' },
-          ]}
-          value={leftRenderer}
-          onChange={setLeftRenderer}
+          label="Left pane"
+          data={LEFT_RENDERERS}
+          value={renderer}
+          onChange={(v) => v && setRenderer(v as Renderer)}
+          allowDeselect={false}
           styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         <Select
           size="xs"
-          label="Right Panel"
-          data={[
-            { value: 'cesium', label: 'CesiumJS (3D)' },
-            { value: 'maplibre', label: 'MapLibre' },
-            { value: 'leaflet', label: 'Leaflet (2D)' },
-          ]}
-          value={rightRenderer}
-          onChange={setRightRenderer}
+          label="Right pane"
+          data={RIGHT_RENDERERS}
+          value={paneRenderer}
+          onChange={(v) => v && setPaneRenderer(v as PaneRenderer)}
+          allowDeselect={false}
           styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
+
+        {activeTab !== 'globe' && (
+          <Text size="xs" c="orange">
+            Both panes are globe renderers, so the split only shows on the 3D
+            Globe tab.
+          </Text>
+        )}
+
+        <Text size="xs" c="dimmed">
+          The panes share the camera, the basemap and the agent's layers. Tools
+          that act on one viewer — Ion tilesets, terrain, OGC layers, draw and
+          measure — stay in the left pane.
+        </Text>
       </Stack>
     </Paper>
   );

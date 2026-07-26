@@ -14,6 +14,9 @@ declare global {
     __viewtopiaViewer?: Viewer | null;
     __viewtopiaMap?: MapLibreMap | null;
     __viewtopiaDeck?: Deck | null;
+    // the split view's second pane, which no tool acts on
+    __viewtopiaPaneViewer?: Viewer | null;
+    __viewtopiaPaneMap?: MapLibreMap | null;
   }
 }
 
@@ -38,6 +41,18 @@ export function setActiveMapLibre(m: MapLibreMap | null): void {
 
 export function getActiveMapLibre(): MapLibreMap | null {
   return maplibreMap;
+}
+
+/**
+ * The split view's second pane. Kept apart from the active slots on purpose:
+ * tools and agent commands drive one viewer, and that stays the left pane.
+ */
+export function setPaneCesiumViewer(v: Viewer | null): void {
+  window.__viewtopiaPaneViewer = v;
+}
+
+export function setPaneMapLibre(m: MapLibreMap | null): void {
+  window.__viewtopiaPaneMap = m;
 }
 
 export function setActiveDeck(d: Deck | null): void {

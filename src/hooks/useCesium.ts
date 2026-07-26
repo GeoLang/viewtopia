@@ -2,19 +2,29 @@ import { useEffect, useRef } from 'react';
 import {
   Ion,
   Viewer,
-  Cartesian3,
-  Math as CesiumMath,
   UrlTemplateImageryProvider,
   OpenStreetMapImageryProvider,
 } from 'cesium';
 import { useAppStore } from '../store/app';
+import { useSplitViewStore } from '../store/splitView';
 import { getSharedCamera, setSharedCamera } from './sharedCamera';
+import {
+  applyCesiumCamera,
+  readCesiumCamera,
+  useFollowSharedCamera,
+} from './cameraSync';
 import { rasterTiles } from './basemapTiles';
-import { setActiveCesiumViewer } from '../viewer/registry';
+import { setActiveCesiumViewer, setPaneCesiumViewer } from '../viewer/registry';
 
 interface UseCesiumOptions {
   containerId?: string;
   ionToken?: string;
+  /**
+   * 'pane' is the split view's second viewer: it follows the split's own
+   * renderer choice, stays out of the registry every tool reads, and is
+   * destroyed when the pane unmounts.
+   */
+  slot?: 'active' | 'pane';
 }
 
 /** Cesium is raster-only, so a vector basemap resolves to its raster fallback. */
@@ -37,8 +47,14 @@ export function useCesium(opts: UseCesiumOptions = {}) {
   const basemap = useAppStore((s) => s.basemap);
   const renderer = useAppStore((s) => s.renderer);
   const activeTab = useAppStore((s) => s.activeTab);
+  const splitActive = useSplitViewStore((s) => s.active);
+  const paneRenderer = useSplitViewStore((s) => s.paneRenderer);
 
-  const isActive = activeTab === 'globe' && renderer === 'cesium';
+  const isPane = opts.slot === 'pane';
+  const register = isPane ? setPaneCesiumViewer : setActiveCesiumViewer;
+  const isActive =
+    activeTab === 'globe' &&
+    (isPane ? splitActive && paneRenderer === 'cesium' : renderer === 'cesium');
 
   // Create/destroy viewer based on active state
   useEffect(() => {
@@ -48,7 +64,7 @@ export function useCesium(opts: UseCesiumOptions = {}) {
         viewerRef.current.destroy();
       }
       viewerRef.current = null;
-      setActiveCesiumViewer(null);
+      register(null);
       return;
     }
 
@@ -97,31 +113,13 @@ export function useCesium(opts: UseCesiumOptions = {}) {
     );
 
     // Restore shared camera
-    // cam.pitch is map-style (0=top-down, 45=tilted, 90=horizon)
-    // Cesium pitch: -90=straight down, -45=tilted, 0=horizon
-    const cam = getSharedCamera();
-    const height = 4e7 / Math.pow(2, cam.zoom);
-    viewer.camera.setView({
-      destination: Cartesian3.fromDegrees(cam.longitude, cam.latitude, height),
-      orientation: {
-        heading: CesiumMath.toRadians(cam.bearing),
-        pitch: CesiumMath.toRadians(cam.pitch - 90),
-        roll: 0,
-      },
-    });
+    applyCesiumCamera(viewer, getSharedCamera());
 
     // Write back to shared camera on move
     const syncShared = () => {
       if (viewer.isDestroyed()) return;
-      const carto = viewer.camera.positionCartographic;
-      if (!carto) return;
-      setSharedCamera({
-        longitude: CesiumMath.toDegrees(carto.longitude),
-        latitude: CesiumMath.toDegrees(carto.latitude),
-        zoom: Math.max(0, Math.log2(4e7 / Math.max(carto.height, 1))),
-        pitch: 90 + CesiumMath.toDegrees(viewer.camera.pitch),
-        bearing: CesiumMath.toDegrees(viewer.camera.heading) || 0,
-      });
+      const cam = readCesiumCamera(viewer);
+      if (cam) setSharedCamera(cam);
     };
     viewer.camera.changed.addEventListener(syncShared);
     viewer.camera.moveEnd.addEventListener(syncShared);
@@ -133,8 +131,8 @@ export function useCesium(opts: UseCesiumOptions = {}) {
     }, 300);
 
     viewerRef.current = viewer;
-    setActiveCesiumViewer(viewer);
-  }, [isActive, opts.containerId, opts.ionToken, basemap]);
+    register(viewer);
+  }, [isActive, opts.containerId, opts.ionToken, basemap, register]);
 
   // Swap basemap imagery when already active
   useEffect(() => {
@@ -143,6 +141,31 @@ export function useCesium(opts: UseCesiumOptions = {}) {
     viewer.imageryLayers.removeAll();
     viewer.imageryLayers.addImageryProvider(cesiumImageryProvider(basemap));
   }, [basemap, isActive]);
+
+  // In split view both panes move together
+  useFollowSharedCamera(
+    splitActive,
+    () => {
+      const viewer = viewerRef.current;
+      return viewer && !viewer.isDestroyed() ? readCesiumCamera(viewer) : null;
+    },
+    (cam) => {
+      const viewer = viewerRef.current;
+      if (viewer && !viewer.isDestroyed()) applyCesiumCamera(viewer, cam);
+    },
+  );
+
+  // Release the WebGL context when the owner unmounts (a closing split pane)
+  useEffect(
+    () => () => {
+      if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+        viewerRef.current.destroy();
+      }
+      viewerRef.current = null;
+      register(null);
+    },
+    [register],
+  );
 
   return viewerRef;
 }

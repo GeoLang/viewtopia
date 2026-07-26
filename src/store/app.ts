@@ -113,8 +113,6 @@ interface AppState {
   toggleNav: () => void;
   asideWidth: number;
   setAsideWidth: (w: number) => void;
-  splitViewActive: boolean;
-  setSplitView: (v: boolean) => void;
 
   // Viewer
   activeTab: ViewerTab;
@@ -181,8 +179,6 @@ export const useAppStore = create<AppState>()(
       toggleNav: () => set((s) => ({ navOpened: !s.navOpened })),
       asideWidth: 340,
       setAsideWidth: (asideWidth) => set({ asideWidth: Math.max(250, Math.min(700, asideWidth)) }),
-      splitViewActive: false,
-      setSplitView: (splitViewActive) => set({ splitViewActive }),
 
       activeTab: 'globe',
       setActiveTab: (tab) => set({ activeTab: tab }),

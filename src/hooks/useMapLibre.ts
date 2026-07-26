@@ -4,13 +4,25 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Protocol } from 'pmtiles';
 import { useAppStore } from '../store/app';
+import { useSplitViewStore } from '../store/splitView';
 import { getSharedCamera, setSharedCamera } from './sharedCamera';
+import {
+  applyMapLibreCamera,
+  readMapLibreCamera,
+  useFollowSharedCamera,
+} from './cameraSync';
 import { maplibreStyle } from './basemapTiles';
-import { setActiveMapLibre } from '../viewer/registry';
+import { setActiveMapLibre, setPaneMapLibre } from '../viewer/registry';
 import { useBuildingStore, styleDrawsBuildings } from '../store/buildings';
 
 interface UseMapLibreOptions {
   containerId?: string;
+  /**
+   * 'pane' is the split view's second map: it follows the split's own renderer
+   * choice, stays out of the registry every tool reads, and is removed when the
+   * pane unmounts.
+   */
+  slot?: 'active' | 'pane';
 }
 
 let pmtilesRegistered = false;
@@ -33,8 +45,14 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
   const selfHostedUrl = useAppStore((s) => s.settings.selfHostedBasemapUrl);
   const renderer = useAppStore((s) => s.renderer);
   const activeTab = useAppStore((s) => s.activeTab);
+  const splitActive = useSplitViewStore((s) => s.active);
+  const paneRenderer = useSplitViewStore((s) => s.paneRenderer);
 
-  const isActive = activeTab === 'globe' && renderer === 'maplibre';
+  const isPane = opts.slot === 'pane';
+  const register = isPane ? setPaneMapLibre : setActiveMapLibre;
+  const isActive =
+    activeTab === 'globe' &&
+    (isPane ? splitActive && paneRenderer === 'maplibre' : renderer === 'maplibre');
   const styleKey = `${basemap}|${selfHostedUrl}`;
 
   // Create/destroy map based on active state
@@ -44,8 +62,9 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
         mapRef.current.remove();
         mapRef.current = null;
         styledKeyRef.current = null;
-        setActiveMapLibre(null);
-        useBuildingStore.getState().setStyleHasBuildings(false);
+        register(null);
+        // the buildings tool reads the active style, so a pane never speaks for it
+        if (!isPane) useBuildingStore.getState().setStyleHasBuildings(false);
       }
       return;
     }
@@ -78,26 +97,20 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
       map.setProjection({ type: 'globe' });
       // vector styles like Liberty extrude their own buildings, so the OSM
       // buildings tool has nothing to add on them
-      useBuildingStore
-        .getState()
-        .setStyleHasBuildings(styleDrawsBuildings(map.getStyle().layers));
+      if (!isPane) {
+        useBuildingStore
+          .getState()
+          .setStyleHasBuildings(styleDrawsBuildings(map.getStyle().layers));
+      }
     });
 
-    map.on('moveend', () => {
-      const c = map.getCenter();
-      setSharedCamera({
-        longitude: c.lng,
-        latitude: c.lat,
-        zoom: map.getZoom(),
-        pitch: map.getPitch(),
-        bearing: map.getBearing(),
-      });
-    });
+    // 'move' rather than 'moveend' so the other split pane tracks the drag
+    map.on('move', () => setSharedCamera(readMapLibreCamera(map)));
 
     mapRef.current = map;
     styledKeyRef.current = styleKey;
-    setActiveMapLibre(map);
-  }, [isActive, opts.containerId, basemap, selfHostedUrl, styleKey]);
+    register(map);
+  }, [isActive, opts.containerId, basemap, selfHostedUrl, styleKey, isPane, register]);
 
   // Swap the basemap style when already active
   useEffect(() => {
@@ -116,6 +129,26 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
       map.jumpTo({ center: c, zoom: z, pitch: p, bearing: b });
     });
   }, [basemap, selfHostedUrl, styleKey, isActive]);
+
+  // In split view both panes move together
+  useFollowSharedCamera(
+    splitActive,
+    () => (mapRef.current ? readMapLibreCamera(mapRef.current) : null),
+    (cam) => {
+      if (mapRef.current) applyMapLibreCamera(mapRef.current, cam);
+    },
+  );
+
+  // Release the WebGL context when the owner unmounts (a closing split pane)
+  useEffect(
+    () => () => {
+      mapRef.current?.remove();
+      mapRef.current = null;
+      styledKeyRef.current = null;
+      register(null);
+    },
+    [register],
+  );
 
   return mapRef;
 }
