@@ -1,0 +1,150 @@
+name: Platform load test
+
+# k6 load test of the platform data plane against the real stack, for the
+# performance baseline and as a nightly regression gate. The k6 thresholds in
+# loadtest/k6/*.js are the pass/fail, a breach exits non-zero and fails the job.
+#
+# Never runs on push or pull_request: it seeds thousands of commits and drives
+# sustained load, which is minutes of runner time and meaningless on a PR diff.
+#
+# The nightly run seeds chain depths 100 and 1000. Depth 10000 is ~10k sequential
+# commits, far too slow for a nightly, so it is dispatch-only via `full`.
+#
+# geolang is deliberately not started: the agent is not part of the data plane
+# under test, and its image is the slowest thing in the stack to build and boot.
+
+on:
+  workflow_dispatch:
+    inputs:
+      full:
+        description: "Include chain depth 10000 (slow: ~10k sequential commits)"
+        type: boolean
+        default: false
+  schedule:
+    - cron: "0 4 * * *"
+
+concurrency:
+  group: platform-load
+  cancel-in-progress: true
+
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    # throwaway secret for this ephemeral CI stack, not a real credential. the
+    # fail-closed services refuse to start without it, and the seeder mints
+    # editor tokens from the same value (scripts/platform-token.mjs reads it).
+    env:
+      PLATFORM_JWT_SECRET: ci-platform-load-secret-not-for-production-use
+      LOADTEST_BASE_URL: http://localhost:5174
+      LOADTEST_FENESTRA_URL: http://localhost:3003
+      LOADTEST_VUS: "10"
+      LOADTEST_RATE: "20"
+      LOADTEST_DURATION: 60s
+    steps:
+      - name: Checkout viewtopia
+        uses: actions/checkout@v4
+        with:
+          path: viewtopia
+
+      - name: Checkout ptolemy
+        uses: actions/checkout@v4
+        with: { repository: GeoLang/ptolemy, path: ptolemy }
+      - name: Checkout tiletopia
+        uses: actions/checkout@v4
+        with: { repository: GeoLang/tiletopia, path: tiletopia }
+      - name: Checkout fenestra
+        uses: actions/checkout@v4
+        with: { repository: GeoLang/fenestra, path: fenestra }
+      - name: Checkout geokode
+        uses: actions/checkout@v4
+        with: { repository: GeoLang/geokode, path: geokode }
+      - name: Checkout itinera
+        uses: actions/checkout@v4
+        with: { repository: GeoLang/itinera, path: itinera }
+
+      - name: Download OSM extract for routing and geocoding
+        working-directory: viewtopia
+        run: |
+          curl -sSL -o data/region.osm.pbf \
+            https://download.geofabrik.de/europe/monaco-latest.osm.pbf
+
+      - name: Build platform images (data plane only)
+        working-directory: viewtopia
+        run: |
+          docker compose -f docker-compose.platform.yml build \
+            ptolemy tiletopia fenestra geokode itinera viewtopia
+
+      # itinera's entrypoint builds data/graph.bin from the extract on first
+      # start, so there is no separate graph-build step.
+      - name: Start the stack
+        working-directory: viewtopia
+        run: |
+          docker compose -f docker-compose.platform.yml down --remove-orphans
+          docker compose -f docker-compose.platform.yml up -d \
+            ptolemy tiletopia fenestra geokode itinera viewtopia
+
+      - name: Wait for all services healthy
+        working-directory: viewtopia
+        run: |
+          services="ptolemy tiletopia fenestra geokode itinera"
+          deadline=$(( $(date +%s) + 600 ))   # itinera builds its routing graph on first boot
+          while :; do
+            pending=""
+            for s in $services; do
+              cid=$(docker compose -f docker-compose.platform.yml ps -q "$s")
+              st=$(docker inspect --format '{{.State.Health.Status}}' "$cid" 2>/dev/null || echo none)
+              [ "$st" = "healthy" ] || pending="$pending $s($st)"
+            done
+            # viewtopia has no healthcheck, so probe its port directly
+            curl -sf -o /dev/null http://localhost:5174/ || pending="$pending viewtopia(down)"
+            [ -z "$pending" ] && { echo "all healthy"; break; }
+            [ "$(date +%s)" -ge "$deadline" ] && { echo "TIMEOUT waiting for:$pending"; exit 1; }
+            echo "waiting for:$pending"; sleep 5
+          done
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Pick chain depths
+        run: |
+          if [ "${{ inputs.full }}" = "true" ]; then
+            echo "LOADTEST_DEPTHS=100,1000,10000" >> "$GITHUB_ENV"
+          else
+            echo "LOADTEST_DEPTHS=100,1000" >> "$GITHUB_ENV"
+          fi
+
+      - name: Seed fixtures
+        working-directory: viewtopia
+        run: node loadtest/seed.mjs --depths "$LOADTEST_DEPTHS"
+
+      - name: Record the box spec
+        working-directory: viewtopia
+        run: |
+          mkdir -p loadtest/out
+          {
+            echo "runner: ${{ runner.os }} ${{ runner.arch }} (github-hosted)"
+            echo "cpus: $(nproc)"
+            echo "mem: $(free -h | awk '/^Mem:/ {print $2}')"
+            echo "depths: $LOADTEST_DEPTHS"
+            echo "rate: $LOADTEST_RATE/s  vus: $LOADTEST_VUS  duration: $LOADTEST_DURATION"
+            docker --version
+          } > loadtest/out/box.txt
+          cat loadtest/out/box.txt
+
+      - name: Run k6 scenarios
+        working-directory: viewtopia
+        run: loadtest/run.sh
+
+      - name: Upload k6 summaries
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-summaries
+          path: viewtopia/loadtest/out/
+
+      - name: Dump service logs on failure
+        if: failure()
+        working-directory: viewtopia
+        run: docker compose -f docker-compose.platform.yml logs --no-color --tail=200
