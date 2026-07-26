@@ -21,10 +21,9 @@ import { ArcLayer, ScatterplotLayer } from '@deck.gl/layers';
 import type { Layer } from '@deck.gl/core';
 import { getActiveCesiumViewer, getActiveMapLibre, getActiveDeck } from './registry';
 import { setSharedCamera } from '../hooks/sharedCamera';
-import { renderGeoJson } from './renderGeoJson';
 import { runSqlQuery } from '../duckdb/sqlCommand';
 import { useAppStore, type Renderer, type ViewerTab, type ToolPanel } from '../store/app';
-import { useAgentLayerStore } from '../store/agentLayers';
+import { useAgentLayerStore, toFeatureCollection } from '../store/agentLayers';
 import { useDeckLayersStore } from '../hooks/deckLayers';
 import { colorByHeight, colorByClassification, colorByProperty } from './tileStyles';
 import { useMeasureStore, type MeasureMode } from '../store/measure';
@@ -142,12 +141,14 @@ const handlers: Record<string, Handler> = {
         return;
       }
     }
-    if (!data) return;
-    try {
-      await renderGeoJson(data as object, color, true);
-    } catch (e) {
-      console.error('add_geojson: failed to render', e);
-    }
+    const geojson = toFeatureCollection(data);
+    if (!geojson) return;
+    useAgentLayerStore.getState().addLayer({
+      id: crypto.randomUUID(),
+      name: typeof p.name === 'string' ? p.name : 'GeoJSON',
+      color,
+      geojson,
+    });
   },
 
   sql_query: (p) => runSqlQuery(p),

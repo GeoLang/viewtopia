@@ -1,14 +1,14 @@
 /**
  * sql_query viewer command: run SQL against the shared in-browser DuckDB,
- * render any detected geometry on the active Cesium viewer, and publish a
- * result summary for UI/agent-roundtrip code.
+ * render any detected geometry as an agent layer (drawn by every renderer),
+ * and publish a result summary for UI/agent-roundtrip code.
  *
  * Geometry detection and GeoJSON conversion live in queryAsGeoJson; a missing
  * geometry is a valid outcome (NoGeometryError), not a query failure.
  */
 import { query } from './index';
 import { queryAsGeoJson, NoGeometryError } from './spatial';
-import { renderGeoJson } from '../viewer/renderGeoJson';
+import { useAgentLayerStore } from '../store/agentLayers';
 
 export interface SqlResultSummary {
   sql: string;
@@ -57,7 +57,11 @@ export async function runSqlQuery(params: Record<string, unknown>): Promise<void
     if (showOnMap) {
       try {
         const fc = await queryAsGeoJson(sql);
-        if (fc.features.length > 0) await renderGeoJson(fc, color, fit);
+        if (fc.features.length > 0) {
+          useAgentLayerStore
+            .getState()
+            .addLayer({ id: crypto.randomUUID(), name: 'SQL result', color, geojson: fc }, fit);
+        }
       } catch (e) {
         // no geometry is a valid outcome, still report the summary below
         if (!(e instanceof NoGeometryError)) throw e;

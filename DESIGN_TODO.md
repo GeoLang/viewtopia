@@ -148,9 +148,12 @@
       markers to `maplibre-gl.css` never being imported (markers/controls are DOM overlays);
       importing it also fixed the unstyled zoom/attribution controls. Browser-verified on
       all three renderers.
-- [ ] follow-up: `add_geojson`/`sql_query` still render through Cesium-only
-      `renderGeoJson` (no-op on MapLibre/deck.gl); `load_tileset`/`screenshot` are
-      inherently Cesium. Route add_geojson through the agent-layer store like ui_spec.
+- [x] **add_geojson/sql_query render on every renderer (2026-07-25).** Both now append an
+      agent layer to the store (any GeoJSON root normalized to a FeatureCollection);
+      sql_query's `fit:false` skips the reframe. `renderGeoJson` stays for the Cesium
+      analysis tool panels that track/remove their data sources. Browser-verified: agent
+      add_geojson polygon renders on the MapLibre globe. `load_tileset`/`screenshot`
+      remain inherently Cesium.
 
 ## DONE — AG-UI agent channel + panel close fix (2026-07-25)
 

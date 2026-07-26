@@ -5,16 +5,15 @@ interface Field {
   type: string;
 }
 
-// hoisted so both the state and the render spy exist before the vi.mock
-// factories (which are hoisted above the imports) run.
-const { mockDb, mockRenderGeoJson } = vi.hoisted(() => ({
+// hoisted so the state exists before the vi.mock factories (which are hoisted
+// above the imports) run.
+const { mockDb } = vi.hoisted(() => ({
   mockDb: { fields: [], rows: [], geomRows: [], throwError: false } as {
     fields: Field[];
     rows: Record<string, unknown>[];
     geomRows: Record<string, unknown>[];
     throwError: boolean;
   },
-  mockRenderGeoJson: vi.fn(async () => {}),
 }));
 
 function makeTable(fields: Field[], rows: Record<string, unknown>[]) {
@@ -37,11 +36,8 @@ vi.mock('../../src/duckdb/worker', () => ({
   close: async () => {},
 }));
 
-// stub the cesium render boundary so we can assert what geometry was detected
-vi.mock('../../src/viewer/renderGeoJson', () => ({ renderGeoJson: mockRenderGeoJson }));
-
 import { runSqlQuery, type SqlResultSummary } from '../../src/duckdb/sqlCommand';
-import type { FeatureCollection } from 'geojson';
+import { useAgentLayerStore } from '../../src/store/agentLayers';
 
 function captureEvent(name: string): { detail: unknown | null } {
   const box: { detail: unknown | null } = { detail: null };
@@ -57,7 +53,7 @@ describe('sql_query command', () => {
     mockDb.rows = [];
     mockDb.geomRows = [];
     mockDb.throwError = false;
-    mockRenderGeoJson.mockClear();
+    useAgentLayerStore.setState({ layers: [], generation: 0 });
     delete window.__viewtopiaSqlResults;
   });
 
@@ -65,7 +61,7 @@ describe('sql_query command', () => {
     vi.restoreAllMocks();
   });
 
-  it('detects a WKT geometry column and renders it', async () => {
+  it('detects a WKT geometry column and adds it as an agent layer', async () => {
     mockDb.fields = [
       { name: 'name', type: 'VARCHAR' },
       { name: 'geom', type: 'VARCHAR' },
@@ -75,8 +71,9 @@ describe('sql_query command', () => {
 
     await runSqlQuery({ sql: 'SELECT name, geom FROM places' });
 
-    expect(mockRenderGeoJson).toHaveBeenCalledTimes(1);
-    const fc = mockRenderGeoJson.mock.calls[0][0] as unknown as FeatureCollection;
+    const layers = useAgentLayerStore.getState().layers;
+    expect(layers).toHaveLength(1);
+    const fc = layers[0].geojson;
     expect(fc.features).toHaveLength(1);
     expect(fc.features[0].geometry).toEqual({ type: 'Point', coordinates: [1, 2] });
     expect(fc.features[0].properties).toMatchObject({ name: 'A' });
@@ -93,10 +90,26 @@ describe('sql_query command', () => {
 
     await runSqlQuery({ sql: 'SELECT city, lon, lat FROM cities' });
 
-    expect(mockRenderGeoJson).toHaveBeenCalledTimes(1);
-    const fc = mockRenderGeoJson.mock.calls[0][0] as unknown as FeatureCollection;
+    const layers = useAgentLayerStore.getState().layers;
+    expect(layers).toHaveLength(1);
+    const fc = layers[0].geojson;
     expect(fc.features[0].geometry).toEqual({ type: 'Point', coordinates: [5, 6] });
     expect(fc.features[0].properties).toMatchObject({ city: 'X' });
+  });
+
+  it('fit=false adds the layer without bumping the reframe generation', async () => {
+    mockDb.fields = [
+      { name: 'name', type: 'VARCHAR' },
+      { name: 'geom', type: 'VARCHAR' },
+    ];
+    mockDb.rows = [{ name: 'A', geom: 'POINT(1 2)' }];
+    mockDb.geomRows = [{ name: 'A', __geom__: '{"type":"Point","coordinates":[1,2]}' }];
+
+    await runSqlQuery({ sql: 'SELECT name, geom FROM places', fit: false });
+
+    const state = useAgentLayerStore.getState();
+    expect(state.layers).toHaveLength(1);
+    expect(state.generation).toBe(0);
   });
 
   it('stashes a result summary and caps the ring buffer at 20', async () => {
@@ -113,7 +126,7 @@ describe('sql_query command', () => {
     const buf = window.__viewtopiaSqlResults as SqlResultSummary[];
     expect(buf).toHaveLength(20);
     expect(buf[buf.length - 1].sql).toBe('SELECT n FROM t WHERE n > 24');
-    expect(mockRenderGeoJson).not.toHaveBeenCalled();
+    expect(useAgentLayerStore.getState().layers).toHaveLength(0);
 
     const summary = result.detail as SqlResultSummary;
     expect(summary.rowCount).toBe(8);

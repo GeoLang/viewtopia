@@ -27,9 +27,24 @@ interface AgentLayerState {
   /** Bumped each time a new spec lands, so renderers know to reframe. */
   generation: number;
   setLayers: (layers: AgentLayer[]) => void;
+  /** Append one layer (add_geojson / sql_query); fit reframes the view to it. */
+  addLayer: (layer: AgentLayer, fit?: boolean) => void;
   addMarker: (marker: Omit<AgentMarker, 'id'>) => void;
   clearMarkers: () => void;
   clear: () => void;
+}
+
+/** Normalize any GeoJSON root (FeatureCollection | Feature | geometry) to a FeatureCollection. */
+export function toFeatureCollection(data: unknown): GeoJSON.FeatureCollection | null {
+  const g = data as { type?: string } | null;
+  if (!g?.type) return null;
+  if (g.type === 'FeatureCollection') return g as GeoJSON.FeatureCollection;
+  if (g.type === 'Feature')
+    return { type: 'FeatureCollection', features: [g as GeoJSON.Feature] };
+  return {
+    type: 'FeatureCollection',
+    features: [{ type: 'Feature', geometry: g as GeoJSON.Geometry, properties: {} }],
+  };
 }
 
 export const useAgentLayerStore = create<AgentLayerState>((set) => ({
@@ -37,6 +52,11 @@ export const useAgentLayerStore = create<AgentLayerState>((set) => ({
   markers: [],
   generation: 0,
   setLayers: (layers) => set((s) => ({ layers, generation: s.generation + 1 })),
+  addLayer: (layer, fit = true) =>
+    set((s) => ({
+      layers: [...s.layers, layer],
+      generation: fit ? s.generation + 1 : s.generation,
+    })),
   addMarker: (marker) =>
     set((s) => ({ markers: [...s.markers, { ...marker, id: crypto.randomUUID() }] })),
   clearMarkers: () => set({ markers: [] }),

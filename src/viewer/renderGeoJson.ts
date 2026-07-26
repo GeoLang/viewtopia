@@ -1,6 +1,7 @@
 /**
- * Shared GeoJSON renderer for the active Cesium viewer. Used by the add_geojson
- * viewer command and the sql_query command so both load layers the same way.
+ * Shared GeoJSON renderer for the active Cesium viewer. Used by the Cesium
+ * analysis tool panels (viewshed, flood, contours, …) which track and remove
+ * their result data sources. Agent layers render via the agent-layer store.
  */
 import { Color, GeoJsonDataSource } from 'cesium';
 import { getActiveCesiumViewer } from './registry';

@@ -60,6 +60,22 @@ describe('agent viewer commands', () => {
     expect(useAgentLayerStore.getState().markers).toHaveLength(0);
   });
 
+  it('add_geojson normalizes a bare geometry into an agent layer every renderer draws', async () => {
+    useAgentLayerStore.setState({ layers: [], generation: 0 });
+    executeViewerCommand({
+      action: 'add_geojson',
+      params: { geojson: { type: 'Point', coordinates: [7.42, 43.73] }, color: '#123456' },
+    });
+    await vi.waitFor(() => expect(useAgentLayerStore.getState().layers).toHaveLength(1));
+    const layer = useAgentLayerStore.getState().layers[0];
+    expect(layer.color).toBe('#123456');
+    expect(layer.geojson.features[0].geometry).toEqual({
+      type: 'Point',
+      coordinates: [7.42, 43.73],
+    });
+    expect(useAgentLayerStore.getState().generation).toBe(1);
+  });
+
   it('style_by_* runs without a live viewer (no tilesets → no-op)', () => {
     expect(() => executeViewerCommand({ action: 'style_by_height' })).not.toThrow();
   });
