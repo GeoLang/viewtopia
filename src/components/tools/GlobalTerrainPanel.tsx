@@ -18,12 +18,19 @@ import {
 } from 'cesium';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 
+/**
+ * The stack's own quantized-mesh terrain, served by tiletopia through the viewer's
+ * /tiles proxy. Relative so it follows whatever host the viewer is served from.
+ */
+const STACK_TERRAIN_URL = '/tiles/v1/terrain/';
+
 export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
-  const [provider, setProvider] = useState<string | null>('cesium');
+  const [provider, setProvider] = useState<string | null>('stack');
   const [url, setUrl] = useState('');
   const [exaggeration, setExaggeration] = useState(1);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('Ellipsoid (default)');
+  const [failed, setFailed] = useState(false);
 
   // Vertical exaggeration is a scene setting: apply live, no provider needed.
   useEffect(() => {
@@ -35,19 +42,33 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
     const viewer = getActiveCesiumViewer();
     if (!viewer) {
       setStatus('No active viewer');
+      setFailed(true);
       return;
     }
     setLoading(true);
     try {
-      const tp =
-        provider === 'custom'
-          ? await CesiumTerrainProvider.fromUrl(url)
-          : await createWorldTerrainAsync();
+      let tp;
+      if (provider === 'stack') tp = await CesiumTerrainProvider.fromUrl(STACK_TERRAIN_URL);
+      else if (provider === 'custom') tp = await CesiumTerrainProvider.fromUrl(url);
+      else tp = await createWorldTerrainAsync();
       viewer.terrainProvider = tp;
-      setStatus(provider === 'custom' ? 'Custom terrain enabled' : 'Cesium World Terrain enabled');
+      setFailed(false);
+      setStatus(
+        provider === 'stack'
+          ? 'Platform terrain enabled'
+          : provider === 'custom'
+            ? 'Custom terrain enabled'
+            : 'Cesium World Terrain enabled',
+      );
     } catch (e) {
-      // World terrain needs an Ion token; a missing/invalid one rejects here.
-      setStatus(`Terrain failed: ${e instanceof Error ? e.message : String(e)}`);
+      // the platform service may be unreachable or still require a token, a typed
+      // URL may be wrong, and world terrain needs an Ion token: all land here
+      setFailed(true);
+      setStatus(
+        provider === 'stack'
+          ? 'No terrain source: the platform terrain service did not answer, terrain stays off'
+          : `Terrain failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
     } finally {
       setLoading(false);
     }
@@ -57,9 +78,11 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
     const viewer = getActiveCesiumViewer();
     if (!viewer) {
       setStatus('No active viewer');
+      setFailed(true);
       return;
     }
     viewer.terrainProvider = new EllipsoidTerrainProvider();
+    setFailed(false);
     setStatus('Ellipsoid (default)');
   };
 
@@ -95,6 +118,7 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
           size="xs"
           label="Provider"
           data={[
+            { value: 'stack', label: 'Platform terrain' },
             { value: 'cesium', label: 'Cesium World Terrain' },
             { value: 'custom', label: 'Custom URL' },
           ]}
@@ -102,6 +126,12 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
           onChange={setProvider}
           styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
+
+        {provider === 'stack' && (
+          <Text size="xs" c="dimmed">
+            {STACK_TERRAIN_URL}
+          </Text>
+        )}
 
         {provider === 'custom' && (
           <TextInput
@@ -125,7 +155,7 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
           Reset to Ellipsoid
         </Button>
 
-        <Text size="xs" c="green" data-testid="terrain-status">{status}</Text>
+        <Text size="xs" c={failed ? 'red' : 'green'} data-testid="terrain-status">{status}</Text>
       </Stack>
     </Paper>
   );
