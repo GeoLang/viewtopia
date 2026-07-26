@@ -19,3 +19,28 @@ describe('renderUISpec', () => {
     ).resolves.toBeUndefined();
   });
 });
+
+describe('agentLayersBounds', () => {
+  it('pads a single-point layer to a visible extent instead of max zoom', async () => {
+    const { agentLayersBounds } = await import('../../src/hooks/agentLayerBounds');
+    const bounds = agentLayersBounds([
+      {
+        id: 'p',
+        name: 'point',
+        color: '#3388ff',
+        geojson: {
+          type: 'FeatureCollection',
+          features: [
+            { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [2.32, 48.86] } },
+          ],
+        },
+      },
+    ]);
+    expect(bounds).not.toBeNull();
+    const [w, s, e, n] = bounds!;
+    expect(e - w).toBeCloseTo(0.01, 5);
+    expect(n - s).toBeCloseTo(0.01, 5);
+    expect((w + e) / 2).toBeCloseTo(2.32);
+    expect((s + n) / 2).toBeCloseTo(48.86);
+  });
+});

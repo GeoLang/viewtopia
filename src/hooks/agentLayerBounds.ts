@@ -19,7 +19,23 @@ export function agentLayersBounds(
     }
   }
 
-  return any ? bounds : null;
+  if (!any) return null;
+
+  // a single point (or near-degenerate extent) would otherwise fit at max zoom,
+  // landing the camera on an anonymous street corner — pad to ~2km so the
+  // result stays visible in context
+  const MIN_EXTENT = 0.01;
+  if (bounds[2] - bounds[0] < MIN_EXTENT) {
+    const cx = (bounds[0] + bounds[2]) / 2;
+    bounds[0] = cx - MIN_EXTENT / 2;
+    bounds[2] = cx + MIN_EXTENT / 2;
+  }
+  if (bounds[3] - bounds[1] < MIN_EXTENT) {
+    const cy = (bounds[1] + bounds[3]) / 2;
+    bounds[1] = cy - MIN_EXTENT / 2;
+    bounds[3] = cy + MIN_EXTENT / 2;
+  }
+  return bounds;
 }
 
 function forEachPosition(
