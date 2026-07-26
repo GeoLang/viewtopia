@@ -78,7 +78,14 @@
       sub when auth is on, body only in disabled-auth dev mode. Left alone: unmounted
       grpc bulk_import, hardcoded merge "api"/unlock "system" placeholders. Still open
       below: permissions-table enforcement, and any-editor can unlock another's lock.
-- [~] **ptolemy permissions — DECIDED 2026-07-26: MVP is multi-tenant, enforce.**
+- [x] **ptolemy permissions — DECIDED + DONE 2026-07-26: MVP is multi-tenant, enforced.**
+      Landed as 0486629..0f23716 (write ladder, creator auto-grant, visibility+404,
+      Actor/AuthEnabled), 5105ed7 (dataset-admin delegation, revoke lockout rules),
+      e8e43c9 (private datasets filtered from all six listings via one SQL predicate).
+      Platform e2e green on a fresh DB with enforcement on (realestate spec runs as
+      operator role since seed-parcels owns the demo datasets). Known accepted limits in
+      ptolemy README: org membership grants nothing; STAC raster search ungated (rasters
+      have no visibility concept yet). Original decision text follows.
       (1) Writes (commit/merge/import/push/branch create+delete) check branch/dataset
       permission via the existing check fns + the Actor extractor; dataset creator gets an
       auto-granted admin row; a dataset with no permission rows stays any-editor so
@@ -249,17 +256,28 @@
 
 ## OPEN — trust & adoption
 
-- [ ] **Load-test harness + published numbers (scoped 2026-07-25).** A harness, not a
-      product: k6 (or oha) scenarios + a seeder that generates deep changeset chains and
-      wide datasets, run against the existing platform compose, with p95 pass/fail
-      thresholds so it doubles as a regression gate. Nightly/manual CI job, never
-      per-push. Data plane only (ptolemy, tiletopia, geokode, itinera, fenestra, external
-      read-only mode) — exclude the agent path, it's LLM-bound. The one number that
-      matters most: ptolemy read latency vs changeset-chain depth (100/1k/10k) — every
-      read walks a recursive CTE, and this either validates the data model or forces
-      materialized branch heads. Deliverable: numbers table in the docs ("on a 4-core
-      box, N reads/s at p95 X ms with 10k-changeset history"). Do after the external
-      dataset mode lands so it's in the benchmark set.
+- [x] **Load-test harness + published numbers (DONE 2026-07-26).** `loadtest/` (k6 pinned
+      image + seeder + run.sh), nightly `platform-load.yml` (cron+dispatch only). First
+      full baseline published in loadtest/README.md; thresholds tightened to ~2x measured.
+      **The data model is validated** — after the branch-scoping fix below, reads scale
+      with the queried dataset's own history only: 10k-commit chain p95 67ms bbox / 68ms
+      filter / 28ms item at 20 req/s, fenestra 15-17ms p95, 0% failures, ~277 req/s
+      aggregate on one box. No materialized branch heads needed for v1.
+- [x] **ptolemy read paths branch-scoped (2026-07-26, 0ee367c).** The baseline's first run
+      caught the `features` view walking every branch's chain before filtering: CQL2
+      filter was a flat ~5.7s for ANY versioned dataset once an 11k-commit neighbor
+      existed (fenestra queued to 25-36s). All view consumers (cql2/exports/sfcgal/h3/
+      qgis) now read a branch-scoped source; 100-feature dataset filter is history-
+      independent (8.9ms beside 89k unrelated commits). Same commit: OGC single-item GET
+      ignored the branch entirely (returned newest version globally, 200 for deleted
+      features) — fixed with regression tests; external-table bbox seq-scans when the
+      source SRID isn't 4326 (ST_Transform defeats the GiST index) — registration now
+      warns with the exact functional index; suite 248.
+- [ ] **ptolemy external-source predicate pushdown (deferred 2026-07-26).** Reproject
+      spatial predicates into the source SRID inside the ExternalSource builder so
+      non-4326 external tables use their raw-column index without the manual functional
+      index. Contract change touching bbox/intersects/within/MVT/OGC/CQL2 spatial ops;
+      measure against real polygon geometry.
 - [x] **"Your data is just PostGIS" docs section (2026-07-25).** ptolemy README gets a
       section under Data Model (verified against migration 020 + 001: `feature_versions`
       PostGIS geometry + JSONB properties, GIST index, `features` view; plain-SQL example,
