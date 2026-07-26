@@ -58,6 +58,12 @@ const TRACK_CENTRE = {
  * the globe from requesting terrain nothing here serves.
  */
 const TERRAIN_URL = '/panel-e2e-terrain';
+
+/** Where the panel points its default provider: tiletopia through the viewer's proxy. */
+const STACK_TERRAIN_URL = '/tiles/v1/terrain/';
+
+/** fenestra, the platform's OGC gateway. On the host, not proxied through :5174. */
+const FENESTRA = 'http://localhost:3003';
 const TERRAIN_LAYER_JSON = {
   tilejson: '2.1.0',
   format: 'quantized-mesh-1.0',
@@ -219,8 +225,10 @@ test.describe('Data panels', () => {
       .fill('https://ows.panel-e2e.test/service?LAYERS=OSM-WMS');
     await panel.getByRole('button', { name: 'Add' }).click();
 
-    // the added service is listed by the panel and draped on the globe
-    await expect(panel.getByText('panel-e2e wms')).toBeVisible();
+    // the added service is listed by the panel and draped on the globe. exact,
+    // because the status line names it too ('Added panel-e2e wms')
+    await expect(panel.getByText('panel-e2e wms', { exact: true })).toBeVisible();
+    await expect(panel.getByTestId('ogc-status')).toHaveText('Added panel-e2e wms');
     await expect(panel.getByText('No OGC layers added')).toHaveCount(0);
     await expect.poll(imageryCount, { timeout: 30000 }).toBe(before + 1);
 
@@ -240,6 +248,85 @@ test.describe('Data panels', () => {
     // the panel owns what it added: removing the row takes the layer off again
     await rowDeleteButton(panel, 'panel-e2e wms').click();
     await expect.poll(imageryCount).toBe(before);
+
+    await closePanel(page, panel);
+  });
+
+  test('ogc: a WFS service becomes features and a WMTS template becomes imagery', async ({
+    page,
+  }) => {
+    // fenestra is the platform's own OGC gateway, serving real ptolemy data over
+    // WMS/WFS/WMTS. It is not proxied through :5174, so the panel gets absolute
+    // urls; it answers with access-control-allow-origin, so the browser can.
+    const reachable = await fetch(`${FENESTRA}/wfs?service=WFS&request=GetCapabilities`)
+      .then((r) => r.ok)
+      .catch(() => false);
+    test.skip(!reachable, 'fenestra is not up on :3003');
+
+    await openViewer(page);
+    const panel = await openPanel(page, 'OGC Layers', 'OGC Layers');
+
+    const imageryCount = () =>
+      page.evaluate(() => window.__viewtopiaViewer.imageryLayers.length);
+    const agentLayers = () =>
+      page.evaluate(() =>
+        Array.from(
+          { length: window.__viewtopiaViewer.dataSources.length },
+          (_, i) => window.__viewtopiaViewer.dataSources.get(i).name,
+        ),
+      );
+    const before = await imageryCount();
+    expect(await agentLayers()).toEqual([]);
+
+    // WFS is vector: the panel fetches GetFeature as GeoJSON and hands it to the
+    // agent layers, which every renderer draws
+    await panel.getByPlaceholder('Layer name').fill('demo_parcels');
+    await panel.getByPlaceholder('Service URL').fill(`${FENESTRA}/wfs`);
+    await panel.getByRole('textbox', { name: 'Type' }).click();
+    await page.getByRole('option', { name: 'WFS' }).click();
+    await panel.getByRole('button', { name: 'Add' }).click();
+
+    await expect(panel.getByTestId('ogc-status')).toHaveText(/^demo_parcels: \d+ features$/, {
+      timeout: 30000,
+    });
+    const featureCount = Number(
+      (await panel.getByTestId('ogc-status').textContent()).match(/(\d+) features/)[1],
+    );
+    expect(featureCount).toBeGreaterThan(0);
+    await expect.poll(agentLayers, { timeout: 30000 }).toHaveLength(1);
+    expect(
+      await page.evaluate(
+        () => window.__viewtopiaViewer.dataSources.get(0).entities.values.length,
+      ),
+    ).toBe(featureCount);
+    // vector features are not imagery
+    expect(await imageryCount()).toBe(before);
+
+    // WMTS is raster: the RESTful template becomes an imagery layer, with the
+    // placeholders rewritten to the tile form the renderers speak
+    await panel.getByPlaceholder('Layer name').fill('parcel tiles');
+    await panel
+      .getByPlaceholder('Service URL')
+      .fill(`${FENESTRA}/wmts/demo_parcels/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.png`);
+    await panel.getByRole('textbox', { name: 'Type' }).click();
+    await page.getByRole('option', { name: 'WMTS' }).click();
+    // the panel says what form of WMTS it reads, since it does not parse capabilities
+    await expect(panel.getByTestId('ogc-wmts-note')).toContainText('RESTful tile template');
+    await panel.getByRole('button', { name: 'Add' }).click();
+
+    await expect.poll(imageryCount, { timeout: 30000 }).toBe(before + 1);
+    expect(
+      await page.evaluate(() => {
+        const layers = window.__viewtopiaViewer.imageryLayers;
+        return layers.get(layers.length - 1).imageryProvider.url;
+      }),
+    ).toBe(`${FENESTRA}/wmts/demo_parcels/WebMercatorQuad/{z}/{y}/{x}.png`);
+
+    // each row owns what it added: the WMTS imagery and the WFS features both go
+    await rowDeleteButton(panel, 'parcel tiles').click();
+    await expect.poll(imageryCount).toBe(before);
+    await rowDeleteButton(panel, 'demo_parcels').click();
+    await expect.poll(agentLayers).toEqual([]);
 
     await closePanel(page, panel);
   });
@@ -479,6 +566,11 @@ test.describe('Data panels', () => {
     await openViewer(page);
     const panel = await openPanel(page, 'Terrain', 'Global Terrain');
 
+    // the default provider is the platform's own terrain, named by its relative
+    // url; enabling it is a test of its own, below
+    await expect(panel.getByRole('textbox', { name: 'Provider' })).toHaveValue('Platform terrain');
+    await expect(panel.getByText(STACK_TERRAIN_URL, { exact: true })).toBeVisible();
+
     /** What the scene currently uses for elevation. */
     const terrain = () =>
       page.evaluate(() => {
@@ -528,6 +620,67 @@ test.describe('Data panels', () => {
     expect(reset.changed).toBe(true);
     expect(reset.quantizedMesh).toBe(false);
     expect(reset.providerUrl).toBeNull();
+
+    await closePanel(page, panel);
+  });
+
+  test('globalTerrain: the platform provider enables, and says so when it cannot', async ({
+    page,
+  }) => {
+    // layer.json is answered here, both ways round, so the test says the same
+    // thing whatever the deployment serves: an empty availability keeps the globe
+    // from asking for terrain tiles, and the unreachable case is an answer Cesium
+    // rejects rather than a 4xx, whose failed load the console guard fails on.
+    let answer = 'terrain';
+    await page.route(`**${STACK_TERRAIN_URL}**`, (route) => {
+      const url = route.request().url();
+      if (!url.endsWith('layer.json')) {
+        // Cesium asks for the two root tiles whatever the availability says, and
+        // this url is a live one: tiletopia answers those 400, which would fail
+        // this test on the terrain service rather than on the panel
+        return route.fulfill({ status: 200, contentType: 'application/octet-stream', body: '' });
+      }
+      if (answer === 'terrain') {
+        return route.fulfill({
+          contentType: 'application/json',
+          body: JSON.stringify(TERRAIN_LAYER_JSON),
+        });
+      }
+      // a 200 that is not a terrain layer.json: what an endpoint serving
+      // something else looks like, without the console noise of a 4xx
+      return route.fulfill({ contentType: 'application/json', body: '{}' });
+    });
+
+    await openViewer(page);
+    const panel = await openPanel(page, 'Terrain', 'Global Terrain');
+    const status = panel.getByTestId('terrain-status');
+
+    await expect(panel.getByRole('textbox', { name: 'Provider' })).toHaveValue('Platform terrain');
+    await panel.getByRole('button', { name: 'Enable Terrain' }).click();
+
+    await expect(status).toHaveText('Platform terrain enabled');
+    expect(
+      await page.evaluate(() => {
+        const v = window.__viewtopiaViewer;
+        return {
+          quantizedMesh: 'requestVertexNormals' in v.terrainProvider,
+          url: v.terrainProvider._layers?.[0]?.resource?.url ?? null,
+        };
+      }),
+    ).toEqual({ quantizedMesh: true, url: expect.stringContaining(STACK_TERRAIN_URL) });
+
+    // and when the service does not answer with terrain, the panel says so
+    // instead of leaving the last status up
+    await panel.getByRole('button', { name: 'Reset to Ellipsoid' }).click();
+    await expect(status).toHaveText('Ellipsoid (default)');
+    answer = 'unusable';
+    await panel.getByRole('button', { name: 'Enable Terrain' }).click();
+    await expect(status).toHaveText(
+      'No terrain source: the platform terrain service did not answer, terrain stays off',
+    );
+    expect(
+      await page.evaluate(() => 'requestVertexNormals' in window.__viewtopiaViewer.terrainProvider),
+    ).toBe(false);
 
     await closePanel(page, panel);
   });
