@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Cartesian3, Math as CesiumMath, type Viewer } from 'cesium';
 import type { Map as MapLibreMap } from 'maplibre-gl';
-import { subscribeSharedCamera, type SharedCamera } from './sharedCamera';
+import { getSharedCamera, subscribeSharedCamera, type SharedCamera } from './sharedCamera';
 
 /**
  * The one place the renderer camera conversions live: shared camera state is
@@ -95,6 +95,10 @@ export function useFollowSharedCamera(
       if (!mine || sameCamera(mine, cam)) return;
       applyRef.current(cam);
     };
-    return subscribeSharedCamera(follow);
+    const unsubscribe = subscribeSharedCamera(follow);
+    // a move published before this subscription attached would otherwise be
+    // lost until the next one, leaving a fresh pane at its default view
+    follow(getSharedCamera());
+    return unsubscribe;
   }, [enabled]);
 }

@@ -499,16 +499,18 @@ test.describe('Tools panels', () => {
     await expect(page.getByTestId('viewer-pane-left').locator('canvas')).toHaveCount(1);
     await expect(page.getByTestId('viewer-pane-right').locator('canvas')).toHaveCount(1);
 
-    // Cesium's camera position translates into the map's centre and zoom
+    // Cesium's camera position translates into the map's centre and zoom.
+    // Two live renderers under the 4-worker load can starve frames for
+    // seconds, and Cesium publishes on render ticks, hence the long polls.
     await setView(page, { ...ICELAND, height: cameraHeight(6) });
     await expect
-      .poll(() => mapCamera(page, '__viewtopiaPaneMap'))
+      .poll(() => mapCamera(page, '__viewtopiaPaneMap'), { timeout: 15000 })
       .toEqual(nearView({ lon: ICELAND.lon, lat: ICELAND.lat, zoom: 6 }));
 
     // and the map's centre translates back into a Cesium camera position
     await jumpMap(page, '__viewtopiaPaneMap', SYDNEY_VIEW);
     await expect
-      .poll(() => cameraPosition(page))
+      .poll(() => cameraPosition(page), { timeout: 15000 })
       .toEqual({ lon: expect.closeTo(SYDNEY_VIEW.lon, 3), lat: expect.closeTo(SYDNEY_VIEW.lat, 3) });
 
     await panel.getByText('Enable Split View').click();
