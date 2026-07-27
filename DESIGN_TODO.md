@@ -112,4 +112,10 @@
 - [ ] ptolemy external-source pushdown non-goals (documented in README): near-global
       windows fall back to unfiltered scans; `or`/`not` CQL2 spatial ops are never pushed.
       Revisit only if a real workload hits them.
+- [ ] **Replace the standalone deck.gl renderer with MapLibre + `MapboxOverlay`**
+      (`@deck.gl/mapbox`, `interleaved: true`, maplibre-gl v3+, works with the v5 globe).
+      Deck layers keep GPU rendering but draw into MapLibre's context, so everything the
+      MapLibre path has (analysis results, agent layers, terrain-RGB relief) works in the
+      same view and the per-panel "switch renderer" hints on deck go away. Collapses three
+      renderers to two; touches useDeckGL, the registry, ViewerArea and the renderer picker.
 - [ ] Raise jung from its rendering-only coverage into the v1 path *(only if it enters it)*.
