@@ -10,6 +10,7 @@ import {
 } from '@mantine/core';
 import { IconBookmark, IconX, IconCamera, IconTrash } from '@tabler/icons-react';
 import { useAppStore } from '../../store/app';
+import { useSpaceTimeStore } from '../../features/spacetime/store';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { getSharedCamera } from '../../hooks/sharedCamera';
 import { captureCameraState, flyToCameraState } from '../../store/cameraViews';
@@ -19,6 +20,7 @@ export function BookmarkPanel({ onClose }: { onClose: () => void }) {
   const bookmarks = useAppStore((s) => s.bookmarks);
   const addBookmark = useAppStore((s) => s.addBookmark);
   const removeBookmark = useAppStore((s) => s.removeBookmark);
+  const flyTo = useSpaceTimeStore((s) => s.flyTo);
   const reduceMotion = useAccessibilityStore((s) => s.reduceMotion);
   const [name, setName] = useState('');
   const [status, setStatus] = useState('');
@@ -50,8 +52,13 @@ export function BookmarkPanel({ onClose }: { onClose: () => void }) {
     if (viewer && bm.camera) {
       flyToCameraState(viewer, bm.camera, { reduceMotion });
       setStatus(`Flew to ${bm.name}`);
+    } else if (Number.isFinite(bm.lng) && Number.isFinite(bm.lat)) {
+      // no cesium viewer (2d renderer) or no camera snapshot: use the
+      // renderer-agnostic flyTo pipeline (applied in ViewerArea)
+      flyTo(bm.lng, bm.lat, bm.zoom);
+      setStatus(`Flew to ${bm.name}`);
     } else {
-      setStatus('No active viewer for flyTo');
+      setStatus('Bookmark has no coordinates');
     }
   };
 
