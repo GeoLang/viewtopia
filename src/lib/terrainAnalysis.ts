@@ -1,33 +1,28 @@
 /**
  * Client for tiletopia's terrain-analysis endpoints, reached same-origin through
  * the /tiles/ proxy (nginx rewrites /tiles/(.*) -> tiletopia /api/$1). Also holds
- * the Cesium helpers the panels share: current-view bbox and PNG raster overlays.
+ * the result-drawing helpers the panels share: PNG raster overlays and GeoJSON
+ * results, on Cesium and on MapLibre.
  */
 import {
   ImageryLayer,
-  Math as CesiumMath,
   Rectangle,
   SingleTileImageryProvider,
 } from 'cesium';
-import { getActiveCesiumViewer } from '../viewer/registry';
+import type { Map as MapLibreMap } from 'maplibre-gl';
+import { getActiveCesiumViewer, getActiveMapLibre } from '../viewer/registry';
 import { apiHeaders } from './apiAuth';
+import { getViewBounds } from './viewBounds';
 
 const BASE = '/tiles/v1/analysis';
 
 export type Bbox = [number, number, number, number]; // [west, south, east, north]
 
-/** Current camera view as a lon/lat bbox, or null when it can't be resolved. */
+/** Current view as a lon/lat bbox, or null when it can't be resolved. */
 export function currentBbox(): Bbox | null {
-  const viewer = getActiveCesiumViewer();
-  if (!viewer) return null;
-  const rect = viewer.camera.computeViewRectangle();
-  if (!rect) return null;
-  return [
-    CesiumMath.toDegrees(rect.west),
-    CesiumMath.toDegrees(rect.south),
-    CesiumMath.toDegrees(rect.east),
-    CesiumMath.toDegrees(rect.north),
-  ];
+  const b = getViewBounds();
+  const bbox: Bbox = [b.west, b.south, b.east, b.north];
+  return bbox.every(Number.isFinite) ? bbox : null;
 }
 
 async function postJson<T>(path: string, body: unknown): Promise<T> {
@@ -102,4 +97,92 @@ export function removeOverlay(layer: ImageryLayer | null): void {
   const viewer = getActiveCesiumViewer();
   if (!viewer || viewer.isDestroyed()) return;
   if (viewer.imageryLayers.contains(layer)) viewer.imageryLayers.remove(layer, true);
+}
+
+/** deck.gl is a standalone Deck, not a map, so it draws no analysis result. */
+export const RENDERER_HINT = 'Switch to the Cesium or MapLibre renderer to run this';
+
+/** A result the panel added to MapLibre and has to take off again. */
+export interface MapResult {
+  setOpacity: (opacity: number) => void;
+  remove: () => void;
+}
+
+function dropMapLayers(map: MapLibreMap, id: string, suffixes: string[]): void {
+  for (const s of suffixes) {
+    if (map.getLayer(`${id}${s}`)) map.removeLayer(`${id}${s}`);
+  }
+  if (map.getSource(id)) map.removeSource(id);
+}
+
+/**
+ * Draw a GeoJSON result on the displayed MapLibre map, in the same colors the
+ * Cesium path uses. Null when MapLibre is not the live renderer.
+ */
+export function addMapGeoJson(
+  id: string,
+  data: GeoJSON.FeatureCollection,
+  color: string,
+): MapResult | null {
+  const map = getActiveMapLibre();
+  if (!map) return null;
+  const suffixes = ['-fill', '-line'];
+  dropMapLayers(map, id, suffixes);
+  map.addSource(id, { type: 'geojson', data });
+  // one source can hold mixed geometry, so add a layer per kind
+  map.addLayer({
+    id: `${id}-fill`,
+    type: 'fill',
+    source: id,
+    filter: ['==', ['geometry-type'], 'Polygon'],
+    paint: { 'fill-color': color, 'fill-opacity': 0.4 },
+  });
+  map.addLayer({
+    id: `${id}-line`,
+    type: 'line',
+    source: id,
+    filter: ['in', ['geometry-type'], ['literal', ['LineString', 'Polygon']]],
+    paint: { 'line-color': color, 'line-width': 2 },
+  });
+  return {
+    setOpacity: () => {},
+    remove: () => dropMapLayers(map, id, suffixes),
+  };
+}
+
+/** Drape a PNG (object URL) over a bbox on the displayed MapLibre map. */
+export function addMapRaster(
+  id: string,
+  url: string,
+  bbox: Bbox,
+  opacity: number,
+): MapResult | null {
+  const map = getActiveMapLibre();
+  if (!map) return null;
+  const [west, south, east, north] = bbox;
+  const suffixes = ['-raster'];
+  dropMapLayers(map, id, suffixes);
+  map.addSource(id, {
+    type: 'image',
+    url,
+    // image source corners run clockwise from the top left
+    coordinates: [
+      [west, north],
+      [east, north],
+      [east, south],
+      [west, south],
+    ],
+  });
+  map.addLayer({
+    id: `${id}-raster`,
+    type: 'raster',
+    source: id,
+    paint: { 'raster-opacity': opacity },
+  });
+  return {
+    setOpacity: (o) => {
+      if (map.getLayer(`${id}-raster`)) map.setPaintProperty(`${id}-raster`, 'raster-opacity', o);
+    },
+    remove: () => dropMapLayers(map, id, suffixes),
+  };
 }

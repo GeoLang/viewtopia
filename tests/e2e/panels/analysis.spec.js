@@ -97,6 +97,28 @@ const namedEntityCount = (page, name) =>
     return ds ? ds.entities.values.length : -1;
   }, name);
 
+/**
+ * Show MapLibre instead of Cesium and frame the view on the map itself, so the
+ * bbox a panel reads can only have come from the renderer on screen.
+ */
+async function useMapLibreAt(page, view) {
+  await page.getByRole('textbox', { name: 'Renderer' }).click();
+  await page.getByRole('option', { name: 'MapLibre' }).click();
+  await page.waitForFunction(() => window.__viewtopiaMap?.isStyleLoaded(), null, { timeout: 60000 });
+  await page.evaluate(
+    (v) => window.__viewtopiaMap.jumpTo({ center: [v.lon, v.lat], zoom: 12 }),
+    view,
+  );
+}
+
+/** ids of the layers the live MapLibre map draws for a result source. */
+const mapLayerIds = (page, prefix) =>
+  page.evaluate((p) => {
+    const m = window.__viewtopiaMap;
+    if (!m) return null;
+    return (m.getStyle()?.layers ?? []).map((l) => l.id).filter((id) => id.startsWith(p));
+  }, prefix);
+
 /** Alphas of the Cesium imagery layers, base layer first. */
 const imageryAlphas = (page) =>
   page.evaluate(() => {
@@ -353,5 +375,84 @@ test.describe('Analysis panels', () => {
 
     await closePanel(page, panel);
     await expect.poll(() => dataSourceNames(page)).toEqual([]);
+  });
+
+  test('terrainAnalysis on MapLibre: the result draws on the renderer being shown', async ({
+    page,
+  }) => {
+    await openViewer(page);
+    await useMapLibreAt(page, VIEW);
+    const panel = await openPanel(page, 'Terrain');
+
+    expect(await mapLayerIds(page, 'terrain-result')).toEqual([]);
+    await panel.getByRole('button', { name: 'Run', exact: true }).click();
+
+    // the slope PNG is draped on the MapLibre map, at the panel's 70% opacity
+    await expect
+      .poll(() => mapLayerIds(page, 'terrain-result'), { timeout: 60000 })
+      .toEqual(['terrain-result-raster']);
+    // the defect: with Cesium hidden the panel could read no view at all
+    await expect(panel.getByText('Cannot read the current map view')).toHaveCount(0);
+    await expect(panel.getByText('Terrain request failed')).toHaveCount(0);
+
+    // and it is draped over the box this map is showing, not a stale Cesium view
+    const { corners, bounds } = await page.evaluate(() => {
+      const m = window.__viewtopiaMap;
+      const b = m.getBounds();
+      return {
+        corners: m.getStyle().sources['terrain-result'].coordinates,
+        bounds: [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()],
+      };
+    });
+    const round = (v) => Math.round(v * 1000) / 1000;
+    const [[west, north], , [east, south]] = corners;
+    expect([west, south, east, north].map(round)).toEqual(bounds.map(round));
+
+    // the slider drives the live raster layer, no re-run needed
+    const rasterOpacity = () =>
+      page.evaluate(() =>
+        window.__viewtopiaMap.getPaintProperty('terrain-result-raster', 'raster-opacity'),
+      );
+    expect(await rasterOpacity()).toBeCloseTo(0.7, 2);
+    await nudgeSlider(page, panel.locator('[role="slider"]').first(), 'ArrowLeft', 10);
+    await expect(panel).toContainText('Opacity: 60%');
+    await expect.poll(rasterOpacity).toBe(0.6);
+
+    // contours take the raster's place, as line features on the same map
+    await panel.getByRole('textbox', { name: 'Analysis Type' }).click();
+    await page.getByRole('option', { name: 'Contour Lines' }).click();
+    await panel.getByRole('button', { name: 'Run', exact: true }).click();
+    await expect
+      .poll(() => mapLayerIds(page, 'contours-result'), { timeout: 60000 })
+      .toEqual(['contours-result-fill', 'contours-result-line']);
+    await expect.poll(() => mapLayerIds(page, 'terrain-result')).toEqual([]);
+    expect(
+      await page.evaluate(
+        () => window.__viewtopiaMap.getSource('contours-result').serialize().data.features.length,
+      ),
+    ).toBeGreaterThan(10);
+
+    // the panel owns the layers: closing it takes them off the map
+    await closePanel(page, panel);
+    await expect.poll(() => mapLayerIds(page, 'contours-result')).toEqual([]);
+  });
+
+  test('terrainAnalysis on deck.gl: the panel says which renderer to switch to', async ({
+    page,
+  }) => {
+    await openViewer(page);
+    await page.getByRole('textbox', { name: 'Renderer' }).click();
+    await page.getByRole('option', { name: 'deck.gl' }).click();
+    await expect(page.locator('#deckgl-container canvas').first()).toBeVisible({ timeout: 30000 });
+
+    const panel = await openPanel(page, 'Terrain');
+    // deck draws no analysis result, so the run is blocked with a reason rather
+    // than left to fail on a view it cannot read
+    await expect(panel.getByTestId('terrain-renderer-hint')).toHaveText(
+      'Switch to the Cesium or MapLibre renderer to run this',
+    );
+    await expect(panel.getByRole('button', { name: 'Run', exact: true })).toBeDisabled();
+
+    await closePanel(page, panel);
   });
 });

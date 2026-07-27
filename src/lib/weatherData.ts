@@ -1,23 +1,14 @@
 /**
- * Shared open-meteo helpers for the Weather and Wind panels: resolve the
- * current view bounds from whichever renderer is live, fetch current/hourly
- * weather at a point, and sample a grid of current values across the view.
- * open-meteo is a free no-key API (same precedent as open-elevation).
+ * Shared open-meteo helpers for the Weather and Wind panels: fetch
+ * current/hourly weather at a point, and sample a grid of current values
+ * across the view. The view bounds those panels import from here now come from
+ * lib/viewBounds. open-meteo is a free no-key API (same precedent as
+ * open-elevation).
  */
-import { Math as CesiumMath } from 'cesium';
-import { getActiveCesiumViewer, getActiveMapLibre } from '../viewer/registry';
-import { getSharedCamera } from '../hooks/sharedCamera';
+export { getViewBounds, type ViewBounds } from './viewBounds';
+import type { ViewBounds } from './viewBounds';
 
 const OPEN_METEO = 'https://api.open-meteo.com/v1/forecast';
-
-export interface ViewBounds {
-  west: number;
-  south: number;
-  east: number;
-  north: number;
-  centerLng: number;
-  centerLat: number;
-}
 
 export interface CurrentWeather {
   temperature: number; // °C
@@ -56,44 +47,6 @@ export function weatherCodeInfo(code: number): { icon: string; text: string } {
   if (code <= 82) return { icon: '🌧', text: 'Rain showers' };
   if (code <= 86) return { icon: '❄', text: 'Snow showers' };
   return { icon: '⛈', text: 'Thunderstorm' };
-}
-
-/** Current view bounds from Cesium, else MapLibre, else the shared camera. */
-export function getViewBounds(): ViewBounds {
-  const viewer = getActiveCesiumViewer();
-  if (viewer) {
-    const rect = viewer.camera.computeViewRectangle();
-    if (rect) {
-      const west = CesiumMath.toDegrees(rect.west);
-      const south = CesiumMath.toDegrees(rect.south);
-      const east = CesiumMath.toDegrees(rect.east);
-      const north = CesiumMath.toDegrees(rect.north);
-      return { west, south, east, north, centerLng: (west + east) / 2, centerLat: (south + north) / 2 };
-    }
-  }
-  const map = getActiveMapLibre();
-  if (map) {
-    const b = map.getBounds();
-    return {
-      west: b.getWest(),
-      south: b.getSouth(),
-      east: b.getEast(),
-      north: b.getNorth(),
-      centerLng: b.getCenter().lng,
-      centerLat: b.getCenter().lat,
-    };
-  }
-  // fallback: a box around the shared camera sized by zoom
-  const cam = getSharedCamera();
-  const span = 180 / 2 ** cam.zoom;
-  return {
-    west: cam.longitude - span,
-    south: cam.latitude - span,
-    east: cam.longitude + span,
-    north: cam.latitude + span,
-    centerLng: cam.longitude,
-    centerLat: cam.latitude,
-  };
 }
 
 /** Grid of cell-center coordinates across bounds, n per side. */

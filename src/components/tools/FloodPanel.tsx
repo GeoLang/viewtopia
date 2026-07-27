@@ -4,14 +4,23 @@ import { IconDroplet, IconX } from '@tabler/icons-react';
 import type { GeoJsonDataSource } from 'cesium';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { renderGeoJson } from '../../viewer/renderGeoJson';
-import { currentBbox, flood } from '../../lib/terrainAnalysis';
+import { useAppStore } from '../../store/app';
+import {
+  addMapGeoJson,
+  currentBbox,
+  flood,
+  RENDERER_HINT,
+  type MapResult,
+} from '../../lib/terrainAnalysis';
 
 export function FloodPanel({ onClose }: { onClose: () => void }) {
   const [waterLevel, setWaterLevel] = useState(20);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cells, setCells] = useState<number | null>(null);
+  const renderer = useAppStore((s) => s.renderer);
   const dsRef = useRef<GeoJsonDataSource | undefined>(undefined);
+  const mapResultRef = useRef<MapResult | null>(null);
 
   const clearResult = () => {
     const viewer = getActiveCesiumViewer();
@@ -19,6 +28,8 @@ export function FloodPanel({ onClose }: { onClose: () => void }) {
       viewer.dataSources.remove(dsRef.current);
     }
     dsRef.current = undefined;
+    mapResultRef.current?.remove();
+    mapResultRef.current = null;
     setCells(null);
   };
 
@@ -36,7 +47,11 @@ export function FloodPanel({ onClose }: { onClose: () => void }) {
       clearResult();
       const fc = await flood(waterLevel, bbox);
       setCells(fc.features.length ? (fc.features[0].properties?.flooded_cells ?? 0) : 0);
-      dsRef.current = await renderGeoJson(fc, '#3b82f6', false, 'flood-result');
+      if (renderer === 'maplibre') {
+        mapResultRef.current = addMapGeoJson('flood-result', fc, '#3b82f6');
+      } else {
+        dsRef.current = await renderGeoJson(fc, '#3b82f6', false, 'flood-result');
+      }
     } catch {
       setError('Flood request failed');
     } finally {
@@ -80,13 +95,25 @@ export function FloodPanel({ onClose }: { onClose: () => void }) {
         <Slider size="xs" min={0} max={100} step={1} value={waterLevel} onChange={setWaterLevel} color="blue" />
 
         <Group grow>
-          <Button size="xs" color="blue" onClick={run} loading={loading}>
+          <Button
+            size="xs"
+            color="blue"
+            onClick={run}
+            loading={loading}
+            disabled={renderer === 'deckgl'}
+          >
             Simulate
           </Button>
           <Button size="xs" variant="default" onClick={clearResult}>
             Clear
           </Button>
         </Group>
+
+        {renderer === 'deckgl' && (
+          <Text size="xs" c="yellow" data-testid="flood-renderer-hint">
+            {RENDERER_HINT}
+          </Text>
+        )}
 
         {cells !== null && (
           <Text size="xs" c="dimmed">

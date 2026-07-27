@@ -4,13 +4,18 @@ import { IconMountain, IconX } from '@tabler/icons-react';
 import type { GeoJsonDataSource, ImageryLayer } from 'cesium';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { renderGeoJson } from '../../viewer/renderGeoJson';
+import { useAppStore } from '../../store/app';
 import {
+  addMapGeoJson,
+  addMapRaster,
   addRasterOverlay,
   contours,
   currentBbox,
   removeOverlay,
   terrainRaster,
+  RENDERER_HINT,
   type Bbox,
+  type MapResult,
 } from '../../lib/terrainAnalysis';
 
 type Op = 'slope' | 'aspect' | 'hillshade' | 'contours';
@@ -20,13 +25,17 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
   const [opacity, setOpacity] = useState(70);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const renderer = useAppStore((s) => s.renderer);
   const layerRef = useRef<ImageryLayer | null>(null);
   const dsRef = useRef<GeoJsonDataSource | undefined>(undefined);
+  const mapResultRef = useRef<MapResult | null>(null);
   const urlRef = useRef<string | null>(null);
 
   const clearResult = () => {
     removeOverlay(layerRef.current);
     layerRef.current = null;
+    mapResultRef.current?.remove();
+    mapResultRef.current = null;
     if (urlRef.current) {
       URL.revokeObjectURL(urlRef.current);
       urlRef.current = null;
@@ -43,6 +52,7 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
   // live opacity control for the raster overlay.
   useEffect(() => {
     if (layerRef.current) layerRef.current.alpha = opacity / 100;
+    mapResultRef.current?.setOpacity(opacity / 100);
   }, [opacity]);
 
   const run = async () => {
@@ -57,11 +67,19 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
       clearResult();
       if (analysis === 'contours') {
         const fc = await contours(bbox as Bbox);
-        dsRef.current = await renderGeoJson(fc, '#f59e0b', false, 'contours-result');
+        if (renderer === 'maplibre') {
+          mapResultRef.current = addMapGeoJson('contours-result', fc, '#f59e0b');
+        } else {
+          dsRef.current = await renderGeoJson(fc, '#f59e0b', false, 'contours-result');
+        }
       } else {
         const url = await terrainRaster(analysis, bbox as Bbox);
         urlRef.current = url;
-        layerRef.current = await addRasterOverlay(url, bbox as Bbox, opacity / 100);
+        if (renderer === 'maplibre') {
+          mapResultRef.current = addMapRaster('terrain-result', url, bbox as Bbox, opacity / 100);
+        } else {
+          layerRef.current = await addRasterOverlay(url, bbox as Bbox, opacity / 100);
+        }
       }
     } catch {
       setError('Terrain request failed');
@@ -124,13 +142,25 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
         />
 
         <Group grow>
-          <Button size="xs" color="violet" onClick={run} loading={loading}>
+          <Button
+            size="xs"
+            color="violet"
+            onClick={run}
+            loading={loading}
+            disabled={renderer === 'deckgl'}
+          >
             Run
           </Button>
           <Button size="xs" variant="default" onClick={clearResult}>
             Clear
           </Button>
         </Group>
+
+        {renderer === 'deckgl' && (
+          <Text size="xs" c="yellow" data-testid="terrain-renderer-hint">
+            {RENDERER_HINT}
+          </Text>
+        )}
 
         {error && (
           <Text size="xs" c="red">
