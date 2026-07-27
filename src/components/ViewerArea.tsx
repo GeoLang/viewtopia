@@ -231,6 +231,9 @@ export function ViewerArea() {
             position: 'absolute',
             inset: 0,
             display: activeTab === 'map' ? 'block' : 'none',
+            // leaflet panes carry z-index 400+; without an own stacking
+            // context they paint over body-level dropdowns (z 300)
+            zIndex: 0,
           }}
         />
       </Box>
