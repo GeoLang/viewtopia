@@ -270,3 +270,14 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   tiletopia's room cap (close code 4029 -> "too many rooms open", no reconnect into the
   same refusal) and finally builds a valid socket URL from an absolute `tiletopiaUrl`
   (http -> ws, https -> wss; root-relative unchanged).
+- **2026-07-27 (realtime + population)** — tiletopia collab WS hardened: presence
+  refcounted per connection (two tabs of one account survive one closing; stale cleanup
+  cannot evict a reconnected user), rooms reclaimed when empty (they previously leaked a
+  256-slot channel per distinct id, forever) and creation capped at 32 per user, refusals
+  close with 4029; tests mutation-checked. geolang download_population_grid: local
+  GHS-POP zonal sum is now the primary source for clipped AND unclipped runs; the
+  WorldPop fallback speaks the real async contract (geojson param, task polling,
+  pyramid sum — the old bbox call had never been valid, hence the -1s) and the iso3=GBR
+  hardcode is gone. Also fixed: the biome autofix in ab0295e2 had arrow-converted the
+  collab e2e's WebSocket recording wrapper, breaking `new` (the only conversion in that
+  commit; audited).

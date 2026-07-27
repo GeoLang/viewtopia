@@ -18,13 +18,6 @@
 
 ## OPEN — platform hygiene
 
-- [ ] **tiletopia realtime presence is not per-connection refcounted**
-      (`crates/tiletopia-server/src/realtime.rs`, `PresenceTracker::leave`): with two
-      tabs of one account, either tab leaving removes the account from every peer's
-      roster while the other tab is still connected.
-- [ ] **tiletopia realtime room count unbounded** — any authenticated user can create
-      rooms without limit; add a cap or an idle reaper.
-
 - [ ] **tiletopia full-features clippy**: `cargo clippy --all-features` fails in
       tiletopia-core (ort/ndarray version clash); CI runs `--features
       draco,gpu,plugin-dylib,ml` — check whether that job is red on master and fix the
@@ -48,9 +41,6 @@
 - [ ] **ptolemy pointcloud query/profile classified as writes**: POST /pointclouds/{id}/query
       and /profile are read-shaped but `classify` marks them Write, so anonymous callers
       get 401 even on public datasets. Over-restrictive, not a leak.
-- [ ] **geolang download_population_grid unclipped path returns -1**: the WorldPop stats
-      API returns nothing (URL also hardcodes iso3=GBR). Same local GHS-POP zonal sum
-      used for clipped runs would fix it.
 
 ## OPEN — post-v1: replace embedded Letta (decided 2026-07-25)
 
