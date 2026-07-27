@@ -301,4 +301,7 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   gates nginx on tiletopia's healthcheck, so a cold `up` never exposes it. Follow-up
   found on the way: viewtopia's depends_on pulled geolang into the panels/load jobs,
   which never build that image — dep dropped (nginx resolves /agent/ at request time),
-  so those jobs can finally start their stack.
+  so those jobs can finally start their stack. That stack has no agent at all, so the
+  panels and sweep suites stub the probe in `openApp` (tests/e2e/panel-helpers.js): a
+  2xx is the only answer chrome does not log as a console error, so the stub reports the
+  agent reachable and only the header's status dot reads that.

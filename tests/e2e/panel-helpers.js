@@ -11,6 +11,14 @@ export const MENU_ITEM = '[class*="mantine-Menu-dropdown"] [class*="mantine-Menu
 
 /** Boot the app with preview tools visible and the default renderer up. */
 export async function openApp(page) {
+  // this stack runs no geolang-api, so nginx answers the viewer's per-page-load
+  // /agent/health probe with a 502 and chrome logs it as a console error. A 2xx is the
+  // only answer it does not log, and useBackendDiscovery reads res.ok alone, so the
+  // agent reads as reachable here. Only the header's status dot reads that.
+  await page.route('**/agent/health', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '{"status":"stubbed"}' }),
+  );
+
   await page.addInitScript(() => {
     // zustand/persist store for useAppStore ('viewtopia-app'); merge() backfills
     // every key we leave out
