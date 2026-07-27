@@ -1,10 +1,19 @@
-import { useEffect, useState } from 'react';
-import { Math as CesiumMath } from 'cesium';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Cartesian2,
+  Cartesian3,
+  HeadingPitchRange,
+  Math as CesiumMath,
+  Matrix4,
+} from 'cesium';
 import { getActiveCesiumViewer } from '../viewer/registry';
-import { useAccessibilityStore } from '../store/accessibility';
 
 /** Zoom step as a fraction of camera height, so a click feels equal at any altitude. */
 const ZOOM_FRACTION = 0.4;
+/** Compass drag sensitivity, matching maplibre's feel. */
+const DRAG_DEG_PER_PX = 0.5;
+/** Below this movement a pointer press counts as a click (reset north). */
+const CLICK_SLOP_PX = 3;
 
 const buttonStyle: React.CSSProperties = {
   width: 29,
@@ -26,7 +35,6 @@ const buttonStyle: React.CSSProperties = {
  */
 export function CesiumNavControl() {
   const [headingDeg, setHeadingDeg] = useState(0);
-  const reduceMotion = useAccessibilityStore((s) => s.reduceMotion);
 
   useEffect(() => {
     let detach: (() => void) | null = null;
@@ -60,14 +68,69 @@ export function CesiumNavControl() {
     else viewer.camera.zoomOut(amount);
   };
 
+  // setView, not flyTo: a zero-distance flight (same position, new heading)
+  // completes without applying the orientation, verified live
   const resetNorth = () => {
     const viewer = getActiveCesiumViewer();
     if (!viewer) return;
-    viewer.camera.flyTo({
-      destination: viewer.camera.position.clone(),
+    viewer.camera.setView({
       orientation: { heading: 0, pitch: viewer.camera.pitch, roll: 0 },
-      duration: reduceMotion ? 0 : 0.5,
     });
+  };
+
+  /** Turn the camera to a heading, rotating about the globe point at screen
+   * center (like cesium's own middle-drag); off-globe views turn in place. */
+  const rotateTo = (headingRad: number) => {
+    const viewer = getActiveCesiumViewer();
+    if (!viewer) return;
+    const canvas = viewer.scene.canvas;
+    const target = viewer.camera.pickEllipsoid(
+      new Cartesian2(canvas.clientWidth / 2, canvas.clientHeight / 2),
+    );
+    if (target) {
+      const range = Cartesian3.distance(viewer.camera.position, target);
+      viewer.camera.lookAt(
+        target,
+        new HeadingPitchRange(headingRad, viewer.camera.pitch, range),
+      );
+      // lookAt pins the camera to the target's frame; release it or every
+      // later camera move orbits the target
+      viewer.camera.lookAtTransform(Matrix4.IDENTITY);
+    } else {
+      viewer.camera.setView({
+        orientation: { heading: headingRad, pitch: viewer.camera.pitch, roll: 0 },
+      });
+    }
+  };
+
+  const drag = useRef<{ startX: number; lastX: number; moved: boolean } | null>(null);
+
+  const onCompassDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    drag.current = { startX: e.clientX, lastX: e.clientX, moved: false };
+  };
+
+  const onCompassMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const st = drag.current;
+    if (!st) return;
+    if (Math.abs(e.clientX - st.startX) > CLICK_SLOP_PX) st.moved = true;
+    const dx = e.clientX - st.lastX;
+    st.lastX = e.clientX;
+    if (!st.moved || dx === 0) return;
+    const viewer = getActiveCesiumViewer();
+    if (!viewer) return;
+    rotateTo(viewer.camera.heading + CesiumMath.toRadians(dx * DRAG_DEG_PER_PX));
+  };
+
+  const onCompassUp = () => {
+    const wasDrag = drag.current?.moved;
+    drag.current = null;
+    if (!wasDrag) resetNorth();
+  };
+
+  // a cancelled press (capture lost, touch interrupted) is neither click nor drag
+  const onCompassCancel = () => {
+    drag.current = null;
   };
 
   return (
@@ -102,8 +165,11 @@ export function CesiumNavControl() {
       <button
         type="button"
         aria-label="Reset bearing to north"
-        style={buttonStyle}
-        onClick={resetNorth}
+        style={{ ...buttonStyle, touchAction: 'none' }}
+        onPointerDown={onCompassDown}
+        onPointerMove={onCompassMove}
+        onPointerUp={onCompassUp}
+        onPointerCancel={onCompassCancel}
       >
         <svg
           width="18"
