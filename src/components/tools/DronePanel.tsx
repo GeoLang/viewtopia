@@ -8,7 +8,6 @@ import {
   NumberInput,
   Slider,
   Button,
-  Switch,
 } from '@mantine/core';
 import { IconDrone, IconX, IconPlayerPlay, IconPlayerPause } from '@tabler/icons-react';
 

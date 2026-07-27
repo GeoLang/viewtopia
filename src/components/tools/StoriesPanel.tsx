@@ -41,7 +41,7 @@ function sharedAsCamera(): CameraState {
   return {
     lng: cam.longitude,
     lat: cam.latitude,
-    height: 4e7 / Math.pow(2, cam.zoom),
+    height: 4e7 / 2 ** cam.zoom,
     heading: cam.bearing,
     pitch: cam.pitch - 90,
     roll: 0,

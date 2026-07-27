@@ -6,7 +6,6 @@ import {
   Group,
   ActionIcon,
   Button,
-  Select,
   FileButton,
   Badge,
   Slider,

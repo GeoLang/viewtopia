@@ -56,7 +56,7 @@ export function Minimap() {
     const interval = setInterval(() => {
       try {
         const cam = getSharedCamera();
-        const extent = (4e7 / Math.pow(2, cam.zoom)) / 111000;
+        const extent = (4e7 / 2 ** cam.zoom) / 111000;
         rect.setBounds([
           [cam.latitude - extent / 2, cam.longitude - extent / 2],
           [cam.latitude + extent / 2, cam.longitude + extent / 2],

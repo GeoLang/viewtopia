@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Badge, Tabs, Group, Select, Button, Menu, Box, ActionIcon, Tooltip } from '@mantine/core';
+import { Badge, Tabs, Group, Select, Button, Menu, ActionIcon, Tooltip } from '@mantine/core';
 import {
   IconGlobe,
   IconMap,
@@ -13,21 +13,11 @@ import {
   IconRoute,
   IconBookmark,
   IconDownload,
-  IconMapPins,
   IconStack2,
   IconBuildingSkyscraper,
-  IconColumns,
-  IconChartBar,
-  IconTimeline,
-  IconUsers,
-  IconLink,
   IconSettings,
   IconPackage,
-  IconFileExport,
-  IconBook,
   IconCategory,
-  IconMountain,
-  IconChartAreaLine,
   IconClick,
   IconVectorTriangle,
   IconPalette,

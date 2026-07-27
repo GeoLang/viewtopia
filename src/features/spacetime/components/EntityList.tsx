@@ -12,7 +12,7 @@ import {
 } from '@mantine/core';
 import { IconSearch, IconPlus, IconTrash } from '@tabler/icons-react';
 import { useSpaceTimeStore } from '../store';
-import type { Entity, EntityKind } from '../types';
+import type { EntityKind } from '../types';
 
 const KIND_COLORS: Record<EntityKind, string> = {
   person: 'violet',

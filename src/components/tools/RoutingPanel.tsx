@@ -8,7 +8,6 @@ import {
   TextInput,
   Button,
   Badge,
-  Loader,
 } from '@mantine/core';
 import { IconRoute, IconX, IconMapPin } from '@tabler/icons-react';
 import { geocode } from '../../services/geocode';

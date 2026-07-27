@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import {
-  Viewer,
+  type Viewer,
   Cartesian3,
   Cartesian2,
   Color,

@@ -33,7 +33,7 @@ function activeCamera(renderer: Renderer): number[] {
       return [
         c.lng,
         c.lat,
-        4e7 / Math.pow(2, map.getZoom()),
+        4e7 / 2 ** map.getZoom(),
         map.getBearing(),
         map.getPitch() - 90,
       ];
@@ -43,7 +43,7 @@ function activeCamera(renderer: Renderer): number[] {
   return [
     shared.longitude,
     shared.latitude,
-    4e7 / Math.pow(2, shared.zoom),
+    4e7 / 2 ** shared.zoom,
     shared.bearing,
     shared.pitch - 90,
   ];

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import {
   Paper,
   Text,
-  Stack,
   Group,
   ActionIcon,
   Button,

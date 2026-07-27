@@ -1,4 +1,4 @@
-import type { Track, SpaceTimeEvent } from '../types';
+import type { Track, } from '../types';
 import { haversineM } from './geo';
 
 export interface ColocationEvent {

@@ -1,17 +1,16 @@
 import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import {
-  Viewer,
+  type Viewer,
   Cartesian2,
   Cartographic,
   Math as CesiumMath,
   Color,
-  Entity,
   PolylineDashMaterialProperty,
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
 } from 'cesium';
-import { useDrawStore, type DrawMode, type DrawnFeature } from '../store/draw';
+import { useDrawStore, type DrawMode, } from '../store/draw';
 import { useAppStore } from '../store/app';
 import { Cartesian3 } from 'cesium';
 

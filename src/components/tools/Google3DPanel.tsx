@@ -7,7 +7,6 @@ import {
   ActionIcon,
   TextInput,
   Switch,
-  Button,
 } from '@mantine/core';
 import { IconBrandGoogle, IconX } from '@tabler/icons-react';
 

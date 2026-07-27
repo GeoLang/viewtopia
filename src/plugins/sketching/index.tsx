@@ -5,8 +5,8 @@
  */
 
 import { useState } from 'react';
-import { Paper, Text, Stack, Button, Group, Badge, Select, SegmentedControl, Slider, Switch, Code, NumberInput } from '@mantine/core';
-import { IconPencil, IconCut, IconArrowMerge, IconShape } from '@tabler/icons-react';
+import { Paper, Text, Stack, Button, Group, Badge, Select, Slider, Code, NumberInput } from '@mantine/core';
+import { IconPencil, } from '@tabler/icons-react';
 import * as turf from '@turf/turf';
 import type { PluginDefinition, PluginContext } from '../sdk';
 

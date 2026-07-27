@@ -72,6 +72,7 @@ function WidgetContent({ widget }: { widget: DashboardWidget }) {
         <Box
           fz="xs"
           c="gray.4"
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: user's own localStorage content, no backend
           dangerouslySetInnerHTML={{ __html: (c.html as string) || '' }}
         />
       );

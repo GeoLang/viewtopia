@@ -6,7 +6,7 @@
 
 import { useState } from 'react';
 import { Paper, Text, Stack, Button, Group, Badge, Select, NumberInput, ColorInput, TextInput } from '@mantine/core';
-import { IconCircle, IconOvalVertical } from '@tabler/icons-react';
+import { IconCircle, } from '@tabler/icons-react';
 import * as turf from '@turf/turf';
 import type { PluginDefinition, PluginContext } from '../sdk';
 

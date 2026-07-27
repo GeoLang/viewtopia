@@ -57,7 +57,7 @@ const ICELAND_VIEW = { lon: ICELAND.lon, lat: ICELAND.lat, zoom: 6 };
 const SYDNEY_VIEW = { lon: SYDNEY.lon, lat: SYDNEY.lat, zoom: 4 };
 
 /** The zoom↔height conversion the renderers share, so a Cesium height sets a zoom. */
-const cameraHeight = (zoom) => 4e7 / Math.pow(2, zoom);
+const cameraHeight = (zoom) => 4e7 / 2 ** zoom;
 
 async function openPanel(page, label, title) {
   await page.getByRole('button', { name: 'Tools' }).click();

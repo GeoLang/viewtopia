@@ -16,7 +16,7 @@ interface ViewerRefs {
 export function useViewerSync(refs: ViewerRefs) {
   const flyTo = useCallback(
     (lng: number, lat: number, zoom?: number) => {
-      const altitude = zoom ? 40_000_000 / Math.pow(2, zoom) : 5_000_000;
+      const altitude = zoom ? 40_000_000 / 2 ** zoom : 5_000_000;
 
       if (refs.cesium?.current && !refs.cesium.current.isDestroyed()) {
         const { Cartesian3 } = require('cesium');

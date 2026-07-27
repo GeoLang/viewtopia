@@ -3,7 +3,7 @@ import type { MutableRefObject } from 'react';
 import {
   UrlTemplateImageryProvider,
   WebMapServiceImageryProvider,
-  Viewer,
+  type Viewer,
   type ImageryProvider,
 } from 'cesium';
 import {

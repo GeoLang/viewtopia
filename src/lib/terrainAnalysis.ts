@@ -5,7 +5,7 @@
  * results, on Cesium and on MapLibre.
  */
 import {
-  ImageryLayer,
+  type ImageryLayer,
   Rectangle,
   SingleTileImageryProvider,
 } from 'cesium';

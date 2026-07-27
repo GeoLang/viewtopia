@@ -12,7 +12,6 @@ import {
   Text,
   Paper,
   Alert,
-  Divider,
 } from '@mantine/core';
 import { IconBrandPython, IconPlugConnected, IconPlugConnectedX, IconRefresh } from '@tabler/icons-react';
 import { createKernelClient, getKernelClient, disconnectKernel, loadKernelConfig, saveKernelConfig, type KernelStatus, type KernelConfig } from './jupyter';

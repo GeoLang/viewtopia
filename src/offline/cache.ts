@@ -7,7 +7,7 @@
  * - Stale-while-revalidate: return cached immediately, refresh in background
  */
 
-import { apiCache, type CachedResponse } from './db';
+import { apiCache, } from './db';
 import { isOnline } from './network';
 
 /** Default TTL for cached API responses (1 hour) */

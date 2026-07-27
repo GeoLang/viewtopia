@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import {
-  Viewer,
+  type Viewer,
   Cartesian3,
   Color,
-  Entity,
+  type Entity,
 } from 'cesium';
 import { useBuildingStore } from '../store/buildings';
 import { useAppStore } from '../store/app';

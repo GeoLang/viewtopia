@@ -1,4 +1,4 @@
-import type { Track, Geofence, SpaceTimeEvent } from '../types';
+import type { Track, Geofence, } from '../types';
 import { haversineM } from './geo';
 
 export interface FenceCrossing {

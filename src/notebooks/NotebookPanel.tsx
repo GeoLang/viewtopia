@@ -17,7 +17,6 @@ import {
   ScrollArea,
   Tooltip,
   Divider,
-  Select,
 } from '@mantine/core';
 import {
   IconPlayerPlay,
@@ -41,7 +40,7 @@ import {
 } from '@tabler/icons-react';
 import { Table as MantineTable } from '@mantine/core';
 import { useNotebookStore } from './notebookStore';
-import type { NotebookCell, CellType } from './types';
+import type { NotebookCell, } from './types';
 
 function formatCell(value: unknown): string {
   if (value === null || value === undefined) return '';

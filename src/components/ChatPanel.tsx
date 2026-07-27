@@ -6,8 +6,6 @@ import {
   Group,
   Text,
   Select,
-  Button,
-  Loader,
   Tooltip,
 } from '@mantine/core';
 import { IconSend, IconPlus, IconTrash, IconSquare } from '@tabler/icons-react';

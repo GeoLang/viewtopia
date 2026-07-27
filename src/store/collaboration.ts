@@ -214,7 +214,7 @@ function clampedLatRad(latitude: number): number {
 }
 
 function zoomToHeight(zoom: number, latitude: number): number {
-  return (EARTH_CIRCUMFERENCE_M * Math.cos(clampedLatRad(latitude))) / Math.pow(2, zoom + 1);
+  return (EARTH_CIRCUMFERENCE_M * Math.cos(clampedLatRad(latitude))) / 2 ** (zoom + 1);
 }
 
 function heightToZoom(height: number, latitude: number): number {

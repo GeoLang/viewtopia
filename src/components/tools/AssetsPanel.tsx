@@ -9,7 +9,6 @@ import {
   ScrollArea,
   Badge,
   FileButton,
-  Progress,
 } from '@mantine/core';
 import { IconPackage, IconX, IconUpload, IconTrash, IconEye } from '@tabler/icons-react';
 

@@ -137,7 +137,10 @@ export function featuresToGeoJSON(features: DrawnFeature[]) {
   return {
     type: 'FeatureCollection' as const,
     features: features.map((f) => {
-      let geometry;
+      let geometry:
+        | { type: 'Point'; coordinates: [number, number] }
+        | { type: 'LineString'; coordinates: [number, number][] }
+        | { type: 'Polygon'; coordinates: [number, number][][] };
       if (f.type === 'Point' || f.type === 'Circle') {
         geometry = { type: 'Point' as const, coordinates: f.coords[0] };
       } else if (f.type === 'LineString') {

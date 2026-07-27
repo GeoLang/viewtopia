@@ -12,7 +12,6 @@ import {
   IconGlobe,
   IconMoon,
   IconSun,
-  IconTrash,
 } from '@tabler/icons-react';
 import { useMantineColorScheme } from '@mantine/core';
 import { useAppStore } from '../store/app';

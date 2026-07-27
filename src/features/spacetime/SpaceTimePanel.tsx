@@ -6,12 +6,9 @@ import {
   Group,
   ActionIcon,
   Stack,
-  TextInput,
   Button,
   ScrollArea,
   Badge,
-  Slider,
-  Switch,
   Box,
 } from '@mantine/core';
 import {
@@ -19,12 +16,7 @@ import {
   IconClock,
   IconUsers,
   IconLink,
-  IconTarget,
   IconChartBar,
-  IconPlayerPlay,
-  IconPlayerPause,
-  IconSearch,
-  IconPlus,
   IconUpload,
   IconFileTypeCsv,
 } from '@tabler/icons-react';

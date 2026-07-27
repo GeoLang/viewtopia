@@ -39,7 +39,7 @@ export function BuildingsPanel({ onClose }: { onClose: () => void }) {
     setStatus(null);
     try {
       const cam = getSharedCamera();
-      const height = 4e7 / Math.pow(2, cam.zoom);
+      const height = 4e7 / 2 ** cam.zoom;
       const result = await fetchOsmBuildings(cam.latitude, cam.longitude, height);
       setBuildings(result);
       setEnabled(true);

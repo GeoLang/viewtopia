@@ -4,8 +4,8 @@
  */
 
 import { useState } from 'react';
-import { Paper, Text, Stack, Button, Group, Badge, TextInput, Select, Table, Loader, Code, Anchor } from '@mantine/core';
-import { IconDatabase, IconSearch, IconWorldWww } from '@tabler/icons-react';
+import { Paper, Text, Stack, Button, Group, Badge, TextInput, Select, Table, Loader, } from '@mantine/core';
+import { IconDatabase, IconSearch, } from '@tabler/icons-react';
 import type { PluginDefinition, PluginContext } from '../sdk';
 
 interface CatalogResult {

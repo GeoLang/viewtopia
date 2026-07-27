@@ -15,6 +15,7 @@ import {
   createWorldTerrainAsync,
   CesiumTerrainProvider,
   EllipsoidTerrainProvider,
+  type TerrainProvider,
 } from 'cesium';
 import { getActiveCesiumViewer, getActiveMapLibre } from '../../viewer/registry';
 import { useAppStore, type Renderer } from '../../store/app';
@@ -92,7 +93,7 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
     }
     setLoading(true);
     try {
-      let tp;
+      let tp: TerrainProvider;
       if (provider === 'stack') tp = await CesiumTerrainProvider.fromUrl(STACK_TERRAIN_URL);
       else if (provider === 'custom') tp = await CesiumTerrainProvider.fromUrl(url);
       else tp = await createWorldTerrainAsync();

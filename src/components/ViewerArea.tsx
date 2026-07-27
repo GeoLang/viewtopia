@@ -101,7 +101,7 @@ export function ViewerArea() {
       return;
     }
 
-    const altitude = zoom ? 4e7 / Math.pow(2, zoom) : 5_000_000;
+    const altitude = zoom ? 4e7 / 2 ** zoom : 5_000_000;
 
     if (activeTab === 'globe') {
       if (renderer === 'cesium' && cesiumRef.current && !cesiumRef.current.isDestroyed()) {

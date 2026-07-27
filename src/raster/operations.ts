@@ -12,8 +12,6 @@ import type {
   ReclassParams,
   ContourParams,
   ContourResult,
-  ZonalStatsParams,
-  ZonalResult,
 } from './types';
 
 /**

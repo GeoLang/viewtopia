@@ -9,7 +9,7 @@ import { getSharedCamera, subscribeSharedCamera, type SharedCamera } from './sha
  * plus heading/pitch in radians with -90 pointing down.
  */
 
-export const cameraHeight = (zoom: number) => 4e7 / Math.pow(2, zoom);
+export const cameraHeight = (zoom: number) => 4e7 / 2 ** zoom;
 
 export const cameraZoom = (height: number) =>
   Math.max(0, Math.log2(4e7 / Math.max(height, 1)));

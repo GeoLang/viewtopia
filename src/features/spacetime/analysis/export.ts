@@ -1,4 +1,4 @@
-import type { Track, Entity, SpaceTimeEvent } from '../types';
+import type { Track, Entity, } from '../types';
 
 /**
  * Export entities and tracks to KML format.

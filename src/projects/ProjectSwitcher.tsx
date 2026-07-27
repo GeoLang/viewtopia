@@ -22,7 +22,6 @@ import {
   IconFolder,
   IconFolderPlus,
   IconChevronDown,
-  IconSettings,
   IconShare,
   IconTrash,
   IconCopy,

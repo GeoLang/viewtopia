@@ -14,10 +14,7 @@ import {
   Badge,
   Divider,
   Alert,
-  Loader,
-  Slider,
   FileInput,
-  Code,
   Textarea,
 } from '@mantine/core';
 import {
@@ -38,8 +35,8 @@ import {
   computeBandMath,
   computeContours,
 } from './operations';
-import { renderToDataUrl, generateLegend } from './renderer';
-import type { RasterResult, RasterMetadata, ColorRamp, ContourResult } from './types';
+import { renderToDataUrl, } from './renderer';
+import type { RasterResult, ColorRamp, ContourResult } from './types';
 
 export function RasterPanel() {
   const [url, setUrl] = useState('');

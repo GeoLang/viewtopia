@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { Paper, Text, Stack, Button, Group, Badge, Select, NumberInput, TextInput, Switch, Code } from '@mantine/core';
-import { IconPhoto, IconFileTypePdf, IconCode, IconShare } from '@tabler/icons-react';
+import { IconPhoto, IconShare } from '@tabler/icons-react';
 import type { PluginDefinition, PluginContext } from '../sdk';
 
 type ExportFormat = 'png' | 'jpeg' | 'svg' | 'pdf' | 'html-embed' | 'html-full';

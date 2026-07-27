@@ -6,7 +6,7 @@ import {
   Color,
   GeoJsonDataSource,
   VerticalOrigin,
-  Viewer,
+  type Viewer,
 } from 'cesium';
 import { useAgentLayerStore } from '../store/agentLayers';
 import { useAppStore } from '../store/app';

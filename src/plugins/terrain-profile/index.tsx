@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { Paper, Text, Stack, Button, Group, Badge, NumberInput, Select, Code, TextInput } from '@mantine/core';
+import { Paper, Text, Stack, Button, Group, Badge, NumberInput, Code, TextInput } from '@mantine/core';
 import { IconChartLine, IconRoute } from '@tabler/icons-react';
 import type { PluginDefinition, PluginContext } from '../sdk';
 import {

@@ -10,7 +10,7 @@ import {
   Badge,
   ScrollArea,
 } from '@mantine/core';
-import { IconSatellite, IconX, IconSearch } from '@tabler/icons-react';
+import { IconSatellite, IconX, } from '@tabler/icons-react';
 
 interface IonAsset {
   id: number;

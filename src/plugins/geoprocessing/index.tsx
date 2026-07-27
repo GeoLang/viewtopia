@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react';
-import { Paper, Text, Stack, Select, Button, Group, Badge, NumberInput, Loader, Code, Checkbox } from '@mantine/core';
+import { Paper, Text, Stack, Select, Button, Group, Badge, NumberInput, Loader, Code, } from '@mantine/core';
 import { IconVectorTriangle } from '@tabler/icons-react';
 import * as turf from '@turf/turf';
 import type { PluginDefinition, PluginContext } from '../sdk';

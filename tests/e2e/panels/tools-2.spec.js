@@ -321,7 +321,7 @@ test.describe('Tools panels (batch 2)', () => {
     // handshake arguments: the marker first and the raw JWT second
     await page.addInitScript(() => {
       const Inner = window.WebSocket;
-      const recording = function (url, protocols) {
+      const recording = (url, protocols) => {
         window.__wsProtocols = [...(window.__wsProtocols ?? []), protocols];
         return new Inner(url, protocols);
       };

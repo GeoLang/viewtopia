@@ -11,7 +11,7 @@ import {
   Slider,
   Button,
 } from '@mantine/core';
-import { IconStack2, IconX, IconEye, IconEyeOff } from '@tabler/icons-react';
+import { IconStack2, IconX, } from '@tabler/icons-react';
 
 export interface LayerItem {
   id: string;

@@ -44,7 +44,8 @@ class FakeSocket {
   }
 
   addEventListener(type: string, fn: (e: unknown) => void) {
-    (this.listeners[type] ??= []).push(fn);
+    this.listeners[type] ??= [];
+    this.listeners[type].push(fn);
   }
 
   send(data: string) {
