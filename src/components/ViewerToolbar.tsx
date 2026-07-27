@@ -67,6 +67,17 @@ export function ViewerToolbar() {
   const showPreviewTools = useAppStore((s) => s.settings.showPreviewTools);
   const plugins = getPlugins();
 
+  // the 2d map is leaflet: the renderer choice doesn't apply, and vector
+  // styles can't render there (leaflet shows their raster approximation)
+  const onMapTab = activeTab === 'map';
+  const basemapGroups = onMapTab
+    ? BASEMAP_SELECT_GROUPS.map((g) =>
+        g.group.startsWith('Vector')
+          ? { ...g, items: g.items.map((i) => ({ ...i, disabled: true })) }
+          : g,
+      )
+    : BASEMAP_SELECT_GROUPS;
+
   const renderMenuItems = (items: ToolMenuItem[]) =>
     visibleToolItems(items, showPreviewTools).map((item) => (
       <Menu.Item
@@ -144,6 +155,7 @@ export function ViewerToolbar() {
           aria-label="Renderer"
           data={RENDERER_OPTIONS}
           value={renderer}
+          disabled={onMapTab}
           onChange={(v) => v && setRenderer(v as Renderer)}
           styles={{
             input: { background: '#0d1117', borderColor: '#30363d' },
@@ -155,7 +167,7 @@ export function ViewerToolbar() {
           w={110}
           aria-label="Basemap"
           comboboxProps={{ width: 190, position: 'bottom-start' }}
-          data={BASEMAP_SELECT_GROUPS}
+          data={basemapGroups}
           value={basemap}
           onChange={(v) => v && setBasemap(v as Basemap)}
           styles={{
