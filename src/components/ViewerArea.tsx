@@ -12,10 +12,8 @@ import { useSpaceTimeTracks } from '../hooks/useSpaceTimeTracks';
 import { useSpaceTimeDeckLayers } from '../hooks/useSpaceTimeDeckLayers';
 import { useSpaceTimeCesium } from '../hooks/useSpaceTimeCesium';
 import { useBuildingsCesium } from '../hooks/useBuildingsCesium';
-import { useBuildingsDeck } from '../hooks/useBuildingsDeck';
 import { useBuildingsMapLibre } from '../hooks/useBuildingsMapLibre';
 import { useAgentLayersCesium } from '../hooks/useAgentLayersCesium';
-import { useAgentLayersDeck } from '../hooks/useAgentLayersDeck';
 import { useAgentLayersMapLibre } from '../hooks/useAgentLayersMapLibre';
 import { useAgentLayersLeaflet } from '../hooks/useAgentLayersLeaflet';
 import { useOgcLayersCesium } from '../hooks/useOgcLayersCesium';
@@ -57,14 +55,13 @@ export function ViewerArea() {
   useSpaceTimeDeckLayers();
   useSpaceTimeCesium(cesiumRef);
 
-  // Render OSM buildings on all 3D renderers
+  // Render OSM buildings on all 3D renderers (maplibre draws its own
+  // fill-extrusions; a deck copy would z-fight with them)
   useBuildingsCesium(cesiumRef);
-  useBuildingsDeck();
   useBuildingsMapLibre(maplibreRef);
 
   // Render the agent's ui_spec layers on whichever renderer is active
   useAgentLayersCesium(cesiumRef);
-  useAgentLayersDeck();
   useAgentLayersMapLibre(maplibreRef);
   useAgentLayersLeaflet(leafletRef);
 
