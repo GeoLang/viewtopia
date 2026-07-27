@@ -25,13 +25,6 @@
 
 ## OPEN — geolang agent tools (found in 2026-07-26 viewer testing)
 
-- [ ] **assess_environmental_risk run-to-run variance.** Two identical "Monaco, 2km"
-      requests scored 4/10 (mean elev 14.1m, range 0–98) then 1/10 (mean 50.0m, range
-      0–322) — geocode anchor and/or sampling nondeterminism. Pin the geocode result and
-      make the grid deterministic so identical requests reproduce.
-- [ ] **download_population_grid pop_total ignores the clip polygon**: computed from the
-      radius bbox even when clip_layer_path is given, now visibly disagreeing with the
-      rendered clip polygon.
 
 ## OPEN — platform hygiene
 
@@ -61,9 +54,16 @@
       under cold-start load — rather than tolerating it forever.
 - [ ] **fenestra has no platform nginx route** — the load scenario hits :3003 directly.
       Decide whether fenestra belongs behind the same-origin proxy like everything else.
-- [ ] **ptolemy STAC raster search ungated**: `/api/v1/stac/search` returns raster tile
-      ids/bounds without naming a dataset; rasters have no visibility concept, so
-      dataset privacy does not cover them. Decide raster-catalog visibility.
+- [ ] **ptolemy create_catalog on a missing dataset 500s for admins**: the FK stops the
+      write but `ensure_dataset_writable` passes (no row → unenforced scope), so the
+      error shape is a 500, not 404. Check dataset existence first (raster.rs and
+      pointcloud.rs create_catalog).
+- [ ] **ptolemy pointcloud query/profile classified as writes**: POST /pointclouds/{id}/query
+      and /profile are read-shaped but `classify` marks them Write, so anonymous callers
+      get 401 even on public datasets. Over-restrictive, not a leak.
+- [ ] **geolang download_population_grid unclipped path returns -1**: the WorldPop stats
+      API returns nothing (URL also hardcodes iso3=GBR). Same local GHS-POP zonal sum
+      used for clipped runs would fix it.
 
 ## OPEN — post-v1: replace embedded Letta (decided 2026-07-25)
 

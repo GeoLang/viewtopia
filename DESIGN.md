@@ -248,3 +248,14 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   it works on 2D renderers and camera-less bookmarks. Biome lint added (lint/lint:fix,
   formatter off), 315 findings triaged: autofixes + 4 real errors fixed, noisy rules
   downgraded; 0 open dependabot alerts confirmed.
+- **2026-07-27 (later)** — **Raster/pointcloud multi-tenancy closed.** ptolemy's
+  visibility resolver now maps raster and pointcloud catalog/tile ids to their dataset,
+  so every /rasters/{id}, /pointclouds/{id} and /stac/collections/{id} route 404s on
+  private data; /stac/search filters by visible datasets and binds its collections
+  filter as Vec<Uuid>. Raster + pointcloud writes (create_catalog, upload_tile,
+  add_patch) now run the dataset write ladder (403 non-granted; external datasets 409,
+  read-only by design). 9 new integration tests, all proven to fail pre-fix; 134+31
+  green. geolang agent tools: assess_environmental_risk made deterministic (stable
+  geocode pick, rounded grid, batch retries), download_population_grid pop_total is a
+  GHS-POP zonal sum inside the dissolved clip polygon (was radius bbox; UTM area,
+  ~2.7x Mercator inflation gone), both live-verified.
