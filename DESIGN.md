@@ -113,9 +113,9 @@ take effect with `nginx -s reload` instead of a force-recreate.
 
 ### 2.3 ViewTopia internals (this repo)
 
-- **Renderer abstraction** switches CesiumJS (3D globe), MapLibre GL (2D vector), deck.gl
-  (data-viz layers), Leaflet, plus a synced split view. Picking/draw/measure/agent-layers
-  survive renderer switches (hardened 2026-07).
+- **Renderer abstraction** switches CesiumJS (3D globe), MapLibre GL (vector globe, with
+  the deck.gl data-viz layers interleaved into it), Leaflet, plus a synced split view.
+  Picking/draw/measure/agent-layers survive renderer switches (hardened 2026-07).
 - **Agent UI**: chat panel + a registered viewer command protocol — the agent emits
   commands (flyTo, addLayer, measure, deck layers, style-by-*, ~20 tool commands) executed
   client-side; the agent side is geolang's `viewer_control` tool.
@@ -323,3 +323,14 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   replayed cross-token or post-expiry. Terraform validate clean; not applied to live
   infra. Two follow-ups filed: default-behavior TTL vs revoked tokens, and the untested
   Sec-WebSocket-Protocol forwarding for realtime through the CDN.
+- **2026-07-27 (deck.gl folded into MapLibre)** — the standalone deck.gl renderer is gone:
+  deck layers now interleave into the MapLibre map through `MapboxOverlay`
+  (`@deck.gl/mapbox`, `interleaved: true`), so analysis/agent/panel layers draw in the same
+  view as the vector globe, terrain relief and OGC rasters. Three globe renderers became
+  two; the per-panel "switch renderer" hints are gone. Persisted state and share links that
+  say `deckgl` fall back to maplibre. Feature picking goes through one map click handler
+  that asks the overlay first (`deck.pickObject`), since `queryRenderedFeatures` never
+  returns deck's custom layers. Open regression: deck's screen-space aggregation layers
+  (HeatmapLayer, ScreenGridLayer) do not draw under a GlobeView, and useMapLibre projects
+  the map as a globe, so the Heatmap panel and `add_heatmap`/`add_screengrid` render
+  nothing until the projection question is settled.

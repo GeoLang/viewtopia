@@ -21,7 +21,7 @@ const drawEntityCount = (page) =>
 
 async function switchRenderer(page, label) {
   await page
-    .locator('input[value="CesiumJS"], input[value="deck.gl"], input[value="MapLibre"]')
+    .locator('input[value="CesiumJS"], input[value="MapLibre"]')
     .first()
     .click();
   await page.getByRole('option', { name: label, exact: true }).click();
@@ -49,20 +49,17 @@ test.describe('camera across renderers', () => {
       return !!v.camera.pickEllipsoid({ x: r.width / 2, y: r.height / 2 });
     });
 
-  // deck tilts a flat camera 45° for its 2.5D view. Publishing that invented
-  // tilt made Cesium restore it as real and aim at space, silently killing
-  // every click on the globe.
-  test('the globe stays under the cursor after a deck.gl round trip', async ({ page }) => {
+  // A renderer that hands back a tilt Cesium reads as real aims the globe at
+  // space, silently killing every click on it.
+  test('the globe stays under the cursor after a MapLibre round trip', async ({ page }) => {
     await page.goto(REACT_URL);
     await page.waitForFunction(() => !!window.__viewtopiaViewer, null, { timeout: 60000 });
     await expect.poll(() => centreHitsGlobe(page), { timeout: 30000 }).toBe(true);
 
-    await switchRenderer(page, 'deck.gl');
+    await switchRenderer(page, 'MapLibre');
+    await page.waitForFunction(() => !!window.__viewtopiaMap, null, { timeout: 30000 });
+    // the deck overlay rides on that map, so it comes up with it
     await page.waitForFunction(() => !!window.__viewtopiaDeck, null, { timeout: 30000 });
-    // deck still shows its tilted 2.5D view.
-    expect(
-      await page.evaluate(() => window.__viewtopiaDeck?.props?.viewState?.pitch),
-    ).toBeGreaterThan(0);
 
     await switchRenderer(page, 'CesiumJS');
     await page.waitForFunction(() => !!window.__viewtopiaViewer, null, { timeout: 30000 });
@@ -71,7 +68,7 @@ test.describe('camera across renderers', () => {
 });
 
 test.describe('draw tool across renderers', () => {
-  test('drawn features survive a cesium → deck.gl → cesium round trip', async ({ page }) => {
+  test('drawn features survive a cesium → maplibre → cesium round trip', async ({ page }) => {
     await page.goto(REACT_URL);
     await page.waitForFunction(() => !!window.__viewtopiaViewer, null, { timeout: 60000 });
 
@@ -88,8 +85,8 @@ test.describe('draw tool across renderers', () => {
     await expect.poll(() => drawEntityCount(page), { timeout: 15000 }).toBe(2);
 
     // The viewer is rebuilt on each switch; the entities went with the old one.
-    await switchRenderer(page, 'deck.gl');
-    await page.waitForFunction(() => !!window.__viewtopiaDeck, null, { timeout: 30000 });
+    await switchRenderer(page, 'MapLibre');
+    await page.waitForFunction(() => !!window.__viewtopiaMap, null, { timeout: 30000 });
     await switchRenderer(page, 'CesiumJS');
     await page.waitForFunction(() => !!window.__viewtopiaViewer, null, { timeout: 30000 });
 
@@ -117,8 +114,8 @@ test.describe('draw tool across renderers', () => {
       });
     await expect.poll(cursor, { timeout: 15000 }).toBe('crosshair');
 
-    await switchRenderer(page, 'deck.gl');
-    await page.waitForFunction(() => !!window.__viewtopiaDeck, null, { timeout: 30000 });
+    await switchRenderer(page, 'MapLibre');
+    await page.waitForFunction(() => !!window.__viewtopiaMap, null, { timeout: 30000 });
     await switchRenderer(page, 'CesiumJS');
     await page.waitForFunction(() => !!window.__viewtopiaViewer, null, { timeout: 30000 });
 

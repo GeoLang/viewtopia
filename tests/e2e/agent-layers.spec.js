@@ -4,11 +4,10 @@ import { test, expect } from './console-guard';
  * Agent layer (ui_spec) behaviour across renderers — two regressions from the
  * React port:
  *
- *  - a result drawn on one renderer vanished when switching to another. deck.gl
- *    had no agent-layer path at all, and renderUISpec forced deck.gl back to
- *    Cesium.
+ *  - a result drawn on one renderer vanished when switching to another, and
+ *    renderUISpec forced the app back to Cesium.
  *  - clicking a result feature only surfaced its properties on Cesium; MapLibre
- *    had no click handler and deck.gl's picks went nowhere.
+ *    had no click handler, and picks on the deck.gl layers went nowhere.
  *
  * The layer file is served by a route mock, so no agent backend is needed. The
  * result is replayed through the chat history's click-to-replay, which is the
@@ -75,7 +74,7 @@ async function seedAndReplay(page) {
 
 async function switchRenderer(page, label) {
   await page
-    .locator('input[value="CesiumJS"], input[value="deck.gl"], input[value="MapLibre"]')
+    .locator('input[value="CesiumJS"], input[value="MapLibre"]')
     .first()
     .click();
   await page.getByRole('option', { name: label, exact: true }).click();
@@ -113,38 +112,38 @@ const leafletPathCount = (page) =>
   page.locator('#leaflet-container .leaflet-overlay-pane path').count();
 
 test.describe('agent layers across renderers', () => {
-  test('a replayed result survives cesium → deck.gl → maplibre → cesium', async ({ page }) => {
+  test('a replayed result survives cesium → maplibre → cesium', async ({ page }) => {
     await seedAndReplay(page);
 
     await expect.poll(() => cesiumLayerCount(page), { timeout: 30000 }).toBeGreaterThan(0);
 
-    // The regression: deck.gl drew nothing and renderUISpec forced you off it.
-    await switchRenderer(page, 'deck.gl');
+    await switchRenderer(page, 'MapLibre');
+    await expect.poll(() => maplibreLayerIds(page), { timeout: 30000 }).not.toHaveLength(0);
+    // the deck.gl copy of the layers rides on the same map
     await expect
       .poll(() => deckLayerIds(page), { timeout: 30000 })
       .toEqual(expect.arrayContaining([expect.stringMatching(/^agent-layer-/)]));
+
+    await switchRenderer(page, 'CesiumJS');
+    await expect.poll(() => cesiumLayerCount(page), { timeout: 30000 }).toBeGreaterThan(0);
+  });
+
+  test('a result survives maplibre → cesium → maplibre', async ({ page }) => {
+    await seedAndReplay(page);
 
     await switchRenderer(page, 'MapLibre');
     await expect.poll(() => maplibreLayerIds(page), { timeout: 30000 }).not.toHaveLength(0);
 
     await switchRenderer(page, 'CesiumJS');
     await expect.poll(() => cesiumLayerCount(page), { timeout: 30000 }).toBeGreaterThan(0);
-  });
 
-  test('a result survives maplibre → deck.gl → maplibre', async ({ page }) => {
-    await seedAndReplay(page);
-
+    // Returning rebuilds the map from scratch and re-sets its style, and the
+    // deck overlay has to reattach to the new map.
     await switchRenderer(page, 'MapLibre');
     await expect.poll(() => maplibreLayerIds(page), { timeout: 30000 }).not.toHaveLength(0);
-
-    await switchRenderer(page, 'deck.gl');
     await expect
       .poll(() => deckLayerIds(page), { timeout: 30000 })
       .toEqual(expect.arrayContaining([expect.stringMatching(/^agent-layer-/)]));
-
-    // Returning rebuilds the map from scratch and re-sets its style.
-    await switchRenderer(page, 'MapLibre');
-    await expect.poll(() => maplibreLayerIds(page), { timeout: 30000 }).not.toHaveLength(0);
   });
 
   test('a basemap change keeps the agent layers', async ({ page }) => {
@@ -187,15 +186,15 @@ test.describe('agent layers across renderers', () => {
     await page.reload();
     await page.waitForFunction(() => !!window.__viewtopiaViewer, null, { timeout: 60000 });
 
-    // Replaying while deck.gl is active used to snap the app back to Cesium.
-    await switchRenderer(page, 'deck.gl');
-    await page.waitForFunction(() => !!window.__viewtopiaDeck, null, { timeout: 30000 });
+    // Replaying used to snap the app back to Cesium.
+    await switchRenderer(page, 'MapLibre');
+    await page.waitForFunction(() => !!window.__viewtopiaMap, null, { timeout: 30000 });
     await page.getByTitle('Click to replay this result on the map').click();
 
     await expect
       .poll(() => deckLayerIds(page), { timeout: 30000 })
       .toEqual(expect.arrayContaining([expect.stringMatching(/^agent-layer-/)]));
-    await expect(page.locator('#deckgl-container')).toBeVisible();
+    await expect(page.locator('#maplibre-container canvas').first()).toBeVisible();
   });
 });
 
@@ -247,15 +246,6 @@ test.describe('feature picker on agent layers', () => {
       .catch(() => {});
     await expect.poll(tweens, { timeout: 30000, intervals: [100] }).toBe(0);
   }
-
-  /** deck's project() is canvas-relative; the canvas sits below the toolbar. */
-  const deckProject = (c) => {
-    const d = window.__viewtopiaDeck;
-    if (!d || !d.canvas) return null;
-    const [x, y] = d.getViewports()[0].project(c);
-    const r = d.canvas.getBoundingClientRect();
-    return { x: x + r.x, y: y + r.y };
-  };
 
   const maplibreProject = (c) => {
     const m = window.__viewtopiaMap;
@@ -312,38 +302,30 @@ test.describe('feature picker on agent layers', () => {
     await expect(featureInfo(page)).toBeHidden();
   });
 
-  test('clicking a feature shows its properties on deck.gl', async ({ page }) => {
+  // The map's click handler asks the deck overlay before it queries the style,
+  // since queryRenderedFeatures never returns deck's custom layers.
+  test('the deck overlay answers a pick on the agent layer', async ({ page }) => {
     await seedAndReplay(page);
-    await enableInspect(page);
-    await switchRenderer(page, 'deck.gl');
+    await switchRenderer(page, 'MapLibre');
     await page.waitForFunction(() => !!window.__viewtopiaDeck, null, { timeout: 30000 });
     await expect
       .poll(() => deckLayerIds(page), { timeout: 30000 })
       .toEqual(expect.arrayContaining([expect.stringMatching(/^agent-layer-/)]));
 
-    await clickAt(page, deckProject);
-
-    await expect(featureInfo(page)).toContainText('Cafe Central');
-    await expect(featureInfo(page)).toContainText('amenity');
+    const picked = await page.evaluate((c) => {
+      const p = window.__viewtopiaMap.project(c);
+      const info = window.__viewtopiaDeck.pickObject({
+        x: Math.round(p.x),
+        y: Math.round(p.y),
+        radius: 8,
+      });
+      return info?.object?.properties ?? null;
+    }, CAFE);
+    expect(picked).toMatchObject({ name: 'Cafe Central', amenity: 'cafe' });
   });
 
-  // Agent points are 5px circles on deck/maplibre, vs Cesium's large pins. With
-  // no pick tolerance they need near-pixel aim, which reads as "only Cesium works".
-  test('a near-miss click still picks the feature on deck.gl', async ({ page }) => {
-    await seedAndReplay(page);
-    await enableInspect(page);
-    await switchRenderer(page, 'deck.gl');
-    await page.waitForFunction(() => !!window.__viewtopiaDeck, null, { timeout: 30000 });
-    await expect
-      .poll(() => deckLayerIds(page), { timeout: 30000 })
-      .toEqual(expect.arrayContaining([expect.stringMatching(/^agent-layer-/)]));
-
-    const pt = await settledPoint(page, deckProject);
-    await page.mouse.click(Math.round(pt.x) + 6, Math.round(pt.y) + 4);
-
-    await expect(featureInfo(page)).toContainText('Cafe Central');
-  });
-
+  // Agent points are 5px circles on maplibre, vs Cesium's large pins. With no
+  // pick tolerance they need near-pixel aim, which reads as "only Cesium works".
   test('a near-miss click still picks the feature on maplibre', async ({ page }) => {
     await seedAndReplay(page);
     await enableInspect(page);
@@ -424,8 +406,8 @@ test.describe('feature picker on agent layers', () => {
     await seedAndReplay(page);
     await enableInspect(page);
 
-    await switchRenderer(page, 'deck.gl');
-    await page.waitForFunction(() => !!window.__viewtopiaDeck, null, { timeout: 30000 });
+    await switchRenderer(page, 'MapLibre');
+    await page.waitForFunction(() => !!window.__viewtopiaMap, null, { timeout: 30000 });
     await switchRenderer(page, 'CesiumJS');
     await expect.poll(() => cesiumLayerCount(page), { timeout: 30000 }).toBeGreaterThan(0);
     await waitForCesiumFlight(page);
@@ -440,8 +422,8 @@ test.describe('feature picker on agent layers', () => {
 
     await switchRenderer(page, 'MapLibre');
     await page.waitForFunction(() => !!window.__viewtopiaMap, null, { timeout: 30000 });
-    await switchRenderer(page, 'deck.gl');
-    await page.waitForFunction(() => !!window.__viewtopiaDeck, null, { timeout: 30000 });
+    await switchRenderer(page, 'CesiumJS');
+    await page.waitForFunction(() => !!window.__viewtopiaViewer, null, { timeout: 30000 });
     await switchRenderer(page, 'MapLibre');
     await expect.poll(() => maplibreLayerIds(page), { timeout: 30000 }).not.toHaveLength(0);
 

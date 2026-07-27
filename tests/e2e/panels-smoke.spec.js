@@ -9,8 +9,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * Shadows, Lighting, Global Terrain (Cesium scene) + Heatmap, Spatial Stats
  * (deck.gl aggregation) + Cross Section (elevation profile).
  *
- * Served standalone on :5175 (see playwright.react.config.js). deck.gl gets a
- * real WebGL canvas headless; the Cesium viewer may be absent headless, so the
+ * Served standalone on :5175 (see playwright.react.config.js). MapLibre (which
+ * hosts the deck.gl layers) gets a real WebGL canvas headless; the Cesium viewer
+ * may be absent headless, so the
  * Cesium panels assert the live scene property when a viewer exists and the
  * no-viewer status otherwise (both are real outputs of the panel's apply path).
  *
@@ -147,9 +148,10 @@ test.describe('tool panels', () => {
     await page.getByRole('textbox', { name: 'GeoJSON' }).fill(SAMPLE_POINTS);
     await page.getByRole('button', { name: 'Add', exact: true }).click();
 
-    // Real effects: status reflects the parsed point count and the deck renderer mounts.
+    // Real effects: status reflects the parsed point count and the map that hosts
+    // the deck layer mounts.
     await expect(page.getByTestId('heatmap-status')).toHaveText('Heatmap added: 4 points');
-    await expect(page.locator('#deckgl-container canvas').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#maplibre-container canvas').first()).toBeVisible({ timeout: 10000 });
     expect(errors, `runtime errors:\n${errors.join('\n')}`).toEqual([]);
   });
 
@@ -165,7 +167,7 @@ test.describe('tool panels', () => {
     await page.getByRole('button', { name: 'Run', exact: true }).click();
 
     await expect(page.getByTestId('spatialstats-result')).toContainText('points: 4');
-    await expect(page.locator('#deckgl-container canvas').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#maplibre-container canvas').first()).toBeVisible({ timeout: 10000 });
     expect(errors, `runtime errors:\n${errors.join('\n')}`).toEqual([]);
   });
 
@@ -405,7 +407,7 @@ test.describe('weather/wind/traffic panels', () => {
 
     await page.getByText('Grid overlay').click();
     await expect(page.getByTestId('weather-grid-status')).toContainText('25 cells');
-    await expect(page.locator('#deckgl-container canvas').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#maplibre-container canvas').first()).toBeVisible({ timeout: 10000 });
     expect(errors, `runtime errors:\n${errors.join('\n')}`).toEqual([]);
   });
 
@@ -421,7 +423,7 @@ test.describe('weather/wind/traffic panels', () => {
 
     await expect(page.getByTestId('wind-status')).toContainText('arrows');
     await expect(page.getByTestId('wind-legend')).toBeVisible();
-    await expect(page.locator('#deckgl-container canvas').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#maplibre-container canvas').first()).toBeVisible({ timeout: 10000 });
     expect(errors, `runtime errors:\n${errors.join('\n')}`).toEqual([]);
   });
 

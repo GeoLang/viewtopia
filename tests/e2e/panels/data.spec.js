@@ -797,27 +797,10 @@ test.describe('Data panels', () => {
     await panel.getByRole('button', { name: 'Enable Terrain' }).click();
     await expect(status).toHaveText('Platform terrain enabled');
     await page.getByRole('textbox', { name: 'Renderer' }).click();
-    await page.getByRole('option', { name: 'deck.gl' }).click();
-    await expect(page.locator('#deckgl-container canvas').first()).toBeVisible({ timeout: 30000 });
-    await expect(status).toHaveText('Terrain off');
+    await page.getByRole('option', { name: 'CesiumJS' }).click();
+    await page.waitForFunction(() => !!window.__viewtopiaViewer, null, { timeout: 30000 });
+    await expect(status).toHaveText('Ellipsoid (default)');
     expect(await page.evaluate(() => !!window.__viewtopiaMap)).toBe(false);
-
-    await closePanel(page, panel);
-  });
-
-  test('globalTerrain on deck.gl: the panel says which renderer to switch to', async ({ page }) => {
-    await openViewer(page);
-    await page.getByRole('textbox', { name: 'Renderer' }).click();
-    await page.getByRole('option', { name: 'deck.gl' }).click();
-    await expect(page.locator('#deckgl-container canvas').first()).toBeVisible({ timeout: 30000 });
-
-    const panel = await openPanel(page, 'Terrain', 'Global Terrain');
-    // deck is a standalone Deck with no terrain of its own, so the panel points
-    // at the renderers that have one instead of reporting no viewer
-    await expect(panel.getByTestId('global-terrain-renderer-hint')).toHaveText(
-      'Switch to the Cesium or MapLibre renderer to run this',
-    );
-    await expect(panel.getByRole('button', { name: 'Enable Terrain' })).toBeDisabled();
 
     await closePanel(page, panel);
   });

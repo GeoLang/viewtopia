@@ -187,8 +187,8 @@ test.describe('Analysis panels (batch 2)', () => {
       await expect(result).toContainText(line);
     }
 
-    // running switches to the deck renderer and adds the panel's grid layer
-    await expect(page.locator('#deckgl-container canvas').first()).toBeVisible();
+    // running switches to the renderer that hosts deck layers and adds the grid
+    await expect(page.locator('#maplibre-container canvas').first()).toBeVisible();
     await page.waitForFunction(
       () =>
         (window.__viewtopiaDeck?.props?.layers ?? []).some((l) =>

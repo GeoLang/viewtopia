@@ -125,17 +125,18 @@ test.describe('React shell smoke', () => {
     expect(errors, `runtime errors:\n${errors.join('\n')}`).toEqual([]);
   });
 
-  test('deck.gl renderer activates as a standalone Deck (2.5D)', async ({ page }) => {
+  test('MapLibre renderer activates with the deck.gl overlay on it', async ({ page }) => {
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto(REACT_URL);
-    // Switch renderer Cesium → deck.gl via the toolbar Select.
+    // Switch renderer Cesium → MapLibre via the toolbar Select.
     await page.locator('input[aria-label="Renderer"]').click();
-    await page.getByRole('option', { name: 'deck.gl' }).click();
-    // The standalone Deck mounts its own canvas into #deckgl-container.
-    await expect(page.locator('#deckgl-container canvas').first()).toBeVisible({
+    await page.getByRole('option', { name: 'MapLibre' }).click();
+    await expect(page.locator('#maplibre-container canvas').first()).toBeVisible({
       timeout: 10000,
     });
+    // deck.gl has no renderer of its own: it interleaves into that map
+    await page.waitForFunction(() => !!window.__viewtopiaDeck, null, { timeout: 30000 });
     expect(errors, `runtime errors:\n${errors.join('\n')}`).toEqual([]);
   });
 

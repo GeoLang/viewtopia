@@ -126,7 +126,7 @@ const imageryAlphas = (page) =>
     return Array.from({ length: v.imageryLayers.length }, (_, i) => v.imageryLayers.get(i).alpha);
   });
 
-/** ids of the layers the deck.gl renderer currently draws. */
+/** ids of the layers the map's deck.gl overlay currently draws. */
 const deckLayerIds = (page) =>
   page.evaluate(() => window.__viewtopiaDeck?.props?.layers?.map((l) => l.id) ?? []);
 
@@ -245,7 +245,7 @@ test.describe('Analysis panels', () => {
     await panel.getByRole('button', { name: 'Add', exact: true }).click();
 
     await expect(page.getByTestId('heatmap-status')).toHaveText('Heatmap added: 3 points');
-    await expect(page.locator('#deckgl-container canvas').first()).toBeVisible({ timeout: 30000 });
+    await expect(page.locator('#maplibre-container canvas').first()).toBeVisible({ timeout: 30000 });
     await expect
       .poll(() => deckLayerIds(page), { timeout: 30000 })
       .toEqual(expect.arrayContaining([expect.stringMatching(/^panel-heatmap-/)]));
@@ -435,24 +435,5 @@ test.describe('Analysis panels', () => {
     // the panel owns the layers: closing it takes them off the map
     await closePanel(page, panel);
     await expect.poll(() => mapLayerIds(page, 'contours-result')).toEqual([]);
-  });
-
-  test('terrainAnalysis on deck.gl: the panel says which renderer to switch to', async ({
-    page,
-  }) => {
-    await openViewer(page);
-    await page.getByRole('textbox', { name: 'Renderer' }).click();
-    await page.getByRole('option', { name: 'deck.gl' }).click();
-    await expect(page.locator('#deckgl-container canvas').first()).toBeVisible({ timeout: 30000 });
-
-    const panel = await openPanel(page, 'Terrain');
-    // deck draws no analysis result, so the run is blocked with a reason rather
-    // than left to fail on a view it cannot read
-    await expect(panel.getByTestId('terrain-renderer-hint')).toHaveText(
-      'Switch to the Cesium or MapLibre renderer to run this',
-    );
-    await expect(panel.getByRole('button', { name: 'Run', exact: true })).toBeDisabled();
-
-    await closePanel(page, panel);
   });
 });
