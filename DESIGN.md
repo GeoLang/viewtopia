@@ -282,4 +282,9 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   collab e2e's WebSocket recording wrapper, breaking `new` (the only conversion in that
   commit; audited). Building-data toggle browser-verified on MapLibre (Liberty disables
   with the basemap note, raster styles re-enable on style.load); the panel's
-  Badge-inside-Text DOM nesting error fixed along the way.
+  Badge-inside-Text DOM nesting error fixed along the way. ptolemy error shapes:
+  writes to a missing dataset 404 instead of 500 (fixed in ensure_dataset_writable,
+  so create_branch benefits too), pointcloud query/profile reclassified as reads so
+  anonymous callers reach public data (visibility middleware is now their only gate,
+  pinned by tests). Loadtest: tiletopia scenario measures a harness-owned seeded
+  tileset (idempotent, honest skip after teardown).

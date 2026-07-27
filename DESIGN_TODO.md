@@ -26,13 +26,6 @@
       under cold-start load — rather than tolerating it forever.
 - [ ] **fenestra has no platform nginx route** — the load scenario hits :3003 directly.
       Decide whether fenestra belongs behind the same-origin proxy like everything else.
-- [ ] **ptolemy create_catalog on a missing dataset 500s for admins**: the FK stops the
-      write but `ensure_dataset_writable` passes (no row → unenforced scope), so the
-      error shape is a 500, not 404. Check dataset existence first (raster.rs and
-      pointcloud.rs create_catalog).
-- [ ] **ptolemy pointcloud query/profile classified as writes**: POST /pointclouds/{id}/query
-      and /profile are read-shaped but `classify` marks them Write, so anonymous callers
-      get 401 even on public datasets. Over-restrictive, not a leak.
 
 ## OPEN — post-v1: replace embedded Letta (decided 2026-07-25)
 
