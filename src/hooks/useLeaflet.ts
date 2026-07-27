@@ -81,7 +81,10 @@ export function useLeaflet(opts: UseLeafletOptions = {}) {
     if (!map) return;
     const cam = getSharedCamera();
     map.setView([cam.latitude, cam.longitude], cam.zoom, { animate: false });
-    setTimeout(() => map.invalidateSize(), 100);
+    // leaving the tab destroys the map, and invalidateSize on a destroyed one
+    // throws on its missing pane
+    const timer = setTimeout(() => map.invalidateSize(), 100);
+    return () => clearTimeout(timer);
   }, [activeTab]);
 
   return mapRef;

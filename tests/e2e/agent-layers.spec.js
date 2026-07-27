@@ -108,6 +108,10 @@ const maplibreLayerIds = (page) =>
       .filter((id) => id.startsWith('agent-layer-'));
   });
 
+/** Leaflet draws vector layers as SVG paths in its overlay pane. */
+const leafletPathCount = (page) =>
+  page.locator('#leaflet-container .leaflet-overlay-pane path').count();
+
 test.describe('agent layers across renderers', () => {
   test('a replayed result survives cesium → deck.gl → maplibre → cesium', async ({ page }) => {
     await seedAndReplay(page);
@@ -153,6 +157,20 @@ test.describe('agent layers across renderers', () => {
     await page.getByRole('option', { name: 'Satellite', exact: true }).click();
 
     await expect.poll(() => maplibreLayerIds(page), { timeout: 30000 }).not.toHaveLength(0);
+  });
+
+  test('a result shows on the 2D map tab and survives leaving it', async ({ page }) => {
+    await seedAndReplay(page);
+    await expect.poll(() => cesiumLayerCount(page), { timeout: 30000 }).toBeGreaterThan(0);
+
+    // The regression: the 2D tab had no agent-layer hook, so the layer vanished.
+    await page.getByRole('tab', { name: '2D Map' }).click();
+    await expect.poll(() => leafletPathCount(page), { timeout: 30000 }).toBeGreaterThan(0);
+
+    // Leaving the tab destroys the Leaflet map, so coming back must redraw.
+    await page.getByRole('tab', { name: '3D Globe' }).click();
+    await page.getByRole('tab', { name: '2D Map' }).click();
+    await expect.poll(() => leafletPathCount(page), { timeout: 30000 }).toBeGreaterThan(0);
   });
 
   test('renderUISpec leaves the active renderer alone', async ({ page }) => {

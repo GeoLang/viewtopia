@@ -17,6 +17,7 @@ import { useBuildingsMapLibre } from '../hooks/useBuildingsMapLibre';
 import { useAgentLayersCesium } from '../hooks/useAgentLayersCesium';
 import { useAgentLayersDeck } from '../hooks/useAgentLayersDeck';
 import { useAgentLayersMapLibre } from '../hooks/useAgentLayersMapLibre';
+import { useAgentLayersLeaflet } from '../hooks/useAgentLayersLeaflet';
 import { useOgcLayersCesium } from '../hooks/useOgcLayersCesium';
 import { useOgcLayersMapLibre } from '../hooks/useOgcLayersMapLibre';
 import { useDrawCesium } from '../hooks/useDrawCesium';
@@ -63,10 +64,11 @@ export function ViewerArea() {
   useBuildingsDeck();
   useBuildingsMapLibre(maplibreRef);
 
-  // Render the agent's ui_spec layers on whichever globe renderer is active
+  // Render the agent's ui_spec layers on whichever renderer is active
   useAgentLayersCesium(cesiumRef);
   useAgentLayersDeck(deckFitBounds);
   useAgentLayersMapLibre(maplibreRef);
+  useAgentLayersLeaflet(leafletRef);
 
   // OGC/XYZ services the user added (raster imagery; no deck.gl equivalent)
   useOgcLayersCesium(cesiumRef);
