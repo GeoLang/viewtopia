@@ -184,6 +184,8 @@ services:
       GEOLANG_PORT: "8283"
       TOOL_EXEC_DIR: "/app/geolang"
       TOOL_EXEC_VENV_NAME: "env"
+      # long analysis tools can exceed letta's 180s default on cold ci runners
+      TOOL_SANDBOX_TIMEOUT: "420"
       PTOLEMY_URL: http://ptolemy:3000
       TILETOPIA_URL: http://tiletopia:3000
       GEOKODE_URL: http://geokode:3000
