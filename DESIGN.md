@@ -229,3 +229,14 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   defects fixed: print-export size/pdf, spatial-stats aggregation, tour selectors,
   sharelink active camera, vector-tile origin-relative templates, space-time import
   summary. Panels suite 36 passed + 3 starvation flakes (pass on retry); vitest 197.
+- **2026-07-26 (evening)** — **Terrain made real end to end.** tiletopia: quantized-mesh
+  contract fixed (format, relative template, availability; index encoder rewritten to
+  match Cesium's decoder), DEM cache race fixed (atomic writes, unconstructable empty
+  grids), and a **latitude-mirror bug** found and fixed: HGT rows are north-up but the
+  sampler indexed south-up, so every elevation reflected about its tile's mid-latitude
+  (Monaco coast read as -2312 m of bathymetry); layer version bumped to 1.0.1 to bust
+  24h tile caches. New terrain-RGB endpoint (mercator XYZ, mapbox encoding, anonymous)
+  feeds MapLibre relief in the Global Terrain panel; Cesium keeps the mesh path;
+  browser-verified on both. Analysis panels (Terrain/Flood/Solar) now read the shown
+  renderer's view and draw results on it (viewBounds.ts); 2D map tab disables the
+  renderer select and vector basemap options. tiletopia 616 tests; viewer vitest 203.
