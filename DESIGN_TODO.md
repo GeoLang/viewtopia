@@ -20,8 +20,6 @@
 - [ ] **loadtest: tiletopia fixture seeder.** The scenario measures whatever assets the
       stack holds; a fresh CI stack may have none and the ops skip with a warning.
       Needs a small tiling job in the harness for a deterministic asset.
-- [ ] **fenestra has no platform nginx route** — the load scenario hits :3003 directly.
-      Decide whether fenestra belongs behind the same-origin proxy like everything else.
 
 ## OPEN — post-v1: replace embedded Letta (decided 2026-07-25)
 

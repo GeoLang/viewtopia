@@ -63,7 +63,7 @@ Maturity as of the 2026-07-17 docs refresh (test-fn counts via
 
 The shipping unit is `docker-compose.platform.yml` (11 services), all fronted by
 ViewTopia's nginx on `:5174` so the SPA talks to every backend same-origin via relative
-paths (`/api/*`, `/tiles/*`, `/agent/*`, `/jupyter/*`). The nginx config is
+paths (`/api/*`, `/tiles/*`, `/agent/*`, `/jupyter/*`, `/ogc/*`). The nginx config is
 `deploy/nginx-platform.conf`, reached through a stub include
 (`deploy/nginx-platform-include.conf`) plus a `deploy/` directory mount, so config edits
 take effect with `nginx -s reload` instead of a force-recreate.
@@ -71,27 +71,31 @@ take effect with `nginx -s reload` instead of a force-recreate.
 ```
                     Browser (ViewTopia SPA, :5174, nginx)
                                    │  same-origin proxy
-   ┌──────────┬──────────┬─────────┼─────────┬──────────┬──────────┐
- /api/*    /tiles/*  /api/geocode /api/route /agent/*  /jupyter/*
-   │          │          │          │          │          │
-┌──────┐ ┌─────────┐ ┌───────┐ ┌────────┐ ┌─────────┐ ┌────────┐
-│ptolemy│ │tiletopia│ │geokode│ │itinera │ │geolang- │ │jupyter │
-│feature│ │3D tiles/│ │geocode│ │routing/│ │api +    │ │(python │
-│store +│ │terrain/ │ │(OSM   │ │isochr. │ │geolang  │ │cells)  │
-│geoproc│ │COG/asset│ │ pbf)  │ │(graph) │ │(Letta)  │ │        │
-└──┬───┘  └─────────┘ └───────┘ └────────┘ └────┬────┘ └────────┘
-   │                                            │
-┌──┴────┐   fenestra (:3003) OGC WMS/WFS/    ┌──┴──────┐
-│PostGIS│   WMTS/WCS gateway, reads ptolemy  │embeddings│ (TEI, CPU)
-│ :5432 │   (off the golden path)            └─────────┘
-└───────┘
+   ┌──────────┬──────────┬─────────┼─────────┬──────────┬──────────┬─────────┐
+ /api/*    /tiles/*  /api/geocode /api/route /agent/*  /jupyter/*   /ogc/*
+   │          │          │          │          │          │          │
+┌──────┐ ┌─────────┐ ┌───────┐ ┌────────┐ ┌─────────┐ ┌────────┐ ┌────────┐
+│ptolemy│ │tiletopia│ │geokode│ │itinera │ │geolang- │ │jupyter │ │fenestra│
+│feature│ │3D tiles/│ │geocode│ │routing/│ │api +    │ │(python │ │OGC WMS/│
+│store +│ │terrain/ │ │(OSM   │ │isochr. │ │geolang  │ │cells)  │ │WFS/WMTS│
+│geoproc│ │COG/asset│ │ pbf)  │ │(graph) │ │(Letta)  │ │        │ │WCS/API │
+└──┬───┘  └─────────┘ └───────┘ └────────┘ └────┬────┘ └────────┘ └────────┘
+   │                                            │            fenestra reads its
+┌──┴────┐                                  ┌────┴─────┐      features from
+│PostGIS│                                  │embeddings│      ptolemy's REST API
+│ :5432 │                                  └──────────┘      (PTOLEMY_URL)
+└───────┘                                   (TEI, CPU)
 ```
 
+- fenestra's own OGC API Features prefix is `/ogc`, so through the proxy that API
+  is `/ogc/ogc/*` while WMS/WFS/WMTS/WCS are `/ogc/wms` etc. Its capabilities
+  embed absolute URLs, hence `FENESTRA_PUBLIC_URL=<origin>/ogc` in compose.
 - **The agent calls the same backend REST APIs the viewer does.** `geolang` is configured
   with `PTOLEMY_URL`/`TILETOPIA_URL`/`GEOKODE_URL`/`ITINERA_URL`; it self-hosts an embedded
   Letta + Postgres (no separate `letta` service — that was removed as redundant).
 - Backends are independent Rust services except `geolang` (Python/Letta) and `jupyter`
-  (scipy-notebook for python notebook cells). Only `ptolemy`/`fenestra` share PostGIS.
+  (scipy-notebook for python notebook cells). Only `ptolemy` talks to PostGIS; fenestra
+  goes through ptolemy's REST API.
 
 ### 2.2 Service responsibilities
 
@@ -305,3 +309,12 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   panels and sweep suites stub the probe in `openApp` (tests/e2e/panel-helpers.js): a
   2xx is the only answer chrome does not log as a console error, so the stub reports the
   agent reachable and only the header's status dot reads that.
+- **2026-07-27 (fenestra on-proxy)** — fenestra was the last service off the same-origin
+  proxy. Now mounted at `/ogc/` (prefix stripped), so WMS/WFS/WMTS/WCS are `/ogc/wms` etc
+  and fenestra's own `/ogc`-prefixed OGC API Features lands on `/ogc/ogc/*`. The wiring
+  needed a fenestra change: its WMTS `ResourceURL` templates and OGC API links were built
+  from the bind address, so every capabilities document handed clients
+  `http://0.0.0.0:8080/...` — unusable direct, and through a proxy it would have bounced
+  them off it. `FENESTRA_PUBLIC_URL` now overrides that base (compose sets
+  `<origin>/ogc`). The loadtest fenestra scenario measures the proxy route by default;
+  the :3003 publish stays for dev and is still reachable via `LOADTEST_FENESTRA_URL`.

@@ -1,8 +1,8 @@
 // fenestra OGC gateway: WMS GetMap renders a PNG server-side, WFS GetFeature
 // returns GeoJSON. Both resolve their layer by name against ptolemy datasets.
 //
-// fenestra is not behind the viewtopia proxy, so this is the one scenario that
-// addresses a service port directly (LOADTEST_FENESTRA_URL, default :3003).
+// Both go through the viewtopia proxy at /ogc/, same origin as every other
+// scenario. LOADTEST_FENESTRA_URL points them at the published :3003 instead.
 //
 // fenestra fetches a layer by exporting the whole branch as GeoJSON from
 // ptolemy and filtering in process, with no bbox pushdown. Its latency

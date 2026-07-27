@@ -37,7 +37,6 @@ jobs:
     env:
       PLATFORM_JWT_SECRET: ci-platform-load-secret-not-for-production-use
       LOADTEST_BASE_URL: http://localhost:5174
-      LOADTEST_FENESTRA_URL: http://localhost:3003
       LOADTEST_VUS: "10"
       LOADTEST_RATE: "20"
       LOADTEST_DURATION: 60s

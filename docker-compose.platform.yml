@@ -12,7 +12,7 @@
 # Services:
 #   - db:         PostGIS 16 database (port 5432)
 #   - ptolemy:    Enterprise geodatabase + geoprocessing API (port 3000)
-#   - fenestra:   OGC WMS/WFS/WMTS gateway with server-side rendering (port 3003)
+#   - fenestra:   OGC WMS/WFS/WMTS gateway with server-side rendering (:5174/ogc/, port 3003)
 #   - tiletopia:  3D Tiles / terrain / asset server (port 3100)
 #   - geokode:    Geocoding service (port 3001)
 #   - itinera:    Routing + isochrones (port 3002)
@@ -97,6 +97,10 @@ services:
       FENESTRA_HOST: 0.0.0.0
       FENESTRA_PORT: "8080"
       PTOLEMY_URL: http://ptolemy:3000
+      # capabilities embed absolute URLs; they have to point back through the
+      # viewtopia proxy's /ogc/ mount, not at fenestra's bind address.
+      FENESTRA_PUBLIC_URL: ${FENESTRA_PUBLIC_URL:-http://localhost:5174/ogc}
+    # 3003 stays published for dev; the proxy route at :5174/ogc/ is the real one.
     ports:
       - "3003:8080"
     healthcheck:

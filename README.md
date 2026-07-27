@@ -420,7 +420,7 @@ on Windows — it does not apply to native Docker on Linux.
 | Ptolemy | 3000 | Feature store |
 | Geokode | 3001 | Geocoder (imports `data/region.osm.pbf`) |
 | Itinera | 3002 | Router + isochrones (needs `data/region.osm.pbf`) |
-| Fenestra | 3003 | WMS/WFS gateway |
+| Fenestra | 3003 | WMS/WFS/WMTS/WCS gateway, proxied at `/ogc/` (host port is dev convenience) |
 | TileTopia | 3100 | 3D Tiles / terrain / assets, plus auth, portal, and terrain analysis |
 | GeoLang AI | 8080 | Letta AI agent — embeds its own Letta server (port 8283 internal) |
 | Jupyter | n/a | Python notebook kernels, proxied at `/jupyter/` (no host port) |
@@ -430,7 +430,10 @@ The nginx proxy fronts everything on 5174, so the app talks same-origin:
 `/api/` → Ptolemy, `/api/v1/auth` + `/api/v1/portal` → TileTopia, `/tiles/` →
 TileTopia (including `/tiles/v1/analysis`, backed by terrano), `/api/route` +
 `/api/isochrone` → Itinera, `/api/geocode/` → Geokode, `/agent/` → GeoLang,
-`/jupyter/` → Jupyter.
+`/jupyter/` → Jupyter, `/ogc/` → Fenestra (so WMS is `/ogc/wms` and OGC API
+Features is `/ogc/ogc/collections`, since fenestra namespaces that API itself).
+Fenestra's WMTS and OGC API responses carry absolute URLs, so serving the stack on
+anything but `localhost:5174` needs `FENESTRA_PUBLIC_URL=<origin>/ogc` set for it.
 
 **Data setup** (`scripts/platform-up.sh <extract-url>` does all of this for you,
 and re-does the derived parts whenever the extract URL changes):

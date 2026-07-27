@@ -39,7 +39,7 @@ breached threshold fails the caller.
 | env | default | meaning |
 | --- | --- | --- |
 | `LOADTEST_BASE_URL` | `http://localhost:5174` | the nginx front, so numbers include the real proxy path |
-| `LOADTEST_FENESTRA_URL` | `http://localhost:3003` | fenestra is not behind the proxy |
+| `LOADTEST_FENESTRA_URL` | `<base>/ogc` | fenestra's proxy mount; set to `http://localhost:3003` to bypass nginx |
 | `LOADTEST_FENESTRA_LAYER` | shallowest seeded chain | any ptolemy dataset name |
 | `LOADTEST_DEPTHS` | `100,1000,10000` | which chain datasets the scenarios target |
 | `LOADTEST_RATE` | `20` | iterations started per second |

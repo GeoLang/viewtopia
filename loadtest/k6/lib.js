@@ -8,8 +8,8 @@ import http from 'k6/http';
 import { check } from 'k6';
 
 export const BASE = (__ENV.LOADTEST_BASE_URL || 'http://localhost:5174').replace(/\/$/, '');
-// fenestra is not behind the viewtopia proxy, so it is addressed directly
-export const FENESTRA = (__ENV.LOADTEST_FENESTRA_URL || 'http://localhost:3003').replace(/\/$/, '');
+// fenestra sits behind the proxy at /ogc/. Override to measure it port-direct.
+export const FENESTRA = (__ENV.LOADTEST_FENESTRA_URL || `${BASE}/ogc`).replace(/\/$/, '');
 export const API = `${BASE}/api/v1`;
 
 // Reads are unauthenticated on a public dataset, so the token is optional. Set
