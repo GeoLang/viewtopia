@@ -175,8 +175,10 @@ services:
       # persist the embedded letta postgres; without this every recreate
       # re-runs initdb (~50s boot) and loses agent state
       - geolang-pgdata:/var/lib/postgresql/data
+    # optional: panels/load CI don't check out geolang, and compose must still parse
     env_file:
-      - ../geolang/.env
+      - path: ../geolang/.env
+        required: false
     environment:
       GEOLANG_HOST: 0.0.0.0
       GEOLANG_PORT: "8283"
@@ -209,7 +211,8 @@ services:
     volumes:
       - ../geolang:/app/geolang:z
     env_file:
-      - ../geolang/.env
+      - path: ../geolang/.env
+        required: false
     environment:
       LETTA_URL: http://geolang:8283
       VLLM_API_BASE: http://embeddings:8000
