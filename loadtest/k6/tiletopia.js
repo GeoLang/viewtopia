@@ -1,11 +1,13 @@
 // tiletopia 3D Tiles serving: the tileset manifest and a content tile.
 //
-// tiletopia has no loadtest seeder of its own, so this measures whatever assets
-// the stack already holds (the demo assets it registers on start). With no
-// assets the ops are skipped and the run reports the gap instead of failing,
-// because an empty catalog is a seeding gap, not a regression.
+// The target is the asset loadtest/seed.mjs uploads, resolved by name. Measuring
+// whichever asset the catalog happened to hold would compare a different tileset
+// every run, and would find nothing at all on a fresh stack. Without the seeder
+// the ops are skipped and the run says so, because a missing fixture is a seeding
+// gap, not a regression.
 
 import { BASE, get, probe, scenario, summaryTo, thresholds } from './lib.js';
+import { TILESET_ASSET } from '../geo.js';
 
 const TILES = `${BASE}/tiles/v1`;
 
@@ -19,8 +21,8 @@ export const options = {
   thresholds: thresholds(SPECS),
 };
 
-// Pick the first asset that serves a tileset.json, and pull one tile URI out of
-// it so the tile op requests something the manifest actually references.
+// Resolve the seeded asset, and pull one tile URI out of its manifest so the tile
+// op requests something the manifest actually references.
 export function setup() {
   const list = probe(`${TILES}/assets`);
   if (list.status !== 200) {
@@ -29,13 +31,17 @@ export function setup() {
   }
   const assets = list.json();
   const items = Array.isArray(assets) ? assets : assets.assets || [];
-  for (const asset of items) {
-    const res = probe(`${TILES}/assets/${asset.id}/tileset.json`);
-    if (res.status !== 200) continue;
-    return { asset: asset.id, tile: firstTileUri(res.json()) };
+  const seeded = items.find((a) => a.name === TILESET_ASSET && a.status === 'ready');
+  if (!seeded) {
+    console.warn(`target ${TILESET_ASSET} is not seeded, its ops will be skipped`);
+    return {};
   }
-  console.warn('no tiletopia asset serves a tileset.json, ops skipped (seeding gap)');
-  return {};
+  const res = probe(`${TILES}/assets/${seeded.id}/tileset.json`);
+  if (res.status !== 200) {
+    console.warn(`${TILESET_ASSET} is ready but its tileset.json -> ${res.status}, ops skipped`);
+    return {};
+  }
+  return { asset: seeded.id, tile: firstTileUri(res.json()) };
 }
 
 // Depth-first walk for the first content uri in the tileset tree.

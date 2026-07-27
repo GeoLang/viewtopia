@@ -1,14 +1,15 @@
 // Seed the fixtures the k6 scenarios measure against, and tear them down again.
 //
-//   node loadtest/seed.mjs                        # depths 100,1000,10000 + wide + external
+//   node loadtest/seed.mjs                        # all depths + wide + external + tileset
 //   node loadtest/seed.mjs --depths 100,1000      # nightly budget
 //   node loadtest/seed.mjs --depths 10 --no-wide  # smoke
-//   node loadtest/seed.mjs --teardown             # drop every loadtest-* dataset
+//   node loadtest/seed.mjs --teardown             # drop every loadtest-* fixture
 //
-// Talks to ptolemy through the nginx front (LOADTEST_BASE_URL, default
-// http://localhost:5174) so the seeded state and the measured reads take the
-// same path. Idempotent: a chain dataset already at the target depth is skipped,
-// and the wide dataset only gets the features it is missing.
+// Talks to ptolemy and tiletopia through the nginx front (LOADTEST_BASE_URL,
+// default http://localhost:5174) so the seeded state and the measured reads take
+// the same path. Idempotent: a chain dataset already at the target depth is
+// skipped, the wide dataset only gets the features it is missing, and a tileset
+// asset that is already ready is left alone.
 //
 // Ptolemy has no DELETE /datasets route, so teardown goes through psql in the
 // compose `db` container and leans on the schema's ON DELETE CASCADE. Without
@@ -18,6 +19,7 @@
 import { randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { platformAuthHeaders } from '../scripts/platform-token.mjs';
 import {
@@ -27,6 +29,8 @@ import {
   EXTERNAL,
   EXTERNAL_DATASET,
   EXTERNAL_TABLE,
+  TILESET,
+  TILESET_ASSET,
   WIDE,
   WIDE_DATASET,
   chainDataset,
@@ -37,6 +41,10 @@ const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const COMPOSE_FILE = resolve(REPO, 'docker-compose.platform.yml');
 const BASE = (process.env.LOADTEST_BASE_URL ?? 'http://localhost:5174').replace(/\/$/, '');
 const API = `${BASE}/api/v1`;
+// nginx rewrites /tiles/<path> to tiletopia's /api/<path>
+const TILES = `${BASE}/tiles/v1`;
+// tiletopia scopes asset delete to the JWT `sub` that uploaded it, so every run
+// has to present the same subject or teardown cannot reach its own fixture.
 const AUTH = platformAuthHeaders({ role: 'editor', sub: 'loadtest' });
 
 // One commit carries at most this many operations. Ptolemy applies operations
@@ -47,12 +55,19 @@ const OPS_PER_COMMIT = 2000;
 // ─── CLI ────────────────────────────────────────────────────────────
 
 function parseArgs(argv) {
-  const opts = { depths: [100, 1000, 10000], wide: true, external: true, teardown: false };
+  const opts = {
+    depths: [100, 1000, 10000],
+    wide: true,
+    external: true,
+    tileset: true,
+    teardown: false,
+  };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--teardown') opts.teardown = true;
     else if (arg === '--no-wide') opts.wide = false;
     else if (arg === '--no-external') opts.external = false;
+    else if (arg === '--no-tileset') opts.tileset = false;
     else if (arg === '--depths') {
       opts.depths = argv[++i]
         .split(',')
@@ -73,6 +88,21 @@ async function api(path, init) {
   });
   if (!res.ok) {
     throw new Error(`${init?.method ?? 'GET'} ${path} -> ${res.status}: ${await res.text()}`);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+// Same idea for tiletopia, minus the JSON content type: its writes are multipart
+// and fetch has to set the boundary itself.
+async function tiles(path, init) {
+  const res = await fetch(`${TILES}${path}`, {
+    ...init,
+    headers: { ...AUTH, ...(init?.headers ?? {}) },
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`${init?.method ?? 'GET'} /tiles/v1${path} -> ${res.status}: ${body}`);
   }
   const text = await res.text();
   return text ? JSON.parse(text) : null;
@@ -300,6 +330,79 @@ async function seedExternal() {
   return { name: EXTERNAL_DATASET, datasetId, mode: 'external' };
 }
 
+// ─── tiletopia tileset ──────────────────────────────────────────────
+
+// The job worker polls every 2s, and a 200-point cloud tiles in one pass, so this
+// bound is generous. It exists so a wedged worker fails the seed instead of
+// hanging CI until the job timeout.
+const TILING_TIMEOUT_MS = 120_000;
+const TILING_POLL_MS = 2000;
+
+// ascii ply on the shared grid. A point cloud, because that is the one asset type
+// tiletopia tiles on upload rather than waiting for a separate job request.
+function plyFixture() {
+  const lines = [
+    'ply',
+    'format ascii 1.0',
+    `element vertex ${TILESET.features}`,
+    'property float x',
+    'property float y',
+    'property float z',
+    'end_header',
+  ];
+  for (let i = 0; i < TILESET.features; i++) {
+    const [lng, lat] = gridPoint(TILESET, i);
+    lines.push(`${lng} ${lat} ${10 + (i % 5)}`);
+  }
+  return lines.join('\n');
+}
+
+async function waitForTiling(id) {
+  const deadline = Date.now() + TILING_TIMEOUT_MS;
+  for (;;) {
+    const asset = await tiles(`/assets/${id}`);
+    if (asset.status === 'ready') return asset;
+    if (asset.status === 'error') throw new Error(`${TILESET_ASSET}: tiling failed`);
+    if (Date.now() >= deadline) {
+      throw new Error(
+        `${TILESET_ASSET}: still ${asset.status} after ${TILING_TIMEOUT_MS / 1000}s, ` +
+          'the tiling worker is not draining its queue',
+      );
+    }
+    await sleep(TILING_POLL_MS);
+  }
+}
+
+// One asset under a fixed name, tiled and serving. Reruns keep the ready one and
+// drop any leftovers, so an interrupted seed self-heals instead of leaving the
+// scenario to pick between two assets with the same name.
+async function seedTileset() {
+  const mine = (await tiles('/assets')).filter((a) => a.name === TILESET_ASSET);
+  const ready = mine.find((a) => a.status === 'ready');
+  for (const a of mine) {
+    if (a.id !== ready?.id) await tiles(`/assets/${a.id}`, { method: 'DELETE' });
+  }
+  if (ready) {
+    console.log(`${TILESET_ASSET}: already ready (${ready.id}), skipping`);
+    return { name: TILESET_ASSET, asset: ready.id, tileCount: ready.tile_count, uploaded: false };
+  }
+
+  const form = new FormData();
+  form.append('name', TILESET_ASSET);
+  form.append('file', new Blob([plyFixture()]), 'cloud.ply');
+  const created = await tiles('/assets', { method: 'POST', body: form });
+  const asset = await waitForTiling(created.id);
+  console.log(`${TILESET_ASSET}: uploaded and tiled (${asset.id}, ${asset.tile_count} tiles)`);
+  return { name: TILESET_ASSET, asset: asset.id, tileCount: asset.tile_count, uploaded: true };
+}
+
+async function teardownTileset() {
+  const mine = (await tiles('/assets')).filter((a) => a.name === TILESET_ASSET);
+  for (const a of mine) await tiles(`/assets/${a.id}`, { method: 'DELETE' });
+  console.log(`${TILESET_ASSET}: deleted ${mine.length} asset(s)`);
+  return { name: TILESET_ASSET, deleted: mine.length };
+}
+
 // ─── Teardown ───────────────────────────────────────────────────────
 
 // Every statement is scoped to the loadtest- prefix. Nothing here may touch a
@@ -355,17 +458,20 @@ async function main() {
   const opts = parseArgs(process.argv.slice(2));
 
   if (opts.teardown) {
-    console.log(`tearing down loadtest fixtures via ${API}`);
-    console.log(JSON.stringify(psqlAvailable() ? hardTeardown() : await softTeardown(), null, 2));
+    console.log(`tearing down loadtest fixtures via ${BASE}`);
+    const datasets = psqlAvailable() ? hardTeardown() : await softTeardown();
+    const tileset = await teardownTileset();
+    console.log(JSON.stringify({ datasets, tileset }, null, 2));
     return;
   }
 
-  console.log(`seeding loadtest fixtures into ${API}`);
+  console.log(`seeding loadtest fixtures into ${BASE}`);
   const chains = [];
   for (const depth of opts.depths) chains.push(await seedChain(depth));
   const wide = opts.wide ? await seedWide() : null;
   const external = opts.external ? await seedExternal() : null;
-  console.log(JSON.stringify({ chains, wide, external }, null, 2));
+  const tileset = opts.tileset ? await seedTileset() : null;
+  console.log(JSON.stringify({ chains, wide, external, tileset }, null, 2));
 }
 
 main().catch((e) => {

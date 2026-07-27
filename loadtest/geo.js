@@ -12,10 +12,22 @@ export const WIDE_DATASET = `${DATASET_PREFIX}wide`;
 export const EXTERNAL_DATASET = `${DATASET_PREFIX}external`;
 export const EXTERNAL_TABLE = 'loadtest_external_src';
 
+// The tiletopia asset the seeder uploads and the scenario resolves by name.
+// Naming it, rather than taking whichever asset the catalog happens to hold,
+// is what makes the tiletopia numbers comparable between runs and boxes.
+//
+// The .ply is load-bearing, not decoration: tiletopia stores the upload under its
+// asset name and the tiler picks its reader from that path's extension, so a name
+// without one is typed as a point cloud and then fails to parse as one.
+export const TILESET_ASSET = `${DATASET_PREFIX}tileset.ply`;
+
 // Chain datasets: a fixed 10x10 grid. Feature count stays constant across
 // depths, so a latency difference between depths is the changeset walk and
 // nothing else.
 export const CHAIN = { features: 100, cols: 10, cell: 0.0005 };
+// The point cloud behind TILESET_ASSET. Small on purpose: the scenario measures
+// tileset.json and one content tile, and neither cost scales with point count.
+export const TILESET = { features: 200, cols: 20, cell: 0.0001 };
 // ~50k features on a square grid.
 export const WIDE = { features: 50176, cols: 224, cell: 0.0002 };
 export const EXTERNAL = { features: 50176, cols: 224, cell: 0.0002 };

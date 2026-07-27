@@ -15,10 +15,10 @@ Needs the platform stack up (`scripts/platform-up.sh`) and docker. No host k6
 install: everything runs in `grafana/k6:2.1.0`.
 
 ```bash
-node loadtest/seed.mjs                  # depths 100,1000,10000 + wide + external
+node loadtest/seed.mjs                  # depths 100,1000,10000 + wide + external + tileset
 loadtest/run.sh                         # every scenario
 loadtest/run.sh ptolemy                 # one scenario
-node loadtest/seed.mjs --teardown       # drop every loadtest-* dataset
+node loadtest/seed.mjs --teardown       # drop every loadtest-* fixture
 ```
 
 Seeding depth 10000 is 10000 sequential commits and takes a long time. For a
@@ -29,6 +29,9 @@ node loadtest/seed.mjs --depths 10 --no-wide --no-external
 LOADTEST_VUS=5 LOADTEST_DURATION=10s LOADTEST_DEPTHS=10 loadtest/run.sh ptolemy
 node loadtest/seed.mjs --teardown
 ```
+
+`--no-tileset` skips the tiletopia upload the same way, for a run that only
+targets ptolemy.
 
 Summaries land in `loadtest/out/<scenario>.json`. Exit status is k6's, so a
 breached threshold fails the caller.
@@ -90,10 +93,13 @@ Two things confound the `filter` numbers, both worth knowing before reading them
 - `external` is a registered external PostGIS table, so it has no changesets at
   all. It is the floor: what these reads cost with versioning out of the picture.
 
-**tiletopia** serves `tileset.json` and one content tile from whatever assets the
-stack already holds. There is no loadtest seeder for tiletopia assets, so on a
-stack with an empty catalog these ops are skipped and the run says so. Filling
-that gap needs a tiling job in the harness, which is not written.
+**tiletopia** serves `tileset.json` and one content tile from `loadtest-tileset.ply`,
+the asset the seeder uploads. The scenario resolves it by name and ignores every
+other asset in the catalog: picking whichever asset happened to be there measured a
+different tileset on every box, and found nothing at all on a fresh CI stack. If the
+seeder has not run, these ops are skipped with a warning rather than falling back to
+another asset, because a fixture that is missing is a seeding gap, not a regression,
+and a substitute would publish a number that is not comparable to the baseline.
 
 **geokode** forward and reverse geocoding against the addresses imported from the
 OSM extract. In-memory FST and R-tree lookups, so the fastest reads on the
@@ -181,10 +187,11 @@ op count implies (about 40 req/s).
 
 ## Fixtures
 
-`loadtest/seed.mjs` creates three kinds of dataset, all named `loadtest-*`, all
-idempotent. `loadtest/geo.js` holds the grid and bbox constants and is imported
-by both the seeder and the k6 scripts, so a bbox the seeder filled cannot drift
-from the bbox a scenario queries.
+`loadtest/seed.mjs` creates three kinds of ptolemy dataset plus one tiletopia
+asset, all named `loadtest-*`, all idempotent. `loadtest/geo.js` holds the grid,
+bbox and fixture-name constants and is imported by both the seeder and the k6
+scripts, so a bbox the seeder filled cannot drift from the bbox a scenario
+queries, nor a fixture name from the name a scenario looks up.
 
 - `loadtest-chain-<depth>`: 100 features, then `depth - 1` commits each editing
   one feature. The commit counter rides in that feature's properties, because
@@ -197,10 +204,18 @@ from the bbox a scenario queries.
   does not expose. The seeder creates it with `psql` inside the compose `db`
   container. Without docker access it substitutes an ordinary versioned dataset
   and says so, because the two do not measure the same read path.
+- `loadtest-tileset.ply`: a 200-point ascii PLY uploaded to tiletopia. Point-cloud
+  uploads tile on arrival, so this needs no separate job request, and the seeder
+  polls the asset until it reports `ready` (bounded at 120s, so a wedged tiling
+  worker fails the seed instead of hanging CI). The `.ply` in the name is required,
+  not cosmetic: tiletopia stores the upload under its asset name and the tiler picks
+  its reader from that path's extension. A rerun keeps the asset that is already
+  `ready` and deletes any other asset under the same name, so an interrupted seed
+  self-heals rather than leaving two candidates behind.
 
 ## Teardown
 
-`--teardown` drops every `loadtest-*` dataset. Ptolemy has **no
+`--teardown` drops every `loadtest-*` dataset and the tiletopia asset. Ptolemy has **no
 `DELETE /datasets/{id}` route**, so this goes through `psql` in the compose `db`
 container and relies on the schema's own cascades: `branches`, `changesets` and
 `feature_versions` all declare `ON DELETE CASCADE` on their dataset or changeset
@@ -214,6 +229,11 @@ empties the branches but reclaims nothing: the datasets survive, and a delete
 operation appends another `feature_versions` row rather than removing one. The
 seeder says so when it takes that path. Do not use the soft path to clean up a
 deep chain, it makes the database bigger.
+
+The tiletopia asset is not subject to any of that: tiletopia does have an asset
+delete, so teardown goes over HTTP and reclaims the tiles either way. It only
+reaches assets this harness uploaded, because tiletopia scopes delete to the JWT
+`sub` that created the asset, and the seeder always presents `loadtest`.
 
 ## CI
 
