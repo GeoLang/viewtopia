@@ -1,9 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { GeoJsonLayer, ScatterplotLayer, TextLayer } from '@deck.gl/layers';
 import { useAgentLayerStore } from '../store/agentLayers';
-import { useAppStore } from '../store/app';
 import { useDeckLayersStore } from './deckLayers';
-import { agentLayersBounds } from './agentLayerBounds';
 
 function hexToRgb(hex: string): [number, number, number] {
   const n = parseInt(hex.replace('#', ''), 16);
@@ -13,22 +11,14 @@ function hexToRgb(hex: string): [number, number, number] {
 }
 
 /**
- * Draws the agent's ui_spec layers on the standalone Deck, so switching to
- * deck.gl keeps them. Cesium and MapLibre have their own hooks reading the same
- * store.
+ * Contributes the agent's ui_spec layers to the map's deck overlay. Cesium and
+ * MapLibre have their own hooks reading the same store; framing the new spec is
+ * the map's job, so this one only builds layers.
  */
-export function useAgentLayersDeck(
-  fitBounds: (bounds: [number, number, number, number]) => void,
-) {
+export function useAgentLayersDeck() {
   const layers = useAgentLayerStore((s) => s.layers);
   const markers = useAgentLayerStore((s) => s.markers);
-  const generation = useAgentLayerStore((s) => s.generation);
-  const renderer = useAppStore((s) => s.renderer);
-  const activeTab = useAppStore((s) => s.activeTab);
   const setGroup = useDeckLayersStore((s) => s.setGroup);
-  const framedRef = useRef(-1);
-
-  const isActive = activeTab === 'globe' && renderer === 'deckgl';
 
   useEffect(() => {
     setGroup(
@@ -80,14 +70,4 @@ export function useAgentLayersDeck(
     });
     setGroup('agent-markers', markers.length ? [dots, labels] : []);
   }, [markers, setGroup]);
-
-  // Frame once per spec, and only while deck is the live renderer — the Deck is
-  // destroyed when it isn't, so framing then would be dropped and never retried.
-  useEffect(() => {
-    if (!isActive || framedRef.current === generation) return;
-    const bounds = agentLayersBounds(layers);
-    if (!bounds) return;
-    framedRef.current = generation;
-    fitBounds(bounds);
-  }, [layers, generation, isActive, fitBounds]);
 }

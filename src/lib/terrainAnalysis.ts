@@ -99,9 +99,6 @@ export function removeOverlay(layer: ImageryLayer | null): void {
   if (viewer.imageryLayers.contains(layer)) viewer.imageryLayers.remove(layer, true);
 }
 
-/** deck.gl is a standalone Deck, not a map, so it draws no analysis result. */
-export const RENDERER_HINT = 'Switch to the Cesium or MapLibre renderer to run this';
-
 // tiletopia gates the analysis POSTs, so without a session token they can only
 // answer 401. the panels check the session first and show this instead of firing,
 // like the portal catalog's signed-out state.

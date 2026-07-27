@@ -5,8 +5,8 @@ import { useAppStore } from '../store/app';
 import { useSplitViewStore } from '../store/splitView';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { useCesium } from '../hooks/useCesium';
-import { useDeckGL } from '../hooks/useDeckGL';
 import { useMapLibre } from '../hooks/useMapLibre';
+import { useDeckOverlay } from '../hooks/useDeckOverlay';
 import { useLeaflet } from '../hooks/useLeaflet';
 import { useSpaceTimeTracks } from '../hooks/useSpaceTimeTracks';
 import { useSpaceTimeDeckLayers } from '../hooks/useSpaceTimeDeckLayers';
@@ -46,13 +46,11 @@ export function ViewerArea() {
 
   // Initialize all viewer engines (they mount into DOM containers below)
   const cesiumRef = useCesium({ containerId: 'cesium-container' });
-  const {
-    deckRef,
-    flyTo: deckFlyTo,
-    fitBounds: deckFitBounds,
-  } = useDeckGL({ containerId: 'deckgl-container' });
   const maplibreRef = useMapLibre({ containerId: 'maplibre-container' });
   const leafletRef = useLeaflet({ containerId: 'leaflet-container' });
+
+  // deck.gl draws through the MapLibre map, so it needs the map to exist first
+  useDeckOverlay(maplibreRef);
 
   // Render spacetime tracks on all renderers
   useSpaceTimeTracks(maplibreRef);
@@ -66,7 +64,7 @@ export function ViewerArea() {
 
   // Render the agent's ui_spec layers on whichever renderer is active
   useAgentLayersCesium(cesiumRef);
-  useAgentLayersDeck(deckFitBounds);
+  useAgentLayersDeck();
   useAgentLayersMapLibre(maplibreRef);
   useAgentLayersLeaflet(leafletRef);
 
@@ -74,7 +72,7 @@ export function ViewerArea() {
   useOgcLayersCesium(cesiumRef);
   useOgcLayersMapLibre(maplibreRef);
 
-  // Drawing tools (Cesium + MapLibre; deck.gl is a standalone Deck, not a map)
+  // Drawing tools
   useDrawCesium(cesiumRef);
   useDrawMapLibre(maplibreRef);
 
@@ -82,8 +80,8 @@ export function ViewerArea() {
   useMeasureCesium(cesiumRef);
   useMeasureMapLibre(maplibreRef);
 
-  // Feature picker — inspect clicked features (deck.gl binds via useDeckGL,
-  // since picking is a Deck-level prop)
+  // Feature picker — inspect clicked features (the MapLibre binding also picks
+  // the deck overlay's layers)
   useFeaturePickerCesium(cesiumRef);
   useFeaturePickerMapLibre(maplibreRef);
 
@@ -109,8 +107,6 @@ export function ViewerArea() {
           destination: Cartesian3.fromDegrees(lng, lat, altitude),
           duration: 1.5,
         });
-      } else if (renderer === 'deckgl') {
-        deckFlyTo(lng, lat, zoom);
       } else if (renderer === 'maplibre' && maplibreRef.current) {
         maplibreRef.current.flyTo({ center: [lng, lat], zoom: zoom ?? 8, duration: 1500 });
       }
@@ -119,7 +115,7 @@ export function ViewerArea() {
     }
 
     clearFlyTo();
-  }, [flyToTarget, clearFlyTo, activeTab, renderer, cesiumRef, deckFlyTo, maplibreRef, leafletRef]);
+  }, [flyToTarget, clearFlyTo, activeTab, renderer, cesiumRef, maplibreRef, leafletRef]);
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
@@ -158,8 +154,6 @@ export function ViewerArea() {
       if (activeTab === 'globe') {
         if (renderer === 'cesium' && cesiumRef.current && !cesiumRef.current.isDestroyed()) {
           cesiumRef.current.resize();
-        } else if (renderer === 'deckgl' && deckRef.current) {
-          deckRef.current.redraw('resize');
         } else if (renderer === 'maplibre' && maplibreRef.current) {
           maplibreRef.current.resize();
         }
@@ -168,7 +162,7 @@ export function ViewerArea() {
       }
     }, 150);
     return () => clearTimeout(timer);
-  }, [activeTab, renderer, split, cesiumRef, deckRef, maplibreRef, leafletRef]);
+  }, [activeTab, renderer, split, cesiumRef, maplibreRef, leafletRef]);
 
   return (
     <Box
@@ -204,18 +198,7 @@ export function ViewerArea() {
           }}
         />
 
-        {/* deck.gl standalone renderer (own Deck instance) */}
-        <div
-          id="deckgl-container"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display:
-              activeTab === 'globe' && renderer === 'deckgl' ? 'block' : 'none',
-          }}
-        />
-
-        {/* MapLibre GL standalone */}
+        {/* MapLibre GL, with the deck.gl layers interleaved into it */}
         <div
           id="maplibre-container"
           style={{

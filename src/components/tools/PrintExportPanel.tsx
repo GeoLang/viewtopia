@@ -51,7 +51,6 @@ export function PrintExportPanel({ onClose }: { onClose: () => void }) {
     // Pick the container matching the active renderer
     const containerIds: Record<string, string> = {
       cesium: 'cesium-container',
-      deckgl: 'deckgl-container',
       maplibre: 'maplibre-container',
     };
     const containerId = containerIds[renderer] ?? 'cesium-container';

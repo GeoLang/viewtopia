@@ -55,6 +55,11 @@ export function setPaneMapLibre(m: MapLibreMap | null): void {
   window.__viewtopiaPaneMap = m;
 }
 
+/**
+ * The Deck the MapLibre map's interleaved overlay owns. Registered by
+ * useDeckOverlay so the feature picker can pick deck layers, which
+ * queryRenderedFeatures never returns.
+ */
 export function setActiveDeck(d: Deck | null): void {
   deckInstance = d;
   window.__viewtopiaDeck = d;

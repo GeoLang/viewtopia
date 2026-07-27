@@ -19,7 +19,6 @@ import {
 } from 'cesium';
 import { getActiveCesiumViewer, getActiveMapLibre } from '../../viewer/registry';
 import { useAppStore, type Renderer } from '../../store/app';
-import { RENDERER_HINT } from '../../lib/terrainAnalysis';
 import { addMapTerrain, TERRAIN_RGB_URL, type MapTerrain } from '../../lib/mapTerrain';
 
 /**
@@ -217,7 +216,6 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
           color="violet"
           onClick={enableTerrain}
           loading={loading}
-          disabled={renderer === 'deckgl'}
           fullWidth
         >
           Enable Terrain
@@ -231,17 +229,10 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
           variant="subtle"
           color="gray"
           onClick={resetTerrain}
-          disabled={renderer === 'deckgl'}
           fullWidth
         >
           {onMap ? 'Disable Terrain' : 'Reset to Ellipsoid'}
         </Button>
-
-        {renderer === 'deckgl' && (
-          <Text size="xs" c="yellow" data-testid="global-terrain-renderer-hint">
-            {RENDERER_HINT}
-          </Text>
-        )}
 
         <Text size="xs" c={failed ? 'red' : 'green'} data-testid="terrain-status">{status}</Text>
       </Stack>

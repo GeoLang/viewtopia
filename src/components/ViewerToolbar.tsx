@@ -45,7 +45,6 @@ const TAB_DATA: { value: ViewerTab; label: string; icon: React.ReactNode }[] = [
 
 const RENDERER_OPTIONS: { value: Renderer; label: string }[] = [
   { value: 'cesium', label: 'CesiumJS' },
-  { value: 'deckgl', label: 'deck.gl' },
   { value: 'maplibre', label: 'MapLibre' },
 ];
 
@@ -96,7 +95,7 @@ export function ViewerToolbar() {
   const handleExportPng = useCallback(() => {
     // Find the active canvas element and export it
     const canvas = document.querySelector(
-      '#cesium-container canvas, #deckgl-container canvas, #maplibre-container canvas, #leaflet-container canvas',
+      '#cesium-container canvas, #maplibre-container canvas, #leaflet-container canvas',
     ) as HTMLCanvasElement | null;
     if (!canvas) return;
     try {

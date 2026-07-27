@@ -4,8 +4,18 @@ import type { CameraState } from './cameraViews';
 import type { Basemap } from '../hooks/basemapTiles';
 
 export type ViewerTab = 'globe' | 'map';
-export type Renderer = 'cesium' | 'deckgl' | 'maplibre';
+export type Renderer = 'cesium' | 'maplibre';
 export type { Basemap };
+
+/**
+ * Read a renderer from persisted state, a share link or an agent command.
+ * 'deckgl' was a standalone renderer whose layers now draw on the MapLibre map,
+ * so old links and localStorage land there. null when the value is not a renderer.
+ */
+export function asRenderer(value: unknown): Renderer | null {
+  if (value === 'deckgl') return 'maplibre';
+  return value === 'cesium' || value === 'maplibre' ? value : null;
+}
 export type ToolPanel =
   | null
   | 'measure'
@@ -245,13 +255,20 @@ export const useAppStore = create<AppState>()(
         asideWidth: state.asideWidth,
       }),
       // deep-merge settings so a persisted object from an older build backfills
-      // any settings key added since (a missing key would crash the panel)
+      // any settings key added since (a missing key would crash the panel), and
+      // map a retired renderer name onto the one that took it over
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<AppState>;
+        const settings = { ...current.settings, ...(p.settings ?? {}) };
         return {
           ...current,
           ...p,
-          settings: { ...current.settings, ...(p.settings ?? {}) },
+          renderer: asRenderer(p.renderer) ?? current.renderer,
+          settings: {
+            ...settings,
+            defaultRenderer:
+              asRenderer(settings.defaultRenderer) ?? current.settings.defaultRenderer,
+          },
         };
       },
     },

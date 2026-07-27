@@ -14,7 +14,6 @@ import {
   currentBbox,
   removeOverlay,
   terrainRaster,
-  RENDERER_HINT,
   SIGN_IN_HINT,
   type Bbox,
   type MapResult,
@@ -150,7 +149,7 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
             color="violet"
             onClick={run}
             loading={loading}
-            disabled={renderer === 'deckgl' || needsSignIn}
+            disabled={needsSignIn}
           >
             Run
           </Button>
@@ -158,12 +157,6 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
             Clear
           </Button>
         </Group>
-
-        {renderer === 'deckgl' && (
-          <Text size="xs" c="yellow" data-testid="terrain-renderer-hint">
-            {RENDERER_HINT}
-          </Text>
-        )}
 
         {needsSignIn && (
           <Text size="xs" c="dimmed" data-testid="terrain-signin">

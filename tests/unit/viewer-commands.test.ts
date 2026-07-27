@@ -12,7 +12,6 @@ const reg = vi.hoisted(() => ({ map: null as { flyTo: (o: unknown) => void } | n
 vi.mock('../../src/viewer/registry', () => ({
   getActiveCesiumViewer: () => null,
   getActiveMapLibre: () => reg.map,
-  getActiveDeck: () => null,
 }));
 
 describe('agent viewer commands', () => {
@@ -35,14 +34,14 @@ describe('agent viewer commands', () => {
     expect(useAppStore.getState().activePanel).toBe('measure');
   });
 
-  it('deck-layer commands register a layer and switch to the deck renderer', () => {
+  it('deck-layer commands register a layer and switch to the renderer that draws it', () => {
     executeViewerCommand({
       action: 'add_scatter',
       params: { data: [[7.42, 43.73]], radius: 40 },
     });
     const groups = useDeckLayersStore.getState().groups;
     expect(groups.agent?.length).toBe(1);
-    expect(useAppStore.getState().renderer).toBe('deckgl');
+    expect(useAppStore.getState().renderer).toBe('maplibre');
     expect(useAppStore.getState().activeTab).toBe('globe');
   });
 
@@ -74,6 +73,14 @@ describe('agent viewer commands', () => {
       coordinates: [7.42, 43.73],
     });
     expect(useAgentLayerStore.getState().generation).toBe(1);
+  });
+
+  it('switch_renderer lands a retired deckgl request on maplibre and ignores junk', () => {
+    executeViewerCommand({ action: 'switch_renderer', params: { renderer: 'deckgl' } });
+    expect(useAppStore.getState().renderer).toBe('maplibre');
+
+    executeViewerCommand({ action: 'switch_renderer', params: { renderer: 'nonsense' } });
+    expect(useAppStore.getState().renderer).toBe('maplibre');
   });
 
   it('style_by_* runs without a live viewer (no tilesets → no-op)', () => {

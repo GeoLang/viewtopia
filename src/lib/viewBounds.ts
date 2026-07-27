@@ -2,11 +2,11 @@
  * Current view bounds as a lon/lat box, read from the renderer that is on
  * screen. ViewerArea keeps every renderer container mounted and toggles
  * display, and only the displayed one holds a live instance, so asking a
- * single renderer (Cesium) leaves the other two with no bounds at all.
+ * single renderer (Cesium) leaves the other one with no bounds at all.
  */
 import { Math as CesiumMath } from 'cesium';
 import { useAppStore, type Renderer } from '../store/app';
-import { getActiveCesiumViewer, getActiveDeck, getActiveMapLibre } from '../viewer/registry';
+import { getActiveCesiumViewer, getActiveMapLibre } from '../viewer/registry';
 import { getSharedCamera } from '../hooks/sharedCamera';
 
 export interface ViewBounds {
@@ -44,23 +44,9 @@ function maplibreBounds(): ViewBounds | null {
   return box(b.getWest(), b.getSouth(), b.getEast(), b.getNorth());
 }
 
-function deckBounds(): ViewBounds | null {
-  const viewport = getActiveDeck()?.getViewports()[0];
-  if (!viewport) return null;
-  const [west, south, east, north] = viewport.getBounds();
-  // deck's tilted camera can see past the antimeridian and the mercator limit
-  return box(
-    Math.max(west, -180),
-    Math.max(south, -85),
-    Math.min(east, 180),
-    Math.min(north, 85),
-  );
-}
-
 const READERS: Record<Renderer, () => ViewBounds | null> = {
   cesium: cesiumBounds,
   maplibre: maplibreBounds,
-  deckgl: deckBounds,
 };
 
 /** Displayed renderer's bounds, else any other live one, else the shared camera. */

@@ -10,7 +10,6 @@ import {
   currentBbox,
   removeOverlay,
   solarRaster,
-  RENDERER_HINT,
   SIGN_IN_HINT,
   type Bbox,
   type MapResult,
@@ -119,7 +118,7 @@ export function SolarPanel({ onClose }: { onClose: () => void }) {
             color="yellow"
             onClick={run}
             loading={loading}
-            disabled={renderer === 'deckgl' || needsSignIn}
+            disabled={needsSignIn}
           >
             Compute
           </Button>
@@ -127,12 +126,6 @@ export function SolarPanel({ onClose }: { onClose: () => void }) {
             Clear
           </Button>
         </Group>
-
-        {renderer === 'deckgl' && (
-          <Text size="xs" c="yellow" data-testid="solar-renderer-hint">
-            {RENDERER_HINT}
-          </Text>
-        )}
 
         {needsSignIn && (
           <Text size="xs" c="dimmed" data-testid="solar-signin">

@@ -11,14 +11,11 @@ import { IconColumns, IconX } from '@tabler/icons-react';
 import { useAppStore, type Renderer } from '../../store/app';
 import { useSplitViewStore, type PaneRenderer } from '../../store/splitView';
 
-/** Left pane options: the app's globe renderers, since it is the active one. */
-const LEFT_RENDERERS = [
+/** The globe renderers either pane can show. */
+const RENDERERS = [
   { value: 'cesium', label: 'CesiumJS (3D)' },
   { value: 'maplibre', label: 'MapLibre' },
-  { value: 'deckgl', label: 'deck.gl' },
 ];
-
-const RIGHT_RENDERERS = LEFT_RENDERERS.slice(0, 2);
 
 export function SplitViewPanel({ onClose }: { onClose: () => void }) {
   const renderer = useAppStore((s) => s.renderer);
@@ -68,7 +65,7 @@ export function SplitViewPanel({ onClose }: { onClose: () => void }) {
         <Select
           size="xs"
           label="Left pane"
-          data={LEFT_RENDERERS}
+          data={RENDERERS}
           value={renderer}
           onChange={(v) => v && setRenderer(v as Renderer)}
           allowDeselect={false}
@@ -78,7 +75,7 @@ export function SplitViewPanel({ onClose }: { onClose: () => void }) {
         <Select
           size="xs"
           label="Right pane"
-          data={RIGHT_RENDERERS}
+          data={RENDERERS}
           value={paneRenderer}
           onChange={(v) => v && setPaneRenderer(v as PaneRenderer)}
           allowDeselect={false}

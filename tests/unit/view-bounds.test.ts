@@ -10,10 +10,9 @@ vi.mock('cesium', () => ({
 vi.mock('../../src/viewer/registry', () => ({
   getActiveCesiumViewer: vi.fn(() => null),
   getActiveMapLibre: vi.fn(() => null),
-  getActiveDeck: vi.fn(() => null),
 }));
 
-const { getActiveCesiumViewer, getActiveMapLibre, getActiveDeck } = await import(
+const { getActiveCesiumViewer, getActiveMapLibre } = await import(
   '../../src/viewer/registry'
 );
 const { getViewBounds } = await import('../../src/lib/viewBounds');
@@ -35,15 +34,10 @@ function maplibreMap(w: number, s: number, e: number, n: number) {
   };
 }
 
-function deck(w: number, s: number, e: number, n: number) {
-  return { getViewports: () => [{ getBounds: () => [w, s, e, n] }] };
-}
-
 describe('getViewBounds', () => {
   beforeEach(() => {
     vi.mocked(getActiveCesiumViewer).mockReturnValue(null);
     vi.mocked(getActiveMapLibre).mockReturnValue(null);
-    vi.mocked(getActiveDeck).mockReturnValue(null);
     useAppStore.setState({ renderer: 'cesium' });
     setSharedCamera({ longitude: 0, latitude: 20, zoom: 2, pitch: 0, bearing: 0 });
   });
@@ -62,22 +56,6 @@ describe('getViewBounds', () => {
       centerLng: 7.45,
       centerLat: 43.75,
     });
-  });
-
-  it('reads the deck.gl viewport when deck is displayed', () => {
-    vi.mocked(getActiveDeck).mockReturnValue(deck(1, 2, 3, 4) as never);
-    useAppStore.setState({ renderer: 'deckgl' });
-
-    const b = getViewBounds();
-    expect([b.west, b.south, b.east, b.north]).toEqual([1, 2, 3, 4]);
-  });
-
-  it('clamps a deck viewport that reaches past the mercator limit', () => {
-    vi.mocked(getActiveDeck).mockReturnValue(deck(-200, -120, 200, 120) as never);
-    useAppStore.setState({ renderer: 'deckgl' });
-
-    const b = getViewBounds();
-    expect([b.west, b.south, b.east, b.north]).toEqual([-180, -85, 180, 85]);
   });
 
   it('converts the Cesium rectangle to degrees', () => {

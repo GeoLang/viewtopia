@@ -12,7 +12,6 @@ import {
 } from '@mantine/core';
 import { IconWorld, IconX, IconPlus } from '@tabler/icons-react';
 import { useState } from 'react';
-import { useAppStore } from '../../store/app';
 import { loadWfsLayer, type OGCLayer, type OGCType } from '../../store/ogcLayers';
 
 interface OGCLayersPanelProps {
@@ -35,7 +34,6 @@ export function OGCLayersPanel({
   const [type, setType] = useState<OGCType>('wms');
   const [status, setStatus] = useState<{ text: string; failed: boolean } | null>(null);
   const [loading, setLoading] = useState(false);
-  const renderer = useAppStore((s) => s.renderer);
 
   const handleAdd = async () => {
     if (!name.trim() || !url.trim()) return;
@@ -143,11 +141,6 @@ export function OGCLayersPanel({
         {status && (
           <Text size="xs" c={status.failed ? 'red' : 'dimmed'} data-testid="ogc-status">
             {status.text}
-          </Text>
-        )}
-        {renderer === 'deckgl' && (
-          <Text size="xs" c="dimmed" data-testid="ogc-note">
-            Raster services draw on CesiumJS and MapLibre, not the deck.gl renderer.
           </Text>
         )}
       </Stack>

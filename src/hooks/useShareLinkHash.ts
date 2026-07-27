@@ -1,10 +1,8 @@
 import { useEffect } from 'react';
-import { useAppStore, type Renderer } from '../store/app';
+import { useAppStore, asRenderer } from '../store/app';
 import { setSharedCamera } from './sharedCamera';
 import { getActiveCesiumViewer } from '../viewer/registry';
 import { flyToCameraState } from '../store/cameraViews';
-
-const RENDERERS: Renderer[] = ['cesium', 'deckgl', 'maplibre'];
 
 /**
  * On first mount, apply camera + renderer encoded in the URL hash
@@ -25,10 +23,8 @@ export function useShareLinkHash() {
     const [lng, lat, height, heading, pitch] = camRaw.split(',').map(Number);
     if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
 
-    const rendererParam = params.get('renderer');
-    if (rendererParam && RENDERERS.includes(rendererParam as Renderer)) {
-      setRenderer(rendererParam as Renderer);
-    }
+    const shared = asRenderer(params.get('renderer'));
+    if (shared) setRenderer(shared);
 
     // seed shared camera so a freshly-mounted viewer starts here
     setSharedCamera({

@@ -1,7 +1,8 @@
 /**
  * Point-data sourcing for the deck.gl analysis panels (Heatmap, Spatial Stats).
  * Turns a drawn layer or pasted GeoJSON into flat [lng,lat] records the deck
- * aggregation layers consume, and helpers to add/remove a panel's deck group.
+ * aggregation layers consume, and helpers to add/remove a panel's layer group
+ * on the map's deck overlay.
  */
 import type { Layer } from '@deck.gl/core';
 import { useDeckLayersStore } from '../hooks/deckLayers';
@@ -116,12 +117,12 @@ export function gridSummary(
   };
 }
 
-/** Show a panel's deck layer(s), switching the app to the deck.gl globe renderer. */
+/** Show a panel's deck layer(s), switching to the renderer that draws them. */
 export function showPanelDeckLayer(group: string, layer: Layer | Layer[]): void {
   useDeckLayersStore.getState().setGroup(group, Array.isArray(layer) ? layer : [layer]);
   const app = useAppStore.getState();
   app.setActiveTab('globe');
-  app.setRenderer('deckgl');
+  app.setRenderer('maplibre');
 }
 
 export function clearPanelDeckLayer(group: string): void {

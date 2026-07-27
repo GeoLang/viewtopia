@@ -3,6 +3,7 @@ import type { MutableRefObject } from 'react';
 import type maplibregl from 'maplibre-gl';
 import { useAppStore } from '../store/app';
 import { useFeaturePickerStore, propsToRows, toRow } from '../store/featurePicker';
+import { getActiveDeck } from '../viewer/registry';
 
 const AGENT_PREFIX = 'agent-layer-';
 
@@ -15,10 +16,24 @@ const pickBox = (p: maplibregl.Point): [maplibregl.PointLike, maplibregl.PointLi
 ];
 
 /**
+ * Properties of the deck overlay's topmost layer at a point, or null. Deck
+ * layers are custom style layers, so queryRenderedFeatures never sees them.
+ */
+function pickDeckProps(p: maplibregl.Point): Record<string, unknown> | null {
+  const deck = getActiveDeck();
+  if (!deck?.isInitialized) return null;
+  const info = deck.pickObject({ x: p.x, y: p.y, radius: PICK_TOLERANCE });
+  const props = (info?.object as { properties?: Record<string, unknown> } | undefined)
+    ?.properties;
+  return props ?? null;
+}
+
+/**
  * MapLibre binding for the feature picker. While the picker is enabled, a left
  * click reads the clicked feature's properties into the store, preferring the
  * agent's layers over basemap fill so clicking a result doesn't select the road
- * underneath it.
+ * underneath it. Deck overlay layers sit on the same map and the same click, so
+ * they are picked here too rather than through a second handler.
  */
 export function useFeaturePickerMapLibre(
   mapRef: MutableRefObject<maplibregl.Map | null>,
@@ -38,12 +53,21 @@ export function useFeaturePickerMapLibre(
         canvas.style.cursor = '';
         return;
       }
-      const over = map.queryRenderedFeatures(pickBox(e.point)).length > 0;
+      const over =
+        map.queryRenderedFeatures(pickBox(e.point)).length > 0 ||
+        pickDeckProps(e.point) !== null;
       canvas.style.cursor = over ? 'pointer' : '';
     };
 
     const onClick = (e: maplibregl.MapMouseEvent) => {
       if (!useFeaturePickerStore.getState().enabled) return;
+
+      // A deck layer draws over the basemap, so it answers the click first
+      const deckProps = pickDeckProps(e.point);
+      if (deckProps) {
+        useFeaturePickerStore.getState().setSelected(propsToRows(deckProps));
+        return;
+      }
 
       const hits = map.queryRenderedFeatures(pickBox(e.point));
       const feature =

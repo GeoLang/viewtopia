@@ -78,7 +78,6 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           label="Default Renderer"
           data={[
             { value: 'cesium', label: 'CesiumJS' },
-            { value: 'deckgl', label: 'deck.gl' },
             { value: 'maplibre', label: 'MapLibre' },
           ]}
           value={settings.defaultRenderer}
@@ -89,7 +88,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         <Select
           size="xs"
           label="Default Basemap"
-          description="Vector styles render in MapLibre (globe); Cesium and deck.gl show the closest raster"
+          description="Vector styles render in MapLibre (globe); Cesium shows the closest raster"
           data={BASEMAP_SELECT_GROUPS}
           value={settings.defaultBasemap}
           onChange={(v) => v && updateSettings({ defaultBasemap: v as Basemap })}

@@ -18,7 +18,6 @@ import { captureCameraState } from '../../store/cameraViews';
 /**
  * The five hash numbers (lng, lat, height, heading, pitch) read off the renderer
  * that is on screen. Cesium pitch convention: 0 = horizon, -90 = straight down.
- * deck.gl keeps its display tilt out of the shared camera, so it shares that.
  */
 function activeCamera(renderer: Renderer): number[] {
   if (renderer === 'cesium') {

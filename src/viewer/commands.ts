@@ -7,7 +7,8 @@
  *
  * Covers navigation / marker / geojson / tileset / tab / renderer commands, the
  * deck.gl visualization layers (add_heatmap, add_hexbin, add_arcs, add_scatter,
- * add_screengrid), 3D-tiles styling (style_by_*), and tool-panel commands
+ * add_screengrid) which draw on the MapLibre map's deck overlay, 3D-tiles
+ * styling (style_by_*), and tool-panel commands
  * (measure, annotate, analysis, weather, …) which open the matching panel.
  */
 import {
@@ -19,10 +20,10 @@ import {
 import { HeatmapLayer, HexagonLayer, ScreenGridLayer } from '@deck.gl/aggregation-layers';
 import { ArcLayer, ScatterplotLayer } from '@deck.gl/layers';
 import type { Layer } from '@deck.gl/core';
-import { getActiveCesiumViewer, getActiveMapLibre, getActiveDeck } from './registry';
+import { getActiveCesiumViewer, getActiveMapLibre } from './registry';
 import { setSharedCamera } from '../hooks/sharedCamera';
 import { runSqlQuery } from '../duckdb/sqlCommand';
-import { useAppStore, type Renderer, type ViewerTab, type ToolPanel } from '../store/app';
+import { useAppStore, asRenderer, type ViewerTab, type ToolPanel } from '../store/app';
 import { useAgentLayerStore, toFeatureCollection } from '../store/agentLayers';
 import { useDeckLayersStore } from '../hooks/deckLayers';
 import { colorByHeight, colorByClassification, colorByProperty } from './tileStyles';
@@ -51,24 +52,23 @@ const asArray = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 // Agent-added deck layers accumulate in a dedicated registry group.
 let agentLayers: Layer[] = [];
 
-/** Add a deck layer from the agent, and make sure the deck.gl renderer is showing. */
+/** Add a deck layer from the agent, and show the renderer that draws deck layers. */
 function addAgentDeckLayer(layer: Layer): void {
   agentLayers = [...agentLayers, layer];
   useDeckLayersStore.getState().setGroup('agent', agentLayers);
   const store = useAppStore.getState();
   store.setActiveTab('globe');
-  store.setRenderer('deckgl');
+  store.setRenderer('maplibre');
 }
 
 // camera altitude (m) -> web-mercator zoom, so a Cesium-style fly_to also moves
-// the MapLibre globe / deck.gl view.
+// the MapLibre globe.
 const heightToZoom = (height: number): number =>
   Math.max(3, Math.min(18, Math.round(Math.log2(59000000 / Math.max(height, 200)))));
 
-// Move whichever renderer is live (Cesium, MapLibre, deck.gl), and record the
-// position in the shared camera so a later renderer switch keeps it. Camera
-// commands used to touch only Cesium, so they silently did nothing on the
-// MapLibre globe.
+// Move whichever renderer is live, and record the position in the shared camera
+// so a later renderer switch keeps it. Camera commands used to touch only
+// Cesium, so they silently did nothing on the MapLibre globe.
 function moveCamera(p: Record<string, unknown>, setView: boolean): void {
   const lon = num(p.lon);
   const lat = num(p.lat);
@@ -96,16 +96,13 @@ function moveCamera(p: Record<string, unknown>, setView: boolean): void {
     return;
   }
 
-  const map = getActiveMapLibre();
-  if (map) {
-    map.flyTo({ center: [lon, lat], zoom, bearing, duration: setView ? 0 : duration * 1000 });
-    return;
-  }
-
-  const deck = getActiveDeck();
-  if (deck) {
-    deck.setProps({ viewState: { longitude: lon, latitude: lat, zoom, bearing, pitch: 0 } });
-  }
+  // deck layers ride on the MapLibre map, so moving the map moves them too
+  getActiveMapLibre()?.flyTo({
+    center: [lon, lat],
+    zoom,
+    bearing,
+    duration: setView ? 0 : duration * 1000,
+  });
 }
 
 const handlers: Record<string, Handler> = {
@@ -188,10 +185,8 @@ const handlers: Record<string, Handler> = {
   },
 
   switch_renderer: (p) => {
-    const r = p.renderer;
-    if (r === 'cesium' || r === 'deckgl' || r === 'maplibre') {
-      useAppStore.getState().setRenderer(r as Renderer);
-    }
+    const r = asRenderer(p.renderer);
+    if (r) useAppStore.getState().setRenderer(r);
   },
 
   // ─── deck.gl visualization layers ───────────────────────────────────────
