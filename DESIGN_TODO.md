@@ -14,12 +14,13 @@
       tiletopia-core (ort/ndarray version clash); CI runs `--features
       draco,gpu,plugin-dylib,ml` — check whether that job is red on master and fix the
       version clash.
-- [ ] **tiletopia CloudFront config**: `deploy/terraform/main.tf:235` gives
-      `/api/v1/catalog*` GET/HEAD only and drops Authorization, so catalog-add cannot
-      work through that distribution (fails closed).
-- [ ] **loadtest: tiletopia fixture seeder.** The scenario measures whatever assets the
-      stack holds; a fresh CI stack may have none and the ops skip with a warning.
-      Needs a small tiling job in the harness for a deterministic asset.
+- [ ] **tiletopia CloudFront default behavior caches authenticated responses ~1h**
+      (post-MVP decision): Authorization is in the cache key so no cross-user leak,
+      but a revoked token's responses keep serving until TTL. Clean fix: split the
+      two public tile patterns into an aggressive-TTL behavior, default to TTL 0.
+- [ ] **CloudFront realtime WS untested**: auth rides Sec-WebSocket-Protocol, which
+      the distribution never forwards explicitly; collab may fail closed through the
+      CDN. Test on a live distribution before relying on it.
 
 ## OPEN — post-v1: replace embedded Letta (decided 2026-07-25)
 

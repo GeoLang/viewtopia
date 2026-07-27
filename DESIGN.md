@@ -318,3 +318,8 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   them off it. `FENESTRA_PUBLIC_URL` now overrides that base (compose sets
   `<origin>/ogc`). The loadtest fenestra scenario measures the proxy route by default;
   the :3003 publish stays for dev and is still reachable via `LOADTEST_FENESTRA_URL`.
+- **2026-07-27 (CDN)** — CloudFront catalog path fixed: Authorization + Origin forwarded,
+  full method set (origin 405s what it lacks), TTL 0 so authorized responses are never
+  replayed cross-token or post-expiry. Terraform validate clean; not applied to live
+  infra. Two follow-ups filed: default-behavior TTL vs revoked tokens, and the untested
+  Sec-WebSocket-Protocol forwarding for realtime through the CDN.
