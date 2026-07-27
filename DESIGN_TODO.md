@@ -25,10 +25,6 @@
 
 ## OPEN — geolang agent tools (found in 2026-07-26 viewer testing)
 
-- [ ] **Tool cold-start exceeds Letta 180s sandbox cap.** First tool call after an image
-      rebuild pays schema re-registration + geo-stack import on top of an ~85s tool run
-      and times out (agent retry succeeds). Pre-warm with a throwaway tool call in the
-      entrypoint, or raise the sandbox timeout.
 - [ ] **assess_environmental_risk run-to-run variance.** Two identical "Monaco, 2km"
       requests scored 4/10 (mean elev 14.1m, range 0–98) then 1/10 (mean 50.0m, range
       0–322) — geocode anchor and/or sampling nondeterminism. Pin the geocode result and

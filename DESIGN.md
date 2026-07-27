@@ -240,3 +240,11 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   browser-verified on both. Analysis panels (Terrain/Flood/Solar) now read the shown
   renderer's view and draw results on it (viewBounds.ts); 2D map tab disables the
   renderer select and vector basemap options. tiletopia 616 tests; viewer vitest 203.
+- **2026-07-27** — Agent tool cold-start fixed: geolang-api pre-warms the Letta sandbox
+  at boot (throwaway /v1/tools/run importing the geo stack) and TOOL_SANDBOX_TIMEOUT
+  raised 180→420s in both compose files; verified live (pre-warm success, agent resumed).
+  Panels/load CI unbroken: compose geolang env_file now `required: false` (those jobs
+  don't check out geolang). Bookmark fly-to falls back to the shared flyTo pipeline, so
+  it works on 2D renderers and camera-less bookmarks. Biome lint added (lint/lint:fix,
+  formatter off), 315 findings triaged: autofixes + 4 real errors fixed, noisy rules
+  downgraded; 0 open dependabot alerts confirmed.
