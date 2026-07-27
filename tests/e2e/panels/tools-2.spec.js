@@ -321,13 +321,16 @@ test.describe('Tools panels (batch 2)', () => {
     // handshake arguments: the marker first and the raw JWT second
     await page.addInitScript(() => {
       const Inner = window.WebSocket;
-      const recording = (url, protocols) => {
-        window.__wsProtocols = [...(window.__wsProtocols ?? []), protocols];
-        return new Inner(url, protocols);
-      };
-      recording.prototype = Inner.prototype;
-      Object.assign(recording, { CONNECTING: 0, OPEN: 1, CLOSING: 2, CLOSED: 3 });
-      window.WebSocket = recording;
+      // a class, because the app calls `new WebSocket(…)` and an arrow function
+      // is not constructible
+      class Recording extends Inner {
+        constructor(url, protocols) {
+          window.__wsProtocols = [...(window.__wsProtocols ?? []), protocols];
+          super(url, protocols);
+        }
+      }
+      Object.assign(Recording, { CONNECTING: 0, OPEN: 1, CLOSING: 2, CLOSED: 3 });
+      window.WebSocket = Recording;
     });
 
     await signIn(page);

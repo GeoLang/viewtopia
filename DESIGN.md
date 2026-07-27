@@ -266,4 +266,7 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   Jawg access-token setting and previews (and selects) jawg tiles only once it is set,
   street-view a Google Maps API key setting for the embed. The plugin sweep's fixme list
   is gone, it now asserts both states and that neither keyed host is contacted; 11 new
-  unit tests.
+  unit tests. Follow-up: Viewshed got the same gate, and the collab client handles
+  tiletopia's room cap (close code 4029 -> "too many rooms open", no reconnect into the
+  same refusal) and finally builds a valid socket URL from an absolute `tiletopiaUrl`
+  (http -> ws, https -> wss; root-relative unchanged).

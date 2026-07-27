@@ -9,9 +9,6 @@
 
 ## IN PROGRESS — viewer test coverage (decided 2026-07-26)
 
-- [ ] **Viewshed panel shows a generic failure when signed out**: same defect the
-      Terrain/Flood/Solar panels were fixed for on 2026-07-27, still open in
-      `src/components/tools/ViewshedPanel.tsx` ("Viewshed request failed" on the 401).
 - [~] **Building-data toggle on MapLibre** (committed ea421a9d, browser verification
       pending): disabled with tooltip when the loaded style has its own fill-extrusion
       layers (Liberty); detection re-runs on style.load; hook skips duplicate layer.
@@ -27,9 +24,6 @@
       roster while the other tab is still connected.
 - [ ] **tiletopia realtime room count unbounded** — any authenticated user can create
       rooms without limit; add a cap or an idle reaper.
-- [ ] **viewer collab connect URL only handles a root-relative `tiletopiaUrl`**: an
-      absolute `http(s)://` settings value builds an invalid `ws://http://…` URL
-      (`src/store/collaboration.ts`, pre-existing, noted 2026-07-26).
 
 - [ ] **tiletopia full-features clippy**: `cargo clippy --all-features` fails in
       tiletopia-core (ort/ndarray version clash); CI runs `--features

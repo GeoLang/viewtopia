@@ -10,7 +10,8 @@ import {
 } from 'cesium';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { renderGeoJson } from '../../viewer/renderGeoJson';
-import { viewshed } from '../../lib/terrainAnalysis';
+import { useAuthStore } from '../../features/auth/store';
+import { SIGN_IN_HINT, viewshed } from '../../lib/terrainAnalysis';
 
 export function ViewshedPanel({ onClose }: { onClose: () => void }) {
   const [observerHeight, setObserverHeight] = useState(2);
@@ -19,6 +20,7 @@ export function ViewshedPanel({ onClose }: { onClose: () => void }) {
   const [observer, setObserver] = useState<[number, number] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const needsSignIn = useAuthStore((s) => !s.token);
   const dsRef = useRef<GeoJsonDataSource | undefined>(undefined);
 
   const clearResult = () => {
@@ -118,13 +120,25 @@ export function ViewshedPanel({ onClose }: { onClose: () => void }) {
         <Slider size="xs" min={100} max={10000} step={100} value={radius} onChange={setRadius} color="violet" />
 
         <Group grow>
-          <Button size="xs" color="violet" onClick={run} loading={loading} disabled={!observer}>
+          <Button
+            size="xs"
+            color="violet"
+            onClick={run}
+            loading={loading}
+            disabled={!observer || needsSignIn}
+          >
             Compute
           </Button>
           <Button size="xs" variant="default" onClick={clearResult}>
             Clear
           </Button>
         </Group>
+
+        {needsSignIn && (
+          <Text size="xs" c="dimmed" data-testid="viewshed-signin">
+            {SIGN_IN_HINT}
+          </Text>
+        )}
 
         {error && (
           <Text size="xs" c="red">

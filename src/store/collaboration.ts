@@ -25,6 +25,32 @@ import { getSharedCamera, setSharedCamera } from '../hooks/sharedCamera';
 /** Marker the server looks for as the first offered subprotocol. */
 const BEARER_SUBPROTOCOL = 'bearer';
 
+// tiletopia's ROOM_LIMIT_CLOSE_CODE: the account already holds its 32 concurrent
+// rooms and this one would be a new room (joining someone else's never counts).
+// A retry gets the same refusal, so we stay closed and say which limit it was.
+const ROOM_LIMIT_CLOSE_CODE = 4029;
+const ROOM_LIMIT_ERROR = 'Too many collaboration rooms open. Leave one first.';
+const UNREACHABLE_ERROR = 'Could not reach the realtime service.';
+
+/**
+ * The room socket for a `tiletopiaUrl` setting that is either root-relative
+ * (same-origin through the proxy) or absolute, where the scheme carries over as
+ * http -> ws and https -> wss.
+ */
+function realtimeUrl(base: string, roomId: string): string {
+  const path = `/realtime/${encodeURIComponent(roomId)}`;
+  if (/^https?:\/\//i.test(base)) return `${base.replace(/^http/i, 'ws')}${path}`;
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = base.startsWith('/') ? location.host : '';
+  return `${proto}//${host}${base}${path}`;
+}
+
+/** What a closed socket means for the panel: null when we simply left the room. */
+function closeError(code: number | undefined, opened: boolean): string | null {
+  if (code === ROOM_LIMIT_CLOSE_CODE) return ROOM_LIMIT_ERROR;
+  return opened ? null : UNREACHABLE_ERROR;
+}
+
 /** Colour for our own row when the roster arrives without us. */
 const SELF_COLOR = '#a78bfa';
 
@@ -106,11 +132,7 @@ export const useCollabStore = create<CollabState>()((set, get) => ({
     }
 
     const { tiletopiaUrl } = useAppStore.getState().settings;
-    const base = tiletopiaUrl.replace(/\/$/, '');
-    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = base.startsWith('/') ? location.host : '';
-    const path = `${host}${base}/realtime/${encodeURIComponent(roomId)}`;
-    const url = `${proto}//${path}`;
+    const url = realtimeUrl(tiletopiaUrl.replace(/\/$/, ''), roomId);
 
     // the server keys presence and every relayed frame on the token subject, so a
     // token without one leaves us unable to tell our own frames from a peer's.
@@ -148,7 +170,7 @@ export const useCollabStore = create<CollabState>()((set, get) => ({
       }
     });
 
-    socket.addEventListener('close', () => {
+    socket.addEventListener('close', (event) => {
       // a socket we already replaced or left must not touch the current state
       if (ws !== socket) return;
       ws = null;
@@ -158,7 +180,7 @@ export const useCollabStore = create<CollabState>()((set, get) => ({
         roomId: null,
         users: [],
         userId: null,
-        error: opened ? null : 'Could not reach the realtime service.',
+        error: closeError(event.code, opened),
       });
     });
 

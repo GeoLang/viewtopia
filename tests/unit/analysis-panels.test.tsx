@@ -10,6 +10,12 @@ vi.mock('cesium', () => ({
   GeoJsonDataSource: { load: async () => ({}) },
   Rectangle: { fromDegrees: () => ({}) },
   SingleTileImageryProvider: { fromUrl: async () => ({}) },
+  Math: { toDegrees: (r: number) => (r * 180) / Math.PI },
+  ScreenSpaceEventHandler: class {
+    setInputAction() {}
+    destroy() {}
+  },
+  ScreenSpaceEventType: { LEFT_CLICK: 0 },
 }));
 
 vi.mock('../../src/viewer/registry', () => ({
@@ -21,6 +27,7 @@ vi.mock('../../src/viewer/registry', () => ({
 import { FloodPanel } from '../../src/components/tools/FloodPanel';
 import { SolarPanel } from '../../src/components/tools/SolarPanel';
 import { TerrainAnalysisPanel } from '../../src/components/tools/TerrainAnalysisPanel';
+import { ViewshedPanel } from '../../src/components/tools/ViewshedPanel';
 import { SIGN_IN_HINT } from '../../src/lib/terrainAnalysis';
 import { useAuthStore } from '../../src/features/auth/store';
 import { useAppStore } from '../../src/store/app';
@@ -39,17 +46,37 @@ globalThis.ResizeObserver = class {
 };
 
 const PANELS = [
-  { name: 'FloodPanel', Panel: FloodPanel, action: /^simulate$/i, testId: 'flood-signin' },
-  { name: 'SolarPanel', Panel: SolarPanel, action: /^compute$/i, testId: 'solar-signin' },
+  {
+    name: 'FloodPanel',
+    Panel: FloodPanel,
+    action: /^simulate$/i,
+    testId: 'flood-signin',
+    needsObserver: false,
+  },
+  {
+    name: 'SolarPanel',
+    Panel: SolarPanel,
+    action: /^compute$/i,
+    testId: 'solar-signin',
+    needsObserver: false,
+  },
   {
     name: 'TerrainAnalysisPanel',
     Panel: TerrainAnalysisPanel,
     action: /^run$/i,
     testId: 'terrain-signin',
+    needsObserver: false,
+  },
+  {
+    name: 'ViewshedPanel',
+    Panel: ViewshedPanel,
+    action: /^compute$/i,
+    testId: 'viewshed-signin',
+    needsObserver: true,
   },
 ];
 
-describe.each(PANELS)('$name signed-out state', ({ Panel, action, testId }) => {
+describe.each(PANELS)('$name signed-out state', ({ Panel, action, testId, needsObserver }) => {
   const renderPanel = () =>
     render(
       <MantineProvider>
@@ -77,11 +104,14 @@ describe.each(PANELS)('$name signed-out state', ({ Panel, action, testId }) => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('runs normally with a session token', () => {
+  it('drops the hint with a session token', () => {
     useAuthStore.setState({ loggedIn: true, token: 'jwt-abc', user: { email: 'a@b.c' } });
     renderPanel();
 
     expect(screen.queryByTestId(testId)).toBeNull();
-    expect(screen.getByRole('button', { name: action })).not.toBeDisabled();
+    const run = screen.getByRole('button', { name: action });
+    // viewshed keeps its own gate: an observer point, which only a live viewer places
+    if (needsObserver) expect(run).toBeDisabled();
+    else expect(run).not.toBeDisabled();
   });
 });

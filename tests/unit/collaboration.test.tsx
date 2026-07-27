@@ -5,6 +5,7 @@ import { MantineProvider } from '@mantine/core';
 import { useCollabStore } from '../../src/store/collaboration';
 import { CollaborationPanel } from '../../src/components/tools/CollaborationPanel';
 import { useAuthStore } from '../../src/features/auth/store';
+import { useAppStore } from '../../src/store/app';
 import { getSharedCamera, setSharedCamera } from '../../src/hooks/sharedCamera';
 
 /**
@@ -52,11 +53,11 @@ class FakeSocket {
     this.sent.push(data);
   }
 
-  close() {
+  close(code = 1000) {
     if (this.closed) return;
     this.closed = true;
     this.readyState = FakeSocket.CLOSED;
-    this.emit('close', {});
+    this.emit('close', { code });
   }
 
   private emit(type: string, evt: unknown) {
@@ -151,6 +152,62 @@ describe('collaboration handshake', () => {
     expect(state.roomId).toBeNull();
     expect(state.userId).toBeNull();
     expect(state.error).toMatch(/realtime service/i);
+  });
+});
+
+describe('socket url from the tiletopiaUrl setting', () => {
+  const setTiletopiaUrl = (tiletopiaUrl: string) =>
+    useAppStore.setState((s) => ({ settings: { ...s.settings, tiletopiaUrl } }));
+
+  afterEach(() => setTiletopiaUrl('/api/v1'));
+
+  it('keeps a root-relative value on this origin', () => {
+    setTiletopiaUrl('/api/v1');
+    signIn();
+    expect(joinRoom('room-1').url).toBe(`ws://${location.host}/api/v1/realtime/room-1`);
+  });
+
+  it('maps an absolute http value to ws, not ws://http://…', () => {
+    setTiletopiaUrl('http://tiles.example:3100/api/v1');
+    signIn();
+    expect(joinRoom('room-1').url).toBe('ws://tiles.example:3100/api/v1/realtime/room-1');
+  });
+
+  it('maps an absolute https value to wss', () => {
+    setTiletopiaUrl('https://tiles.example/api/v1');
+    signIn();
+    expect(joinRoom('a b').url).toBe('wss://tiles.example/api/v1/realtime/a%20b');
+  });
+});
+
+describe('room limit refusal', () => {
+  /** tiletopia's ROOM_LIMIT_CLOSE_CODE, sent when a 33rd room creation is refused. */
+  const ROOM_LIMIT = 4029;
+
+  it('names the limit and does not reconnect into the same refusal', () => {
+    signIn();
+    const socket = joinRoom('room-33');
+    socket.close(ROOM_LIMIT);
+
+    const state = useCollabStore.getState();
+    expect(state.error).toMatch(/too many collaboration rooms/i);
+    expect(state.connected).toBe(false);
+    expect(state.roomId).toBeNull();
+    // a retry would be refused the same way, so no second socket goes out
+    expect(FakeSocket.instances).toHaveLength(1);
+  });
+
+  it('names the limit even when the refusal lands before the open event', () => {
+    signIn();
+    useCollabStore.getState().connect('room-33');
+    FakeSocket.instances.at(-1)!.close(ROOM_LIMIT);
+    expect(useCollabStore.getState().error).toMatch(/too many collaboration rooms/i);
+  });
+
+  it('leaves no error when a joined room closes normally', () => {
+    signIn();
+    joinRoom('room-1').close();
+    expect(useCollabStore.getState().error).toBeNull();
   });
 });
 
