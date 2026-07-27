@@ -15,6 +15,10 @@
       embed URL with `key=` empty and gets 401. Both should detect the missing key and
       render a configure-a-key state instead of requesting, like the catalog panel's
       signed-out state.
+- [ ] **Analysis panels show a generic failure when signed out** (found 2026-07-26):
+      tiletopia gates the analysis POSTs, so a signed-out Run in the Terrain/Flood/Solar
+      panels gets a 401 and reports "request failed". Surface a sign-in hint instead,
+      like the catalog panel's signed-out state.
 - [~] **Building-data toggle on MapLibre** (committed ea421a9d, browser verification
       pending): disabled with tooltip when the loaded style has its own fill-extrusion
       layers (Liberty); detection re-runs on style.load; hook skips duplicate layer.
