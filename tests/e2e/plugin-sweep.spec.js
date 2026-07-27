@@ -25,14 +25,16 @@ import { MENU_ITEM, openApp } from './panel-helpers';
  */
 const PANEL = 'main > *, [class*="mantine-Modal-content"]';
 
-/** Plugins that fail this sweep today, keyed by plugin id with the error they hit. */
-const FIXME = {
-  // three keyless tile previews (https://tile.jawg.io/jawg-{streets,dark,terrain})
-  // answer 400, which the browser logs as console.error
-  'basemap-catalog': 'jawg basemap previews request without an API key',
-  // the embed is built with an empty key (…/maps/embed/v1/streetview?key=&…) and
-  // Google answers 401
-  'street-view': 'google streetview embed requests without an API key',
+/**
+ * Panels that talk to a keyed third party: with no key configured they render a
+ * configure-a-key state and send nothing to `host`, so this sweep also checks
+ * that state is up and that host stayed untouched.
+ */
+const NEEDS_KEY = {
+  // the three jawg tile previews answer 400 without an access token
+  'basemap-catalog': { testId: 'basemap-needs-key', host: 'tile.jawg.io' },
+  // the google embed answers 401 when built with an empty key
+  'street-view': { testId: 'street-view-needs-key', host: 'google.com/maps/embed' },
 };
 
 /** how long a panel's own requests may stay on the wire before we give up on them */
@@ -99,9 +101,9 @@ test('plugin panel sweep', async ({ page }) => {
 
   for (const plugin of plugins) {
     current = plugin.id;
-    const broken = FIXME[plugin.id];
+    const keyed = NEEDS_KEY[plugin.id];
     try {
-      await test.step(`${plugin.id}${broken ? ` [fixme: ${broken}]` : ''}`, async () => {
+      await test.step(plugin.id, async () => {
         await page.getByRole('button', { name: /^Plugins/ }).click();
         await page.locator(MENU_ITEM).filter({ hasText: plugin.name }).first().click();
 
@@ -110,9 +112,18 @@ test('plugin panel sweep', async ({ page }) => {
         await expect(panel).toBeVisible();
         await expect(panel).toHaveText(/\S/);
 
+        if (keyed) await expect(panel.getByTestId(keyed.testId).first()).toBeVisible();
+
         // Drain while the panel is still mounted: closing it first cancels its
         // in-flight requests, and a cancelled load never reaches the console.
         await drain(plugin.id);
+
+        if (keyed) {
+          const sent = [...requester]
+            .filter(([url, who]) => who === plugin.id && url.includes(keyed.host))
+            .map(([url]) => url);
+          expect(sent, `requests to ${keyed.host} without a key`).toEqual([]);
+        }
 
         await page.keyboard.press('Escape');
         await expect(page.locator(PANEL)).toHaveCount(closed);
@@ -137,18 +148,9 @@ test('plugin panel sweep', async ({ page }) => {
   await drain();
 
   const failed = [];
-  const known = [];
   for (const { id } of plugins) {
     const reasons = [stepFailure.get(id), ...linesFor(id)].filter(Boolean);
-    if (reasons.length) (FIXME[id] ? known : failed).push(`${id}: ${reasons.join(' | ')}`);
-    else if (FIXME[id]) known.push(`${id}: passes now, drop it from FIXME`);
-  }
-
-  if (known.length) {
-    test.info().annotations.push({
-      type: 'warning',
-      description: `known-broken plugins:\n${known.join('\n')}`,
-    });
+    if (reasons.length) failed.push(`${id}: ${reasons.join(' | ')}`);
   }
 
   const boot = [...linesFor(BOOT), ...linesFor('after sweep')];

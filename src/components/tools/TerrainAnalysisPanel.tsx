@@ -5,6 +5,7 @@ import type { GeoJsonDataSource, ImageryLayer } from 'cesium';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { renderGeoJson } from '../../viewer/renderGeoJson';
 import { useAppStore } from '../../store/app';
+import { useAuthStore } from '../../features/auth/store';
 import {
   addMapGeoJson,
   addMapRaster,
@@ -14,6 +15,7 @@ import {
   removeOverlay,
   terrainRaster,
   RENDERER_HINT,
+  SIGN_IN_HINT,
   type Bbox,
   type MapResult,
 } from '../../lib/terrainAnalysis';
@@ -26,6 +28,7 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const renderer = useAppStore((s) => s.renderer);
+  const needsSignIn = useAuthStore((s) => !s.token);
   const layerRef = useRef<ImageryLayer | null>(null);
   const dsRef = useRef<GeoJsonDataSource | undefined>(undefined);
   const mapResultRef = useRef<MapResult | null>(null);
@@ -147,7 +150,7 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
             color="violet"
             onClick={run}
             loading={loading}
-            disabled={renderer === 'deckgl'}
+            disabled={renderer === 'deckgl' || needsSignIn}
           >
             Run
           </Button>
@@ -159,6 +162,12 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
         {renderer === 'deckgl' && (
           <Text size="xs" c="yellow" data-testid="terrain-renderer-hint">
             {RENDERER_HINT}
+          </Text>
+        )}
+
+        {needsSignIn && (
+          <Text size="xs" c="dimmed" data-testid="terrain-signin">
+            {SIGN_IN_HINT}
           </Text>
         )}
 

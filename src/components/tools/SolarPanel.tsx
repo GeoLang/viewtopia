@@ -3,6 +3,7 @@ import { Paper, Text, Stack, Group, ActionIcon, Slider, Button, TextInput } from
 import { IconSolarPanel, IconX } from '@tabler/icons-react';
 import type { ImageryLayer } from 'cesium';
 import { useAppStore } from '../../store/app';
+import { useAuthStore } from '../../features/auth/store';
 import {
   addMapRaster,
   addRasterOverlay,
@@ -10,6 +11,7 @@ import {
   removeOverlay,
   solarRaster,
   RENDERER_HINT,
+  SIGN_IN_HINT,
   type Bbox,
   type MapResult,
 } from '../../lib/terrainAnalysis';
@@ -20,6 +22,7 @@ export function SolarPanel({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const renderer = useAppStore((s) => s.renderer);
+  const needsSignIn = useAuthStore((s) => !s.token);
   const layerRef = useRef<ImageryLayer | null>(null);
   const mapResultRef = useRef<MapResult | null>(null);
   const urlRef = useRef<string | null>(null);
@@ -116,7 +119,7 @@ export function SolarPanel({ onClose }: { onClose: () => void }) {
             color="yellow"
             onClick={run}
             loading={loading}
-            disabled={renderer === 'deckgl'}
+            disabled={renderer === 'deckgl' || needsSignIn}
           >
             Compute
           </Button>
@@ -128,6 +131,12 @@ export function SolarPanel({ onClose }: { onClose: () => void }) {
         {renderer === 'deckgl' && (
           <Text size="xs" c="yellow" data-testid="solar-renderer-hint">
             {RENDERER_HINT}
+          </Text>
+        )}
+
+        {needsSignIn && (
+          <Text size="xs" c="dimmed" data-testid="solar-signin">
+            {SIGN_IN_HINT}
           </Text>
         )}
 

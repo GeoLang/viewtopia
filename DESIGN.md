@@ -259,3 +259,11 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   geocode pick, rounded grid, batch retries), download_population_grid pop_total is a
   GHS-POP zonal sum inside the dissolved clip polygon (was radius bbox; UTM area,
   ~2.7x Mercator inflation gone), both live-verified.
+- **2026-07-27 (viewer)** — Signed-out and keyless panel states, following the catalog
+  panel's pattern. Terrain/Flood/Solar read the session before POSTing: Run is disabled
+  and a sign-in hint replaces the old generic "request failed" 401. The two keyed plugin
+  panels render a configure-a-key state instead of requesting: basemap-catalog gained a
+  Jawg access-token setting and previews (and selects) jawg tiles only once it is set,
+  street-view a Google Maps API key setting for the embed. The plugin sweep's fixme list
+  is gone, it now asserts both states and that neither keyed host is contacted; 11 new
+  unit tests.

@@ -5,11 +5,13 @@ import type { GeoJsonDataSource } from 'cesium';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { renderGeoJson } from '../../viewer/renderGeoJson';
 import { useAppStore } from '../../store/app';
+import { useAuthStore } from '../../features/auth/store';
 import {
   addMapGeoJson,
   currentBbox,
   flood,
   RENDERER_HINT,
+  SIGN_IN_HINT,
   type MapResult,
 } from '../../lib/terrainAnalysis';
 
@@ -19,6 +21,7 @@ export function FloodPanel({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [cells, setCells] = useState<number | null>(null);
   const renderer = useAppStore((s) => s.renderer);
+  const needsSignIn = useAuthStore((s) => !s.token);
   const dsRef = useRef<GeoJsonDataSource | undefined>(undefined);
   const mapResultRef = useRef<MapResult | null>(null);
 
@@ -100,7 +103,7 @@ export function FloodPanel({ onClose }: { onClose: () => void }) {
             color="blue"
             onClick={run}
             loading={loading}
-            disabled={renderer === 'deckgl'}
+            disabled={renderer === 'deckgl' || needsSignIn}
           >
             Simulate
           </Button>
@@ -112,6 +115,12 @@ export function FloodPanel({ onClose }: { onClose: () => void }) {
         {renderer === 'deckgl' && (
           <Text size="xs" c="yellow" data-testid="flood-renderer-hint">
             {RENDERER_HINT}
+          </Text>
+        )}
+
+        {needsSignIn && (
+          <Text size="xs" c="dimmed" data-testid="flood-signin">
+            {SIGN_IN_HINT}
           </Text>
         )}
 

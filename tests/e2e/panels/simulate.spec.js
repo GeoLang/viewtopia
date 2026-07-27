@@ -334,6 +334,20 @@ test.describe('Simulate panels', () => {
     await closePanel(page, panel);
   });
 
+  test('flood and solar ask for sign-in when no session is seeded', async ({ page }) => {
+    await openApp(page);
+
+    for (const [label, title, action, testId] of [
+      ['Flood', 'Flood Simulation', 'Simulate', 'flood-signin'],
+      ['Solar', 'Solar Planner', 'Compute', 'solar-signin'],
+    ]) {
+      const panel = await openPanel(page, label, title);
+      await expect(panel.getByTestId(testId)).toBeVisible();
+      await expect(panel.getByRole('button', { name: action })).toBeDisabled();
+      await closePanel(page, panel);
+    }
+  });
+
   test('traffic: demo mode colours OSM roads on the live MapLibre map', async ({ page }) => {
     let ways = WAYS_A;
     await page.route(/overpass-api\.de/, (route) =>

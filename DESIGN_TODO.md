@@ -9,16 +9,9 @@
 
 ## IN PROGRESS — viewer test coverage (decided 2026-07-26)
 
-- [ ] **Two plugin panels request a third-party API with no key** (found by the new
-      plugin sweep, marked fixme in `tests/e2e/plugin-sweep.spec.js`): basemap-catalog
-      fetches three jawg.io preview tiles that answer 400; street-view builds a Google
-      embed URL with `key=` empty and gets 401. Both should detect the missing key and
-      render a configure-a-key state instead of requesting, like the catalog panel's
-      signed-out state.
-- [ ] **Analysis panels show a generic failure when signed out** (found 2026-07-26):
-      tiletopia gates the analysis POSTs, so a signed-out Run in the Terrain/Flood/Solar
-      panels gets a 401 and reports "request failed". Surface a sign-in hint instead,
-      like the catalog panel's signed-out state.
+- [ ] **Viewshed panel shows a generic failure when signed out**: same defect the
+      Terrain/Flood/Solar panels were fixed for on 2026-07-27, still open in
+      `src/components/tools/ViewshedPanel.tsx` ("Viewshed request failed" on the 401).
 - [~] **Building-data toggle on MapLibre** (committed ea421a9d, browser verification
       pending): disabled with tooltip when the loaded style has its own fill-extrusion
       layers (Liberty); detection re-runs on style.load; hook skips duplicate layer.

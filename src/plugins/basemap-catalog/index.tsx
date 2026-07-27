@@ -15,7 +15,13 @@ interface BasemapSource {
   attribution: string;
   category: 'streets' | 'satellite' | 'terrain' | 'topo' | 'dark' | 'light' | 'specialty';
   preview?: string;
+  /** provider needs an api key: the settings key holding it and the query param it goes in */
+  keyAuth?: { setting: string; param: string };
 }
+
+// jawg tiles answer 400 without an access token, so those sources render a
+// configure-a-key state instead of previewing or selecting them
+const JAWG_AUTH = { setting: 'jawgAccessToken', param: 'access-token' };
 
 const BASEMAPS: BasemapSource[] = [
   // Streets
@@ -52,9 +58,9 @@ const BASEMAPS: BasemapSource[] = [
   { id: 'openhistorical', name: 'OHM Historical', url: 'https://www.openhistoricalmap.org/render/{z}/{x}/{y}.png', attribution: '© OpenHistoricalMap', category: 'specialty' },
   { id: 'thunderforest-landscape', name: 'Thunderforest Landscape', url: 'https://tile.thunderforest.com/landscape/{z}/{x}/{y}.png', attribution: '© Thunderforest, © OSM', category: 'terrain' },
   { id: 'thunderforest-outdoors', name: 'Thunderforest Outdoors', url: 'https://tile.thunderforest.com/outdoors/{z}/{x}/{y}.png', attribution: '© Thunderforest, © OSM', category: 'terrain' },
-  { id: 'jawg-streets', name: 'Jawg Streets', url: 'https://tile.jawg.io/jawg-streets/{z}/{x}/{y}.png', attribution: '© Jawg, © OSM', category: 'streets' },
-  { id: 'jawg-dark', name: 'Jawg Dark', url: 'https://tile.jawg.io/jawg-dark/{z}/{x}/{y}.png', attribution: '© Jawg, © OSM', category: 'dark' },
-  { id: 'jawg-terrain', name: 'Jawg Terrain', url: 'https://tile.jawg.io/jawg-terrain/{z}/{x}/{y}.png', attribution: '© Jawg, © OSM', category: 'terrain' },
+  { id: 'jawg-streets', name: 'Jawg Streets', url: 'https://tile.jawg.io/jawg-streets/{z}/{x}/{y}.png', attribution: '© Jawg, © OSM', category: 'streets', keyAuth: JAWG_AUTH },
+  { id: 'jawg-dark', name: 'Jawg Dark', url: 'https://tile.jawg.io/jawg-dark/{z}/{x}/{y}.png', attribution: '© Jawg, © OSM', category: 'dark', keyAuth: JAWG_AUTH },
+  { id: 'jawg-terrain', name: 'Jawg Terrain', url: 'https://tile.jawg.io/jawg-terrain/{z}/{x}/{y}.png', attribution: '© Jawg, © OSM', category: 'terrain', keyAuth: JAWG_AUTH },
   { id: 'esri-streets', name: 'Esri Streets', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', attribution: '© Esri', category: 'streets' },
 ];
 
@@ -79,6 +85,12 @@ function BasemapCatalogPanel({ ctx }: { ctx: PluginContext }) {
   });
 
   const categories = [...new Set(BASEMAPS.map((b) => b.category))];
+
+  const keyFor = (b: BasemapSource) =>
+    b.keyAuth ? String(ctx.settings.get(b.keyAuth.setting, '') ?? '').trim() : '';
+
+  const tileUrl = (b: BasemapSource, key: string) =>
+    b.keyAuth ? `${b.url}?${b.keyAuth.param}=${key}` : b.url;
 
   return (
     <Paper p="md" withBorder style={{ width: 360, maxHeight: '80vh', overflow: 'auto' }}>
@@ -117,38 +129,50 @@ function BasemapCatalogPanel({ ctx }: { ctx: PluginContext }) {
         </Group>
 
         <SimpleGrid cols={2} spacing="xs">
-          {filtered.map((basemap) => (
-            <Tooltip key={basemap.id} label={basemap.attribution} position="bottom">
-              <UnstyledButton
-                onClick={() => {
-                  ctx.map.addGeoJsonLayer(`basemap-${basemap.id}`, {
-                    type: 'FeatureCollection',
-                    features: [],
-                  }, { opacity: 1 });
-                  ctx.settings.set('activeBasemap', basemap.id);
-                  ctx.settings.set('activeBasemapUrl', basemap.url);
-                }}
-                style={{
-                  padding: 8,
-                  borderRadius: 8,
-                  border: '1px solid var(--mantine-color-default-border)',
-                  textAlign: 'center',
-                }}
-              >
-                <Stack gap={4} align="center">
-                  <Image
-                    src={basemap.url.replace('{z}', '2').replace('{x}', '2').replace('{y}', '1')}
-                    h={48}
-                    w={48}
-                    radius="sm"
-                    fallbackSrc="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48'><rect fill='%23ccc' width='48' height='48'/></svg>"
-                  />
-                  <Text size="xs" lineClamp={1}>{basemap.name}</Text>
-                  <Badge size="xs" color={CATEGORY_COLORS[basemap.category]}>{basemap.category}</Badge>
-                </Stack>
-              </UnstyledButton>
-            </Tooltip>
-          ))}
+          {filtered.map((basemap) => {
+            const key = keyFor(basemap);
+            const needsKey = !!basemap.keyAuth && !key;
+            const url = tileUrl(basemap, key);
+            return (
+              <Tooltip key={basemap.id} label={basemap.attribution} position="bottom">
+                <UnstyledButton
+                  disabled={needsKey}
+                  onClick={() => {
+                    ctx.map.addGeoJsonLayer(`basemap-${basemap.id}`, {
+                      type: 'FeatureCollection',
+                      features: [],
+                    }, { opacity: 1 });
+                    ctx.settings.set('activeBasemap', basemap.id);
+                    ctx.settings.set('activeBasemapUrl', url);
+                  }}
+                  style={{
+                    padding: 8,
+                    borderRadius: 8,
+                    border: '1px solid var(--mantine-color-default-border)',
+                    textAlign: 'center',
+                  }}
+                >
+                  <Stack gap={4} align="center">
+                    {needsKey ? (
+                      <Text size="xs" c="dimmed" data-testid="basemap-needs-key">
+                        Add an API key in plugin settings
+                      </Text>
+                    ) : (
+                      <Image
+                        src={url.replace('{z}', '2').replace('{x}', '2').replace('{y}', '1')}
+                        h={48}
+                        w={48}
+                        radius="sm"
+                        fallbackSrc="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48'><rect fill='%23ccc' width='48' height='48'/></svg>"
+                      />
+                    )}
+                    <Text size="xs" lineClamp={1}>{basemap.name}</Text>
+                    <Badge size="xs" color={CATEGORY_COLORS[basemap.category]}>{basemap.category}</Badge>
+                  </Stack>
+                </UnstyledButton>
+              </Tooltip>
+            );
+          })}
         </SimpleGrid>
       </Stack>
     </Paper>
@@ -166,6 +190,7 @@ const plugin: PluginDefinition = {
   Panel: BasemapCatalogPanel,
   settings: [
     { key: 'activeBasemap', label: 'Active Basemap', type: 'text', defaultValue: 'osm-standard' },
+    { key: 'jawgAccessToken', label: 'Jawg Access Token', type: 'text' },
   ],
 };
 

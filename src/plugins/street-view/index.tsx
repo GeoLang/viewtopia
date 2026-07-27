@@ -21,6 +21,11 @@ function StreetViewPanel({ ctx }: { ctx: PluginContext }) {
   const [mapillaryToken, setMapillaryToken] = useState('');
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
+  // the google embed answers 401 without a key, so the panel asks for one in
+  // plugin settings instead of loading the iframe
+  const googleKey = String(ctx.settings.get('googleApiKey', '') ?? '').trim();
+  const needsKey = provider === 'google' && !googleKey;
+
   const handlePickFromMap = () => {
     const coords = ctx.map.getCursorCoords();
     if (coords) {
@@ -31,7 +36,7 @@ function StreetViewPanel({ ctx }: { ctx: PluginContext }) {
 
   const getEmbedUrl = (): string => {
     if (provider === 'google') {
-      return `https://www.google.com/maps/embed/v1/streetview?key=&location=${lat},${lng}&heading=${heading}&pitch=${pitch}&fov=${fov}`;
+      return `https://www.google.com/maps/embed/v1/streetview?key=${googleKey}&location=${lat},${lng}&heading=${heading}&pitch=${pitch}&fov=${fov}`;
     }
     // Mapillary embed
     return `https://www.mapillary.com/embed?lat=${lat}&lng=${lng}&heading=${heading}&mapillary_token=${mapillaryToken}`;
@@ -111,16 +116,22 @@ function StreetViewPanel({ ctx }: { ctx: PluginContext }) {
         <Switch label="Auto-sync with map click" checked={autoSync} onChange={(e) => setAutoSync(e.currentTarget.checked)} />
 
         <div style={{ width: '100%', height: 250, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--mantine-color-default-border)' }}>
-          <iframe
-            ref={iframeRef}
-            src={getEmbedUrl()}
-            width="100%"
-            height="100%"
-            style={{ border: 'none' }}
-            loading="lazy"
-            allowFullScreen
-            title="Street View"
-          />
+          {needsKey ? (
+            <Text size="sm" c="dimmed" py="lg" ta="center" data-testid="street-view-needs-key">
+              Add a Google Maps API key in plugin settings to load Street View.
+            </Text>
+          ) : (
+            <iframe
+              ref={iframeRef}
+              src={getEmbedUrl()}
+              width="100%"
+              height="100%"
+              style={{ border: 'none' }}
+              loading="lazy"
+              allowFullScreen
+              title="Street View"
+            />
+          )}
         </div>
       </Stack>
     </Paper>
@@ -138,6 +149,7 @@ const plugin: PluginDefinition = {
   Panel: StreetViewPanel,
   settings: [
     { key: 'defaultProvider', label: 'Default Provider', type: 'select', defaultValue: 'google', options: [{ value: 'google', label: 'Google Street View' }, { value: 'mapillary', label: 'Mapillary' }] },
+    { key: 'googleApiKey', label: 'Google Maps API Key', type: 'text' },
     { key: 'mapillaryToken', label: 'Mapillary Access Token', type: 'text' },
   ],
 };
