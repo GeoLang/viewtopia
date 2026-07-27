@@ -13,6 +13,7 @@ import { useSpaceTimeDeckLayers } from '../hooks/useSpaceTimeDeckLayers';
 import { useSpaceTimeCesium } from '../hooks/useSpaceTimeCesium';
 import { useBuildingsCesium } from '../hooks/useBuildingsCesium';
 import { useBuildingsMapLibre } from '../hooks/useBuildingsMapLibre';
+import { useHeatmapsMapLibre } from '../hooks/useHeatmapsMapLibre';
 import { useAgentLayersCesium } from '../hooks/useAgentLayersCesium';
 import { useAgentLayersMapLibre } from '../hooks/useAgentLayersMapLibre';
 import { useAgentLayersLeaflet } from '../hooks/useAgentLayersLeaflet';
@@ -59,6 +60,10 @@ export function ViewerArea() {
   // fill-extrusions; a deck copy would z-fight with them)
   useBuildingsCesium(cesiumRef);
   useBuildingsMapLibre(maplibreRef);
+
+  // Heatmaps are native maplibre layers: deck's HeatmapLayer is screen-space and
+  // draws nothing under the globe projection
+  useHeatmapsMapLibre(maplibreRef);
 
   // Render the agent's ui_spec layers on whichever renderer is active
   useAgentLayersCesium(cesiumRef);

@@ -6,8 +6,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * E2E smoke for the six tool panels wired to real functionality:
- * Shadows, Lighting, Global Terrain (Cesium scene) + Heatmap, Spatial Stats
- * (deck.gl aggregation) + Cross Section (elevation profile).
+ * Shadows, Lighting, Global Terrain (Cesium scene) + Heatmap (native maplibre
+ * layer), Spatial Stats (deck.gl aggregation) + Cross Section (elevation profile).
  *
  * Served standalone on :5175 (see playwright.react.config.js). MapLibre (which
  * hosts the deck.gl layers) gets a real WebGL canvas headless; the Cesium viewer
@@ -137,7 +137,7 @@ test.describe('tool panels', () => {
     }
   });
 
-  test('heatmap: adds a deck.gl layer from pasted GeoJSON', async ({ page }) => {
+  test('heatmap: adds a native maplibre heatmap layer from pasted GeoJSON', async ({ page }) => {
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto(REACT_URL);
@@ -148,10 +148,21 @@ test.describe('tool panels', () => {
     await page.getByRole('textbox', { name: 'GeoJSON' }).fill(SAMPLE_POINTS);
     await page.getByRole('button', { name: 'Add', exact: true }).click();
 
-    // Real effects: status reflects the parsed point count and the map that hosts
-    // the deck layer mounts.
+    // Real effects: status reflects the parsed point count, and the layer lands on
+    // the live map's style (deck's screen-space heatmap draws nothing on a globe).
     await expect(page.getByTestId('heatmap-status')).toHaveText('Heatmap added: 4 points');
     await expect(page.locator('#maplibre-container canvas').first()).toBeVisible({ timeout: 10000 });
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() =>
+            (window.__viewtopiaMap?.getStyle()?.layers ?? [])
+              .filter((l) => l.type === 'heatmap')
+              .map((l) => l.id),
+          ),
+        { timeout: 30000 },
+      )
+      .toEqual(['native-heatmap-panel-heatmap']);
     expect(errors, `runtime errors:\n${errors.join('\n')}`).toEqual([]);
   });
 

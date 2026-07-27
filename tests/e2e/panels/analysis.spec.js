@@ -19,6 +19,9 @@ const TOKEN = mintToken({ role: 'editor', sub: 'panels-analysis-e2e' });
 /** Small area near Monaco, so the panels' view-derived bboxes are city sized. */
 const VIEW = { lon: 7.425, lat: 43.735, height: 8000 };
 
+/** Source/layer id prefix of a native maplibre heatmap (src/lib/mapHeatmap.ts). */
+const HEATMAP_PREFIX = 'native-heatmap-';
+
 const POINTS = {
   type: 'FeatureCollection',
   features: [
@@ -233,12 +236,14 @@ test.describe('Analysis panels', () => {
     await closePanel(page, panel);
   });
 
-  test('heatmap: Add renders a deck.gl heatmap layer at the chosen radius', async ({ page }) => {
+  test('heatmap: Add renders a native maplibre heatmap layer at the chosen radius', async ({
+    page,
+  }) => {
     await openViewer(page);
     const panel = await openPanel(page, 'Heatmap');
 
     await panel.getByRole('textbox', { name: 'GeoJSON' }).fill(JSON.stringify(POINTS));
-    // radius starts at 30px; five steps up must reach the layer as radiusPixels 35
+    // radius starts at 30px; five steps up must reach the layer as heatmap-radius 35
     await nudgeSlider(page, panel.locator('[role="slider"]').first(), 'ArrowRight', 5);
     await expect(panel).toContainText('Radius: 35px');
 
@@ -246,22 +251,27 @@ test.describe('Analysis panels', () => {
 
     await expect(page.getByTestId('heatmap-status')).toHaveText('Heatmap added: 3 points');
     await expect(page.locator('#maplibre-container canvas').first()).toBeVisible({ timeout: 30000 });
+    // deck's HeatmapLayer draws nothing under the globe projection, so the panel
+    // goes through maplibre's own heatmap layer type
     await expect
-      .poll(() => deckLayerIds(page), { timeout: 30000 })
-      .toEqual(expect.arrayContaining([expect.stringMatching(/^panel-heatmap-/)]));
+      .poll(() => mapLayerIds(page, HEATMAP_PREFIX), { timeout: 30000 })
+      .toEqual([`${HEATMAP_PREFIX}panel-heatmap`]);
     expect(
       await page.evaluate(
-        () =>
-          window.__viewtopiaDeck.props.layers.find((l) => l.id.startsWith('panel-heatmap')).props
-            .radiusPixels,
+        (id) => window.__viewtopiaMap.getPaintProperty(id, 'heatmap-radius'),
+        `${HEATMAP_PREFIX}panel-heatmap`,
       ),
     ).toBe(35);
+    expect(
+      await page.evaluate(
+        async (id) => (await window.__viewtopiaMap.getSource(id).getData()).features.length,
+        `${HEATMAP_PREFIX}panel-heatmap`,
+      ),
+    ).toBe(3);
 
     await page.locator(PANEL).first().getByRole('button', { name: 'Remove' }).click();
     await expect(page.getByTestId('heatmap-status')).toHaveText('Heatmap removed');
-    await expect
-      .poll(() => deckLayerIds(page))
-      .not.toEqual(expect.arrayContaining([expect.stringMatching(/^panel-heatmap-/)]));
+    await expect.poll(() => mapLayerIds(page, HEATMAP_PREFIX)).toEqual([]);
 
     await closePanel(page, page.locator(PANEL));
   });

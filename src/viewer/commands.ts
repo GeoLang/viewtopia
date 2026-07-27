@@ -6,8 +6,9 @@
  * the live renderer (via the registry) and/or the app store.
  *
  * Covers navigation / marker / geojson / tileset / tab / renderer commands, the
- * deck.gl visualization layers (add_heatmap, add_hexbin, add_arcs, add_scatter,
- * add_screengrid) which draw on the MapLibre map's deck overlay, 3D-tiles
+ * deck.gl visualization layers (add_hexbin, add_arcs, add_scatter, add_screengrid)
+ * which draw on the MapLibre map's deck overlay, add_heatmap (a native maplibre
+ * heatmap layer, since deck's is screen-space and the map is a globe), 3D-tiles
  * styling (style_by_*), and tool-panel commands
  * (measure, annotate, analysis, weather, …) which open the matching panel.
  */
@@ -17,7 +18,7 @@ import {
   Math as CesiumMath,
   Cesium3DTileset,
 } from 'cesium';
-import { HeatmapLayer, HexagonLayer, ScreenGridLayer } from '@deck.gl/aggregation-layers';
+import { HexagonLayer, ScreenGridLayer } from '@deck.gl/aggregation-layers';
 import { ArcLayer, ScatterplotLayer } from '@deck.gl/layers';
 import type { Layer } from '@deck.gl/core';
 import { getActiveCesiumViewer, getActiveMapLibre } from './registry';
@@ -26,6 +27,8 @@ import { runSqlQuery } from '../duckdb/sqlCommand';
 import { useAppStore, asRenderer, type ViewerTab, type ToolPanel } from '../store/app';
 import { useAgentLayerStore, toFeatureCollection } from '../store/agentLayers';
 import { useDeckLayersStore } from '../hooks/deckLayers';
+import { showHeatmap } from '../lib/mapHeatmap';
+import { useChatStore } from '../store/chat';
 import { colorByHeight, colorByClassification, colorByProperty } from './tileStyles';
 import { useMeasureStore, type MeasureMode } from '../store/measure';
 
@@ -59,6 +62,19 @@ function addAgentDeckLayer(layer: Layer): void {
   const store = useAppStore.getState();
   store.setActiveTab('globe');
   store.setRenderer('maplibre');
+}
+
+export const SCREENGRID_NOTICE = 'screengrid is not available on the globe renderer';
+
+/**
+ * Tell the user what a command did or could not do, through the chat transcript
+ * the reply itself arrives in. A notice can land before the first prompt (a
+ * replayed message), so it opens a session rather than being dropped.
+ */
+function notice(text: string): void {
+  const chat = useChatStore.getState();
+  if (!chat.activeSessionId) chat.createSession();
+  useChatStore.getState().addMessage({ role: 'system', content: text });
 }
 
 // camera altitude (m) -> web-mercator zoom, so a Cesium-style fly_to also moves
@@ -189,18 +205,18 @@ const handlers: Record<string, Handler> = {
     if (r) useAppStore.getState().setRenderer(r);
   },
 
-  // ─── deck.gl visualization layers ───────────────────────────────────────
+  // ─── visualization layers ───────────────────────────────────────────────
+  // Native maplibre heatmap, same helper the Heatmap panel uses
   add_heatmap: (p) => {
-    addAgentDeckLayer(
-      new HeatmapLayer({
-        id: `agent-heatmap-${Date.now()}`,
-        data: asArray(p.data),
-        getPosition: toPosition,
-        getWeight: (d: unknown) => num((d as Record<string, unknown>)?.weight, 1),
-        radiusPixels: num(p.radius, 30),
-        intensity: num(p.intensity, 1),
-      }),
-    );
+    showHeatmap({
+      id: `agent-heatmap-${Date.now()}`,
+      points: asArray(p.data).map((d) => ({
+        position: toPosition(d),
+        weight: num((d as Record<string, unknown>)?.weight, 1),
+      })),
+      radius: num(p.radius, 30),
+      intensity: num(p.intensity, 1),
+    });
   },
 
   add_hexbin: (p) => {
@@ -250,7 +266,11 @@ const handlers: Record<string, Handler> = {
     );
   },
 
+  // ScreenGridLayer aggregates in screen space, which a GlobeView does not
+  // support, so it draws nothing on the only renderer deck rides on. Kept, and
+  // reported, until it has a replacement.
   add_screengrid: (p) => {
+    notice(SCREENGRID_NOTICE);
     addAgentDeckLayer(
       new ScreenGridLayer({
         id: `agent-screengrid-${Date.now()}`,

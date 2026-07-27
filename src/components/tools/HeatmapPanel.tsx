@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Paper,
   Text,
@@ -12,27 +12,16 @@ import {
   ColorInput,
 } from '@mantine/core';
 import { IconFlame, IconX } from '@tabler/icons-react';
-import { HeatmapLayer } from '@deck.gl/aggregation-layers';
 import { useDrawStore } from '../../store/draw';
 import {
   collectPoints,
   pointsFromDraw,
   drawLayerOptions,
-  showPanelDeckLayer,
-  clearPanelDeckLayer,
   type PointRecord,
 } from '../../lib/pointData';
+import { clearHeatmap, showHeatmap } from '../../lib/mapHeatmap';
 
-const GROUP = 'panel-heatmap';
-
-function hexToRgb(hex: string): [number, number, number] {
-  const h = hex.replace('#', '');
-  return [
-    parseInt(h.slice(0, 2), 16) || 0,
-    parseInt(h.slice(2, 4), 16) || 0,
-    parseInt(h.slice(4, 6), 16) || 0,
-  ];
-}
+const HEATMAP_ID = 'panel-heatmap';
 
 export function HeatmapPanel({ onClose }: { onClose: () => void }) {
   const features = useDrawStore((s) => s.features);
@@ -60,29 +49,31 @@ export function HeatmapPanel({ onClose }: { onClose: () => void }) {
     return pointsFromDraw(source);
   };
 
+  // closing the panel takes its layer off the map with it
+  useEffect(() => () => clearHeatmap(HEATMAP_ID), []);
+
   const addLayer = () => {
     const points = gatherPoints();
     if (points.length === 0) {
       setStatus('No points found in source');
       return;
     }
-    showPanelDeckLayer(
-      GROUP,
-      new HeatmapLayer<PointRecord>({
-        id: `panel-heatmap-${Date.now()}`,
-        data: points,
-        getPosition: (d) => d.position,
-        getWeight: (d) => Number(d.properties.weight) || 1,
-        radiusPixels: radius,
-        intensity,
-        colorRange: [hexToRgb(colorLow), hexToRgb(colorHigh)],
-      }),
-    );
+    showHeatmap({
+      id: HEATMAP_ID,
+      points: points.map((p) => ({
+        position: p.position,
+        weight: Number(p.properties.weight) || 1,
+      })),
+      radius,
+      intensity,
+      colorLow,
+      colorHigh,
+    });
     setStatus(`Heatmap added: ${points.length} points`);
   };
 
   const removeLayer = () => {
-    clearPanelDeckLayer(GROUP);
+    clearHeatmap(HEATMAP_ID);
     setStatus('Heatmap removed');
   };
 

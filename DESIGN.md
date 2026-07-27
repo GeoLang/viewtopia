@@ -330,7 +330,11 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   two; the per-panel "switch renderer" hints are gone. Persisted state and share links that
   say `deckgl` fall back to maplibre. Feature picking goes through one map click handler
   that asks the overlay first (`deck.pickObject`), since `queryRenderedFeatures` never
-  returns deck's custom layers. Open regression: deck's screen-space aggregation layers
-  (HeatmapLayer, ScreenGridLayer) do not draw under a GlobeView, and useMapLibre projects
-  the map as a globe, so the Heatmap panel and `add_heatmap`/`add_screengrid` render
-  nothing until the projection question is settled.
+  returns deck's custom layers. deck's screen-space aggregation layers (HeatmapLayer,
+  ScreenGridLayer) do not draw under a GlobeView: the globe projection stays (owner
+  decision), so heatmaps left deck for MapLibre's native `heatmap` layer type, which the
+  globe draws. `src/lib/mapHeatmap.ts` owns the spec store and the radius/intensity/weight
+  → `heatmap-*` paint mapping, `useHeatmapsMapLibre` re-adds the layers after a basemap
+  swap, and the Heatmap panel and `add_heatmap` both go through it. `add_screengrid` keeps
+  its deck layer but now says so: it reports "screengrid is not available on the globe
+  renderer" as a system message in the chat transcript instead of drawing nothing.

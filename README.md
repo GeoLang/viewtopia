@@ -137,7 +137,7 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 ### Visualization
 | Feature | Description |
 |---------|-------------|
-| **Heatmaps** | deck.gl HeatmapLayer |
+| **Heatmaps** | MapLibre native heatmap layer |
 | **Hex Bins** | Hexagonal aggregation |
 | **Arc Diagrams** | Origin-destination arcs |
 | **Scatter Plots** | Point-based scatter |
