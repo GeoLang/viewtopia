@@ -39,12 +39,6 @@
 
 ## OPEN — platform hygiene
 
-- [ ] **tiletopia terrain contract unusable by Cesium** (found 2026-07-26 wiring the
-      terrain panel): `/tiles/v1/terrain/layer.json` now answers 200 anonymously but
-      omits `"format"`, so `CesiumTerrainProvider` rejects it; its `tiles` template
-      points at `/api/v1/terrain/{z}/{x}/{y}` (404 through the viewer proxy — the served
-      path is `/tiles/v1/terrain/…`); and `.terrain` root-tile requests answer 400. The
-      panel is written to the intended contract and shows its no-source state meanwhile.
 - [ ] **tiletopia realtime presence is not per-connection refcounted**
       (`crates/tiletopia-server/src/realtime.rs`, `PresenceTracker::leave`): with two
       tabs of one account, either tab leaving removes the account from every peer's
