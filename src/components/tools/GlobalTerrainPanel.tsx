@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Paper,
   Text,
@@ -16,7 +16,10 @@ import {
   CesiumTerrainProvider,
   EllipsoidTerrainProvider,
 } from 'cesium';
-import { getActiveCesiumViewer } from '../../viewer/registry';
+import { getActiveCesiumViewer, getActiveMapLibre } from '../../viewer/registry';
+import { useAppStore, type Renderer } from '../../store/app';
+import { RENDERER_HINT } from '../../lib/terrainAnalysis';
+import { addMapTerrain, TERRAIN_RGB_URL, type MapTerrain } from '../../lib/mapTerrain';
 
 /**
  * The stack's own quantized-mesh terrain, served by tiletopia through the viewer's
@@ -24,21 +27,63 @@ import { getActiveCesiumViewer } from '../../viewer/registry';
  */
 const STACK_TERRAIN_URL = '/tiles/v1/terrain/';
 
+const NO_SOURCE =
+  'No terrain source: the platform terrain service did not answer, terrain stays off';
+
+/** What the renderer shows with terrain off; only Cesium has an ellipsoid. */
+const offStatus = (renderer: Renderer) =>
+  renderer === 'cesium' ? 'Ellipsoid (default)' : 'Terrain off';
+
 export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
+  const renderer = useAppStore((s) => s.renderer);
+  const onMap = renderer === 'maplibre';
   const [provider, setProvider] = useState<string | null>('stack');
   const [url, setUrl] = useState('');
   const [exaggeration, setExaggeration] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState('Ellipsoid (default)');
+  const [status, setStatus] = useState(() => offStatus(renderer));
   const [failed, setFailed] = useState(false);
+  const mapTerrainRef = useRef<MapTerrain | null>(null);
 
   // Vertical exaggeration is a scene setting: apply live, no provider needed.
   useEffect(() => {
     const viewer = getActiveCesiumViewer();
     if (viewer) viewer.scene.verticalExaggeration = exaggeration;
+    mapTerrainRef.current?.setExaggeration(exaggeration);
   }, [exaggeration]);
 
+  // A renderer switch destroys the map, taking its relief with it, so the panel
+  // drops back to its off state rather than claiming terrain that is gone.
+  useEffect(() => {
+    setStatus(offStatus(renderer));
+    setFailed(false);
+    return () => {
+      mapTerrainRef.current?.remove();
+      mapTerrainRef.current = null;
+    };
+  }, [renderer]);
+
+  const enableMapRelief = () => {
+    mapTerrainRef.current?.remove();
+    mapTerrainRef.current = addMapTerrain(exaggeration, () => {
+      // a tile that will not load lands here, well after Enable returned
+      setFailed(true);
+      setStatus(NO_SOURCE);
+    });
+    if (!mapTerrainRef.current) {
+      setFailed(true);
+      setStatus('No active viewer');
+      return;
+    }
+    setFailed(false);
+    setStatus('Platform terrain enabled');
+  };
+
   const enableTerrain = async () => {
+    if (onMap) {
+      enableMapRelief();
+      return;
+    }
     const viewer = getActiveCesiumViewer();
     if (!viewer) {
       setStatus('No active viewer');
@@ -66,7 +111,7 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
       setFailed(true);
       setStatus(
         provider === 'stack'
-          ? 'No terrain source: the platform terrain service did not answer, terrain stays off'
+          ? NO_SOURCE
           : `Terrain failed: ${e instanceof Error ? e.message : String(e)}`,
       );
     } finally {
@@ -75,6 +120,18 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
   };
 
   const resetTerrain = () => {
+    if (onMap) {
+      if (!getActiveMapLibre()) {
+        setStatus('No active viewer');
+        setFailed(true);
+        return;
+      }
+      mapTerrainRef.current?.remove();
+      mapTerrainRef.current = null;
+      setFailed(false);
+      setStatus(offStatus(renderer));
+      return;
+    }
     const viewer = getActiveCesiumViewer();
     if (!viewer) {
       setStatus('No active viewer');
@@ -83,7 +140,7 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
     }
     viewer.terrainProvider = new EllipsoidTerrainProvider();
     setFailed(false);
-    setStatus('Ellipsoid (default)');
+    setStatus(offStatus(renderer));
   };
 
   return (
@@ -114,46 +171,76 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
       </Group>
 
       <Stack gap="xs">
-        <Select
-          size="xs"
-          label="Provider"
-          data={[
-            { value: 'stack', label: 'Platform terrain' },
-            { value: 'cesium', label: 'Cesium World Terrain' },
-            { value: 'custom', label: 'Custom URL' },
-          ]}
-          value={provider}
-          onChange={setProvider}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
-        />
-
-        {provider === 'stack' && (
+        {onMap ? (
+          // MapLibre reads terrain-RGB tiles, so the quantized-mesh providers the
+          // select offers have nothing to say here
           <Text size="xs" c="dimmed">
-            {STACK_TERRAIN_URL}
+            {TERRAIN_RGB_URL}
           </Text>
+        ) : (
+          <>
+            <Select
+              size="xs"
+              label="Provider"
+              data={[
+                { value: 'stack', label: 'Platform terrain' },
+                { value: 'cesium', label: 'Cesium World Terrain' },
+                { value: 'custom', label: 'Custom URL' },
+              ]}
+              value={provider}
+              onChange={setProvider}
+              styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
+            />
+
+            {provider === 'stack' && (
+              <Text size="xs" c="dimmed">
+                {STACK_TERRAIN_URL}
+              </Text>
+            )}
+
+            {provider === 'custom' && (
+              <TextInput
+                size="xs"
+                label="Terrain URL"
+                placeholder="https://…/terrain"
+                value={url}
+                onChange={(e) => setUrl(e.currentTarget.value)}
+                styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
+              />
+            )}
+          </>
         )}
 
-        {provider === 'custom' && (
-          <TextInput
-            size="xs"
-            label="Terrain URL"
-            placeholder="https://…/terrain"
-            value={url}
-            onChange={(e) => setUrl(e.currentTarget.value)}
-            styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
-          />
-        )}
-
-        <Button size="xs" color="violet" onClick={enableTerrain} loading={loading} fullWidth>
+        <Button
+          size="xs"
+          color="violet"
+          onClick={enableTerrain}
+          loading={loading}
+          disabled={renderer === 'deckgl'}
+          fullWidth
+        >
           Enable Terrain
         </Button>
 
         <Text size="xs" c="dimmed">Exaggeration: {exaggeration.toFixed(1)}×</Text>
         <Slider size="xs" min={0.5} max={10} step={0.5} value={exaggeration} onChange={setExaggeration} color="violet" />
 
-        <Button size="xs" variant="subtle" color="gray" onClick={resetTerrain} fullWidth>
-          Reset to Ellipsoid
+        <Button
+          size="xs"
+          variant="subtle"
+          color="gray"
+          onClick={resetTerrain}
+          disabled={renderer === 'deckgl'}
+          fullWidth
+        >
+          {onMap ? 'Disable Terrain' : 'Reset to Ellipsoid'}
         </Button>
+
+        {renderer === 'deckgl' && (
+          <Text size="xs" c="yellow" data-testid="global-terrain-renderer-hint">
+            {RENDERER_HINT}
+          </Text>
+        )}
 
         <Text size="xs" c={failed ? 'red' : 'green'} data-testid="terrain-status">{status}</Text>
       </Stack>

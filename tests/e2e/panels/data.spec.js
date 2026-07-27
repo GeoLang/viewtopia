@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { crc32, deflateSync } from 'node:zlib';
 import { test, expect } from '../console-guard';
 import { PANEL, MENU_ITEM, openApp } from '../panel-helpers';
 import { mintToken, platformAuthHeaders } from '../../../scripts/platform-token.mjs';
@@ -61,6 +62,52 @@ const TERRAIN_URL = '/panel-e2e-terrain';
 
 /** Where the panel points its default provider: tiletopia through the viewer's proxy. */
 const STACK_TERRAIN_URL = '/tiles/v1/terrain/';
+
+/** MapLibre reads relief off terrain-RGB tiles instead, from the same service. */
+const TERRAIN_RGB_URL = '/tiles/v1/terrain/rgb/{z}/{x}/{y}.png';
+const TERRAIN_SOURCE_ID = 'stack-terrain-dem';
+
+function pngChunk(type, body) {
+  const head = Buffer.alloc(8);
+  head.writeUInt32BE(body.length, 0);
+  head.write(type, 4, 'ascii');
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(Buffer.concat([head.subarray(4), body])), 0);
+  return Buffer.concat([head, body, crc]);
+}
+
+/**
+ * A 256x256 terrain-RGB tile, flat at `height` metres in the mapbox encoding.
+ * Built here so the MapLibre terrain test never pulls real SRTM through the
+ * live endpoint: the panel's job is the source and the setTerrain call.
+ */
+function terrainRgbTile(height) {
+  const v = Math.round((height + 10000) * 10);
+  const rgb = [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+  const stride = 1 + 256 * 3; // one filter byte per scanline
+  const raw = Buffer.alloc(256 * stride);
+  for (let y = 0; y < 256; y++) {
+    for (let x = 0; x < 256; x++) {
+      const at = y * stride + 1 + x * 3;
+      raw[at] = rgb[0];
+      raw[at + 1] = rgb[1];
+      raw[at + 2] = rgb[2];
+    }
+  }
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(256, 0);
+  ihdr.writeUInt32BE(256, 4);
+  ihdr[8] = 8; // bit depth
+  ihdr[9] = 2; // truecolour
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    pngChunk('IHDR', ihdr),
+    pngChunk('IDAT', deflateSync(raw)),
+    pngChunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+
+const TERRAIN_RGB_TILE = terrainRgbTile(500);
 
 /** fenestra, the platform's OGC gateway. On the host, not proxied through :5174. */
 const FENESTRA = 'http://localhost:3003';
@@ -681,6 +728,96 @@ test.describe('Data panels', () => {
     expect(
       await page.evaluate(() => 'requestVertexNormals' in window.__viewtopiaViewer.terrainProvider),
     ).toBe(false);
+
+    await closePanel(page, panel);
+  });
+
+  test('globalTerrain on MapLibre: relief comes off the terrain-RGB tiles', async ({ page }) => {
+    let tileRequests = 0;
+    await page.route('**/tiles/v1/terrain/rgb/**', (route) => {
+      tileRequests++;
+      return route.fulfill({ contentType: 'image/png', body: TERRAIN_RGB_TILE });
+    });
+
+    await openViewer(page);
+    await page.getByRole('textbox', { name: 'Renderer' }).click();
+    await page.getByRole('option', { name: 'MapLibre' }).click();
+    await page.waitForFunction(() => window.__viewtopiaMap?.isStyleLoaded(), null, {
+      timeout: 60000,
+    });
+
+    const panel = await openPanel(page, 'Terrain', 'Global Terrain');
+    const status = panel.getByTestId('terrain-status');
+
+    /** What the live map uses for relief, and where it reads it from. */
+    const relief = () =>
+      page.evaluate((id) => {
+        const m = window.__viewtopiaMap;
+        return { terrain: m.getTerrain(), source: m.getStyle().sources[id] ?? null };
+      }, TERRAIN_SOURCE_ID);
+
+    // the quantized-mesh providers are Cesium's; MapLibre names its own endpoint
+    await expect(panel.getByText(TERRAIN_RGB_URL, { exact: true })).toBeVisible();
+    await expect(panel.getByRole('textbox', { name: 'Provider' })).toHaveCount(0);
+    await expect(status).toHaveText('Terrain off');
+    expect(await relief()).toEqual({ terrain: null, source: null });
+
+    // the slider is moved first, so the source is added at the shown exaggeration
+    await nudgeSlider(page, panel.locator('[role="slider"]'), 'ArrowRight', 4);
+    await expect(panel).toContainText('Exaggeration: 3.0×');
+
+    await panel.getByRole('button', { name: 'Enable Terrain' }).click();
+    await expect(status).toHaveText('Platform terrain enabled');
+    expect(await relief()).toEqual({
+      terrain: { source: TERRAIN_SOURCE_ID, exaggeration: 3 },
+      source: {
+        type: 'raster-dem',
+        tiles: [TERRAIN_RGB_URL],
+        tileSize: 256,
+        encoding: 'mapbox',
+        maxzoom: 15,
+      },
+    });
+
+    // the DEM is read, not just declared
+    await expect.poll(() => tileRequests, { timeout: 30000 }).toBeGreaterThan(0);
+
+    // the slider drives the live terrain, with no re-enable
+    await nudgeSlider(page, panel.locator('[role="slider"]'), 'ArrowRight', 2);
+    await expect(panel).toContainText('Exaggeration: 4.0×');
+    await expect.poll(async () => (await relief()).terrain.exaggeration).toBe(4);
+
+    // disabling takes both the terrain and its source back off the map
+    await panel.getByRole('button', { name: 'Disable Terrain' }).click();
+    await expect(status).toHaveText('Terrain off');
+    expect(await relief()).toEqual({ terrain: null, source: null });
+
+    // a renderer switch destroys the map, so the panel goes back to its off state
+    // rather than claiming relief that went with it
+    await panel.getByRole('button', { name: 'Enable Terrain' }).click();
+    await expect(status).toHaveText('Platform terrain enabled');
+    await page.getByRole('textbox', { name: 'Renderer' }).click();
+    await page.getByRole('option', { name: 'deck.gl' }).click();
+    await expect(page.locator('#deckgl-container canvas').first()).toBeVisible({ timeout: 30000 });
+    await expect(status).toHaveText('Terrain off');
+    expect(await page.evaluate(() => !!window.__viewtopiaMap)).toBe(false);
+
+    await closePanel(page, panel);
+  });
+
+  test('globalTerrain on deck.gl: the panel says which renderer to switch to', async ({ page }) => {
+    await openViewer(page);
+    await page.getByRole('textbox', { name: 'Renderer' }).click();
+    await page.getByRole('option', { name: 'deck.gl' }).click();
+    await expect(page.locator('#deckgl-container canvas').first()).toBeVisible({ timeout: 30000 });
+
+    const panel = await openPanel(page, 'Terrain', 'Global Terrain');
+    // deck is a standalone Deck with no terrain of its own, so the panel points
+    // at the renderers that have one instead of reporting no viewer
+    await expect(panel.getByTestId('global-terrain-renderer-hint')).toHaveText(
+      'Switch to the Cesium or MapLibre renderer to run this',
+    );
+    await expect(panel.getByRole('button', { name: 'Enable Terrain' })).toBeDisabled();
 
     await closePanel(page, panel);
   });
