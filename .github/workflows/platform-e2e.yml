@@ -84,13 +84,15 @@ jobs:
         run: |
           docker compose -f docker-compose.platform.yml down --remove-orphans
           docker compose -f docker-compose.platform.yml up -d \
-            ptolemy tiletopia geokode itinera geolang jupyter viewtopia
+            ptolemy tiletopia geokode itinera geolang geolang-api jupyter viewtopia
 
       - name: Wait for all services healthy
         working-directory: viewtopia
         run: |
-          services="ptolemy tiletopia geokode itinera geolang jupyter"
-          deadline=$(( $(date +%s) + 360 ))   # geolang first boot is slow (embedded Letta)
+          services="ptolemy tiletopia geokode itinera geolang geolang-api jupyter"
+          # geolang first boot is slow (embedded Letta), and geolang-api only starts
+          # its tool upsert + agent resolve once geolang is healthy
+          deadline=$(( $(date +%s) + 600 ))
           while :; do
             pending=""
             for s in $services; do

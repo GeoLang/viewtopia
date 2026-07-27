@@ -288,3 +288,14 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   anonymous callers reach public data (visibility middleware is now their only gate,
   pinned by tests). Loadtest: tiletopia scenario measures a harness-owned seeded
   tileset (idempotent, honest skip after teardown).
+- **2026-07-27 (e2e 502s)** — The "cold-start 502s" were not cold starts and not
+  tiletopia. The platform e2e never started `geolang-api`, so nginx could not resolve
+  that upstream (`geolang-api could not be resolved`, run 30208376624) and the viewer's
+  per-page-load `/agent/health` probe answered 502 in all 18 tests. The workflow now
+  starts and waits for geolang-api (which gained a healthcheck), and the console guard
+  is strict again: the 502/503/504 tolerance and its unit tests are gone. 18/18 pass
+  strict against the live stack with zero 5xx. tiletopia was measured and cleared: 49ms
+  from exec to serving a request on an empty data dir (migrations included), so nothing
+  there needs a readiness change. The ~2s of connection-refused after `docker restart
+  tiletopia` is container-start overhead before the process runs, and compose already
+  gates nginx on tiletopia's healthcheck, so a cold `up` never exposes it.

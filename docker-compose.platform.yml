@@ -231,6 +231,16 @@ services:
         condition: service_healthy
       embeddings:
         condition: service_started
+    # nginx routes /agent/ here, and the viewer probes /agent/health on every page
+    # load, so a stack without this container answers that probe with a 502. The
+    # check gives callers (CI wait loops, compose ps) a way to wait for it.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      # the startup event upserts tools and resolves the agent before uvicorn serves
+      start_period: 180s
 
   # ── Notebooks (Python) ────────────────────────────────────────────
   #
