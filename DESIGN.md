@@ -298,4 +298,7 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   from exec to serving a request on an empty data dir (migrations included), so nothing
   there needs a readiness change. The ~2s of connection-refused after `docker restart
   tiletopia` is container-start overhead before the process runs, and compose already
-  gates nginx on tiletopia's healthcheck, so a cold `up` never exposes it.
+  gates nginx on tiletopia's healthcheck, so a cold `up` never exposes it. Follow-up
+  found on the way: viewtopia's depends_on pulled geolang into the panels/load jobs,
+  which never build that image — dep dropped (nginx resolves /agent/ at request time),
+  so those jobs can finally start their stack.

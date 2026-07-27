@@ -20,10 +20,6 @@
 - [ ] **loadtest: tiletopia fixture seeder.** The scenario measures whatever assets the
       stack holds; a fresh CI stack may have none and the ops skip with a warning.
       Needs a small tiling job in the harness for a deterministic asset.
-- [ ] **panels and load CI cannot start the stack.** Both jobs run a data-plane-only
-      subset but `up -d viewtopia` pulls in viewtopia's `depends_on: geolang`, whose image
-      they never build (no geolang checkout). Neither job has ever reached its suite.
-      Either build geolang there or drop the viewer's dependency on it.
 - [ ] **fenestra has no platform nginx route** — the load scenario hits :3003 directly.
       Decide whether fenestra belongs behind the same-origin proxy like everything else.
 

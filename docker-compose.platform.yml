@@ -283,12 +283,12 @@ services:
       # work without a force-recreate
       - ./deploy/nginx-platform-include.conf:/etc/nginx/conf.d/default.conf:ro
       - ./deploy:/etc/nginx/platform:ro
+    # no geolang dep: nginx resolves /agent/ upstreams at request time, and the
+    # panels/load CI jobs start the viewer without the agent (no geolang checkout)
     depends_on:
       ptolemy:
         condition: service_healthy
       tiletopia:
-        condition: service_healthy
-      geolang:
         condition: service_healthy
 
 volumes:
