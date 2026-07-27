@@ -106,6 +106,13 @@
 - [ ] ptolemy external-source pushdown non-goals (documented in README): near-global
       windows fall back to unfiltered scans; `or`/`not` CQL2 spatial ops are never pushed.
       Revisit only if a real workload hits them.
+- [ ] **Split view: per-pane basemap picker, then tiled views** (owner, 2026-07-26,
+      post-MVP). Panes currently share the basemap, so same-renderer split is a mirror.
+      Step 1: each pane picks its own basemap, cameras stay locked (no focused-pane
+      concept; viewer-scoped tools keep the left-pane convention). Build the pane state
+      as a list of `{renderer, basemap}`, not a single right-pane entry, so step 2 —
+      a 2x2 tiled compare view — is layout work, not a rewrite. Tiles are GL contexts:
+      cap at 4, MapLibre by default, at most one Cesium instance.
 - [ ] **Replace the standalone deck.gl renderer with MapLibre + `MapboxOverlay`**
       (`@deck.gl/mapbox`, `interleaved: true`, maplibre-gl v3+, works with the v5 globe).
       Deck layers keep GPU rendering but draw into MapLibre's context, so everything the
