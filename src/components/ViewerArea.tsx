@@ -26,6 +26,7 @@ import { useFeaturePickerCesium } from '../hooks/useFeaturePickerCesium';
 import { useFeaturePickerMapLibre } from '../hooks/useFeaturePickerMapLibre';
 import { useMeasureMapLibre } from '../hooks/useMeasureMapLibre';
 import { useShareLinkHash } from '../hooks/useShareLinkHash';
+import { CesiumNavControl } from './CesiumNavControl';
 import { Minimap } from './Minimap';
 import { CoordReadout } from './CoordReadout';
 import { ContextMenu } from './ContextMenu';
@@ -199,6 +200,8 @@ export function ViewerArea() {
               activeTab === 'globe' && renderer === 'cesium' ? 'block' : 'none',
           }}
         />
+        {/* cesium has no built-in zoom/compass, so match maplibre's control */}
+        {activeTab === 'globe' && renderer === 'cesium' && <CesiumNavControl />}
 
         {/* MapLibre GL, with the deck.gl layers interleaved into it */}
         <div
