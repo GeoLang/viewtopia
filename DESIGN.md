@@ -280,4 +280,6 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   pyramid sum — the old bbox call had never been valid, hence the -1s) and the iso3=GBR
   hardcode is gone. Also fixed: the biome autofix in ab0295e2 had arrow-converted the
   collab e2e's WebSocket recording wrapper, breaking `new` (the only conversion in that
-  commit; audited).
+  commit; audited). Building-data toggle browser-verified on MapLibre (Liberty disables
+  with the basemap note, raster styles re-enable on style.load); the panel's
+  Badge-inside-Text DOM nesting error fixed along the way.

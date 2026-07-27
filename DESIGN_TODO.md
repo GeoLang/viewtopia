@@ -7,14 +7,6 @@
 
 ---
 
-## IN PROGRESS — viewer test coverage (decided 2026-07-26)
-
-- [~] **Building-data toggle on MapLibre** (committed ea421a9d, browser verification
-      pending): disabled with tooltip when the loaded style has its own fill-extrusion
-      layers (Liberty); detection re-runs on style.load; hook skips duplicate layer.
-
-## OPEN — geolang agent tools (found in 2026-07-26 viewer testing)
-
 
 ## OPEN — platform hygiene
 

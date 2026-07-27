@@ -99,7 +99,7 @@ export function BuildingsPanel({ onClose }: { onClose: () => void }) {
           Zoom in close to a city for best results.
         </Text>
 
-        <Text size="xs" c="dimmed">
+        <Text size="xs" c="dimmed" component="div">
           Renderer: <Badge size="xs" variant="light" color="violet">{renderer}</Badge>
         </Text>
 
