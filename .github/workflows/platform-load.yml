@@ -123,6 +123,14 @@ jobs:
         working-directory: viewtopia
         run: node loadtest/seed.mjs --depths "$LOADTEST_DEPTHS"
 
+      # bulk-seeded tables have no planner statistics yet, and the recursive
+      # changeset walk picks catastrophic plans without them: 2026-07-28 the db
+      # pinned all 4 runner cores at ~48 req/s until stats existed. a
+      # steady-state deployment has autoanalyze; a fresh CI stack must ask.
+      - name: Analyze database after seeding
+        working-directory: viewtopia
+        run: docker compose -f docker-compose.platform.yml exec -T db psql -U ptolemy -d ptolemy -c 'ANALYZE'
+
       - name: Record the box spec
         working-directory: viewtopia
         run: |

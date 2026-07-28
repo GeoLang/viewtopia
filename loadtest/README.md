@@ -254,3 +254,10 @@ runs did exactly that). So CI runs at `LOADTEST_RATE=5` and widens the budgets
 with `LOADTEST_P95_SCALE=6`. The depth comparison the harness exists for
 (chain-100 vs chain-1000) is unaffected: both depths still run in the same
 iteration under the same load.
+
+The workflow runs `ANALYZE` after seeding. A freshly bulk-seeded postgres has
+no planner statistics, and the recursive changeset walk picks plans that pin
+every runner core at a fraction of the target rate (found 2026-07-28 via the
+in-run sidecar probe, `loadtest/out/during-load.txt` in the artifact). The same
+cliff would hit any deployment that bulk-imports and immediately serves reads,
+until autoanalyze catches up.
