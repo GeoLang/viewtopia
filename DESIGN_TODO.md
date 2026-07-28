@@ -10,13 +10,14 @@
 
 ## OPEN — platform hygiene
 
-- [ ] **tiletopia-server `raft` feature never compiled**: the openraft half of
-      cluster.rs (gated behind the non-CI `raft` feature) was written against an
-      older openraft and fails with ~130 errors at the pinned 0.9.24. The
-      single-process fallback that actually runs is fine. Decide: delete the
-      openraft half, migrate it, or document `--all-features` as unsupported.
-      (The tiletopia-core half of this item, the ort/ndarray clash, was fixed
-      2026-07-27.)
+- [ ] **tiletopia multi-node HA (raft)** — future reference, no open work. The
+      openraft half of cluster.rs was deleted 2026-07-27: it was a never-compiled
+      textbook key-value example wired to nothing (no transport, no discovery, no
+      real server state through it). The single-process leader election that
+      actually runs remains. If clustering ever becomes a requirement, design it
+      around what needs replicating (catalog and auth state via Raft; tile data
+      needs shared/object storage regardless) instead of resurrecting the deleted
+      scaffolding.
 - [ ] **tiletopia CloudFront default behavior caches authenticated responses ~1h**
       (post-MVP decision): Authorization is in the cache key so no cross-user leak,
       but a revoked token's responses keep serving until TTL. Clean fix: split the
