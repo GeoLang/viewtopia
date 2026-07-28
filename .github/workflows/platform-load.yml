@@ -159,9 +159,25 @@ jobs:
             done
           } | tee loadtest/out/probe.txt
 
+      # sidecar probe during the k6 run: if these curls stay fast while k6
+      # reports hundreds of ms, the k6 numbers are its own cpu starvation on the
+      # 4-vcpu runner, not server latency.
       - name: Run k6 scenarios
         working-directory: viewtopia
-        run: loadtest/run.sh
+        run: |
+          (
+            while :; do
+              curl -s -o /dev/null -w "$(date +%T) direct:%{time_total}s " http://localhost:3000/api/v1/health
+              docker stats --no-stream --format '{{.Name}}:{{.CPUPerc}}' | tr '\n' ' '
+              echo
+              sleep 5
+            done > loadtest/out/during-load.txt 2>&1
+          ) &
+          PROBE_PID=$!
+          status=0
+          loadtest/run.sh || status=$?
+          kill "$PROBE_PID" 2>/dev/null || true
+          exit "$status"
 
       - name: Upload k6 summaries
         if: always()
