@@ -265,7 +265,4 @@ volumes:
   pgdata:
   tiletopia-data:
   geolang-cache:
-  # rollback artifact from the embedded-letta era; delete once sibyl has run
-  # for a while (DESIGN_TODO cleanup item)
-  geolang-pgdata:
   sibyl-data:

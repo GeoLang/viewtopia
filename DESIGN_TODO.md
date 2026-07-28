@@ -22,11 +22,8 @@
       the distribution never forwards explicitly; collab may fail closed through the
       CDN. Test on a live distribution before relying on it.
 
-## OPEN — sibyl cutover cleanup (after a confidence period)
+## OPEN — sibyl cutover cleanup
 
-- [ ] Delete the `geolang-pgdata` volume definition (rollback artifact from the
-      embedded-letta era) from docker-compose.platform.yml, and the volume itself
-      on the host.
 - [ ] Session routing is still server-side-global (sibyl active flag mirrors the
       old behavior). Later cleanup: route runs by AG-UI `thread_id` so sessions
       are per-client and stateless; needs viewer session-switcher rework.
