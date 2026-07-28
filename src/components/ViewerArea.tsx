@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { Box } from '@mantine/core';
-import { Cartesian3 } from 'cesium';
+import { Cartesian2, Cartesian3, Cartographic, Math as CesiumMath } from 'cesium';
 import { useAppStore } from '../store/app';
 import { useSplitViewStore } from '../store/splitView';
 import { useSpaceTimeStore } from '../features/spacetime/store';
@@ -120,35 +120,71 @@ export function ViewerArea() {
     clearFlyTo();
   }, [flyToTarget, clearFlyTo, activeTab, renderer, cesiumRef, maplibreRef, leafletRef]);
 
+  // Real screen→geographic conversion on the active renderer. Null when the
+  // pointer misses the globe (sky) or no renderer is up.
+  const screenToLngLat = useCallback(
+    (clientX: number, clientY: number): { lat: number; lng: number } | null => {
+      if (activeTab === 'globe' && renderer === 'cesium') {
+        const viewer = cesiumRef.current;
+        if (!viewer || viewer.isDestroyed()) return null;
+        const rect = viewer.canvas.getBoundingClientRect();
+        const picked = viewer.camera.pickEllipsoid(
+          new Cartesian2(clientX - rect.left, clientY - rect.top),
+          viewer.scene.globe.ellipsoid,
+        );
+        if (!picked) return null;
+        const carto = Cartographic.fromCartesian(picked);
+        return {
+          lat: CesiumMath.toDegrees(carto.latitude),
+          lng: CesiumMath.toDegrees(carto.longitude),
+        };
+      }
+      if (activeTab === 'globe' && renderer === 'maplibre') {
+        const map = maplibreRef.current;
+        if (!map) return null;
+        const rect = map.getContainer().getBoundingClientRect();
+        const p = map.unproject([clientX - rect.left, clientY - rect.top]);
+        return { lat: p.lat, lng: p.lng };
+      }
+      if (activeTab === 'map') {
+        const map = leafletRef.current;
+        if (!map) return null;
+        const rect = map.getContainer().getBoundingClientRect();
+        const p = map.containerPointToLatLng([clientX - rect.left, clientY - rect.top]);
+        return { lat: p.lat, lng: p.lng };
+      }
+      return null;
+    },
+    [activeTab, renderer, cesiumRef, maplibreRef, leafletRef],
+  );
+
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
-      // Approximate lat/lng from pixel position within the viewer area
-      const rect = e.currentTarget.getBoundingClientRect();
-      const xFrac = (e.clientX - rect.left) / rect.width;
-      const yFrac = (e.clientY - rect.top) / rect.height;
-      const lng = -180 + xFrac * 360;
-      const lat = 90 - yFrac * 180;
-      setCursorCoords({ lat, lng });
+      const coords = screenToLngLat(e.clientX, e.clientY);
+      if (coords) setCursorCoords(coords);
     },
-    [setCursorCoords],
+    [screenToLngLat, setCursorCoords],
   );
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
-      const rect = e.currentTarget.getBoundingClientRect();
-      const xFrac = (e.clientX - rect.left) / rect.width;
-      const yFrac = (e.clientY - rect.top) / rect.height;
-      const lng = -180 + xFrac * 360;
-      const lat = 90 - yFrac * 180;
-      showContextMenu({ x: e.clientX, y: e.clientY, lat, lng });
+      const coords = screenToLngLat(e.clientX, e.clientY);
+      if (coords) showContextMenu({ x: e.clientX, y: e.clientY, ...coords });
     },
-    [showContextMenu],
+    [screenToLngLat, showContextMenu],
   );
 
-  const handleClick = useCallback(() => {
-    hideContextMenu();
-  }, [hideContextMenu]);
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      hideContextMenu();
+      const coords = screenToLngLat(e.clientX, e.clientY);
+      if (coords) {
+        window.dispatchEvent(new CustomEvent('viewtopia:map:click', { detail: coords }));
+      }
+    },
+    [hideContextMenu, screenToLngLat],
+  );
 
   // Resize viewers when switching renderer/tab or splitting (containers go
   // display:none→block, and the left pane halves its width)

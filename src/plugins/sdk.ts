@@ -20,6 +20,8 @@ export interface PluginMapContext {
   flyTo: (lng: number, lat: number, zoom?: number) => void;
   /** Get current cursor coordinates */
   getCursorCoords: () => { lat: number; lng: number; elevation?: number } | null;
+  /** Subscribe to map clicks (real geographic coords); returns unsubscribe */
+  onMapClick: (cb: (coords: { lat: number; lng: number }) => void) => () => void;
   /** Add a GeoJSON layer to the map */
   addGeoJsonLayer: (id: string, geojson: object, options?: LayerOptions) => void;
   /** Remove a layer by ID */

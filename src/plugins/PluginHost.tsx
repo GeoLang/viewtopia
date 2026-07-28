@@ -28,6 +28,11 @@ export function PluginPanel({ pluginId, onClose }: PluginPanelProps) {
     const mapCtx: PluginMapContext = {
       flyTo: (lng, lat, zoom) => flyTo(lng, lat, zoom ?? 14),
       getCursorCoords: () => store.cursorCoords,
+      onMapClick: (cb) => {
+        const handler = (e: Event) => cb((e as CustomEvent<{ lat: number; lng: number }>).detail);
+        window.addEventListener('viewtopia:map:click', handler);
+        return () => window.removeEventListener('viewtopia:map:click', handler);
+      },
       addGeoJsonLayer: (id, geojson, options) => {
         store.addLayer({
           id,
@@ -110,5 +115,20 @@ export function PluginPanel({ pluginId, onClose }: PluginPanelProps) {
   }
 
   const { Panel } = plugin;
-  return <Panel ctx={ctx} />;
+  // float like the built-in tool panels: plugins render plain Papers and would
+  // otherwise join AppShell.Main's flex column and push the map out of view
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: 60,
+        right: 16,
+        zIndex: 300,
+        maxHeight: 'calc(100% - 76px)',
+        overflowY: 'auto',
+      }}
+    >
+      <Panel ctx={ctx} />
+    </div>
+  );
 }

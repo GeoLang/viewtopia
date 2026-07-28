@@ -60,6 +60,7 @@
     "@mantine/hooks": "^7.17.8",
     "@mantine/modals": "^7.17.8",
     "@mantine/notifications": "^7.17.8",
+    "@panoramax/web-viewer": "^5.1.2",
     "@protomaps/basemaps": "^5.7.2",
     "@tabler/icons-react": "^3.44.0",
     "@tmcw/togeojson": "^7.1.2",

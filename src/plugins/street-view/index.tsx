@@ -3,7 +3,7 @@
  * Equivalent to: QGIS Street View plugin (901K downloads)
  */
 
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Paper, Text, Stack, Button, Group, Badge, SegmentedControl, TextInput, Switch } from '@mantine/core';
 import { IconEye, IconCamera } from '@tabler/icons-react';
 import type { PluginDefinition, PluginContext } from '../sdk';
@@ -11,7 +11,9 @@ import type { PluginDefinition, PluginContext } from '../sdk';
 type Provider = 'google' | 'mapillary';
 
 function StreetViewPanel({ ctx }: { ctx: PluginContext }) {
-  const [provider, setProvider] = useState<Provider>('google');
+  const [provider, setProvider] = useState<Provider>(
+    () => ctx.settings.get('defaultProvider', 'mapillary') as Provider
+  );
   const [lat, setLat] = useState('51.5074');
   const [lng, setLng] = useState('-0.1278');
   const [heading, setHeading] = useState(0);
@@ -26,13 +28,15 @@ function StreetViewPanel({ ctx }: { ctx: PluginContext }) {
   const googleKey = String(ctx.settings.get('googleApiKey', '') ?? '').trim();
   const needsKey = provider === 'google' && !googleKey;
 
-  const handlePickFromMap = () => {
-    const coords = ctx.map.getCursorCoords();
-    if (coords) {
+  const [picking, setPicking] = useState(false);
+  useEffect(() => {
+    if (!picking) return;
+    return ctx.map.onMapClick((coords) => {
+      setPicking(false);
       setLat(coords.lat.toFixed(6));
       setLng(coords.lng.toFixed(6));
-    }
-  };
+    });
+  }, [picking, ctx.map]);
 
   const getEmbedUrl = (): string => {
     if (provider === 'google') {
@@ -96,8 +100,13 @@ function StreetViewPanel({ ctx }: { ctx: PluginContext }) {
         </Group>
 
         <Group gap="xs">
-          <Button size="xs" variant="light" leftSection={<IconCamera size={14} />} onClick={handlePickFromMap}>
-            Pick from Map
+          <Button
+            size="xs"
+            variant={picking ? 'filled' : 'light'}
+            leftSection={<IconCamera size={14} />}
+            onClick={() => setPicking((p) => !p)}
+          >
+            {picking ? 'Click the map…' : 'Pick from Map'}
           </Button>
           <Button size="xs" variant="light" onClick={handleShowOnMap}>
             Show on Map
@@ -148,7 +157,7 @@ const plugin: PluginDefinition = {
   category: 'tools',
   Panel: StreetViewPanel,
   settings: [
-    { key: 'defaultProvider', label: 'Default Provider', type: 'select', defaultValue: 'google', options: [{ value: 'google', label: 'Google Street View' }, { value: 'mapillary', label: 'Mapillary' }] },
+    { key: 'defaultProvider', label: 'Default Provider', type: 'select', defaultValue: 'mapillary', options: [{ value: 'mapillary', label: 'Mapillary' }, { value: 'google', label: 'Google Street View' }] },
     { key: 'googleApiKey', label: 'Google Maps API Key', type: 'text' },
     { key: 'mapillaryToken', label: 'Mapillary Access Token', type: 'text' },
   ],

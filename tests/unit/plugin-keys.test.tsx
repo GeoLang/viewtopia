@@ -30,6 +30,7 @@ function makeCtx(values: Record<string, unknown> = {}): PluginContext {
     map: {
       flyTo: vi.fn(),
       getCursorCoords: vi.fn(() => null),
+      onMapClick: vi.fn(() => () => {}),
       addGeoJsonLayer: vi.fn(),
       removeLayer: vi.fn(),
       fitBounds: vi.fn(),
@@ -108,14 +109,14 @@ describe('street view embed', () => {
   });
 
   it('asks for a google key instead of loading the embed', () => {
-    renderPanel(streetView.Panel, makeCtx());
+    renderPanel(streetView.Panel, makeCtx({ defaultProvider: 'google' }));
 
     expect(screen.getByTestId('street-view-needs-key')).toBeVisible();
     expect(screen.queryByTitle('Street View')).toBeNull();
   });
 
   it('loads the embed with the configured key', () => {
-    renderPanel(streetView.Panel, makeCtx({ googleApiKey: 'gkey-1' }));
+    renderPanel(streetView.Panel, makeCtx({ defaultProvider: 'google', googleApiKey: 'gkey-1' }));
 
     expect(screen.queryByTestId('street-view-needs-key')).toBeNull();
     expect(screen.getByTitle('Street View')).toHaveAttribute(
