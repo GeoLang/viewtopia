@@ -5,12 +5,14 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: 'tests/e2e/panels',
   timeout: 120000,
-  // matches the sweep config: parallel webgl instances get flaky above this
-  workers: 4,
-  // four swiftshader Cesium contexts next to the docker stack oversubscribe the
-  // box, and a starved worker can blow the timeout in fixture setup before the
-  // test body ever runs (seen on terrainAnalysis). The retry lands when the queue
-  // has drained, so it passes. Any test failing on both attempts is a real defect.
+  // matches the sweep config locally: parallel webgl instances get flaky above
+  // this. the 4-vcpu CI runner also carries the docker stack, and there four
+  // swiftshader workers starve even the retries (2026-07-28 nightly: three
+  // cesium tests failed both attempts, all pass on a workstation), so CI gets 2.
+  workers: process.env.CI ? 2 : 4,
+  // a starved worker can blow the timeout in fixture setup before the test body
+  // ever runs (seen on terrainAnalysis). the retry lands when the queue has
+  // drained, so it passes.
   retries: 1,
   use: {
     baseURL: 'http://localhost:5174',
