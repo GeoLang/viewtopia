@@ -36,6 +36,11 @@ interface StacItem {
 
 const SEARCH_RADIUS_DEG = 0.005; // ~500m
 
+// probe results cached across searches: instances auto-ban IPs that look like
+// hammering, so keep our own request count down
+const hostProbeCache = new Map<string, { ok: boolean; at: number }>();
+const PROBE_TTL_MS = 5 * 60_000;
+
 function PanoramaxPanel({ ctx }: { ctx: PluginContext }) {
   const endpoint = String(ctx.settings.get('endpoint', 'https://api.panoramax.xyz/api'));
   const viewerRef = useRef<PhotoViewerElement>(null);
@@ -76,12 +81,19 @@ function PanoramaxPanel({ ctx }: { ctx: PluginContext }) {
       const liveHosts = new Set<string>();
       await Promise.all(
         [...hostSamples].map(async ([host, url]) => {
+          const cached = hostProbeCache.get(host);
+          if (cached && Date.now() - cached.at < PROBE_TTL_MS) {
+            if (cached.ok) liveHosts.add(host);
+            return;
+          }
+          let ok = false;
           try {
-            const probe = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(4000) });
-            if (probe.ok) liveHosts.add(host);
+            ok = (await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(4000) })).ok;
           } catch {
             // host unreachable
           }
+          hostProbeCache.set(host, { ok, at: Date.now() });
+          if (ok) liveHosts.add(host);
         }),
       );
       const chosen =
@@ -129,7 +141,9 @@ function PanoramaxPanel({ ctx }: { ctx: PluginContext }) {
   };
 
   return (
-    <Paper p="md" withBorder style={{ width: 440 }}>
+    // 620 keeps the viewer element >=576px wide, its desktop-layout breakpoint:
+    // corner legend + zoom instead of the mobile bottom drawer
+    <Paper p="md" withBorder style={{ width: 620 }}>
       <Stack gap="sm">
         <Group justify="space-between">
           <Text fw={600} size="lg">Panoramax</Text>
@@ -153,7 +167,10 @@ function PanoramaxPanel({ ctx }: { ctx: PluginContext }) {
         <Text size="sm" c="dimmed">{status}</Text>
 
         {/* contain traps the viewer's position:fixed bottom drawer, which
-            otherwise anchors to the viewport and blacks out the page bottom */}
+            otherwise anchors to the viewport and blacks out the page bottom.
+            the drawer itself (narrow-layout metadata sheet) expands over the
+            whole 300px photo, so hide it; attribution renders below instead */}
+        <style>{'pnx-photo-viewer pnx-bottom-drawer { display: none !important; }'}</style>
         <div style={{ width: '100%', height: 300, borderRadius: 8, overflow: 'hidden', position: 'relative', contain: 'layout paint' }}>
           <pnx-photo-viewer
             ref={viewerRef}
