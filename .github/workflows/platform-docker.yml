@@ -51,6 +51,13 @@ jobs:
           path: geolang
         continue-on-error: true
 
+      - name: Checkout sibyl
+        uses: actions/checkout@v4
+        with:
+          repository: GeoLang/sibyl
+          path: sibyl
+        continue-on-error: true
+
       - name: Checkout fenestra
         uses: actions/checkout@v4
         with:
@@ -64,6 +71,10 @@ jobs:
           if [ ! -f ../geolang/Dockerfile ]; then
             mkdir -p ../geolang
             echo "FROM scratch" > ../geolang/Dockerfile
+          fi
+          if [ ! -f ../sibyl/Dockerfile ]; then
+            mkdir -p ../sibyl
+            echo "FROM scratch" > ../sibyl/Dockerfile
           fi
 
           # Build only services whose repos are available

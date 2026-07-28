@@ -24,7 +24,7 @@ services:
       timeout: 5s
       retries: 3
 
-  # GeoLang — Python AI/NLP geospatial server
+  # GeoLang — Python AI/NLP geospatial server + tool executor
   geolang:
     build:
       context: ../geolang
@@ -34,23 +34,26 @@ services:
     volumes:
       - geolang-cache:/app/cache
     environment:
-      - GEOLANG_HOST=0.0.0.0
-      - GEOLANG_PORT=8080
+      - SIBYL_URL=http://sibyl:8090
     depends_on:
-      - letta
+      - sibyl
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 10s
       timeout: 5s
       retries: 3
 
-  # Letta — AI agent memory server (used by GeoLang)
-  letta:
-    image: letta/letta:latest
+  # Sibyl — Rust agent loop service (LLM calls, sessions, tool dispatch)
+  sibyl:
+    build:
+      context: ../sibyl
     ports:
-      - "8283:8283"
+      - "8090:8090"
+    environment:
+      - XAI_API_KEY=${XAI_API_KEY:-}
+      - GEOLANG_URL=http://geolang:8080
     volumes:
-      - letta-data:/root/.letta
+      - sibyl-data:/data
 
   # ViewTopia — Vite dev server (or static build for production)
   viewtopia:
@@ -71,4 +74,4 @@ services:
 volumes:
   tiletopia-data:
   geolang-cache:
-  letta-data:
+  sibyl-data:

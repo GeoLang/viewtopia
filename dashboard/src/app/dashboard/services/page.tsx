@@ -17,8 +17,8 @@ const SERVICES: ServiceInfo[] = [
   { id: "tiletopia", name: "TileTopia", description: "3D Tiles, terrain, and asset server", composeName: "tiletopia", port: 3100 },
   { id: "geokode", name: "Geokode", description: "Geocoding service", composeName: "geokode", port: 3001 },
   { id: "itinera", name: "Itinera", description: "Routing & isochrones", composeName: "itinera", port: 3002 },
-  { id: "geolang", name: "GeoLang AI", description: "AI/NLP geospatial agent", composeName: "geolang", port: 8080 },
-  { id: "letta", name: "Letta", description: "Agent memory server", composeName: "letta", port: 8283 },
+  { id: "geolang", name: "GeoLang AI", description: "AI/NLP geospatial agent", composeName: "geolang-api", port: 8080 },
+  { id: "sibyl", name: "Sibyl", description: "Agent loop service", composeName: "sibyl", port: 8090 },
   { id: "viewtopia", name: "ViewTopia", description: "Frontend viewer & A2UI", composeName: "viewtopia", port: 5174 },
 ];
 

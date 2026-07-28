@@ -3,7 +3,7 @@
 > Whole-platform backlog for the shipping plan in [DESIGN.md](DESIGN.md).
 > Status keys: `[ ]` todo · `[~]` in progress · `[!]` blocked.
 > **Open work only** — completed items move to DESIGN.md (§4 history log).
-> Last brought current: **2026-07-26**.
+> Last brought current: **2026-07-27**.
 
 ---
 
@@ -22,17 +22,16 @@
       the distribution never forwards explicitly; collab may fail closed through the
       CDN. Test on a live distribution before relying on it.
 
-## OPEN — post-v1: replace embedded Letta (decided 2026-07-25)
+## OPEN — sibyl cutover cleanup (after a confidence period)
 
-- [ ] **Replace the embedded Letta server with a thin in-house agent loop behind
-      `agent_event_stream`.** Upstream's self-hosted line is deprecated and
-      release-frozen; GeoLang needs only an LLM call loop with tool dispatch, message
-      history + summarize-on-overflow, and an event stream (memory audit showed archival
-      and core-memory tools entirely unused; the embeddings container exists only for
-      unused archival and goes away too). The seam is already cut: `agent_event_stream`
-      in geolang/src/api/server.py is the only place Letta shapes exist, and the viewer
-      speaks vendor-neutral AG-UI. Also retires the ~2min embedded-server boot and the
-      cold-start timeout above. Do after MVP announcement; stay on vendored 0.16.8 until.
+- [ ] Delete the `geolang-pgdata` volume definition (rollback artifact from the
+      embedded-letta era) from docker-compose.platform.yml, and the volume itself
+      on the host.
+- [ ] Delete the vendored `letta/` repo checkout and its entry in
+      scripts/clone-geolang.sh.
+- [ ] Session routing is still server-side-global (sibyl active flag mirrors the
+      old behavior). Later cleanup: route runs by AG-UI `thread_id` so sessions
+      are per-client and stateless; needs viewer session-switcher rework.
 
 ## OPEN — Phase 3 (mobile & ML breadth, after v1)
 

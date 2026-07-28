@@ -78,22 +78,23 @@ take effect with `nginx -s reload` instead of a force-recreate.
 │ptolemy│ │tiletopia│ │geokode│ │itinera │ │geolang- │ │jupyter │ │fenestra│
 │feature│ │3D tiles/│ │geocode│ │routing/│ │api +    │ │(python │ │OGC WMS/│
 │store +│ │terrain/ │ │(OSM   │ │isochr. │ │geolang  │ │cells)  │ │WFS/WMTS│
-│geoproc│ │COG/asset│ │ pbf)  │ │(graph) │ │(Letta)  │ │        │ │WCS/API │
+│geoproc│ │COG/asset│ │ pbf)  │ │(graph) │ │(sibyl)  │ │        │ │WCS/API │
 └──┬───┘  └─────────┘ └───────┘ └────────┘ └────┬────┘ └────────┘ └────────┘
    │                                            │            fenestra reads its
 ┌──┴────┐                                  ┌────┴─────┐      features from
-│PostGIS│                                  │embeddings│      ptolemy's REST API
+│PostGIS│                                  │  sibyl   │      ptolemy's REST API
 │ :5432 │                                  └──────────┘      (PTOLEMY_URL)
-└───────┘                                   (TEI, CPU)
+└───────┘                                 (agent loop)
 ```
 
 - fenestra's own OGC API Features prefix is `/ogc`, so through the proxy that API
   is `/ogc/ogc/*` while WMS/WFS/WMTS/WCS are `/ogc/wms` etc. Its capabilities
   embed absolute URLs, hence `FENESTRA_PUBLIC_URL=<origin>/ogc` in compose.
-- **The agent calls the same backend REST APIs the viewer does.** `geolang` is configured
-  with `PTOLEMY_URL`/`TILETOPIA_URL`/`GEOKODE_URL`/`ITINERA_URL`; it self-hosts an embedded
-  Letta + Postgres (no separate `letta` service — that was removed as redundant).
-- Backends are independent Rust services except `geolang` (Python/Letta) and `jupyter`
+- **The agent calls the same backend REST APIs the viewer does.** `geolang-api` is configured
+  with `PTOLEMY_URL`/`TILETOPIA_URL`/`GEOKODE_URL`/`ITINERA_URL`; agent runs execute on
+  the `sibyl` service (Rust agent loop, sessions in sqlite), which calls back into
+  geolang-api's `/tools` endpoints for in-process tool execution.
+- Backends are independent Rust services except `geolang-api` (Python) and `jupyter`
   (scipy-notebook for python notebook cells). Only `ptolemy` talks to PostGIS; fenestra
   goes through ptolemy's REST API.
 
@@ -106,8 +107,8 @@ take effect with `nginx -s reload` instead of a force-recreate.
 | geokode | Rust | Forward/reverse/autocomplete geocoding from an OSM `.pbf` | `data/region.osm.pbf` |
 | itinera | Rust | Routing + isochrones + delivery optimization over a prebuilt graph | `data/graph.bin` |
 | fenestra | Rust | OGC gateway WMS/WFS/WMTS/OGC-API/**WCS** over ptolemy + a GeoTIFF coverage dir | reads ptolemy; `COVERAGE_DIR` |
-| geolang / geolang-api | Python | NL→GIS agent; drives the viewer + calls the backends | Letta + cache |
-| embeddings | — | sentence-transformers TEI (agent memory embeddings) | CPU |
+| geolang-api | Python | NL→GIS agent tools + API; drives the viewer + calls the backends | cache |
+| sibyl | Rust | agent loop, LLM calls, sessions | sqlite volume |
 | jupyter | — | python notebook kernels for viewtopia notebook cells | scipy-notebook |
 | viewtopia | JS/TS | The SPA (this repo) | nginx |
 
@@ -338,3 +339,11 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   swap, and the Heatmap panel and `add_heatmap` both go through it. `add_screengrid` keeps
   its deck layer but now says so: it reports "screengrid is not available on the globe
   renderer" as a system message in the chat transcript instead of drawing nothing.
+- **2026-07-27 (later)** — **Embedded Letta replaced by sibyl.** New Rust repo `sibyl`
+  (axum, rusqlite, hand-rolled xAI client) owns the agent loop, sessions, and
+  summarize-on-overflow history; geolang-api serves a `/tools` manifest + executor
+  (tools run in-process, no sandbox, no source shipping) and proxies runs as NDJSON
+  behind the unchanged `agent_event_stream` seam, so the viewer's AG-UI contract is
+  untouched. Deleted: embedded Letta server + postgres, embeddings (TEI) container,
+  legacy `POST /chat`, sessions.json, the ~2min Letta boot. Letta sessions dropped by
+  design (no migration); `geolang-pgdata` volume kept as rollback artifact.

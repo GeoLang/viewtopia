@@ -16,7 +16,7 @@
 #   scripts/clone-geolang.sh --pull ~/src/GeoLang
 #
 # Notes:
-#   * letta is the upstream third-party repo geolang embeds; cloned over HTTPS.
+#   * letta is the upstream third-party repo kept for reference; cloned over HTTPS.
 #   * The script is idempotent: existing repos are left alone (or pulled with
 #     --pull).
 #
@@ -58,6 +58,7 @@ GITHUB_REPOS=(
   panoptes
   projicio
   ptolemy
+  sibyl
   terrano
   terravista
   tiletopia

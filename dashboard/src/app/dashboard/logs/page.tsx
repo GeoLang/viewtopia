@@ -9,8 +9,8 @@ const SERVICE_OPTIONS = [
   { value: "tiletopia", label: "TileTopia" },
   { value: "geokode", label: "Geokode" },
   { value: "itinera", label: "Itinera" },
-  { value: "geolang", label: "GeoLang AI" },
-  { value: "letta", label: "Letta" },
+  { value: "geolang-api", label: "GeoLang AI" },
+  { value: "sibyl", label: "Sibyl" },
   { value: "viewtopia", label: "ViewTopia" },
 ];
 

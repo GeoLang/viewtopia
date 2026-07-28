@@ -16,7 +16,8 @@
 #   - tiletopia:  3D Tiles / terrain / asset server (port 3100)
 #   - geokode:    Geocoding service (port 3001)
 #   - itinera:    Routing + isochrones (port 3002)
-#   - geolang:    AI/NLP geospatial agent (port 8080; embeds its own Letta server)
+#   - sibyl:      Rust agent loop service (internal port 8090)
+#   - geolang-api: AI/NLP geospatial agent API + tool executor (port 8080)
 #   - viewtopia:  Frontend viewer + A2UI (port 5174)
 #
 # Prerequisites:
@@ -147,94 +148,59 @@ services:
       - /data/graph.bin
 
   # ── AI / Agent Layer ──────────────────────────────────────────────
-  #
-  # NOTE: geolang is all-in-one — its entrypoint starts an embedded Letta server
-  # (+ Postgres) inside this container and connects to it at LETTA_URL
-  # (default http://localhost:8283). There is therefore NO separate `letta`
-  # service: a standalone letta/letta container would be unused dead weight, and
-  # geolang reads LETTA_URL (not LETTA_BASE_URL).
 
-  # CPU embedding server for Letta memory recall (all-MiniLM-L6-v2, dim 384),
-  # OpenAI-compatible /v1/embeddings. geolang's agent embedding_config points here
-  # via VLLM_API_BASE. Downloads the (~90MB) model on first start.
-  embeddings:
-    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.6
-    command: ["--model-id", "sentence-transformers/all-MiniLM-L6-v2", "--port", "8000"]
+  # Rust agent loop service: calls the LLM, dispatches tool calls to
+  # geolang-api's /tools endpoints, stores sessions + history in sqlite.
+  # Internal only, nginx never routes here; geolang-api proxies /chat/agui runs.
+  # The tool manifest is fetched lazily from geolang-api, so no startup ordering
+  # dependency exists between the two.
+  sibyl:
+    build:
+      context: ../sibyl
+    # published for the dashboard's host-side health probe
+    ports:
+      - "8090:8090"
     volumes:
-      - embeddings-cache:/data
-    # (TEI's image has no curl/wget, so no in-container healthcheck; the agent only
-    # embeds on first chat, by which time the ~90MB model has loaded.)
+      - sibyl-data:/data
+    # provides XAI_API_KEY; optional so panels/load CI (no geolang checkout) still parses
+    env_file:
+      - path: ../geolang/.env
+        required: false
+    environment:
+      GEOLANG_URL: http://geolang-api:8080
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  geolang:
+  # geolang's public FastAPI app (src/api/server.py — the /chat/agui SSE API the
+  # viewer talks to) plus the tool manifest/executor endpoints sibyl calls.
+  # Tools run in-process here; nginx routes /agent/ here.
+  geolang-api:
     build:
       context: ../geolang
       dockerfile: Dockerfile
     image: geolang-platform:latest
     ports:
-      - "8080:8283"
+      - "8080:8080"
     volumes:
       - geolang-cache:/app/cache
       # geolang runs its tools from a bind-mounted repo root (see geolang/docker-compose.yml)
       - ../geolang:/app/geolang:z
-      # persist the embedded letta postgres; without this every recreate
-      # re-runs initdb (~50s boot) and loses agent state
-      - geolang-pgdata:/var/lib/postgresql/data
     # optional: panels/load CI don't check out geolang, and compose must still parse
     env_file:
       - path: ../geolang/.env
         required: false
     environment:
-      GEOLANG_HOST: 0.0.0.0
-      GEOLANG_PORT: "8283"
+      SIBYL_URL: http://sibyl:8090
       TOOL_EXEC_DIR: "/app/geolang"
-      TOOL_EXEC_VENV_NAME: "env"
-      # long analysis tools can exceed letta's 180s default on cold ci runners
-      TOOL_SANDBOX_TIMEOUT: "420"
       PTOLEMY_URL: http://ptolemy:3000
       TILETOPIA_URL: http://tiletopia:3000
       GEOKODE_URL: http://geokode:3000
       ITINERA_URL: http://itinera:3000
     depends_on:
-      - ptolemy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8283/v1/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      # letta's first boot (embedded postgres initdb + slow lifespan) can take
-      # minutes on ci runners; probes during start_period don't count as failures
-      start_period: 300s
-
-  # geolang's public FastAPI app (src/api/server.py — the /chat/stream SSE API the
-  # viewer talks to). Reuses the geolang image but bypasses the Letta entrypoint;
-  # it connects to the Letta server in the `geolang` container and embeds via the
-  # `embeddings` service. nginx routes /agent/ here (not at Letta).
-  geolang-api:
-    image: geolang-platform:latest
-    entrypoint: []
-    working_dir: /app/geolang
-    command: ["python3", "-m", "uvicorn", "src.api.server:app", "--host", "0.0.0.0", "--port", "8080"]
-    volumes:
-      - ../geolang:/app/geolang:z
-    env_file:
-      - path: ../geolang/.env
-        required: false
-    environment:
-      LETTA_URL: http://geolang:8283
-      VLLM_API_BASE: http://embeddings:8000
-      # server.py runs in the image's /app/.venv (fastapi/uvicorn/letta) but its
-      # geo endpoints (e.g. /geojson) lazily import geopandas, which lives in the
-      # tool-exec venv. Bridge that venv's site-packages onto the path.
-      PYTHONPATH: /app/geolang/env/lib/python3.11/site-packages
-      PTOLEMY_URL: http://ptolemy:3000
-      TILETOPIA_URL: http://tiletopia:3000
-      GEOKODE_URL: http://geokode:3000
-      ITINERA_URL: http://itinera:3000
-    depends_on:
-      geolang:
-        condition: service_healthy
-      embeddings:
-        condition: service_started
+      - sibyl
     # nginx routes /agent/ here, and the viewer probes /agent/health on every page
     # load, so a stack without this container answers that probe with a 502. The
     # check gives callers (CI wait loops, compose ps) a way to wait for it.
@@ -243,8 +209,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      # the startup event upserts tools and resolves the agent before uvicorn serves
-      start_period: 180s
+      # the geo stack preload happens in a background thread, boot is fast now
+      start_period: 60s
 
   # ── Notebooks (Python) ────────────────────────────────────────────
   #
@@ -299,5 +265,7 @@ volumes:
   pgdata:
   tiletopia-data:
   geolang-cache:
+  # rollback artifact from the embedded-letta era; delete once sibyl has run
+  # for a while (DESIGN_TODO cleanup item)
   geolang-pgdata:
-  embeddings-cache:
+  sibyl-data:

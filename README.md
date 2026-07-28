@@ -248,9 +248,9 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
   add `--https` for HTTPS.)
 - **An LLM API key for the agent:** put `XAI_API_KEY` (or `OPENAI_API_KEY`) in
   `geolang/.env`.
-- **~Several GB of disk** for images (the geolang/Letta + QGIS image is large) plus
-  any OSM/address data and the embedding model.
-- **No GPU required** — the embedding server uses a CPU-only image.
+- **~Several GB of disk** for images (the geolang + QGIS image is large) plus
+  any OSM/address data.
+- **No GPU required**.
 - **bash** for the helper scripts (`scripts/`).
 
 ## Developing on Windows
@@ -354,7 +354,8 @@ or ensure at least these repos are cloned as peers of `viewtopia/`:
 src/GeoLang/
 ├── fenestra/
 ├── geokode/
-├── geolang/      # AI agent (Python + Letta + QGIS)
+├── geolang/      # AI agent tools + API (Python + QGIS)
+├── sibyl/        # Agent loop service (Rust)
 ├── itinera/
 ├── ptolemy/
 ├── tiletopia/
@@ -422,7 +423,7 @@ on Windows — it does not apply to native Docker on Linux.
 | Itinera | 3002 | Router + isochrones (needs `data/region.osm.pbf`) |
 | Fenestra | 3003 | WMS/WFS/WMTS/WCS gateway, proxied at `/ogc/` (host port is dev convenience) |
 | TileTopia | 3100 | 3D Tiles / terrain / assets, plus auth, portal, and terrain analysis |
-| GeoLang AI | 8080 | Letta AI agent — embeds its own Letta server (port 8283 internal) |
+| GeoLang AI | 8080 | Agent API + tool executor; runs ride the sibyl service (port 8090) |
 | Jupyter | n/a | Python notebook kernels, proxied at `/jupyter/` (no host port) |
 | ViewTopia | 5174 | Web app (nginx reverse proxy) |
 
@@ -668,7 +669,7 @@ scripts/clone-geolang.sh  [DIR]   # macOS/Linux/Git-Bash
 
 - **Frontend:** Vite, React + Mantine UI, CesiumJS, deck.gl, MapLibre GL, Leaflet, Apache Arrow
 - **Backend:** [GeoLang](https://github.com/GeoLang/tiletopia) (Rust) + [GeoLang](https://github.com/GeoLang/geolang) (Python)
-- **AI:** Letta-powered spatial agent, 36 tools
+- **AI:** sibyl agent loop (Rust) + spatial tools, 36 tools
 - **Analysis:** 31 space-time intelligence modules (Gotham-class)
 - **Deploy:** Docker Compose, Helm, Terraform
 

@@ -911,13 +911,12 @@ All algorithms exposed to JavaScript/TypeScript:
 
 ## 19. GeoLang — AI-Powered Geospatial Agent
 
-**Port**: 8283 (internal) / 8080 (external) | **Stack**: Python 3.12+, Letta, vLLM, sentence-transformers
+**Port**: 8080 | **Stack**: Python 3.11 (tools + API), sibyl (Rust agent loop, port 8090)
 
 ### Capabilities
 - Natural language → geospatial operations
-- Persistent agent memory (learns user preferences over sessions)
-- Multi-model LLM support (XAI/Grok, Groq)
-- Embedding server (vLLM + sentence-transformers)
+- Session history with summarize-on-overflow (sibyl, sqlite)
+- OpenAI-compatible LLM endpoint (XAI/Grok)
 
 ### Viewer Commands (30+)
 - `fly_to(lat, lon, zoom)` — Navigate camera
@@ -1024,8 +1023,8 @@ services:
   geokode:     # Geocoding (:3002)
   itinera:     # Routing (:3003)
   fenestra:    # OGC Gateway (:3004)
-  geolang:     # AI Agent (internal :8283)
-  letta:       # LLM memory framework (:8083)
+  geolang-api: # AI Agent API + tools (:8080)
+  sibyl:       # Agent loop service (:8090)
   viewtopia:   # Web viewer + dashboard (:4000)
 ```
 
