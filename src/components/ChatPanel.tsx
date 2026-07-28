@@ -180,16 +180,35 @@ export function ChatPanel() {
                   borderLeft: replayable ? '2px solid #a78bfa' : undefined,
                 }}
               >
-                {msg.content ||
-                  (streaming && msg.role === 'assistant' ? (
-                    <Loader type="dots" size="xs" color="violet" />
-                  ) : (
-                    ''
-                  ))}
+                {msg.content}
               </Text>
+              {msg.error && (
+                <Text
+                  size="sm"
+                  c="red.4"
+                  style={{
+                    display: 'block',
+                    background: '#2d1517',
+                    border: '1px solid #f8514966',
+                    padding: '6px 10px',
+                    borderRadius: 8,
+                    maxWidth: '85%',
+                    whiteSpace: 'pre-wrap',
+                    marginTop: 4,
+                  }}
+                >
+                  ⚠ {msg.error}
+                </Text>
+              )}
             </div>
             );
           })
+        )}
+        {/* stays up through tool calls, which is where a slow model spends its time */}
+        {streaming && (
+          <Group gap={6} mb={8}>
+            <Loader type="dots" size="xs" color="violet" />
+          </Group>
         )}
       </ScrollArea>
 

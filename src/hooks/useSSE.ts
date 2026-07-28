@@ -8,6 +8,7 @@ import { renderUISpec, type UiSpec } from '../viewer/uiSpec';
 /** Store setters the AG-UI subscriber writes through, so it can be tested in isolation. */
 interface AgUiHandlers {
   setLastContent: (content: string) => void;
+  setLastError: (error: string) => void;
   setLastMapSpec: (spec: UiSpec) => void;
   addLastViewerCmd: (cmd: ViewerCommand) => void;
 }
@@ -23,7 +24,7 @@ interface AgUiHandlers {
  * custom `ui_spec` → keep the spec on the message + renderUISpec; run error →
  * setLastContent (legacy `error`).
  */
-export function buildAgUiSubscriber({ setLastContent, setLastMapSpec, addLastViewerCmd }: AgUiHandlers): AgentSubscriber {
+export function buildAgUiSubscriber({ setLastContent, setLastError, setLastMapSpec, addLastViewerCmd }: AgUiHandlers): AgentSubscriber {
   let lastText = '';
   return {
     onTextMessageContentEvent({ event }) {
@@ -48,7 +49,8 @@ export function buildAgUiSubscriber({ setLastContent, setLastMapSpec, addLastVie
       }
     },
     onRunErrorEvent({ event }) {
-      setLastContent(event.message);
+      // keep whatever streamed; the error renders as its own marked block
+      setLastError(event.message);
     },
     // onRunFinishedEvent: same as legacy `done`, streaming is cleared in the finally
   };
@@ -60,7 +62,8 @@ export function buildAgUiSubscriber({ setLastContent, setLastMapSpec, addLastVie
  */
 export function useSSE() {
   const abortRef = useRef<AbortController | null>(null);
-  const { addMessage, setLastContent, setLastMapSpec, addLastViewerCmd, setStreaming } = useChatStore();
+  const { addMessage, setLastContent, setLastError, setLastMapSpec, addLastViewerCmd, setStreaming } =
+    useChatStore();
 
   const send = useCallback(
     async (prompt: string) => {
@@ -84,11 +87,11 @@ export function useSSE() {
         const agent = new HttpAgent({ url: '/agent/chat/agui', threadId, initialMessages: messages });
         await agent.runAgent(
           { runId: crypto.randomUUID(), abortController: controller },
-          buildAgUiSubscriber({ setLastContent, setLastMapSpec, addLastViewerCmd }),
+          buildAgUiSubscriber({ setLastContent, setLastError, setLastMapSpec, addLastViewerCmd }),
         );
       } catch (err: unknown) {
         if ((err as Error).name !== 'AbortError') {
-          setLastContent(`[Error: ${(err as Error).message}]`);
+          setLastError((err as Error).message);
         }
       } finally {
         setStreaming(false);

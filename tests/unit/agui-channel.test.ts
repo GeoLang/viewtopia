@@ -19,6 +19,7 @@ const ctx = { messages: [], state: {}, agent: {}, input: {} };
 
 describe('AG-UI subscriber mapping', () => {
   let setLastContent: ReturnType<typeof vi.fn>;
+  let setLastError: ReturnType<typeof vi.fn>;
   let setLastMapSpec: ReturnType<typeof vi.fn>;
   let addLastViewerCmd: ReturnType<typeof vi.fn>;
   let sub: AgentSubscriber;
@@ -26,9 +27,19 @@ describe('AG-UI subscriber mapping', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setLastContent = vi.fn();
+    setLastError = vi.fn();
     setLastMapSpec = vi.fn();
     addLastViewerCmd = vi.fn();
-    sub = buildAgUiSubscriber({ setLastContent, setLastMapSpec, addLastViewerCmd });
+    sub = buildAgUiSubscriber({ setLastContent, setLastError, setLastMapSpec, addLastViewerCmd });
+  });
+
+  it('routes a run error to setLastError, leaving streamed content alone', () => {
+    sub.onRunErrorEvent!({
+      ...ctx,
+      event: { type: 'RUN_ERROR', message: 'upstream died' },
+    } as unknown as P<'onRunErrorEvent'>);
+    expect(setLastError).toHaveBeenCalledWith('upstream died');
+    expect(setLastContent).not.toHaveBeenCalled();
   });
 
   it('appends text deltas via setLastContent', () => {
@@ -94,13 +105,6 @@ describe('AG-UI subscriber mapping', () => {
     expect(renderUISpec).toHaveBeenCalledWith(spec);
   });
 
-  it('routes a run error to setLastContent', () => {
-    sub.onRunErrorEvent!({
-      ...ctx,
-      event: { type: 'RUN_ERROR', message: 'boom' },
-    } as unknown as P<'onRunErrorEvent'>);
-    expect(setLastContent).toHaveBeenCalledWith('boom');
-  });
 });
 
 describe('AG-UI channel', () => {

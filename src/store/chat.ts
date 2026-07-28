@@ -12,6 +12,8 @@ export interface Message {
   mapSpec?: UiSpec;
   /** Viewer commands this reply ran (fly_to etc.), in order, for replay. */
   viewerCmds?: ViewerCommand[];
+  /** Run error text, kept separate so it never overwrites streamed content. */
+  error?: string;
 }
 
 export interface Session {
@@ -37,6 +39,7 @@ interface ChatState {
   addMessage: (msg: Omit<Message, 'id' | 'timestamp'>) => void;
   appendToLast: (content: string) => void;
   setLastContent: (content: string) => void;
+  setLastError: (error: string) => void;
   setLastMapSpec: (mapSpec: UiSpec) => void;
   addLastViewerCmd: (cmd: ViewerCommand) => void;
   clearMessages: () => void;
@@ -135,6 +138,19 @@ export const useChatStore = create<ChatState>()(
             const last = msgs[msgs.length - 1];
             if (last && last.role === 'assistant') {
               msgs[msgs.length - 1] = { ...last, content };
+            }
+            return { ...sess, messages: msgs, updatedAt: Date.now() };
+          }),
+        })),
+
+      setLastError: (error) =>
+        set((s) => ({
+          sessions: s.sessions.map((sess) => {
+            if (sess.id !== s.activeSessionId) return sess;
+            const msgs = [...sess.messages];
+            const last = msgs[msgs.length - 1];
+            if (last && last.role === 'assistant') {
+              msgs[msgs.length - 1] = { ...last, error };
             }
             return { ...sess, messages: msgs, updatedAt: Date.now() };
           }),
