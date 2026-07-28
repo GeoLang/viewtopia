@@ -16,7 +16,6 @@
 #   scripts/clone-geolang.sh --pull ~/src/GeoLang
 #
 # Notes:
-#   * letta is the upstream third-party repo kept for reference; cloned over HTTPS.
 #   * The script is idempotent: existing repos are left alone (or pulled with
 #     --pull).
 #
@@ -69,7 +68,6 @@ GITHUB_REPOS=(
 # name<TAB>clone-url for repos that don't live in the GeoLang GitHub org.
 EXTERNAL_REPOS=(
   "geolang	https://github.com/GeoLang/geolang.git"
-  "letta	https://github.com/letta-ai/letta.git" # upstream Letta (third-party)
 )
 
 github_url() {

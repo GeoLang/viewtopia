@@ -27,8 +27,6 @@
 - [ ] Delete the `geolang-pgdata` volume definition (rollback artifact from the
       embedded-letta era) from docker-compose.platform.yml, and the volume itself
       on the host.
-- [ ] Delete the vendored `letta/` repo checkout and its entry in
-      scripts/clone-geolang.sh.
 - [ ] Session routing is still server-side-global (sibyl active flag mirrors the
       old behavior). Later cleanup: route runs by AG-UI `thread_id` so sessions
       are per-client and stateless; needs viewer session-switcher rework.
