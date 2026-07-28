@@ -47,16 +47,19 @@ export function useFeaturePickerMapLibre(
 
     // Hover affordance: MapLibre has no built-in picking cursor, and the layers
     // come and go with each spec, so query on move rather than bind per layer.
+    // The interleaved deck overlay stamps the shared canvas cursor every move,
+    // so publish hover state for its getCursor instead of writing the style
+    // here (a direct write would be overwritten immediately).
     const onMouseMove = (e: maplibregl.MapMouseEvent) => {
-      const canvas = map.getCanvas();
-      if (!useFeaturePickerStore.getState().enabled) {
-        canvas.style.cursor = '';
+      const { enabled, hovering, setHovering } = useFeaturePickerStore.getState();
+      if (!enabled) {
+        if (hovering) setHovering(false);
         return;
       }
       const over =
         map.queryRenderedFeatures(pickBox(e.point)).length > 0 ||
         pickDeckProps(e.point) !== null;
-      canvas.style.cursor = over ? 'pointer' : '';
+      if (over !== hovering) setHovering(over);
     };
 
     const onClick = (e: maplibregl.MapMouseEvent) => {
@@ -88,7 +91,7 @@ export function useFeaturePickerMapLibre(
     return () => {
       map.off('click', onClick);
       map.off('mousemove', onMouseMove);
-      map.getCanvas().style.cursor = '';
+      useFeaturePickerStore.getState().setHovering(false);
     };
   }, [mapRef, renderer, activeTab]);
 }

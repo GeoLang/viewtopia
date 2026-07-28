@@ -4,6 +4,7 @@ import type maplibregl from 'maplibre-gl';
 import type { Deck } from '@deck.gl/core';
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import { useAppStore } from '../store/app';
+import { useFeaturePickerStore } from '../store/featurePicker';
 import { setActiveDeck } from '../viewer/registry';
 import { useDeckLayersStore, composedDeckLayers } from './deckLayers';
 
@@ -31,7 +32,16 @@ export function useDeckOverlay(mapRef: MutableRefObject<maplibregl.Map | null>) 
     // No onClick/onHover here: interleaved deck shares the map's canvas, so the
     // feature picker's single map click handler asks deck first (see
     // useFeaturePickerMapLibre). Two handlers would answer the same click twice.
-    const overlay = new MapboxOverlay({ interleaved: true, layers: [] });
+    // deck rewrites the shared canvas cursor on every move, so it is the one
+    // place the picker's hover affordance can be shown without being clobbered.
+    const overlay = new MapboxOverlay({
+      interleaved: true,
+      layers: [],
+      getCursor: ({ isDragging }) => {
+        if (isDragging) return 'grabbing';
+        return useFeaturePickerStore.getState().hovering ? 'pointer' : 'grab';
+      },
+    });
     map.addControl(overlay);
     setActiveDeck((map as MapWithDeck).__deck ?? null);
 
