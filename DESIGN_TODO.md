@@ -10,10 +10,13 @@
 
 ## OPEN — platform hygiene
 
-- [ ] **tiletopia full-features clippy**: `cargo clippy --all-features` fails in
-      tiletopia-core (ort/ndarray version clash); CI runs `--features
-      draco,gpu,plugin-dylib,ml` — check whether that job is red on master and fix the
-      version clash.
+- [ ] **tiletopia-server `raft` feature never compiled**: the openraft half of
+      cluster.rs (gated behind the non-CI `raft` feature) was written against an
+      older openraft and fails with ~130 errors at the pinned 0.9.24. The
+      single-process fallback that actually runs is fine. Decide: delete the
+      openraft half, migrate it, or document `--all-features` as unsupported.
+      (The tiletopia-core half of this item, the ort/ndarray clash, was fixed
+      2026-07-27.)
 - [ ] **tiletopia CloudFront default behavior caches authenticated responses ~1h**
       (post-MVP decision): Authorization is in the cache key so no cross-user leak,
       but a revoked token's responses keep serving until TTL. Clean fix: split the
