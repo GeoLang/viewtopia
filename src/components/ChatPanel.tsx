@@ -7,6 +7,7 @@ import {
   Text,
   Select,
   Tooltip,
+  Loader,
 } from '@mantine/core';
 import { IconSend, IconPlus, IconTrash, IconSquare } from '@tabler/icons-react';
 import { useState, useEffect, useMemo, useRef } from 'react';
@@ -179,7 +180,12 @@ export function ChatPanel() {
                   borderLeft: replayable ? '2px solid #a78bfa' : undefined,
                 }}
               >
-                {msg.content || (streaming && msg.role === 'assistant' ? '…' : '')}
+                {msg.content ||
+                  (streaming && msg.role === 'assistant' ? (
+                    <Loader type="dots" size="xs" color="violet" />
+                  ) : (
+                    ''
+                  ))}
               </Text>
             </div>
             );
