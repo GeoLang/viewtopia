@@ -3,12 +3,22 @@
  * Equivalent to: QGIS Street View plugin (901K downloads)
  */
 
-import { useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { Paper, Text, Stack, Button, Group, Badge, SegmentedControl, TextInput, Switch } from '@mantine/core';
 import { IconEye, IconCamera } from '@tabler/icons-react';
+import { Viewer } from 'mapillary-js';
+import 'mapillary-js/dist/mapillary.css';
 import type { PluginDefinition, PluginContext } from '../sdk';
 
 type Provider = 'google' | 'mapillary';
+
+const MLY_SEARCH_RADIUS_DEG = 0.002; // ~200m; graph api caps bbox at 0.01 deg²
+
+interface MlyImage {
+  id: string;
+  computed_geometry?: { coordinates: [number, number] };
+  geometry?: { coordinates: [number, number] };
+}
 
 function StreetViewPanel({ ctx }: { ctx: PluginContext }) {
   const [provider, setProvider] = useState<Provider>(
@@ -20,13 +30,20 @@ function StreetViewPanel({ ctx }: { ctx: PluginContext }) {
   const [pitch, setPitch] = useState(0);
   const [fov, setFov] = useState(90);
   const [autoSync, setAutoSync] = useState(true);
-  const [mapillaryToken, setMapillaryToken] = useState('');
+  const [mapillaryToken, setMapillaryToken] = useState(
+    () => String(ctx.settings.get('mapillaryToken', '') ?? '')
+  );
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const mlyContainer = useRef<HTMLDivElement>(null);
+  const mlyViewer = useRef<Viewer | null>(null);
+  const [mlyReady, setMlyReady] = useState(false);
+  const [mlyStatus, setMlyStatus] = useState('Pick a location to load imagery.');
 
   // the google embed answers 401 without a key, so the panel asks for one in
   // plugin settings instead of loading the iframe
   const googleKey = String(ctx.settings.get('googleApiKey', '') ?? '').trim();
   const needsKey = provider === 'google' && !googleKey;
+  const token = mapillaryToken.trim();
 
   const [picking, setPicking] = useState(false);
   useEffect(() => {
@@ -38,13 +55,68 @@ function StreetViewPanel({ ctx }: { ctx: PluginContext }) {
     });
   }, [picking, ctx.map]);
 
-  const getEmbedUrl = (): string => {
-    if (provider === 'google') {
-      return `https://www.google.com/maps/embed/v1/streetview?key=${googleKey}&location=${lat},${lng}&heading=${heading}&pitch=${pitch}&fov=${fov}`;
-    }
-    // Mapillary embed
-    return `https://www.mapillary.com/embed?lat=${lat}&lng=${lng}&heading=${heading}&mapillary_token=${mapillaryToken}`;
-  };
+  const saveToken = useCallback((value: string) => {
+    setMapillaryToken(value);
+    ctx.settings.set('mapillaryToken', value);
+  }, [ctx.settings]);
+
+  // MapillaryJS viewer lifecycle. Debounced so typing a token doesn't create
+  // a viewer per keystroke.
+  useEffect(() => {
+    if (provider !== 'mapillary' || !token) return;
+    const timer = setTimeout(() => {
+      if (!mlyContainer.current) return;
+      mlyViewer.current = new Viewer({ accessToken: token, container: mlyContainer.current });
+      setMlyReady(true);
+    }, 400);
+    return () => {
+      clearTimeout(timer);
+      setMlyReady(false);
+      mlyViewer.current?.remove();
+      mlyViewer.current = null;
+    };
+  }, [provider, token]);
+
+  // find the nearest image via the graph api and jump the viewer to it
+  useEffect(() => {
+    if (provider !== 'mapillary' || !token || !mlyReady) return;
+    const la = Number.parseFloat(lat);
+    const ln = Number.parseFloat(lng);
+    if (!Number.isFinite(la) || !Number.isFinite(ln)) return;
+    const timer = setTimeout(async () => {
+      setMlyStatus('Searching imagery…');
+      try {
+        const d = MLY_SEARCH_RADIUS_DEG;
+        const bbox = `${ln - d},${la - d},${ln + d},${la + d}`;
+        const res = await fetch(
+          `https://graph.mapillary.com/images?access_token=${encodeURIComponent(token)}&fields=id,computed_geometry,geometry&bbox=${bbox}&limit=20`,
+        );
+        if (!res.ok) throw new Error(`Mapillary API: ${res.status}`);
+        const images: MlyImage[] = (await res.json()).data ?? [];
+        const coordsOf = (i: MlyImage) => i.computed_geometry?.coordinates ?? i.geometry?.coordinates;
+        const usable = images.filter((i) => coordsOf(i));
+        if (usable.length === 0) {
+          setMlyStatus('No Mapillary imagery within ~200m.');
+          return;
+        }
+        const nearest = usable.reduce((a, b) => {
+          const dist = (i: MlyImage) => {
+            const c = coordsOf(i) as [number, number];
+            return (c[0] - ln) ** 2 + (c[1] - la) ** 2;
+          };
+          return dist(b) < dist(a) ? b : a;
+        });
+        await mlyViewer.current?.moveTo(nearest.id);
+        setMlyStatus(`${usable.length} image${usable.length > 1 ? 's' : ''} nearby.`);
+      } catch (e) {
+        setMlyStatus(`Search failed: ${e instanceof Error ? e.message : e}`);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [provider, token, mlyReady, lat, lng]);
+
+  const getEmbedUrl = (): string =>
+    `https://www.google.com/maps/embed/v1/streetview?key=${googleKey}&location=${lat},${lng}&heading=${heading}&pitch=${pitch}&fov=${fov}`;
 
   const handleOpen = () => {
     if (provider === 'google') {
@@ -90,7 +162,7 @@ function StreetViewPanel({ ctx }: { ctx: PluginContext }) {
             label="Mapillary Token"
             placeholder="MLY|..."
             value={mapillaryToken}
-            onChange={(e) => setMapillaryToken(e.currentTarget.value)}
+            onChange={(e) => saveToken(e.currentTarget.value)}
           />
         )}
 
@@ -116,30 +188,42 @@ function StreetViewPanel({ ctx }: { ctx: PluginContext }) {
           </Button>
         </Group>
 
-        <Group grow>
-          <TextInput label="Heading°" value={String(heading)} onChange={(e) => setHeading(Number(e.currentTarget.value))} />
-          <TextInput label="Pitch°" value={String(pitch)} onChange={(e) => setPitch(Number(e.currentTarget.value))} />
-          <TextInput label="FOV°" value={String(fov)} onChange={(e) => setFov(Number(e.currentTarget.value))} />
-        </Group>
+        {provider === 'google' && (
+          <Group grow>
+            <TextInput label="Heading°" value={String(heading)} onChange={(e) => setHeading(Number(e.currentTarget.value))} />
+            <TextInput label="Pitch°" value={String(pitch)} onChange={(e) => setPitch(Number(e.currentTarget.value))} />
+            <TextInput label="FOV°" value={String(fov)} onChange={(e) => setFov(Number(e.currentTarget.value))} />
+          </Group>
+        )}
 
         <Switch label="Auto-sync with map click" checked={autoSync} onChange={(e) => setAutoSync(e.currentTarget.checked)} />
 
+        {provider === 'mapillary' && <Text size="sm" c="dimmed">{mlyStatus}</Text>}
+
         <div style={{ width: '100%', height: 250, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--mantine-color-default-border)' }}>
-          {needsKey ? (
-            <Text size="sm" c="dimmed" py="lg" ta="center" data-testid="street-view-needs-key">
-              Add a Google Maps API key in plugin settings to load Street View.
-            </Text>
+          {provider === 'google' ? (
+            needsKey ? (
+              <Text size="sm" c="dimmed" py="lg" ta="center" data-testid="street-view-needs-key">
+                Add a Google Maps API key in plugin settings to load Street View.
+              </Text>
+            ) : (
+              <iframe
+                ref={iframeRef}
+                src={getEmbedUrl()}
+                width="100%"
+                height="100%"
+                style={{ border: 'none' }}
+                loading="lazy"
+                allowFullScreen
+                title="Street View"
+              />
+            )
+          ) : token ? (
+            <div ref={mlyContainer} style={{ width: '100%', height: '100%' }} />
           ) : (
-            <iframe
-              ref={iframeRef}
-              src={getEmbedUrl()}
-              width="100%"
-              height="100%"
-              style={{ border: 'none' }}
-              loading="lazy"
-              allowFullScreen
-              title="Street View"
-            />
+            <Text size="sm" c="dimmed" py="lg" ta="center">
+              Add a Mapillary access token above (free at mapillary.com/dashboard).
+            </Text>
           )}
         </div>
       </Stack>
