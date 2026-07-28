@@ -90,8 +90,12 @@ export function useSSE() {
           buildAgUiSubscriber({ setLastContent, setLastError, setLastMapSpec, addLastViewerCmd }),
         );
       } catch (err: unknown) {
-        if ((err as Error).name !== 'AbortError') {
-          setLastError((err as Error).message);
+        // a user stop surfaces as AbortError or a browser-internal message
+        // like "BodyStreamBuffer was aborted"; neither is a failure worth a
+        // red block, the partial reply just stays as it is
+        const message = (err as Error).message ?? String(err);
+        if ((err as Error).name !== 'AbortError' && !/abort/i.test(message)) {
+          setLastError(message);
         }
       } finally {
         setStreaming(false);

@@ -247,6 +247,10 @@ function AiModelSelect() {
       disabled={busy || data.length === 0}
       error={error}
       onChange={switchModel}
+      // the panel scrolls, so an in-place dropdown overlaps the next section
+      // and that section swallows the option clicks. portal it and paint above
+      // the panel stack (ToolPanels sits at 400)
+      comboboxProps={{ withinPortal: true, zIndex: 1500 }}
       data-testid="ai-model-select"
       errorProps={{ 'data-testid': 'ai-model-error' }}
       styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
