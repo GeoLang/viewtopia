@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { deleteBackendSession, renameBackendSession } from '../lib/agentSessions';
 import type { UiSpec } from '../viewer/uiSpec';
 import type { ViewerCommand } from '../viewer/commands';
 
@@ -22,6 +23,11 @@ export interface Session {
   messages: Message[];
   createdAt: number;
   updatedAt: number;
+  /**
+   * sibyl session this one runs against, attached on the first send. Sessions
+   * persisted before this existed, and fresh ones, simply have none yet.
+   */
+  backendId?: string;
 }
 
 interface ChatState {
@@ -34,6 +40,7 @@ interface ChatState {
   deleteSession: (id: string) => void;
   renameSession: (id: string, name: string) => void;
   setActiveSession: (id: string) => void;
+  setBackendId: (id: string, backendId: string) => void;
 
   // Messages
   addMessage: (msg: Omit<Message, 'id' | 'timestamp'>) => void;
@@ -75,7 +82,8 @@ export const useChatStore = create<ChatState>()(
         return id;
       },
 
-      deleteSession: (id) =>
+      deleteSession: (id) => {
+        const removed = get().sessions.find((sess) => sess.id === id);
         set((s) => {
           const sessions = s.sessions.filter((sess) => sess.id !== id);
           const activeSessionId =
@@ -83,16 +91,28 @@ export const useChatStore = create<ChatState>()(
               ? sessions[0]?.id ?? null
               : s.activeSessionId;
           return { sessions, activeSessionId };
-        }),
+        });
+        if (removed?.backendId) {
+          void deleteBackendSession(removed.backendId, get().activeSession()?.backendId);
+        }
+      },
 
-      renameSession: (id, name) =>
+      renameSession: (id, name) => {
+        const backendId = get().sessions.find((sess) => sess.id === id)?.backendId;
         set((s) => ({
           sessions: s.sessions.map((sess) =>
             sess.id === id ? { ...sess, name, updatedAt: Date.now() } : sess,
           ),
-        })),
+        }));
+        if (backendId) void renameBackendSession(backendId, name);
+      },
 
       setActiveSession: (id) => set({ activeSessionId: id }),
+
+      setBackendId: (id, backendId) =>
+        set((s) => ({
+          sessions: s.sessions.map((sess) => (sess.id === id ? { ...sess, backendId } : sess)),
+        })),
 
       addMessage: (msg) =>
         set((s) => {

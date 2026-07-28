@@ -1,6 +1,7 @@
 import { useCallback, useRef } from 'react';
 import { HttpAgent, type AgentSubscriber } from '@ag-ui/client';
 import type { Message } from '@ag-ui/core';
+import { ensureBackendSession } from '../lib/agentSessions';
 import { useChatStore } from '../store/chat';
 import { executeViewerCommand, type ViewerCommand } from '../viewer/commands';
 import { renderUISpec, type UiSpec } from '../viewer/uiSpec';
@@ -81,6 +82,14 @@ export function useSSE() {
         // threadId stable per chat session, runId fresh per send. Only the latest
         // user prompt is sent; the agent's RunAgentInput carries it over the wire.
         const threadId = useChatStore.getState().activeSessionId ?? crypto.randomUUID();
+        // sibyl runs against whatever session it has active, so put it on this
+        // one before the run, or the histories of every viewer session merge
+        const session = useChatStore.getState().activeSession();
+        if (session) {
+          await ensureBackendSession(session.backendId, (backendId) =>
+            useChatStore.getState().setBackendId(session.id, backendId),
+          );
+        }
         const messages: Message[] = [
           { id: crypto.randomUUID(), role: 'user', content: prompt },
         ];
