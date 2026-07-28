@@ -137,6 +137,28 @@ jobs:
           } > loadtest/out/box.txt
           cat loadtest/out/box.txt
 
+      # single unloaded requests before k6 muddies things with load: health has
+      # no db round trip, datasets does, and the nginx pair isolates the proxy.
+      # 2026-07-28: ptolemy read p95s here are ~50x the workstation while the
+      # other services match it, and local repro attempts came up clean.
+      - name: Probe single-request latency
+        working-directory: viewtopia
+        run: |
+          {
+            echo "== docker stats =="
+            docker stats --no-stream
+            token=$(node -e 'import("./scripts/platform-token.mjs").then(({mintToken})=>process.stdout.write(mintToken({role:"editor",sub:"probe",ttlSec:600})??""))')
+            fmt='conn:%{time_connect} ttfb:%{time_starttransfer} total:%{time_total}\n'
+            for i in 1 2 3; do
+              echo "-- ptolemy direct /health --"
+              curl -s -o /dev/null -w "$fmt" http://localhost:3000/api/v1/health
+              echo "-- ptolemy direct /datasets --"
+              curl -s -o /dev/null -w "$fmt" -H "Authorization: Bearer $token" http://localhost:3000/api/v1/datasets
+              echo "-- ptolemy via nginx /datasets --"
+              curl -s -o /dev/null -w "$fmt" -H "Authorization: Bearer $token" http://localhost:5174/api/v1/datasets
+            done
+          } | tee loadtest/out/probe.txt
+
       - name: Run k6 scenarios
         working-directory: viewtopia
         run: loadtest/run.sh
