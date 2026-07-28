@@ -35,7 +35,7 @@ for scenario in "${SCENARIOS[@]}"; do
     -v "$PWD/loadtest:/loadtest" -w /loadtest \
     -e LOADTEST_BASE_URL -e LOADTEST_FENESTRA_URL -e LOADTEST_FENESTRA_LAYER \
     -e LOADTEST_TOKEN -e LOADTEST_VUS -e LOADTEST_RATE -e LOADTEST_DURATION \
-    -e LOADTEST_DEPTHS -e LOADTEST_OUT \
+    -e LOADTEST_DEPTHS -e LOADTEST_OUT -e LOADTEST_P95_SCALE \
     "$K6_IMAGE" run "k6/$scenario.js" || status=$?
 done
 exit "$status"
