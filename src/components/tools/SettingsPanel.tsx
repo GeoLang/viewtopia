@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   Paper,
   Text,
@@ -13,6 +14,7 @@ import {
 import { IconSettings, IconX } from '@tabler/icons-react';
 import { useAppStore, type Renderer, type Basemap } from '../../store/app';
 import { BASEMAP_SELECT_GROUPS, isPmtilesUrl } from '../../hooks/basemapTiles';
+import { apiHeaders } from '../../lib/apiAuth';
 import { PluginSettingsPanel } from '../../plugins/PluginSettings';
 
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
@@ -153,9 +155,101 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         />
 
         <Divider color="#30363d" />
+        <Text size="xs" c="dimmed" fw={600}>AI Model</Text>
+        <AiModelSelect />
+
+        <Divider color="#30363d" />
         <Text size="xs" c="dimmed" fw={600}>Plugin Settings</Text>
         <PluginSettingsPanel />
       </Stack>
     </Paper>
+  );
+}
+
+interface ModelProfile {
+  id: string;
+  label: string;
+  model: string;
+  available: boolean;
+}
+
+interface ModelsResponse {
+  active?: string;
+  profiles?: ModelProfile[];
+}
+
+const SWITCH_ERRORS: Record<number, string> = {
+  404: 'That model is not configured.',
+  409: 'That model cannot be reached right now.',
+  503: 'The agent service is down.',
+};
+
+/**
+ * Which model the agent answers with, read from and written to geolang-api.
+ * With no agent service on the other end the section stays inert rather than
+ * failing: nothing else in the panel depends on it.
+ */
+function AiModelSelect() {
+  const [profiles, setProfiles] = useState<ModelProfile[] | null>(null);
+  const [active, setActive] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      const res = await fetch('/agent/models').catch(() => null);
+      const body: ModelsResponse | null = res?.ok ? await res.json().catch(() => null) : null;
+      if (!live) return;
+      setProfiles(body?.profiles ?? []);
+      setActive(body?.active ?? null);
+    })();
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  const switchModel = async (id: string | null) => {
+    if (!id || id === active) return;
+    const previous = active;
+    setActive(id);
+    setError(null);
+    setBusy(true);
+    const res = await fetch('/agent/model', {
+      method: 'PUT',
+      headers: apiHeaders(),
+      body: JSON.stringify({ id }),
+    }).catch(() => null);
+    setBusy(false);
+    if (res?.ok) return;
+    setActive(previous);
+    setError(
+      res
+        ? (SWITCH_ERRORS[res.status] ?? `Switch failed: HTTP ${res.status}`)
+        : 'The agent service is unreachable.',
+    );
+  };
+
+  const data = (profiles ?? []).map((p) => ({
+    value: p.id,
+    label: p.available ? p.label : `${p.label} (unavailable)`,
+    disabled: !p.available,
+  }));
+
+  return (
+    <Select
+      size="xs"
+      label="Model"
+      description="A switch applies to new messages only."
+      placeholder={profiles === null ? 'Loading…' : 'Unavailable'}
+      data={data}
+      value={active}
+      disabled={busy || data.length === 0}
+      error={error}
+      onChange={switchModel}
+      data-testid="ai-model-select"
+      errorProps={{ 'data-testid': 'ai-model-error' }}
+      styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
+    />
   );
 }

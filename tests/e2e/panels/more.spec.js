@@ -15,6 +15,20 @@ import { PANEL, MENU_ITEM, openApp } from '../panel-helpers';
  */
 const MONACO = { lon: 7.42, lat: 43.73, height: 12000, heading: 45, pitch: -30 };
 
+/** What geolang-api answers on /agent/models; this stack runs no agent service. */
+const MODELS = {
+  active: 'local',
+  profiles: [
+    { id: 'cloud', label: 'Grok (cloud)', model: 'grok-4-1-fast-reasoning', available: true },
+    {
+      id: 'local',
+      label: 'Local (Qwen3.5-9B-Q4_K_M)',
+      model: 'Qwen3.5-9B-Q4_K_M',
+      available: true,
+    },
+  ],
+};
+
 /** Point the Cesium camera at a lon/lat/height with an orientation. */
 const setView = (page, view) =>
   page.evaluate((v) => {
@@ -100,6 +114,38 @@ test.describe('More menu panels', () => {
     await closePanel(page, panel);
     // closing does not undo the change
     await expect(minimap).toHaveCount(1);
+  });
+
+  test('settings: the ai model select switches the agent model', async ({ page }) => {
+    await openApp(page);
+
+    // registered after openApp so these win over its empty-list stub, and before
+    // the panel mounts, which is when it reads the list
+    const switched = [];
+    await page.route('**/agent/models', (route) =>
+      route.fulfill({ contentType: 'application/json', body: JSON.stringify(MODELS) }),
+    );
+    await page.route('**/agent/model', async (route) => {
+      switched.push(JSON.parse(route.request().postData()));
+      await route.fulfill({ status: 204 });
+    });
+
+    const panel = await openPanel(page, 'Settings', 'Settings');
+
+    // the section opens on whatever the backend calls active
+    const select = panel.getByTestId('ai-model-select');
+    await expect(select).toHaveValue('Local (Qwen3.5-9B-Q4_K_M)');
+    await expect(panel).toContainText('applies to new messages only');
+
+    await select.click();
+    await page.getByRole('option', { name: 'Grok (cloud)' }).click();
+
+    // the choice reaches the backend and the control keeps it
+    await expect.poll(() => switched).toEqual([{ id: 'cloud' }]);
+    await expect(select).toHaveValue('Grok (cloud)');
+    await expect(panel.getByTestId('ai-model-error')).toHaveCount(0);
+
+    await closePanel(page, panel);
   });
 
   test('shareLink: generated url carries the live camera and renderer', async ({ page }) => {

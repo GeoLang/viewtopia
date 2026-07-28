@@ -19,6 +19,17 @@ export async function openApp(page) {
     route.fulfill({ status: 200, contentType: 'application/json', body: '{"status":"stubbed"}' }),
   );
 
+  // same reason for the Settings panel's model list: without this the 502 is a
+  // console error in every test that opens the panel. An empty list is what a
+  // stack with no agent service really offers, and the section reads Unavailable.
+  await page.route('**/agent/models', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: '{"active":null,"profiles":[]}',
+    }),
+  );
+
   await page.addInitScript(() => {
     // zustand/persist store for useAppStore ('viewtopia-app'); merge() backfills
     // every key we leave out
