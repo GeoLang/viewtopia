@@ -57,10 +57,12 @@ jobs:
         uses: actions/checkout@v4
         with: { repository: GeoLang/sibyl, path: sibyl }
 
+      # sibyl treats an empty key as unset and refuses to start against the
+      # cloud base, so an absent secret must fall back to a non-empty dummy
       - name: Write geolang/.env
         run: |
           cat > geolang/.env <<EOF
-          XAI_API_KEY=${{ secrets.XAI_API_KEY }}
+          XAI_API_KEY=${{ secrets.XAI_API_KEY || 'ci-dummy-key-not-real' }}
           OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
           EOF
 
