@@ -45,6 +45,7 @@ breached threshold fails the caller.
 | `LOADTEST_RATE` | `20` | iterations started per second |
 | `LOADTEST_VUS` | `5` | VUs pre-allocated to sustain that rate (max is 10x) |
 | `LOADTEST_DURATION` | `30s` | run length per scenario |
+| `LOADTEST_P95_SCALE` | `1` | multiplier on every p95 budget, for slower box classes (CI sets 6) |
 | `K6_IMAGE` | `grafana/k6:2.1.0` | pinned, k6 2.0 was a breaking major |
 
 `LOADTEST_DEPTHS` must match what the seeder actually created. A depth with no
@@ -244,3 +245,12 @@ geolang, since the agent is not under test and is the slowest image to build. It
 records the runner's box spec to `loadtest/out/box.txt` and uploads
 `loadtest/out/` as an artifact. Thresholds are the gate, there is no separate
 comparison step and no stored history yet.
+
+The runner is a different box class from the workstation baseline: 4 vCPUs
+running the stack, postgres and k6 together. At the baseline rate of 20/s the
+ptolemy scenario asks for ~240 req/s, which saturates the box and reports
+seconds of queueing delay as if it were service latency (the first two nightly
+runs did exactly that). So CI runs at `LOADTEST_RATE=5` and widens the budgets
+with `LOADTEST_P95_SCALE=6`. The depth comparison the harness exists for
+(chain-100 vs chain-1000) is unaffected: both depths still run in the same
+iteration under the same load.

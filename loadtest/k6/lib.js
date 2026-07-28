@@ -27,6 +27,11 @@ export const DEPTHS = (__ENV.LOADTEST_DEPTHS || '100,1000,10000')
   .map((d) => d.trim())
   .filter(Boolean);
 
+// p95 budgets are calibrated to the workstation baseline in loadtest/README.md.
+// A slower box class (the 4-vCPU CI runner) sets this multiplier instead of
+// rewriting the budgets, so the committed numbers keep meaning one thing.
+export const P95_SCALE = Number(__ENV.LOADTEST_P95_SCALE || 1);
+
 // A fixed arrival rate, not a fixed VU count: this harness measures latency at a
 // defined load, and looping VUs with no think time instead measure "how fast can
 // the box be saturated". Unpaced, 5 VUs push ~2900 req/s through the proxy, which
@@ -55,7 +60,7 @@ export function thresholds(specs) {
   const out = { http_req_failed: ['rate<0.01'] };
   for (const s of specs) {
     const sub = `{op:${s.op},target:${s.target}}`;
-    out[`http_req_duration${sub}`] = [`p(95)<${s.p95}`];
+    out[`http_req_duration${sub}`] = [`p(95)<${s.p95 * P95_SCALE}`];
     out[`http_req_failed${sub}`] = ['rate<0.01'];
     // k6 only materializes a sub-metric that some threshold names, so this
     // always-true one is what puts per-op req/s in the summary. Not a gate.

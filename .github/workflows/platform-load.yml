@@ -38,7 +38,12 @@ jobs:
       PLATFORM_JWT_SECRET: ci-platform-load-secret-not-for-production-use
       LOADTEST_BASE_URL: http://localhost:5174
       LOADTEST_VUS: "10"
-      LOADTEST_RATE: "20"
+      # the workstation baseline rate (20/s) means ~240 req/s for the ptolemy
+      # scenario, which saturates the 4-vCPU runner and measures queueing, not
+      # latency. 5/s keeps the runner below capacity; the scale widens the
+      # workstation p95 budgets to this box class.
+      LOADTEST_RATE: "5"
+      LOADTEST_P95_SCALE: "6"
       LOADTEST_DURATION: 60s
     steps:
       - name: Checkout viewtopia
