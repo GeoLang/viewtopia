@@ -168,6 +168,12 @@ services:
         required: false
     environment:
       GEOLANG_URL: http://geolang-api:8080
+      # set SIBYL_API_BASE=http://host.docker.internal:<port>/v1 (plus
+      # SIBYL_MODEL) to use a local llama-server on the host instead of x.ai
+      SIBYL_API_BASE: ${SIBYL_API_BASE:-}
+      SIBYL_MODEL: ${SIBYL_MODEL:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8090/health"]
       interval: 10s
