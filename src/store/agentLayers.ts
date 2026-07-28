@@ -49,19 +49,58 @@ export function toFeatureCollection(data: unknown): GeoJSON.FeatureCollection | 
   };
 }
 
+function coordsInRange(c: unknown): boolean {
+  if (!Array.isArray(c)) return false;
+  if (typeof c[0] === 'number') {
+    return typeof c[1] === 'number' && Math.abs(c[0]) <= 180 && Math.abs(c[1]) <= 90;
+  }
+  return c.every(coordsInRange);
+}
+
+function geometryInRange(g: GeoJSON.Geometry | null | undefined): boolean {
+  if (!g) return false;
+  if (g.type === 'GeometryCollection') return g.geometries.every(geometryInRange);
+  return coordsInRange((g as { coordinates?: unknown }).coordinates);
+}
+
+// a degrees-vs-metres tool mistake yields coordinates far outside lon/lat
+// range, which throws inside maplibre's LngLat and takes down the viewer,
+// so drop bad features before any renderer sees them
+function sanitizeLayers(layers: AgentLayer[]): AgentLayer[] {
+  const out: AgentLayer[] = [];
+  for (const layer of layers) {
+    const features = layer.geojson.features.filter((f) => geometryInRange(f.geometry));
+    if (features.length === 0) {
+      console.warn(`agent layer "${layer.name}" dropped: coordinates outside lon/lat range`);
+      continue;
+    }
+    if (features.length < layer.geojson.features.length) {
+      console.warn(`agent layer "${layer.name}": dropped ${layer.geojson.features.length - features.length} out-of-range features`);
+    }
+    out.push({ ...layer, geojson: { ...layer.geojson, features } });
+  }
+  return out;
+}
+
 export const useAgentLayerStore = create<AgentLayerState>((set) => ({
   layers: [],
   markers: [],
   generation: 0,
-  setLayers: (layers) => set((s) => ({ layers, generation: s.generation + 1 })),
+  setLayers: (layers) => set((s) => ({ layers: sanitizeLayers(layers), generation: s.generation + 1 })),
   addLayer: (layer, fit = true) =>
     set((s) => ({
-      layers: [...s.layers, layer],
+      layers: [...s.layers, ...sanitizeLayers([layer])],
       generation: fit ? s.generation + 1 : s.generation,
     })),
   removeLayer: (id) => set((s) => ({ layers: s.layers.filter((l) => l.id !== id) })),
   addMarker: (marker) =>
-    set((s) => ({ markers: [...s.markers, { ...marker, id: crypto.randomUUID() }] })),
+    set((s) => {
+      if (Math.abs(marker.lon) > 180 || Math.abs(marker.lat) > 90) {
+        console.warn(`agent marker "${marker.label ?? ''}" dropped: out-of-range coordinates`);
+        return s;
+      }
+      return { markers: [...s.markers, { ...marker, id: crypto.randomUUID() }] };
+    }),
   clearMarkers: () => set({ markers: [] }),
   clear: () => set({ layers: [], markers: [] }),
 }));
