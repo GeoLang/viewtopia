@@ -70,11 +70,11 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <a href="plugins.md" class="secondary">Plugin Dev</a>
 </div>
 <div class="stats">
-<div class="stat"><div class="num">4</div><div class="label">Renderers</div></div>
+<div class="stat"><div class="num">3</div><div class="label">Renderers</div></div>
 <div class="stat"><div class="num">23</div><div class="label">Plugins</div></div>
 <div class="stat"><div class="num">15</div><div class="label">QGIS Ports</div></div>
 <div class="stat"><div class="num">31</div><div class="label">SpaceTime Tools</div></div>
-<div class="stat"><div class="num">146</div><div class="label">Tests</div></div>
+<div class="stat"><div class="num">249</div><div class="label">Unit Tests</div></div>
 <div class="stat"><div class="num">$0</div><div class="label">Per month</div></div>
 </div>
 </div>
@@ -110,10 +110,10 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <h3>🤖 AI Chat Agent</h3>
 <ul>
 <li>Natural language spatial analysis</li>
-<li>SSE streaming responses</li>
+<li>AG-UI event stream from <code>/chat/agui</code></li>
 <li>36 chainable geospatial tools</li>
 <li>SQL, routing, QGIS (321 algorithms)</li>
-<li>Persistent agent memory (Letta)</li>
+<li>Agent loop runs in sibyl (Rust)</li>
 <li>Auto-renders maps from chat</li>
 <li>Follow-up action buttons</li>
 </ul>
@@ -124,8 +124,8 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <li>Chat history survives refresh</li>
 <li>Click any old response to replay</li>
 <li>Named sessions with switching</li>
-<li>Per-session agent memory</li>
-<li>LocalStorage backed</li>
+<li>Sibyl keeps each session's history in sqlite</li>
+<li>Transcript LocalStorage backed</li>
 </ul>
 </div>
 <div class="card">
@@ -152,10 +152,10 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <h3>🎨 Multi-Renderer</h3>
 <ul>
 <li>CesiumJS (globe, terrain, 3D Tiles)</li>
-<li>deck.gl (GPU-accelerated overlays)</li>
-<li>MapLibre GL (vector tiles)</li>
+<li>MapLibre GL (vector tiles, deck.gl overlays interleaved)</li>
 <li>Leaflet (lightweight 2D)</li>
 <li>Shared camera state across all</li>
+<li>Synced split view, two panes</li>
 </ul>
 </div>
 <div class="card">
@@ -709,7 +709,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <tr><td>3D Globe (CesiumJS)</td><td class="check">✅</td><td class="cross">❌</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="check">✅</td></tr>
 <tr><td>2D Map (Leaflet)</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td></tr>
 <tr><td>AI chat agent</td><td class="check">✅</td><td class="check">✅ (AIP)</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
-<tr><td>Multi-renderer (4 engines)</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="check">✅ (deck.gl)</td><td class="cross">❌</td></tr>
+<tr><td>Multi-renderer (3 engines)</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="check">✅ (deck.gl)</td><td class="cross">❌</td></tr>
 <tr><td>Ontology / typed schema</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
 <tr><td>Entity resolution</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
 <tr><td>Classification / RBAC</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
@@ -756,7 +756,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <li>No AI chat or natural language</li>
 <li>No CesiumJS or 3D Tiles</li>
 <li>No session management</li>
-<li>ViewTopia has 4 renderers + AI</li>
+<li>ViewTopia has 3 renderers + AI</li>
 </ul>
 </div>
 </div>
@@ -768,11 +768,11 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <h2>Architecture</h2>
 <div class="arch-diagram">
 <span class="hl">┌─────────────────────────────────────────────────────────────┐</span><br>
-<span class="hl">│  ViewTopia (Vite + JS)  :5174                               │</span><br>
+<span class="hl">│  ViewTopia (Vite + React)  :5174                            │</span><br>
 <span class="hl">│                                                             │</span><br>
-<span class="hl">│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────┐   │</span><br>
-<span class="hl">│  │ CesiumJS │ │ deck.gl  │ │ MapLibre │ │   Leaflet    │   │</span><br>
-<span class="hl">│  └──────────┘ └──────────┘ └──────────┘ └──────────────┘   │</span><br>
+<span class="hl">│  ┌──────────┐ ┌───────────────────────┐ ┌──────────────┐   │</span><br>
+<span class="hl">│  │ CesiumJS │ │ MapLibre + deck.gl    │ │   Leaflet    │   │</span><br>
+<span class="hl">│  └──────────┘ └───────────────────────┘ └──────────────┘   │</span><br>
 <span class="hl">│  ┌───────────────────┐  ┌──────────────────────────────┐   │</span><br>
 <span class="hl">│  │   Chat Panel      │  │   Viz Panel (tabs/toolbar)   │   │</span><br>
 <span class="hl">│  └───────────────────┘  └──────────────────────────────┘   │</span><br>
@@ -782,12 +782,18 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <span class="hl">│  GeoLang (Rust)   │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  GeoLang (Python)   │</span><br>
 <span class="hl">│  :3000              │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  :8080              │</span><br>
 <span class="hl">│                     │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│                     │</span><br>
-<span class="hl">│  • 3D Tiles server  │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • AI Agent (Letta) │</span><br>
-<span class="hl">│  • Terrain mesh     │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • GeoPandas        │</span><br>
+<span class="hl">│  • 3D Tiles server  │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • 36 spatial tools │</span><br>
+<span class="hl">│  • Terrain mesh     │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • QGIS, GeoPandas  │</span><br>
 <span class="hl">│  • Point clouds     │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • OSM/Nominatim    │</span><br>
 <span class="hl">│  • Classification   │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • Isochrones       │</span><br>
-<span class="hl">│  • REST API         │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • SSE streaming    │</span><br>
-<span class="hl">└─────────────────────┘</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">└─────────────────────┘</span><br>
+<span class="hl">│  • REST API         │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • AG-UI stream     │</span><br>
+<span class="hl">└─────────────────────┘</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">└──────────┬──────────┘</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">│ agui out, tool calls back</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">┌──────────▼──────────┐</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  sibyl (Rust) :8090 │</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • LLM agent loop   │</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • sqlite sessions  │</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">└─────────────────────┘</span><br>
 </div>
 </div>
 </section>
@@ -803,11 +809,11 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 │   ├── App.tsx             # Layout: viewer + chat + tool panels
 │   ├── components/
 │   │   ├── ViewerArea.tsx   # Renderer host, 2D ↔ 3D switching
-│   │   ├── ChatPanel.tsx    # AI chat with SSE &amp; persistence
+│   │   ├── ChatPanel.tsx    # AI chat over AG-UI, with persistence
 │   │   ├── tools/           # Tool panels (measure, terrain, SQL, …)
 │   │   └── layers/          # Layer tree and styling
 │   ├── viewer/
-│   │   ├── registry.ts      # Renderer registry (Cesium/deck.gl/MapLibre/Leaflet)
+│   │   ├── registry.ts      # Renderer registry (Cesium/MapLibre/Leaflet)
 │   │   ├── commands.ts      # Unified agent command protocol
 │   │   ├── uiSpec.ts        # Render agent map/table/image specs
 │   │   └── renderGeoJson.ts # Shared GeoJSON draw path
@@ -840,10 +846,10 @@ cd viewtopia
 <span style="color:#475569"># Install dependencies</span>
 pnpm install
 
-<span style="color:#475569"># Start dev server (port 5174)</span>
+<span style="color:#475569"># Start dev server (port 5173, proxies backend routes to the stack on 5174)</span>
 pnpm run dev
 
-<span style="color:#475569"># Open http://localhost:5174</span>
+<span style="color:#475569"># Open http://localhost:5173</span>
 <span style="color:#475569"># Backends are optional — viewer adapts to what's available</span>
 
 <span style="color:#475569"># Full platform: clone every repo, then one command for the rest</span>
@@ -854,8 +860,8 @@ scripts/platform-up.sh
 <span style="color:#475569"># Or run a single backend: tiletopia (3D Tiles, terrain, analysis)</span>
 cd ../tiletopia &amp;&amp; cargo run -- serve --port 3000
 
-<span style="color:#475569"># Or the AI agent (geolang)</span>
-cd ../geolang &amp;&amp; python -m uvicorn src.api.server:app --port 8080</pre>
+<span style="color:#475569"># Or the AI agent: geolang serves the tools, sibyl runs the agent loop</span>
+cd ../geolang &amp;&amp; docker compose up -d --build</pre>
 </div>
 </section>
 
@@ -864,6 +870,7 @@ cd ../geolang &amp;&amp; python -m uvicorn src.api.server:app --port 8080</pre>
 <p>ViewTopia is free software under the <a href="https://github.com/GeoLang/viewtopia/blob/master/LICENSE">AGPL-3.0 license</a>.</p>
 <p style="margin-top:8px">Part of the <a href="https://github.com/GeoLang">GeoLang</a> ecosystem. The backends are open source too:
 <a href="https://github.com/GeoLang/geolang">geolang</a> (AI agent),
+<a href="https://github.com/GeoLang/sibyl">sibyl</a> (agent loop),
 <a href="https://github.com/GeoLang/tiletopia">tiletopia</a>,
 <a href="https://github.com/GeoLang/ptolemy">ptolemy</a>,
 <a href="https://github.com/GeoLang/itinera">itinera</a>,
