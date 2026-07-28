@@ -40,6 +40,15 @@
       prefix matches, then the route/URL refactor. A dead-behavior TODO sits
       in infrastructure/modules/cdn/main.tf until then.
 
+## OPEN — deferred decision: private-asset tile gating
+
+- [ ] tiletopia serves every asset's tiles publicly (`is_public_read`), even
+      for private assets: anyone holding the asset id can read them. The
+      aggressive CloudFront TTLs on tile paths depend on tiles staying
+      public. If private assets ever need gated tiles, decide together:
+      per-asset visibility check in the tile path AND a CDN redesign
+      (authenticated tiles cannot keep the shared long-TTL cache).
+
 ## OPEN — sibyl cutover cleanup
 
 - [ ] Session routing is still server-side-global (sibyl active flag mirrors the
