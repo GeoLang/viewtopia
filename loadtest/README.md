@@ -260,4 +260,13 @@ no planner statistics, and the recursive changeset walk picks plans that pin
 every runner core at a fraction of the target rate (found 2026-07-28 via the
 in-run sidecar probe, `loadtest/out/during-load.txt` in the artifact). The same
 cliff would hit any deployment that bulk-imports and immediately serves reads,
-until autoanalyze catches up.
+until autoanalyze catches up. Ptolemy now issues that ANALYZE itself after
+bulk writes, but the workflow keeps its own as a belt for older checkouts.
+
+Even with statistics, the ptolemy ops cost ~10x more db CPU per request on
+runner vCPUs than on the workstation, so rate 5 ran the db at ~290% of 4
+cores. That is the capacity knee: a slightly slow runner tips into queueing
+collapse and every op reads as seconds. Rate 3 keeps the db around 60%
+utilization so run-to-run runner variance cannot flip the verdict. Signal for
+the materialized-branch-heads question: on 4 vCPUs a depth-1000 walk costs
+~100ms p50 even healthy, ~20x the workstation.

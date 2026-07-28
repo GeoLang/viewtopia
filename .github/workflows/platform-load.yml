@@ -40,9 +40,11 @@ jobs:
       LOADTEST_VUS: "10"
       # the workstation baseline rate (20/s) means ~240 req/s for the ptolemy
       # scenario, which saturates the 4-vCPU runner and measures queueing, not
-      # latency. 5/s keeps the runner below capacity; the scale widens the
-      # workstation p95 budgets to this box class.
-      LOADTEST_RATE: "5"
+      # latency. even 5/s ran the db at ~290% of 4 cores, the capacity knee
+      # where runner speed variance flips runs between fine and collapsed
+      # (2026-07-28 sidecar data). 3/s leaves real headroom; the scale widens
+      # the workstation p95 budgets to this box class.
+      LOADTEST_RATE: "3"
       LOADTEST_P95_SCALE: "6"
       LOADTEST_DURATION: 60s
     steps:
