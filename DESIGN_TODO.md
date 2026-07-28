@@ -26,6 +26,20 @@
       the distribution never forwards explicitly; collab may fail closed through the
       CDN. Test on a live distribution before relying on it.
 
+## OPEN — post-MVP: tiletopia tile edge caching (decided 2026-07-28)
+
+- [ ] The CloudFront `/tiles/v1/*` cache behaviors have never matched a real
+      tiletopia route, so tiles are not edge-cached on AWS (they ride the safe
+      TTL-0 default). Aliasing the API under `/tiles/v1/` is blocked three ways:
+      tiletopia's `is_public_read` treats any path containing `/tiles/` as
+      public (the alias would expose the whole authenticated GET surface),
+      routes are registered with absolute paths, and four handlers emit
+      absolute `/api/v1` URLs in responses. Viable designs, pick one post-MVP:
+      host-based `tiles.<domain>` routing (native ALB support, but CORS and
+      viewer URL changes), or first rewrite `is_public_read` to anchored
+      prefix matches, then the route/URL refactor. A dead-behavior TODO sits
+      in infrastructure/modules/cdn/main.tf until then.
+
 ## OPEN — sibyl cutover cleanup
 
 - [ ] Session routing is still server-side-global (sibyl active flag mirrors the
