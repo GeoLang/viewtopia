@@ -67,8 +67,9 @@ anything multi-user ships, local packaging last.
       `plan` event renders a chat panel with the steps, the validation flag, the
       raw manifest and an approve action that posts it to run_workflow with
       notify (so the model's session learns the run happened), and the platform
-      compose file runs geodukt internally on 8100. Still open: geodukt has no
-      Dockerfile, so that service cannot build yet.
+      compose file runs geodukt internally on 8100 (Dockerfile landed, service
+      builds and health-checks). Still open: sql_query is only persona-discouraged,
+      not labeled as an escape hatch in the rendered plan.
 - [~] **model-independent eval harness**: golden NL-to-manifest tasks scored by
       manifest comparison (not prose grading), runnable per sibyl model profile
       (cloud/local), so "Qwen3.5-35B scores X on N tasks" is a shippable claim
