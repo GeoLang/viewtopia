@@ -369,3 +369,31 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   on any error. `execute` now returns that progress alongside the error, so a failed run
   records the steps that finished, the one that died with its own message, and the ones
   never reached.
+- **2026-07-29 (later)**: **Results became visible, downloadable and honest.** The plan
+  panel now shows what a run actually did: one line per step with its operation,
+  parameters, input and outcome, the failing step's reason in a tooltip rather than
+  inline, and written outputs as download links (the serving route is not a `:path`
+  route, so links use the basename). The manifest downloads with a copyable
+  `geodukt run <file>.toml`, which is exact reproduction through the same executor, so
+  no script is generated that could drift from what ran. Found while wiring this up:
+  the layer panel listed only `useAppStore().layers`, written solely by the plugin host,
+  so agent-drawn layers had never appeared in it and its controls did nothing. It now
+  lists agent layers with working opacity, remove and download. Choropleth shipped on
+  top: the class colour is baked into each feature as simplestyle properties, which
+  Cesium already honours per feature, so MapLibre took three lines, Leaflet six and
+  Cesium none. It is offered only for a numeric field with more than one distinct value,
+  since our environmental risk tool writes a single polygon and shading it would say
+  nothing. Five tools and the persona had been telling users to use a choropleth
+  dropdown that was never built; that prose is now true.
+- **2026-07-29 (later still)**: **geodukt stopped accepting manifests it cannot honour.**
+  Every ParamSpec was `required: false`, several with defaults, so a buffer with no
+  distance validated and silently used 1 metre. Worse, `as_float()` rejected integer
+  literals, so `distance = 500` also fell through to that default. `distance`, `epsilon`,
+  `to_crs`, filter's field and value, clip's four edges and expression's expressions are
+  required now, enforced once in the registry and checked identically on `/validate`,
+  `/run` and both CLI paths; `schema_map` must do at least one of rename, drop or add;
+  `/gp/clip` no longer defaults to the whole world. `rename` was documented as "old
+  column to new column", which reads both ways and made the model invert it. Breaking
+  for manifests that leaned on those defaults, which beats silent wrong data. The eval
+  harness gained `--repeat`: scoring one sample per task let a flaky task report a clean
+  sheet, and a rejected manifest is no longer counted as the model's answer.

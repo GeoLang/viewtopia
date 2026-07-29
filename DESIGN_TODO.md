@@ -73,6 +73,27 @@ anything multi-user ships, local packaging last.
       download, context config, inference-server setup. Wrap llama.cpp/ollama
       tooling rather than build. The differentiation lives in the eval harness
       proving which local model suffices, not in the installer.
+- [ ] **agent-requested shading**: the user can shade a layer by a numeric field
+      now, but must pick it by hand every time, even though the tool that wrote
+      the layer knows which column matters (`gap_score`, `overall_risk`). Needs an
+      optional classification field in the ui_spec layer format, geolang's
+      emit_ui_spec schema and the persona. Do this before letting the tool prose
+      mention shading again.
+- [ ] **cross-session run history**: geodukt keeps every run with its manifest,
+      steps and caller, at `GET /runs`, and nothing exposes it. The executed plan
+      is visible only in the session that ran it. Needs a proxied route plus a
+      list view, and an access decision first: records name users, and geodukt
+      gates only `/run`, not `/runs`.
+
+## OPEN — geodukt fixture drift (found 2026-07-29, harmless today)
+
+- [ ] Two fixtures set parameters no transform reads, and sit in code paths that
+      never validate or execute, so nothing caught them:
+      `geodukt-core/src/visual.rs` sets `target_crs` on a reproject (the transform
+      reads `to_crs`), and `geodukt-io/tests/docgen_tests.rs` nests parameters
+      under `[transform.params]`, which the flattened manifest reads as a single
+      parameter literally named `params`. Both would fail validation if those
+      paths ever ran it.
 
 ## OPEN — sibyl cutover cleanup
 
