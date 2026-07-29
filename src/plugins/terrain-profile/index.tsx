@@ -23,12 +23,17 @@ function TerrainProfilePanel({ ctx }: { ctx: PluginContext }) {
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<ProfilePoint[] | null>(null);
   const [stats, setStats] = useState<ProfileStats | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleProfile = async () => {
     setLoading(true);
+    setError(null);
     try {
       const [startLat, startLng] = startCoord.split(',').map(Number);
       const [endLat, endLng] = endCoord.split(',').map(Number);
+      if ([startLat, startLng, endLat, endLng].some(Number.isNaN)) {
+        throw new Error('Enter start and end as "lat,lng"');
+      }
 
       const coords = interpolatePoints([startLng, startLat], [endLng, endLat], numSamples);
       const elevations = await fetchElevations(coords);
@@ -47,7 +52,10 @@ function TerrainProfilePanel({ ctx }: { ctx: PluginContext }) {
         }],
       }, { color: '#e74c3c', lineWidth: 3 });
     } catch (e) {
-      console.error('Profile error:', e);
+      // the DEM lookup can fail, and an empty chart is better than invented terrain
+      setProfile(null);
+      setStats(null);
+      setError(e instanceof Error ? e.message : 'Elevation lookup failed');
     } finally {
       setLoading(false);
     }
@@ -87,6 +95,8 @@ function TerrainProfilePanel({ ctx }: { ctx: PluginContext }) {
         >
           Generate Profile
         </Button>
+
+        {error && <Text size="sm" c="red">{error}</Text>}
 
         {profile && <ElevationChart profile={profile} />}
 

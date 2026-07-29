@@ -1,28 +1,86 @@
 /**
- * Point Sampling Plugin — Sample raster and vector values at point locations.
+ * Point Sampling Plugin — Sample DEM values at point locations.
  * Equivalent to: QGIS Point Sampling Tool (662K downloads)
+ *
+ * Elevation comes from the Open-Elevation API; slope and aspect are finite
+ * differences over a cross of four neighbouring elevation samples.
  */
 
 import { useState } from 'react';
 import { Paper, Text, Stack, Button, Group, Badge, Select, Table, Loader } from '@mantine/core';
 import { IconPointFilled, IconDownload } from '@tabler/icons-react';
+import { fetchElevations } from '../../lib/elevationProfile';
+import { useGeoJsonSources } from '../../lib/geojsonSources';
 import type { PluginDefinition, PluginContext } from '../sdk';
+
+/** Open-Elevation serves ~90 m SRTM, so a tighter cross would read the same cell twice. */
+const NEIGHBOUR_OFFSET_M = 90;
+const METERS_PER_DEGREE_LAT = 111_320;
 
 interface SampleResult {
   id: number;
   lat: number;
   lng: number;
-  values: Record<string, number | string | null>;
+  values: Record<string, number | null>;
+}
+
+interface Neighbours {
+  east: number;
+  west: number;
+  north: number;
+  south: number;
+}
+
+/**
+ * Slope in degrees and the downhill bearing (clockwise from north) from a cross
+ * of neighbour elevations spaced `spacing` metres from the centre.
+ */
+export function slopeAspect(
+  n: Neighbours,
+  spacing: number,
+): { slope: number; aspect: number | null } {
+  const dzdx = (n.east - n.west) / (2 * spacing);
+  const dzdy = (n.north - n.south) / (2 * spacing);
+  const slope = (Math.atan(Math.hypot(dzdx, dzdy)) * 180) / Math.PI;
+  if (dzdx === 0 && dzdy === 0) return { slope: 0, aspect: null };
+  return { slope, aspect: ((Math.atan2(-dzdx, -dzdy) * 180) / Math.PI + 360) % 360 };
+}
+
+/** Centre point followed by its east, west, north and south neighbours. */
+function crossCoords(lat: number, lng: number): [number, number][] {
+  const dLat = NEIGHBOUR_OFFSET_M / METERS_PER_DEGREE_LAT;
+  const dLng =
+    NEIGHBOUR_OFFSET_M /
+    (METERS_PER_DEGREE_LAT * Math.max(Math.cos((lat * Math.PI) / 180), 1e-6));
+  return [
+    [lng, lat],
+    [lng + dLng, lat],
+    [lng - dLng, lat],
+    [lng, lat + dLat],
+    [lng, lat - dLat],
+  ];
 }
 
 function PointSamplingPanel({ ctx }: { ctx: PluginContext }) {
   const [pointLayer, setPointLayer] = useState<string | null>(null);
-  const [sampleLayers, setSampleLayers] = useState<string[]>([]);
   const [results, setResults] = useState<SampleResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [manualPoints, setManualPoints] = useState<Array<{ lat: number; lng: number }>>([]);
 
-  const layers = ctx.store.getLayers().map((l) => ({ value: l.id, label: l.name }));
+  const sources = useGeoJsonSources()
+    .map((s) => ({
+      ...s,
+      points: s.geojson.features
+        .filter((f) => f.geometry?.type === 'Point')
+        .map((f) => (f.geometry as GeoJSON.Point).coordinates),
+    }))
+    .filter((s) => s.points.length > 0);
+
+  const selected = sources.find((s) => s.id === pointLayer);
+  const points = selected
+    ? selected.points.map(([lng, lat]) => ({ lat, lng }))
+    : manualPoints;
 
   const handleAddPoint = () => {
     const coords = ctx.map.getCursorCoords();
@@ -32,26 +90,33 @@ function PointSamplingPanel({ ctx }: { ctx: PluginContext }) {
   };
 
   const handleSample = async () => {
+    if (points.length === 0) {
+      setError('Add points from the map cursor, or select a point layer.');
+      return;
+    }
     setLoading(true);
+    setError(null);
     try {
-      // Sample demo — in production, this would query actual raster tiles or vector features
-      const points = manualPoints.length > 0 ? manualPoints : [
-        { lat: 51.5074, lng: -0.1278 },
-        { lat: 51.51, lng: -0.12 },
-        { lat: 51.505, lng: -0.13 },
-      ];
+      const coords = points.flatMap((p) => crossCoords(p.lat, p.lng));
+      const elevations = await fetchElevations(coords);
 
-      const sampled: SampleResult[] = points.map((pt, i) => ({
-        id: i + 1,
-        lat: pt.lat,
-        lng: pt.lng,
-        values: {
-          elevation: Math.round(Math.random() * 200 + 50),
-          slope: Math.round(Math.random() * 45 * 10) / 10,
-          aspect: Math.round(Math.random() * 360),
-          landcover: ['urban', 'forest', 'water', 'agriculture', 'barren'][Math.floor(Math.random() * 5)],
-        },
-      }));
+      const sampled: SampleResult[] = points.map((pt, i) => {
+        const [centre, east, west, north, south] = elevations.slice(i * 5, i * 5 + 5);
+        const { slope, aspect } = slopeAspect(
+          { east, west, north, south },
+          NEIGHBOUR_OFFSET_M,
+        );
+        return {
+          id: i + 1,
+          lat: pt.lat,
+          lng: pt.lng,
+          values: {
+            elevation: centre,
+            slope: Math.round(slope * 10) / 10,
+            aspect: aspect === null ? null : Math.round(aspect),
+          },
+        };
+      });
 
       setResults(sampled);
 
@@ -64,6 +129,9 @@ function PointSamplingPanel({ ctx }: { ctx: PluginContext }) {
           properties: { id: s.id, ...s.values },
         })),
       }, { color: '#e74c3c' });
+    } catch (e) {
+      setResults([]);
+      setError(e instanceof Error ? e.message : 'Elevation lookup failed');
     } finally {
       setLoading(false);
     }
@@ -94,10 +162,10 @@ function PointSamplingPanel({ ctx }: { ctx: PluginContext }) {
 
         <Select
           label="Point Layer (or click map to add)"
-          data={layers}
+          data={sources.map((s) => ({ value: s.id, label: `${s.name} — ${s.points.length} points` }))}
           value={pointLayer}
           onChange={setPointLayer}
-          placeholder="Select point layer"
+          placeholder={sources.length ? 'Select point layer' : 'No point layers loaded'}
           clearable
         />
 
@@ -109,24 +177,21 @@ function PointSamplingPanel({ ctx }: { ctx: PluginContext }) {
           <Text size="xs" c="dimmed">{manualPoints.length} manual points added</Text>
         )}
 
-        <Select
-          label="Layers to Sample"
-          data={layers}
-          value={sampleLayers[0] || null}
-          onChange={(v) => setSampleLayers(v ? [v] : [])}
-          placeholder="Select layer to sample from"
-          clearable
-        />
+        <Text size="xs" c="dimmed">
+          Elevation from Open-Elevation; slope and aspect from a {NEIGHBOUR_OFFSET_M} m neighbour cross.
+        </Text>
 
         <Button
           leftSection={loading ? <Loader size={14} /> : <IconPointFilled size={14} />}
           onClick={handleSample}
-          disabled={loading}
+          disabled={loading || points.length === 0}
           fullWidth
           color="red"
         >
-          {loading ? 'Sampling...' : 'Run Point Sampling'}
+          {loading ? 'Sampling...' : `Sample ${points.length} points`}
         </Button>
+
+        {error && <Text size="sm" c="red">{error}</Text>}
 
         {results.length > 0 && (
           <>
@@ -147,8 +212,8 @@ function PointSamplingPanel({ ctx }: { ctx: PluginContext }) {
                     <Table.Td>{r.id}</Table.Td>
                     <Table.Td>{r.lat.toFixed(4)}</Table.Td>
                     <Table.Td>{r.lng.toFixed(4)}</Table.Td>
-                    {Object.values(r.values).map((v, i) => (
-                      <Table.Td key={i}>{v ?? '—'}</Table.Td>
+                    {Object.entries(r.values).map(([k, v]) => (
+                      <Table.Td key={k}>{v ?? '—'}</Table.Td>
                     ))}
                   </Table.Tr>
                 ))}
@@ -168,7 +233,7 @@ function PointSamplingPanel({ ctx }: { ctx: PluginContext }) {
 const plugin: PluginDefinition = {
   id: 'point-sampling',
   name: 'Point Sampling',
-  description: 'Sample raster and vector layer values at point locations, export results as CSV',
+  description: 'Sample elevation, slope and aspect at point locations, export results as CSV',
   version: '1.0.0',
   author: 'TileTopia-HQ',
   icon: <IconPointFilled size={14} />,

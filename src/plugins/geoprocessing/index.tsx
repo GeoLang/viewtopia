@@ -8,14 +8,147 @@ import { useState } from 'react';
 import { Paper, Text, Stack, Select, Button, Group, Badge, NumberInput, Loader, Code, } from '@mantine/core';
 import { IconVectorTriangle } from '@tabler/icons-react';
 import * as turf from '@turf/turf';
+import { useGeoJsonSources, propertyKeys, type GeoJsonSource } from '../../lib/geojsonSources';
 import type { PluginDefinition, PluginContext } from '../sdk';
 
 type GeoOp = 'buffer' | 'dissolve' | 'intersect' | 'union' | 'difference' | 'convex-hull' | 'voronoi' | 'centroid' | 'simplify' | 'explode' | 'collect' | 'bbox-clip';
 
-interface LayerRef {
-  id: string;
-  name: string;
-  geojson?: GeoJSON.FeatureCollection;
+/** Ops that combine two sources; the rest run on the input alone. */
+const OVERLAY_OPS: GeoOp[] = ['intersect', 'union', 'difference', 'bbox-clip', 'collect'];
+
+interface OpParams {
+  bufferDist: number;
+  bufferUnits: turf.Units;
+  simplifyTol: number;
+  /** dissolve: group-by field; collect: point field to aggregate. */
+  field: string;
+}
+
+type Poly = GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>;
+type Clippable = GeoJSON.Feature<
+  GeoJSON.Polygon | GeoJSON.MultiPolygon | GeoJSON.LineString | GeoJSON.MultiLineString
+>;
+
+function polygonsOf(fc: GeoJSON.FeatureCollection): Poly[] {
+  return fc.features.filter(
+    (f): f is Poly => f.geometry?.type === 'Polygon' || f.geometry?.type === 'MultiPolygon',
+  );
+}
+
+function pointsOf(fc: GeoJSON.FeatureCollection): GeoJSON.Feature<GeoJSON.Point>[] {
+  return fc.features.filter(
+    (f): f is GeoJSON.Feature<GeoJSON.Point> => f.geometry?.type === 'Point',
+  );
+}
+
+function clippablesOf(fc: GeoJSON.FeatureCollection): Clippable[] {
+  return fc.features.filter(
+    (f): f is Clippable =>
+      f.geometry?.type === 'Polygon' ||
+      f.geometry?.type === 'MultiPolygon' ||
+      f.geometry?.type === 'LineString' ||
+      f.geometry?.type === 'MultiLineString',
+  );
+}
+
+/** Merge a source's polygons into one feature, so overlay ops work on whole layers. */
+function mergedPolygon(source: GeoJsonSource, label: string): Poly {
+  const polys = polygonsOf(source.geojson);
+  if (polys.length === 0) throw new Error(`${label} "${source.name}" has no polygons`);
+  const merged = polys.length === 1 ? polys[0] : turf.union(turf.featureCollection(polys));
+  if (!merged) throw new Error(`${label} "${source.name}" merged to an empty geometry`);
+  return merged;
+}
+
+function asCollection(
+  out: GeoJSON.FeatureCollection | GeoJSON.Feature,
+): GeoJSON.FeatureCollection {
+  return out.type === 'FeatureCollection' ? out : turf.featureCollection([out]);
+}
+
+/** Run one turf operation over the selected sources. Throws with a usable message. */
+export function runOperation(
+  operation: GeoOp,
+  input: GeoJsonSource,
+  overlay: GeoJsonSource | undefined,
+  params: OpParams,
+): GeoJSON.FeatureCollection {
+  const fc = input.geojson;
+  if (fc.features.length === 0) throw new Error(`"${input.name}" has no features`);
+  if (OVERLAY_OPS.includes(operation) && !overlay) throw new Error('select an overlay layer');
+
+  switch (operation) {
+    case 'buffer': {
+      const out = turf.buffer(fc, params.bufferDist, { units: params.bufferUnits });
+      if (!out) throw new Error('buffer produced no geometry');
+      return out;
+    }
+    case 'simplify':
+      return turf.simplify(fc, { tolerance: params.simplifyTol, highQuality: true });
+    case 'convex-hull': {
+      const hull = turf.convex(fc);
+      if (!hull) throw new Error('convex hull needs at least three distinct vertices');
+      return asCollection(hull);
+    }
+    case 'centroid':
+      return turf.featureCollection(fc.features.map((f) => turf.centroid(f, { properties: f.properties ?? {} })));
+    case 'explode':
+      return turf.explode(fc);
+    case 'voronoi': {
+      const points = turf.explode(fc);
+      const bbox = turf.bbox(fc) as [number, number, number, number];
+      return turf.voronoi(points, { bbox });
+    }
+    case 'dissolve': {
+      const polys = fc.features.filter(
+        (f): f is GeoJSON.Feature<GeoJSON.Polygon> => f.geometry?.type === 'Polygon',
+      );
+      if (polys.length === 0) throw new Error(`"${input.name}" has no simple polygons to dissolve`);
+      return turf.dissolve(turf.featureCollection(polys), {
+        propertyName: params.field || undefined,
+      });
+    }
+    case 'intersect':
+    case 'union':
+    case 'difference': {
+      const a = mergedPolygon(input, 'input layer');
+      const b = mergedPolygon(overlay as GeoJsonSource, 'overlay layer');
+      const pair = turf.featureCollection([a, b]);
+      const out =
+        operation === 'intersect'
+          ? turf.intersect(pair)
+          : operation === 'union'
+            ? turf.union(pair)
+            : turf.difference(pair);
+      if (!out) throw new Error(`${operation} produced no geometry (the layers may not overlap)`);
+      return asCollection(out);
+    }
+    case 'bbox-clip': {
+      const bbox = turf.bbox((overlay as GeoJsonSource).geojson) as [number, number, number, number];
+      const clippable = clippablesOf(fc);
+      if (clippable.length === 0) throw new Error(`"${input.name}" has no lines or polygons to clip`);
+      const clipped: GeoJSON.Feature[] = clippable
+        .map((f) => turf.bboxClip(f, bbox))
+        .filter((f) => turf.coordAll(f).length > 0);
+      if (clipped.length === 0) throw new Error('nothing left after clipping to the overlay bounds');
+      return turf.featureCollection(clipped);
+    }
+    case 'collect': {
+      if (!params.field) throw new Error('pick the point field to collect');
+      const polys = fc.features.filter(
+        (f): f is GeoJSON.Feature<GeoJSON.Polygon> => f.geometry?.type === 'Polygon',
+      );
+      if (polys.length === 0) throw new Error(`"${input.name}" has no simple polygons`);
+      const points = pointsOf((overlay as GeoJsonSource).geojson);
+      if (points.length === 0) throw new Error(`overlay layer "${(overlay as GeoJsonSource).name}" has no points`);
+      return turf.collect(
+        turf.featureCollection(polys),
+        turf.featureCollection(points),
+        params.field,
+        `${params.field}_collected`,
+      );
+    }
+  }
 }
 
 function GeoprocessingPanel({ ctx }: { ctx: PluginContext }) {
@@ -25,93 +158,34 @@ function GeoprocessingPanel({ ctx }: { ctx: PluginContext }) {
   const [bufferDist, setBufferDist] = useState<number>(100);
   const [bufferUnits, setBufferUnits] = useState<string>('meters');
   const [simplifyTol, setSimplifyTol] = useState<number>(0.001);
-  const [dissolveField, setDissolveField] = useState<string>('');
+  const [field, setField] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
 
-  // Get available layers from store
-  const layers: LayerRef[] = ctx.store.getLayers().map((l) => ({ id: l.id, name: l.name }));
+  // real geojson to run on: whatever is drawn, plus the loaded and plugin layers
+  const sources = useGeoJsonSources();
+  const input = sources.find((s) => s.id === inputLayer);
+  const overlay = sources.find((s) => s.id === overlayLayer);
 
-  const needsOverlay = ['intersect', 'union', 'difference'].includes(operation);
+  const needsOverlay = OVERLAY_OPS.includes(operation);
+  // collect aggregates a field off the overlay points, dissolve groups the input
+  const fieldOptions = propertyKeys(operation === 'collect' ? overlay : input);
 
   const handleRun = async () => {
+    if (!input) return;
     setLoading(true);
     setResult(null);
 
     try {
-      // In a real app, we'd get the actual GeoJSON from the layer store
-      // For now, we demonstrate the Turf.js operations
-      const inputGeojson: GeoJSON.FeatureCollection = {
-        type: 'FeatureCollection',
-        features: [],
-      };
-
-      let output: GeoJSON.FeatureCollection | GeoJSON.Feature;
-
-      switch (operation) {
-        case 'buffer':
-          output = turf.buffer(inputGeojson, bufferDist, { units: bufferUnits as turf.Units }) as GeoJSON.FeatureCollection;
-          break;
-        case 'dissolve':
-          output = turf.dissolve(inputGeojson as unknown as GeoJSON.FeatureCollection<GeoJSON.Polygon>, { propertyName: dissolveField || undefined }) as unknown as GeoJSON.FeatureCollection;
-          break;
-        case 'convex-hull':
-          output = turf.convex(inputGeojson) || inputGeojson;
-          break;
-        case 'voronoi': {
-          const points = turf.explode(inputGeojson);
-          const bbox = turf.bbox(inputGeojson);
-          output = turf.voronoi(points, { bbox: bbox as [number, number, number, number] });
-          break;
-        }
-        case 'centroid': {
-          const centroids = inputGeojson.features.map((f) => turf.centroid(f));
-          output = turf.featureCollection(centroids);
-          break;
-        }
-        case 'simplify':
-          output = turf.simplify(inputGeojson, { tolerance: simplifyTol, highQuality: true });
-          break;
-        case 'explode':
-          output = turf.explode(inputGeojson);
-          break;
-        case 'collect':
-          output = turf.collect(
-            inputGeojson as unknown as GeoJSON.FeatureCollection<GeoJSON.Polygon>,
-            inputGeojson as unknown as GeoJSON.FeatureCollection<GeoJSON.Point>,
-            'id', 'collected'
-          ) as unknown as GeoJSON.FeatureCollection;
-          break;
-        case 'intersect':
-        case 'union':
-        case 'difference': {
-          // Two-layer operations
-          const overlayGeojson: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
-          if (operation === 'intersect' && inputGeojson.features[0] && overlayGeojson.features[0]) {
-            output = (turf.intersect(turf.featureCollection([inputGeojson.features[0], overlayGeojson.features[0]]) as unknown as GeoJSON.FeatureCollection<GeoJSON.Polygon>) || inputGeojson) as unknown as GeoJSON.Feature;
-          } else if (operation === 'union' && inputGeojson.features[0] && overlayGeojson.features[0]) {
-            output = (turf.union(turf.featureCollection([inputGeojson.features[0], overlayGeojson.features[0]]) as unknown as GeoJSON.FeatureCollection<GeoJSON.Polygon>) || inputGeojson) as unknown as GeoJSON.Feature;
-          } else if (operation === 'difference' && inputGeojson.features[0] && overlayGeojson.features[0]) {
-            output = (turf.difference(turf.featureCollection([inputGeojson.features[0], overlayGeojson.features[0]]) as unknown as GeoJSON.FeatureCollection<GeoJSON.Polygon>) || inputGeojson) as unknown as GeoJSON.Feature;
-          } else {
-            output = inputGeojson;
-          }
-          break;
-        }
-        case 'bbox-clip': {
-          const bbox = turf.bbox(inputGeojson);
-          const feat = inputGeojson.features[0] || turf.point([0, 0]);
-          output = turf.bboxClip(feat as GeoJSON.Feature<GeoJSON.Polygon>, bbox) as unknown as GeoJSON.Feature;
-          break;
-        }
-        default:
-          output = inputGeojson;
-      }
-
-      const resultFC = 'type' in output && output.type === 'FeatureCollection' ? output : turf.featureCollection([output as GeoJSON.Feature]);
-      const layerId = `geoprocess-${operation}-${Date.now()}`;
-      ctx.map.addGeoJsonLayer(layerId, resultFC, { color: '#9b59b6', lineWidth: 2 });
-      setResult(`✓ ${operation}: ${resultFC.features.length} features → layer "${layerId}"`);
+      const output = runOperation(operation, input, overlay, {
+        bufferDist,
+        bufferUnits: bufferUnits as turf.Units,
+        simplifyTol,
+        field,
+      });
+      const layerId = `geoprocess-${operation}`;
+      ctx.map.addGeoJsonLayer(layerId, output, { color: '#9b59b6', lineWidth: 2 });
+      setResult(`✓ ${operation}: ${output.features.length} features → layer "${layerId}"`);
     } catch (e) {
       setResult(`✗ Error: ${e instanceof Error ? e.message : 'Unknown error'}`);
     } finally {
@@ -142,7 +216,7 @@ function GeoprocessingPanel({ ctx }: { ctx: PluginContext }) {
               { value: 'intersect', label: 'Intersect' },
               { value: 'union', label: 'Union' },
               { value: 'difference', label: 'Difference (Erase)' },
-              { value: 'bbox-clip', label: 'Clip to Bounds' },
+              { value: 'bbox-clip', label: 'Clip to Overlay Bounds' },
             ]},
             { group: 'Aggregation', items: [
               { value: 'dissolve', label: 'Dissolve' },
@@ -153,22 +227,28 @@ function GeoprocessingPanel({ ctx }: { ctx: PluginContext }) {
           onChange={(v) => setOperation((v || 'buffer') as GeoOp)}
         />
 
-        <Select
-          label="Input Layer"
-          data={layers.map((l) => ({ value: l.id, label: l.name }))}
-          value={inputLayer}
-          onChange={setInputLayer}
-          placeholder="Select input layer"
-        />
+        {sources.length === 0 ? (
+          <Text size="sm" c="dimmed">Draw or load features first — there is nothing to process yet.</Text>
+        ) : (
+          <>
+            <Select
+              label="Input Layer"
+              data={sources.map((s) => ({ value: s.id, label: s.name }))}
+              value={inputLayer}
+              onChange={setInputLayer}
+              placeholder="Select input layer"
+            />
 
-        {needsOverlay && (
-          <Select
-            label="Overlay Layer"
-            data={layers.map((l) => ({ value: l.id, label: l.name }))}
-            value={overlayLayer}
-            onChange={setOverlayLayer}
-            placeholder="Select overlay layer"
-          />
+            {needsOverlay && (
+              <Select
+                label="Overlay Layer"
+                data={sources.map((s) => ({ value: s.id, label: s.name }))}
+                value={overlayLayer}
+                onChange={setOverlayLayer}
+                placeholder="Select overlay layer"
+              />
+            )}
+          </>
         )}
 
         {operation === 'buffer' && (
@@ -187,14 +267,21 @@ function GeoprocessingPanel({ ctx }: { ctx: PluginContext }) {
           <NumberInput label="Tolerance" value={simplifyTol} onChange={(v) => setSimplifyTol(Number(v))} step={0.001} decimalScale={4} />
         )}
 
-        {operation === 'dissolve' && (
-          <Select label="Dissolve Field" data={[]} value={dissolveField} onChange={(v) => setDissolveField(v || '')} placeholder="(optional) group by field" clearable />
+        {(operation === 'dissolve' || operation === 'collect') && (
+          <Select
+            label={operation === 'dissolve' ? 'Dissolve Field' : 'Point Field to Collect'}
+            data={fieldOptions}
+            value={field || null}
+            onChange={(v) => setField(v || '')}
+            placeholder={fieldOptions.length ? 'select a field' : 'the selected layer has no fields'}
+            clearable
+          />
         )}
 
         <Button
           leftSection={loading ? <Loader size={14} /> : <IconVectorTriangle size={14} />}
           onClick={handleRun}
-          disabled={loading || !inputLayer}
+          disabled={loading || !input || (needsOverlay && !overlay)}
           fullWidth
           color="grape"
         >

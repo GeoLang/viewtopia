@@ -20,21 +20,33 @@ export interface ProfileStats {
   loss: number; // meters
 }
 
-/** Fetch elevations from the free Open-Elevation API, with a synthetic fallback. */
-export async function fetchElevations(coords: [number, number][]): Promise<number[]> {
+/** The lookup is a GET with the points in the query string, so long lists go in chunks. */
+const LOOKUP_CHUNK = 100;
+
+async function lookupChunk(coords: [number, number][]): Promise<number[]> {
   const locations = coords.map(([lng, lat]) => `${lat},${lng}`).join('|');
-  try {
-    const resp = await fetch(
-      `https://api.open-elevation.com/api/v1/lookup?locations=${locations}`,
-      { signal: AbortSignal.timeout(8000) },
-    );
-    if (!resp.ok) throw new Error('API error');
-    const data = await resp.json();
-    return data.results.map((r: { elevation: number }) => r.elevation);
-  } catch {
-    // Fallback so the profile always renders when the API is unreachable.
-    return coords.map((_, i) => Math.sin((i / coords.length) * Math.PI * 2) * 100 + 200);
+  const resp = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${locations}`, {
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!resp.ok) throw new Error(`elevation lookup failed: ${resp.status} ${resp.statusText}`);
+  const data = await resp.json();
+  const elevations: unknown = data?.results?.map((r: { elevation: number }) => r.elevation);
+  if (!Array.isArray(elevations) || elevations.length !== coords.length) {
+    throw new Error('elevation lookup returned no usable data');
   }
+  return elevations as number[];
+}
+
+/**
+ * Fetch elevations from the free Open-Elevation API. Throws when the lookup
+ * fails: callers must show the failure rather than plot invented terrain.
+ */
+export async function fetchElevations(coords: [number, number][]): Promise<number[]> {
+  const out: number[] = [];
+  for (let i = 0; i < coords.length; i += LOOKUP_CHUNK) {
+    out.push(...(await lookupChunk(coords.slice(i, i + LOOKUP_CHUNK))));
+  }
+  return out;
 }
 
 export function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
