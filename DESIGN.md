@@ -363,6 +363,9 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   editor/admin, recording the caller's `sub` on the run; `/validate`, `/operations` and
   `/health` stay open so headless planning and the evals still work. Verified against the
   live stack, 11 checks including a real run whose record carried the approving user.
-  Two things this surfaced: geodukt ran as uid 999 against a bind mount owned by the host
-  user, so every pipeline sink failed until compose pinned `user:`; and failed runs still
-  record no steps.
+  Two things this surfaced, both since fixed: geodukt ran as uid 999 against a bind mount
+  owned by the host user, so every pipeline sink failed until compose pinned `user:`; and
+  failed runs recorded no steps, because the core executor discarded its progress report
+  on any error. `execute` now returns that progress alongside the error, so a failed run
+  records the steps that finished, the one that died with its own message, and the ones
+  never reached.
