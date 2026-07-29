@@ -124,6 +124,7 @@ export function CompsPanel({
     comps.length > 0
       ? comps.reduce((s, c) => s + c.pricePerSqft, 0) / comps.length
       : 0;
+  const unmapped = comps.filter((c) => c.lat === 0 && c.lng === 0).length;
 
   return (
     <Paper p="sm" radius="md" withBorder>
@@ -192,6 +193,12 @@ export function CompsPanel({
         {error && (
           <Text size="xs" c="red">
             {error}
+          </Text>
+        )}
+
+        {unmapped > 0 && (
+          <Text size="xs" c="dimmed">
+            {unmapped} of {comps.length} sales carry no coordinates and are not drawn.
           </Text>
         )}
 

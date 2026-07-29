@@ -139,6 +139,7 @@ export function ParcelEditPanel({
               <List.Item>Click to start the split line</List.Item>
               <List.Item>Click again to end the line</List.Item>
               <List.Item>Line must cross two edges of the parcel</List.Item>
+              <List.Item>Without a drawn line the parcel is cut across the middle of its bounding box</List.Item>
             </List>
             {selectedParcels.length === 1 && (
               <Badge size="sm" variant="light">

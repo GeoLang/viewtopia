@@ -10,13 +10,12 @@ import {
   ScrollArea,
   Table,
   NumberInput,
-  Select,
   Divider,
 } from '@mantine/core';
 import { IconX, IconAntenna, IconSignal4g, IconMapPin } from '@tabler/icons-react';
 import { discoverBranch, listTowers, TOWERS_DATASET } from '../../lib/verticals';
 
-interface TowerSite {
+export interface TowerSite {
   id: string;
   name: string;
   lat: number;
@@ -34,7 +33,7 @@ interface TowerSite {
 interface CoveragePanelProps {
   onFlyTo: (lat: number, lng: number, zoom?: number) => void;
   onShowCoverage: (tower: TowerSite) => void;
-  onShowViewshed: (lat: number, lng: number, height: number) => void;
+  onShowViewshed: (lat: number, lng: number, height: number) => void | Promise<void>;
   onClose: () => void;
 }
 
@@ -44,9 +43,9 @@ export function CoveragePanel({ onFlyTo, onShowCoverage, onShowViewshed, onClose
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [simHeight, setSimHeight] = useState<number | string>(30);
-  const [simFreq, setSimFreq] = useState<string | null>('3500');
   const [simLat, setSimLat] = useState<number | string>('');
   const [simLng, setSimLng] = useState<number | string>('');
+  const [simulating, setSimulating] = useState(false);
 
   const handleLoad = async () => {
     setLoading(true);
@@ -88,9 +87,16 @@ export function CoveragePanel({ onFlyTo, onShowCoverage, onShowViewshed, onClose
     }
   };
 
-  const handleSimulate = () => {
-    if (simLat && simLng) {
-      onShowViewshed(Number(simLat), Number(simLng), Number(simHeight));
+  const handleSimulate = async () => {
+    if (!simLat || !simLng) return;
+    setSimulating(true);
+    setError(null);
+    try {
+      await onShowViewshed(Number(simLat), Number(simLng), Number(simHeight));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Viewshed request failed');
+    } finally {
+      setSimulating(false);
     }
   };
 
@@ -121,6 +127,12 @@ export function CoveragePanel({ onFlyTo, onShowCoverage, onShowViewshed, onClose
               <Badge color="gray" size="sm">{towers.length} total</Badge>
             </Group>
 
+            <Text size="xs" c="dimmed">
+              Clicking a site draws a simulated coverage footprint: the site's own
+              coverage radius when the record has one, otherwise the radio horizon
+              for its antenna height. No terrain or clutter is taken into account.
+            </Text>
+
             <ScrollArea h={200}>
               <Table striped highlightOnHover>
                 <Table.Thead>
@@ -147,18 +159,23 @@ export function CoveragePanel({ onFlyTo, onShowCoverage, onShowViewshed, onClose
         )}
 
         <Divider label="Site Simulation" labelPosition="left" />
-        <Text size="xs" c="dimmed">Simulate coverage from a new tower location</Text>
+        <Text size="xs" c="dimmed">
+          Terrain line of sight from a candidate site, out to the radio horizon for
+          the antenna height.
+        </Text>
         <Group gap="xs" grow>
           <NumberInput size="xs" label="Lat" value={simLat} onChange={setSimLat} decimalScale={6} />
           <NumberInput size="xs" label="Lng" value={simLng} onChange={setSimLng} decimalScale={6} />
         </Group>
-        <Group gap="xs" grow>
-          <NumberInput size="xs" label="Height (m)" value={simHeight} onChange={setSimHeight} min={5} max={200} />
-          <Select size="xs" label="Frequency" value={simFreq} onChange={setSimFreq}
-            data={[{ value: '700', label: '700 MHz' }, { value: '1800', label: '1800 MHz' }, { value: '2600', label: '2600 MHz' }, { value: '3500', label: '3500 MHz (5G)' }]} />
-        </Group>
-        <Button size="xs" onClick={handleSimulate} disabled={!simLat || !simLng} leftSection={<IconMapPin size={14} />}>
-          Simulate Coverage
+        <NumberInput size="xs" label="Antenna height (m)" value={simHeight} onChange={setSimHeight} min={5} max={200} />
+        <Button
+          size="xs"
+          onClick={handleSimulate}
+          loading={simulating}
+          disabled={!simLat || !simLng}
+          leftSection={<IconMapPin size={14} />}
+        >
+          Run Viewshed
         </Button>
       </Stack>
     </Paper>

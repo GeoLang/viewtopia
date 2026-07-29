@@ -243,15 +243,22 @@ export function DeliveryPanel({
 
             {/* Stats */}
             {currentRoute.optimized && (
-              <Group gap="md">
+              <>
+                <Group gap="md">
+                  <Text size="xs" c="dimmed">
+                    <IconRoute size={12} />{' '}
+                    {(currentRoute.totalDistance / 1000).toFixed(1)} km
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    ~{Math.ceil(currentRoute.totalTime / 60)} min
+                  </Text>
+                </Group>
                 <Text size="xs" c="dimmed">
-                  <IconRoute size={12} />{' '}
-                  {(currentRoute.totalDistance / 1000).toFixed(1)} km
+                  Visit order and distance come from the optimizer, which works on
+                  straight-line distances. The drawn route connects the stops in
+                  order, it is not road geometry.
                 </Text>
-                <Text size="xs" c="dimmed">
-                  ~{Math.ceil(currentRoute.totalTime / 60)} min
-                </Text>
-              </Group>
+              </>
             )}
 
             {/* Add stop */}
