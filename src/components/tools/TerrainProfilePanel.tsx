@@ -31,6 +31,7 @@ export function TerrainProfilePanel({ onClose }: { onClose: () => void }) {
   const [selectedLine, setSelectedLine] = useState<string | null>(null);
   const [numSamples, setNumSamples] = useState(100);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<ProfilePoint[] | null>(null);
   const [stats, setStats] = useState<ProfileStats | null>(null);
 
@@ -50,6 +51,7 @@ export function TerrainProfilePanel({ onClose }: { onClose: () => void }) {
   const generate = async () => {
     if (!activeLine || activeLine.coords.length < 2) return;
     setLoading(true);
+    setError(null);
     try {
       const coords = sampleAlongLine(activeLine.coords, numSamples);
       const elevations = await fetchElevations(coords);
@@ -68,6 +70,10 @@ export function TerrainProfilePanel({ onClose }: { onClose: () => void }) {
         false,
         'terrain-profile-line',
       );
+    } catch (e) {
+      setProfile(null);
+      setStats(null);
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
@@ -145,6 +151,12 @@ export function TerrainProfilePanel({ onClose }: { onClose: () => void }) {
         {drawing && (
           <Text size="xs" c="dimmed" ta="center">
             Click points on the map, double-click to finish the line.
+          </Text>
+        )}
+
+        {error && (
+          <Text size="xs" c="red" ta="center">
+            {error}
           </Text>
         )}
 

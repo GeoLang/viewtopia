@@ -31,6 +31,7 @@ export function CrossSectionPanel({ onClose }: { onClose: () => void }) {
   const [endCoord, setEndCoord] = useState('51.6,-0.05');
   const [numSamples, setNumSamples] = useState(50);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<ProfilePoint[] | null>(null);
   const [stats, setStats] = useState<ProfileStats | null>(null);
 
@@ -56,6 +57,7 @@ export function CrossSectionPanel({ onClose }: { onClose: () => void }) {
     const base = lineCoords();
     if (base.length < 2) return;
     setLoading(true);
+    setError(null);
     try {
       const coords = sampleAlongLine(base, numSamples);
       const elevations = await fetchElevations(coords);
@@ -73,6 +75,10 @@ export function CrossSectionPanel({ onClose }: { onClose: () => void }) {
         '#e74c3c',
         false,
       );
+    } catch (e) {
+      setProfile(null);
+      setStats(null);
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
@@ -154,6 +160,12 @@ export function CrossSectionPanel({ onClose }: { onClose: () => void }) {
         >
           Generate Profile
         </Button>
+
+        {error && (
+          <Text size="xs" c="red" ta="center">
+            {error}
+          </Text>
+        )}
 
         {profile && profile.length > 0 && (
           <ElevationChart profile={profile} width={296} height={110} />
