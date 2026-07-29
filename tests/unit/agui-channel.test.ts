@@ -11,6 +11,7 @@ import { buildAgUiSubscriber, useSSE } from '../../src/hooks/useSSE';
 import { executeViewerCommand } from '../../src/viewer/commands';
 import { renderUISpec } from '../../src/viewer/uiSpec';
 import { useChatStore } from '../../src/store/chat';
+import { useAuthStore } from '../../src/features/auth/store';
 
 // synthetic AG-UI event params: only `event` matters to the mapping, the rest of
 // AgentSubscriberParams is filler the SDK would supply at runtime.
@@ -162,5 +163,36 @@ describe('AG-UI channel', () => {
     expect(urls.some((u) => u.includes('/agent/chat/agui'))).toBe(true);
     expect(urls.some((u) => u.includes('/agent/chat/stream'))).toBe(false);
     fetchSpy.mockRestore();
+  });
+
+  /** Headers the run request went out with, or undefined if it never went out. */
+  async function runHeaders(): Promise<Record<string, string> | undefined> {
+    useChatStore.getState().createSession('AG-UI');
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue({ ok: false, status: 500, statusText: 'err' } as Response);
+
+    const { result } = renderHook(() => useSSE());
+    await act(async () => {
+      await result.current.send('hello');
+    });
+
+    const call = fetchSpy.mock.calls.find((c) => String(c[0]).includes('/agent/chat/agui'));
+    fetchSpy.mockRestore();
+    return call?.[1]?.headers as Record<string, string> | undefined;
+  }
+
+  // the run carries the user's identity to every tool call downstream, so a
+  // signed-in user's writes to ptolemy and geodukt are theirs, not anonymous
+  it('sends the signed-in bearer with the run', async () => {
+    useAuthStore.setState({ loggedIn: true, token: 'jwt-abc', user: null });
+    expect((await runHeaders())?.Authorization).toBe('Bearer jwt-abc');
+  });
+
+  it('sends no Authorization when nobody is signed in', async () => {
+    useAuthStore.setState({ loggedIn: false, token: null, user: null });
+    const headers = await runHeaders();
+    expect(headers).toBeDefined();
+    expect(headers?.Authorization).toBeUndefined();
   });
 });

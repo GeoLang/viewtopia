@@ -3,6 +3,7 @@ import { HttpAgent, type AgentSubscriber } from '@ag-ui/client';
 import type { Message } from '@ag-ui/core';
 import type { WorkflowPlan } from '../features/workflow/plan';
 import { ensureBackendSession } from '../lib/agentSessions';
+import { authHeaders } from '../lib/apiAuth';
 import { useChatStore } from '../store/chat';
 import { executeViewerCommand, type ViewerCommand } from '../viewer/commands';
 import { renderUISpec, type UiSpec } from '../viewer/uiSpec';
@@ -107,7 +108,14 @@ export function useSSE() {
         const messages: Message[] = [
           { id: crypto.randomUUID(), role: 'user', content: prompt },
         ];
-        const agent = new HttpAgent({ url: '/agent/chat/agui', threadId, initialMessages: messages });
+        // the bearer goes with the run: geolang hands it to sibyl, which sends it
+        // on every tool call, so the tools reach ptolemy and friends as this user
+        const agent = new HttpAgent({
+          url: '/agent/chat/agui',
+          headers: authHeaders(),
+          threadId,
+          initialMessages: messages,
+        });
         await agent.runAgent(
           { runId: crypto.randomUUID(), abortController: controller },
           buildAgUiSubscriber({

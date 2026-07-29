@@ -11,7 +11,16 @@ import { getAuthToken } from '../features/auth/store';
 export function apiHeaders(base?: HeadersInit): Headers {
   const headers = new Headers(base);
   if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
-  const token = getAuthToken();
-  if (token) headers.set('Authorization', `Bearer ${token}`);
+  for (const [name, value] of Object.entries(authHeaders())) headers.set(name, value);
   return headers;
+}
+
+/**
+ * The bearer on its own, for clients that build their own request headers. The
+ * AG-UI HttpAgent takes a plain record and sets its own content type, so it
+ * cannot use `apiHeaders`.
+ */
+export function authHeaders(): Record<string, string> {
+  const token = getAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }

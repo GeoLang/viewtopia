@@ -12,6 +12,7 @@ import { PlanPanel } from '../../src/features/workflow/PlanPanel';
 import type { WorkflowPlan } from '../../src/features/workflow/plan';
 import { buildAgUiSubscriber } from '../../src/hooks/useSSE';
 import { useChatStore } from '../../src/store/chat';
+import { useAuthStore } from '../../src/features/auth/store';
 
 window.matchMedia = vi.fn().mockReturnValue({
   matches: false,
@@ -166,6 +167,9 @@ describe('PlanPanel', () => {
   });
 
   it('approving posts the manifest verbatim with notify and renders the run report', async () => {
+    // the approved run happens outside the model's turn, so it carries the
+    // user's own bearer rather than riding on the chat run's
+    useAuthStore.setState({ loggedIn: true, token: 'jwt-abc', user: null });
     const fetchMock = vi.fn(() =>
       Promise.resolve(
         new Response(JSON.stringify({ result: RUN_REPORT }), {
@@ -183,6 +187,7 @@ describe('PlanPanel', () => {
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('/agent/tools/run_workflow');
     expect(init.method).toBe('POST');
+    expect(new Headers(init.headers).get('Authorization')).toBe('Bearer jwt-abc');
     // notify is a sibling of args: it puts the report in the model's session
     expect(JSON.parse(String(init.body))).toEqual({
       args: { manifest_toml: PLAN.manifest },
