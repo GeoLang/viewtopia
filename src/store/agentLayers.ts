@@ -20,6 +20,12 @@ export interface AgentLayer {
   color: string;
   geojson: GeoJSON.FeatureCollection;
   style?: AgentLayerStyle;
+  /**
+   * Relative path of the file this layer was read from, e.g.
+   * "outputs/venice_env_risk.gpkg". Unset for a layer with no file behind it
+   * (a drawing, a SQL result, a plugin's own geometry).
+   */
+  path?: string;
 }
 
 /** Fills in what a layer left unset, so the three renderers draw it the same. */
@@ -51,6 +57,8 @@ interface AgentLayerState {
   addLayer: (layer: AgentLayer, fit?: boolean) => void;
   /** Drop one layer by id (a panel taking back what it added). */
   removeLayer: (id: string) => void;
+  /** Fill opacity of one layer, which every renderer reads through layerStyle. */
+  setLayerOpacity: (id: string, opacity: number) => void;
   addMarker: (marker: Omit<AgentMarker, 'id'>) => void;
   clearMarkers: () => void;
   clear: () => void;
@@ -119,6 +127,13 @@ export const useAgentLayerStore = create<AgentLayerState>((set) => ({
       };
     }),
   removeLayer: (id) => set((s) => ({ layers: s.layers.filter((l) => l.id !== id) })),
+  // generation is left alone: restyling must not reframe the view
+  setLayerOpacity: (id, opacity) =>
+    set((s) => ({
+      layers: s.layers.map((l) =>
+        l.id === id ? { ...l, style: { ...l.style, opacity } } : l,
+      ),
+    })),
   addMarker: (marker) =>
     set((s) => {
       if (Math.abs(marker.lon) > 180 || Math.abs(marker.lat) > 90) {

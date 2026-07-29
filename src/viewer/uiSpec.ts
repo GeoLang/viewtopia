@@ -44,7 +44,10 @@ export async function renderUISpec(spec: UiSpec): Promise<void> {
 
   for (let i = 0; i < specLayers.length; i++) {
     const layer = specLayers[i];
-    const file = (layer.file || layer.path || '').split('/').pop();
+    // the spec's path is relative ("outputs/x.gpkg"), the endpoint takes the
+    // basename; the layer keeps the path so the panel can offer a download
+    const source = layer.file || layer.path || '';
+    const file = source.split('/').pop();
     if (!file) continue;
     const color = layer.color || LAYER_COLORS[i % LAYER_COLORS.length];
 
@@ -52,7 +55,7 @@ export async function renderUISpec(spec: UiSpec): Promise<void> {
       const res = await fetch(`/agent/geojson/${file}`);
       if (!res.ok) continue;
       const geojson = (await res.json()) as GeoJSON.FeatureCollection;
-      loaded.push({ id: `${i}-${file}`, name: layer.name || file, color, geojson });
+      loaded.push({ id: `${i}-${file}`, name: layer.name || file, color, geojson, path: source });
     } catch (e) {
       console.error('renderUISpec: failed to load layer', layer, e);
     }

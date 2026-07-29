@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { renderUISpec } from '../../src/viewer/uiSpec';
+import { useAgentLayerStore } from '../../src/store/agentLayers';
 
 // No live Cesium viewer is registered in jsdom, so renderUISpec should no-op
 // gracefully (it bails when getActiveCesiumViewer() is null) without throwing.
@@ -17,6 +18,42 @@ describe('renderUISpec', () => {
         zoom: 11,
       }),
     ).resolves.toBeUndefined();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    useAgentLayerStore.setState({ layers: [], markers: [], generation: 0 });
+  });
+
+  it('keeps the source path on the layer it puts in the store', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              type: 'FeatureCollection',
+              features: [
+                { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [12.33, 45.44] } },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        ),
+      ),
+    );
+
+    await renderUISpec({
+      type: 'map',
+      layers: [{ name: 'Flood risk', file: 'outputs/venice_env_risk.gpkg' }],
+    });
+
+    const [layer] = useAgentLayerStore.getState().layers;
+    // the endpoint takes the basename, the layer keeps the relative path so the
+    // layer panel can offer a download
+    expect(fetch).toHaveBeenCalledWith('/agent/geojson/venice_env_risk.gpkg');
+    expect(layer.path).toBe('outputs/venice_env_risk.gpkg');
+    expect(layer.name).toBe('Flood risk');
   });
 });
 
