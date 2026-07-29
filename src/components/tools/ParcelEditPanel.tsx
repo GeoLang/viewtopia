@@ -28,7 +28,8 @@ interface ParcelEditPanelProps {
   onConfirmSplit: () => Promise<{ success: boolean; newApns?: string[] }>;
   onConfirmMerge: () => Promise<{ success: boolean; newApn?: string }>;
   onCancel: () => void;
-  onClose: () => void;
+  /** omitted when embedded in the real-estate plugin tabs, which has its own close */
+  onClose?: () => void;
 }
 
 export function ParcelEditPanel({
@@ -98,9 +99,11 @@ export function ParcelEditPanel({
               Parcel Edit
             </Text>
           </Group>
-          <ActionIcon size="sm" variant="subtle" onClick={onClose}>
-            <IconX size={14} />
-          </ActionIcon>
+          {onClose && (
+            <ActionIcon size="sm" variant="subtle" onClick={onClose}>
+              <IconX size={14} />
+            </ActionIcon>
+          )}
         </Group>
 
         <SegmentedControl

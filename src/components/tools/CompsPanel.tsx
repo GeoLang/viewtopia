@@ -43,7 +43,8 @@ interface CompsPanelProps {
   subjectLng: number | null;
   onFlyTo: (lat: number, lng: number, zoom?: number) => void;
   onHighlightComps: (comps: Array<{ lat: number; lng: number }>) => void;
-  onClose: () => void;
+  /** omitted when embedded in the real-estate plugin tabs, which has its own close */
+  onClose?: () => void;
 }
 
 export function CompsPanel({
@@ -136,9 +137,11 @@ export function CompsPanel({
               Comparable Sales
             </Text>
           </Group>
-          <ActionIcon size="sm" variant="subtle" onClick={onClose}>
-            <IconX size={14} />
-          </ActionIcon>
+          {onClose && (
+            <ActionIcon size="sm" variant="subtle" onClick={onClose}>
+              <IconX size={14} />
+            </ActionIcon>
+          )}
         </Group>
 
         <Text size="xs" c="dimmed">

@@ -46,7 +46,8 @@ interface ParcelPanelProps {
   branchId: string | null;
   onFlyTo: (lat: number, lng: number, zoom?: number) => void;
   onHighlightParcel: (geometry: GeoJSON.Geometry | null) => void;
-  onClose: () => void;
+  /** omitted when embedded in the real-estate plugin tabs, which has its own close */
+  onClose?: () => void;
   onSubjectFound?: (lat: number, lng: number) => void;
   onAddToSelection?: (parcel: ParcelRecord) => void;
 }
@@ -152,9 +153,11 @@ export function ParcelPanel({
               Parcels
             </Text>
           </Group>
-          <ActionIcon size="sm" variant="subtle" onClick={onClose}>
-            <IconX size={14} />
-          </ActionIcon>
+          {onClose && (
+            <ActionIcon size="sm" variant="subtle" onClick={onClose}>
+              <IconX size={14} />
+            </ActionIcon>
+          )}
         </Group>
 
         <Select

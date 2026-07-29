@@ -3,11 +3,11 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { IconBuildingEstate } from '@tabler/icons-react';
+import { IconBuildingEstate, IconX } from '@tabler/icons-react';
 import { ParcelPanel } from '../../components/tools/ParcelPanel';
 import { CompsPanel } from '../../components/tools/CompsPanel';
 import { ParcelEditPanel } from '../../components/tools/ParcelEditPanel';
-import { Tabs } from '@mantine/core';
+import { Tabs, ActionIcon } from '@mantine/core';
 import type { PluginDefinition, PluginContext, PluginMapContext } from '../sdk';
 import {
   discoverBranch,
@@ -182,11 +182,13 @@ function RealEstatePanel({ ctx }: { ctx: PluginContext }) {
         <Tabs.Tab value="parcels" size="xs">Parcels</Tabs.Tab>
         <Tabs.Tab value="comps" size="xs">Comps</Tabs.Tab>
         <Tabs.Tab value="edit" size="xs">Edit</Tabs.Tab>
+        <ActionIcon size="sm" variant="subtle" ml="auto" aria-label="Close" onClick={ctx.close}>
+          <IconX size={14} />
+        </ActionIcon>
       </Tabs.List>
       <Tabs.Panel value="parcels">
         <ParcelPanel
           branchId={parcelsBranch}
-          onClose={ctx.close}
           onFlyTo={(lat, lng, zoom) => ctx.map.flyTo(lng, lat, zoom)}
           onHighlightParcel={highlightParcel}
           onSubjectFound={(lat, lng) => setSubject({ lat, lng })}
@@ -196,7 +198,6 @@ function RealEstatePanel({ ctx }: { ctx: PluginContext }) {
       <Tabs.Panel value="comps">
         <CompsPanel
           branchId={salesBranch}
-          onClose={ctx.close}
           subjectLat={subject?.lat ?? null}
           subjectLng={subject?.lng ?? null}
           onFlyTo={(lat, lng, zoom) => ctx.map.flyTo(lng, lat, zoom)}
@@ -205,7 +206,6 @@ function RealEstatePanel({ ctx }: { ctx: PluginContext }) {
       </Tabs.Panel>
       <Tabs.Panel value="edit">
         <ParcelEditPanel
-          onClose={ctx.close}
           selectedParcels={selected.map((p) => p.apn)}
           onStartSplit={handleStartSplit}
           onStartMerge={handleStartMerge}
