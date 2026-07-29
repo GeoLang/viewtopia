@@ -188,12 +188,16 @@ services:
   # is geolang's documented port.
   # Manifest paths ("outputs/foo.gpkg") are relative to geolang's exec dir, so
   # geodukt reads and writes through the same bind mount from the same cwd.
+  # With the shared secret set, POST /run needs an editor or admin token;
+  # /validate and /operations stay open for headless planning.
   geodukt:
     build:
       context: ../geodukt
     volumes:
       - ../geolang:/app/geolang:z
     working_dir: /app/geolang
+    environment:
+      PLATFORM_JWT_SECRET: ${PLATFORM_JWT_SECRET:-}
     command:
       - serve
       - --bind
