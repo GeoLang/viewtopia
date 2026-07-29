@@ -172,6 +172,7 @@ services:
       # SIBYL_MODEL) to use a local llama-server on the host instead of x.ai
       SIBYL_API_BASE: ${SIBYL_API_BASE:-}
       SIBYL_MODEL: ${SIBYL_MODEL:-}
+      SIBYL_THINKING: ${SIBYL_THINKING:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
