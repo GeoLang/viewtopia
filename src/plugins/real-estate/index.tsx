@@ -176,8 +176,9 @@ function RealEstatePanel({ ctx }: { ctx: PluginContext }) {
     );
   };
 
+  // fixed width so the panel doesn't resize when switching tabs
   return (
-    <Tabs defaultValue="parcels">
+    <Tabs defaultValue="parcels" w={400}>
       <Tabs.List>
         <Tabs.Tab value="parcels" size="xs">Parcels</Tabs.Tab>
         <Tabs.Tab value="comps" size="xs">Comps</Tabs.Tab>
