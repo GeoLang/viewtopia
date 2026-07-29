@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react';
 import { HttpAgent, type AgentSubscriber } from '@ag-ui/client';
 import type { Message } from '@ag-ui/core';
-import type { WorkflowPlan } from '../features/workflow/plan';
+import type { WorkflowPlan, WorkflowRunReport } from '../features/workflow/plan';
 import { ensureBackendSession } from '../lib/agentSessions';
 import { authHeaders } from '../lib/apiAuth';
 import { useChatStore } from '../store/chat';
@@ -15,6 +15,7 @@ interface AgUiHandlers {
   setLastMapSpec: (spec: UiSpec) => void;
   addLastViewerCmd: (cmd: ViewerCommand) => void;
   setLastPlan: (plan: WorkflowPlan) => void;
+  setLastPlanReport: (report: WorkflowRunReport) => void;
 }
 
 /**
@@ -27,9 +28,10 @@ interface AgUiHandlers {
  * custom `viewer_cmd` → executeViewerCommand + keep it on the message for replay;
  * custom `ui_spec` → keep the spec on the message + renderUISpec; custom `plan` →
  * keep it on the message, which renders the plan panel and its approve action;
- * run error → setLastContent (legacy `error`).
+ * custom `run` → the per-step outcome of a run the model started, onto that same
+ * panel; run error → setLastContent (legacy `error`).
  */
-export function buildAgUiSubscriber({ setLastContent, setLastError, setLastMapSpec, addLastViewerCmd, setLastPlan }: AgUiHandlers): AgentSubscriber {
+export function buildAgUiSubscriber({ setLastContent, setLastError, setLastMapSpec, addLastViewerCmd, setLastPlan, setLastPlanReport }: AgUiHandlers): AgentSubscriber {
   let lastText = '';
   return {
     onTextMessageContentEvent({ event }) {
@@ -55,6 +57,11 @@ export function buildAgUiSubscriber({ setLastContent, setLastError, setLastMapSp
           // nothing has run: the panel on the message owns the approve action
           setLastPlan(event.value);
           break;
+        case 'run':
+          // the model ran the plan itself, so the panel shows the outcome it
+          // would otherwise only get from the approve button
+          setLastPlanReport(event.value);
+          break;
       }
     },
     onRunErrorEvent({ event }) {
@@ -78,6 +85,7 @@ export function useSSE() {
     setLastMapSpec,
     addLastViewerCmd,
     setLastPlan,
+    setLastPlanReport,
     setStreaming,
   } = useChatStore();
 
@@ -124,6 +132,7 @@ export function useSSE() {
             setLastMapSpec,
             addLastViewerCmd,
             setLastPlan,
+            setLastPlanReport,
           }),
         );
       } catch (err: unknown) {
@@ -139,7 +148,7 @@ export function useSSE() {
         abortRef.current = null;
       }
     },
-    [addMessage, setLastContent, setLastMapSpec, addLastViewerCmd, setLastPlan, setStreaming],
+    [addMessage, setLastContent, setLastMapSpec, addLastViewerCmd, setLastPlan, setLastPlanReport, setStreaming],
   );
 
   const abort = useCallback(() => {

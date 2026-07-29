@@ -51,10 +51,68 @@ export function stepText(step: PlanStep): string {
   return `write ${step.input} to ${step.path} (${step.format})`;
 }
 
+/** One step's fate in a run. "unknown" is an older geodukt with no step status. */
+export type StepOutcome = 'completed' | 'failed' | 'not_run' | 'unknown';
+
+export interface RunStep {
+  name: string;
+  outcome: StepOutcome;
+  feature_count?: number | null;
+  /** Why this step failed, empty otherwise. */
+  message?: string;
+}
+
+export interface RunOutput {
+  name: string;
+  path: string;
+  format?: string | null;
+  /** False when the sink never ran, so there is no file to download. */
+  written: boolean;
+}
+
+/** geolang's run_payload (src/agents/tools/_geodukt.py), per-step run outcome. */
+export interface WorkflowRunReport {
+  id?: number | string | null;
+  title?: string;
+  status: 'completed' | 'failed';
+  message?: string;
+  steps: RunStep[];
+  outputs: RunOutput[];
+}
+
 export interface WorkflowRun {
   ok: boolean;
   /** run_workflow's report: run id, per-step feature counts, files written. */
   text: string;
+  /** The same run as structured data, when the tool emitted its marker. */
+  report?: WorkflowRunReport;
+}
+
+const RUN_MARKER = '__RUN__:';
+
+/**
+ * Split run_workflow's result into the prose the user reads and the structured
+ * report. The marker is one JSON line, the same seam the plan travels on, and it
+ * must never reach the transcript.
+ */
+export function splitRunReport(result: string): { text: string; report?: WorkflowRunReport } {
+  const at = result.indexOf(RUN_MARKER);
+  if (at < 0) return { text: result.trim() };
+  const [marker, ...rest] = result.slice(at + RUN_MARKER.length).split('\n');
+  const text = (result.slice(0, at) + rest.join('\n')).trim();
+  try {
+    return { text, report: JSON.parse(marker.trim()) as WorkflowRunReport };
+  } catch {
+    return { text };
+  }
+}
+
+/**
+ * geolang serves outputs at /download/{filename} with no path segments, so only
+ * the basename matches: "outputs/x.gpkg" downloads from "/agent/download/x.gpkg".
+ */
+export function outputDownloadUrl(path: string): string {
+  return `/agent/download/${encodeURIComponent(path.split('/').pop() ?? path)}`;
 }
 
 /**
@@ -79,7 +137,7 @@ export async function runWorkflow(manifest: string): Promise<WorkflowRun> {
   } catch (e) {
     return { ok: false, text: `run_workflow could not be reached: ${(e as Error).message}` };
   }
-  const text = (body?.result ?? '').trim();
+  const { text, report } = splitRunReport(body?.result ?? '');
   if (!text) return { ok: false, text: 'run_workflow returned nothing' };
-  return { ok: !/^(ERROR|❌)/.test(text), text };
+  return { ok: report ? report.status === 'completed' : !/^(ERROR|❌)/.test(text), text, report };
 }

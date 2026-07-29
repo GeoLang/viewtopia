@@ -24,6 +24,7 @@ describe('AG-UI subscriber mapping', () => {
   let setLastMapSpec: ReturnType<typeof vi.fn>;
   let addLastViewerCmd: ReturnType<typeof vi.fn>;
   let setLastPlan: ReturnType<typeof vi.fn>;
+  let setLastPlanReport: ReturnType<typeof vi.fn>;
   let sub: AgentSubscriber;
 
   beforeEach(() => {
@@ -33,12 +34,14 @@ describe('AG-UI subscriber mapping', () => {
     setLastMapSpec = vi.fn();
     addLastViewerCmd = vi.fn();
     setLastPlan = vi.fn();
+    setLastPlanReport = vi.fn();
     sub = buildAgUiSubscriber({
       setLastContent,
       setLastError,
       setLastMapSpec,
       addLastViewerCmd,
       setLastPlan,
+      setLastPlanReport,
     });
   });
 
@@ -143,6 +146,26 @@ describe('AG-UI subscriber mapping', () => {
     expect(executeViewerCommand).not.toHaveBeenCalled();
   });
 
+  it('routes a run custom event onto the plan it belongs to', () => {
+    const report = {
+      id: 7,
+      title: 'depot-catchment',
+      status: 'completed',
+      message: '',
+      steps: [{ name: 'depots', outcome: 'completed', feature_count: 12, message: '' }],
+      outputs: [
+        { name: 'out', path: 'outputs/depot_catchment.gpkg', format: 'gpkg', written: true },
+      ],
+    };
+    sub.onCustomEvent!({
+      ...ctx,
+      event: { type: 'CUSTOM', name: 'run', value: report },
+    } as unknown as P<'onCustomEvent'>);
+    expect(setLastPlanReport).toHaveBeenCalledWith(report);
+    // a run of its own is not a plan and renders nothing on the map
+    expect(setLastPlan).not.toHaveBeenCalled();
+    expect(renderUISpec).not.toHaveBeenCalled();
+  });
 });
 
 describe('AG-UI channel', () => {

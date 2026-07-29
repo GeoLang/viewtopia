@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { deleteBackendSession, renameBackendSession } from '../lib/agentSessions';
-import type { WorkflowPlan } from '../features/workflow/plan';
+import type { WorkflowPlan, WorkflowRunReport } from '../features/workflow/plan';
 import type { UiSpec } from '../viewer/uiSpec';
 import type { ViewerCommand } from '../viewer/commands';
 
@@ -18,6 +18,8 @@ export interface Message {
   plan?: WorkflowPlan;
   /** run_workflow's report, once that plan was approved and ran. */
   planRun?: string;
+  /** The same run as per-step outcomes and downloadable outputs. */
+  planReport?: WorkflowRunReport;
   /** Run error text, kept separate so it never overwrites streamed content. */
   error?: string;
 }
@@ -55,7 +57,8 @@ interface ChatState {
   setLastMapSpec: (mapSpec: UiSpec) => void;
   addLastViewerCmd: (cmd: ViewerCommand) => void;
   setLastPlan: (plan: WorkflowPlan) => void;
-  setPlanRun: (messageId: string, planRun: string) => void;
+  setPlanRun: (messageId: string, planRun: string, planReport?: WorkflowRunReport) => void;
+  setLastPlanReport: (planReport: WorkflowRunReport) => void;
   clearMessages: () => void;
 
   // Streaming state
@@ -227,17 +230,31 @@ export const useChatStore = create<ChatState>()(
 
       // by id, not "last": a plan is approved after the run that proposed it
       // has finished, with any number of messages since
-      setPlanRun: (messageId, planRun) =>
+      setPlanRun: (messageId, planRun, planReport) =>
         set((s) => ({
           sessions: s.sessions.map((sess) => {
             if (sess.id !== s.activeSessionId) return sess;
             return {
               ...sess,
               messages: sess.messages.map((msg) =>
-                msg.id === messageId ? { ...msg, planRun } : msg,
+                msg.id === messageId ? { ...msg, planRun, planReport } : msg,
               ),
               updatedAt: Date.now(),
             };
+          }),
+        })),
+
+      // the model runs a plan a turn or more after proposing it, so the outcome
+      // belongs to the newest message that holds a plan, not to the newest one
+      setLastPlanReport: (planReport) =>
+        set((s) => ({
+          sessions: s.sessions.map((sess) => {
+            if (sess.id !== s.activeSessionId) return sess;
+            const msgs = [...sess.messages];
+            const at = msgs.map((m) => Boolean(m.plan)).lastIndexOf(true);
+            if (at < 0) return sess;
+            msgs[at] = { ...msgs[at], planReport };
+            return { ...sess, messages: msgs, updatedAt: Date.now() };
           }),
         })),
 

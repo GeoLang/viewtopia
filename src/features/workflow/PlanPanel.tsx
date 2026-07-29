@@ -1,7 +1,26 @@
-import { Badge, Button, Code, Collapse, Group, Loader, Paper, Stack, Text } from '@mantine/core';
+import {
+  Anchor,
+  Badge,
+  Button,
+  Code,
+  Collapse,
+  CopyButton,
+  Group,
+  Loader,
+  Paper,
+  Stack,
+  Text,
+} from '@mantine/core';
 import { useState } from 'react';
 import { useChatStore } from '../../store/chat';
-import { runWorkflow, stepText, type WorkflowPlan } from './plan';
+import {
+  outputDownloadUrl,
+  runWorkflow,
+  stepText,
+  type RunStep,
+  type StepOutcome,
+  type WorkflowPlan,
+} from './plan';
 
 const KIND_COLORS: Record<WorkflowPlan['steps'][number]['kind'], string> = {
   source: 'blue',
@@ -9,37 +28,75 @@ const KIND_COLORS: Record<WorkflowPlan['steps'][number]['kind'], string> = {
   sink: 'teal',
 };
 
+const OUTCOME_COLORS: Record<StepOutcome, string> = {
+  completed: 'teal',
+  failed: 'red',
+  not_run: 'gray',
+  unknown: 'gray',
+};
+
+/** The short marker on a step row: the count when it ran, else its fate. */
+function outcomeLabel(step: RunStep): string {
+  if (step.outcome === 'completed') {
+    return step.feature_count == null ? 'ok' : `${step.feature_count} features`;
+  }
+  if (step.outcome === 'failed') return 'failed';
+  if (step.outcome === 'not_run') return 'not run';
+  return '';
+}
+
 /**
  * A plan the agent proposed, in the chat transcript, with the approve action
  * that runs it. Approving posts the plan's own manifest, so what runs cannot
- * drift from what is on screen.
+ * drift from what is on screen. Once it has run, each step row carries its
+ * outcome and the outputs become download links.
  */
 export function PlanPanel({ messageId, plan }: { messageId: string; plan: WorkflowPlan }) {
   const { setPlanRun, addMessage } = useChatStore();
   // read the report back from the message, so approving re-renders this panel
   // whether or not the chat transcript around it re-rendered
-  const planRun = useChatStore((s) =>
+  const message = useChatStore((s) =>
     s.sessions
       .find((sess) => sess.id === s.activeSessionId)
-      ?.messages.find((msg) => msg.id === messageId)?.planRun,
+      ?.messages.find((msg) => msg.id === messageId),
   );
+  const planRun = message?.planRun;
+  const report = message?.planReport;
   const [showManifest, setShowManifest] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [running, setRunning] = useState(false);
 
-  const failed = Boolean(planRun && /^(ERROR|❌)/.test(planRun));
+  const ran = Boolean(planRun || report);
+  const failed = report
+    ? report.status === 'failed'
+    : Boolean(planRun && /^(ERROR|❌)/.test(planRun));
+  const written = report?.status === 'completed' ? report.outputs.filter((o) => o.written) : [];
+  const manifestFile = `${(plan.project || plan.title || 'workflow')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')}.toml`;
 
   const approve = async () => {
     setRunning(true);
     const run = await runWorkflow(plan.manifest);
     setRunning(false);
-    setPlanRun(messageId, run.text);
+    setPlanRun(messageId, run.text, run.report);
     // same transcript note viewer_cmd notices use, so the run is part of the
     // conversation rather than only a panel state
     addMessage({
       role: 'system',
       content: `${run.ok ? 'Ran' : 'Failed to run'} approved plan "${plan.title}".\n${run.text}`,
     });
+  };
+
+  const downloadManifest = () => {
+    const blob = new Blob([plan.manifest], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = manifestFile;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   if (dismissed) {
@@ -83,10 +140,10 @@ export function PlanPanel({ messageId, plan }: { messageId: string; plan: Workfl
             <Badge
               size="xs"
               variant="light"
-              color={planRun ? (failed ? 'red' : 'teal') : 'gray'}
+              color={ran ? (failed ? 'red' : 'teal') : 'gray'}
               data-testid="plan-status"
             >
-              {planRun ? (failed ? 'run failed' : 'ran') : 'not run yet'}
+              {ran ? (failed ? 'run failed' : 'ran') : 'not run yet'}
             </Badge>
           </Group>
         </Group>
@@ -98,16 +155,39 @@ export function PlanPanel({ messageId, plan }: { messageId: string; plan: Workfl
         )}
 
         <Stack gap={2}>
-          {plan.steps.map((step) => (
-            <Group key={`${step.index}-${step.name}`} gap={6} wrap="nowrap" data-testid="plan-step">
-              <Badge size="xs" variant="outline" color={KIND_COLORS[step.kind]}>
-                {step.index}. {step.kind}
-              </Badge>
-              <Text size="xs" c="gray.3" style={{ wordBreak: 'break-word' }}>
-                {stepText(step)}
-              </Text>
-            </Group>
-          ))}
+          {plan.steps.map((step) => {
+            const outcome = report?.steps.find((s) => s.name === step.name);
+            const label = outcome ? outcomeLabel(outcome) : '';
+            // one line per row in a narrow rail, so the whole of it, failure
+            // reason included, is the row's tooltip
+            const full = [stepText(step), label, outcome?.message].filter(Boolean).join(', ');
+            return (
+              <Group
+                key={`${step.index}-${step.name}`}
+                gap={6}
+                wrap="nowrap"
+                data-testid="plan-step"
+                title={full}
+              >
+                <Badge size="xs" variant="outline" color={KIND_COLORS[step.kind]}>
+                  {step.index}. {step.kind}
+                </Badge>
+                <Text size="xs" c="gray.3" truncate style={{ flex: 1, minWidth: 0 }}>
+                  {stepText(step)}
+                </Text>
+                {label && (
+                  <Badge
+                    size="xs"
+                    variant="light"
+                    color={outcome ? OUTCOME_COLORS[outcome.outcome] : 'gray'}
+                    data-testid="plan-step-outcome"
+                  >
+                    {label}
+                  </Badge>
+                )}
+              </Group>
+            );
+          })}
         </Stack>
 
         {plan.datasets?.length ? (
@@ -115,7 +195,24 @@ export function PlanPanel({ messageId, plan }: { messageId: string; plan: Workfl
             Reads: {plan.datasets.join(', ')}
           </Text>
         ) : null}
-        {plan.outputs?.length ? (
+        {written.length ? (
+          <Group gap={6} wrap="wrap" data-testid="plan-downloads">
+            <Text size="xs" c="dimmed">
+              Download:
+            </Text>
+            {written.map((out) => (
+              <Anchor
+                key={out.path}
+                size="xs"
+                href={outputDownloadUrl(out.path)}
+                download
+                data-testid="plan-download"
+              >
+                {out.path.split('/').pop()}
+              </Anchor>
+            ))}
+          </Group>
+        ) : plan.outputs?.length ? (
           <Text size="xs" c="dimmed">
             Writes: {plan.outputs.join(', ')}
           </Text>
@@ -125,9 +222,14 @@ export function PlanPanel({ messageId, plan }: { messageId: string; plan: Workfl
             Formats: {plan.formats.join(', ')}
           </Text>
         ) : null}
+        {report ? (
+          <Text size="xs" c="dimmed" data-testid="plan-engine">
+            Run {report.id} executed by geodukt (geo/proj).
+          </Text>
+        ) : null}
 
         <Group gap={6}>
-          {!planRun && (
+          {!ran && (
             <Button
               size="compact-xs"
               color="violet"
@@ -160,12 +262,41 @@ export function PlanPanel({ messageId, plan }: { messageId: string; plan: Workfl
         </Group>
 
         <Collapse in={showManifest}>
-          <Code block data-testid="plan-manifest" style={{ fontSize: 11, background: '#0d1117' }}>
-            {plan.manifest}
-          </Code>
+          <Stack gap={4}>
+            <Code block data-testid="plan-manifest" style={{ fontSize: 11, background: '#0d1117' }}>
+              {plan.manifest}
+            </Code>
+            <Group gap={6} wrap="nowrap">
+              <Button
+                size="compact-xs"
+                variant="subtle"
+                color="gray"
+                onClick={downloadManifest}
+                data-testid="plan-manifest-download"
+              >
+                Download {manifestFile}
+              </Button>
+              <Code style={{ fontSize: 11, background: '#0d1117' }} data-testid="plan-rerun-command">
+                geodukt run {manifestFile}
+              </Code>
+              <CopyButton value={`geodukt run ${manifestFile}`}>
+                {({ copied, copy }) => (
+                  <Button
+                    size="compact-xs"
+                    variant="subtle"
+                    color="gray"
+                    onClick={copy}
+                    data-testid="plan-rerun-copy"
+                  >
+                    {copied ? 'Copied' : 'Copy'}
+                  </Button>
+                )}
+              </CopyButton>
+            </Group>
+          </Stack>
         </Collapse>
 
-        {planRun && (
+        {(planRun || report?.message) && (
           <Text
             size="xs"
             c={failed ? 'red.4' : 'gray.3'}
@@ -178,7 +309,7 @@ export function PlanPanel({ messageId, plan }: { messageId: string; plan: Workfl
               whiteSpace: 'pre-wrap',
             }}
           >
-            {planRun}
+            {planRun || report?.message}
           </Text>
         )}
       </Stack>
