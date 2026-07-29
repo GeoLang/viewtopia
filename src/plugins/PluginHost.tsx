@@ -62,6 +62,7 @@ export function PluginPanel({ pluginId, onClose }: PluginPanelProps) {
       getLayers: () => store.layers,
       getActivePanel: () => store.activePanel,
       getBasemap: () => store.basemap,
+      setCustomBasemap: (basemap) => store.setCustomBasemap(basemap),
       getRenderer: () => store.renderer,
       getSettings: () => store.settings as unknown as Record<string, unknown>,
     };

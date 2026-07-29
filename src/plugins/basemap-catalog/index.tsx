@@ -77,6 +77,9 @@ const CATEGORY_COLORS: Record<string, string> = {
 function BasemapCatalogPanel({ ctx }: { ctx: PluginContext }) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<string | null>(null);
+  const [selected, setSelected] = useState(() =>
+    String(ctx.settings.get('activeBasemap', '') ?? ''),
+  );
 
   const filtered = BASEMAPS.filter((b) => {
     const matchSearch = !search || b.name.toLowerCase().includes(search.toLowerCase());
@@ -138,17 +141,19 @@ function BasemapCatalogPanel({ ctx }: { ctx: PluginContext }) {
                 <UnstyledButton
                   disabled={needsKey}
                   onClick={() => {
-                    ctx.map.addGeoJsonLayer(`basemap-${basemap.id}`, {
-                      type: 'FeatureCollection',
-                      features: [],
-                    }, { opacity: 1 });
+                    ctx.store.setCustomBasemap({ url, attr: basemap.attribution });
+                    setSelected(basemap.id);
                     ctx.settings.set('activeBasemap', basemap.id);
                     ctx.settings.set('activeBasemapUrl', url);
                   }}
                   style={{
                     padding: 8,
                     borderRadius: 8,
-                    border: '1px solid var(--mantine-color-default-border)',
+                    border: `1px solid ${
+                      selected === basemap.id
+                        ? 'var(--mantine-color-blue-6)'
+                        : 'var(--mantine-color-default-border)'
+                    }`,
                     textAlign: 'center',
                   }}
                 >

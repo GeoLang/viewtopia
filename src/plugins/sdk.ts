@@ -37,6 +37,8 @@ export interface PluginStoreContext {
   getActivePanel: () => string | null;
   /** Get current basemap */
   getBasemap: () => string;
+  /** Switch the viewers to custom raster tiles */
+  setCustomBasemap: (basemap: { url: string; attr: string }) => void;
   /** Get current renderer */
   getRenderer: () => string;
   /** Access settings */

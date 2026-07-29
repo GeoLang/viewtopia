@@ -13,7 +13,7 @@ import {
   readCesiumCamera,
   useFollowSharedCamera,
 } from './cameraSync';
-import { rasterTiles } from './basemapTiles';
+import { rasterTiles, type CustomBasemap } from './basemapTiles';
 import { setActiveCesiumViewer, setPaneCesiumViewer } from '../viewer/registry';
 
 interface UseCesiumOptions {
@@ -28,13 +28,13 @@ interface UseCesiumOptions {
 }
 
 /** Cesium is raster-only, so a vector basemap resolves to its raster fallback. */
-function cesiumImageryProvider(basemap: string) {
+function cesiumImageryProvider(basemap: string, custom?: CustomBasemap | null) {
   if (basemap === 'osm') {
     return new OpenStreetMapImageryProvider({
       url: 'https://tile.openstreetmap.org/',
     });
   }
-  const tile = rasterTiles(basemap);
+  const tile = rasterTiles(basemap, custom);
   return new UrlTemplateImageryProvider({
     url: tile.url,
     maximumLevel: basemap === 'topo' ? 17 : 19,
@@ -45,6 +45,7 @@ function cesiumImageryProvider(basemap: string) {
 export function useCesium(opts: UseCesiumOptions = {}) {
   const viewerRef = useRef<Viewer | null>(null);
   const basemap = useAppStore((s) => s.basemap);
+  const customBasemap = useAppStore((s) => s.customBasemap);
   const renderer = useAppStore((s) => s.renderer);
   const activeTab = useAppStore((s) => s.activeTab);
   const splitActive = useSplitViewStore((s) => s.active);
@@ -109,7 +110,7 @@ export function useCesium(opts: UseCesiumOptions = {}) {
 
     // Add basemap imagery
     viewer.imageryLayers.addImageryProvider(
-      cesiumImageryProvider(basemap),
+      cesiumImageryProvider(basemap, customBasemap),
     );
 
     // Restore shared camera
@@ -132,15 +133,16 @@ export function useCesium(opts: UseCesiumOptions = {}) {
 
     viewerRef.current = viewer;
     register(viewer);
-  }, [isActive, opts.containerId, opts.ionToken, basemap, register]);
+  }, [isActive, opts.containerId, opts.ionToken, basemap, customBasemap, register]);
 
-  // Swap basemap imagery when already active
+  // Swap basemap imagery when already active. The custom tiles are a dependency
+  // too: another catalog entry keeps basemap === 'custom' and changes only them.
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || viewer.isDestroyed() || !isActive) return;
     viewer.imageryLayers.removeAll();
-    viewer.imageryLayers.addImageryProvider(cesiumImageryProvider(basemap));
-  }, [basemap, isActive]);
+    viewer.imageryLayers.addImageryProvider(cesiumImageryProvider(basemap, customBasemap));
+  }, [basemap, customBasemap, isActive]);
 
   // In split view both panes move together
   useFollowSharedCamera(

@@ -43,6 +43,7 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
   const styledKeyRef = useRef<string | null>(null);
   const basemap = useAppStore((s) => s.basemap);
   const selfHostedUrl = useAppStore((s) => s.settings.selfHostedBasemapUrl);
+  const customBasemap = useAppStore((s) => s.customBasemap);
   const renderer = useAppStore((s) => s.renderer);
   const activeTab = useAppStore((s) => s.activeTab);
   const splitActive = useSplitViewStore((s) => s.active);
@@ -53,7 +54,9 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
   const isActive =
     activeTab === 'globe' &&
     (isPane ? splitActive && paneRenderer === 'maplibre' : renderer === 'maplibre');
-  const styleKey = `${basemap}|${selfHostedUrl}`;
+  // the custom url is part of the key: picking another catalog entry keeps
+  // basemap === 'custom' and only changes the tiles
+  const styleKey = `${basemap}|${selfHostedUrl}|${customBasemap?.url ?? ''}`;
 
   // Create/destroy map based on active state
   useEffect(() => {
@@ -80,7 +83,7 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
 
     const map = new maplibregl.Map({
       container,
-      style: maplibreStyle(basemap, selfHostedUrl),
+      style: maplibreStyle(basemap, selfHostedUrl, customBasemap),
       center: [cam.longitude, cam.latitude],
       zoom: cam.zoom,
       pitch: cam.pitch,
@@ -110,7 +113,16 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
     mapRef.current = map;
     styledKeyRef.current = styleKey;
     register(map);
-  }, [isActive, opts.containerId, basemap, selfHostedUrl, styleKey, isPane, register]);
+  }, [
+    isActive,
+    opts.containerId,
+    basemap,
+    selfHostedUrl,
+    customBasemap,
+    styleKey,
+    isPane,
+    register,
+  ]);
 
   // Swap the basemap style when already active
   useEffect(() => {
@@ -124,11 +136,11 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
     const z = map.getZoom();
     const p = map.getPitch();
     const b = map.getBearing();
-    map.setStyle(maplibreStyle(basemap, selfHostedUrl));
+    map.setStyle(maplibreStyle(basemap, selfHostedUrl, customBasemap));
     map.once('styledata', () => {
       map.jumpTo({ center: c, zoom: z, pitch: p, bearing: b });
     });
-  }, [basemap, selfHostedUrl, styleKey, isActive]);
+  }, [basemap, selfHostedUrl, customBasemap, styleKey, isActive]);
 
   // In split view both panes move together
   useFollowSharedCamera(

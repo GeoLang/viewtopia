@@ -15,7 +15,11 @@ export type Basemap =
   | 'liberty'
   | 'bright'
   | 'positron'
-  | 'selfhosted';
+  | 'selfhosted'
+  | 'custom';
+
+/** Raster tiles picked outside the built-in list, e.g. by the basemap catalog plugin. */
+export type CustomBasemap = { url: string; attr: string };
 
 export const BASEMAP_TILES: Record<string, { url: string; attr: string }> = {
   osm: {
@@ -116,7 +120,11 @@ export function isVectorBasemap(basemap: string): boolean {
 }
 
 /** Raster tiles for a basemap; a vector selection resolves to its closest raster. */
-export function rasterTiles(basemap: string): { url: string; attr: string } {
+export function rasterTiles(
+  basemap: string,
+  custom?: CustomBasemap | null,
+): { url: string; attr: string } {
+  if (basemap === 'custom' && custom) return custom;
   return BASEMAP_TILES[basemap] ?? VECTOR_APPROX_RASTER[basemap] ?? VECTOR_APPROX_RASTER.liberty;
 }
 
@@ -126,8 +134,11 @@ export function isPmtilesUrl(url: string): boolean {
 }
 
 /** MapLibre raster style for a basemap. */
-export function maplibreRasterStyle(basemap: string): StyleSpecification {
-  const tile = rasterTiles(basemap);
+export function maplibreRasterStyle(
+  basemap: string,
+  custom?: CustomBasemap | null,
+): StyleSpecification {
+  const tile = rasterTiles(basemap, custom);
   return {
     version: 8,
     sources: {
@@ -175,6 +186,7 @@ export function pmtilesStyle(url: string, flavor = 'dark'): StyleSpecification {
 export function maplibreStyle(
   basemap: string,
   selfHostedUrl = '',
+  custom?: CustomBasemap | null,
 ): StyleSpecification | string {
   if (basemap === 'selfhosted') {
     const url = selfHostedUrl.trim();
@@ -183,5 +195,5 @@ export function maplibreStyle(
   }
   const vector = VECTOR_BASEMAPS[basemap];
   if (vector) return vector.styleUrl;
-  return maplibreRasterStyle(basemap);
+  return maplibreRasterStyle(basemap, custom);
 }

@@ -13,6 +13,7 @@ export function useLeaflet(opts: UseLeafletOptions = {}) {
   const mapRef = useRef<L.Map | null>(null);
   const tileRef = useRef<L.TileLayer | null>(null);
   const basemap = useAppStore((s) => s.basemap);
+  const customBasemap = useAppStore((s) => s.customBasemap);
   const activeTab = useAppStore((s) => s.activeTab);
 
   useEffect(() => {
@@ -31,7 +32,8 @@ export function useLeaflet(opts: UseLeafletOptions = {}) {
       zoomControl: true,
     });
 
-    const tile = rasterTiles(useAppStore.getState().basemap);
+    const state = useAppStore.getState();
+    const tile = rasterTiles(state.basemap, state.customBasemap);
     const layer = L.tileLayer(tile.url, {
       attribution: tile.attr,
       maxZoom: 19,
@@ -66,13 +68,15 @@ export function useLeaflet(opts: UseLeafletOptions = {}) {
     map.eachLayer((layer) => {
       if (layer instanceof L.TileLayer) map.removeLayer(layer);
     });
-    const tile = rasterTiles(basemap);
+    const tile = rasterTiles(basemap, customBasemap);
     const layer = L.tileLayer(tile.url, {
       attribution: tile.attr,
       maxZoom: 19,
     }).addTo(map);
     tileRef.current = layer;
-  }, [basemap]);
+    // customBasemap is a dependency too: another catalog entry keeps
+    // basemap === 'custom' and changes only the tiles
+  }, [basemap, customBasemap]);
 
   // Restore shared camera when switching TO map tab
   useEffect(() => {

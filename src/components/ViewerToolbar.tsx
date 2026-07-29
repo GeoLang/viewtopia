@@ -61,13 +61,19 @@ export function ViewerToolbar() {
   // the 2d map is leaflet: the renderer choice doesn't apply, and vector
   // styles can't render there (leaflet shows their raster approximation)
   const onMapTab = activeTab === 'map';
-  const basemapGroups = onMapTab
+  const availableGroups = onMapTab
     ? BASEMAP_SELECT_GROUPS.map((g) =>
         g.group.startsWith('Vector')
           ? { ...g, items: g.items.map((i) => ({ ...i, disabled: true })) }
           : g,
       )
     : BASEMAP_SELECT_GROUPS;
+  // a plugin can set tiles outside the built-in list, and the select renders
+  // blank on a value with no matching option
+  const basemapGroups =
+    basemap === 'custom'
+      ? [...availableGroups, { group: 'Plugin', items: [{ value: 'custom', label: 'Custom' }] }]
+      : availableGroups;
 
   const renderMenuItems = (items: ToolMenuItem[]) =>
     visibleToolItems(items, showPreviewTools).map((item) => (

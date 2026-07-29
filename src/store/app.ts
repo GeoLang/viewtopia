@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { CameraState } from './cameraViews';
-import type { Basemap } from '../hooks/basemapTiles';
+import type { Basemap, CustomBasemap } from '../hooks/basemapTiles';
 
 export type ViewerTab = 'globe' | 'map';
 export type Renderer = 'cesium' | 'maplibre';
-export type { Basemap };
+export type { Basemap, CustomBasemap };
 
 /**
  * Read a renderer from persisted state, a share link or an agent command.
@@ -131,6 +131,9 @@ interface AppState {
   setRenderer: (r: Renderer) => void;
   basemap: Basemap;
   setBasemap: (b: Basemap) => void;
+  /** tiles behind basemap 'custom', set by the basemap catalog plugin */
+  customBasemap: CustomBasemap | null;
+  setCustomBasemap: (bm: CustomBasemap) => void;
 
   // Tool panels
   activePanel: ToolPanel;
@@ -196,6 +199,8 @@ export const useAppStore = create<AppState>()(
       setRenderer: (renderer) => set({ renderer }),
       basemap: 'liberty',
       setBasemap: (basemap) => set({ basemap }),
+      customBasemap: null,
+      setCustomBasemap: (customBasemap) => set({ customBasemap, basemap: 'custom' }),
 
       activePanel: null,
       setActivePanel: (activePanel) => set({ activePanel }),
@@ -249,6 +254,8 @@ export const useAppStore = create<AppState>()(
       name: 'viewtopia-app',
       partialize: (state) => ({
         basemap: state.basemap,
+        // persisted with the basemap so a reload of 'custom' still has its tiles
+        customBasemap: state.customBasemap,
         renderer: state.renderer,
         bookmarks: state.bookmarks,
         settings: state.settings,

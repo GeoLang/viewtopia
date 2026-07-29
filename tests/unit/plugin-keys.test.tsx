@@ -39,6 +39,7 @@ function makeCtx(values: Record<string, unknown> = {}): PluginContext {
       getLayers: () => [],
       getActivePanel: () => null,
       getBasemap: () => 'osm-standard',
+      setCustomBasemap: vi.fn(),
       getRenderer: () => 'maplibre',
       getSettings: () => ({}),
     },
@@ -96,10 +97,12 @@ describe('basemap catalog previews', () => {
     renderPanel(basemapCatalog.Panel, ctx);
 
     screen.getByText('Jawg Dark').closest('button')?.click();
-    expect(ctx.settings.set).toHaveBeenCalledWith(
-      'activeBasemapUrl',
-      'https://tile.jawg.io/jawg-dark/{z}/{x}/{y}.png?access-token=tok-123',
-    );
+    const url = 'https://tile.jawg.io/jawg-dark/{z}/{x}/{y}.png?access-token=tok-123';
+    expect(ctx.settings.set).toHaveBeenCalledWith('activeBasemapUrl', url);
+    expect(ctx.store.setCustomBasemap).toHaveBeenCalledWith({
+      url,
+      attr: '© Jawg, © OSM',
+    });
   });
 });
 
