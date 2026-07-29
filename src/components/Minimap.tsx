@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { Box } from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
 import L from 'leaflet';
 import { useAppStore } from '../store/app';
+import { MOBILE_QUERY } from '../theme';
 import { getSharedCamera } from '../hooks/sharedCamera';
 import { rasterTiles } from '../hooks/basemapTiles';
 
@@ -13,12 +15,17 @@ export function Minimap() {
   const settings = useAppStore((s) => s.settings);
   const basemap = useAppStore((s) => s.basemap);
   const customBasemap = useAppStore((s) => s.customBasemap);
+  // a 160px overview eats too much of a phone screen, and it covers the chat input
+  const isMobile = useMediaQuery(MOBILE_QUERY, false, {
+    getInitialValueInEffect: false,
+  });
+  const hidden = !settings.showMinimap || isMobile;
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const rectRef = useRef<L.Rectangle | null>(null);
 
   useEffect(() => {
-    if (!settings.showMinimap) return;
+    if (hidden) return;
     const el = containerRef.current;
     if (!el || mapRef.current) return;
 
@@ -75,9 +82,9 @@ export function Minimap() {
       mapRef.current = null;
       rectRef.current = null;
     };
-  }, [settings.showMinimap, basemap, customBasemap]);
+  }, [hidden, basemap, customBasemap]);
 
-  if (!settings.showMinimap) return null;
+  if (hidden) return null;
 
   return (
     <Box

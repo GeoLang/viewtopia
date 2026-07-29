@@ -16,6 +16,9 @@ const violet: MantineColorsTuple = [
   '#5f3dc4',
 ];
 
+// phone layout cutoff, matches AppShell's `breakpoint: 'sm'`
+export const MOBILE_QUERY = '(max-width: 48em)';
+
 export const theme = createTheme({
   primaryColor: 'violet',
   colors: {
