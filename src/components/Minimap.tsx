@@ -12,6 +12,7 @@ import { rasterTiles } from '../hooks/basemapTiles';
 export function Minimap() {
   const settings = useAppStore((s) => s.settings);
   const basemap = useAppStore((s) => s.basemap);
+  const customBasemap = useAppStore((s) => s.customBasemap);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const rectRef = useRef<L.Rectangle | null>(null);
@@ -32,7 +33,7 @@ export function Minimap() {
     } as L.MapOptions).setView([37.8, -122.4], 4);
 
     // follows the selected basemap so the overview isn't stuck on one provider
-    const tile = rasterTiles(basemap);
+    const tile = rasterTiles(basemap, customBasemap);
     L.tileLayer(tile.url, { attribution: tile.attr, maxZoom: 18 }).addTo(map);
 
     const rect = L.rectangle(
@@ -74,7 +75,7 @@ export function Minimap() {
       mapRef.current = null;
       rectRef.current = null;
     };
-  }, [settings.showMinimap, basemap]);
+  }, [settings.showMinimap, basemap, customBasemap]);
 
   if (!settings.showMinimap) return null;
 
