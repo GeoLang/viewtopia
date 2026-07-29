@@ -117,6 +117,7 @@ describe('AG-UI subscriber mapping', () => {
     const plan = {
       title: 'Depot catchment',
       project: 'depot-catchment',
+      validated: true,
       steps: [
         {
           index: 1,

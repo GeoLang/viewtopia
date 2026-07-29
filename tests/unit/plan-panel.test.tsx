@@ -28,6 +28,7 @@ globalThis.ResizeObserver = class {
 const PLAN: WorkflowPlan = {
   title: 'Depot catchment areas',
   project: 'depot-catchment',
+  validated: true,
   steps: [
     {
       index: 1,
@@ -78,10 +79,10 @@ function seedSession(): string {
   return useChatStore.getState().activeMessages()[0].id;
 }
 
-const renderPanel = (messageId: string) =>
+const renderPanel = (messageId: string, plan: WorkflowPlan = PLAN) =>
   render(
     <MantineProvider>
-      <PlanPanel messageId={messageId} plan={PLAN} />
+      <PlanPanel messageId={messageId} plan={plan} />
     </MantineProvider>,
   );
 
@@ -142,6 +143,18 @@ describe('PlanPanel', () => {
     expect(screen.getByText('Writes: outputs/depot_catchment.gpkg')).toBeInTheDocument();
     expect(screen.getByText('Formats: geojson, gpkg')).toBeInTheDocument();
     expect(screen.getByTestId('plan-status')).toHaveTextContent('not run yet');
+    expect(screen.getByTestId('plan-validated')).toHaveTextContent('validated');
+  });
+
+  it('flags a plan geodukt could not check', () => {
+    renderPanel(messageId, { ...PLAN, validated: false });
+
+    const badge = screen.getByTestId('plan-validated');
+    expect(badge).toHaveTextContent('not validated');
+    expect(badge).toHaveAttribute('data-variant', 'filled');
+    expect(
+      screen.getByText('geodukt did not check this plan, only its TOML was parsed.'),
+    ).toBeInTheDocument();
   });
 
   it('shows the raw manifest once the collapsed view is opened', () => {
@@ -152,7 +165,7 @@ describe('PlanPanel', () => {
     expect(screen.getByTestId('plan-manifest-toggle')).toHaveTextContent('Hide manifest');
   });
 
-  it('approving posts the manifest verbatim and renders the run report', async () => {
+  it('approving posts the manifest verbatim with notify and renders the run report', async () => {
     const fetchMock = vi.fn(() =>
       Promise.resolve(
         new Response(JSON.stringify({ result: RUN_REPORT }), {
@@ -170,7 +183,11 @@ describe('PlanPanel', () => {
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('/agent/tools/run_workflow');
     expect(init.method).toBe('POST');
-    expect(JSON.parse(String(init.body))).toEqual({ args: { manifest_toml: PLAN.manifest } });
+    // notify is a sibling of args: it puts the report in the model's session
+    expect(JSON.parse(String(init.body))).toEqual({
+      args: { manifest_toml: PLAN.manifest },
+      notify: true,
+    });
 
     expect(screen.getByTestId('plan-run-result')).toHaveTextContent('wrote outputs/depot_catchment.gpkg');
     expect(screen.getByTestId('plan-status')).toHaveTextContent('ran');

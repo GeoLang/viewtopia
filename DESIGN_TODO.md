@@ -64,12 +64,11 @@ anything multi-user ships, local packaging last.
       catalog, the user approves the rendered plan, execution goes through
       geodukt /run with lineage. Raw sql_query becomes a gated escape hatch,
       labeled in the plan. Started 2026-07-29. Viewer half landed: the AG-UI
-      `plan` event renders a chat panel with the steps, the raw manifest and an
-      approve action that posts it to run_workflow, and the platform compose
-      file runs geodukt internally on 8100. Still open: geodukt has no
-      Dockerfile so that service cannot build yet, the plan payload carries no
-      validation status for the panel to show, and an approved run is recorded
-      only in the viewer transcript, not in the model's session history.
+      `plan` event renders a chat panel with the steps, the validation flag, the
+      raw manifest and an approve action that posts it to run_workflow with
+      notify (so the model's session learns the run happened), and the platform
+      compose file runs geodukt internally on 8100. Still open: geodukt has no
+      Dockerfile, so that service cannot build yet.
 - [~] **model-independent eval harness**: golden NL-to-manifest tasks scored by
       manifest comparison (not prose grading), runnable per sibyl model profile
       (cloud/local), so "Qwen3.5-35B scores X on N tasks" is a shippable claim

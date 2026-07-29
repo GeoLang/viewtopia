@@ -74,6 +74,14 @@ export function PlanPanel({ messageId, plan }: { messageId: string; plan: Workfl
             </Badge>
             <Badge
               size="xs"
+              variant={plan.validated ? 'light' : 'filled'}
+              color={plan.validated ? 'teal' : 'yellow'}
+              data-testid="plan-validated"
+            >
+              {plan.validated ? 'validated' : 'not validated'}
+            </Badge>
+            <Badge
+              size="xs"
               variant="light"
               color={planRun ? (failed ? 'red' : 'teal') : 'gray'}
               data-testid="plan-status"
@@ -82,6 +90,12 @@ export function PlanPanel({ messageId, plan }: { messageId: string; plan: Workfl
             </Badge>
           </Group>
         </Group>
+
+        {!plan.validated && (
+          <Text size="xs" c="yellow.4">
+            geodukt did not check this plan, only its TOML was parsed.
+          </Text>
+        )}
 
         <Stack gap={2}>
           {plan.steps.map((step) => (

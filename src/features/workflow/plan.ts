@@ -24,6 +24,8 @@ export interface PlanStep {
 export interface WorkflowPlan {
   title: string;
   project?: string;
+  /** False when the plan was only parsed: that geodukt build has no /validate. */
+  validated: boolean;
   steps: PlanStep[];
   /** Source paths the plan reads. */
   datasets?: string[];
@@ -59,6 +61,10 @@ export interface WorkflowRun {
  * Execute an approved manifest through geolang's run_workflow tool. The tool
  * reports its own failures in the result string over HTTP 200, so `ok` comes
  * from the text rather than the status.
+ *
+ * `notify` appends the report to the model's sibyl session: this runs outside
+ * the model's turn, so without it a follow-up question would not know the
+ * workflow ever ran.
  */
 export async function runWorkflow(manifest: string): Promise<WorkflowRun> {
   let body: { result?: string } | null = null;
@@ -66,7 +72,7 @@ export async function runWorkflow(manifest: string): Promise<WorkflowRun> {
     const res = await fetch('/agent/tools/run_workflow', {
       method: 'POST',
       headers: apiHeaders(),
-      body: JSON.stringify({ args: { manifest_toml: manifest } }),
+      body: JSON.stringify({ args: { manifest_toml: manifest }, notify: true }),
     });
     if (!res.ok) return { ok: false, text: `run_workflow failed: HTTP ${res.status}` };
     body = (await res.json()) as { result?: string };
