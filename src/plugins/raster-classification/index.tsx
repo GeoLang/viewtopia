@@ -1,178 +1,177 @@
 /**
- * Raster Classification Plugin — unsupervised k-means / ISODATA clustering.
+ * Raster Classification Plugin — unsupervised k-means / ISODATA on COG pixels.
  * Equivalent to: QGIS Semi-Automatic Classification Plugin (2.6M downloads)
- * The app has no raster pixel pipeline, so the clustering runs on generated
- * 3-band demo data. The algorithms are real, the input is not imagery.
+ * Pixels come from src/raster/loader.ts (geotiff.js), read down to a bounded
+ * size so a large COG cannot lock the tab.
  */
 
 import { useState } from 'react';
-import { Paper, Text, Stack, Button, Group, Badge, Select, Slider, Table, ColorSwatch, Loader, Alert } from '@mantine/core';
-import { IconCategory, } from '@tabler/icons-react';
+import {
+  Paper, Text, Stack, Button, Group, Badge, Select, Slider, Table, ColorSwatch, Loader,
+  Alert, TextInput, FileInput, Divider,
+} from '@mantine/core';
+import { IconCategory, IconLink, IconUpload } from '@tabler/icons-react';
 import type { PluginDefinition, PluginContext } from '../sdk';
+import { loadCogFromUrl, loadCogFromBuffer, type LoadedRaster } from '../../raster/loader';
+import { classifyPixels, CLASS_COLORS, type ClassStats, type ClassifyMethod } from './classify';
 
-interface ClassResult {
-  classId: number;
-  color: string;
-  pixelCount: number;
-  percentage: number;
-  meanValue: number;
+/** Read cap: clustering is synchronous, so keep the pixel count in the hundreds of thousands. */
+const MAX_DIMENSION = 512;
+/** Bands used as the feature vector; a 1-band raster clusters on one dimension. */
+const MAX_BANDS = 3;
+
+/** Pixels to classify, from a COG or from the demo generator. */
+interface ClassifyInput {
+  width: number;
+  height: number;
+  bands: Float32Array[];
+  noData: number | null;
+  /** where the pixels came from, shown in the UI */
+  source: string;
+  demo: boolean;
+  crs?: string;
 }
 
-// Simple k-means clustering on raster bands
-function kMeansClustering(data: Float64Array[], k: number, maxIter = 50, threshold = 0.001): Uint8Array {
-  const numPixels = data[0].length;
-  const numBands = data.length;
-  const labels = new Uint8Array(numPixels);
+function fromRaster(loaded: LoadedRaster, source: string): ClassifyInput {
+  const { metadata, bands } = loaded;
+  return {
+    width: metadata.width,
+    height: metadata.height,
+    bands: bands.slice(0, MAX_BANDS),
+    noData: metadata.noData,
+    source,
+    demo: false,
+    crs: metadata.crs,
+  };
+}
 
-  // Initialize centroids randomly
-  const centroids: number[][] = [];
-  for (let i = 0; i < k; i++) {
-    const idx = Math.floor(Math.random() * numPixels);
-    centroids.push(data.map((band) => band[idx]));
+/** Generated stand-in for people without a COG at hand. Always labelled as demo. */
+function demoInput(): ClassifyInput {
+  const width = 256, height = 256;
+  const numPixels = width * height;
+  const bands = [new Float32Array(numPixels), new Float32Array(numPixels), new Float32Array(numPixels)];
+  // three bands of sin/cos gradients plus noise, so the clusters are separable
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = y * width + x;
+      bands[0][i] = Math.sin(x / 30) * 50 + Math.random() * 20 + 100;
+      bands[1][i] = Math.cos(y / 25) * 40 + Math.random() * 15 + 120;
+      bands[2][i] = Math.sin((x + y) / 40) * 60 + Math.random() * 10 + 80;
+    }
   }
+  return { width, height, bands, noData: null, source: 'Generated demo data', demo: true };
+}
 
-  for (let iter = 0; iter < maxIter; iter++) {
-    let changed = 0;
+/** Paint the labels, leaving unclassified pixels transparent. */
+function renderLabels(labels: Int16Array, width: number, height: number): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const imgCtx = canvas.getContext('2d')!;
+  const imgData = imgCtx.createImageData(width, height);
 
-    // Assignment step
-    for (let p = 0; p < numPixels; p++) {
-      let minDist = Infinity;
-      let bestCluster = 0;
-      for (let c = 0; c < k; c++) {
-        let dist = 0;
-        for (let b = 0; b < numBands; b++) {
-          dist += (data[b][p] - centroids[c][b]) ** 2;
-        }
-        if (dist < minDist) {
-          minDist = dist;
-          bestCluster = c;
-        }
-      }
-      if (labels[p] !== bestCluster) {
-        labels[p] = bestCluster;
-        changed++;
-      }
+  for (let i = 0; i < labels.length; i++) {
+    const label = labels[i];
+    if (label < 0) {
+      imgData.data[i * 4 + 3] = 0;
+      continue;
     }
-
-    // Update step
-    const counts = new Array(k).fill(0);
-    const sums = centroids.map(() => new Array(numBands).fill(0));
-    for (let p = 0; p < numPixels; p++) {
-      counts[labels[p]]++;
-      for (let b = 0; b < numBands; b++) {
-        sums[labels[p]][b] += data[b][p];
-      }
-    }
-    for (let c = 0; c < k; c++) {
-      if (counts[c] > 0) {
-        for (let b = 0; b < numBands; b++) {
-          centroids[c][b] = sums[c][b] / counts[c];
-        }
-      }
-    }
-
-    // Convergence check
-    if (changed === 0 || changed < numPixels * threshold) break;
+    const color = CLASS_COLORS[label % CLASS_COLORS.length];
+    imgData.data[i * 4] = parseInt(color.slice(1, 3), 16);
+    imgData.data[i * 4 + 1] = parseInt(color.slice(3, 5), 16);
+    imgData.data[i * 4 + 2] = parseInt(color.slice(5, 7), 16);
+    imgData.data[i * 4 + 3] = 255;
   }
-
-  return labels;
+  imgCtx.putImageData(imgData, 0, 0);
+  return canvas.toDataURL();
 }
-
-// ISODATA extends k-means with split/merge
-function isodataClustering(data: Float64Array[], initialK: number, maxIter = 30, threshold = 0.001): Uint8Array {
-  // Simplified ISODATA: just k-means with some extra iterations for better convergence
-  return kMeansClustering(data, initialK, maxIter * 2, threshold);
-}
-
-const CLASS_COLORS = [
-  '#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6',
-  '#1abc9c', '#e67e22', '#34495e', '#16a085', '#c0392b',
-  '#2980b9', '#27ae60', '#d35400', '#8e44ad', '#f1c40f',
-  '#7f8c8d', '#2c3e50', '#95a5a6', '#d63031', '#00b894',
-];
 
 function RasterClassificationPanel({ ctx }: { ctx: PluginContext }) {
-  const [method, setMethod] = useState<string>('kmeans');
+  const [url, setUrl] = useState('');
+  const [input, setInput] = useState<ClassifyInput | null>(null);
+  const [method, setMethod] = useState<ClassifyMethod>('kmeans');
   const [numClasses, setNumClasses] = useState(5);
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<ClassResult[] | null>(null);
+  const [classifying, setClassifying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [results, setResults] = useState<ClassStats[] | null>(null);
+  const [skipped, setSkipped] = useState(0);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
-  const handleClassify = async () => {
-    setLoading(true);
+  const reset = () => {
     setResults(null);
+    setImageUrl(null);
+    setSkipped(0);
+  };
 
+  const handleLoadUrl = async () => {
+    if (!url.trim()) return;
+    setLoading(true);
+    setError(null);
+    reset();
     try {
-      // No raster pixel pipeline in the app: the clustering input is generated here
-      const width = 256, height = 256;
-      const numPixels = width * height;
-      const bands: Float64Array[] = [
-        new Float64Array(numPixels),
-        new Float64Array(numPixels),
-        new Float64Array(numPixels),
-      ];
-
-      // Three bands of sin/cos gradients plus noise, so the clusters are separable
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-          const i = y * width + x;
-          bands[0][i] = Math.sin(x / 30) * 50 + Math.random() * 20 + 100;
-          bands[1][i] = Math.cos(y / 25) * 40 + Math.random() * 15 + 120;
-          bands[2][i] = Math.sin((x + y) / 40) * 60 + Math.random() * 10 + 80;
-        }
-      }
-
-      // Run classification
-      const maxIter = ctx.settings.get('maxIterations', 50);
-      const threshold = ctx.settings.get('convergenceThreshold', 0.001);
-      let labels: Uint8Array;
-      if (method === 'isodata') {
-        labels = isodataClustering(bands, numClasses, maxIter, threshold);
-      } else {
-        labels = kMeansClustering(bands, numClasses, maxIter, threshold);
-      }
-
-      // Compute statistics per class
-      const counts = new Array(numClasses).fill(0);
-      const sums = new Array(numClasses).fill(0);
-      for (let i = 0; i < numPixels; i++) {
-        counts[labels[i]]++;
-        sums[labels[i]] += bands[0][i];
-      }
-
-      const classResults: ClassResult[] = [];
-      for (let c = 0; c < numClasses; c++) {
-        classResults.push({
-          classId: c + 1,
-          color: CLASS_COLORS[c % CLASS_COLORS.length],
-          pixelCount: counts[c],
-          percentage: (counts[c] / numPixels) * 100,
-          meanValue: counts[c] > 0 ? sums[c] / counts[c] : 0,
-        });
-      }
-      setResults(classResults);
-
-      // Render classification result to image
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const imgCtx = canvas.getContext('2d')!;
-      const imgData = imgCtx.createImageData(width, height);
-
-      for (let i = 0; i < numPixels; i++) {
-        const color = CLASS_COLORS[labels[i] % CLASS_COLORS.length];
-        const r = parseInt(color.slice(1, 3), 16);
-        const g = parseInt(color.slice(3, 5), 16);
-        const b = parseInt(color.slice(5, 7), 16);
-        imgData.data[i * 4] = r;
-        imgData.data[i * 4 + 1] = g;
-        imgData.data[i * 4 + 2] = b;
-        imgData.data[i * 4 + 3] = 255;
-      }
-      imgCtx.putImageData(imgData, 0, 0);
-      setImageUrl(canvas.toDataURL());
+      const loaded = await loadCogFromUrl(url.trim(), { maxDimension: MAX_DIMENSION });
+      setInput(fromRaster(loaded, url.trim()));
+    } catch (err) {
+      setInput(null);
+      setError(err instanceof Error ? err.message : 'Failed to load raster');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLoadFile = async (file: File | null) => {
+    if (!file) return;
+    setLoading(true);
+    setError(null);
+    reset();
+    try {
+      const loaded = await loadCogFromBuffer(await file.arrayBuffer(), { maxDimension: MAX_DIMENSION });
+      setInput(fromRaster(loaded, file.name));
+    } catch (err) {
+      setInput(null);
+      setError(err instanceof Error ? err.message : 'Failed to load raster');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClassify = async () => {
+    if (!input) return;
+    setError(null);
+    reset();
+
+    if (input.bands.length === 0) {
+      setError('The raster has no readable bands.');
+      return;
+    }
+    if (input.bands[0].length !== input.width * input.height) {
+      setError(`Unsupported raster layout: ${input.bands[0].length} samples for ${input.width}×${input.height} pixels.`);
+      return;
+    }
+
+    setClassifying(true);
+    // the clustering blocks, so let the spinner paint first
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    try {
+      const result = classifyPixels(input.bands, {
+        method,
+        numClasses,
+        noData: input.noData,
+        maxIterations: ctx.settings.get('maxIterations', 50),
+        convergenceThreshold: ctx.settings.get('convergenceThreshold', 0.001),
+      });
+      if (result.classifiedPixels === 0) {
+        setError('Every pixel is nodata, nothing to classify.');
+        return;
+      }
+      setResults(result.classes);
+      setSkipped(result.skippedPixels);
+      setImageUrl(renderLabels(result.labels, input.width, input.height));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Classification failed');
+    } finally {
+      setClassifying(false);
     }
   };
 
@@ -184,12 +183,49 @@ function RasterClassificationPanel({ ctx }: { ctx: PluginContext }) {
           <Badge size="sm" color="orange">Unsupervised</Badge>
         </Group>
 
-        <Alert color="yellow" p="xs">
-          <Text size="xs">
-            Demo data: there is no raster pixel pipeline in the app yet, so the clustering runs on a generated 256×256
-            3-band image, not on a loaded layer.
-          </Text>
-        </Alert>
+        <Text size="xs" fw={500}>Load Raster (GeoTIFF / COG)</Text>
+        <Group gap="xs" wrap="nowrap">
+          <TextInput
+            placeholder="https://example.com/scene.tif"
+            value={url}
+            onChange={(e) => setUrl(e.currentTarget.value)}
+            size="xs"
+            style={{ flex: 1 }}
+            leftSection={<IconLink size={14} />}
+          />
+          <Button size="xs" onClick={handleLoadUrl} loading={loading}>Load</Button>
+        </Group>
+        <FileInput
+          size="xs"
+          placeholder="Or pick a .tif file"
+          accept=".tif,.tiff"
+          leftSection={<IconUpload size={14} />}
+          onChange={handleLoadFile}
+        />
+        <Button size="xs" variant="subtle" color="gray" onClick={() => { setError(null); reset(); setInput(demoInput()); }}>
+          Try with demo data
+        </Button>
+        <Text size="xs" c="dimmed">
+          Read down to {MAX_DIMENSION} px on the long side, first {MAX_BANDS} bands.
+        </Text>
+
+        {error && <Alert color="red" variant="light" p="xs"><Text size="xs">{error}</Text></Alert>}
+
+        {input && (
+          <Paper p="xs" withBorder>
+            <Group gap={8}>
+              <Badge size="xs" color={input.demo ? 'yellow' : 'green'}>
+                {input.demo ? 'Generated demo data' : 'Loaded'}
+              </Badge>
+              <Text size="xs">{input.width}×{input.height}</Text>
+              <Text size="xs">{input.bands.length} band{input.bands.length === 1 ? '' : 's'}</Text>
+              {input.crs && <Text size="xs">{input.crs}</Text>}
+            </Group>
+            <Text size="xs" c="dimmed" mt={4} style={{ wordBreak: 'break-all' }}>{input.source}</Text>
+          </Paper>
+        )}
+
+        <Divider />
 
         <Select
           label="Method"
@@ -198,7 +234,7 @@ function RasterClassificationPanel({ ctx }: { ctx: PluginContext }) {
             { value: 'isodata', label: 'ISODATA' },
           ]}
           value={method}
-          onChange={(v) => setMethod(v || 'kmeans')}
+          onChange={(v) => setMethod((v || 'kmeans') as ClassifyMethod)}
         />
 
         <Text size="xs" c="dimmed">Number of Classes: {numClasses}</Text>
@@ -211,22 +247,29 @@ function RasterClassificationPanel({ ctx }: { ctx: PluginContext }) {
         />
 
         <Button
-          leftSection={loading ? <Loader size={14} /> : <IconCategory size={14} />}
+          leftSection={classifying ? <Loader size={14} /> : <IconCategory size={14} />}
           onClick={handleClassify}
-          disabled={loading}
+          disabled={!input || classifying}
           fullWidth
           color="orange"
         >
-          {loading ? 'Classifying...' : 'Run Classification on Demo Data'}
+          {classifying ? 'Classifying...' : input ? 'Run Classification' : 'Load a raster first'}
         </Button>
 
-        {imageUrl && (
+        {imageUrl && input && (
           <>
             <Group justify="space-between">
               <Text size="xs" fw={500}>Result</Text>
-              <Badge size="xs" color="yellow" variant="light">Demo data</Badge>
+              {input.demo && <Badge size="xs" color="yellow" variant="light">Demo data</Badge>}
             </Group>
-            <img src={imageUrl} alt="Classification of the demo bands" style={{ width: '100%', borderRadius: 8, border: '1px solid var(--mantine-color-default-border)' }} />
+            <img
+              src={imageUrl}
+              alt="Classified raster"
+              style={{ width: '100%', imageRendering: 'pixelated', borderRadius: 8, border: '1px solid var(--mantine-color-default-border)' }}
+            />
+            {skipped > 0 && (
+              <Text size="xs" c="dimmed">{skipped.toLocaleString()} pixels skipped as nodata.</Text>
+            )}
           </>
         )}
 
@@ -238,7 +281,7 @@ function RasterClassificationPanel({ ctx }: { ctx: PluginContext }) {
                 <Table.Th>Color</Table.Th>
                 <Table.Th>Pixels</Table.Th>
                 <Table.Th>%</Table.Th>
-                <Table.Th>Mean</Table.Th>
+                <Table.Th>Mean B1</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -262,7 +305,7 @@ function RasterClassificationPanel({ ctx }: { ctx: PluginContext }) {
 const plugin: PluginDefinition = {
   id: 'raster-classification',
   name: 'Raster Classification',
-  description: 'Demonstrates K-Means and ISODATA clustering on generated demo bands (no raster input pipeline yet)',
+  description: 'Unsupervised K-Means / ISODATA classification of the pixels of a COG loaded from a URL or file',
   version: '1.0.0',
   author: 'TileTopia-HQ',
   icon: <IconCategory size={14} />,
