@@ -11,6 +11,7 @@ import {
 } from '@mantine/core';
 import { IconSend, IconPlus, IconTrash, IconSquare } from '@tabler/icons-react';
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { PlanPanel } from '../features/workflow/PlanPanel';
 import { renderUISpec } from '../viewer/uiSpec';
 import { executeViewerCommand } from '../viewer/commands';
 import { useChatStore, type Message } from '../store/chat';
@@ -200,6 +201,7 @@ export function ChatPanel() {
                   ⚠ {msg.error}
                 </Text>
               )}
+              {msg.plan && <PlanPanel messageId={msg.id} plan={msg.plan} />}
             </div>
             );
           })

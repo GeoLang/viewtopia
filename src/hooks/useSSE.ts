@@ -1,6 +1,7 @@
 import { useCallback, useRef } from 'react';
 import { HttpAgent, type AgentSubscriber } from '@ag-ui/client';
 import type { Message } from '@ag-ui/core';
+import type { WorkflowPlan } from '../features/workflow/plan';
 import { ensureBackendSession } from '../lib/agentSessions';
 import { useChatStore } from '../store/chat';
 import { executeViewerCommand, type ViewerCommand } from '../viewer/commands';
@@ -12,6 +13,7 @@ interface AgUiHandlers {
   setLastError: (error: string) => void;
   setLastMapSpec: (spec: UiSpec) => void;
   addLastViewerCmd: (cmd: ViewerCommand) => void;
+  setLastPlan: (plan: WorkflowPlan) => void;
 }
 
 /**
@@ -22,10 +24,11 @@ interface AgUiHandlers {
  * text delta → append to assistant message (setLastContent, like legacy `text`);
  * custom `progress` → show only while no assistant text has arrived yet;
  * custom `viewer_cmd` → executeViewerCommand + keep it on the message for replay;
- * custom `ui_spec` → keep the spec on the message + renderUISpec; run error →
- * setLastContent (legacy `error`).
+ * custom `ui_spec` → keep the spec on the message + renderUISpec; custom `plan` →
+ * keep it on the message, which renders the plan panel and its approve action;
+ * run error → setLastContent (legacy `error`).
  */
-export function buildAgUiSubscriber({ setLastContent, setLastError, setLastMapSpec, addLastViewerCmd }: AgUiHandlers): AgentSubscriber {
+export function buildAgUiSubscriber({ setLastContent, setLastError, setLastMapSpec, addLastViewerCmd, setLastPlan }: AgUiHandlers): AgentSubscriber {
   let lastText = '';
   return {
     onTextMessageContentEvent({ event }) {
@@ -47,6 +50,10 @@ export function buildAgUiSubscriber({ setLastContent, setLastError, setLastMapSp
           setLastMapSpec(event.value);
           void renderUISpec(event.value);
           break;
+        case 'plan':
+          // nothing has run: the panel on the message owns the approve action
+          setLastPlan(event.value);
+          break;
       }
     },
     onRunErrorEvent({ event }) {
@@ -63,8 +70,15 @@ export function buildAgUiSubscriber({ setLastContent, setLastError, setLastMapSp
  */
 export function useSSE() {
   const abortRef = useRef<AbortController | null>(null);
-  const { addMessage, setLastContent, setLastError, setLastMapSpec, addLastViewerCmd, setStreaming } =
-    useChatStore();
+  const {
+    addMessage,
+    setLastContent,
+    setLastError,
+    setLastMapSpec,
+    addLastViewerCmd,
+    setLastPlan,
+    setStreaming,
+  } = useChatStore();
 
   const send = useCallback(
     async (prompt: string) => {
@@ -96,7 +110,13 @@ export function useSSE() {
         const agent = new HttpAgent({ url: '/agent/chat/agui', threadId, initialMessages: messages });
         await agent.runAgent(
           { runId: crypto.randomUUID(), abortController: controller },
-          buildAgUiSubscriber({ setLastContent, setLastError, setLastMapSpec, addLastViewerCmd }),
+          buildAgUiSubscriber({
+            setLastContent,
+            setLastError,
+            setLastMapSpec,
+            addLastViewerCmd,
+            setLastPlan,
+          }),
         );
       } catch (err: unknown) {
         // a user stop surfaces as AbortError or a browser-internal message
@@ -111,7 +131,7 @@ export function useSSE() {
         abortRef.current = null;
       }
     },
-    [addMessage, setLastContent, setLastMapSpec, addLastViewerCmd, setStreaming],
+    [addMessage, setLastContent, setLastMapSpec, addLastViewerCmd, setLastPlan, setStreaming],
   );
 
   const abort = useCallback(() => {

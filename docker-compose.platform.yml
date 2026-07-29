@@ -17,6 +17,7 @@
 #   - geokode:    Geocoding service (port 3001)
 #   - itinera:    Routing + isochrones (port 3002)
 #   - sibyl:      Rust agent loop service (internal port 8090)
+#   - geodukt:    Declarative pipeline runner for agent plans (internal port 8100)
 #   - geolang-api: AI/NLP geospatial agent API + tool executor (port 8080)
 #   - viewtopia:  Frontend viewer + A2UI (port 5174)
 #
@@ -181,6 +182,23 @@ services:
       timeout: 5s
       retries: 5
 
+  # Declarative pipeline runner: geolang's plan_workflow/run_workflow tools POST
+  # TOML manifests to /validate and /run. Internal only, nothing else calls it,
+  # so no published port. Port 8100 rather than geodukt's own 8080 default, which
+  # is geolang's documented port.
+  # Manifest paths ("outputs/foo.gpkg") are relative to geolang's exec dir, so
+  # geodukt reads and writes through the same bind mount from the same cwd.
+  geodukt:
+    build:
+      context: ../geodukt
+    volumes:
+      - ../geolang:/app/geolang:z
+    working_dir: /app/geolang
+    command:
+      - serve
+      - --bind
+      - "0.0.0.0:8100"
+
   # geolang's public FastAPI app (src/api/server.py — the /chat/agui SSE API the
   # viewer talks to) plus the tool manifest/executor endpoints sibyl calls.
   # Tools run in-process here; nginx routes /agent/ here.
@@ -206,8 +224,10 @@ services:
       TILETOPIA_URL: http://tiletopia:3000
       GEOKODE_URL: http://geokode:3000
       ITINERA_URL: http://itinera:3000
+      GEODUKT_URL: http://geodukt:8100
     depends_on:
       - sibyl
+      - geodukt
     # nginx routes /agent/ here, and the viewer probes /agent/health on every page
     # load, so a stack without this container answers that probe with a 502. The
     # check gives callers (CI wait loops, compose ps) a way to wait for it.

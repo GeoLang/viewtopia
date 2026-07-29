@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { deleteBackendSession, renameBackendSession } from '../lib/agentSessions';
+import type { WorkflowPlan } from '../features/workflow/plan';
 import type { UiSpec } from '../viewer/uiSpec';
 import type { ViewerCommand } from '../viewer/commands';
 
@@ -13,6 +14,10 @@ export interface Message {
   mapSpec?: UiSpec;
   /** Viewer commands this reply ran (fly_to etc.), in order, for replay. */
   viewerCmds?: ViewerCommand[];
+  /** Workflow plan this reply proposed, awaiting approval. */
+  plan?: WorkflowPlan;
+  /** run_workflow's report, once that plan was approved and ran. */
+  planRun?: string;
   /** Run error text, kept separate so it never overwrites streamed content. */
   error?: string;
 }
@@ -49,6 +54,8 @@ interface ChatState {
   setLastError: (error: string) => void;
   setLastMapSpec: (mapSpec: UiSpec) => void;
   addLastViewerCmd: (cmd: ViewerCommand) => void;
+  setLastPlan: (plan: WorkflowPlan) => void;
+  setPlanRun: (messageId: string, planRun: string) => void;
   clearMessages: () => void;
 
   // Streaming state
@@ -202,6 +209,35 @@ export const useChatStore = create<ChatState>()(
               };
             }
             return { ...sess, messages: msgs, updatedAt: Date.now() };
+          }),
+        })),
+
+      setLastPlan: (plan) =>
+        set((s) => ({
+          sessions: s.sessions.map((sess) => {
+            if (sess.id !== s.activeSessionId) return sess;
+            const msgs = [...sess.messages];
+            const last = msgs[msgs.length - 1];
+            if (last && last.role === 'assistant') {
+              msgs[msgs.length - 1] = { ...last, plan };
+            }
+            return { ...sess, messages: msgs, updatedAt: Date.now() };
+          }),
+        })),
+
+      // by id, not "last": a plan is approved after the run that proposed it
+      // has finished, with any number of messages since
+      setPlanRun: (messageId, planRun) =>
+        set((s) => ({
+          sessions: s.sessions.map((sess) => {
+            if (sess.id !== s.activeSessionId) return sess;
+            return {
+              ...sess,
+              messages: sess.messages.map((msg) =>
+                msg.id === messageId ? { ...msg, planRun } : msg,
+              ),
+              updatedAt: Date.now(),
+            };
           }),
         })),
 

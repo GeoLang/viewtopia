@@ -22,6 +22,7 @@ describe('AG-UI subscriber mapping', () => {
   let setLastError: ReturnType<typeof vi.fn>;
   let setLastMapSpec: ReturnType<typeof vi.fn>;
   let addLastViewerCmd: ReturnType<typeof vi.fn>;
+  let setLastPlan: ReturnType<typeof vi.fn>;
   let sub: AgentSubscriber;
 
   beforeEach(() => {
@@ -30,7 +31,14 @@ describe('AG-UI subscriber mapping', () => {
     setLastError = vi.fn();
     setLastMapSpec = vi.fn();
     addLastViewerCmd = vi.fn();
-    sub = buildAgUiSubscriber({ setLastContent, setLastError, setLastMapSpec, addLastViewerCmd });
+    setLastPlan = vi.fn();
+    sub = buildAgUiSubscriber({
+      setLastContent,
+      setLastError,
+      setLastMapSpec,
+      addLastViewerCmd,
+      setLastPlan,
+    });
   });
 
   it('routes a run error to setLastError, leaving streamed content alone', () => {
@@ -103,6 +111,34 @@ describe('AG-UI subscriber mapping', () => {
     } as unknown as P<'onCustomEvent'>);
     expect(setLastMapSpec).toHaveBeenCalledWith(spec);
     expect(renderUISpec).toHaveBeenCalledWith(spec);
+  });
+
+  it('keeps a plan custom event on the message and runs nothing', () => {
+    const plan = {
+      title: 'Depot catchment',
+      project: 'depot-catchment',
+      steps: [
+        {
+          index: 1,
+          kind: 'source',
+          name: 'depots',
+          format: 'geojson',
+          path: 'outputs/depots.geojson',
+          params: {},
+        },
+      ],
+      datasets: ['outputs/depots.geojson'],
+      outputs: [],
+      formats: ['geojson'],
+      manifest: '[project]\nname = "depot-catchment"\n',
+    };
+    sub.onCustomEvent!({
+      ...ctx,
+      event: { type: 'CUSTOM', name: 'plan', value: plan },
+    } as unknown as P<'onCustomEvent'>);
+    expect(setLastPlan).toHaveBeenCalledWith(plan);
+    expect(renderUISpec).not.toHaveBeenCalled();
+    expect(executeViewerCommand).not.toHaveBeenCalled();
   });
 
 });
