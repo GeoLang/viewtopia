@@ -39,19 +39,28 @@ interface Incident {
   reportedAt: string;
   assignedUnits: string[];
   affectedPopulation: number;
+  properties: Record<string, unknown>;
+}
+
+/** What the map side needs to plot an incident. */
+export interface IncidentSelection {
+  id: string;
+  type: string;
+  lat: number | null;
+  lng: number | null;
+  properties: Record<string, unknown>;
 }
 
 interface IncidentPanelProps {
-  onFlyTo: (lat: number, lng: number, zoom?: number) => void;
-  onShowEvacRoutes: (incidentId: string) => void;
-  onShowAffectedArea: (lat: number, lng: number, radiusM: number) => void;
+  onShowEvacRoutes: (incident: IncidentSelection) => void;
+  onShowAffectedArea: (incident: IncidentSelection) => void;
   onClose: () => void;
 }
 
 const SEVERITY_COLORS: Record<string, string> = { low: 'blue', medium: 'yellow', high: 'orange', critical: 'red' };
 const AUTHOR = 'viewtopia';
 
-export function IncidentPanel({ onFlyTo, onShowEvacRoutes, onShowAffectedArea, onClose }: IncidentPanelProps) {
+export function IncidentPanel({ onShowEvacRoutes, onShowAffectedArea, onClose }: IncidentPanelProps) {
   const [branchId, setBranchId] = useState<string | null>(null);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -87,6 +96,7 @@ export function IncidentPanel({ onFlyTo, onShowEvacRoutes, onShowAffectedArea, o
       reportedAt: i.reported_at ?? '',
       assignedUnits: Array.isArray(units) ? (units as string[]) : [],
       affectedPopulation: typeof pop === 'number' ? pop : 0,
+      properties: i.properties,
     };
   };
 
@@ -197,11 +207,8 @@ export function IncidentPanel({ onFlyTo, onShowEvacRoutes, onShowAffectedArea, o
               <Table.Tbody>
                 {activeIncidents.map((inc) => (
                   <Table.Tr key={inc.id} style={{ cursor: 'pointer' }} onClick={() => {
-                    if (inc.lat != null && inc.lng != null) {
-                      onFlyTo(inc.lat, inc.lng, 15);
-                      onShowAffectedArea(inc.lat, inc.lng, 1000);
-                    }
-                    onShowEvacRoutes(inc.id);
+                    onShowAffectedArea(inc);
+                    onShowEvacRoutes(inc);
                   }}>
                     <Table.Td><Text size="xs" fw={500}>{inc.type}</Text></Table.Td>
                     <Table.Td><Badge size="xs" color={SEVERITY_COLORS[inc.severity] ?? 'gray'}>{inc.severity}</Badge></Table.Td>

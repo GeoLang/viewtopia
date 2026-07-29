@@ -22,6 +22,7 @@ import {
   CONSTRUCTION_DATASET,
   type ElevationStats,
 } from '../../lib/verticals';
+import { fetchBranchGeometry } from '../../lib/branchFeatures';
 
 interface Survey {
   id: string;
@@ -29,6 +30,14 @@ interface Survey {
   date: string;
   pointCount: number;
   meanElevation: number | null;
+  geometry: GeoJSON.Geometry | null;
+}
+
+/** What the map side needs to draw a survey. */
+export interface SurveySelection {
+  id: string;
+  name: string;
+  geometry: GeoJSON.Geometry | null;
 }
 
 interface ProgressMilestone {
@@ -41,8 +50,8 @@ interface ProgressMilestone {
 }
 
 interface ConstructionPanelProps {
-  onLoadSurvey: (surveyId: string) => void;
-  onCompareSurveys: (baseId: string, compareId: string) => void;
+  onLoadSurvey: (survey: SurveySelection) => void;
+  onCompareSurveys: (base: SurveySelection, compare: SurveySelection) => void;
   onClose: () => void;
 }
 
@@ -69,9 +78,10 @@ export function ConstructionPanel({ onLoadSurvey, onCompareSurveys, onClose }: C
         return;
       }
       setBranchId(branch);
-      const [surveyRows, milestoneRows] = await Promise.all([
+      const [surveyRows, milestoneRows, geometry] = await Promise.all([
         listSurveys(branch),
         listMilestones(branch),
+        fetchBranchGeometry(branch),
       ]);
       setSurveys(
         surveyRows.map((s) => ({
@@ -80,6 +90,7 @@ export function ConstructionPanel({ onLoadSurvey, onCompareSurveys, onClose }: C
           date: s.date ?? '',
           pointCount: s.point_count ?? 0,
           meanElevation: s.mean_elevation,
+          geometry: geometry.get(s.id) ?? null,
         })),
       );
       setMilestones(
@@ -105,7 +116,9 @@ export function ConstructionPanel({ onLoadSurvey, onCompareSurveys, onClose }: C
 
   const handleCompare = async () => {
     if (!branchId || !baseSurvey || !compareSurvey) return;
-    onCompareSurveys(baseSurvey, compareSurvey);
+    const base = surveys.find((s) => s.id === baseSurvey);
+    const compare = surveys.find((s) => s.id === compareSurvey);
+    if (base && compare) onCompareSurveys(base, compare);
     try {
       const result = await compareSurveys(branchId, baseSurvey, compareSurvey);
       setComparison(result.elevation_diff_stats);
@@ -193,7 +206,7 @@ export function ConstructionPanel({ onLoadSurvey, onCompareSurveys, onClose }: C
                 </Table.Thead>
                 <Table.Tbody>
                   {surveys.map((s) => (
-                    <Table.Tr key={s.id} style={{ cursor: 'pointer' }} onClick={() => onLoadSurvey(s.id)}>
+                    <Table.Tr key={s.id} style={{ cursor: 'pointer' }} onClick={() => onLoadSurvey(s)}>
                       <Table.Td><Text size="xs">{s.name}</Text></Table.Td>
                       <Table.Td><Text size="xs">{s.pointCount.toLocaleString()}</Text></Table.Td>
                       <Table.Td><Text size="xs">{s.meanElevation != null ? `${s.meanElevation.toFixed(1)} m` : '—'}</Text></Table.Td>
