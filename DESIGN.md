@@ -347,3 +347,22 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   untouched. Deleted: embedded Letta server + postgres, embeddings (TEI) container,
   legacy `POST /chat`, sessions.json, the ~2min Letta boot. Letta sessions dropped by
   design (no migration); `geolang-pgdata` volume kept as rollback artifact.
+- **2026-07-29**: **Plan substrate, evals and identity propagation.** The NL agent now
+  composes a geodukt TOML manifest as its execution plan: `plan_workflow` validates it,
+  the viewer renders the steps with a validated badge, and approving posts the manifest
+  verbatim to `run_workflow` with `notify` so the model's session learns the run
+  happened. geodukt gained a Dockerfile and runs internally on 8100. The eval harness
+  (`geolang/evals/`) scores NL-to-manifest against the expected pipeline graph, never
+  prose: local Qwen3.5-35B-A3B went 0.87 then 1.00 over 10 tasks once the persona stopped
+  telling it to put `spatial_join` in manifests (transforms are single-input, geodukt
+  rejects it), so all three misses were prompt-caused. Identity now flows end to end: the
+  viewer sends its platform JWT to `/chat/agui`, sibyl carries it per run (memory only,
+  never persisted or logged), geolang's tool executor puts it in a ContextVar and its
+  ptolemy/tiletopia/geodukt clients attach it, with the old `PTOLEMY_API_TOKEN` kept only
+  as the headless fallback. geodukt validates the same secret and gates `POST /run` to
+  editor/admin, recording the caller's `sub` on the run; `/validate`, `/operations` and
+  `/health` stay open so headless planning and the evals still work. Verified against the
+  live stack, 11 checks including a real run whose record carried the approving user.
+  Two things this surfaced: geodukt ran as uid 999 against a bind mount owned by the host
+  user, so every pipeline sink failed until compose pinned `user:`; and failed runs still
+  record no steps.

@@ -59,26 +59,16 @@ results downloadable via the new GeoPackage/Shapefile sinks. Three spec items
 Order: substrate first, eval harness alongside, permission propagation before
 anything multi-user ships, local packaging last.
 
-- [~] **geodukt as plan substrate**: geolang agent gains a plan-then-execute
-      flow. The model composes a geodukt TOML manifest from the typed tool
-      catalog, the user approves the rendered plan, execution goes through
-      geodukt /run with lineage. Raw sql_query becomes a gated escape hatch,
-      labeled in the plan. Started 2026-07-29. Viewer half landed: the AG-UI
-      `plan` event renders a chat panel with the steps, the validation flag, the
-      raw manifest and an approve action that posts it to run_workflow with
-      notify (so the model's session learns the run happened), and the platform
-      compose file runs geodukt internally on 8100 (Dockerfile landed, service
-      builds and health-checks). Still open: sql_query is only persona-discouraged,
-      not labeled as an escape hatch in the rendered plan.
-- [~] **model-independent eval harness**: golden NL-to-manifest tasks scored by
-      manifest comparison (not prose grading), runnable per sibyl model profile
-      (cloud/local), so "Qwen3.5-35B scores X on N tasks" is a shippable claim
-      and a regression guard when models change. Started 2026-07-29.
-- [ ] **permission-aware tool execution (blocks multi-user)**: every tool call
-      must carry the requesting user's identity through to ptolemy/tiletopia so
-      discovery and operations inherit real RBAC. Today the executor is
-      in-process with no per-user identity, tiletopia RBAC is type stubs,
-      collecta checks nothing. Security-sensitive work.
+- [~] **geodukt as plan substrate**: plan-then-approve flow shipped (see the
+      history log). Still open: sql_query is only persona-discouraged, not
+      labeled as a gated escape hatch in the rendered plan.
+- [ ] **permission-aware enforcement (blocks multi-user)**: the caller's JWT now
+      reaches ptolemy/tiletopia/geodukt (history log), so ptolemy's real RBAC
+      applies. What is still missing is enforcement at the other end: tiletopia
+      RBAC is type stubs, collecta checks nothing, and geolang's own `/tools`
+      endpoint is unauthenticated, so anyone who can reach it runs tools as
+      whatever token they present (no escalation, but no audit either).
+      Security-sensitive work.
 - [ ] **local deployment packaging (last)**: GPU detection, quantized model
       download, context config, inference-server setup. Wrap llama.cpp/ollama
       tooling rather than build. The differentiation lives in the eval harness
