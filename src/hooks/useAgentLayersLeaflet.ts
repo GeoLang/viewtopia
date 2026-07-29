@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import L from 'leaflet';
-import { useAgentLayerStore } from '../store/agentLayers';
+import { useAgentLayerStore, layerStyle } from '../store/agentLayers';
 import { useAppStore } from '../store/app';
 import { agentLayersBounds } from './agentLayerBounds';
 
@@ -41,13 +41,16 @@ export function useAgentLayersLeaflet(mapRef: MutableRefObject<L.Map | null>) {
     const map = mapRef.current;
     if (!map) return;
 
-    const objs = layers.map((layer) =>
-      L.geoJSON(layer.geojson, {
+    const objs = layers.map((layer) => {
+      const style = layerStyle(layer);
+      return L.geoJSON(layer.geojson, {
         style: {
           color: layer.color,
-          weight: 2,
+          weight: style.lineWidth,
           fillColor: layer.color,
-          fillOpacity: 0.3,
+          fillOpacity: style.opacity,
+          fill: style.filled,
+          stroke: style.stroked,
         },
         pointToLayer: (_f, latlng) =>
           L.circleMarker(latlng, {
@@ -57,8 +60,8 @@ export function useAgentLayersLeaflet(mapRef: MutableRefObject<L.Map | null>) {
             fillColor: layer.color,
             fillOpacity: 1,
           }),
-      }).addTo(map),
-    );
+      }).addTo(map);
+    });
 
     // Frame only when a new spec arrives, never on a plain tab switch.
     const bounds = agentLayersBounds(layers);

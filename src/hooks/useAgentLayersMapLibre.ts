@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import maplibregl from 'maplibre-gl';
-import { useAgentLayerStore, type AgentMarker } from '../store/agentLayers';
+import { useAgentLayerStore, layerStyle, type AgentMarker } from '../store/agentLayers';
 import { useAppStore } from '../store/app';
 import { agentLayersBounds } from './agentLayerBounds';
 
@@ -61,22 +61,27 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
 
       for (const layer of layers) {
         const src = `${PREFIX}${layer.id}`;
+        const style = layerStyle(layer);
         map.addSource(src, { type: 'geojson', data: layer.geojson });
         // One source can hold mixed geometry, so add a layer per kind.
-        map.addLayer({
-          id: `${src}-fill`,
-          type: 'fill',
-          source: src,
-          filter: ['==', ['geometry-type'], 'Polygon'],
-          paint: { 'fill-color': layer.color, 'fill-opacity': 0.3 },
-        });
-        map.addLayer({
-          id: `${src}-line`,
-          type: 'line',
-          source: src,
-          filter: ['in', ['geometry-type'], ['literal', ['LineString', 'Polygon']]],
-          paint: { 'line-color': layer.color, 'line-width': 2 },
-        });
+        if (style.filled) {
+          map.addLayer({
+            id: `${src}-fill`,
+            type: 'fill',
+            source: src,
+            filter: ['==', ['geometry-type'], 'Polygon'],
+            paint: { 'fill-color': layer.color, 'fill-opacity': style.opacity },
+          });
+        }
+        if (style.stroked) {
+          map.addLayer({
+            id: `${src}-line`,
+            type: 'line',
+            source: src,
+            filter: ['in', ['geometry-type'], ['literal', ['LineString', 'Polygon']]],
+            paint: { 'line-color': layer.color, 'line-width': style.lineWidth },
+          });
+        }
         map.addLayer({
           id: `${src}-circle`,
           type: 'circle',

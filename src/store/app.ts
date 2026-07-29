@@ -213,7 +213,12 @@ export const useAppStore = create<AppState>()(
 
       // Layers
       layers: [],
-      addLayer: (layer) => set((s) => ({ layers: [...s.layers, layer] })),
+      addLayer: (layer) =>
+        set((s) => ({
+          layers: s.layers.some((l) => l.id === layer.id)
+            ? s.layers.map((l) => (l.id === layer.id ? layer : l))
+            : [...s.layers, layer],
+        })),
       removeLayer: (id) => set((s) => ({ layers: s.layers.filter((l) => l.id !== id) })),
       toggleLayerVisibility: (id) =>
         set((s) => ({

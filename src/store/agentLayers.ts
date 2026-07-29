@@ -5,11 +5,31 @@ import { create } from 'zustand';
  * pushed straight into one renderer, so every renderer can draw the same set
  * and switching between them keeps the results on screen.
  */
+/** Per-layer drawing overrides, from a plugin's LayerOptions. */
+export interface AgentLayerStyle {
+  /** fill opacity, 0..1 */
+  opacity?: number;
+  lineWidth?: number;
+  filled?: boolean;
+  stroked?: boolean;
+}
+
 export interface AgentLayer {
   id: string;
   name: string;
   color: string;
   geojson: GeoJSON.FeatureCollection;
+  style?: AgentLayerStyle;
+}
+
+/** Fills in what a layer left unset, so the three renderers draw it the same. */
+export function layerStyle(layer: AgentLayer): Required<AgentLayerStyle> {
+  return {
+    opacity: layer.style?.opacity ?? 0.3,
+    lineWidth: layer.style?.lineWidth ?? 2,
+    filled: layer.style?.filled ?? true,
+    stroked: layer.style?.stroked ?? true,
+  };
 }
 
 /** A point the agent dropped via add_marker. Accumulates until clear_entities. */
@@ -27,7 +47,7 @@ interface AgentLayerState {
   /** Bumped each time a new spec lands, so renderers know to reframe. */
   generation: number;
   setLayers: (layers: AgentLayer[]) => void;
-  /** Append one layer (add_geojson / sql_query); fit reframes the view to it. */
+  /** Add one layer (add_geojson / sql_query / plugin); a known id replaces that layer, fit reframes the view. */
   addLayer: (layer: AgentLayer, fit?: boolean) => void;
   /** Drop one layer by id (a panel taking back what it added). */
   removeLayer: (id: string) => void;
@@ -88,10 +108,16 @@ export const useAgentLayerStore = create<AgentLayerState>((set) => ({
   generation: 0,
   setLayers: (layers) => set((s) => ({ layers: sanitizeLayers(layers), generation: s.generation + 1 })),
   addLayer: (layer, fit = true) =>
-    set((s) => ({
-      layers: [...s.layers, ...sanitizeLayers([layer])],
-      generation: fit ? s.generation + 1 : s.generation,
-    })),
+    set((s) => {
+      const clean = sanitizeLayers([layer]);
+      const known = s.layers.some((l) => l.id === layer.id);
+      return {
+        layers: known
+          ? s.layers.flatMap((l) => (l.id === layer.id ? clean : [l]))
+          : [...s.layers, ...clean],
+        generation: fit ? s.generation + 1 : s.generation,
+      };
+    }),
   removeLayer: (id) => set((s) => ({ layers: s.layers.filter((l) => l.id !== id) })),
   addMarker: (marker) =>
     set((s) => {

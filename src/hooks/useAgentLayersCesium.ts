@@ -8,7 +8,7 @@ import {
   VerticalOrigin,
   type Viewer,
 } from 'cesium';
-import { useAgentLayerStore } from '../store/agentLayers';
+import { useAgentLayerStore, layerStyle } from '../store/agentLayers';
 import { useAppStore } from '../store/app';
 
 const PREFIX = 'agent-layer-';
@@ -61,11 +61,13 @@ export function useAgentLayersCesium(viewerRef: MutableRefObject<Viewer | null>)
 
       let last: GeoJsonDataSource | undefined;
       for (const layer of layers) {
+        const style = layerStyle(layer);
+        const color = Color.fromCssColorString(layer.color);
         const ds = await GeoJsonDataSource.load(layer.geojson, {
-          stroke: Color.fromCssColorString(layer.color),
-          fill: Color.fromCssColorString(layer.color).withAlpha(0.3),
-          strokeWidth: 2,
-          markerColor: Color.fromCssColorString(layer.color),
+          stroke: style.stroked ? color : color.withAlpha(0),
+          fill: color.withAlpha(style.filled ? style.opacity : 0),
+          strokeWidth: style.lineWidth,
+          markerColor: color,
         });
         if (cancelled || viewer.isDestroyed()) return;
         ds.name = `${PREFIX}${layer.id}`;
