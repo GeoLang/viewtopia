@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Badge, Tabs, Group, Select, Button, Menu, ActionIcon, Tooltip } from '@mantine/core';
+import { Badge, Tabs, Group, Stack, Select, Button, Menu, ActionIcon, Tooltip } from '@mantine/core';
 import {
   IconGlobe,
   IconMap,
@@ -140,31 +140,33 @@ export function ViewerToolbar() {
 
       <Group gap="xs" wrap="nowrap">
         <FlyToSearch />
-        <Select
-          size="xs"
-          w={110}
-          aria-label="Renderer"
-          data={RENDERER_OPTIONS}
-          value={renderer}
-          disabled={onMapTab}
-          onChange={(v) => v && setRenderer(v as Renderer)}
-          styles={{
-            input: { background: '#0d1117', borderColor: '#30363d' },
-          }}
-        />
+        <Stack gap={4}>
+          <Select
+            size="xs"
+            w={110}
+            aria-label="Renderer"
+            data={RENDERER_OPTIONS}
+            value={renderer}
+            disabled={onMapTab}
+            onChange={(v) => v && setRenderer(v as Renderer)}
+            styles={{
+              input: { background: '#0d1117', borderColor: '#30363d' },
+            }}
+          />
 
-        <Select
-          size="xs"
-          w={110}
-          aria-label="Basemap"
-          comboboxProps={{ width: 190, position: 'bottom-start' }}
-          data={basemapGroups}
-          value={basemap}
-          onChange={(v) => v && setBasemap(v as Basemap)}
-          styles={{
-            input: { background: '#0d1117', borderColor: '#30363d' },
-          }}
-        />
+          <Select
+            size="xs"
+            w={110}
+            aria-label="Basemap"
+            comboboxProps={{ width: 190, position: 'bottom-start' }}
+            data={basemapGroups}
+            value={basemap}
+            onChange={(v) => v && setBasemap(v as Basemap)}
+            styles={{
+              input: { background: '#0d1117', borderColor: '#30363d' },
+            }}
+          />
+        </Stack>
 
         <Tooltip label="Measure"><ActionIcon aria-label="Measure" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('measure')}><IconRuler size={14} /></ActionIcon></Tooltip>
         <Tooltip label="Layers"><ActionIcon aria-label="Layers" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('layers')}><IconStack2 size={14} /></ActionIcon></Tooltip>
