@@ -1,11 +1,20 @@
 import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import maplibregl from 'maplibre-gl';
+import type { ExpressionSpecification } from 'maplibre-gl';
 import { useAgentLayerStore, layerStyle, type AgentMarker } from '../store/agentLayers';
 import { useAppStore } from '../store/app';
 import { agentLayersBounds } from './agentLayerBounds';
 
 const PREFIX = 'agent-layer-';
+
+/**
+ * A classified layer carries its class colour on each feature as a simplestyle
+ * property, so the paint reads that and falls back to the layer's one colour.
+ */
+export function featureColor(key: string, fallback: string): ExpressionSpecification {
+  return ['coalesce', ['get', key], fallback];
+}
 
 /** Colored dot + optional label, matching the Cesium marker look. */
 function markerElement(m: AgentMarker): HTMLElement {
@@ -70,7 +79,10 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
             type: 'fill',
             source: src,
             filter: ['==', ['geometry-type'], 'Polygon'],
-            paint: { 'fill-color': layer.color, 'fill-opacity': style.opacity },
+            paint: {
+              'fill-color': featureColor('fill', layer.color),
+              'fill-opacity': style.opacity,
+            },
           });
         }
         if (style.stroked) {
@@ -79,7 +91,10 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
             type: 'line',
             source: src,
             filter: ['in', ['geometry-type'], ['literal', ['LineString', 'Polygon']]],
-            paint: { 'line-color': layer.color, 'line-width': style.lineWidth },
+            paint: {
+              'line-color': featureColor('stroke', layer.color),
+              'line-width': style.lineWidth,
+            },
           });
         }
         map.addLayer({
@@ -88,7 +103,7 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
           source: src,
           filter: ['==', ['geometry-type'], 'Point'],
           paint: {
-            'circle-color': layer.color,
+            'circle-color': featureColor('marker-color', layer.color),
             'circle-radius': 5,
             'circle-stroke-color': '#ffffff',
             'circle-stroke-width': 1,

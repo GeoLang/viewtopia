@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import { LayerManager } from '../../src/components/layers/LayerManager';
 import { layerStyle, useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers';
@@ -24,6 +24,21 @@ globalThis.ResizeObserver = class {
 const point = (lon: number, lat: number): GeoJSON.FeatureCollection => ({
   type: 'FeatureCollection',
   features: [{ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [lon, lat] } }],
+});
+
+/** A layer whose features carry a score worth shading by. */
+const scored = (values: number[]): AgentLayer => ({
+  id: 'risk',
+  name: 'Flood risk',
+  color: '#3388ff',
+  geojson: {
+    type: 'FeatureCollection',
+    features: values.map((risk) => ({
+      type: 'Feature',
+      properties: { risk },
+      geometry: { type: 'Point', coordinates: [12.33, 45.44] },
+    })),
+  },
 });
 
 const layer = (id: string, path?: string): AgentLayer => ({
@@ -102,6 +117,45 @@ describe('LayerManager agent layers', () => {
     expect(layerStyle(updated).opacity).toBe(0.8);
     // restyling must not reframe the view
     expect(useAgentLayerStore.getState().generation).toBe(before);
+  });
+
+  it('offers the fields worth shading by, and a legend once one is picked', () => {
+    useAgentLayerStore.getState().setLayers([scored([0, 50, 100])]);
+
+    renderPanel();
+    fireEvent.click(screen.getByTestId('agent-layer-row'));
+
+    expect(screen.getByTestId('agent-layer-field')).toHaveAttribute('placeholder', 'Shade by field');
+    expect(screen.queryByTestId('agent-layer-legend')).not.toBeInTheDocument();
+
+    act(() => {
+      useAgentLayerStore.getState().classify('risk', 'risk');
+    });
+
+    const swatches = screen.getAllByTestId('agent-layer-legend-class');
+    expect(swatches).toHaveLength(5);
+    // the ranges are the tooltip, not five more rows in a 300px panel
+    expect(swatches[0]).toHaveAttribute('title', 'risk: 0 to 20');
+    expect(swatches[4]).toHaveAttribute('title', 'risk: 80+');
+    expect(screen.getByTestId('agent-layer-field')).toHaveValue('risk');
+
+    act(() => {
+      useAgentLayerStore.getState().classify('risk', null);
+    });
+    expect(screen.queryByTestId('agent-layer-legend')).not.toBeInTheDocument();
+  });
+
+  it('says why a single-feature layer has nothing to shade instead of offering a dead picker', () => {
+    // the environmental risk tool writes one polygon carrying every score
+    useAgentLayerStore.getState().setLayers([scored([42])]);
+
+    renderPanel();
+    fireEvent.click(screen.getByTestId('agent-layer-row'));
+
+    expect(screen.queryByTestId('agent-layer-field')).not.toBeInTheDocument();
+    expect(screen.getByTestId('agent-layer-no-shading')).toHaveTextContent(
+      'no numeric field varies across these features',
+    );
   });
 
   it('a plugin layer keeps its own row instead of appearing twice', () => {

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { classifyLayer, clearClassification } from './choropleth';
 
 /**
  * Layers the agent asked us to draw (from a ui_spec). Held here rather than
@@ -26,6 +27,10 @@ export interface AgentLayer {
    * (a drawing, a SQL result, a plugin's own geometry).
    */
   path?: string;
+  /** Set while the layer is shaded by a field: the classes, for the legend. */
+  choropleth?: { field: string; breaks: number[]; colors: string[] };
+  /** The features before shading, so clearing it restores the single colour. */
+  sourceGeojson?: GeoJSON.FeatureCollection;
 }
 
 /** Fills in what a layer left unset, so the three renderers draw it the same. */
@@ -59,6 +64,8 @@ interface AgentLayerState {
   removeLayer: (id: string) => void;
   /** Fill opacity of one layer, which every renderer reads through layerStyle. */
   setLayerOpacity: (id: string, opacity: number) => void;
+  /** Shade one layer by a numeric field, or null to go back to one colour. */
+  classify: (id: string, field: string | null) => void;
   addMarker: (marker: Omit<AgentMarker, 'id'>) => void;
   clearMarkers: () => void;
   clear: () => void;
@@ -132,6 +139,12 @@ export const useAgentLayerStore = create<AgentLayerState>((set) => ({
     set((s) => ({
       layers: s.layers.map((l) =>
         l.id === id ? { ...l, style: { ...l.style, opacity } } : l,
+      ),
+    })),
+  classify: (id, field) =>
+    set((s) => ({
+      layers: s.layers.map((l) =>
+        l.id !== id ? l : field ? classifyLayer(l, field) : clearClassification(l),
       ),
     })),
   addMarker: (marker) =>

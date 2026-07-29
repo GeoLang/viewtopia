@@ -67,6 +67,17 @@ const countOn = (map: L.Map, kind: new (...args: never[]) => L.Layer) => {
   return n;
 };
 
+/** The fill each drawn feature ended up with, in order. */
+const fillColors = (map: L.Map): (string | undefined)[] => {
+  const out: (string | undefined)[] = [];
+  map.eachLayer((l) => {
+    if (l instanceof L.GeoJSON) {
+      for (const child of l.getLayers()) out.push((child as L.Path).options.fillColor);
+    }
+  });
+  return out;
+};
+
 const setTab = (tab: 'globe' | 'map') =>
   act(() => {
     useAppStore.setState({ activeTab: tab });
@@ -205,5 +216,38 @@ describe('useAgentLayersLeaflet', () => {
     expect(result.current.current).toBeNull();
     expect(countOn(map, L.GeoJSON)).toBe(0);
     expect(countOn(map, L.CircleMarker)).toBe(0);
+  });
+
+  it('shades each feature by its own colour once the layer is classified', () => {
+    const { result } = renderHook(() => useMapWithAgentLayers());
+    const scored: AgentLayer = {
+      ...polygon('risk', 10, 50),
+      geojson: {
+        type: 'FeatureCollection',
+        features: [0, 100].map((risk) => ({
+          ...polygon('risk', 10, 50).geojson.features[0],
+          properties: { risk },
+        })),
+      },
+    };
+    act(() => {
+      useAgentLayerStore.getState().addLayer(scored);
+    });
+
+    // one colour for the whole layer until it is classified
+    expect(fillColors(result.current.current!)).toEqual(['#ff0000', '#ff0000']);
+
+    act(() => {
+      useAgentLayerStore.getState().classify('risk', 'risk');
+    });
+    const shaded = fillColors(result.current.current!);
+    expect(shaded).toHaveLength(2);
+    expect(new Set(shaded).size).toBe(2);
+    expect(shaded[0]).not.toBe('#ff0000');
+
+    act(() => {
+      useAgentLayerStore.getState().classify('risk', null);
+    });
+    expect(fillColors(result.current.current!)).toEqual(['#ff0000', '#ff0000']);
   });
 });

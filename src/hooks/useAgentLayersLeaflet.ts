@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import L from 'leaflet';
 import { useAgentLayerStore, layerStyle } from '../store/agentLayers';
+import { simplestyleColor } from '../store/choropleth';
 import { useAppStore } from '../store/app';
 import { agentLayersBounds } from './agentLayerBounds';
 
@@ -44,20 +45,22 @@ export function useAgentLayersLeaflet(mapRef: MutableRefObject<L.Map | null>) {
     const objs = layers.map((layer) => {
       const style = layerStyle(layer);
       return L.geoJSON(layer.geojson, {
-        style: {
-          color: layer.color,
+        // a callback, not an object, so a classified layer's per-feature colour
+        // is read off the feature's simplestyle properties
+        style: (feature) => ({
+          color: simplestyleColor(feature, 'stroke', layer.color),
           weight: style.lineWidth,
-          fillColor: layer.color,
+          fillColor: simplestyleColor(feature, 'fill', layer.color),
           fillOpacity: style.opacity,
           fill: style.filled,
           stroke: style.stroked,
-        },
-        pointToLayer: (_f, latlng) =>
+        }),
+        pointToLayer: (feature, latlng) =>
           L.circleMarker(latlng, {
             radius: 5,
             color: '#ffffff',
             weight: 1,
-            fillColor: layer.color,
+            fillColor: simplestyleColor(feature, 'marker-color', layer.color),
             fillOpacity: 1,
           }),
       }).addTo(map);
