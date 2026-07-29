@@ -193,6 +193,10 @@ services:
   geodukt:
     build:
       context: ../geodukt
+    # the image's own user is uid 999, which cannot write the bind-mounted
+    # outputs/ owned by the host user, so every pipeline run fails at its sink.
+    # itinera solves the same problem by dropping privileges in its entrypoint.
+    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
     volumes:
       - ../geolang:/app/geolang:z
     working_dir: /app/geolang
