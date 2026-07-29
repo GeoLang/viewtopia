@@ -1,11 +1,12 @@
 /**
- * Raster Classification Plugin — Unsupervised (k-means) and threshold classification.
+ * Raster Classification Plugin — unsupervised k-means / ISODATA clustering.
  * Equivalent to: QGIS Semi-Automatic Classification Plugin (2.6M downloads)
- * Covers the most common classification workflows without requiring server-side ML.
+ * The app has no raster pixel pipeline, so the clustering runs on generated
+ * 3-band demo data. The algorithms are real, the input is not imagery.
  */
 
 import { useState } from 'react';
-import { Paper, Text, Stack, Button, Group, Badge, Select, Slider, Table, ColorSwatch, Loader } from '@mantine/core';
+import { Paper, Text, Stack, Button, Group, Badge, Select, Slider, Table, ColorSwatch, Loader, Alert } from '@mantine/core';
 import { IconCategory, } from '@tabler/icons-react';
 import type { PluginDefinition, PluginContext } from '../sdk';
 
@@ -18,7 +19,7 @@ interface ClassResult {
 }
 
 // Simple k-means clustering on raster bands
-function kMeansClustering(data: Float64Array[], k: number, maxIter = 50): Uint8Array {
+function kMeansClustering(data: Float64Array[], k: number, maxIter = 50, threshold = 0.001): Uint8Array {
   const numPixels = data[0].length;
   const numBands = data.length;
   const labels = new Uint8Array(numPixels);
@@ -71,16 +72,16 @@ function kMeansClustering(data: Float64Array[], k: number, maxIter = 50): Uint8A
     }
 
     // Convergence check
-    if (changed === 0 || changed < numPixels * 0.001) break;
+    if (changed === 0 || changed < numPixels * threshold) break;
   }
 
   return labels;
 }
 
 // ISODATA extends k-means with split/merge
-function isodataClustering(data: Float64Array[], initialK: number, maxIter = 30): Uint8Array {
+function isodataClustering(data: Float64Array[], initialK: number, maxIter = 30, threshold = 0.001): Uint8Array {
   // Simplified ISODATA: just k-means with some extra iterations for better convergence
-  return kMeansClustering(data, initialK, maxIter * 2);
+  return kMeansClustering(data, initialK, maxIter * 2, threshold);
 }
 
 const CLASS_COLORS = [
@@ -102,7 +103,7 @@ function RasterClassificationPanel({ ctx }: { ctx: PluginContext }) {
     setResults(null);
 
     try {
-      // Generate synthetic multi-band data for demo
+      // No raster pixel pipeline in the app: the clustering input is generated here
       const width = 256, height = 256;
       const numPixels = width * height;
       const bands: Float64Array[] = [
@@ -111,7 +112,7 @@ function RasterClassificationPanel({ ctx }: { ctx: PluginContext }) {
         new Float64Array(numPixels),
       ];
 
-      // Simulate 3-band imagery with spatial patterns
+      // Three bands of sin/cos gradients plus noise, so the clusters are separable
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
           const i = y * width + x;
@@ -122,11 +123,13 @@ function RasterClassificationPanel({ ctx }: { ctx: PluginContext }) {
       }
 
       // Run classification
+      const maxIter = ctx.settings.get('maxIterations', 50);
+      const threshold = ctx.settings.get('convergenceThreshold', 0.001);
       let labels: Uint8Array;
       if (method === 'isodata') {
-        labels = isodataClustering(bands, numClasses);
+        labels = isodataClustering(bands, numClasses, maxIter, threshold);
       } else {
-        labels = kMeansClustering(bands, numClasses);
+        labels = kMeansClustering(bands, numClasses, maxIter, threshold);
       }
 
       // Compute statistics per class
@@ -181,6 +184,13 @@ function RasterClassificationPanel({ ctx }: { ctx: PluginContext }) {
           <Badge size="sm" color="orange">Unsupervised</Badge>
         </Group>
 
+        <Alert color="yellow" p="xs">
+          <Text size="xs">
+            Demo data: there is no raster pixel pipeline in the app yet, so the clustering runs on a generated 256×256
+            3-band image, not on a loaded layer.
+          </Text>
+        </Alert>
+
         <Select
           label="Method"
           data={[
@@ -207,11 +217,17 @@ function RasterClassificationPanel({ ctx }: { ctx: PluginContext }) {
           fullWidth
           color="orange"
         >
-          {loading ? 'Classifying...' : 'Run Classification'}
+          {loading ? 'Classifying...' : 'Run Classification on Demo Data'}
         </Button>
 
         {imageUrl && (
-          <img src={imageUrl} alt="Classification Result" style={{ width: '100%', borderRadius: 8, border: '1px solid var(--mantine-color-default-border)' }} />
+          <>
+            <Group justify="space-between">
+              <Text size="xs" fw={500}>Result</Text>
+              <Badge size="xs" color="yellow" variant="light">Demo data</Badge>
+            </Group>
+            <img src={imageUrl} alt="Classification of the demo bands" style={{ width: '100%', borderRadius: 8, border: '1px solid var(--mantine-color-default-border)' }} />
+          </>
         )}
 
         {results && (
@@ -246,7 +262,7 @@ function RasterClassificationPanel({ ctx }: { ctx: PluginContext }) {
 const plugin: PluginDefinition = {
   id: 'raster-classification',
   name: 'Raster Classification',
-  description: 'Unsupervised raster classification using K-Means and ISODATA clustering algorithms',
+  description: 'Demonstrates K-Means and ISODATA clustering on generated demo bands (no raster input pipeline yet)',
   version: '1.0.0',
   author: 'TileTopia-HQ',
   icon: <IconCategory size={14} />,
