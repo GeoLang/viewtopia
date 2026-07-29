@@ -49,6 +49,35 @@
       per-asset visibility check in the tile path AND a CDN redesign
       (authenticated tiles cannot keep the shared long-TTL cache).
 
+## OPEN: NL agent as plan substrate (decided 2026-07-29)
+
+Decision: the NL agent's differentiator is trust with local open models. Instead
+of free-form sequential tool calls, the model emits a geodukt manifest as the
+execution plan: visible before running, validated, lineage-tracked, rerunnable,
+results downloadable via the new GeoPackage/Shapefile sinks. Three spec items
+(typed tools, visible plans, provenance) collapse into this one substrate.
+Order: substrate first, eval harness alongside, permission propagation before
+anything multi-user ships, local packaging last.
+
+- [~] **geodukt as plan substrate**: geolang agent gains a plan-then-execute
+      flow. The model composes a geodukt TOML manifest from the typed tool
+      catalog, the user approves the rendered plan, execution goes through
+      geodukt /run with lineage. Raw sql_query becomes a gated escape hatch,
+      labeled in the plan. Started 2026-07-29.
+- [~] **model-independent eval harness**: golden NL-to-manifest tasks scored by
+      manifest comparison (not prose grading), runnable per sibyl model profile
+      (cloud/local), so "Qwen3.5-35B scores X on N tasks" is a shippable claim
+      and a regression guard when models change. Started 2026-07-29.
+- [ ] **permission-aware tool execution (blocks multi-user)**: every tool call
+      must carry the requesting user's identity through to ptolemy/tiletopia so
+      discovery and operations inherit real RBAC. Today the executor is
+      in-process with no per-user identity, tiletopia RBAC is type stubs,
+      collecta checks nothing. Security-sensitive work.
+- [ ] **local deployment packaging (last)**: GPU detection, quantized model
+      download, context config, inference-server setup. Wrap llama.cpp/ollama
+      tooling rather than build. The differentiation lives in the eval harness
+      proving which local model suffices, not in the installer.
+
 ## OPEN — sibyl cutover cleanup
 
 - [ ] Session routing is still server-side-global (sibyl active flag mirrors the
