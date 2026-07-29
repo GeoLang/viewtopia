@@ -34,7 +34,7 @@ const SHIPPED_PANELS = [
   'dataTable',
   'timeline',
   'shadows',
-  'settings',
+  // settings is a top-level toolbar button now, not a menu registry entry
 ] as const;
 
 describe('tool menu preview gating', () => {
