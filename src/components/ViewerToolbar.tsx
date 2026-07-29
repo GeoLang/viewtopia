@@ -21,6 +21,8 @@ import {
   IconClick,
   IconVectorTriangle,
   IconPalette,
+  IconWand,
+  IconDots,
 } from '@tabler/icons-react';
 import { useAppStore, type Renderer, type Basemap, type ViewerTab } from '../store/app';
 import { useFeaturePickerStore } from '../store/featurePicker';
@@ -165,17 +167,51 @@ export function ViewerToolbar() {
         />
 
         <Tooltip label="Measure"><ActionIcon aria-label="Measure" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('measure')}><IconRuler size={14} /></ActionIcon></Tooltip>
-        <Tooltip label="Draw"><ActionIcon aria-label="Draw" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('draw')}><IconPencil size={14} /></ActionIcon></Tooltip>
-        <Tooltip label="Annotate"><ActionIcon aria-label="Annotate" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('annotate')}><IconMapPin size={14} /></ActionIcon></Tooltip>
-        <Tooltip label="Route"><ActionIcon aria-label="Route" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('routing')}><IconRoute size={14} /></ActionIcon></Tooltip>
-        <Tooltip label="Bookmarks"><ActionIcon aria-label="Bookmarks" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('bookmark')}><IconBookmark size={14} /></ActionIcon></Tooltip>
-        <Tooltip label="Search"><ActionIcon aria-label="Search" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('geocoding')}><IconSearch size={14} /></ActionIcon></Tooltip>
         <Tooltip label="Layers"><ActionIcon aria-label="Layers" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('layers')}><IconStack2 size={14} /></ActionIcon></Tooltip>
-        <Tooltip label="Buildings"><ActionIcon aria-label="Buildings" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('buildings')}><IconBuildingSkyscraper size={14} /></ActionIcon></Tooltip>
         <Tooltip label="Inspect"><ActionIcon aria-label="Inspect" size="sm" variant="subtle" color="gray" onClick={toggleInspect}><IconClick size={14} /></ActionIcon></Tooltip>
-        <Tooltip label="GeoJSON Editor"><ActionIcon aria-label="GeoJSON Editor" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('geojsonEditor')}><IconVectorTriangle size={14} /></ActionIcon></Tooltip>
-        <Tooltip label="Style Editor"><ActionIcon aria-label="Style Editor" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('styleEditor')}><IconPalette size={14} /></ActionIcon></Tooltip>
-        <Tooltip label="Export PNG"><ActionIcon aria-label="Export PNG" size="sm" variant="subtle" color="gray" onClick={handleExportPng}><IconDownload size={14} /></ActionIcon></Tooltip>
+
+        <Menu shadow="md" width={180}>
+          <Menu.Target>
+            <Button size="xs" variant="subtle" leftSection={<IconWand size={14} />}>
+              Actions
+            </Button>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Menu.Item leftSection={<IconPencil size={14} />} onClick={() => togglePanel('draw')}>
+              Draw
+            </Menu.Item>
+            <Menu.Item leftSection={<IconMapPin size={14} />} onClick={() => togglePanel('annotate')}>
+              Annotate
+            </Menu.Item>
+            <Menu.Item leftSection={<IconRoute size={14} />} onClick={() => togglePanel('routing')}>
+              Route
+            </Menu.Item>
+            <Menu.Item leftSection={<IconBookmark size={14} />} onClick={() => togglePanel('bookmark')}>
+              Bookmarks
+            </Menu.Item>
+            <Menu.Item leftSection={<IconSearch size={14} />} onClick={() => togglePanel('geocoding')}>
+              Search
+            </Menu.Item>
+            <Menu.Item
+              leftSection={<IconBuildingSkyscraper size={14} />}
+              onClick={() => togglePanel('buildings')}
+            >
+              Buildings
+            </Menu.Item>
+            <Menu.Item
+              leftSection={<IconVectorTriangle size={14} />}
+              onClick={() => togglePanel('geojsonEditor')}
+            >
+              GeoJSON Editor
+            </Menu.Item>
+            <Menu.Item leftSection={<IconPalette size={14} />} onClick={() => togglePanel('styleEditor')}>
+              Style Editor
+            </Menu.Item>
+            <Menu.Item leftSection={<IconDownload size={14} />} onClick={handleExportPng}>
+              Export PNG
+            </Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
 
         <Menu shadow="md" width={180}>
           <Menu.Target>
@@ -230,12 +266,21 @@ export function ViewerToolbar() {
 
         <Menu shadow="md" width={160}>
           <Menu.Target>
-            <Button size="xs" variant="subtle" leftSection={<IconSettings size={14} />}>
+            <Button size="xs" variant="subtle" leftSection={<IconDots size={14} />}>
               More
             </Button>
           </Menu.Target>
           <Menu.Dropdown>{renderMenuItems(MORE_MENU[0])}</Menu.Dropdown>
         </Menu>
+
+        <Button
+          size="xs"
+          variant="subtle"
+          leftSection={<IconSettings size={14} />}
+          onClick={() => togglePanel('settings')}
+        >
+          Settings
+        </Button>
 
         {plugins.length > 0 && (
           <Menu shadow="md" width={200}>

@@ -86,7 +86,6 @@ export const DATA_MENU: ToolMenuItem[][] = [
 
 export const MORE_MENU: ToolMenuItem[][] = [
   [
-    { panel: 'settings', label: '⚙ Settings' },
     { panel: 'shareLink', label: '🔗 Share Link' },
     { panel: 'tour', label: '🎓 Tour' },
   ],
