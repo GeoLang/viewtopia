@@ -100,6 +100,42 @@ anything multi-user ships, local packaging last.
       parameter literally named `params`. Both would fail validation if those
       paths ever ran it.
 
+## OPEN — ptolemy: ~33 mutating routes never touch the write ladder (found 2026-07-29)
+
+Attachments were not an isolated slip. `ensure_branch_writable` /
+`ensure_dataset_writable` are the write ladder, and its own doc comment states the
+invariant: a write path is guarded by being routed through it rather than by
+remembering to check. Nothing enforces that, so every new write route has to
+remember, and roughly 33 do not. They are gated only by the editor role, meaning
+any editor can write to a dataset they hold no grant on.
+
+`review` is the failure mode in miniature: `POST /reviews/{id}/merge` goes through
+the ladder while `approve`, `close` and `comments` do not.
+
+- [ ] Fix by module: catalog (tags, metadata), quality (schema, topology rules),
+      schema_evolution, review (4 routes), locks, network (3), lrs (2), domains (7),
+      relationships (4), cartography (6), topology (3), trajectory. Several do not
+      even extract an `Actor`, so they cannot check anything (`add_tag`,
+      `create_network`).
+- [ ] `POST /datasets` is correctly NOT in that list: the dataset does not exist
+      yet, and the handler grants its creator an admin row.
+- [ ] The list came from a systematic pass with only four handler bodies read, so
+      treat it as a strong lead, not a verified audit. Confirm each before fixing.
+- [ ] Better than fixing them one at a time: make the omission impossible. A write
+      that cannot reach the store without a `Writer` would end the class, rather
+      than relying on every future route author remembering.
+
+## DECIDED 2026-07-29 — an attachment cannot be written to an external dataset
+
+Routing attachment writes through `ensure_dataset_writable` also inherits its
+external-table check, so uploading an attachment to an external (read-only)
+dataset now answers 409 where it used to succeed. Keeping that: "an external
+dataset is read-only" is a simpler invariant than "read-only except for
+attachments", the attachment table is ptolemy's own so there was no security
+reason either way, and exempting it would mean threading a flag through the ladder
+for a workflow nobody has. Revisit only if someone actually needs to annotate an
+external dataset.
+
 ## OPEN — ptolemy route/schema drift: three feature families never worked (found 2026-07-29)
 
 Found while auditing dataset visibility, verified against the migrations. Each
