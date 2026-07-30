@@ -92,18 +92,20 @@ anything multi-user ships, local packaging last.
       list view, and an access decision first: records name users, and geodukt
       gates only `/run`, not `/runs`.
 
-## OPEN — ptolemy: the write gate is runtime, not compile-time (2026-07-30)
+## OPEN — ptolemy: what the write guard still leaves open (2026-07-30)
 
-The 39 unladdered routes are closed by a middleware (history log), but the thing
-that made them possible is still there: `PgStore::pool()` hands out the raw pool,
-about 50 raw write statements across 25 api modules use it, and nothing stops the
-next one. The middleware is a second layer, not a proof.
+The runtime gate and the compile-time guard both shipped (history log). What is
+left is the edges neither reaches.
 
-- [ ] The compile-time version, sized during the audit at roughly +1100/-450
-      across 15 api files: make `pool()` crate-private, add a read accessor for the
-      ~140 read sites, and move the write statements into store methods taking a
-      `WriteGrant` with a private field, so an unguarded write fails to compile.
-      Deferred only because it collided with the schema-drift work in flight.
+- [ ] `ci/no-raw-writes.sh` cannot see a mutating Postgres function called through
+      `SELECT`. `topology.rs` does exactly that (`SELECT topology.CreateTopology`,
+      `AddFace`, `TopoGeom_addElement`), so those three routes are guarded only by
+      being instance-admin-only in `auth.rs`. If topology is ever bound to a
+      dataset, they need the ladder and the check needs to learn about them.
+- [ ] `unguarded_pool()` exists because the CLI and the test fixtures are separate
+      crates and could not use a crate-private accessor. Nothing in ptolemy-api may
+      name it and the CI check enforces that, but it is a named accessor rather
+      than a barrier. Revisit if the CLI ever grows a path that should be laddered.
 - [ ] `/permissions` (4 routes) is the one place the write layer is deliberately
       absent from routes that write, because `require_dataset_admin` in rbac.rs is
       the stricter gate and running the ladder too would deny a dataset admin the
@@ -189,6 +191,35 @@ PROJ, which vendors through cmake and is why that image takes minutes to build:
       dataset-level metadata and glob domains are unexercised. Subtype, annotation
       and topology fixtures are hand-written catalog XML, since GDAL cannot create
       those either: the read path is real, the blob is not.
+- [~] **features and attachments into ptolemy** (in flight 2026-07-30). Attachments
+      dragged feature loading in with them: ptolemy hangs an attachment off a
+      feature id and a branch, and verne had never put a feature into ptolemy at
+      all, so blobs would have landed on empty datasets. `DiffOpRequest::Insert`
+      takes an optional `feature_id`, so verne mints its own uuids on commit and
+      keeps the Esri-OBJECTID-to-ptolemy-id map that attachments key on. Side
+      effect worth having: `verne load` becomes a whole migration rather than the
+      semantics half, with the data no longer stranded in the GeoPackage.
+      `verne-load` stays GDAL-free, so how features reach it is a real constraint.
+- [ ] **more real data, and from another vendor domain.** One public geodatabase
+      found two bugs an afternoon (history log), and it was hydrography: no
+      attachments, no annotation, no utility network, so those paths are still
+      exercised only by fixtures verne builds itself. A utilities, parcels or
+      emergency-services file would hit them. Public sources with attachments are
+      hard to find, since attachments rarely survive open-data publishing, so this
+      may need a customer file.
+- [ ] **the loader is not covered by verne's CI.** The one place verne's
+      assumptions meet ptolemy's real API is gated on an env var naming a live
+      server, so CI never runs it, and today's drift bugs are the argument for
+      closing it. Automating it needs ptolemy to publish a container image (it
+      publishes none) or an OpenAPI spec (it has none); a mocked test would assert
+      only verne's own assumptions and is worse than the honest gap. Cheapest real
+      fix is probably a ptolemy image, which helps more than verne.
+- [ ] **display an alias.** A field alias now reaches ptolemy and is stored on the
+      dataset schema, and nothing shows it (history log), so the verdict stays
+      *approximated*. The work is viewtopia's: attribute table headers, feature
+      popups and field pickers reading `alias` with the column name as fallback.
+      Pin the field JSON shape in one place when doing it, because two writers and
+      no agreed schema is how the drift fixed this morning started.
 - [ ] **what the Esri report cannot land, by category** (from the GDAL feasibility
       pass and v0.2's own verdicts):
       - domains lose their field binding (ptolemy binds a domain to a field only

@@ -497,6 +497,22 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   keywords in every free-text terminal segment. Deliberately still exempt: the four
   `/permissions` routes, where `require_dataset_admin` is the stricter gate and running the
   ladder as well would lock a dataset admin out of the case they need it for.
+- **2026-07-30 (panels CI)**: **the settings panel moved and only half its tests followed.**
+  The toolbar reorg made Settings a top-level button instead of a More-menu entry; the unit
+  test was updated in the same session, the per-panel e2e suite was not, so both settings
+  tests timed out waiting on a menu item that no longer exists. The suite is scheduled
+  rather than per-push, which is why a passing push run and a failing nightly disagreed.
+  The other two failures in that run were WebGL context timeouts that passed on retry, and
+  are the reason a red panels run needs reading before it is believed.
+- **2026-07-30 (geodukt fixtures)**: **two manifest fixtures set parameters no transform
+  reads.** `visual.rs` set `target_crs` on a reproject where the transform reads `to_crs`,
+  and a docgen fixture nested parameters under `[transform.params]`, which the flattened
+  manifest reads as one parameter literally named `params`. Both sat in paths that never
+  validate or execute a manifest, so nothing caught them. Fixing the second turned up a
+  third: its filter named `property`/`value` where the transform requires `field`/`equals`,
+  so flattening alone would still have failed validation. `check_parameters` would catch a
+  missing required parameter in a test, but it does not reject an unknown one, so a stray
+  `target_crs` beside a valid `to_crs` would still pass.
 - **2026-07-30 (verne v0.2)**: **the Esri File Geodatabase adapter, and a trajectory
   verdict that changed the same day the platform did.** `gx:Track` had been reported as
   flattening to a line "because nothing reads it back as a trajectory", which stopped being
@@ -517,3 +533,84 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   archiving at all (they are enterprise-only features), so the report says "not applicable"
   rather than "unsupported", and the branching-beats-SDE-history advantage only applies to
   enterprise sources.
+- **2026-07-30 (verne moves data)**: **the report stopped being the only output.** verne
+  now extracts a geodatabase into a GeoPackage plus a sidecar whose structs mirror
+  ptolemy's request bodies field for field, so loading is a POST of each struct rather
+  than a translation that can drift; `verne load` creates the datasets, schemas, domains,
+  subtypes and relationship classes in a running ptolemy. Two fields cannot mirror one,
+  because ptolemy wants the id of a row that does not exist until the load runs: a
+  subtype's `domain_assignments` names its domains and a relationship class names its two
+  datasets, so both are typed as names and the loader swaps them. An extraction log
+  records every row of the report as carried, carried-with-losses or skipped, decided from
+  the verdict rather than from the caller, so the report and the log cannot give different
+  accounts of the same thing; the operator and a timestamp are required, because the
+  licence position is that "with permission" must be a mechanism with a record of what was
+  taken. The loader is verified against a real ptolemy and **not** by verne's CI: ptolemy
+  publishes no container image and no OpenAPI spec, so there is nothing CI could stand up
+  or check shapes against, and a mocked test would only assert verne's own assumptions.
+  That gap is real and recorded rather than papered over.
+- **2026-07-30 (real data)**: **one public geodatabase found two bugs that every test
+  suite had passed.** Run on a USGS National Hydrography file (41 tables, 62 domains, 10
+  relationship classes, 5 subtype sets, public domain). First: verne paired written
+  GeoPackage layers to source tables **by position**, on the assumption that GDAL writes
+  them in the order it was given them. True of the synthetic fixture, false of real output,
+  where a GeoPackage lists its spatial layers first. The conversion was in fact perfect,
+  but the report claimed renames that never happened, invented dropped fields and reported
+  features as lost, because every table was compared against another table's layer. In a
+  product whose whole value is an honest account of what is lost, a report that fabricates
+  losses is the worst failure available. Now paired by name, with a single-candidate rule
+  for real renames and a loud refusal when two at once make attribution a guess. Second:
+  the README claimed the GeoPackage carries "the domains themselves and the binding of a
+  field to a domain", verified with `ogrinfo` against a fixture where both domains happen
+  to be field-bound. On the real file 42 of 62 domains are reachable only through subtypes,
+  which GDAL does not model, so it never sees them used and never carries them. Both the
+  code and the documentation were confidently wrong in the same way: the fixture was built
+  by the tool whose behaviour the claim described, so it agreed with itself. The measured
+  comparison now lives in verne's README, and it is the clearest statement of why the
+  project exists: for the same conversion, GDAL's GeoPackage keeps 18 of 62 domains, none
+  of the 10 relationship classes and no subtypes at all.
+- **2026-07-30 (GDAL 3.8)**: **a double free that only two CPUs could show.** verne's
+  GeoPackage tests aborted on CI and passed everywhere locally. Not the ownership mistake
+  it looked like: valgrind over the whole binary reported zero errors, because the bug is
+  concurrency-only. GDAL 3.8's GeoPackage driver calls `spatialite_cleanup_ex` on every
+  dataset close, tearing down libxml2's process-global encoding table, so two threads
+  closing a GeoPackage at once free it twice; 3.11 never reaches that path, which is why a
+  sixteen-core machine on a newer GDAL could not reproduce it in fifteen runs and two
+  pinned cores reproduced it in nineteen of forty. All GeoPackage work is now serialised
+  behind one mutex, read-back included. The part that keeps it fixed is a thread-local flag
+  with a debug assertion: on 3.11 an unguarded close is harmless, so a future call added
+  outside the lock would pass every local test and abort only on CI, and the assertion
+  fails on any version instead. Proved by removing the guard and watching it fire where the
+  memory bug itself is invisible.
+- **2026-07-30 (aliases)**: **an Esri field label now survives the migration, and the
+  report says exactly how far.** verne's report had claimed aliases "can be carried,
+  because ptolemy's dataset_schemas takes free-form JSON". The column is JSONB, but the
+  API deserialises into a typed `FieldDef`, so an alias posted through the schema route was
+  silently dropped: the load would report success with the label gone. ptolemy's `FieldDef`
+  gained `alias: Option<String>`, defaulted and omitted when absent so existing schemas are
+  untouched, and verne now writes a schema per dataset carrying each column's name, type,
+  required flag from the source's real nullability, and its alias. The verdict is still
+  *approximated*, and deliberately so: the label reaches ptolemy and is stored, and nothing
+  in the platform displays it, which is a smaller loss rather than none. A column type that
+  ptolemy's six field types cannot name is approximated to the nearest and both the report
+  and the log name the column and the type it had. The viewtopia side that would show an
+  alias is deferred, and nothing claims otherwise.
+- **2026-07-30 (write guard)**: **an unguarded write in ptolemy now fails to compile, and
+  what types could not reach is checked in CI.** The write middleware closed the 39 routes
+  at runtime, but the reason they were possible remained: `PgStore::pool()` handed out the
+  raw pool and 48 raw write statements across the api crate used it. Those all moved into
+  `ptolemy-storage` behind a `WriteGrant`, a struct with a private field that only the
+  ladder can mint, and each guarded write takes the id it writes under **from the grant**
+  rather than from its own arguments, so a grant cannot be aimed at a target that was never
+  checked. `Writer` and `WriteGrant` deliberately did not merge: one is the input to the
+  check and has to stay freely constructible for the CLI, the other is the output and is
+  worth nothing unless it is unforgeable. `pool()` could not become crate-private because
+  the CLI and the test fixtures are separate crates, so it split into `read_pool()` and
+  `unguarded_pool()`, the latter banned by name inside ptolemy-api by `ci/no-raw-writes.sh`.
+  That script is what closes the residual hole, and its limit is written into its own
+  header: it cannot see a mutating Postgres function called through `SELECT`, which
+  `topology.rs` does, and those routes are admin-only for that reason. The check found a
+  real one on its first run: the gRPC service committed with `Writer::Unenforced`. Nothing
+  mounted it, and ptolemy's README had advertised "gRPC bulk ops" as done since v1.6, so
+  the module, its two dependencies and the README claims were deleted rather than fixed —
+  419 lines removed, and no unenforced commit path left in the tree to mount by accident.
