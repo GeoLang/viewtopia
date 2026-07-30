@@ -100,6 +100,33 @@ anything multi-user ships, local packaging last.
       parameter literally named `params`. Both would fail validation if those
       paths ever ran it.
 
+## OPEN — ptolemy route/schema drift: three feature families never worked (found 2026-07-29)
+
+Found while auditing dataset visibility, verified against the migrations. Each
+handler queries a column its table does not have, so the endpoint is a guaranteed
+500 on read and on write. The tables are real and the routes are mounted, which is
+why this looked implemented. Nothing depends on them, so nothing caught it.
+
+- [ ] **label rules.** `ptolemy-api/src/cartography.rs` selects and inserts
+      `label_expression` (lines 197, 246, 260) but `014_cartography.sql:18` names
+      the column `field_expression`. Check `placement` and `font` at the same time:
+      both are jsonb in the schema and the handler binds them as strings.
+- [ ] **trajectories.** `ptolemy-api/src/trajectory.rs` selects and inserts
+      `feature_id` (lines 51, 103), which `015_extensions.sql` does not create in
+      either the MobilityDB or the fallback branch. Columns there are `id`,
+      `dataset_id`, `name`, `trip`, `period`, `created_at`.
+- [ ] **relationship classes and records.** `ptolemy-api/src/relationships.rs`
+      selects and inserts `rel_type` (lines 56, 109), which does not exist in
+      `relationship_classes`; the nearest real column is `cardinality`. It also
+      uses `class_id` for `relationship_records` (lines 170, 202, 237) where
+      `013_relationships.sql:21` names it `relationship_class_id`.
+- [ ] Once fixed, tighten the three weakened assertions in the visibility test
+      matrix (`api_integration.rs`) from `assert_ne!(status, NOT_FOUND)` to a real
+      200, since they were loosened only because these handlers 500 regardless.
+- [ ] Worth a broader sweep: these were found by accident, so other mounted routes
+      may query columns that do not exist. A schema/query check in CI would catch
+      the class, since compile-time query verification is not in use here.
+
 ## OPEN — verne: get your data out (named 2026-07-29, v0.1 shipped same day)
 
 Rationale: lock-in, not features, is what stops an org moving off an incumbent
