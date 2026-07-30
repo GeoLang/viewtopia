@@ -397,3 +397,25 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   for manifests that leaned on those defaults, which beats silent wrong data. The eval
   harness gained `--repeat`: scoring one sample per task let a flaky task report a clean
   sheet, and a rejected manifest is no longer counted as the model's answer.
+- **2026-07-29 (last)**: **verne v0.1 shipped and pushed, and the report changed the
+  platform.** A read-only KML/KMZ inventory (verne-core model plus verdicts, verne-kml
+  adapter, verne-cli, 30 tests, public AGPL). Each row says faithful, approximated or
+  unsupported, and `Losses` cannot be built empty, so an approximated verdict that names
+  nothing lost cannot be written down. The first pass at those verdicts was wrong in both
+  directions and every one was rechecked against the destination code. Over-harsh: it
+  claimed GeoLang has no scale-dependent visibility when a jung `StyleRule` carries
+  min/max zoom and `symbology_rules` carries min/max scale, claimed no asset store when
+  the `attachments` table is real and routed, and claimed jung symbolises only from its
+  own library when `SpriteAtlas::insert` takes any icon. Over-generous: three faithful
+  verdicts hid real losses, since a dataset declares one `geometry_type` so a mixed
+  container must split, a null geometry records a deletion so attribute-only placemarks
+  need their own convention, and KML `SimpleField` widths collapse to JSON numbers in
+  `properties`. Running it on a realistic file caught what synthetic fixtures missed: a
+  Placemark whose geometry is a `Model` or `gx:Track` counted as geometry-less, inventing
+  a loss and double-reporting it, and the `Model`'s own `altitudeMode` leaked into the
+  container's losses. Worst of all, a truncated file passed as a clean source, because
+  quick_xml reaches Eof without objecting to elements left open. Then the reverse
+  direction: **jung gained an icon anchor, a pixel offset and a clockwise rotation**
+  (229 to 242 tests, `blit_icon` kept bit-identical as a default-placement wrapper), so
+  KML `hotSpot` and IconStyle `heading` are now carried instead of dropped. The report is
+  the product, so a loss it names is a work item, not a footnote.

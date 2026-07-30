@@ -100,7 +100,7 @@ anything multi-user ships, local packaging last.
       parameter literally named `params`. Both would fail validation if those
       paths ever ran it.
 
-## OPEN — verne: get your data out (named 2026-07-29, not started)
+## OPEN — verne: get your data out (named 2026-07-29, v0.1 shipped same day)
 
 Rationale: lock-in, not features, is what stops an org moving off an incumbent
 platform, and nothing in the tree reads a proprietary project or enterprise
@@ -136,12 +136,24 @@ PROJ, which vendors through cmake and is why that image takes minutes to build:
   bindings usually cover geometry and attributes better than metadata. If it
   falls short the answer is a little C-API glue, not a different language.
 
-- [ ] **v0.1, read-only inventory.** Connect with operator-supplied credentials
-      and report what is there, what GeoLang can represent faithfully, what it
-      would approximate, and what has no home. Read-only first because a
-      converter that silently drops the semantics is worse than no converter, and
-      the report says which converters are worth building from real customer data
-      instead of guesses. The report is also the sales artifact.
+- [ ] **the next adapter.** v0.1 covers KML and KMZ only. Pick the next source
+      from real customer data rather than guesses, and check it against GDAL's
+      driver list before committing to it.
+- [ ] **fidelity gaps verne named that are still open.** Each is a real loss the
+      report prints today, listed so the report stays a work list:
+      - KML folder nesting flattens to a path attribute, because nothing holds a
+        layer tree. Needs a grouping concept or an accepted loss.
+      - `GroundOverlay` rotation and `gx:LatLonQuad`: terrano's GeoTIFF carries an
+        origin and a pixel scale with no rotation terms, so a rotated or warped
+        overlay has to be resampled north-up.
+      - A `Model` (COLLADA mesh) has no home. interiora holds indoor and building
+        models, not arbitrary meshes. Product question, not a small fix.
+      - `gx:Track` degrades to a line with times alongside. The trajectories table
+        is MobilityDB-gated and nothing serves it.
+      - Viewer chrome stays unsupported by design: `BalloonStyle`, `ListStyle`,
+        `ScreenOverlay`, `LookAt`/`Camera`, `NetworkLink` refresh.
+      - `LabelStyle` scale multiplies an unstated base size, so text size is
+        approximate either way. Probably not fixable.
 - [ ] **the semantics with no target** (the actual work; geometry and attributes
       are the easy fifth and GDAL does most of that). The specifics differ per
       vendor but the categories repeat: attribute domains and subtypes, typed
