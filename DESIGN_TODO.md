@@ -204,12 +204,16 @@ PROJ, which vendors through cmake and is why that image takes minutes to build:
       effect worth having: `verne load` becomes a whole migration rather than the
       semantics half, with the data no longer stranded in the GeoPackage.
       `verne-load` stays GDAL-free, so how features reach it is a real constraint.
-- [ ] **ptolemy is single-CRS by schema, and whether that is right is a product
-      call.** Geometry columns are typed `GEOMETRY(Type, 4326)`, so the database
-      rejects any other srid, and `ST_GeomFromWKB($4, 4326)` on insert and update
-      stamps 4326 on whatever arrives regardless of the `datasets.srid` the
-      dataset declares. Constraining one srid per column is ordinary PostGIS
-      practice. Fixing it at 4326 platform-wide is the choice, and it is a
+- [ ] **ptolemy is single-CRS by code, not by schema, and whether that is right is
+      a product call.** `feature_versions.geometry` is a bare untyped `geometry`
+      column with no srid constraint, so PostGIS would hold mixed srids in it
+      quite happily. What forces one is `ST_GeomFromWKB($4, 4326)` on insert and
+      update, which stamps 4326 on whatever arrives regardless of the
+      `datasets.srid` the dataset declares. (The `GEOMETRY(Type, 4326)` typmods
+      elsewhere, on networks, raster bounds and LRS, are real constraints but do
+      not cover features.) One srid per column is ordinary PostGIS practice and a
+      database normally holds many tables in many srids, so single-CRS platform
+      wide is this platform's choice rather than a PostGIS norm. It is a
       reasonable one for a web-first stack: tiles and viewers are WGS84, and any
       cross-dataset operation needs a common frame anyway.
 
@@ -226,10 +230,13 @@ PROJ, which vendors through cmake and is why that image takes minutes to build:
       claim verne cannot make. The compound vertical datum has nowhere to go
       either, so a Z value referenced to NAVD88 arrives unreferenced.
 
-      Deciding to support per-dataset srid later means the column typmod or a
-      per-dataset geometry table, plus auditing every query that assumes 4326
-      (bbox envelopes built at 4326, the tile paths, the viewer). Worth it only if
-      someone needs data back out unchanged rather than merely correct.
+      Supporting per-dataset srid later needs no storage migration, since the
+      column already accepts any srid. It means taking the srid from the dataset
+      on write instead of the literal, then auditing every query that assumes 4326
+      (bbox envelopes built at 4326, `ST_Transform` calls pinned to it, the tile
+      paths, the viewer), and deciding what a cross-dataset query does when two
+      datasets disagree. Worth it only if someone needs data back out unchanged
+      rather than merely correct.
 - [ ] **more real data, and from another vendor domain.** One public geodatabase
       found two bugs an afternoon (history log), and it was hydrography: no
       attachments, no annotation, no utility network, so those paths are still
