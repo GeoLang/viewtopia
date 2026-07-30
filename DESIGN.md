@@ -419,3 +419,27 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   (229 to 242 tests, `blit_icon` kept bit-identical as a default-placement wrapper), so
   KML `hotSpot` and IconStyle `heading` are now carried instead of dropped. The report is
   the product, so a loss it names is a work item, not a footnote.
+- **2026-07-29 (extensions)**: **the platform grew to fit what the report said it was
+  losing**, and verne's verdicts were rewritten as each landed. **terrano**: `BandedRaster`
+  plus 8-bit samples and a multi-band GeoTIFF writer and reader, so an RGB or RGBA overlay
+  keeps its colour (70 to 86 tests). `Raster`, `GeoTiffMetadata`, `write_geotiff` and
+  `read_geotiff` are untouched, and a golden fixture captured before the edit proves the
+  single-band output is byte-identical, which is what keeps fenestra and tiletopia safe
+  (both pin the crate at tag v0.1.0, so neither sees this until a retag). Reviewing that
+  row also killed a second wrong claim of mine: an axis-aligned `LatLonBox` in EPSG:4326
+  maps exactly onto an origin and a pixel scale, so nothing is resampled. **ptolemy**
+  (migration 023, 308 tests): a dataset may declare the geometry type `geometry`, so a
+  mixed container no longer splits, and `geometry_type` needed no DDL because it was
+  always free text with no CHECK. An attachment may belong to a dataset instead of a
+  feature, enforced by a one-owner CHECK, so a style's icon has a carrier without
+  inventing a feature. A feature version carries a half-open `[valid_from, valid_to)`
+  valid range, exposed through the rebuilt `features` view and filtered by `?valid_at`.
+  The valid time had to reach `DiffOp`, since that is the only path into
+  `feature_versions`, and an `Update` with both fields null inherits the previous
+  version's range so a properties-only patch cannot silently erase it. Two latent bugs
+  fell out of the same work: the GeoPackage reader mapped a gpkg's `"GEOMETRY"` (exactly
+  how a mixed-type layer declares itself) to `GeometryCollection`, and the mongodb and
+  elasticsearch readers used `GeometryCollection` as their unknown-type fallback. What is
+  left in verne's report is now mostly honest mismatch rather than missing capability: a
+  `TimeStamp` is an instant and a range is not, KML permits year precision and
+  `timestamptz` does not, and overlay rotation still has no rotation terms to land in.

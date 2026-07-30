@@ -139,6 +139,11 @@ PROJ, which vendors through cmake and is why that image takes minutes to build:
 - [ ] **the next adapter.** v0.1 covers KML and KMZ only. Pick the next source
       from real customer data rather than guesses, and check it against GDAL's
       driver list before committing to it.
+- [ ] **attachment reads ignore dataset visibility.** `GET /attachments/{id}` and
+      both list routes are classified public, so a private dataset's blobs are
+      readable anonymously. Pre-existing for feature attachments, and the new
+      dataset-level route inherits it, which widens the surface. Migration 022
+      visibility should gate both route families.
 - [ ] **fidelity gaps verne named that are still open.** Each is a real loss the
       report prints today, listed so the report stays a work list:
       - KML folder nesting flattens to a path attribute, because nothing holds a
