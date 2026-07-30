@@ -204,18 +204,32 @@ PROJ, which vendors through cmake and is why that image takes minutes to build:
       effect worth having: `verne load` becomes a whole migration rather than the
       semantics half, with the data no longer stranded in the GeoPackage.
       `verne-load` stays GDAL-free, so how features reach it is a real constraint.
-- [ ] **ptolemy labels every committed geometry EPSG:4326** (`ST_GeomFromWKB($4,
-      4326)` on insert and update in postgres.rs), whatever srid the dataset
-      declares, so coordinates arrive unchanged under a label that is not theirs.
-      verne names this as a loss on every non-4326 class. The severity is not
-      uniform and the report does not yet say so: a geographic source like NAD83
-      is out by the datum shift, a metre or two, while a **projected** source
-      (state plane, UTM, the common case for Esri data) sends coordinates in feet
-      or metres to be read as degrees, which is not a shift but garbage. Decide
-      between reprojecting to 4326 during extraction, where GDAL already can,
-      accepting an srid on ptolemy's commit and transforming there, or refusing a
-      projected source outright. Until then the report must at least separate the
-      two cases, because they differ by orders of magnitude.
+- [ ] **ptolemy is single-CRS by schema, and whether that is right is a product
+      call.** Geometry columns are typed `GEOMETRY(Type, 4326)`, so the database
+      rejects any other srid, and `ST_GeomFromWKB($4, 4326)` on insert and update
+      stamps 4326 on whatever arrives regardless of the `datasets.srid` the
+      dataset declares. Constraining one srid per column is ordinary PostGIS
+      practice. Fixing it at 4326 platform-wide is the choice, and it is a
+      reasonable one for a web-first stack: tiles and viewers are WGS84, and any
+      cross-dataset operation needs a common frame anyway.
+
+      The cost lands on the migration story. A geodatabase is not single-CRS: each
+      feature class carries its own spatial reference and a feature dataset only
+      constrains its own members to a shared one. The one real file tested carries
+      two, plain NAD83 for ten classes and NAD83 with NAVD88 height for the nine
+      in its Hydrography feature dataset, so a load already flattens two frames
+      into one. Reprojecting at extraction (decided, in flight) makes the data
+      correct and renderable, which is what most viewing and analysis needs. It
+      does not make it unchanged: 4326 and back does not return the original
+      numbers, and for cadastral, survey or engineering data the projected
+      coordinates are the authoritative ones, so that round trip is the fidelity
+      claim verne cannot make. The compound vertical datum has nowhere to go
+      either, so a Z value referenced to NAVD88 arrives unreferenced.
+
+      Deciding to support per-dataset srid later means the column typmod or a
+      per-dataset geometry table, plus auditing every query that assumes 4326
+      (bbox envelopes built at 4326, the tile paths, the viewer). Worth it only if
+      someone needs data back out unchanged rather than merely correct.
 - [ ] **more real data, and from another vendor domain.** One public geodatabase
       found two bugs an afternoon (history log), and it was hydrography: no
       attachments, no annotation, no utility network, so those paths are still
