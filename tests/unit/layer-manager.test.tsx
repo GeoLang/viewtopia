@@ -70,26 +70,50 @@ describe('LayerManager agent layers', () => {
 
   afterEach(cleanup);
 
-  it('lists a layer the agent drew and offers it as a download', () => {
+  it('lists a layer the agent drew and offers it as a download without expanding', () => {
     useAgentLayerStore.getState().setLayers([layer('0-venice_env_risk.gpkg', 'outputs/venice_env_risk.gpkg')]);
 
     renderPanel();
 
     expect(screen.getByText('Layers (1)')).toBeInTheDocument();
-    // the download hides behind the row, like the remove button
-    expect(screen.queryByTestId('agent-layer-download')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('agent-layer-row'));
-
+    // a control nobody can see is a control nobody uses, so this one is on the
+    // collapsed header rather than behind the expand
     const download = screen.getByTestId('agent-layer-download');
     // /download/{filename} takes the basename only, via outputDownloadUrl
     expect(download).toHaveAttribute('href', '/agent/download/venice_env_risk.gpkg');
     expect(download).toHaveAttribute('download');
+    expect(screen.queryByText('Remove')).not.toBeInTheDocument();
+  });
+
+  it('downloading does not toggle the row', () => {
+    useAgentLayerStore.getState().setLayers([layer('a', 'outputs/a.gpkg')]);
+
+    renderPanel();
+    fireEvent.click(screen.getByTestId('agent-layer-download'));
+
+    expect(screen.getByTestId('agent-layer-chevron')).toHaveAttribute('data-expanded', 'false');
+    expect(screen.queryByText('Remove')).not.toBeInTheDocument();
+  });
+
+  it('the chevron shows whether the row is open', () => {
+    useAgentLayerStore.getState().setLayers([layer('a', 'outputs/a.gpkg')]);
+
+    renderPanel();
+    expect(screen.getByTestId('agent-layer-chevron')).toHaveAttribute('data-expanded', 'false');
+
+    fireEvent.click(screen.getByTestId('agent-layer-row'));
+    expect(screen.getByTestId('agent-layer-chevron')).toHaveAttribute('data-expanded', 'true');
+
+    fireEvent.click(screen.getByTestId('agent-layer-row'));
+    expect(screen.getByTestId('agent-layer-chevron')).toHaveAttribute('data-expanded', 'false');
   });
 
   it('offers no download for a layer with no file behind it', () => {
     useAgentLayerStore.getState().setLayers([layer('drawn')]);
 
     renderPanel();
+    expect(screen.queryByTestId('agent-layer-download')).not.toBeInTheDocument();
+
     fireEvent.click(screen.getByTestId('agent-layer-row'));
 
     expect(screen.getByText('Remove')).toBeInTheDocument();

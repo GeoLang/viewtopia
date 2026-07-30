@@ -13,7 +13,7 @@ import {
   Select,
   Box,
 } from '@mantine/core';
-import { IconDownload, IconStack2, IconX, } from '@tabler/icons-react';
+import { IconChevronRight, IconDownload, IconStack2, IconX, } from '@tabler/icons-react';
 import { outputDownloadUrl } from '../../features/workflow/plan';
 import { layerStyle, useAgentLayerStore, type AgentLayer } from '../../store/agentLayers';
 import { choroplethFields } from '../../store/choropleth';
@@ -38,8 +38,9 @@ function classLabel(classes: NonNullable<AgentLayer['choropleth']>, i: number): 
 /**
  * A layer the agent drew, from the store the renderers read. Its controls act on
  * that store, so opacity and remove reach the drawn layer. There is no
- * visibility switch because no renderer honours one, and the download only
- * appears for a layer that came from a file.
+ * visibility switch because no renderer honours one. The download sits on the
+ * header, for a layer that came from a file; opacity, shading and remove are
+ * secondary and stay behind the expand.
  */
 function AgentLayerRow({
   layer,
@@ -66,12 +67,40 @@ function AgentLayerRow({
       data-testid="agent-layer-row"
     >
       <Group justify="space-between" wrap="nowrap">
-        <Text size="xs" c="white" lineClamp={1}>
-          {layer.name}
-        </Text>
-        <Badge size="xs" variant="light" color="gray">
-          agent
-        </Badge>
+        <Group gap={4} wrap="nowrap" style={{ minWidth: 0 }}>
+          <IconChevronRight
+            size={12}
+            color="#8b949e"
+            data-testid="agent-layer-chevron"
+            data-expanded={expanded}
+            style={{ flexShrink: 0, transform: expanded ? 'rotate(90deg)' : undefined }}
+          />
+          <Text size="xs" c="white" lineClamp={1}>
+            {layer.name}
+          </Text>
+        </Group>
+        <Group gap={4} wrap="nowrap">
+          <Badge size="xs" variant="light" color="gray">
+            agent
+          </Badge>
+          {/* on the header, not in the expanded block: a download nobody can see
+              is a download nobody uses */}
+          {layer.path && (
+            <ActionIcon
+              size="sm"
+              variant="subtle"
+              color="gray"
+              component="a"
+              href={outputDownloadUrl(layer.path)}
+              download
+              title={`Download ${layer.path.split('/').pop()}`}
+              onClick={(e) => e.stopPropagation()}
+              data-testid="agent-layer-download"
+            >
+              <IconDownload size={14} />
+            </ActionIcon>
+          )}
+        </Group>
       </Group>
 
       {expanded && (
@@ -126,34 +155,17 @@ function AgentLayerRow({
               </Text>
             </Group>
           )}
-          <Group gap="xs" wrap="nowrap">
-            <Button
-              size="xs"
-              variant="subtle"
-              color="red"
-              onClick={(e) => {
-                e.stopPropagation();
-                removeLayer(layer.id);
-              }}
-            >
-              Remove
-            </Button>
-            {layer.path && (
-              <ActionIcon
-                size="sm"
-                variant="subtle"
-                color="gray"
-                component="a"
-                href={outputDownloadUrl(layer.path)}
-                download
-                title={`Download ${layer.path.split('/').pop()}`}
-                onClick={(e) => e.stopPropagation()}
-                data-testid="agent-layer-download"
-              >
-                <IconDownload size={14} />
-              </ActionIcon>
-            )}
-          </Group>
+          <Button
+            size="xs"
+            variant="subtle"
+            color="red"
+            onClick={(e) => {
+              e.stopPropagation();
+              removeLayer(layer.id);
+            }}
+          >
+            Remove
+          </Button>
         </Stack>
       )}
     </Paper>
