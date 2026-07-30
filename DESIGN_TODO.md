@@ -250,6 +250,68 @@ PROJ, which vendors through cmake and is why that image takes minutes to build:
       old behavior). Later cleanup: route runs by AG-UI `thread_id` so sessions
       are per-client and stateless; needs viewer session-switcher rework.
 
+## OPEN: viewtopia feature gaps vs GeoLibre (surveyed 2026-07-30)
+
+Diffed geolibre.app's documented features against the panel registry,
+`importGeoJson.ts` and the duckdb loaders. Caution: this is GeoLibre's
+advertised surface, not a source-level audit, so check depth before treating
+any single item as table stakes. Deliberately skipped: planetary basemaps,
+PGlite (redundant with DuckDB Spatial), Gaussian splats, and a Tauri
+desktop/mobile wrapper (competes with the terravista/collecta track).
+
+High value, existing GeoLang crates supply the engine:
+
+- [ ] **client-side file import beyond text formats**: GeoPackage, Shapefile,
+      FlatGeobuf and GeoParquet drag-and-drop. The client only handles
+      GeoJSON/KML/GPX/CSV today, GeoParquet works only as a URL through DuckDB.
+- [ ] **PMTiles** as a layer source and an export target.
+- [ ] **in-browser raster processing** (terrano via WASM): hillshade, slope,
+      aspect, contour, polygonize, zonal/focal stats, raster calculator,
+      reclassify, spectral index presets (NDVI/NDWI/EVI).
+- [ ] **browser geoprocessing toolbox** (topoi WASM instead of turf): catalogued
+      buffer/dissolve/overlay/voronoi/joins/grids plus a batch runner with tool
+      chaining. The geoprocessing plugin covers only the basics.
+- [ ] **data quality tools** (topoi): check validity, fix geometries, topology
+      checks.
+- [ ] **convert loaded data to cloud-native formats**: GeoParquet, FlatGeobuf,
+      PMTiles, COG.
+
+High value, product-level:
+
+- [ ] **project file format**: save/open/share the whole workspace (layers,
+      styles, camera, panels) as one JSON file or URL. The share link encodes
+      camera and renderer only. Probably the single biggest gap.
+- [ ] **SQL workspace panel**: DuckDB is embedded but nothing exposes direct
+      SQL entry outside notebooks. Add sample queries, history,
+      add-results-to-map, CSV/GeoParquet export, bare-URL remote files via
+      range requests.
+- [ ] **data-driven symbology**: categorized, graduated, expression and
+      rule-based renderers with scale-dependent visibility, SLD/QML/Mapbox
+      style import/export (fenestra already parses SLD server-side), and an
+      auto-generated legend panel.
+- [ ] **attribute table upgrades**: field calculator, virtual fields,
+      attribute joins, stats/charts from the table.
+- [ ] **embedding support**: URL params for chrome-less/compact layouts and a
+      postMessage API for host pages. Cheap, widens adoption.
+- [ ] **runtime plugin install**: plugins are build-time only
+      (`import.meta.glob`). GeoLibre ships a marketplace with
+      install/update/remove.
+
+Medium value:
+
+- [ ] **story map export**: standalone HTML, scroll-driven layout, presenter
+      view. Current stories are localStorage camera steps.
+- [ ] **STAC catalog browser + data source manager panel**: browse services,
+      databases, files and favorites in one place.
+- [ ] **isochrones/service areas and OD matrices**, served by itinera.
+- [ ] **print layout with atlas/map-series generation**: current export is a
+      canvas screenshot.
+- [ ] **time slider over tiled/mosaic data** (STAC, PMTiles), not only the
+      Cesium clock.
+- [ ] **map-to-video recording and route animation with MP4 export**: would
+      finish the preview-gated flythrough panel.
+- [ ] **offline area download** with service-worker caching.
+
 ## OPEN — Phase 3 (mobile & ML breadth, after v1)
 
 - [ ] **terravista v0.2** — HTTP tile fetch + MVT decode (the SDK can't fetch/draw tiles yet).
