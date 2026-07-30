@@ -10,6 +10,10 @@
 
 ## OPEN — platform hygiene
 
+- [ ] **drop the `geolang-pgdata` volume.** Kept as a rollback artifact when the
+      embedded Letta server and its postgres were removed for sibyl. Nothing reads
+      it, and the rollback it insures against is long past. Delete it once nobody
+      wants the old sessions back.
 - [ ] **tiletopia multi-node HA (raft)** — future reference, no open work. The
       openraft half of cluster.rs was deleted 2026-07-27: it was a never-compiled
       textbook key-value example wired to nothing (no transport, no discovery, no
