@@ -69,6 +69,11 @@ anything multi-user ships, local packaging last.
       endpoint is unauthenticated, so anyone who can reach it runs tools as
       whatever token they present (no escalation, but no audit either).
       Security-sensitive work.
+      Note: geodukt's `/run` gate is opt-in via `GEODUKT_JWT_SECRET`, unset in
+      the local compose (owner decision 2026-07-29). Gating it by default meant
+      an unauthenticated viewer session could not run a workflow at all, and the
+      model answered the 401 by improvising with sql_query and the raw geopandas
+      tools. Set it before this ships multi-user.
 - [ ] **local deployment packaging (last)**: GPU detection, quantized model
       download, context config, inference-server setup. Wrap llama.cpp/ollama
       tooling rather than build. The differentiation lives in the eval harness
