@@ -118,6 +118,24 @@ the risk profile (it holds customer credentials) should not land on every geoduk
 user. It emits GeoPackage/Parquet plus a semantics sidecar; geodukt and ptolemy
 consume that through the source interface they already have.
 
+Rust (owner decision 2026-07-29), consistent with the rest of the platform. GDAL
+being C++ does not argue against it: GDAL exposes a stable C API, which is what
+every binding wraps. Two constraints that follow, because verne would be the
+first GDAL dependency here and the only native geo dependency today is geodukt's
+PROJ, which vendors through cmake and is why that image takes minutes to build:
+
+- GDAL stays behind one crate or adapter trait, feature-gated, so the core and
+  its tests compile without it. Several adapters need no GDAL at all (hosted
+  service APIs, KML/KMZ, JSON project files), and those should not pay for it.
+- Ship the service as a container with GDAL from the distro, like ptolemy and
+  geodukt already do, rather than fighting system-GDAL version skew across the
+  cross-platform CI matrix. A local CLI can require a system GDAL instead of
+  vendoring one.
+- Check what the `gdal` crate actually exposes for driver-specific metadata
+  before committing to it. The semantics layer is the whole point of verne, and
+  bindings usually cover geometry and attributes better than metadata. If it
+  falls short the answer is a little C-API glue, not a different language.
+
 - [ ] **v0.1, read-only inventory.** Connect with operator-supplied credentials
       and report what is there, what GeoLang can represent faithfully, what it
       would approximate, and what has no home. Read-only first because a
