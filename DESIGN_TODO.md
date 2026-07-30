@@ -229,11 +229,12 @@ PROJ, which vendors through cmake and is why that image takes minutes to build:
       every transformed class whose reference a code names, and
       `GET /branches/{id}/features/{id}/native` returns them exactly, byte for
       byte. NULL means "no distinct original", and an edit's new version stores
-      NULL rather than inheriting one. What is still flattened: a reference no
-      single EPSG code names, such as the real file's NAD83 + NAVD88 compound on
-      its nine Hydrography classes, keeps its original only in the GeoPackage
-      (the log says so per class), and a Z referenced to NAVD88 still arrives
-      unreferenced.
+      NULL rather than inheriting one. A reference no single EPSG code names,
+      such as the real file's NAD83 + NAVD88 compound on its nine Hydrography
+      classes, travels as its full WKT2 definition in `native_crs_wkt` instead,
+      so an orthometric Z keeps its vertical datum on the record. Only a
+      reference GDAL cannot state at all leaves its original in the GeoPackage
+      alone, and the log says so per class.
 
       Supporting per-dataset srid later needs no storage migration, since the
       column already accepts any srid. It means taking the srid from the dataset
@@ -243,17 +244,6 @@ PROJ, which vendors through cmake and is why that image takes minutes to build:
       datasets disagree. Getting the numbers back out unchanged now works per
       feature through the native read, so this is worth it only if someone needs
       to query and serve in the native frame.
-- [ ] **a compound CRS has no EPSG code to store its original under.** The
-      native geometry slice names a reference by a single integer code, which is
-      what the wire fields, the storage and the read route all speak. The real
-      file's nine Hydrography classes are NAD83 + NAVD88 height, GDAL identifies
-      no code for the compound, so their originals stay in the GeoPackage alone,
-      and they are most of that file's features. Candidate: an optional WKT2
-      string (`native_crs_wkt`) beside the code, stored as text with the
-      geometry stamped srid 0 and returned by the native read. That covers any
-      reference GDAL can describe, at the cost of a wire and column addition in
-      both repos. Carrying just the horizontal member's code is not an option,
-      it would claim an orthometric Z belongs to a 2D geographic reference.
 - [ ] **more real data, and from another vendor domain.** One public geodatabase
       found two bugs an afternoon (history log), and it was hydrography: no
       attachments, no annotation, no utility network, so those paths are still
