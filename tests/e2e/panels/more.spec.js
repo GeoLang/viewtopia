@@ -3,8 +3,9 @@ import { PANEL, MENU_ITEM, openApp } from '../panel-helpers';
 
 /**
  * Functional smoke for the More menu panels against the live platform stack.
- * Each test opens the panel from the menu, drives its primary control and reads
- * the effect back out of the document, the persisted store or the live camera.
+ * Each test opens the panel from the menu (settings from its toolbar button),
+ * drives its primary control and reads the effect back out of the document,
+ * the persisted store or the live camera.
  *
  * Run: npx playwright test -c playwright.panels.config.js tests/e2e/panels/more.spec.js
  */
@@ -80,6 +81,14 @@ async function openPanel(page, label, match) {
   return panel;
 }
 
+// settings is a top-level toolbar button now, not a More menu entry
+async function openSettings(page) {
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const panel = page.locator(PANEL).filter({ hasText: 'Settings' });
+  await expect(panel).toHaveCount(1);
+  return panel;
+}
+
 async function closePanel(page, panel) {
   await page.keyboard.press('Escape');
   await expect(panel).toHaveCount(0);
@@ -94,7 +103,7 @@ test.describe('More menu panels', () => {
     await expect(minimap).toHaveCount(1);
     expect((await persistedSettings(page)).showMinimap).toBe(true);
 
-    const panel = await openPanel(page, 'Settings', 'Settings');
+    const panel = await openSettings(page);
 
     await panel.getByText('Show Minimap').click();
 
@@ -130,7 +139,7 @@ test.describe('More menu panels', () => {
       await route.fulfill({ status: 204 });
     });
 
-    const panel = await openPanel(page, 'Settings', 'Settings');
+    const panel = await openSettings(page);
 
     // the section opens on whatever the backend calls active
     const select = panel.getByTestId('ai-model-select');
