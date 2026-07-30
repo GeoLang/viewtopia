@@ -3,7 +3,7 @@
 > Whole-platform backlog for the shipping plan in [DESIGN.md](DESIGN.md).
 > Status keys: `[ ]` todo · `[~]` in progress · `[!]` blocked.
 > **Open work only** — completed items move to DESIGN.md (§4 history log).
-> Last brought current: **2026-07-27**.
+> Last brought current: **2026-07-30**.
 
 ---
 
@@ -64,11 +64,13 @@ anything multi-user ships, local packaging last.
       labeled as a gated escape hatch in the rendered plan.
 - [ ] **permission-aware enforcement (blocks multi-user)**: the caller's JWT now
       reaches ptolemy/tiletopia/geodukt (history log), so ptolemy's real RBAC
-      applies. What is still missing is enforcement at the other end: tiletopia
-      RBAC is type stubs, collecta checks nothing, and geolang's own `/tools`
-      endpoint is unauthenticated, so anyone who can reach it runs tools as
-      whatever token they present (no escalation, but no audit either).
-      Security-sensitive work.
+      applies, and as of 2026-07-30 it applies to writes too (history log): every
+      mutating route runs the write ladder, so an editor grant no longer implies
+      write access to every dataset. What is still missing is enforcement at the
+      other end: tiletopia RBAC is type stubs, collecta checks nothing, and
+      geolang's own `/tools` endpoint is unauthenticated, so anyone who can reach
+      it runs tools as whatever token they present (no escalation, but no audit
+      either). Security-sensitive work.
       Note: geodukt's `/run` gate is opt-in via `GEODUKT_JWT_SECRET`, unset in
       the local compose (owner decision 2026-07-29). Gating it by default meant
       an unauthenticated viewer session could not run a workflow at all, and the
@@ -90,78 +92,46 @@ anything multi-user ships, local packaging last.
       list view, and an access decision first: records name users, and geodukt
       gates only `/run`, not `/runs`.
 
-## OPEN — geodukt fixture drift (found 2026-07-29, harmless today)
+## OPEN — ptolemy: the write gate is runtime, not compile-time (2026-07-30)
 
-- [ ] Two fixtures set parameters no transform reads, and sit in code paths that
-      never validate or execute, so nothing caught them:
-      `geodukt-core/src/visual.rs` sets `target_crs` on a reproject (the transform
-      reads `to_crs`), and `geodukt-io/tests/docgen_tests.rs` nests parameters
-      under `[transform.params]`, which the flattened manifest reads as a single
-      parameter literally named `params`. Both would fail validation if those
-      paths ever ran it.
+The 39 unladdered routes are closed by a middleware (history log), but the thing
+that made them possible is still there: `PgStore::pool()` hands out the raw pool,
+about 50 raw write statements across 25 api modules use it, and nothing stops the
+next one. The middleware is a second layer, not a proof.
 
-## OPEN — ptolemy: ~33 mutating routes never touch the write ladder (found 2026-07-29)
+- [ ] The compile-time version, sized during the audit at roughly +1100/-450
+      across 15 api files: make `pool()` crate-private, add a read accessor for the
+      ~140 read sites, and move the write statements into store methods taking a
+      `WriteGrant` with a private field, so an unguarded write fails to compile.
+      Deferred only because it collided with the schema-drift work in flight.
+- [ ] `/permissions` (4 routes) is the one place the write layer is deliberately
+      absent from routes that write, because `require_dataset_admin` in rbac.rs is
+      the stricter gate and running the ladder too would deny a dataset admin the
+      exact case they need. That makes rbac.rs solely responsible for grant
+      management; worth a second pair of eyes before multi-user.
+- [ ] A dataset with zero permission rows accepts any editor even on laddered
+      routes (documented compatibility rule in permission.rs). Datasets created
+      before the creator auto-grant existed are therefore open. Decide whether to
+      backfill grants or drop the rule before this ships multi-user.
+- [ ] None of the above holds when `PTOLEMY_AUTH_DISABLED=true`: the ladder and
+      the visibility layer both no-op by design.
 
-Attachments were not an isolated slip. `ensure_branch_writable` /
-`ensure_dataset_writable` are the write ladder, and its own doc comment states the
-invariant: a write path is guarded by being routed through it rather than by
-remembering to check. Nothing enforces that, so every new write route has to
-remember, and roughly 33 do not. They are gated only by the editor role, meaning
-any editor can write to a dataset they hold no grant on.
+## OPEN — ptolemy: a schema/query check in CI (2026-07-30)
 
-`review` is the failure mode in miniature: `POST /reviews/{id}/merge` goes through
-the ladder while `approve`, `close` and `comments` do not.
+Four feature families shipped querying columns their tables do not have (history
+log). Three were found by accident and the fourth fell out of unrelated security
+work, which is the argument for the check rather than for more reading.
 
-- [ ] Fix by module: catalog (tags, metadata), quality (schema, topology rules),
-      schema_evolution, review (4 routes), locks, network (3), lrs (2), domains (7),
-      relationships (4), cartography (6), topology (3), trajectory. Several do not
-      even extract an `Actor`, so they cannot check anything (`add_tag`,
-      `create_network`).
-- [ ] `POST /datasets` is correctly NOT in that list: the dataset does not exist
-      yet, and the handler grants its creator an admin row.
-- [ ] The list came from a systematic pass with only four handler bodies read, so
-      treat it as a strong lead, not a verified audit. Confirm each before fixing.
-- [ ] Better than fixing them one at a time: make the omission impossible. A write
-      that cannot reach the store without a `Writer` would end the class, rather
-      than relying on every future route author remembering.
-
-## DECIDED 2026-07-29 — an attachment cannot be written to an external dataset
-
-Routing attachment writes through `ensure_dataset_writable` also inherits its
-external-table check, so uploading an attachment to an external (read-only)
-dataset now answers 409 where it used to succeed. Keeping that: "an external
-dataset is read-only" is a simpler invariant than "read-only except for
-attachments", the attachment table is ptolemy's own so there was no security
-reason either way, and exempting it would mean threading a flag through the ladder
-for a workflow nobody has. Revisit only if someone actually needs to annotate an
-external dataset.
-
-## OPEN — ptolemy route/schema drift: three feature families never worked (found 2026-07-29)
-
-Found while auditing dataset visibility, verified against the migrations. Each
-handler queries a column its table does not have, so the endpoint is a guaranteed
-500 on read and on write. The tables are real and the routes are mounted, which is
-why this looked implemented. Nothing depends on them, so nothing caught it.
-
-- [ ] **label rules.** `ptolemy-api/src/cartography.rs` selects and inserts
-      `label_expression` (lines 197, 246, 260) but `014_cartography.sql:18` names
-      the column `field_expression`. Check `placement` and `font` at the same time:
-      both are jsonb in the schema and the handler binds them as strings.
-- [ ] **trajectories.** `ptolemy-api/src/trajectory.rs` selects and inserts
-      `feature_id` (lines 51, 103), which `015_extensions.sql` does not create in
-      either the MobilityDB or the fallback branch. Columns there are `id`,
-      `dataset_id`, `name`, `trip`, `period`, `created_at`.
-- [ ] **relationship classes and records.** `ptolemy-api/src/relationships.rs`
-      selects and inserts `rel_type` (lines 56, 109), which does not exist in
-      `relationship_classes`; the nearest real column is `cardinality`. It also
-      uses `class_id` for `relationship_records` (lines 170, 202, 237) where
-      `013_relationships.sql:21` names it `relationship_class_id`.
-- [ ] Once fixed, tighten the three weakened assertions in the visibility test
-      matrix (`api_integration.rs`) from `assert_ne!(status, NOT_FOUND)` to a real
-      200, since they were loosened only because these handlers 500 regardless.
-- [ ] Worth a broader sweep: these were found by accident, so other mounted routes
-      may query columns that do not exist. A schema/query check in CI would catch
-      the class, since compile-time query verification is not in use here.
+- [ ] Compile-time query verification is not in use here, so nothing catches a
+      handler that names a column the migrations never create. A CI check that
+      runs every mounted route against a migrated database, or turns on sqlx's
+      offline query checking, would end the class.
+- [ ] The trajectory analytics routes (speed, distance, at, simplify,
+      nearest-approach) are still MobilityDB-only and 500 on stock PostGIS, which
+      is what CI and the compose stack run. Either gate them behind a capability
+      check that answers 501, or install MobilityDB somewhere they are exercised.
+- [ ] The relationship API still cannot express `is_composite`, though the column
+      exists. Feature gap, not a bug.
 
 ## OPEN — verne: get your data out (named 2026-07-29, v0.1 shipped same day)
 
@@ -198,17 +168,44 @@ PROJ, which vendors through cmake and is why that image takes minutes to build:
   before committing to it. The semantics layer is the whole point of verne, and
   bindings usually cover geometry and attributes better than metadata. If it
   falls short the answer is a little C-API glue, not a different language.
+  Settled for Esri (2026-07-30): georust 0.19 wraps neither field domains nor
+  relationships, so verne carries read-only `gdal-sys` glue. Minimum GDAL is 3.8
+  (relationships need 3.6, related-table-types and raster-in-gdb 3.7); Debian 13
+  ships 3.10 and Ubuntu 24.04 ships 3.8, so distro GDAL is fine and Ubuntu 22.04
+  is the only casualty. Domain and relationship handles are borrowed const
+  pointers the dataset owns: freeing them aborts the process.
 
-- [ ] **the next adapter.** v0.1 covers KML and KMZ only. Pick the next source
-      from real customer data rather than guesses, and check it against GDAL's
-      driver list before committing to it.
-- [ ] **an attachment id resolves to no dataset, so visibility misses it.** The
-      visibility layer covers every `/api/v1` route and resolves the uuids a path
-      names, so both attachment *list* routes are already gated by their branch or
-      dataset id. `private_datasets_for_ids` has no clause for an attachment id
-      though, so `GET /attachments/{id}` and `/meta` serve a private dataset's blob
-      anonymously, and DELETE escapes dataset permission while still needing the
-      editor role. One `EXISTS` clause covering both owner shapes closes it.
+- [ ] **the next adapter after Esri.** v0.1 covers KML/KMZ, v0.2 the Esri File
+      Geodatabase (history log). Pick the next from real customer data rather than
+      guesses, and check it against GDAL's driver list before committing to it. The
+      recorded order of demand puts the photogrammetry and reality-capture stacks
+      next, then the CAD-adjacent platforms.
+- [ ] **verne v0.3: ArcGIS REST and Portal.** v0.2 reads a `.gdb` on disk only.
+      Hosted layers through the documented REST API with the operator's own
+      credentials are the other half of the Esri story, and the one that needs the
+      credential handling the repo was scoped around.
+- [ ] **v0.2 gaps.** Rasters in a `.gdb` are detected and routed to terrano but
+      have no fixture, because OpenFileGDB refuses to create them. Field subtypes,
+      dataset-level metadata and glob domains are unexercised. Subtype, annotation
+      and topology fixtures are hand-written catalog XML, since GDAL cannot create
+      those either: the read path is real, the blob is not.
+- [ ] **what the Esri report cannot land, by category** (from the GDAL feasibility
+      pass and v0.2's own verdicts):
+      - domains lose their field binding (ptolemy binds a domain to a field only
+        through a subtype), their description, non-default split/merge policies and
+        bound inclusivity.
+      - relationship classes lose the origin key, `is_composite` (the column exists,
+        the API cannot express it) and the many-to-many mapping table's own
+        attributes. GDAL models no relationship rules or notification at all.
+      - annotation and dimension graphics are unsupported: GDAL reads no class
+        extension, and jung places labels from text and an anchor rather than
+        storing a placed graphic.
+      - topology rules, geometric/network/utility networks, parcel fabrics,
+        terrains, mosaic datasets, attribute rules and contingent values have no
+        GDAL model: named in the report and nothing more.
+      - versioning and archiving are enterprise-only Esri features, so a `.gdb`
+        reports them not applicable. The branching-beats-edit-history advantage
+        only applies to enterprise sources, which lands in v0.3, not here.
 - [ ] **fidelity gaps verne named that are still open.** Each is a real loss the
       report prints today, listed so the report stays a work list:
       - KML folder nesting flattens to a path attribute, because nothing holds a
@@ -218,8 +215,10 @@ PROJ, which vendors through cmake and is why that image takes minutes to build:
         overlay has to be resampled north-up.
       - A `Model` (COLLADA mesh) has no home. interiora holds indoor and building
         models, not arbitrary meshes. Product question, not a small fix.
-      - `gx:Track` degrades to a line with times alongside. The trajectories table
-        is MobilityDB-gated and nothing serves it.
+      - A `gx:Track` lands as a trajectory now, but with no `feature_id` the
+        placemark's attributes, style and folder path stay on a separate feature
+        with nothing joining the two, and altitude, per-sample angles and
+        `gx:SimpleArrayData` columns have nowhere to go.
       - Viewer chrome stays unsupported by design: `BalloonStyle`, `ListStyle`,
         `ScreenOverlay`, `LookAt`/`Camera`, `NetworkLink` refresh.
       - `LabelStyle` scale multiplies an unstated base size, so text size is

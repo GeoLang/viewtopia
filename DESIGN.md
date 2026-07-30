@@ -443,3 +443,77 @@ Milestone record. Detailed per-run notes have been retired into these one-liners
   left in verne's report is now mostly honest mismatch rather than missing capability: a
   `TimeStamp` is an instant and a range is not, KML permits year precision and
   `timestamptz` does not, and overlay rotation still has no rotation terms to land in.
+- **2026-07-30**: **ptolemy's attachments, then every dataset-owned id, reached the
+  visibility layer, and attachment writes reached the write ladder.** `GET
+  /attachments/{id}` and `/meta` served a private dataset's blob to anyone holding the id,
+  because `private_datasets_for_ids` had no clause for an attachment; the same pass then
+  covered every other id kind a path can name. Writing an attachment now goes through
+  `ensure_dataset_writable`, which also inherits its external-table check, so uploading to
+  an external (read-only) dataset answers 409 where it used to succeed. That is kept on
+  purpose: "an external dataset is read-only" is a simpler invariant than "read-only except
+  for attachments", and exempting it would mean threading a flag through the ladder for a
+  workflow nobody has.
+- **2026-07-30 (drift)**: **three ptolemy feature families never worked and now do.** Each
+  handler queried a column its table does not have, so every call was a guaranteed 500 on
+  read and on write; the tables are real and the routes are mounted, which is why it looked
+  implemented, and nothing depends on them, which is why nothing caught it. Label rules
+  selected `label_expression` where the schema names it `field_expression`, and bound the
+  jsonb `placement` as a string. Trajectories selected a `feature_id` that exists in neither
+  schema branch. Relationship classes selected `rel_type`, which has no equivalent column
+  (`cardinality` is a different axis, so the field was dropped rather than renamed), and
+  records used `class_id` where the migration names it `relationship_class_id`. Fixing them
+  surfaced three more blockers the audit had not seen: `create_class` never inserted the
+  NOT NULL `origin_foreign_key`, two nullable labels were read as `String` and would panic
+  on NULL, and both trajectory handlers were written in MobilityDB-only SQL, so they failed
+  on the stock PostGIS that CI and the compose stack actually run. Trajectories gained a
+  JSONB fallback path chosen per request; the five analytics routes stay MobilityDB-only.
+  A fourth family fell out of the security pass below: `POST /datasets/{id}/subtypes` never
+  inserted the NOT NULL `subtype_field`. The three visibility-matrix assertions weakened to
+  `assert_ne!(status, NOT_FOUND)` because these handlers 500ed regardless are now real 200s.
+- **2026-07-30 (ladder)**: **every mutating route is gated on the write ladder, and the
+  first gate was refuted before it shipped.** An audit of all 124 mutating routes found 39
+  that bypassed `ensure_branch_writable` / `ensure_dataset_writable` and were gated only by
+  the editor role, so an editor could write to any public dataset they held no grant on, or
+  any private one they held only a read grant on; 30 never extracted an `Actor` at all. The
+  prior estimate of ~33 was low, and its misses were the worst of the set: `h3/index` and
+  `similarity/embed` bulk-`UPDATE` feature rows on someone else's branch. The store was not
+  the chokepoint the plan assumed: `PgStore::pool()` hands out the raw pool and all 39
+  routes wrote through it, so a `Writer` on the 28 store write methods would have guarded a
+  surface they never touch. What shipped instead is a middleware symmetric to the visibility
+  layer, reusing the same id resolution and calling the same two ladder functions, so the
+  rule stays in one place: 36 routes covered by the layer, 3 checked in-handler because
+  their target arrives in the body, and the three topology routes made admin-only since they
+  issue schema DDL and discard the dataset id, leaving nothing to ladder. Adversarial
+  verification then refuted the first version with a working exploit: the compute-only
+  exemption list was matched against the raw request path, and a free-text trailing segment
+  is caller-controlled, so `DELETE /datasets/{id}/tags/trace` (and nine more, including
+  `tags/permissions`) read as an exempt compute endpoint and deleted rows past the gate. The
+  fix keys every path-based policy decision on axum's matched route template instead, which
+  ends the class rather than the instance, since a template comes from this crate's own
+  route tables. The convention the gate rests on is now the first `{param}` of the template
+  rather than the first uuid-shaped path segment. Tests were rebuilt around the failure:
+  the old ones asserted against hand-picked literal strings and could not have caught it, so
+  they now drive the live router, walk the real mounted route table, and plant policy
+  keywords in every free-text terminal segment. Deliberately still exempt: the four
+  `/permissions` routes, where `require_dataset_admin` is the stricter gate and running the
+  ladder as well would lock a dataset admin out of the case they need it for.
+- **2026-07-30 (verne v0.2)**: **the Esri File Geodatabase adapter, and a trajectory
+  verdict that changed the same day the platform did.** `gx:Track` had been reported as
+  flattening to a line "because nothing reads it back as a trajectory", which stopped being
+  true the moment the trajectory routes worked on stock PostGIS, so tracks are now
+  inventoried one row per placemark against ptolemy's trajectory model, with the losses
+  computed from what each track actually holds (altitude, per-sample angles, `gx:SimpleArrayData`
+  columns, year-precision timestamps) rather than a single static sentence. Then v0.2: a
+  read-only `.gdb` inventory behind a feature-gated crate, so verne-core and the KML adapter
+  still build with no GDAL installed. GDAL reads the two hardest semantic layers (coded and
+  range domains since 3.3, relationship classes with cardinality and composite flag since
+  3.6) but georust's crate wraps neither, so verne carries ~260 lines of read-only glue over
+  `gdal-sys`. Esri subtypes have no GDAL model at all and are parsed out of the geodatabase's
+  own catalog XML. The licence line holds in code, not in prose: the dataset opens with
+  `allowed_drivers` pinned to `OpenFileGDB`, so Esri's SDK driver can never be picked up.
+  One correction worth keeping: the domain and relationship handles are borrowed const
+  pointers the dataset owns, and freeing them aborts the process; only the two `*Names`
+  lists are the caller's to destroy. Also settled: a file geodatabase has no versioning or
+  archiving at all (they are enterprise-only features), so the report says "not applicable"
+  rather than "unsupported", and the branching-beats-SDE-history advantage only applies to
+  enterprise sources.
