@@ -204,6 +204,18 @@ PROJ, which vendors through cmake and is why that image takes minutes to build:
       effect worth having: `verne load` becomes a whole migration rather than the
       semantics half, with the data no longer stranded in the GeoPackage.
       `verne-load` stays GDAL-free, so how features reach it is a real constraint.
+- [ ] **ptolemy labels every committed geometry EPSG:4326** (`ST_GeomFromWKB($4,
+      4326)` on insert and update in postgres.rs), whatever srid the dataset
+      declares, so coordinates arrive unchanged under a label that is not theirs.
+      verne names this as a loss on every non-4326 class. The severity is not
+      uniform and the report does not yet say so: a geographic source like NAD83
+      is out by the datum shift, a metre or two, while a **projected** source
+      (state plane, UTM, the common case for Esri data) sends coordinates in feet
+      or metres to be read as degrees, which is not a shift but garbage. Decide
+      between reprojecting to 4326 during extraction, where GDAL already can,
+      accepting an srid on ptolemy's commit and transforming there, or refusing a
+      projected source outright. Until then the report must at least separate the
+      two cases, because they differ by orders of magnitude.
 - [ ] **more real data, and from another vendor domain.** One public geodatabase
       found two bugs an afternoon (history log), and it was hydrography: no
       attachments, no annotation, no utility network, so those paths are still
