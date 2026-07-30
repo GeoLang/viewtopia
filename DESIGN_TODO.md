@@ -100,40 +100,49 @@ anything multi-user ships, local packaging last.
       parameter literally named `params`. Both would fail validation if those
       paths ever ran it.
 
-## OPEN — verne: Esri extraction (named 2026-07-29, not started)
+## OPEN — verne: get your data out (named 2026-07-29, not started)
 
-Rationale: data lock-in, not features, is what stops an org leaving Esri, and
-nothing in the tree reads a File Geodatabase or talks to ArcGIS REST today. A new
-repo rather than geodukt, because the dependency surface (GDAL OpenFileGDB, REST
-token auth, possibly ODBC/Oracle for enterprise geodatabases) and the risk
-profile (holds customer credentials) should not land on every geodukt user. It
-emits GeoPackage/Parquet plus a semantics sidecar; geodukt and ptolemy consume it
-through the source interface they already have.
+Rationale: lock-in, not features, is what stops an org moving off an incumbent
+platform, and nothing in the tree reads a proprietary project or enterprise
+database from one today. Vendor-neutral by design: a common core (connect,
+inventory, report fidelity, extract) with a thin adapter per source, so no single
+vendor shapes the architecture. Candidate adapters in rough order of demand: the
+large enterprise GIS suites, the photogrammetry and reality-capture stacks, the
+CAD-adjacent platforms, the earth-browser exports, and the legacy desktop
+formats. Per-source feasibility must be checked against GDAL's driver list before
+any adapter is committed to; do not assume a reader exists.
 
-- [ ] **v0.1, read-only inventory.** Connect to a geodatabase or Portal with
-      operator-supplied credentials and report what is there, what GeoLang can
-      represent faithfully, what it would approximate, and what has no home.
-      Read-only first because a converter that silently drops domains is worse
-      than no converter, and the report tells us which converters are worth
-      building from real data instead of guesses.
+A new repo rather than geodukt, because the dependency surface (GDAL with
+optional drivers, REST/token auth, possibly ODBC and vendor database clients) and
+the risk profile (it holds customer credentials) should not land on every geodukt
+user. It emits GeoPackage/Parquet plus a semantics sidecar; geodukt and ptolemy
+consume that through the source interface they already have.
+
+- [ ] **v0.1, read-only inventory.** Connect with operator-supplied credentials
+      and report what is there, what GeoLang can represent faithfully, what it
+      would approximate, and what has no home. Read-only first because a
+      converter that silently drops the semantics is worse than no converter, and
+      the report says which converters are worth building from real customer data
+      instead of guesses. The report is also the sales artifact.
 - [ ] **the semantics with no target** (the actual work; geometry and attributes
-      are the easy fifth and GDAL does most of it): coded value domains,
-      subtypes, relationship classes with cardinality, attribute and topology
-      rules, annotation and dimension feature classes, utility/network datasets,
-      `.lyrx` symbology and `.aprx` layouts, attachments, ISO metadata, and
-      versioned/archived edit history. Domains and subtypes are schema concerns,
-      so they belong in ptolemy, not in a store verne invents. Versioned SDE
-      history maps onto ptolemy's branching better than onto anything else, which
-      is the one place this platform has a real fidelity advantage.
-- [ ] **licence boundaries, needs a human to read Esri's current terms.** Clean:
-      the customer's own data in formats they hold (`.gdb`, `.shp`, `.lyrx`,
-      `.mxd`/`.aprx`, SDE in SQL Server/Oracle) and their own hosted layers via
-      the documented REST API with their credentials. Not ours to move:
-      Esri-provided basemaps, the world geocoder, demographic datasets, and
-      Portal items the user can see but does not own. Use GDAL's OpenFileGDB
-      driver, never Esri's FileGDB SDK, whose terms do not sit with AGPL linking.
-      "With permission" must be a mechanism: explicit operator credentials and a
-      log of what was extracted, nothing that sniffs or crawls.
+      are the easy fifth and GDAL does most of that). The specifics differ per
+      vendor but the categories repeat: attribute domains and subtypes, typed
+      relationships with cardinality, validation and topology rules, cartographic
+      text as features, network and utility models, styling and print layouts,
+      attachments, metadata, and edit history. Schema concerns like domains and
+      subtypes belong in ptolemy, not in a store verne invents. Versioned edit
+      history maps onto ptolemy's branching better than onto anything else this
+      platform could migrate to, which is where the real fidelity advantage is.
+- [ ] **licence boundaries, needs a human to read each vendor's current terms.**
+      The line is the same everywhere: the customer's own data in formats they
+      hold, and their own hosted content through documented APIs with their own
+      credentials, is clean. Vendor-supplied licensed content (basemaps,
+      geocoders, demographic and imagery datasets) is not theirs to move, and
+      neither is content they can merely see. Prefer open-source readers over
+      vendor SDKs, several of which carry terms that do not sit with AGPL
+      linking. "With permission" must be a mechanism, not a promise: explicit
+      operator credentials and a log of what was extracted, nothing that sniffs
+      or crawls.
 
 ## OPEN — sibyl cutover cleanup
 
