@@ -187,21 +187,18 @@ PROJ, which vendors through cmake and is why that image takes minutes to build:
       guesses, and check it against GDAL's driver list before committing to it. The
       recorded order of demand puts the photogrammetry and reality-capture stacks
       next, then the CAD-adjacent platforms.
-- [ ] **verne: the rest of the hosted Esri story.** verne reads a FeatureServer
-      root over REST (inspect and extract, token from the environment, loader
-      unchanged, see verne's README and changelog). Still open:
-      - Portal enumeration (`sharing/rest/search`), so an operator points verne
-        at a portal and picks services instead of pasting FeatureServer URLs.
-      - token minting: verne takes a ready token only. OAuth client_credentials
-        against `sharing/rest/oauth2/token` is Esri's documented replacement for
-        generateToken; holding a client secret needs the credential care the
-        repo was scoped around.
-      - native originals over REST: the service transforms to 4326 on the way
-        out, so no native geometry rides on the inserts. Fetching each layer
-        twice (native and 4326) and pairing by object id would carry them, at
-        double the queries, and edits between the passes can skew the pairing.
+- [ ] **verne: the rest of the hosted Esri story.** verne lists a portal's
+      feature services, reads a FeatureServer whole or scoped to one layer with
+      the operator's token or one it mints itself, carries the untransformed
+      originals, and the loader is unchanged (see verne's README and
+      changelog). Still open:
       - enterprise sources: MapServer roots, versioned data (where the
         branching-beats-edit-history advantage lives) and `extractChanges`.
+        Blocked on having an enterprise server to verify against; unverifiable
+        credential code is worse than the gap.
+      - legacy generateToken (username/password) is deliberately not taken:
+        holding a password is worse than holding a client secret, and OAuth
+        client_credentials covers the hosted case.
 - [ ] **v0.2 gaps.** Rasters in a `.gdb` are detected and routed to terrano but
       have no fixture, because OpenFileGDB refuses to create them. Field subtypes,
       dataset-level metadata and glob domains are unexercised. Subtype, annotation
