@@ -188,14 +188,16 @@ PROJ, which vendors through cmake and is why that image takes minutes to build:
       recorded order of demand puts the photogrammetry and reality-capture stacks
       next, then the CAD-adjacent platforms.
 - [ ] **verne: the rest of the hosted Esri story.** verne lists a portal's
-      feature services, reads a FeatureServer whole or scoped to one layer with
-      the operator's token or one it mints itself, carries the untransformed
-      originals, and the loader is unchanged (see verne's README and
-      changelog). Still open:
-      - enterprise sources: MapServer roots, versioned data (where the
-        branching-beats-edit-history advantage lives) and `extractChanges`.
-        Blocked on having an enterprise server to verify against; unverifiable
-        credential code is worse than the gap.
+      feature services, reads a FeatureServer or MapServer whole or scoped to
+      one layer with the operator's token or one it mints itself, carries the
+      untransformed originals, and the loader is unchanged (see verne's README
+      and changelog). Still open:
+      - the version tree: verne names which layers front versioned data and
+        reads only the default version. Carrying versions and edits onto
+        geogit/ptolemy branches needs the version-management REST resources
+        and `extractChanges`, and a server whose versioning verne may exercise;
+        sampleserver6 exposes versioned layers read-only, which covered the
+        detection but not the tree.
       - legacy generateToken (username/password) is deliberately not taken:
         holding a password is worse than holding a client secret, and OAuth
         client_credentials covers the hosted case.
