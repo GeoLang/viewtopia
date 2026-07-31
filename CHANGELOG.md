@@ -21,6 +21,9 @@ All notable changes to this project will be documented in this file.
   - Results dispatched as `viewtopia:sql_result` / `viewtopia:sql_error` CustomEvents; last 20 summaries stashed on `window.__viewtopiaSqlResults`
 - `add_geojson` viewer command now accepts a direct `params.geojson` object in addition to `params.url`
 - Shared `renderGeoJson()` helper consolidates Cesium + Leaflet rendering for `add_geojson` and `sql_query`
+- **Dataset styling for vector tiles** ([src/lib/datasetStyle.ts](src/lib/datasetStyle.ts))
+  - Vector Tiles panel takes an optional ptolemy dataset ID and draws the source with the layers from `/api/v1/datasets/{id}/style`
+  - Falls back to the panel's own fill + outline when the dataset has no convertible style, and conversion losses go to `console.debug`
 
 ### Dependencies
 

@@ -10,13 +10,16 @@ import {
   ScrollArea,
 } from '@mantine/core';
 import { IconVectorTriangle, IconX, IconPlus, IconTrash } from '@tabler/icons-react';
+import type { LayerSpecification } from 'maplibre-gl';
 import { getActiveMapLibre } from '../../viewer/registry';
+import { fetchDatasetStyle, PTOLEMY_SOURCE_LAYER } from '../../lib/datasetStyle';
 
 interface VTSource {
   id: string;
   name: string;
   url: string;
   sourceLayer: string;
+  layerIds: string[];
 }
 
 // ptolemy MVT endpoint shape, works when the platform stack runs
@@ -31,15 +34,43 @@ function absoluteTemplate(template: string): string {
   return template.startsWith('/') ? `${window.location.origin}${template}` : template;
 }
 
+/** Violet fill and outline, for a source with no dataset style to draw with. */
+function defaultLayers(id: string, sourceLayer: string): LayerSpecification[] {
+  return [
+    {
+      id: `${id}-fill`,
+      type: 'fill',
+      source: id,
+      'source-layer': sourceLayer,
+      paint: { 'fill-color': '#a78bfa', 'fill-opacity': 0.25 },
+    },
+    {
+      id: `${id}-line`,
+      type: 'line',
+      source: id,
+      'source-layer': sourceLayer,
+      paint: { 'line-color': '#a78bfa', 'line-width': 1.5 },
+    },
+  ];
+}
+
 export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
   const [sources, setSources] = useState<VTSource[]>([]);
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
+  const [datasetId, setDatasetId] = useState('');
   const [sourceLayer, setSourceLayer] = useState('default');
   const [status, setStatus] = useState('');
 
-  const handleAdd = () => {
+  const dataset = datasetId.trim();
+
+  const handleAdd = async () => {
     if (!name.trim() || !url.trim()) return;
+    const id = `vt-${crypto.randomUUID()}`;
+    // ptolemy hardcodes its MVT layer name, so a dataset id settles the source layer
+    const layer = dataset ? PTOLEMY_SOURCE_LAYER : sourceLayer.trim() || 'default';
+    const style = dataset ? await fetchDatasetStyle(dataset, id, layer) : null;
+    // re-read the map: the style request gave the user time to switch renderer
     const map = getActiveMapLibre();
     if (!map) {
       setStatus('Switch renderer to MapLibre first');
@@ -49,34 +80,30 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
       setStatus('Map still loading, try again');
       return;
     }
-    const id = `vt-${crypto.randomUUID()}`;
-    const layer = sourceLayer.trim() || 'default';
     const tileUrl = absoluteTemplate(url.trim());
     map.addSource(id, { type: 'vector', tiles: [tileUrl], minzoom: 0, maxzoom: 22 });
-    map.addLayer({
-      id: `${id}-fill`,
-      type: 'fill',
-      source: id,
-      'source-layer': layer,
-      paint: { 'fill-color': '#a78bfa', 'fill-opacity': 0.25 },
-    });
-    map.addLayer({
-      id: `${id}-line`,
-      type: 'line',
-      source: id,
-      'source-layer': layer,
-      paint: { 'line-color': '#a78bfa', 'line-width': 1.5 },
-    });
-    setSources((prev) => [...prev, { id, name: name.trim(), url: tileUrl, sourceLayer: layer }]);
-    setStatus(`Added ${name.trim()}`);
+    const layers = style?.layers ?? defaultLayers(id, layer);
+    for (const spec of layers) map.addLayer(spec);
+    setSources((prev) => [
+      ...prev,
+      { id, name: name.trim(), url: tileUrl, sourceLayer: layer, layerIds: layers.map((l) => l.id) },
+    ]);
+    if (style?.losses.length) console.debug(`dataset ${dataset} style losses`, style.losses);
+    setStatus(
+      style
+        ? `Added ${name.trim()}, dataset style (${style.layers.length} layers, ${style.losses.length} dropped)`
+        : `Added ${name.trim()}`,
+    );
     setName('');
     setUrl('');
+    setDatasetId('');
   };
 
   const handleRemove = (id: string) => {
     const map = getActiveMapLibre();
     if (map) {
-      for (const layerId of [`${id}-fill`, `${id}-line`]) {
+      const source = sources.find((x) => x.id === id);
+      for (const layerId of source?.layerIds ?? []) {
         if (map.getLayer(layerId)) map.removeLayer(layerId);
       }
       if (map.getSource(id)) map.removeSource(id);
@@ -131,8 +158,22 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
         />
         <TextInput
           size="xs"
+          label="Dataset ID"
+          description="ptolemy dataset, styles the source from its Esri style"
+          placeholder="optional"
+          value={datasetId}
+          onChange={(e) => setDatasetId(e.currentTarget.value)}
+          styles={{
+            label: { color: '#8b949e' },
+            description: { color: '#6e7681' },
+            input: { background: '#0d1117', borderColor: '#30363d' },
+          }}
+        />
+        <TextInput
+          size="xs"
           label="Source layer"
-          value={sourceLayer}
+          value={dataset ? PTOLEMY_SOURCE_LAYER : sourceLayer}
+          disabled={!!dataset}
           onChange={(e) => setSourceLayer(e.currentTarget.value)}
           styles={{
             label: { color: '#8b949e' },
