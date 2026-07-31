@@ -360,7 +360,8 @@ ArcGIS feature services over REST, no GDAL, always built), `verne-load` and `ver
 AGPL. It lists a portal's feature services (`verne services`, `sharing/rest/search`), reads
 KML/KMZ, `.gdb`, FeatureServer and MapServer URLs (whole or scoped to one layer id, the shape
 portal item URLs come in; a map service's group layers become hierarchy rows, its rasters are
-named for terrano, and per-layer versioning reaches the report), reports what a migration into
+named for terrano, and per-layer versioning reaches the report; `--gdb-version` reads a named
+geodatabase version, one per extraction), reports what a migration into
 GeoLang would keep and lose, and can extract a geodatabase or a feature or map service into a
 sidecar that `verne load` posts into a running ptolemy. A geodatabase extraction also writes a GeoPackage;
 a REST extraction cannot (no GDAL), so its feature files and sidecar are the whole output. On

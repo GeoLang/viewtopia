@@ -192,12 +192,21 @@ PROJ, which vendors through cmake and is why that image takes minutes to build:
       one layer with the operator's token or one it mints itself, carries the
       untransformed originals, and the loader is unchanged (see verne's README
       and changelog). Still open:
-      - the version tree: verne names which layers front versioned data and
-        reads only the default version. Carrying versions and edits onto
-        geogit/ptolemy branches needs the version-management REST resources
-        and `extractChanges`, and a server whose versioning verne may exercise;
-        sampleserver6 exposes versioned layers read-only, which covered the
-        detection but not the tree.
+      - the version tree: verne reads any named version (`--gdb-version`, one
+        per extraction) and names which layers front versioned data and change
+        tracking. Carrying the tree itself stays open, and the requirements
+        are now documented rather than guessed: enumerating and diffing
+        versions is the VersionManagementServer resource, whose `differences`
+        needs the `features:user:edit` privilege, a read-session lock
+        (`startReading`/`stopReading`, blocking editors on 11.5 and older) and
+        at 11.2+ an Advanced Editing license; `extractChanges` needs the
+        service to publish `changeTrackingInfo` generations, which
+        sampleserver6 does not, and the only other source of generations is
+        registering a sync replica, which writes server state. Both need an
+        enterprise deployment verne may exercise; also decide the ptolemy
+        mapping first (a branch per version needs update/delete ops in the
+        sidecar, which today holds inserts only, and a persisted
+        objectid-to-feature-id map across extractions).
       - legacy generateToken (username/password) is deliberately not taken:
         holding a password is worse than holding a client secret, and OAuth
         client_credentials covers the hosted case.
