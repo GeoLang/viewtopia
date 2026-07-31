@@ -354,11 +354,16 @@ tree, and WebGL context timeouts flake and pass on retry.
 
 ### 2.7 verne (foreign-format inventory and migration)
 
-verne is a read-only inventory and extractor for foreign GIS formats: `verne-core` (model plus
-verdicts), `verne-kml`, a feature-gated Esri File Geodatabase crate, and `verne-cli`. Public
-AGPL. It reads KML/KMZ and `.gdb`, reports what a migration into GeoLang would keep and lose,
-and can extract a geodatabase into a GeoPackage plus a sidecar that `verne load` posts into a
-running ptolemy.
+verne is a read-only inventory and extractor for foreign GIS sources: `verne-core` (model plus
+verdicts), `verne-kml`, a feature-gated Esri File Geodatabase crate, `verne-arcgis` (hosted
+ArcGIS feature services over REST, no GDAL, always built), `verne-load` and `verne-cli`. Public
+AGPL. It reads KML/KMZ, `.gdb` and FeatureServer URLs, reports what a migration into GeoLang
+would keep and lose, and can extract a geodatabase or a feature service into a sidecar that
+`verne load` posts into a running ptolemy. A geodatabase extraction also writes a GeoPackage;
+a REST extraction cannot (no GDAL), so its feature files and sidecar are the whole output. On
+the REST path the service itself reprojects to 4326 (`outSR`), so no native original rides on
+the inserts, and the token comes from `VERNE_ARCGIS_TOKEN` in the `X-Esri-Authorization`
+header, never an argument.
 
 **The report is the product, so a loss it names is a work item, not a footnote.** Each row is
 faithful, approximated or unsupported, and `Losses` cannot be constructed empty, so an

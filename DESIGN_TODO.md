@@ -2,8 +2,9 @@
 
 > Whole-platform backlog for the shipping plan in [DESIGN.md](DESIGN.md).
 > Status keys: `[ ]` todo · `[~]` in progress · `[!]` blocked.
-> **Open work only** — completed items move to DESIGN.md (§4 history log).
-> Last brought current: **2026-07-30**.
+> **Open work only** — a completed item is deleted; durable design knowledge folds
+> into DESIGN.md's current-state sections, dated history goes in per-repo changelogs.
+> Last brought current: **2026-07-31**.
 
 ---
 
@@ -186,24 +187,26 @@ PROJ, which vendors through cmake and is why that image takes minutes to build:
       guesses, and check it against GDAL's driver list before committing to it. The
       recorded order of demand puts the photogrammetry and reality-capture stacks
       next, then the CAD-adjacent platforms.
-- [ ] **verne v0.3: ArcGIS REST and Portal.** v0.2 reads a `.gdb` on disk only.
-      Hosted layers through the documented REST API with the operator's own
-      credentials are the other half of the Esri story, and the one that needs the
-      credential handling the repo was scoped around.
+- [ ] **verne: the rest of the hosted Esri story.** verne reads a FeatureServer
+      root over REST (inspect and extract, token from the environment, loader
+      unchanged, see verne's README and changelog). Still open:
+      - Portal enumeration (`sharing/rest/search`), so an operator points verne
+        at a portal and picks services instead of pasting FeatureServer URLs.
+      - token minting: verne takes a ready token only. OAuth client_credentials
+        against `sharing/rest/oauth2/token` is Esri's documented replacement for
+        generateToken; holding a client secret needs the credential care the
+        repo was scoped around.
+      - native originals over REST: the service transforms to 4326 on the way
+        out, so no native geometry rides on the inserts. Fetching each layer
+        twice (native and 4326) and pairing by object id would carry them, at
+        double the queries, and edits between the passes can skew the pairing.
+      - enterprise sources: MapServer roots, versioned data (where the
+        branching-beats-edit-history advantage lives) and `extractChanges`.
 - [ ] **v0.2 gaps.** Rasters in a `.gdb` are detected and routed to terrano but
       have no fixture, because OpenFileGDB refuses to create them. Field subtypes,
       dataset-level metadata and glob domains are unexercised. Subtype, annotation
       and topology fixtures are hand-written catalog XML, since GDAL cannot create
       those either: the read path is real, the blob is not.
-- [~] **features and attachments into ptolemy** (in flight 2026-07-30). Attachments
-      dragged feature loading in with them: ptolemy hangs an attachment off a
-      feature id and a branch, and verne had never put a feature into ptolemy at
-      all, so blobs would have landed on empty datasets. `DiffOpRequest::Insert`
-      takes an optional `feature_id`, so verne mints its own uuids on commit and
-      keeps the Esri-OBJECTID-to-ptolemy-id map that attachments key on. Side
-      effect worth having: `verne load` becomes a whole migration rather than the
-      semantics half, with the data no longer stranded in the GeoPackage.
-      `verne-load` stays GDAL-free, so how features reach it is a real constraint.
 - [ ] **ptolemy is single-CRS by code, not by schema, and whether that is right is
       a product call.** `feature_versions.geometry` is a bare untyped `geometry`
       column with no srid constraint, so PostGIS would hold mixed srids in it
