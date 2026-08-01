@@ -142,9 +142,16 @@ take effect with `nginx -s reload` instead of a force-recreate.
   work does not reach them until a retag. terrano's single-band GeoTIFF output is
   byte-identical to before that work (golden fixture), which is what keeps the pin safe.
 
-### 2.3 Authorization model (ptolemy + tiletopia)
+### 2.3 Authorization model
 
-Multi-tenancy is enforced in two symmetric middleware layers over the same id resolution.
+One HS256 secret signs `{sub, exp, role}` tokens every service accepts, so a user is one
+subject across the platform. The tenancy unit is that subject and the resources it owns or was
+granted: there is no org boundary above it. `008_tenancy.sql` creates organizations,
+org_members and `datasets.org_id`, and nothing enforcing reads them, only the informational
+`/check` routes, which is why `/check` can answer allowed where a write refuses.
+
+In ptolemy, multi-tenancy is enforced in two symmetric middleware layers over the same id
+resolution.
 
 **Visibility (read side).** Datasets have per-dataset visibility. A private dataset answers
 404, not 403, and is filtered out of every listing. The resolver maps every dataset-owned id
@@ -157,7 +164,12 @@ data, with the visibility middleware as their only gate. Terrain reads are anony
 **Write ladder (write side).** Every mutating route is gated on `ensure_branch_writable` /
 `ensure_dataset_writable`: a write-permission ladder with creator auto-grant, dataset-admin
 delegation and revoke-lockout protection. The editor role alone is not enough, because
-without the ladder an editor could write to any public dataset they hold no grant on. Three
+without the ladder an editor could write to any public dataset they hold no grant on. The
+ladder fails closed: a dataset with no grant rows denies every enforced writer rather than
+falling back to the role gate, and migration 027 backfills an admin grant for each such
+dataset's `created_by`. A dataset whose `created_by` is blank or a machine label is skipped
+and stays instance-admin-only until an admin grants, so a deployment needs at least one
+instance admin, and a service account writing to datasets it did not create needs a grant. Three
 routes check in-handler because their target arrives in the request body. The three topology
 routes are admin-only because they issue schema DDL and discard the dataset id, leaving
 nothing to ladder. The four `/permissions` routes are deliberately exempt: `require_dataset_admin`
@@ -188,7 +200,21 @@ Postgres function called through `SELECT`.
   "external means read-only" is the simpler invariant.
 - A write to a missing dataset answers 404, not 500.
 - tiletopia: assets have an owner, destructive writes are owner-or-admin, `/v1` and native
-  writes are editor-gated. Roles are managed in-service with argon2id hashing.
+  writes are editor-gated. Roles are managed in-service with argon2id hashing. Annotations are
+  asset content, so writing one is editor-gated plus owner-or-admin on the target asset, and a
+  delete is scoped in SQL to the asset in the path. Plugin-registry mutations are admin-only.
+  The asset listing shows the caller's own assets plus ownerless legacy rows, admins all.
+  Tiles stay public by asset id, which the CDN cache TTLs depend on, so the boundary protects
+  metadata and writes rather than tile bytes.
+- collecta: forms carry a creator. Creating a form or submitting needs editor or admin, reading
+  submissions is creator-or-admin, and form definitions are instance-readable so collectors can
+  discover them. A form id cannot be taken over: the upsert carries the ownership test in the
+  same statement.
+- geolang: executing a tool needs a valid platform JWT when `PLATFORM_JWT_SECRET` is set. The
+  manifest stays open because sibyl fetches it before anyone signs in. Unset means no gate,
+  which is the standalone dev flow, the test suite and the evals.
+- An unknown role string grants nothing anywhere. Every service parses the claim into a closed
+  enum rather than comparing strings, so a typo or a future role fails closed.
 - ptolemy config reads and metrics are admin-gated, and audit identity comes from the JWT.
 
 ### 2.4 Agent stack

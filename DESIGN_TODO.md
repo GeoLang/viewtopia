@@ -4,7 +4,7 @@
 > Status keys: `[ ]` todo · `[~]` in progress · `[!]` blocked.
 > **Open work only** — a completed item is deleted; durable design knowledge folds
 > into DESIGN.md's current-state sections, dated history goes in per-repo changelogs.
-> Last brought current: **2026-07-31**.
+> Last brought current: **2026-08-01**.
 
 ---
 
@@ -67,20 +67,30 @@ anything multi-user ships, local packaging last.
 - [~] **geodukt as plan substrate**: plan-then-approve flow shipped (see the
       history log). Still open: sql_query is only persona-discouraged, not
       labeled as a gated escape hatch in the rendered plan.
-- [ ] **permission-aware enforcement (blocks multi-user)**: the caller's JWT now
-      reaches ptolemy/tiletopia/geodukt (history log), so ptolemy's real RBAC
-      applies, and as of 2026-07-30 it applies to writes too (history log): every
-      mutating route runs the write ladder, so an editor grant no longer implies
-      write access to every dataset. What is still missing is enforcement at the
-      other end: tiletopia RBAC is type stubs, collecta checks nothing, and
-      geolang's own `/tools` endpoint is unauthenticated, so anyone who can reach
-      it runs tools as whatever token they present (no escalation, but no audit
-      either). Security-sensitive work.
-      Note: geodukt's `/run` gate is opt-in via `GEODUKT_JWT_SECRET`, unset in
-      the local compose (owner decision 2026-07-29). Gating it by default meant
-      an unauthenticated viewer session could not run a workflow at all, and the
-      model answered the 401 by improvising with sql_query and the raw geopandas
-      tools. Set it before this ships multi-user.
+- [~] **permission-aware enforcement**: the far end is now enforced in every
+      service (per-repo changelogs): tiletopia gates annotations, plugin
+      mutations and the asset listing, collecta enforces roles and form
+      ownership, geolang requires a platform JWT to execute a tool. Unknown role
+      strings fail closed everywhere. What is left:
+      - geodukt's `/run` gate is opt-in via `GEODUKT_JWT_SECRET`, unset in
+        the local compose (owner decision 2026-07-29). Gating it by default meant
+        an unauthenticated viewer session could not run a workflow at all, and the
+        model answered the 401 by improvising with sql_query and the raw geopandas
+        tools. Set it before this ships multi-user.
+      - geolang's chat route is still open, so an unauthenticated viewer session
+        starts a run and then every tool call answers 401 and the model narrates
+        the failures. Decide whether the chat route itself should require a token.
+      - geolang's `/upload`, `/draw` and `/export-pdf` write or read files with
+        no token. `/geojson` and `/stats` are confined to the served tree, but
+        the repo root is one of their search dirs by design, so a file there
+        stays name-probeable (404 versus 500) without being readable. Tightening
+        it means deciding what those routes are meant to serve, since the
+        natural_earth bundles and ghsl_pop.tif live there.
+      - an org boundary above the user does not exist. `008_tenancy.sql` creates
+        organizations, org_members and `datasets.org_id`, and the write ladder
+        ignores all of it: only the informational `/check` routes read
+        org_members, so `/check` can answer allowed for someone writes refuse.
+        Either wire orgs into the ladder or drop the schema and the fallback.
 - [ ] **local deployment packaging (last)**: GPU detection, quantized model
       download, context config, inference-server setup. Wrap llama.cpp/ollama
       tooling rather than build. The differentiation lives in the eval harness
@@ -111,17 +121,19 @@ left is the edges neither reaches.
       crates and could not use a crate-private accessor. Nothing in ptolemy-api may
       name it and the CI check enforces that, but it is a named accessor rather
       than a barrier. Revisit if the CLI ever grows a path that should be laddered.
-- [ ] `/permissions` (4 routes) is the one place the write layer is deliberately
-      absent from routes that write, because `require_dataset_admin` in rbac.rs is
-      the stricter gate and running the ladder too would deny a dataset admin the
-      exact case they need. That makes rbac.rs solely responsible for grant
-      management; worth a second pair of eyes before multi-user.
-- [ ] A dataset with zero permission rows accepts any editor even on laddered
-      routes (documented compatibility rule in permission.rs). Datasets created
-      before the creator auto-grant existed are therefore open. Decide whether to
-      backfill grants or drop the rule before this ships multi-user.
-- [ ] None of the above holds when `PTOLEMY_AUTH_DISABLED=true`: the ladder and
-      the visibility layer both no-op by design.
+- [ ] None of the above holds when auth is off (an empty `PTOLEMY_JWT_SECRET`):
+      the ladder and the visibility layer both no-op by design.
+- [ ] `/check` (dataset and branch) still falls back to `org_members`, which the
+      write ladder and `is_dataset_admin` both ignore, so it can answer allowed
+      for someone a write would refuse. Informational routes, nothing enforcing
+      calls them, but a client trusting them is misled. Same decision as the org
+      boundary item above.
+- [ ] Two operational consequences of dropping the zero-rows rule, for whoever
+      deploys first: a deployment needs at least one instance-admin token holder,
+      because that is the only actor who can grant on a dataset the backfill
+      skipped (blank or machine `created_by`), and any service account writing to
+      datasets it did not create needs an explicit grant where the editor role
+      alone used to pass.
 
 ## OPEN — ptolemy: a schema/query check in CI (2026-07-30)
 
@@ -334,6 +346,35 @@ PROJ, which vendors through cmake and is why that image takes minutes to build:
 - [ ] Session routing is still server-side-global (sibyl active flag mirrors the
       old behavior). Later cleanup: route runs by AG-UI `thread_id` so sessions
       are per-client and stateless; needs viewer session-switcher rework.
+
+## OPEN — what the enforcement pass left open per service (2026-08-01)
+
+Deliberate scope calls from the multi-user enforcement work, each a product
+decision rather than a bug. Per-repo changelogs hold what shipped.
+
+- [ ] **tiletopia asset metadata is only listing-filtered.** `GET /assets`
+      hides other tenants' rows, but `GET /assets/{id}` still answers for any
+      valid token, and the Ion-compat `/v1/assets/{id}` is public by design, so
+      gating one and not the other would be theater. Tiles are public regardless
+      (the CDN TTLs depend on it). Decide whether asset metadata is tenant
+      private, and if so do both routes and the CDN together.
+- [ ] **tiletopia annotation reads are open** to any valid token on any asset.
+      Writes are owner-or-admin. Only worth closing if annotations count as
+      private content.
+- [ ] **collecta viewers can read no submissions at all**, because a viewer
+      cannot create a form and submission access is creator-or-admin. A
+      read-only analyst over someone else's data needs the deferred per-form
+      grants table. Legacy forms with no creator are admin-only and are not
+      backfilled to anyone.
+- [ ] **collecta JSON submissions record no submitter** (only the OpenRosa path
+      sets `collector_id`), so there is no per-submitter audit trail and
+      ownership cannot be reconstructed later.
+- [ ] **collecta role strings outside admin/editor/viewer now fail closed.**
+      Nothing in the repo creates others, but a live database predating this may
+      hold them, and those accounts stop working on deploy.
+- [ ] **geolang has no CI workflow** despite the README's CI badge pointing at
+      `ci.yml`. Restore the workflow or drop the badge; today nothing runs the
+      test suite on push.
 
 ## OPEN: viewtopia feature gaps vs GeoLibre (surveyed 2026-07-30)
 
