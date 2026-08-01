@@ -11,6 +11,11 @@
 
 ## OPEN — platform hygiene
 
+- [ ] **the terrain panel cannot consume tiletopia's terrain `layer.json`.**
+      `GlobalTerrainPanel` points `CesiumTerrainProvider.fromUrl` at
+      `/tiles/v1/terrain/` and falls back to its no-source state when the
+      service's `layer.json` does not parse. Make tiletopia's document
+      Cesium-consumable or record why it cannot be.
 - [ ] **drop the `geolang-pgdata` volume.** Kept as a rollback artifact when the
       embedded Letta server and its postgres were removed for sibyl. Nothing reads
       it, and the rollback it insures against is long past. Delete it once nobody
@@ -382,9 +387,8 @@ decision rather than a bug. Per-repo changelogs hold what shipped.
 - [ ] **collecta role strings outside admin/editor/viewer now fail closed.**
       Nothing in the repo creates others, but a live database predating this may
       hold them, and those accounts stop working on deploy.
-- [ ] **geolang has no CI workflow** despite the README's CI badge pointing at
-      `ci.yml`. Restore the workflow or drop the badge; today nothing runs the
-      test suite on push.
+- [ ] **geolang has no CI workflow**, so nothing runs its test suite on push.
+      The README's dead CI badge is gone; add a workflow.
 
 ## OPEN: viewtopia feature gaps vs GeoLibre (surveyed 2026-07-30)
 
@@ -456,9 +460,6 @@ online/offline detection, mutation queue with retry, three-way column-level
 conflict merge, `offlineFetch()` API response cache. Data already loaded
 survives reloads and syncs back. Everything below is what does not work.
 
-- [ ] **README oversells offline, fix first.** §Offline-First advertises "tile
-      caching" and "service worker", neither exists. Trim the two lines or land
-      the items below.
 - [ ] **OfflinePanel is a stub behind the preview gate.** "Cache Current View"
       animates a timer-driven progress bar and caches nothing, the regions list
       is hardcoded empty. `cacheTilesForArea()` and `precacheUrls()` in

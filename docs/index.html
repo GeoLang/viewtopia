@@ -74,7 +74,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <div class="stat"><div class="num">23</div><div class="label">Plugins</div></div>
 <div class="stat"><div class="num">15</div><div class="label">QGIS Ports</div></div>
 <div class="stat"><div class="num">31</div><div class="label">SpaceTime Tools</div></div>
-<div class="stat"><div class="num">249</div><div class="label">Unit Tests</div></div>
+<div class="stat"><div class="num">347</div><div class="label">Unit Tests</div></div>
 <div class="stat"><div class="num">$0</div><div class="label">Per month</div></div>
 </div>
 </div>
@@ -88,7 +88,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <h3>🌍 3D Globe</h3>
 <ul>
 <li>CesiumJS with real-time tile streaming</li>
-<li>deck.gl overlay rendering</li>
+<li>deck.gl layers interleaved into MapLibre</li>
 <li>MapLibre GL vector tiles</li>
 <li>Fly-to animations with easing</li>
 <li>3D Tiles, terrain, point clouds</li>
@@ -338,15 +338,14 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <section>
 <div class="container">
 <h2>📡 Offline-First & Conflict Resolution</h2>
-<p style="color:var(--muted);margin-bottom:20px">Everything works without internet. Data syncs when you reconnect — conflicts are resolved automatically where possible, with a clear UI for true conflicts.</p>
+<p style="color:var(--muted);margin-bottom:20px">Data you have loaded survives reloads and syncs when you reconnect — conflicts are resolved automatically where possible, with a clear UI for true conflicts.</p>
 <div class="grid">
 <div class="card">
 <h3>Local-First Storage</h3>
 <ul>
 <li>All data in IndexedDB — reads never hit the network</li>
 <li>Mutations queued in an operation log</li>
-<li>Service Worker caches static assets + tiles</li>
-<li>App loads and functions fully offline</li>
+<li>API responses cached with TTL for offline fallback</li>
 </ul>
 </div>
 <div class="card">

@@ -160,7 +160,7 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 | **Stories** | Guided fly-through presentations |
 | **Collaboration** | Real-time view sync, cursors, chat, and voice/video |
 | **Responsive** | Mobile-friendly layout with collapsible panels |
-| **PWA** | Installable with offline support |
+| **PWA** | Installable web app manifest |
 
 ### Offline-First
 | Feature | Description |
@@ -168,9 +168,7 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 | **Local-first storage** | All data in IndexedDB — works without network |
 | **Operation queue** | Mutations queued locally, synced to server when online |
 | **Auto-sync** | Reconnects and pushes pending changes automatically |
-| **Tile caching** | Pre-download map tiles for offline viewing |
 | **API response cache** | GET responses cached with TTL for offline fallback |
-| **Service Worker** | Static assets cached, app loads even without internet |
 | **Sync indicator** | Real-time UI showing pending/synced/offline status |
 | **Three-way merge** | Conflict resolution: auto-merge when possible, UI for true conflicts |
 | **Column-level resolution** | Different-property changes merge automatically (like git) |

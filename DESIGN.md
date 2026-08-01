@@ -14,8 +14,8 @@
 
 GeoLang is ~20 sibling repos under `/home/aaron/src/GeoLang/` (~250k LOC), a full
 Esri/Cesium-class platform, not an "LLM-over-GIS" toy. All repos are **AGPL-3.0** and
-public on GitHub. Every repo carries standardized CI (fmt, clippy, test, cargo-deny,
-coverage, cross-platform).
+public on GitHub. Every Rust repo carries standardized CI (fmt, clippy, test, cargo-deny,
+coverage, cross-platform); geolang has none (open item in DESIGN_TODO).
 
 The three big structural bets are **settled**:
 1. **Golden path proven and gated.** The full stack comes up from one compose file and a
@@ -30,24 +30,21 @@ Maturity (test-fn counts via `grep -rE '#\[(test|tokio::test|sqlx::test)'`):
 
 | Repo | Role | Tests | Read |
 |------|------|-------|------|
-| tiletopia | 3D tiles / terrain / COG | 616 | Mature ✅ |
-| ptolemy | versioned PostGIS backbone | ~308 | Hardened ✅ |
-| jung | cartographic rendering | 242 | Well-tested ✅ |
-| fluvius | spatial stream processor | 89 | ✅ |
-| terrano | raster | 86 | ✅ |
-| fenestra | OGC gateway (WMS/WFS/WMTS/WCS/OGC API) | 83 | ✅ |
-| geodukt / topoi | ETL+workflow / geometry | 73 / 73 | ✅ |
-| geogit | geo VCS | 70 | ✅ |
-| itinera / geokode / nubis | routing / geocode / point cloud | 62 / 65 / 64 | ✅ |
-| terravista | mobile SDK | 58 | core only, renderer is roadmap ⚠️ |
-| collecta | field collection | 56 | JWT auth + sync real, media is roadmap ⚠️ |
-| projicio / interiora | CRS / indoor | 52 / 49 | ✅ |
+| tiletopia | 3D tiles / terrain / COG | 651 | Mature ✅ |
+| ptolemy | versioned PostGIS backbone | 581 | Hardened ✅ |
+| jung | cartographic rendering | 307 | Well-tested ✅ |
+| verne | foreign-format inventory + extractor (§2.7) | 230 | ✅ |
+| geodukt / fluvius | ETL+workflow / spatial streams | 187 / 170 | ✅ |
+| nubis / topoi | point cloud / geometry | 158 / 140 | ✅ |
+| terravista | mobile SDK | 107 | core only, renderer is roadmap ⚠️ |
+| collecta | field collection | 103 | JWT auth + sync real, media is roadmap ⚠️ |
+| projicio / sibyl | CRS / agent loop (§2.4) | 97 / 87 | ✅ |
+| terrano / fenestra | raster / OGC gateway (WMS/WFS/WMTS/WCS/OGC API) | 86 / 83 | ✅ |
+| geokode / geogit / itinera | geocode / geo VCS / routing | 72 / 70 / 62 | ✅ |
+| interiora | indoor | 49 | ✅ |
 | panoptes | imagery ML | 45 | ONNX path real, **no published weights** ⚠️ |
-| viewtopia | flagship viewer | 203 vitest + 18 platform E2E | ~42 real panels, 18 preview-gated |
-| geolang | NL→GIS agent | (py) | 31/33 tools real, wired to ptolemy/itinera/geokode |
-
-Two repos sit outside that sweep: **sibyl** (Rust, the agent loop, §2.4) and **verne**
-(read-only foreign-format inventory and extractor, §2.7).
+| viewtopia | flagship viewer | 347 vitest + 18 platform E2E | 47 registry panels (18 preview-gated) + 23 plugin panels |
+| geolang | NL→GIS agent | 172 (py) | 39 tools, wired to ptolemy/itinera/geokode/geodukt |
 
 **Current headline risks:**
 - **terravista can't draw a map yet.** Camera, cache and FFI are real, but GPU rendering,
@@ -336,10 +333,10 @@ parameters, input and outcome, the failing step's reason in a tooltip rather tha
 written outputs as download links (the serving route is not a `:path` route, so links use the
 basename).
 
-**Tool panels.** ~42 functional panels (measure, feature-picker, geojson/style editors,
+**Tool panels.** 47 registry panels, 29 on by default, plus 23 plugin panels (measure, feature-picker, geojson/style editors,
 geocoding, routing via itinera, terrain profile, cross-section, heatmap, spatial stats,
 weather/wind, shadows/lighting, raster/COG, space-time, notebooks, the industry verticals
-wired to ptolemy `/api/v1/*`). **18 experimental panels are gated** behind a "Show Preview
+wired via plugins to ptolemy `/api/v1/*`). **18 experimental panels are gated** behind a "Show Preview
 Tools" setting with a Preview badge, so there are no dead buttons in the default UI.
 
 - Signed-out and keyless states replace failed requests. Terrain/Flood/Solar and Viewshed
@@ -376,8 +373,8 @@ open" without reconnecting into the same refusal.
 
 **`src/` module groups:** `components/` + `features/`, `spacetime/` (31 space-time modules),
 `plugins/` (file-discovered + built-ins), `notebooks/`, `raster/`, `offline/` (IndexedDB
-local-first + op queue + service worker), `projects/`, `store/` (Zustand), `duckdb/` (in-browser
-analytics). ~228 source files.
+local-first + op queue; no service worker yet, see DESIGN_TODO), `projects/`, `store/` (Zustand),
+`duckdb/` (in-browser analytics). ~228 source files.
 
 **Test surface.** A vitest unit suite, an 18-test platform E2E suite against the live stack with
 a strict console-error tripwire and zero 5xx tolerance, a registry-derived panel sweep across 50
