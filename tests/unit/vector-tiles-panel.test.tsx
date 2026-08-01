@@ -6,6 +6,15 @@ import type { Map as MapLibreMap } from 'maplibre-gl';
 import { VectorTilesPanel } from '../../src/components/tools/VectorTilesPanel';
 import { setActiveMapLibre } from '../../src/viewer/registry';
 
+// the real decode needs a canvas, which jsdom has no backend for
+vi.mock('../../src/lib/styleImages', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/lib/styleImages')>()),
+  decodeStyleImage: vi.fn(
+    async (image: { name: string; width: number; height: number }) =>
+      ({ width: image.width, height: image.height }) as ImageData,
+  ),
+}));
+
 // MantineProvider reads the color scheme through matchMedia, which jsdom lacks
 window.matchMedia = vi.fn().mockReturnValue({
   matches: false,
@@ -20,20 +29,36 @@ globalThis.ResizeObserver = class {
   disconnect() {}
 };
 
-/** Enough of a MapLibre map for the panel: it only adds and removes sources and layers. */
+/** Enough of a MapLibre map for the panel, with a log of what it was told to add. */
 function fakeMap() {
   const sources = new Map<string, unknown>();
   const layers = new Map<string, { id: string }>();
+  const images = new Map<string, unknown>();
+  const calls: string[] = [];
   return {
     sources,
     layers,
+    images,
+    calls,
     isStyleLoaded: () => true,
     addSource: (id: string, spec: unknown) => sources.set(id, spec),
-    addLayer: (spec: { id: string }) => layers.set(spec.id, spec),
+    addLayer: (spec: { id: string }) => {
+      calls.push(`addLayer ${spec.id}`);
+      layers.set(spec.id, spec);
+    },
+    addImage: (name: string, image: unknown) => {
+      calls.push(`addImage ${name}`);
+      images.set(name, image);
+    },
     getSource: (id: string) => sources.get(id),
     getLayer: (id: string) => layers.get(id),
+    hasImage: (name: string) => images.has(name),
     removeSource: (id: string) => sources.delete(id),
     removeLayer: (id: string) => layers.delete(id),
+    removeImage: (name: string) => {
+      calls.push(`removeImage ${name}`);
+      images.delete(name);
+    },
   };
 }
 
@@ -45,6 +70,12 @@ const styleResponse = {
     { id: 'parcels-line', type: 'line', paint: { 'line-color': '#654321' } },
   ],
   losses: [{ path: 'renderer.symbol', reason: 'unsupported marker' }],
+};
+
+const styleWithImages = {
+  layers: [{ id: 'icons', type: 'symbol', layout: { 'icon-image': 'pin' } }],
+  images: { pin: { data_uri: 'data:image/png;base64,iVBORw0KGgo=', width: 24, height: 24 } },
+  losses: [],
 };
 
 let map: ReturnType<typeof fakeMap>;
@@ -135,6 +166,29 @@ describe('VectorTilesPanel', () => {
 
     expect(map.layers.size).toBe(0);
     expect(map.sources.size).toBe(0);
+  });
+
+  it('registers the sprites at their declared size before the layers that use them', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify(styleWithImages), { status: 200 })),
+    );
+    renderPanel();
+    addSource('parcels', 'ds-7');
+
+    await waitFor(() => expect(map.layers.size).toBe(1));
+    const sourceId = [...map.sources.keys()][0];
+    expect(map.calls).toEqual([`addImage ${sourceId}-pin`, `addLayer ${sourceId}-icons`]);
+    expect(map.images.get(`${sourceId}-pin`)).toEqual({ width: 24, height: 24 });
+    expect(map.layers.get(`${sourceId}-icons`)).toMatchObject({
+      layout: { 'icon-image': `${sourceId}-pin` },
+    });
+
+    // the row's trash icon is the last button on the panel
+    const buttons = screen.getAllByRole('button');
+    fireEvent.click(buttons[buttons.length - 1]);
+    expect(map.images.size).toBe(0);
+    expect(map.calls).toContain(`removeImage ${sourceId}-pin`);
   });
 
   it('falls back to the default styling on a 404', async () => {

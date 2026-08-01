@@ -4,8 +4,12 @@ import {
   fetchDatasetStyle,
   PTOLEMY_SOURCE_LAYER,
 } from '../../src/lib/datasetStyle';
+import type { DatasetStyleImage } from '../../src/lib/datasetStyle';
+import { decodeStyleImages } from '../../src/lib/styleImages';
 
 const source = 'vt-1';
+
+const PNG = 'data:image/png;base64,iVBORw0KGgo=';
 
 describe('datasetStyleLayers', () => {
   it('keeps the response order and binds every layer to the source we asked for', () => {
@@ -53,6 +57,132 @@ describe('datasetStyleLayers', () => {
   it('names an unnamed layer after its position', () => {
     const style = datasetStyleLayers({ layers: [{ type: 'fill' }] }, source, 'features');
     expect(style?.layers[0].id).toBe('vt-1-0');
+  });
+
+  it('has no images when the server leaves the key out', () => {
+    const style = datasetStyleLayers(
+      { layers: [{ id: 'icons', type: 'symbol', layout: { 'icon-image': 'pin' } }] },
+      source,
+      'features',
+    );
+    expect(style?.images).toEqual([]);
+    // nothing to rename against, so the reference is left as it came
+    expect(style?.layers[0]).toMatchObject({ layout: { 'icon-image': 'pin' } });
+  });
+
+  it('prefixes image names and the layer references to them', () => {
+    const style = datasetStyleLayers(
+      {
+        layers: [
+          { id: 'icons', type: 'symbol', layout: { 'icon-image': 'pin' } },
+          { id: 'hatch', type: 'fill', paint: { 'fill-pattern': 'hatch' } },
+        ],
+        images: {
+          pin: { data_uri: PNG, width: 24.0, height: 24.0 },
+          hatch: { data_uri: PNG, width: 8, height: 8 },
+        },
+      },
+      source,
+      'features',
+    );
+    expect(style?.images).toEqual([
+      { name: 'vt-1-pin', dataUri: PNG, width: 24, height: 24 },
+      { name: 'vt-1-hatch', dataUri: PNG, width: 8, height: 8 },
+    ]);
+    expect(style?.layers[0]).toMatchObject({ layout: { 'icon-image': 'vt-1-pin' } });
+    expect(style?.layers[1]).toMatchObject({ paint: { 'fill-pattern': 'vt-1-hatch' } });
+  });
+
+  it('renames references inside match and step expressions, leaving "" alone', () => {
+    const style = datasetStyleLayers(
+      {
+        layers: [
+          {
+            id: 'icons',
+            type: 'symbol',
+            layout: {
+              'icon-image': ['match', ['get', 'kind'], 'a', 'pin', 'b', 'flag', ''],
+            },
+          },
+          {
+            id: 'hatch',
+            type: 'fill',
+            paint: { 'fill-pattern': ['step', ['zoom'], 'hatch', 12, ''] },
+          },
+        ],
+        images: {
+          pin: { data_uri: PNG, width: 24, height: 24 },
+          flag: { data_uri: PNG, width: 16, height: 16 },
+          hatch: { data_uri: PNG, width: 8, height: 8 },
+        },
+      },
+      source,
+      'features',
+    );
+    expect(style?.layers[0]).toMatchObject({
+      layout: { 'icon-image': ['match', ['get', 'kind'], 'a', 'vt-1-pin', 'b', 'vt-1-flag', ''] },
+    });
+    expect(style?.layers[1]).toMatchObject({
+      paint: { 'fill-pattern': ['step', ['zoom'], 'vt-1-hatch', 12, ''] },
+    });
+  });
+
+  it('skips malformed image entries and keeps the good ones', () => {
+    const style = datasetStyleLayers(
+      {
+        layers: [{ id: 'icons', type: 'symbol', layout: { 'icon-image': 'pin' } }],
+        images: {
+          pin: { data_uri: PNG, width: 24, height: 24 },
+          nosize: { data_uri: PNG, width: 0, height: 24 },
+          badsize: { data_uri: PNG, width: '24', height: 24 },
+          nan: { data_uri: PNG, width: Number.NaN, height: 24 },
+          script: { data_uri: 'javascript:alert(1)', width: 24, height: 24 },
+          nothtml: { data_uri: 'data:text/html,<script>', width: 24, height: 24 },
+          nouri: { width: 24, height: 24 },
+          notanobject: 'pin.png',
+          '': { data_uri: PNG, width: 24, height: 24 },
+        },
+      },
+      source,
+      'features',
+    );
+    expect(style?.images.map((i) => i.name)).toEqual(['vt-1-pin']);
+    expect(style?.layers[0]).toMatchObject({ layout: { 'icon-image': 'vt-1-pin' } });
+  });
+
+  it('ignores an images value that is not an object', () => {
+    const style = datasetStyleLayers(
+      { layers: [{ id: 'fill', type: 'fill' }], images: ['pin.png'] },
+      source,
+      'features',
+    );
+    expect(style?.images).toEqual([]);
+  });
+});
+
+describe('decodeStyleImages', () => {
+  const image = (name: string): DatasetStyleImage => ({
+    name,
+    dataUri: PNG,
+    width: 24,
+    height: 24,
+  });
+
+  it('keeps the decoded sprites in order', async () => {
+    const decode = vi.fn(async () => ({ width: 24, height: 24 }) as ImageData);
+    const decoded = await decodeStyleImages([image('a'), image('b')], decode);
+    expect(decoded.map((d) => d.name)).toEqual(['a', 'b']);
+    expect(decode).toHaveBeenCalledTimes(2);
+  });
+
+  it('skips a sprite the browser will not decode', async () => {
+    const decode = vi.fn(async (img: DatasetStyleImage) => {
+      if (img.name === 'bad') throw new Error('corrupt');
+      return { width: 24, height: 24 } as ImageData;
+    });
+    expect(await decodeStyleImages([image('bad'), image('good')], decode)).toEqual([
+      { name: 'good', image: { width: 24, height: 24 } },
+    ]);
   });
 });
 

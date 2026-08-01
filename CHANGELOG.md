@@ -24,6 +24,7 @@ All notable changes to this project will be documented in this file.
 - **Dataset styling for vector tiles** ([src/lib/datasetStyle.ts](src/lib/datasetStyle.ts))
   - Vector Tiles panel takes an optional ptolemy dataset ID and draws the source with the layers from `/api/v1/datasets/{id}/style`
   - Falls back to the panel's own fill + outline when the dataset has no convertible style, and conversion losses go to `console.debug`
+  - Sprites from the response's optional `images` object are decoded and registered with `addImage` at their declared css size, with `icon-image` / `fill-pattern` references rewritten to match ([src/lib/styleImages.ts](src/lib/styleImages.ts))
 
 ### Dependencies
 

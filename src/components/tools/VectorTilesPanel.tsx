@@ -13,6 +13,7 @@ import { IconVectorTriangle, IconX, IconPlus, IconTrash } from '@tabler/icons-re
 import type { LayerSpecification } from 'maplibre-gl';
 import { getActiveMapLibre } from '../../viewer/registry';
 import { fetchDatasetStyle, PTOLEMY_SOURCE_LAYER } from '../../lib/datasetStyle';
+import { decodeStyleImage, decodeStyleImages } from '../../lib/styleImages';
 
 interface VTSource {
   id: string;
@@ -20,6 +21,7 @@ interface VTSource {
   url: string;
   sourceLayer: string;
   layerIds: string[];
+  imageIds: string[];
 }
 
 // ptolemy MVT endpoint shape, works when the platform stack runs
@@ -70,6 +72,8 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
     // ptolemy hardcodes its MVT layer name, so a dataset id settles the source layer
     const layer = dataset ? PTOLEMY_SOURCE_LAYER : sourceLayer.trim() || 'default';
     const style = dataset ? await fetchDatasetStyle(dataset, id, layer) : null;
+    // decode the sprites before touching the map, so all the waiting happens here
+    const images = style ? await decodeStyleImages(style.images, decodeStyleImage) : [];
     // re-read the map: the style request gave the user time to switch renderer
     const map = getActiveMapLibre();
     if (!map) {
@@ -82,11 +86,20 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
     }
     const tileUrl = absoluteTemplate(url.trim());
     map.addSource(id, { type: 'vector', tiles: [tileUrl], minzoom: 0, maxzoom: 22 });
+    // the layers reference these by name, so they go in first
+    for (const { name: imageId, image } of images) map.addImage(imageId, image);
     const layers = style?.layers ?? defaultLayers(id, layer);
     for (const spec of layers) map.addLayer(spec);
     setSources((prev) => [
       ...prev,
-      { id, name: name.trim(), url: tileUrl, sourceLayer: layer, layerIds: layers.map((l) => l.id) },
+      {
+        id,
+        name: name.trim(),
+        url: tileUrl,
+        sourceLayer: layer,
+        layerIds: layers.map((l) => l.id),
+        imageIds: images.map((i) => i.name),
+      },
     ]);
     if (style?.losses.length) console.debug(`dataset ${dataset} style losses`, style.losses);
     setStatus(
@@ -105,6 +118,9 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
       const source = sources.find((x) => x.id === id);
       for (const layerId of source?.layerIds ?? []) {
         if (map.getLayer(layerId)) map.removeLayer(layerId);
+      }
+      for (const imageId of source?.imageIds ?? []) {
+        if (map.hasImage(imageId)) map.removeImage(imageId);
       }
       if (map.getSource(id)) map.removeSource(id);
     }
