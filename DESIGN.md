@@ -194,6 +194,19 @@ into `read_pool()` and `unguarded_pool()`, the latter banned by name inside `pto
 `ci/no-raw-writes.sh`. That script's own header records its limit: it cannot see a mutating
 Postgres function called through `SELECT`.
 
+**Every mounted route is swept against a migrated database.** `tests/route_sweep.rs` derives
+the route list from the router itself, by parsing axum's `Debug` output for the internal path
+table, so a new route is covered without anyone remembering it. It calls each one with fixture
+data and fails on SQLSTATE 42703 and 42P01, which is the class where a handler names a column
+or table the migrations never create. The SQLSTATE cannot come from the response, since a
+handler flattens the error to `internal error` and the ArcGIS facade answers 200 with the
+failure in the body, so every database error goes through `errors::log_db_error` and the test
+reads the logged code. An extractor rejection also fails the sweep, because then the handler
+never ran and the sweep proved nothing. Coverage is only as deep as the SQL branches the
+fixtures reach, which is what per-route query variants are for. Routes needing an absent
+extension answer 501 rather than 500: MobilityDB for the five trajectory analytics routes,
+pgvector for the four similarity routes.
+
 **Invariants:**
 - An external dataset is read-only. Writes answer 409, attachment uploads included. Exempting
   attachments would mean threading a flag through the ladder for a workflow nobody has, and

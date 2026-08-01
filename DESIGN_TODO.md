@@ -135,22 +135,32 @@ left is the edges neither reaches.
       datasets it did not create needs an explicit grant where the editor role
       alone used to pass.
 
-## OPEN — ptolemy: a schema/query check in CI (2026-07-30)
+## OPEN — ptolemy: what the route sweep still reports (2026-08-01)
 
-Four feature families shipped querying columns their tables do not have (history
-log). Three were found by accident and the fourth fell out of unrelated security
-work, which is the argument for the check rather than for more reading.
+The sweep closed the missing-column class: every mounted route is called against
+a migrated database and 42703/42P01 fails CI (see the changelog). It reports
+these on every run without failing on them, because each needs a decision rather
+than a fix. All are 500s today.
 
-- [ ] Compile-time query verification is not in use here, so nothing catches a
-      handler that names a column the migrations never create. A CI check that
-      runs every mounted route against a migrated database, or turns on sqlx's
-      offline query checking, would end the class.
-- [ ] The trajectory analytics routes (speed, distance, at, simplify,
-      nearest-approach) are still MobilityDB-only and 500 on stock PostGIS, which
-      is what CI and the compose stack run. Either gate them behind a capability
-      check that answers 501, or install MobilityDB somewhere they are exercised.
+- [ ] `analytics/anomalies` nests aggregate calls (42803).
+- [ ] `analytics/union` and `geoprocessing/convex-hull` call `st_union` and
+      `st_collect` on `geography`, which has no such function (42883).
+- [ ] the four pgRouting routes cast uuid junction ids to bigint (42846).
+- [ ] `branches/{id}/reproject` writes through the read-only `features` view
+      (55000).
+- [ ] `POST /incidents` uses `fetch_one`, so no row is a 500 where it should be
+      a 404.
+- [ ] the h3, pointcloud, sfcgal and pgrouting routes need an absent extension
+      and are candidates for the same 501 capability check MobilityDB and
+      pgvector now use.
+- [ ] the sweep only covers the SQL branches its fixtures reach, which is what
+      query variants are for, and a handler that swallows its error is invisible
+      to it. Add a variant when a route grows a second branch.
 - [ ] The relationship API still cannot express `is_composite`, though the column
       exists. Feature gap, not a bug.
+- [ ] the throwaway script that generated the 130-entry request-body table by
+      parsing handler structs lives in no repo. Worth keeping as a small dev
+      script if the table needs regenerating.
 
 ## OPEN — verne: get your data out (named 2026-07-29, v0.1 shipped same day)
 
