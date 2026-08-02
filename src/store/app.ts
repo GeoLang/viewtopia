@@ -28,6 +28,7 @@ export type ToolPanel =
   | 'layers'
   | 'ogc'
   | 'import'
+  | 'project'
   | 'clipping'
   | 'crossSection'
   | 'heatmap'

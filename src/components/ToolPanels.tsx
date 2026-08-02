@@ -12,6 +12,7 @@ import { GeoJsonEditorPanel } from './tools/GeoJsonEditorPanel';
 import { StyleEditorPanel } from './tools/StyleEditorPanel';
 import { PortalPanel } from '../features/portal/PortalPanel';
 import { DashboardPanel } from '../features/dashboards/DashboardPanel';
+import { ProjectPanel } from '../features/project/ProjectPanel';
 import { GeocodingPanel } from './tools/GeocodingPanel';
 import { RoutingPanel } from './tools/RoutingPanel';
 import { DrawPanel } from './tools/DrawPanel';
@@ -194,6 +195,8 @@ export function ToolPanels() {
           onClose={close}
         />
       );
+    case 'project':
+      return <ProjectPanel onClose={close} />;
     case 'clipping':
       return <ClippingPanel onClose={close} />;
     case 'crossSection':

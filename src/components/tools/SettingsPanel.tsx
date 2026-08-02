@@ -198,7 +198,7 @@ function AiModelSelect() {
   useEffect(() => {
     let live = true;
     (async () => {
-      const res = await fetch('/agent/models').catch(() => null);
+      const res = await fetch('/agent/models', { headers: apiHeaders() }).catch(() => null);
       const body: ModelsResponse | null = res?.ok ? await res.json().catch(() => null) : null;
       if (!live) return;
       setProfiles(body?.profiles ?? []);

@@ -12,6 +12,7 @@ import { IconUpload, IconX, IconFile } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { IMPORT_FORMATS, parseImport } from '../../lib/importGeoJson';
 import { timedImport, loadTimedImport } from '../../lib/importTime';
+import { applyProject, asProject } from '../../features/project/projectFile';
 
 interface DragDropImportProps {
   onImport: (name: string, geojson: GeoJSON.FeatureCollection) => void;
@@ -35,7 +36,20 @@ export function DragDropImport({ onImport, onClose }: DragDropImportProps) {
         continue;
       }
       try {
-        const collection = parseImport(file.name, await file.text());
+        const text = await file.text();
+        // a saved workspace is .json too, so open it instead of reading geometry
+        const project = ext === '.json' ? asProject(text) : null;
+        if (project) {
+          applyProject(project);
+          setStatus({ text: `${file.name}: project opened`, failed: false });
+          notifications.show({
+            title: 'Project opened',
+            message: `${file.name} — ${project.name}`,
+            color: 'green',
+          });
+          continue;
+        }
+        const collection = parseImport(file.name, text);
         const count = `${collection.features.length} features`;
         // timestamped data goes in as CZML so the clock can play it. with no
         // Cesium viewer it takes the plain-geometry path every renderer draws

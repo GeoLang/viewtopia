@@ -14,7 +14,7 @@ import {
 import { useState } from 'react';
 import { useChatStore } from '../../store/chat';
 import {
-  outputDownloadUrl,
+  downloadOutput,
   runWorkflow,
   stepText,
   type RunStep,
@@ -204,8 +204,9 @@ export function PlanPanel({ messageId, plan }: { messageId: string; plan: Workfl
               <Anchor
                 key={out.path}
                 size="xs"
-                href={outputDownloadUrl(out.path)}
-                download
+                component="button"
+                type="button"
+                onClick={() => void downloadOutput(out.path)}
                 data-testid="plan-download"
               >
                 {out.path.split('/').pop()}

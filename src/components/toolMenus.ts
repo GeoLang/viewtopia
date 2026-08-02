@@ -72,6 +72,7 @@ export const DATA_MENU: ToolMenuItem[][] = [
     { panel: 'assets', label: '📦 Assets', preview: true },
     { panel: 'ogc', label: '🌐 OGC Layers' },
     { panel: 'import', label: '📂 Import' },
+    { panel: 'project', label: '💾 Project' },
     { panel: 'modelImport', label: '🧊 3D Models', preview: true },
     { panel: 'trackImport', label: '🗺 Tracks' },
     { panel: 'vectorTiles', label: '🔷 Vector Tiles' },

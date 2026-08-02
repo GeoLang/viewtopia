@@ -70,8 +70,12 @@ describe('LayerManager agent layers', () => {
 
   afterEach(cleanup);
 
-  it('lists a layer the agent drew and offers it as a download without expanding', () => {
+  it('lists a layer the agent drew and offers it as a download without expanding', async () => {
     useAgentLayerStore.getState().setLayers([layer('0-venice_env_risk.gpkg', 'outputs/venice_env_risk.gpkg')]);
+    // the download goes through fetch so it can carry the bearer header
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('gpkg bytes'));
+    URL.createObjectURL = vi.fn().mockReturnValue('blob:x');
+    URL.revokeObjectURL = vi.fn();
 
     renderPanel();
 
@@ -79,10 +83,14 @@ describe('LayerManager agent layers', () => {
     // a control nobody can see is a control nobody uses, so this one is on the
     // collapsed header rather than behind the expand
     const download = screen.getByTestId('agent-layer-download');
-    // /download/{filename} takes the basename only, via outputDownloadUrl
-    expect(download).toHaveAttribute('href', '/agent/download/venice_env_risk.gpkg');
-    expect(download).toHaveAttribute('download');
+    await act(async () => fireEvent.click(download));
+    // /download/{filename} takes the basename only
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/agent/download/venice_env_risk.gpkg',
+      expect.objectContaining({ headers: expect.anything() }),
+    );
     expect(screen.queryByText('Remove')).not.toBeInTheDocument();
+    fetchSpy.mockRestore();
   });
 
   it('downloading does not toggle the row', () => {

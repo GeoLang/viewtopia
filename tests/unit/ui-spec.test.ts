@@ -51,7 +51,9 @@ describe('renderUISpec', () => {
     const [layer] = useAgentLayerStore.getState().layers;
     // the endpoint takes the basename, the layer keeps the relative path so the
     // layer panel can offer a download
-    expect(fetch).toHaveBeenCalledWith('/agent/geojson/venice_env_risk.gpkg');
+    expect(fetch).toHaveBeenCalledWith('/agent/geojson/venice_env_risk.gpkg', {
+      headers: expect.anything(),
+    });
     expect(layer.path).toBe('outputs/venice_env_risk.gpkg');
     expect(layer.name).toBe('Flood risk');
   });

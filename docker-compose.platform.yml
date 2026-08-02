@@ -188,12 +188,10 @@ services:
   # is geolang's documented port.
   # Manifest paths ("outputs/foo.gpkg") are relative to geolang's exec dir, so
   # geodukt reads and writes through the same bind mount from the same cwd.
-  # Gating POST /run is opt-in via GEODUKT_JWT_SECRET, because a single-user
-  # stack should not need a login to run a pipeline: unset, an unauthenticated
-  # viewer session runs workflows as before. Set it to the platform secret in a
-  # multi-user deployment and /run then needs an editor or admin token, which is
-  # also how to exercise that path locally. /validate and /operations are open
-  # either way, so headless planning and the evals never need a token.
+  # POST /run follows the shared platform secret like every other gated write,
+  # so it needs an editor or admin token (platform-up.sh always generates the
+  # secret). /validate and /operations are open either way, so headless planning
+  # and the evals never need a token.
   geodukt:
     build:
       context: ../geodukt
@@ -205,7 +203,7 @@ services:
       - ../geolang:/app/geolang:z
     working_dir: /app/geolang
     environment:
-      PLATFORM_JWT_SECRET: ${GEODUKT_JWT_SECRET:-}
+      PLATFORM_JWT_SECRET: ${PLATFORM_JWT_SECRET:-}
     command:
       - serve
       - --bind

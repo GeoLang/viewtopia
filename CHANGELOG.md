@@ -4,7 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- 2026-08-02: geodukt's `/run` now follows the shared `PLATFORM_JWT_SECRET` in
+  the platform compose instead of a separate never-set variable, and the agent
+  client sends the bearer everywhere geolang now enforces it: `/agent/models`
+  and `/agent/geojson` fetches carry the header, and output downloads go
+  through an authenticated fetch instead of a plain anchor, which cannot.
+
 ### Added
+
+- 2026-08-02: **Project file**: save and open the whole workspace as one JSON
+  file (`*.viewtopia.json`, schemaVersion 1): renderer, basemap including
+  custom, camera, split view, agent layers with styles and choropleth, markers,
+  OGC layers. New Project panel in the Data menu, drag and drop opens a project
+  file directly, unknown schema versions and basemaps are rejected with a clear
+  error. Chat, settings, bookmarks and offline stores deliberately stay out.
 
 - **In-browser DuckDB-WASM Spatial** ([docs/duckdb-wasm.md](docs/duckdb-wasm.md))
   - New `src/duckdb/` module: lazy worker-backed `AsyncDuckDB` singleton, `query`/`exec`/`queryAsGeoJson` API, geo-format loaders (`registerGeoJson`, `attachParquetUrl`, `attachCsvUrl`)

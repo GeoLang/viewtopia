@@ -75,27 +75,11 @@ anything multi-user ships, local packaging last.
 - [~] **permission-aware enforcement**: the far end is now enforced in every
       service (per-repo changelogs): tiletopia gates annotations, plugin
       mutations and the asset listing, collecta enforces roles and form
-      ownership, geolang requires a platform JWT to execute a tool. Unknown role
-      strings fail closed everywhere. What is left:
-      - geodukt's `/run` gate is opt-in via `GEODUKT_JWT_SECRET`, unset in
-        the local compose (owner decision 2026-07-29). Gating it by default meant
-        an unauthenticated viewer session could not run a workflow at all, and the
-        model answered the 401 by improvising with sql_query and the raw geopandas
-        tools. Set it before this ships multi-user.
-      - geolang's chat route is still open, so an unauthenticated viewer session
-        starts a run and then every tool call answers 401 and the model narrates
-        the failures. Decide whether the chat route itself should require a token.
-      - geolang's `/upload`, `/draw` and `/export-pdf` write or read files with
-        no token. `/geojson` and `/stats` are confined to the served tree, but
-        the repo root is one of their search dirs by design, so a file there
-        stays name-probeable (404 versus 500) without being readable. Tightening
-        it means deciding what those routes are meant to serve, since the
-        natural_earth bundles and ghsl_pop.tif live there.
-      - an org boundary above the user does not exist. `008_tenancy.sql` creates
-        organizations, org_members and `datasets.org_id`, and the write ladder
-        ignores all of it: only the informational `/check` routes read
-        org_members, so `/check` can answer allowed for someone writes refuse.
-        Either wire orgs into the ladder or drop the schema and the fallback.
+      ownership, geolang requires a platform JWT on everything that runs code,
+      writes a file or reads back user data (chat, sessions, uploads, outputs),
+      and geodukt's `/run` follows the shared platform secret. The org schema
+      that the write ladder never read was dropped (ptolemy migration 028).
+      Unknown role strings fail closed everywhere.
 - [ ] **local deployment packaging (last)**: GPU detection, quantized model
       download, context config, inference-server setup. Wrap llama.cpp/ollama
       tooling rather than build. The differentiation lives in the eval harness
@@ -387,8 +371,6 @@ decision rather than a bug. Per-repo changelogs hold what shipped.
 - [ ] **collecta role strings outside admin/editor/viewer now fail closed.**
       Nothing in the repo creates others, but a live database predating this may
       hold them, and those accounts stop working on deploy.
-- [ ] **geolang has no CI workflow**, so nothing runs its test suite on push.
-      The README's dead CI badge is gone; add a workflow.
 
 ## OPEN: viewtopia feature gaps vs GeoLibre (surveyed 2026-07-30)
 
@@ -418,9 +400,6 @@ High value, existing GeoLang crates supply the engine:
 
 High value, product-level:
 
-- [ ] **project file format**: save/open/share the whole workspace (layers,
-      styles, camera, panels) as one JSON file or URL. The share link encodes
-      camera and renderer only. Probably the single biggest gap.
 - [ ] **SQL workspace panel**: DuckDB is embedded but nothing exposes direct
       SQL entry outside notebooks. Add sample queries, history,
       add-results-to-map, CSV/GeoParquet export, bare-URL remote files via

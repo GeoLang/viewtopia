@@ -8,7 +8,7 @@
  * only thing that executes it.
  */
 
-import { apiHeaders } from '../../lib/apiAuth';
+import { apiHeaders, authHeaders } from '../../lib/apiAuth';
 
 export interface PlanStep {
   index: number;
@@ -113,6 +113,23 @@ export function splitRunReport(result: string): { text: string; report?: Workflo
  */
 export function outputDownloadUrl(path: string): string {
   return `/agent/download/${encodeURIComponent(path.split('/').pop() ?? path)}`;
+}
+
+/**
+ * Download an output through fetch rather than a plain link: the route needs
+ * the bearer header when the platform enforces auth, and an anchor cannot
+ * carry one.
+ */
+export async function downloadOutput(path: string): Promise<boolean> {
+  const res = await fetch(outputDownloadUrl(path), { headers: authHeaders() }).catch(() => null);
+  if (!res?.ok) return false;
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = path.split('/').pop() ?? path;
+  a.click();
+  URL.revokeObjectURL(url);
+  return true;
 }
 
 /**

@@ -14,7 +14,7 @@ import {
   Box,
 } from '@mantine/core';
 import { IconChevronRight, IconDownload, IconStack2, IconX, } from '@tabler/icons-react';
-import { outputDownloadUrl } from '../../features/workflow/plan';
+import { downloadOutput } from '../../features/workflow/plan';
 import { layerStyle, useAgentLayerStore, type AgentLayer } from '../../store/agentLayers';
 import { choroplethFields } from '../../store/choropleth';
 
@@ -90,11 +90,12 @@ function AgentLayerRow({
               size="sm"
               variant="subtle"
               color="gray"
-              component="a"
-              href={outputDownloadUrl(layer.path)}
-              download
               title={`Download ${layer.path.split('/').pop()}`}
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                const path = layer.path;
+                if (path) void downloadOutput(path);
+              }}
               data-testid="agent-layer-download"
             >
               <IconDownload size={14} />

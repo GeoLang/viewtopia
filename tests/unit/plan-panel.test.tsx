@@ -276,8 +276,7 @@ describe('PlanPanel', () => {
     );
 
     const link = screen.getByTestId('plan-download');
-    // /download/{filename} is not a path route: only the basename matches
-    expect(link).toHaveAttribute('href', '/agent/download/depot_catchment.gpkg');
+    // a button, not an anchor: the download fetch carries the bearer header
     expect(link).toHaveTextContent('depot_catchment.gpkg');
     // the plan's own "Writes:" line gives way to the download, no extra row
     expect(screen.queryByText('Writes: outputs/depot_catchment.gpkg')).not.toBeInTheDocument();
@@ -332,10 +331,7 @@ describe('PlanPanel', () => {
 
     expect(screen.getByTestId('plan-status')).toHaveTextContent('ran');
     expect(screen.getAllByTestId('plan-step-outcome')).toHaveLength(3);
-    expect(screen.getByTestId('plan-download')).toHaveAttribute(
-      'href',
-      '/agent/download/depot_catchment.gpkg',
-    );
+    expect(screen.getByTestId('plan-download')).toHaveTextContent('depot_catchment.gpkg');
     expect(screen.queryByTestId('plan-approve')).not.toBeInTheDocument();
   });
 

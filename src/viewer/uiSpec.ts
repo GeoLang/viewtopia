@@ -6,6 +6,7 @@
  * (GPKG/SHP/GeoJSON). We fetch each via the agent's `/geojson/<file>` endpoint
  * (which converts to GeoJSON) and render it on the Cesium globe.
  */
+import { authHeaders } from '../lib/apiAuth';
 import { useAppStore } from '../store/app';
 import { useAgentLayerStore, type AgentLayer } from '../store/agentLayers';
 
@@ -52,7 +53,7 @@ export async function renderUISpec(spec: UiSpec): Promise<void> {
     const color = layer.color || LAYER_COLORS[i % LAYER_COLORS.length];
 
     try {
-      const res = await fetch(`/agent/geojson/${file}`);
+      const res = await fetch(`/agent/geojson/${file}`, { headers: authHeaders() });
       if (!res.ok) continue;
       const geojson = (await res.json()) as GeoJSON.FeatureCollection;
       loaded.push({ id: `${i}-${file}`, name: layer.name || file, color, geojson, path: source });
