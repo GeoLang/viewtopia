@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { notifications } from '@mantine/notifications';
 import { renderUISpec } from '../../src/viewer/uiSpec';
 import { useAgentLayerStore } from '../../src/store/agentLayers';
+
+vi.mock('@mantine/notifications', () => ({ notifications: { show: vi.fn() } }));
 
 // No live Cesium viewer is registered in jsdom, so renderUISpec should no-op
 // gracefully (it bails when getActiveCesiumViewer() is null) without throwing.
@@ -22,7 +25,25 @@ describe('renderUISpec', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.mocked(notifications.show).mockClear();
     useAgentLayerStore.setState({ layers: [], markers: [], generation: 0 });
+  });
+
+  it('says sign-in is needed when replay gets 401s', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(new Response('unauthorized', { status: 401 }))),
+    );
+
+    await renderUISpec({
+      type: 'map',
+      layers: [{ name: 'Flood risk', file: 'outputs/venice_env_risk.gpkg' }],
+    });
+
+    expect(useAgentLayerStore.getState().layers).toHaveLength(0);
+    expect(notifications.show).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Sign in required' }),
+    );
   });
 
   it('keeps the source path on the layer it puts in the store', async () => {

@@ -6,6 +6,7 @@
  * (GPKG/SHP/GeoJSON). We fetch each via the agent's `/geojson/<file>` endpoint
  * (which converts to GeoJSON) and render it on the Cesium globe.
  */
+import { notifications } from '@mantine/notifications';
 import { authHeaders } from '../lib/apiAuth';
 import { useAppStore } from '../store/app';
 import { useAgentLayerStore, type AgentLayer } from '../store/agentLayers';
@@ -42,6 +43,8 @@ export async function renderUISpec(spec: UiSpec): Promise<void> {
 
   const specLayers = spec.layers ?? [];
   const loaded: AgentLayer[] = [];
+  let unauthorized = 0;
+  let failed = 0;
 
   for (let i = 0; i < specLayers.length; i++) {
     const layer = specLayers[i];
@@ -54,12 +57,32 @@ export async function renderUISpec(spec: UiSpec): Promise<void> {
 
     try {
       const res = await fetch(`/agent/geojson/${file}`, { headers: authHeaders() });
-      if (!res.ok) continue;
+      if (!res.ok) {
+        if (res.status === 401) unauthorized++;
+        else failed++;
+        continue;
+      }
       const geojson = (await res.json()) as GeoJSON.FeatureCollection;
       loaded.push({ id: `${i}-${file}`, name: layer.name || file, color, geojson, path: source });
     } catch (e) {
+      failed++;
       console.error('renderUISpec: failed to load layer', layer, e);
     }
+  }
+
+  // a silently empty map reads as "history is broken", so name the reason
+  if (unauthorized) {
+    notifications.show({
+      title: 'Sign in required',
+      message: 'Sign in to load analysis layers.',
+      color: 'yellow',
+    });
+  } else if (failed) {
+    notifications.show({
+      title: 'Layers failed to load',
+      message: `Could not load ${failed} layer${failed === 1 ? '' : 's'}.`,
+      color: 'red',
+    });
   }
 
   useAgentLayerStore.getState().setLayers(loaded);
