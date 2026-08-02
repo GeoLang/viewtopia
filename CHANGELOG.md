@@ -14,6 +14,13 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-02: **Binary vector import**: GeoPackage (one layer per import),
+  Shapefile with its sidecars or as a zip, FlatGeobuf and GeoParquet drop into
+  the import panel and are read entirely in the browser by the DuckDB-WASM
+  spatial extension (`src/duckdb/importVector.ts`). Sources with a CRS other
+  than EPSG:4326 are reprojected on the way in, and every imported layer also
+  lands as a queryable DuckDB table.
+
 - 2026-08-02: **Project file**: save and open the whole workspace as one JSON
   file (`*.viewtopia.json`, schemaVersion 1): renderer, basemap including
   custom, camera, split view, agent layers with styles and choropleth, markers,

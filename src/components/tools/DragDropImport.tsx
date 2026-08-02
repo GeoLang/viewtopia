@@ -10,9 +10,16 @@ import {
 } from '@mantine/core';
 import { IconUpload, IconX, IconFile } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import { IMPORT_FORMATS, parseImport } from '../../lib/importGeoJson';
+import {
+  ALL_IMPORT_FORMATS,
+  VECTOR_IMPORT_FORMATS,
+  parseImport,
+} from '../../lib/importGeoJson';
+import { importVectorFiles } from '../../duckdb/importVector';
 import { timedImport, loadTimedImport } from '../../lib/importTime';
 import { applyProject, asProject } from '../../features/project/projectFile';
+
+const extOf = (name: string) => '.' + name.split('.').pop()?.toLowerCase();
 
 interface DragDropImportProps {
   onImport: (name: string, geojson: GeoJSON.FeatureCollection) => void;
@@ -23,14 +30,48 @@ export function DragDropImport({ onImport, onClose }: DragDropImportProps) {
   const [dragging, setDragging] = useState(false);
   const [status, setStatus] = useState<{ text: string; failed: boolean } | null>(null);
 
+  // one batch, so shapefile sidecars dropped together stay together
+  const handleVectorFiles = async (files: File[]) => {
+    const names = files.map((f) => f.name).join(', ');
+    try {
+      const { layers, problems } = await importVectorFiles(files);
+      for (const layer of layers) {
+        onImport(layer.name, layer.geojson);
+        notifications.show({
+          title: 'Imported',
+          message: `${layer.name} — ${layer.geojson.features.length} features`,
+          color: 'green',
+        });
+      }
+      for (const problem of problems) {
+        notifications.show({
+          title: problem.level === 'warning' ? 'Imported with a gap' : 'Import failed',
+          message: `${problem.file} — ${problem.message}`,
+          color: problem.level === 'warning' ? 'yellow' : 'red',
+        });
+      }
+      const summary = layers.length
+        ? layers.map((l) => `${l.name}: ${l.geojson.features.length} features`).join(', ')
+        : problems.map((p) => `${p.file}: ${p.message}`).join(', ');
+      setStatus({ text: summary || `${names}: nothing to import`, failed: layers.length === 0 });
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : 'import failed';
+      setStatus({ text: `${names}: ${reason}`, failed: true });
+      notifications.show({ title: 'Import failed', message: `${names} — ${reason}`, color: 'red' });
+    }
+  };
+
   const handleFiles = async (files: File[]) => {
-    for (const file of files) {
-      const ext = '.' + file.name.split('.').pop()?.toLowerCase();
-      if (!IMPORT_FORMATS.includes(ext)) {
+    const vectorFiles = files.filter((f) => VECTOR_IMPORT_FORMATS.includes(extOf(f.name)));
+    if (vectorFiles.length) await handleVectorFiles(vectorFiles);
+
+    for (const file of files.filter((f) => !vectorFiles.includes(f))) {
+      const ext = extOf(file.name);
+      if (!ALL_IMPORT_FORMATS.includes(ext)) {
         setStatus({ text: `${file.name}: unsupported file`, failed: true });
         notifications.show({
           title: 'Unsupported file',
-          message: `${file.name} — supported: ${IMPORT_FORMATS.join(', ')}`,
+          message: `${file.name} — supported: ${ALL_IMPORT_FORMATS.join(', ')}`,
           color: 'red',
         });
         continue;
@@ -132,11 +173,11 @@ export function DragDropImport({ onImport, onClose }: DragDropImportProps) {
           Drop files here or click Browse
         </Text>
         <Text size="xs" c="dimmed">
-          {IMPORT_FORMATS.join(', ')}
+          {ALL_IMPORT_FORMATS.join(', ')}
         </Text>
         <FileButton
           onChange={(files) => files && void handleFiles(Array.isArray(files) ? files : [files])}
-          accept={IMPORT_FORMATS.join(',')}
+          accept={ALL_IMPORT_FORMATS.join(',')}
           multiple
         >
           {(props) => (

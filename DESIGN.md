@@ -356,6 +356,10 @@ Tools" setting with a Preview badge, so there are no dead buttons in the default
   only for a numeric field with more than one distinct value.
 - Imports carrying timestamps (CSV/GeoJSON properties, GPX `coordTimes`) become playable CZML
   with availability, so Timeline Fit-to-Data works through the UI.
+- Binary vector imports read registered buffers through DuckDB spatial. Zips are unpacked with
+  fflate because `/vsizip/` cannot see a registered buffer, the geometry column and its CRS both
+  come from `DESCRIBE` (`GEOMETRY('EPSG:3857')`), and `ST_Transform` needs `always_xy` or EPSG:4326
+  comes back as lat/lon.
 - WMTS (REST template) and WFS (GeoJSON → agent layers) are verified against fenestra.
 - The building-data toggle self-disables on styles with native 3D buildings and re-enables on
   raster styles at `style.load`.

@@ -8,6 +8,22 @@ import { csvCoordColumns } from './trackParsers';
 
 export const IMPORT_FORMATS = ['.geojson', '.json', '.kml', '.gpx', '.csv'];
 
+/** Read by DuckDB spatial instead of parseImport, sidecars included. */
+export const VECTOR_IMPORT_FORMATS = [
+  '.gpkg',
+  '.shp',
+  '.dbf',
+  '.shx',
+  '.prj',
+  '.cpg',
+  '.fgb',
+  '.parquet',
+  '.geoparquet',
+  '.zip',
+];
+
+export const ALL_IMPORT_FORMATS = [...IMPORT_FORMATS, ...VECTOR_IMPORT_FORMATS];
+
 const GEOMETRY_TYPES = [
   'Point',
   'MultiPoint',

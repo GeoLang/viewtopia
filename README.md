@@ -129,7 +129,7 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 | **Asset Catalogue** | Browse TileTopia tilesets and load with one click |
 | **Cesium Ion** | Connect your Ion account and load assets |
 | **OGC Layers** | Import WMS, WMTS, WFS, and XYZ tile services |
-| **Drag & Drop** | Drop GeoJSON, GPX, KML, CSV files to import |
+| **Drag & Drop** | Drop GeoJSON, GPX, KML, CSV, GeoPackage, Shapefile (loose or zipped), FlatGeobuf and GeoParquet files to import |
 | **GPX/KML Import** | Track and waypoint rendering |
 | **Layer Manager** | Reorder, toggle visibility, opacity, remove |
 | **GeoJSON Editor** | Edit feature properties and vertices |
