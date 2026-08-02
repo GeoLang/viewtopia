@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": false,
   "type": "module",
-  "packageManager": "pnpm@11.8.0",
+  "packageManager": "pnpm@11.18.0",
   "description": "All-in-one geospatial viewer — 3D globe, 2D maps, AI agent, and professional GIS tools",
   "keywords": [
     "gis",
@@ -65,7 +65,7 @@
     "@tabler/icons-react": "^3.44.0",
     "@tmcw/togeojson": "^7.1.2",
     "@turf/turf": "^7.3.5",
-    "@types/three": "^0.184.1",
+    "@types/three": "^0.185.0",
     "apache-arrow": "^21.1.0",
     "cesium": "^1.123.0",
     "geotiff": "^3.0.5",
@@ -81,11 +81,11 @@
     "rbush": "^4.0.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "three": "^0.184.0",
+    "three": "^0.185.0",
     "zustand": "^5.0.13"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.5",
+    "@biomejs/biome": "2.5.6",
     "@playwright/test": "^1.59.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
