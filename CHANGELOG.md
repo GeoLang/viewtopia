@@ -14,6 +14,13 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-02: **SQL workspace** (Data ▸ 🗄 SQL): run DuckDB SQL against
+  everything already in the browser database, Ctrl+Enter or the Run button,
+  results capped at 500 displayed rows, the last 25 queries kept in
+  localStorage. The result can go straight onto the map as an agent layer via
+  `queryAsGeoJson`, out as CSV or Parquet (`src/duckdb/exportFile.ts`), and a
+  remote `.parquet` or `.csv` URL can be attached as a view.
+
 - 2026-08-02: **Binary vector import**: GeoPackage (one layer per import),
   Shapefile with its sidecars or as a zip, FlatGeobuf and GeoParquet drop into
   the import panel and are read entirely in the browser by the DuckDB-WASM

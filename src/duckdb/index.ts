@@ -2,7 +2,7 @@ import type { Table } from 'apache-arrow';
 import { getConnection, close as closeInternal } from './worker';
 
 export { getDb, getConnection } from './worker';
-export { queryAsGeoJson } from './spatial';
+export { queryAsGeoJson, NoGeometryError } from './spatial';
 
 export interface QueryResult {
   rows: Record<string, unknown>[];

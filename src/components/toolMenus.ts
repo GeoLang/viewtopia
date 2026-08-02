@@ -73,6 +73,7 @@ export const DATA_MENU: ToolMenuItem[][] = [
     { panel: 'ogc', label: '🌐 OGC Layers' },
     { panel: 'import', label: '📂 Import' },
     { panel: 'project', label: '💾 Project' },
+    { panel: 'sqlWorkspace', label: '🗄 SQL' },
     { panel: 'modelImport', label: '🧊 3D Models', preview: true },
     { panel: 'trackImport', label: '🗺 Tracks' },
     { panel: 'vectorTiles', label: '🔷 Vector Tiles' },

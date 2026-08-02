@@ -29,6 +29,7 @@ export type ToolPanel =
   | 'ogc'
   | 'import'
   | 'project'
+  | 'sqlWorkspace'
   | 'clipping'
   | 'crossSection'
   | 'heatmap'

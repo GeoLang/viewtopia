@@ -356,6 +356,9 @@ Tools" setting with a Preview badge, so there are no dead buttons in the default
   only for a numeric field with more than one distinct value.
 - Imports carrying timestamps (CSV/GeoJSON properties, GPX `coordTimes`) become playable CZML
   with availability, so Timeline Fit-to-Data works through the UI.
+- SQL exports go through `COPY (...) TO '<temp>'` and `copyFileToBuffer`, then drop the temp file.
+  In the browser that file lives in the wasm filesystem, under the node bundle used by the tests it
+  lands in the process working directory instead.
 - Binary vector imports read registered buffers through DuckDB spatial. Zips are unpacked with
   fflate because `/vsizip/` cannot see a registered buffer, the geometry column and its CRS both
   come from `DESCRIBE` (`GEOMETRY('EPSG:3857')`), and `ST_Transform` needs `always_xy` or EPSG:4326
