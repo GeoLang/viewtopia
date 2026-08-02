@@ -383,9 +383,6 @@ desktop/mobile wrapper (competes with the terravista/collecta track).
 
 High value, existing GeoLang crates supply the engine:
 
-- [ ] **client-side file import beyond text formats**: GeoPackage, Shapefile,
-      FlatGeobuf and GeoParquet drag-and-drop. The client only handles
-      GeoJSON/KML/GPX/CSV today, GeoParquet works only as a URL through DuckDB.
 - [ ] **PMTiles** as a layer source and an export target.
 - [ ] **in-browser raster processing** (terrano via WASM): hillshade, slope,
       aspect, contour, polygonize, zonal/focal stats, raster calculator,
@@ -400,10 +397,6 @@ High value, existing GeoLang crates supply the engine:
 
 High value, product-level:
 
-- [ ] **SQL workspace panel**: DuckDB is embedded but nothing exposes direct
-      SQL entry outside notebooks. Add sample queries, history,
-      add-results-to-map, CSV/GeoParquet export, bare-URL remote files via
-      range requests.
 - [ ] **data-driven symbology**: categorized, graduated, expression and
       rule-based renderers with scale-dependent visibility, SLD/QML/Mapbox
       style import/export (fenestra already parses SLD server-side), and an
