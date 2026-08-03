@@ -1,25 +1,30 @@
 import { create } from 'zustand';
 import { useAgentLayerStore, toFeatureCollection } from './agentLayers';
+import { addRemotePmtiles, type PmtilesInfo } from '../features/pmtiles/source';
 
 /**
  * OGC services the user added (OGCLayersPanel). Raster services (WMS, WMTS, XYZ)
  * are held here so Cesium and MapLibre draw the same set and switching renderers
  * keeps them on screen. WFS is vector: its features go into the agent layers,
  * which every renderer already draws, and the entry here is the handle for them.
+ * PMTiles archives also live here, but only MapLibre can draw them.
  */
-export type OGCType = 'wms' | 'wmts' | 'wfs' | 'xyz';
+export type OGCType = 'wms' | 'wmts' | 'wfs' | 'xyz' | 'pmtiles';
 
 export interface OGCLayer {
   id: string;
   name: string;
   type: OGCType;
   url: string;
+  /** Set once the archive's header has been read; unset means not drawable yet. */
+  pmtiles?: PmtilesInfo;
 }
 
 interface OGCLayerState {
   layers: OGCLayer[];
   addLayer: (name: string, url: string, type: OGCType) => OGCLayer;
   removeLayer: (id: string) => void;
+  setPmtilesInfo: (id: string, info: PmtilesInfo) => void;
 }
 
 /** Root-relative service URLs need an origin before a worker can request them. */
@@ -112,6 +117,21 @@ export function wfsFeatureUrl(layer: OGCLayer): string {
   return `${base}?${params}`;
 }
 
+/** The style-facing URL of a PMTiles layer. A dropped file is already pmtiles://. */
+export function pmtilesStyleUrl(layer: OGCLayer): string {
+  return layer.url.startsWith('pmtiles://') ? layer.url : `pmtiles://${absolute(layer.url)}`;
+}
+
+/**
+ * Read a remote archive's header so the renderer knows how to draw it. Resolves
+ * with the info and throws a message the panel can show.
+ */
+export async function loadPmtilesLayer(layer: OGCLayer): Promise<PmtilesInfo> {
+  const info = await addRemotePmtiles(absolute(layer.url));
+  useOgcLayerStore.getState().setPmtilesInfo(layer.id, info);
+  return info;
+}
+
 /** Agent-layer id holding a WFS layer's features, so removal can find them. */
 export function wfsAgentLayerId(layer: OGCLayer): string {
   return `ogc-${layer.id}`;
@@ -152,4 +172,8 @@ export const useOgcLayerStore = create<OGCLayerState>((set, get) => ({
     }
     set((s) => ({ layers: s.layers.filter((l) => l.id !== id) }));
   },
+  setPmtilesInfo: (id, info) =>
+    set((s) => ({
+      layers: s.layers.map((l) => (l.id === id ? { ...l, pmtiles: info } : l)),
+    })),
 }));

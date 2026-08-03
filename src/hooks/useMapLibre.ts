@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 // markers and controls are DOM overlays that need maplibre's stylesheet
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Protocol } from 'pmtiles';
+import { registerPmtilesProtocol } from '../features/pmtiles/source';
 import { useAppStore } from '../store/app';
 import { useSplitViewStore } from '../store/splitView';
 import { getSharedCamera, setSharedCamera } from './sharedCamera';
@@ -23,18 +23,6 @@ interface UseMapLibreOptions {
    * pane unmounts.
    */
   slot?: 'active' | 'pane';
-}
-
-let pmtilesRegistered = false;
-
-/**
- * Teach MapLibre the pmtiles:// scheme so a basemap can come from a static
- * .pmtiles archive. addProtocol is global, so register it once per page.
- */
-function registerPmtilesProtocol() {
-  if (pmtilesRegistered) return;
-  pmtilesRegistered = true;
-  maplibregl.addProtocol('pmtiles', new Protocol().tile);
 }
 
 export function useMapLibre(opts: UseMapLibreOptions = {}) {

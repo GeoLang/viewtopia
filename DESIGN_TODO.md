@@ -383,7 +383,6 @@ desktop/mobile wrapper (competes with the terravista/collecta track).
 
 High value, existing GeoLang crates supply the engine:
 
-- [ ] **PMTiles** as a layer source and an export target.
 - [ ] **in-browser raster processing** (terrano via WASM): hillshade, slope,
       aspect, contour, polygonize, zonal/focal stats, raster calculator,
       reclassify, spectral index presets (NDVI/NDWI/EVI).
@@ -393,7 +392,7 @@ High value, existing GeoLang crates supply the engine:
 - [ ] **data quality tools** (topoi): check validity, fix geometries, topology
       checks.
 - [ ] **convert loaded data to cloud-native formats**: GeoParquet, FlatGeobuf,
-      PMTiles, COG.
+      COG (PMTiles shipped 2026-08-02).
 
 High value, product-level:
 
@@ -445,9 +444,9 @@ survives reloads and syncs back. Everything below is what does not work.
       (`getJsDelivrBundles()` in the worker). Serve the bundle from the app
       origin so SQL works without the CDN.
 - [ ] **no local basemap.** All eight basemaps are external hosts and
-      "selfhosted" needs the compose stack reachable. No way to load a local
-      MBTiles/PMTiles file as a basemap, which is how GeoLibre solves offline
-      basemaps. Pairs with the PMTiles item in the GeoLibre section above.
+      "selfhosted" needs the compose stack reachable. A local .pmtiles now
+      loads as an overlay layer (2026-08-02), but not as the basemap, which is
+      how GeoLibre solves offline basemaps.
 - [ ] **vector basemap glyphs/sprites load from protomaps.github.io**, so even
       a locally served vector style breaks offline. Bundle or proxy the assets.
 - [ ] **Cesium terrain needs an external provider** (ion token or terrain

@@ -13,9 +13,31 @@ import {
   Box,
 } from '@mantine/core';
 import { IconChevronRight, IconDownload, IconStack2, IconX, } from '@tabler/icons-react';
+import { notifications } from '@mantine/notifications';
 import { downloadOutput } from '../../features/workflow/plan';
 import { layerStyle, useAgentLayerStore, type AgentLayer } from '../../store/agentLayers';
 import { SymbologyEditor } from '../../features/symbology/SymbologyEditor';
+import { geojsonToPmtiles } from '../../features/pmtiles/writer';
+
+/** Tile and download the layer's features as a .pmtiles archive. */
+function exportPmtiles(layer: AgentLayer): void {
+  try {
+    const bytes = geojsonToPmtiles(layer.sourceGeojson ?? layer.geojson, layer.name);
+    const blob = new Blob([bytes], { type: 'application/octet-stream' });
+    const href = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = href;
+    anchor.download = `${layer.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.pmtiles`;
+    anchor.click();
+    URL.revokeObjectURL(href);
+  } catch (err) {
+    notifications.show({
+      title: 'Export failed',
+      message: err instanceof Error ? err.message : 'could not write archive',
+      color: 'red',
+    });
+  }
+}
 
 export interface LayerItem {
   id: string;
@@ -114,17 +136,30 @@ function AgentLayerRow({
           <Box onClick={(e) => e.stopPropagation()}>
             <SymbologyEditor layer={layer} />
           </Box>
-          <Button
-            size="xs"
-            variant="subtle"
-            color="red"
-            onClick={(e) => {
-              e.stopPropagation();
-              removeLayer(layer.id);
-            }}
-          >
-            Remove
-          </Button>
+          <Group gap="xs">
+            <Button
+              size="xs"
+              variant="subtle"
+              onClick={(e) => {
+                e.stopPropagation();
+                exportPmtiles(layer);
+              }}
+              data-testid="agent-layer-export-pmtiles"
+            >
+              Export PMTiles
+            </Button>
+            <Button
+              size="xs"
+              variant="subtle"
+              color="red"
+              onClick={(e) => {
+                e.stopPropagation();
+                removeLayer(layer.id);
+              }}
+            >
+              Remove
+            </Button>
+          </Group>
         </Stack>
       )}
     </Paper>

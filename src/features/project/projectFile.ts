@@ -90,7 +90,9 @@ export function serializeProject(name: string): ViewtopiaProject {
     splitView: { active: split.active, paneRenderer: split.paneRenderer },
     agentLayers: agent.layers,
     markers: agent.markers,
-    ogcLayers: useOgcLayerStore.getState().layers,
+    // a dropped .pmtiles is a browser File the protocol resolves in this
+    // session only, so saving its entry would only produce a dead layer
+    ogcLayers: useOgcLayerStore.getState().layers.filter((l) => !l.pmtiles?.local),
   };
 }
 

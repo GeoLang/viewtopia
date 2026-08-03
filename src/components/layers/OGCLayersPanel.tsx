@@ -12,7 +12,7 @@ import {
 } from '@mantine/core';
 import { IconWorld, IconX, IconPlus } from '@tabler/icons-react';
 import { useState } from 'react';
-import { loadWfsLayer, type OGCLayer, type OGCType } from '../../store/ogcLayers';
+import { loadPmtilesLayer, loadWfsLayer, type OGCLayer, type OGCType } from '../../store/ogcLayers';
 
 interface OGCLayersPanelProps {
   layers: OGCLayer[];
@@ -40,17 +40,25 @@ export function OGCLayersPanel({
     const added = onAdd(name.trim(), url.trim(), type);
     setName('');
     setUrl('');
-    if (added.type !== 'wfs') {
+    if (added.type !== 'wfs' && added.type !== 'pmtiles') {
       setStatus({ text: `Added ${added.name}`, failed: false });
       return;
     }
-    // WFS is a request, not a tile template: it either answers with features or
-    // it fails, and the panel is where that has to show
+    // WFS and PMTiles are requests, not tile templates: they either answer or
+    // they fail, and the panel is where that has to show
     setLoading(true);
     setStatus({ text: `Loading ${added.name}…`, failed: false });
     try {
-      const count = await loadWfsLayer(added);
-      setStatus({ text: `${added.name}: ${count} features`, failed: false });
+      if (added.type === 'pmtiles') {
+        const info = await loadPmtilesLayer(added);
+        setStatus({
+          text: `${added.name}: ${info.kind}, zoom ${info.minZoom}–${info.maxZoom}`,
+          failed: false,
+        });
+      } else {
+        const count = await loadWfsLayer(added);
+        setStatus({ text: `${added.name}: ${count} features`, failed: false });
+      }
     } catch (e) {
       onRemove(added.id);
       setStatus({
@@ -117,6 +125,7 @@ export function OGCLayersPanel({
               { value: 'wmts', label: 'WMTS' },
               { value: 'wfs', label: 'WFS' },
               { value: 'xyz', label: 'XYZ Tiles' },
+              { value: 'pmtiles', label: 'PMTiles' },
             ]}
             value={type}
             onChange={(v) => v && setType(v as OGCType)}
@@ -136,6 +145,12 @@ export function OGCLayersPanel({
         {type === 'wmts' && (
           <Text size="xs" c="dimmed" data-testid="ogc-wmts-note">
             {WMTS_NOTE}
+          </Text>
+        )}
+        {type === 'pmtiles' && (
+          <Text size="xs" c="dimmed" data-testid="ogc-pmtiles-note">
+            PMTiles: drawn by the MapLibre renderer only. A .pmtiles file can also
+            be dropped straight onto the map.
           </Text>
         )}
         {status && (

@@ -77,6 +77,9 @@ importers:
       fflate:
         specifier: ^0.8.3
         version: 0.8.3
+      geojson-vt:
+        specifier: ^4.0.3
+        version: 4.0.3
       geotiff:
         specifier: ^3.0.5
         version: 3.0.5
@@ -119,6 +122,9 @@ importers:
       three:
         specifier: ^0.185.0
         version: 0.185.1
+      vt-pbf:
+        specifier: ^3.1.3
+        version: 3.1.3
       zustand:
         specifier: ^5.0.13
         version: 5.0.14(@types/react@19.2.17)(react@19.2.8)
@@ -126,6 +132,9 @@ importers:
       '@biomejs/biome':
         specifier: 2.5.6
         version: 2.5.6
+      '@mapbox/vector-tile':
+        specifier: ^3.0.0
+        version: 3.0.0
       '@playwright/test':
         specifier: ^1.59.1
         version: 1.62.0
@@ -138,9 +147,15 @@ importers:
       '@types/geojson':
         specifier: ^7946.0.16
         version: 7946.0.16
+      '@types/geojson-vt':
+        specifier: ^3.2.5
+        version: 3.2.5
       '@types/leaflet':
         specifier: ^1.9.21
         version: 1.9.21
+      '@types/pbf':
+        specifier: ^3.0.5
+        version: 3.0.5
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.17
@@ -153,6 +168,9 @@ importers:
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1
+      pbf:
+        specifier: ^5.1.2
+        version: 5.1.2
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -889,6 +907,9 @@ packages:
   '@mapbox/vector-tile@2.0.4':
     resolution: {integrity: sha512-AkOLcbgGTdXScosBWwmmD7cDlvOjkg/DetGva26pIRiZPdeJYjYKarIlb4uxVzi6bwHO6EWH82eZ5Nuv4T5DUg==}
 
+  '@mapbox/vector-tile@3.0.0':
+    resolution: {integrity: sha512-Qf10S1uIHMk20ri/IVBnpS+esUEkVaR5Hftmz88jTInrpmWgPGJfPe3LVjjlE77trLx8tH6qjTG7uWH9hIq/0Q==}
+
   '@mapbox/whoots-js@3.1.0':
     resolution: {integrity: sha512-Es6WcD0nO5l+2BOQS4uLfNPYQaNDfbot3X1XUoloz+x0mPDS3eeORZJl06HXjwBG1fOGwCRnzK88LMdxKRrd6Q==}
     engines: {node: '>=6.0.0'}
@@ -1589,6 +1610,9 @@ packages:
 
   '@types/estree@1.0.9':
     resolution: {integrity: sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg==}
+
+  '@types/geojson-vt@3.2.5':
+    resolution: {integrity: sha512-qDO7wqtprzlpe8FfQ//ClPV9xiuoh2nkIgiouIptON9w5jvD/fA4szvP9GBlDVdJ5dldAl0kX/sy3URbWwLx0g==}
 
   '@types/geojson@7946.0.16':
     resolution: {integrity: sha512-6C8nqWur3j98U6+lXDfTUWIfgvZU+EumvpHKcYjujKH7woYyLj2sUmff0tRhrqM7BohUw7Pz3ZB1jj2gW9Fvmg==}
@@ -2457,6 +2481,10 @@ packages:
     resolution: {integrity: sha512-SuLdBvS42z33m8ejRbInMapQe8n0D3vN/Xd5fmWM3tufNgRQFBpaW2YVJxQZV4iPNqb0vEFvssMEo5w9c6BTIA==}
     hasBin: true
 
+  pbf@5.1.2:
+    resolution: {integrity: sha512-mnvGdvOrIvJOBGUEdGkrVXjN8E/VkIJCkf2eS1DH2yv82ORUlLttmDt0rWY38yYZmVwciZwBUvHM20qxBZf40w==}
+    hasBin: true
+
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
 
@@ -3059,6 +3087,9 @@ packages:
         optional: true
       jsdom:
         optional: true
+
+  vt-pbf@3.1.3:
+    resolution: {integrity: sha512-2LzDFzt0mZKZ9IpVF2r69G9bXaP2Q2sArJCmcCgvfTdCCZzSyz4aCLoQyUilu37Ll56tCblIZrXFIjNUpGIlmA==}
 
   w3c-xmlserializer@5.0.0:
     resolution: {integrity: sha512-o8qghlI8NZHU1lLPrpi2+Uq7abh4GGPpYANlalzWxyWteJOCsr/P+oPBA49TOLu5FTZO4d3F9MnWJfiMo4BkmA==}
@@ -3965,6 +3996,12 @@ snapshots:
       '@mapbox/point-geometry': 1.1.0
       '@types/geojson': 7946.0.16
       pbf: 4.0.1
+
+  '@mapbox/vector-tile@3.0.0':
+    dependencies:
+      '@mapbox/point-geometry': 1.1.0
+      '@types/geojson': 7946.0.16
+      pbf: 5.1.2
 
   '@mapbox/whoots-js@3.1.0': {}
 
@@ -5425,6 +5462,10 @@ snapshots:
 
   '@types/estree@1.0.9': {}
 
+  '@types/geojson-vt@3.2.5':
+    dependencies:
+      '@types/geojson': 7946.0.16
+
   '@types/geojson@7946.0.16': {}
 
   '@types/kdbush@3.0.5': {}
@@ -6309,6 +6350,10 @@ snapshots:
     dependencies:
       resolve-protobuf-schema: 2.1.0
 
+  pbf@5.1.2:
+    dependencies:
+      resolve-protobuf-schema: 2.1.0
+
   picocolors@1.1.1: {}
 
   picomatch@2.3.2: {}
@@ -6875,6 +6920,12 @@ snapshots:
       jsdom: 29.1.1
     transitivePeerDependencies:
       - msw
+
+  vt-pbf@3.1.3:
+    dependencies:
+      '@mapbox/point-geometry': 0.1.0
+      '@mapbox/vector-tile': 1.3.1
+      pbf: 3.3.0
 
   w3c-xmlserializer@5.0.0:
     dependencies:

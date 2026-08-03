@@ -18,8 +18,13 @@ import {
 import { importVectorFiles } from '../../duckdb/importVector';
 import { timedImport, loadTimedImport } from '../../lib/importTime';
 import { applyProject, asProject } from '../../features/project/projectFile';
+import { addLocalPmtiles } from '../../features/pmtiles/source';
+import { useOgcLayerStore } from '../../store/ogcLayers';
 
 const extOf = (name: string) => '.' + name.split('.').pop()?.toLowerCase();
+
+// .pmtiles stays out of ALL_IMPORT_FORMATS: it becomes a tile layer, not GeoJSON
+const ACCEPT_FORMATS = [...ALL_IMPORT_FORMATS, '.pmtiles'];
 
 interface DragDropImportProps {
   onImport: (name: string, geojson: GeoJSON.FeatureCollection) => void;
@@ -61,11 +66,33 @@ export function DragDropImport({ onImport, onClose }: DragDropImportProps) {
     }
   };
 
+  // the archive stays a tile source: registered on the pmtiles protocol and
+  // listed with the OGC layers, which only the MapLibre renderer draws
+  const handlePmtilesFile = async (file: File) => {
+    try {
+      const { url, info } = await addLocalPmtiles(file);
+      const store = useOgcLayerStore.getState();
+      const layer = store.addLayer(file.name.replace(/\.pmtiles$/i, ''), url, 'pmtiles');
+      store.setPmtilesInfo(layer.id, info);
+      const summary = `${info.kind} tiles, zoom ${info.minZoom}–${info.maxZoom}`;
+      setStatus({ text: `${file.name}: ${summary}`, failed: false });
+      notifications.show({ title: 'Imported', message: `${file.name} — ${summary}`, color: 'green' });
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : 'import failed';
+      setStatus({ text: `${file.name}: ${reason}`, failed: true });
+      notifications.show({ title: 'Import failed', message: `${file.name} — ${reason}`, color: 'red' });
+    }
+  };
+
   const handleFiles = async (files: File[]) => {
-    const vectorFiles = files.filter((f) => VECTOR_IMPORT_FORMATS.includes(extOf(f.name)));
+    const pmtilesFiles = files.filter((f) => extOf(f.name) === '.pmtiles');
+    for (const file of pmtilesFiles) await handlePmtilesFile(file);
+    const rest = files.filter((f) => !pmtilesFiles.includes(f));
+
+    const vectorFiles = rest.filter((f) => VECTOR_IMPORT_FORMATS.includes(extOf(f.name)));
     if (vectorFiles.length) await handleVectorFiles(vectorFiles);
 
-    for (const file of files.filter((f) => !vectorFiles.includes(f))) {
+    for (const file of rest.filter((f) => !vectorFiles.includes(f))) {
       const ext = extOf(file.name);
       if (!ALL_IMPORT_FORMATS.includes(ext)) {
         setStatus({ text: `${file.name}: unsupported file`, failed: true });
@@ -173,11 +200,11 @@ export function DragDropImport({ onImport, onClose }: DragDropImportProps) {
           Drop files here or click Browse
         </Text>
         <Text size="xs" c="dimmed">
-          {ALL_IMPORT_FORMATS.join(', ')}
+          {ACCEPT_FORMATS.join(', ')}
         </Text>
         <FileButton
           onChange={(files) => files && void handleFiles(Array.isArray(files) ? files : [files])}
-          accept={ALL_IMPORT_FORMATS.join(',')}
+          accept={ACCEPT_FORMATS.join(',')}
           multiple
         >
           {(props) => (

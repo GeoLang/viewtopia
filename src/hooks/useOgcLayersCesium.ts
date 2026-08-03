@@ -43,9 +43,10 @@ export function useOgcLayersCesium(viewerRef: MutableRefObject<Viewer | null>) {
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || viewer.isDestroyed()) return;
-    // WFS is vector: its features are drawn from the agent layers instead
+    // WFS is vector (drawn from the agent layers), and PMTiles rides a MapLibre
+    // protocol Cesium has no provider for, so neither is draped here
     const added = layers
-      .filter((layer) => layer.type !== 'wfs')
+      .filter((layer) => layer.type !== 'wfs' && layer.type !== 'pmtiles')
       .map((layer) => viewer.imageryLayers.addImageryProvider(imageryProvider(layer)));
     return () => {
       if (viewer.isDestroyed()) return;

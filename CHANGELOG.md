@@ -14,6 +14,19 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-02: **PMTiles as a layer source and an export target**. As a source:
+  a PMTiles archive can be added by URL from the OGC panel or dropped onto the
+  import panel as a local file (`src/features/pmtiles/source.ts`); vector
+  archives draw one colour per source layer, raster archives drape as imagery,
+  both on the MapLibre renderer only (Cesium has no provider for the protocol,
+  and a `.pmtiles` basemap URL already worked before this). A dropped file
+  lives for the session and is kept out of saved project files. As a target:
+  every agent layer's row offers Export PMTiles, cut in the browser by
+  geojson-vt/vt-pbf to zoom 12 and written by our own PMTiles v3 writer
+  (`src/features/pmtiles/writer.ts`: gzipped root/leaf directories, clustered
+  tile data, `vector_layers` metadata), round-trip tested against the pmtiles
+  reader the map itself uses.
+
 - 2026-08-02: **Data-driven symbology**: agent layers can be styled by their
   data with three renderers picked per layer in the layer panel
   (`src/features/symbology/`): graduated (equal-interval or quantile breaks,
