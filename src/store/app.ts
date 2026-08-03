@@ -26,6 +26,7 @@ export type ToolPanel =
   | 'annotate'
   | 'geofence'
   | 'layers'
+  | 'legend'
   | 'ogc'
   | 'import'
   | 'project'

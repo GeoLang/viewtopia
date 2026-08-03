@@ -21,6 +21,7 @@ import { AnnotatePanel } from './tools/AnnotatePanel';
 import { GeofencePanel } from './tools/GeofencePanel';
 import { BookmarkPanel } from './tools/BookmarkPanel';
 import { LayerManager } from './layers/LayerManager';
+import { LegendPanel } from '../features/symbology/LegendPanel';
 import { OGCLayersPanel } from './layers/OGCLayersPanel';
 import { DragDropImport } from './tools/DragDropImport';
 import { ClippingPanel } from './tools/ClippingPanel';
@@ -177,6 +178,8 @@ export function ToolPanels() {
           onClose={close}
         />
       );
+    case 'legend':
+      return <LegendPanel onClose={close} />;
     case 'ogc':
       return (
         <OGCLayersPanel

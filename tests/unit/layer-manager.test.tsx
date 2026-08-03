@@ -4,6 +4,7 @@ import { render, screen, cleanup, fireEvent, act } from '@testing-library/react'
 import { MantineProvider } from '@mantine/core';
 import { LayerManager } from '../../src/components/layers/LayerManager';
 import { layerStyle, useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers';
+import { buildGraduated } from '../../src/features/symbology/symbology';
 
 /**
  * The agent's layers live in the store the renderers draw from, so the panel has
@@ -151,17 +152,19 @@ describe('LayerManager agent layers', () => {
     expect(useAgentLayerStore.getState().generation).toBe(before);
   });
 
-  it('offers the fields worth shading by, and a legend once one is picked', () => {
+  it('offers symbology, and a legend once a renderer is applied', () => {
     useAgentLayerStore.getState().setLayers([scored([0, 50, 100])]);
 
     renderPanel();
     fireEvent.click(screen.getByTestId('agent-layer-row'));
 
-    expect(screen.getByTestId('agent-layer-field')).toHaveAttribute('placeholder', 'Shade by field');
+    expect(screen.getByTestId('agent-layer-symbology-kind')).toHaveValue('Single colour');
     expect(screen.queryByTestId('agent-layer-legend')).not.toBeInTheDocument();
 
     act(() => {
-      useAgentLayerStore.getState().classify('risk', 'risk');
+      const sym = buildGraduated(scored([0, 50, 100]), 'risk');
+      if (!sym) throw new Error('expected graduated symbology');
+      useAgentLayerStore.getState().setSymbology('risk', sym);
     });
 
     const swatches = screen.getAllByTestId('agent-layer-legend-class');
@@ -172,21 +175,32 @@ describe('LayerManager agent layers', () => {
     expect(screen.getByTestId('agent-layer-field')).toHaveValue('risk');
 
     act(() => {
-      useAgentLayerStore.getState().classify('risk', null);
+      useAgentLayerStore.getState().setSymbology('risk', null);
     });
     expect(screen.queryByTestId('agent-layer-legend')).not.toBeInTheDocument();
   });
 
-  it('says why a single-feature layer has nothing to shade instead of offering a dead picker', () => {
-    // the environmental risk tool writes one polygon carrying every score
+  it('offers no graduated or categorized renderer when no field varies', () => {
+    // the environmental risk tool writes one polygon carrying every score;
+    // rules can still single it out, so the kind select stays
     useAgentLayerStore.getState().setLayers([scored([42])]);
 
     renderPanel();
     fireEvent.click(screen.getByTestId('agent-layer-row'));
 
+    expect(screen.getByTestId('agent-layer-symbology-kind')).toBeInTheDocument();
     expect(screen.queryByTestId('agent-layer-field')).not.toBeInTheDocument();
+  });
+
+  it('says why a layer with no attributes has nothing to style by', () => {
+    useAgentLayerStore.getState().setLayers([layer('drawn')]);
+
+    renderPanel();
+    fireEvent.click(screen.getByTestId('agent-layer-row'));
+
+    expect(screen.queryByTestId('agent-layer-symbology-kind')).not.toBeInTheDocument();
     expect(screen.getByTestId('agent-layer-no-shading')).toHaveTextContent(
-      'no numeric field varies across these features',
+      'no field varies across these features',
     );
   });
 

@@ -14,6 +14,18 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-02: **Data-driven symbology**: agent layers can be styled by their
+  data with three renderers picked per layer in the layer panel
+  (`src/features/symbology/`): graduated (equal-interval or quantile breaks,
+  2–9 classes, any raster colour ramp), categorized (one editable colour per
+  distinct value, capped at 12), and rule-based (ordered field/op/value rules,
+  first match wins, unmatched features keep the layer colour). Colours are
+  baked into simplestyle feature properties as before, so MapLibre, Cesium and
+  Leaflet all render them with no renderer-specific code. A new Legend toolbar
+  panel auto-generates one swatch row per class for every layer. Symbology
+  survives the project file; files saved with the old single-field choropleth
+  shape are migrated to graduated on load.
+
 - 2026-08-02: **SQL workspace** (Data ▸ 🗄 SQL): run DuckDB SQL against
   everything already in the browser database, Ctrl+Enter or the Run button,
   results capped at 500 displayed rows, the last 25 queries kept in

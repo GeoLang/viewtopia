@@ -13,6 +13,7 @@ import {
   IconRoute,
   IconBookmark,
   IconDownload,
+  IconListDetails,
   IconStack2,
   IconBuildingSkyscraper,
   IconSettings,
@@ -176,6 +177,7 @@ export function ViewerToolbar() {
 
         <Tooltip label="Measure"><ActionIcon aria-label="Measure" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('measure')}><IconRuler size={14} /></ActionIcon></Tooltip>
         <Tooltip label="Layers"><ActionIcon aria-label="Layers" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('layers')}><IconStack2 size={14} /></ActionIcon></Tooltip>
+        <Tooltip label="Legend"><ActionIcon aria-label="Legend" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('legend')}><IconListDetails size={14} /></ActionIcon></Tooltip>
         <Tooltip label="Inspect"><ActionIcon aria-label="Inspect" size="sm" variant="subtle" color="gray" onClick={toggleInspect}><IconClick size={14} /></ActionIcon></Tooltip>
 
         <Menu shadow="md" width={180}>

@@ -4,7 +4,7 @@
 > Status keys: `[ ]` todo · `[~]` in progress · `[!]` blocked.
 > **Open work only** — a completed item is deleted; durable design knowledge folds
 > into DESIGN.md's current-state sections, dated history goes in per-repo changelogs.
-> Last brought current: **2026-08-01**.
+> Last brought current: **2026-08-02**.
 
 ---
 
@@ -397,10 +397,10 @@ High value, existing GeoLang crates supply the engine:
 
 High value, product-level:
 
-- [ ] **data-driven symbology**: categorized, graduated, expression and
-      rule-based renderers with scale-dependent visibility, SLD/QML/Mapbox
-      style import/export (fenestra already parses SLD server-side), and an
-      auto-generated legend panel.
+- [ ] **symbology, what the first cut left open** (categorized, graduated and
+      rule-based renderers plus the legend panel shipped 2026-08-02):
+      expression renderers, scale-dependent visibility, and SLD/QML/Mapbox
+      style import/export (fenestra already parses SLD server-side).
 - [ ] **attribute table upgrades**: field calculator, virtual fields,
       attribute joins, stats/charts from the table.
 - [ ] **embedding support**: URL params for chrome-less/compact layouts and a

@@ -151,6 +151,30 @@ describe('parseProject', () => {
       parseProject('{"app":"viewtopia","schemaVersion":1,"renderer":"cesium","basemap":"dark"}'),
     ).toThrow(/camera/);
   });
+
+  it('migrates a layer saved with the old choropleth shape', () => {
+    const project = parseProject(
+      JSON.stringify({
+        ...serializeProject('p'),
+        agentLayers: [
+          {
+            id: 'risk',
+            name: 'risk',
+            color: '#3388ff',
+            geojson: { type: 'FeatureCollection', features: [] },
+            choropleth: { field: 'risk', breaks: [0, 50], colors: ['#111111', '#222222'] },
+          },
+        ],
+      }),
+    );
+
+    expect(project.agentLayers[0].symbology).toMatchObject({
+      kind: 'graduated',
+      field: 'risk',
+      breaks: [0, 50],
+      colors: ['#111111', '#222222'],
+    });
+  });
 });
 
 describe('asProject', () => {

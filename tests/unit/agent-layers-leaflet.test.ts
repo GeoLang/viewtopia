@@ -3,6 +3,7 @@ import { renderHook, act, cleanup } from '@testing-library/react';
 import L from 'leaflet';
 import { useLeaflet } from '../../src/hooks/useLeaflet';
 import { useAgentLayersLeaflet } from '../../src/hooks/useAgentLayersLeaflet';
+import { buildGraduated } from '../../src/features/symbology/symbology';
 import { useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers';
 import { useAppStore } from '../../src/store/app';
 import { setSharedCamera } from '../../src/hooks/sharedCamera';
@@ -238,7 +239,9 @@ describe('useAgentLayersLeaflet', () => {
     expect(fillColors(result.current.current!)).toEqual(['#ff0000', '#ff0000']);
 
     act(() => {
-      useAgentLayerStore.getState().classify('risk', 'risk');
+      const l = useAgentLayerStore.getState().layers.find((x) => x.id === 'risk');
+      const sym = l && buildGraduated(l, 'risk');
+      useAgentLayerStore.getState().setSymbology('risk', sym ?? null);
     });
     const shaded = fillColors(result.current.current!);
     expect(shaded).toHaveLength(2);
@@ -246,7 +249,7 @@ describe('useAgentLayersLeaflet', () => {
     expect(shaded[0]).not.toBe('#ff0000');
 
     act(() => {
-      useAgentLayerStore.getState().classify('risk', null);
+      useAgentLayerStore.getState().setSymbology('risk', null);
     });
     expect(fillColors(result.current.current!)).toEqual(['#ff0000', '#ff0000']);
   });

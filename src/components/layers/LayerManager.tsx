@@ -10,13 +10,12 @@ import {
   Switch,
   Slider,
   Button,
-  Select,
   Box,
 } from '@mantine/core';
 import { IconChevronRight, IconDownload, IconStack2, IconX, } from '@tabler/icons-react';
 import { downloadOutput } from '../../features/workflow/plan';
 import { layerStyle, useAgentLayerStore, type AgentLayer } from '../../store/agentLayers';
-import { choroplethFields } from '../../store/choropleth';
+import { SymbologyEditor } from '../../features/symbology/SymbologyEditor';
 
 export interface LayerItem {
   id: string;
@@ -24,15 +23,6 @@ export interface LayerItem {
   type: 'raster' | 'vector' | 'tiles3d' | 'terrain' | 'geojson';
   visible: boolean;
   opacity: number;
-}
-
-const short = (v: number) => String(Number(v.toPrecision(3)));
-
-/** One legend class as its value range, for the swatch's tooltip. */
-function classLabel(classes: NonNullable<AgentLayer['choropleth']>, i: number): string {
-  const upper = classes.breaks[i + 1];
-  const range = upper === undefined ? `${short(classes.breaks[i])}+` : `${short(classes.breaks[i])} to ${short(upper)}`;
-  return `${classes.field}: ${range}`;
 }
 
 /**
@@ -53,10 +43,7 @@ function AgentLayerRow({
 }) {
   const setOpacity = useAgentLayerStore((s) => s.setLayerOpacity);
   const removeLayer = useAgentLayerStore((s) => s.removeLayer);
-  const classify = useAgentLayerStore((s) => s.classify);
   const opacity = layerStyle(layer).opacity;
-  const fields = expanded ? choroplethFields(layer) : [];
-  const classes = layer.choropleth;
 
   return (
     <Paper
@@ -123,39 +110,10 @@ function AgentLayerRow({
               {Math.round(opacity * 100)}%
             </Text>
           </Group>
-          {/* a click in here would collapse the row, and the select needs its own */}
+          {/* a click in here would collapse the row, and the selects need their own */}
           <Box onClick={(e) => e.stopPropagation()}>
-            {fields.length === 0 ? (
-              <Text size="xs" c="dimmed" data-testid="agent-layer-no-shading">
-                Nothing to shade by: no numeric field varies across these features.
-              </Text>
-            ) : (
-              <Select
-                size="xs"
-                clearable
-                placeholder="Shade by field"
-                data={fields}
-                value={classes?.field ?? null}
-                onChange={(field) => classify(layer.id, field)}
-                data-testid="agent-layer-field"
-              />
-            )}
+            <SymbologyEditor layer={layer} />
           </Box>
-          {classes && (
-            <Group gap={2} wrap="nowrap" data-testid="agent-layer-legend">
-              {classes.breaks.map((lower, i) => (
-                <div
-                  key={lower}
-                  data-testid="agent-layer-legend-class"
-                  title={classLabel(classes, i)}
-                  style={{ background: classes.colors[i], width: 18, height: 8, borderRadius: 2 }}
-                />
-              ))}
-              <Text size="xs" c="dimmed">
-                {short(classes.breaks[0])}+
-              </Text>
-            </Group>
-          )}
           <Button
             size="xs"
             variant="subtle"

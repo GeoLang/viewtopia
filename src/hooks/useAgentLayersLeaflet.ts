@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import L from 'leaflet';
 import { useAgentLayerStore, layerStyle } from '../store/agentLayers';
-import { simplestyleColor } from '../store/choropleth';
+import { simplestyleColor } from '../features/symbology/symbology';
 import { useAppStore } from '../store/app';
 import { agentLayersBounds } from './agentLayerBounds';
 

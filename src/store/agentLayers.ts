@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { classifyLayer, clearClassification } from './choropleth';
+import { applySymbology, clearSymbology, type Symbology } from '../features/symbology/symbology';
 
 /**
  * Layers the agent asked us to draw (from a ui_spec). Held here rather than
@@ -27,9 +27,9 @@ export interface AgentLayer {
    * (a drawing, a SQL result, a plugin's own geometry).
    */
   path?: string;
-  /** Set while the layer is shaded by a field: the classes, for the legend. */
-  choropleth?: { field: string; breaks: number[]; colors: string[] };
-  /** The features before shading, so clearing it restores the single colour. */
+  /** Set while the layer is styled by its data: the classes, for the legend. */
+  symbology?: Symbology;
+  /** The features before styling, so clearing it restores the single colour. */
   sourceGeojson?: GeoJSON.FeatureCollection;
 }
 
@@ -64,8 +64,8 @@ interface AgentLayerState {
   removeLayer: (id: string) => void;
   /** Fill opacity of one layer, which every renderer reads through layerStyle. */
   setLayerOpacity: (id: string, opacity: number) => void;
-  /** Shade one layer by a numeric field, or null to go back to one colour. */
-  classify: (id: string, field: string | null) => void;
+  /** Style one layer by its data, or null to go back to one colour. */
+  setSymbology: (id: string, symbology: Symbology | null) => void;
   addMarker: (marker: Omit<AgentMarker, 'id'>) => void;
   clearMarkers: () => void;
   clear: () => void;
@@ -141,10 +141,10 @@ export const useAgentLayerStore = create<AgentLayerState>((set) => ({
         l.id === id ? { ...l, style: { ...l.style, opacity } } : l,
       ),
     })),
-  classify: (id, field) =>
+  setSymbology: (id, symbology) =>
     set((s) => ({
       layers: s.layers.map((l) =>
-        l.id !== id ? l : field ? classifyLayer(l, field) : clearClassification(l),
+        l.id !== id ? l : symbology ? applySymbology(l, symbology) : clearSymbology(l),
       ),
     })),
   addMarker: (marker) =>

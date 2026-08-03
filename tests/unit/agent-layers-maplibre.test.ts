@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { act, renderHook, cleanup } from '@testing-library/react';
 import { useAgentLayersMapLibre } from '../../src/hooks/useAgentLayersMapLibre';
 import { useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers';
+import { buildGraduated } from '../../src/features/symbology/symbology';
 import { useAppStore } from '../../src/store/app';
 
 /** Enough of a maplibre style surface for the paint the hook writes. */
@@ -99,7 +100,9 @@ describe('useAgentLayersMapLibre', () => {
     mount(map);
 
     act(() => {
-      useAgentLayerStore.getState().classify('risk', 'risk');
+      const l = useAgentLayerStore.getState().layers.find((x) => x.id === 'risk');
+      const sym = l && buildGraduated(l, 'risk');
+      useAgentLayerStore.getState().setSymbology('risk', sym ?? null);
     });
 
     const data = map.source('agent-layer-risk')?.data as GeoJSON.FeatureCollection;
@@ -108,7 +111,7 @@ describe('useAgentLayersMapLibre', () => {
     expect(new Set(fills).size).toBe(2);
 
     act(() => {
-      useAgentLayerStore.getState().classify('risk', null);
+      useAgentLayerStore.getState().setSymbology('risk', null);
     });
     const plain = map.source('agent-layer-risk')?.data as GeoJSON.FeatureCollection;
     expect(plain.features.map((f) => f.properties?.fill)).toEqual([undefined, undefined]);

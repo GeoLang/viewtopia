@@ -1,6 +1,7 @@
 import { useAppStore, asRenderer, type Renderer, type Basemap, type CustomBasemap } from '../../store/app';
 import { BASEMAP_OPTIONS } from '../../hooks/basemapTiles';
 import { useAgentLayerStore, type AgentLayer, type AgentMarker } from '../../store/agentLayers';
+import { migrateLegacyChoropleth } from '../symbology/symbology';
 import { useOgcLayerStore, type OGCLayer } from '../../store/ogcLayers';
 import { useSplitViewStore, type PaneRenderer } from '../../store/splitView';
 import { captureCameraState, flyToCameraState, type CameraState } from '../../store/cameraViews';
@@ -145,7 +146,9 @@ export function parseProject(text: string): ViewtopiaProject {
     ...(p.customBasemap ? { customBasemap: p.customBasemap } : {}),
     camera: readCamera(p.camera),
     ...(p.splitView ? { splitView: p.splitView } : {}),
-    agentLayers: requireArray(p.agentLayers, 'agentLayers') as AgentLayer[],
+    agentLayers: (requireArray(p.agentLayers, 'agentLayers') as AgentLayer[]).map(
+      migrateLegacyChoropleth,
+    ),
     markers: requireArray(p.markers, 'markers') as AgentMarker[],
     ogcLayers: requireArray(p.ogcLayers, 'ogcLayers') as OGCLayer[],
   };
