@@ -106,6 +106,41 @@ export function liveLayerName(op: LiveOp, sun: SunParams): string {
   return op === 'hillshade' ? `hillshade ${sun.azimuth}/${sun.altitude} (live)` : `${op} (live)`;
 }
 
+/** Export URL for one live op: degrees bbox, meters per pixel, sun for hillshade. */
+export function exportUrl(op: LiveOp, bbox: Bbox, resolution: number, sun: SunParams): string {
+  const params = new URLSearchParams({ bbox: bbox.join(','), resolution: String(resolution) });
+  if (op === 'hillshade') {
+    params.set('azimuth', String(sun.azimuth));
+    params.set('altitude', String(sun.altitude));
+  }
+  return `${BASE}/export/${op}?${params}`;
+}
+
+/**
+ * Download a live op over a bbox as a web mercator COG. The export route is
+ * gated, unlike the tiles, so the bytes come through an authenticated fetch
+ * and leave via a blob anchor. A refusal carries the server's plain-text
+ * reason (malformed bbox, resolution, the pixel cap).
+ */
+export async function exportCog(
+  op: LiveOp,
+  bbox: Bbox,
+  resolution: number,
+  sun: SunParams,
+): Promise<void> {
+  const res = await fetch(exportUrl(op, bbox, resolution, sun), { headers: apiHeaders() });
+  if (!res.ok) {
+    const reason = await res.text();
+    throw new Error(reason || `export failed: ${res.status}`);
+  }
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${op}.tif`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 /** Drape a PNG (object URL) over a bbox as a Cesium imagery layer. */
 export async function addRasterOverlay(
   url: string,

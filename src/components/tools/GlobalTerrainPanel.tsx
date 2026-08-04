@@ -43,6 +43,8 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(() => offStatus(renderer));
   const [failed, setFailed] = useState(false);
+  // NO_SOURCE names no cause, so the rejection behind it is kept and shown
+  const [detail, setDetail] = useState<string | null>(null);
   const mapTerrainRef = useRef<MapTerrain | null>(null);
 
   // Vertical exaggeration is a scene setting: apply live, no provider needed.
@@ -57,6 +59,7 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     setStatus(offStatus(renderer));
     setFailed(false);
+    setDetail(null);
     return () => {
       mapTerrainRef.current?.remove();
       mapTerrainRef.current = null;
@@ -80,6 +83,7 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
   };
 
   const enableTerrain = async () => {
+    setDetail(null);
     if (onMap) {
       enableMapRelief();
       return;
@@ -108,18 +112,21 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
     } catch (e) {
       // the platform service may be unreachable or still require a token, a typed
       // URL may be wrong, and world terrain needs an Ion token: all land here
+      // cesium's rejections carry the inner error on later lines, often as a bare
+      // "undefined", so only the first line is fit to show
+      const message = (e instanceof Error ? e.message : String(e)).split('\n')[0];
+      console.error('Terrain provider failed', e);
       setFailed(true);
-      setStatus(
-        provider === 'stack'
-          ? NO_SOURCE
-          : `Terrain failed: ${e instanceof Error ? e.message : String(e)}`,
-      );
+      setStatus(provider === 'stack' ? NO_SOURCE : `Terrain failed: ${message}`);
+      // the other statuses already carry the message
+      if (provider === 'stack') setDetail(message);
     } finally {
       setLoading(false);
     }
   };
 
   const resetTerrain = () => {
+    setDetail(null);
     if (onMap) {
       if (!getActiveMapLibre()) {
         setStatus('No active viewer');
@@ -235,6 +242,11 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
         </Button>
 
         <Text size="xs" c={failed ? 'red' : 'green'} data-testid="terrain-status">{status}</Text>
+        {detail && (
+          <Text size="xs" c="dimmed" data-testid="terrain-error">
+            {detail}
+          </Text>
+        )}
       </Stack>
     </Paper>
   );

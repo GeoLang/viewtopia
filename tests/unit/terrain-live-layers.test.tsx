@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 
 // the panel imports cesium through the shared analysis lib, and nothing here
@@ -16,9 +16,19 @@ vi.mock('../../src/viewer/registry', () => ({
   getActiveDeck: vi.fn(() => null),
 }));
 
+vi.mock('../../src/lib/viewBounds', () => ({
+  getViewBounds: () => ({ west: 7, south: 45, east: 7.02, north: 45.01 }),
+}));
+
 import { TerrainAnalysisPanel } from '../../src/components/tools/TerrainAnalysisPanel';
-import { DEFAULT_SUN, liveLayerName, liveTileTemplate } from '../../src/lib/terrainAnalysis';
+import {
+  DEFAULT_SUN,
+  exportUrl,
+  liveLayerName,
+  liveTileTemplate,
+} from '../../src/lib/terrainAnalysis';
 import { useOgcLayerStore, rasterTileTemplate } from '../../src/store/ogcLayers';
+import { useAuthStore } from '../../src/features/auth/store';
 
 window.matchMedia = vi.fn().mockReturnValue({
   matches: false,
@@ -141,5 +151,85 @@ describe('TerrainAnalysisPanel live layer action', () => {
       url: '/tiles/v1/analysis/xyz/ndvi/{z}/{x}/{y}.png',
     });
     expect(screen.getByTestId('terrain-live-status')).toHaveTextContent('ndvi (live)');
+  });
+});
+
+describe('export urls', () => {
+  it('carries bbox and resolution, and the sun only for hillshade', () => {
+    expect(exportUrl('hillshade', [7, 45, 7.02, 45.01], 100, { azimuth: 90, altitude: 20 })).toBe(
+      '/tiles/v1/analysis/export/hillshade?bbox=7%2C45%2C7.02%2C45.01&resolution=100&azimuth=90&altitude=20',
+    );
+    expect(exportUrl('ndvi', [7, 45, 8, 46], 30, DEFAULT_SUN)).toBe(
+      '/tiles/v1/analysis/export/ndvi?bbox=7%2C45%2C8%2C46&resolution=30',
+    );
+    expect(exportUrl('slope', [7, 45, 8, 46], 30, DEFAULT_SUN)).toBe(
+      '/tiles/v1/analysis/export/slope?bbox=7%2C45%2C8%2C46&resolution=30',
+    );
+  });
+});
+
+describe('TerrainAnalysisPanel export download', () => {
+  beforeEach(() => {
+    cleanup();
+    useAuthStore.setState({ loggedIn: true, token: 'jwt-abc', user: { email: 'a@b.c' } });
+    URL.createObjectURL = vi.fn(() => 'blob:cog');
+    URL.revokeObjectURL = vi.fn();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    useAuthStore.setState({ loggedIn: false, token: null, user: null });
+  });
+
+  const renderPanel = () => {
+    render(
+      <MantineProvider>
+        <TerrainAnalysisPanel onClose={() => {}} />
+      </MantineProvider>,
+    );
+  };
+
+  it('fetches the gated export with the bearer and saves the blob', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      blob: async () => new Blob(['tif']),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    renderPanel();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Download NDVI GeoTIFF' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('/tiles/v1/analysis/export/ndvi?bbox=7%2C45%2C7.02%2C45.01&resolution=100');
+    expect(new Headers(init.headers).get('Authorization')).toBe('Bearer jwt-abc');
+    await waitFor(() =>
+      expect(screen.getByTestId('terrain-live-status')).toHaveTextContent('Downloaded ndvi.tif'),
+    );
+    expect(URL.createObjectURL).toHaveBeenCalled();
+  });
+
+  it('shows the server refusal instead of a generic failure', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 400,
+        text: async () => 'bbox covers no ground, expected west,south,east,north in degrees',
+      })),
+    );
+    renderPanel();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Download GeoTIFF' }));
+
+    await waitFor(() => expect(screen.getByText(/covers no ground/)).toBeInTheDocument());
+  });
+
+  it('keeps the exports behind a session, like the analysis posts', () => {
+    useAuthStore.setState({ loggedIn: false, token: null, user: null });
+    renderPanel();
+
+    expect(screen.getByRole('button', { name: 'Download GeoTIFF' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Download NDVI GeoTIFF' })).toBeDisabled();
   });
 });

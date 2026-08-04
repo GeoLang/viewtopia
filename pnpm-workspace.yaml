@@ -13,4 +13,4 @@ allowBuilds:
 # overrides just keep the audit clean.
 overrides:
   undici: "^7.29.0"
-  "@babel/core": ">=7.29.1"
+  "@babel/core": "^7.29.1"

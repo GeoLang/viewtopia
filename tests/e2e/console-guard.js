@@ -15,12 +15,24 @@ import { test as base, expect } from '@playwright/test';
  */
 const ALLOWED = [];
 
+/** Per-page allowances, for a test that drives a failure on purpose. */
+const perTest = new WeakMap();
+
+/**
+ * Let this test's page log console errors matching `rx`. For a test that makes
+ * the app fail deliberately, where the error is the behaviour under test.
+ */
+export function allowConsoleError(page, rx) {
+  perTest.get(page)?.push(rx);
+}
+
 const describeArg = (v) => (v instanceof Error ? `${v.name}: ${v.message}` : String(v));
 
 export const test = base.extend({
   page: async ({ page }, use) => {
     const seen = [];
     const resolving = [];
+    perTest.set(page, []);
 
     page.on('pageerror', (e) => seen.push(`pageerror: ${e.message}`));
     page.on('console', (msg) => {
@@ -40,7 +52,8 @@ export const test = base.extend({
     await use(page);
     await Promise.all(resolving);
 
-    const unexpected = seen.filter((line) => !ALLOWED.some((rx) => rx.test(line)));
+    const allowed = [...ALLOWED, ...perTest.get(page)];
+    const unexpected = seen.filter((line) => !allowed.some((rx) => rx.test(line)));
     expect(unexpected, `browser errors during this test:\n${unexpected.join('\n')}`).toEqual([]);
   },
 });

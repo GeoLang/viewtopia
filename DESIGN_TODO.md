@@ -11,16 +11,12 @@
 
 ## OPEN — platform hygiene
 
-- [ ] **terrain panel NO_SOURCE is not a document problem, reproduce it live.**
-      tiletopia's `/api/v1/terrain/layer.json` and its quantized-mesh tiles are
-      proven Cesium-consumable in isolation (probed 2026-08-04:
-      `CesiumTerrainProvider.fromUrl` with cesium 1.143.0 resolves against a
-      live local tiletopia and `requestTileGeometry(0,0,0)` decodes). If the
-      panel still shows NO_SOURCE, the failure is deployment-side (nginx
-      `/tiles/` prefix, auth, tiletopia not running), and the catch in
-      `GlobalTerrainPanel` maps every rejection to NO_SOURCE. Reproduce against
-      the live platform stack and surface the underlying error instead of the
-      catch-all message.
+- [ ] **tiletopia serves flat terrain as success.** With an empty data dir it
+      downloads SRTM per request, and when that download fails it answers 200
+      with a zero-elevation mesh instead of an error. Terrain looks enabled and
+      is perfectly flat, and no status message can catch it client-side. Found
+      2026-08-04 while proving the NO_SOURCE panel path. Decide: error, or an
+      honest flat-fallback marker in the response.
 - [ ] **drop the `geolang-pgdata` volume.** Kept as a rollback artifact when the
       embedded Letta server and its postgres were removed for sibyl. Nothing reads
       it, and the rollback it insures against is long past. Delete it once nobody
@@ -133,16 +129,13 @@ left is the edges neither reaches.
 
 The sweep closed the missing-column class: every mounted route is called against
 a migrated database and 42703/42P01 fails CI (see the changelog). The fixable
-class of its standing 500s closed 2026-08-04 (changelog again); what is left
-needs a decision rather than a fix.
+class of its standing 500s closed 2026-08-04 (changelog again), and the same day
+closed the pgRouting id mapping (junction uuids ranked to bigints per statement,
+validated end to end against pgRouting 3.8) and removed the never-worked
+`branches/{id}/reproject` route. What is left needs a decision rather than a
+fix.
 
-- [ ] the four pgRouting routes bind uuid junction ids into the `pgr_*` bigint
-      node parameters, so even with the extension installed shortest-path,
-      astar, isochrone and tsp fail on the cast. Needs an id-mapping layer.
-- [ ] `branches/{id}/reproject` writes through the read-only `features` view
-      (55000), so the route has never worked against the current schema.
-      Rewrite it against the underlying table or remove it.
-- [ ] two more standing defects of the same kind the sweep reports:
+- [ ] two standing defects of the kind the sweep reports:
       `POST /datasets/{id}/routes` inserts geometry without an M dimension into
       an M-typed column, and `POST /rasters/{id}/tiles` casts bytea to `raster`,
       which needs postgis_raster and a real raster blob.

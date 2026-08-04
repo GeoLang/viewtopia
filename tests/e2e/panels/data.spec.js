@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { crc32, deflateSync } from 'node:zlib';
-import { test, expect } from '../console-guard';
+import { allowConsoleError, test, expect } from '../console-guard';
 import { PANEL, MENU_ITEM, openApp } from '../panel-helpers';
 import { mintToken, platformAuthHeaders } from '../../../scripts/platform-token.mjs';
 
@@ -717,17 +717,25 @@ test.describe('Data panels', () => {
     ).toEqual({ quantizedMesh: true, url: expect.stringContaining(STACK_TERRAIN_URL) });
 
     // and when the service does not answer with terrain, the panel says so
-    // instead of leaving the last status up
+    // instead of leaving the last status up, and names the rejection under it
     await panel.getByRole('button', { name: 'Reset to Ellipsoid' }).click();
     await expect(status).toHaveText('Ellipsoid (default)');
     answer = 'unusable';
+    allowConsoleError(page, /Terrain provider failed/);
     await panel.getByRole('button', { name: 'Enable Terrain' }).click();
     await expect(status).toHaveText(
       'No terrain source: the platform terrain service did not answer, terrain stays off',
     );
+    await expect(panel.getByTestId('terrain-error')).toHaveText(/tile format is not specified/);
     expect(
       await page.evaluate(() => 'requestVertexNormals' in window.__viewtopiaViewer.terrainProvider),
     ).toBe(false);
+
+    // a later success clears the cause line rather than leaving it under a good status
+    answer = 'terrain';
+    await panel.getByRole('button', { name: 'Enable Terrain' }).click();
+    await expect(status).toHaveText('Platform terrain enabled');
+    await expect(panel.getByTestId('terrain-error')).toHaveCount(0);
 
     await closePanel(page, panel);
   });

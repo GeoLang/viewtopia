@@ -10,7 +10,7 @@ import {
   Button,
   NumberInput,
 } from '@mantine/core';
-import { IconMountain, IconX } from '@tabler/icons-react';
+import { IconDownload, IconMountain, IconX } from '@tabler/icons-react';
 import type { GeoJsonDataSource, ImageryLayer } from 'cesium';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { renderGeoJson } from '../../viewer/renderGeoJson';
@@ -24,12 +24,14 @@ import {
   contours,
   currentBbox,
   DEFAULT_SUN,
+  exportCog,
   liveLayerName,
   liveTileTemplate,
   removeOverlay,
   terrainRaster,
   SIGN_IN_HINT,
   type Bbox,
+  type LiveOp,
   type MapResult,
 } from '../../lib/terrainAnalysis';
 
@@ -39,6 +41,8 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
   const [analysis, setAnalysis] = useState<Op>('slope');
   const [opacity, setOpacity] = useState(70);
   const [sun, setSun] = useState(DEFAULT_SUN);
+  const [resolution, setResolution] = useState(100);
+  const [exporting, setExporting] = useState<LiveOp | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -125,6 +129,24 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
   const addNdvi = () => {
     const layer = addXyzLayer(liveLayerName('ndvi', sun), liveTileTemplate('ndvi', sun));
     setStatus(`Showing ${layer.name}`);
+  };
+
+  const download = async (op: LiveOp) => {
+    const bbox = currentBbox();
+    if (!bbox) {
+      setError('Cannot read the current map view');
+      return;
+    }
+    setExporting(op);
+    setError(null);
+    try {
+      await exportCog(op, bbox as Bbox, resolution, sun);
+      setStatus(`Downloaded ${op}.tif`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Export failed');
+    } finally {
+      setExporting(null);
+    }
   };
 
   return (
@@ -218,19 +240,61 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
           </Button>
         </Group>
 
-        <Button
+        <NumberInput
           size="xs"
-          variant="light"
-          color="violet"
-          onClick={addLive}
-          disabled={!isLive}
-        >
-          Add live layer
-        </Button>
+          label="Export resolution (m/px)"
+          min={1}
+          value={resolution}
+          onChange={(v) => typeof v === 'number' && setResolution(v)}
+          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
+        />
 
-        <Button size="xs" variant="light" color="green" onClick={addNdvi}>
-          Add live NDVI layer
-        </Button>
+        <Group gap="xs" wrap="nowrap">
+          <Button
+            size="xs"
+            variant="light"
+            color="violet"
+            onClick={addLive}
+            disabled={!isLive}
+            style={{ flex: 1 }}
+          >
+            Add live layer
+          </Button>
+          <ActionIcon
+            size="lg"
+            variant="light"
+            color="violet"
+            aria-label="Download GeoTIFF"
+            onClick={() => isLive && download(analysis as LiveOp)}
+            disabled={!isLive || needsSignIn}
+            loading={exporting !== null && exporting === analysis}
+          >
+            <IconDownload size={14} />
+          </ActionIcon>
+        </Group>
+
+        <Group gap="xs" wrap="nowrap">
+          <Button
+            size="xs"
+            variant="light"
+            color="green"
+            onClick={addNdvi}
+            style={{ flex: 1 }}
+          >
+            Add live NDVI layer
+          </Button>
+          <ActionIcon
+            size="lg"
+            variant="light"
+            color="green"
+            aria-label="Download NDVI GeoTIFF"
+            onClick={() => download('ndvi')}
+            disabled={needsSignIn}
+            loading={exporting === 'ndvi'}
+          >
+            <IconDownload size={14} />
+          </ActionIcon>
+        </Group>
 
         {status && (
           <Text size="xs" c="dimmed" data-testid="terrain-live-status">

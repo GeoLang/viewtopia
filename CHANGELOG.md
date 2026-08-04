@@ -6,10 +6,23 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-04: the Global Terrain panel names the rejection behind its
+  NO_SOURCE status. The catch-all message stays, with the provider's own error
+  ("An error occurred while accessing /tiles/v1/terrain/layer.json.", "The tile
+  format is not specified in the layer.json file.") on a line under it and the
+  full error in `console.error`. Nothing was wrong deployment-side: probed
+  against the live stack, `/tiles/v1/terrain/` reaches tiletopia through the
+  nginx rewrite, terrain reads are exempt from auth, and the panel enables a
+  real quantized-mesh provider. NO_SOURCE reproduces only when tiletopia is
+  down, which the status now says.
+
 - 2026-08-04: `pnpm audit` is clean: overrides in pnpm-workspace.yaml force the
-  patched undici (`^7.29.0`, kept on 7.x because jsdom 29 deep-imports paths
-  undici 8 moved) and `@babel/core` (`>=7.29.1`). All 13 advisories were
-  dev-only (jsdom/vitest, the vite react plugin), nothing shipped to users.
+  patched undici and `@babel/core`. Both are pinned to their current majors
+  (`^7.29.0`, `^7.29.1`): an open `>=` range resolved them to the next major,
+  which broke jsdom (undici 8 moved paths it deep-imports) and `pnpm dev`
+  (Babel 8 misparses `<T = unknown>` arrow generics in .tsx that esbuild
+  accepts, so only dev broke). All 13 advisories were dev-only (jsdom/vitest,
+  the vite react plugin), nothing shipped to users.
 
 - 2026-08-02: geodukt's `/run` now follows the shared `PLATFORM_JWT_SECRET` in
   the platform compose instead of a separate never-set variable, and the agent
@@ -19,6 +32,12 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-04: **analysis GeoTIFF download**. The terrain panel exports any live
+  op (hillshade with its sun, slope, ndvi) over the current view as a web
+  mercator COG through tiletopia's new gated `/analysis/export/` route: a
+  resolution input in m/px, bearer-authenticated fetch, blob anchor download,
+  and the server's plain-text refusal (malformed bbox, pixel cap) shown
+  verbatim in the panel.
 - 2026-08-04: **live NDVI layer**. The terrain panel's live section grew an
   NDVI button: sentinel-2 red and nir reduced to a monthly median and painted
   brown-tan-green, served tile by tile from the same
