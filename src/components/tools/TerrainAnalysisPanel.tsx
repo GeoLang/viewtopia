@@ -1,10 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
-import { Paper, Text, Stack, Group, ActionIcon, Select, Slider, Button } from '@mantine/core';
+import {
+  Paper,
+  Text,
+  Stack,
+  Group,
+  ActionIcon,
+  Select,
+  Slider,
+  Button,
+  NumberInput,
+} from '@mantine/core';
 import { IconMountain, IconX } from '@tabler/icons-react';
 import type { GeoJsonDataSource, ImageryLayer } from 'cesium';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { renderGeoJson } from '../../viewer/renderGeoJson';
 import { useAppStore } from '../../store/app';
+import { useOgcLayerStore } from '../../store/ogcLayers';
 import { useAuthStore } from '../../features/auth/store';
 import {
   addMapGeoJson,
@@ -12,6 +23,9 @@ import {
   addRasterOverlay,
   contours,
   currentBbox,
+  DEFAULT_SUN,
+  liveLayerName,
+  liveTileTemplate,
   removeOverlay,
   terrainRaster,
   SIGN_IN_HINT,
@@ -24,9 +38,12 @@ type Op = 'slope' | 'aspect' | 'hillshade' | 'contours';
 export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
   const [analysis, setAnalysis] = useState<Op>('slope');
   const [opacity, setOpacity] = useState(70);
+  const [sun, setSun] = useState(DEFAULT_SUN);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
   const renderer = useAppStore((s) => s.renderer);
+  const addXyzLayer = useOgcLayerStore((s) => s.addXyzLayer);
   const needsSignIn = useAuthStore((s) => !s.token);
   const layerRef = useRef<ImageryLayer | null>(null);
   const dsRef = useRef<GeoJsonDataSource | undefined>(undefined);
@@ -75,7 +92,7 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
           dsRef.current = await renderGeoJson(fc, '#f59e0b', false, 'contours-result');
         }
       } else {
-        const url = await terrainRaster(analysis, bbox as Bbox);
+        const url = await terrainRaster(analysis, bbox as Bbox, sun);
         urlRef.current = url;
         if (renderer === 'maplibre') {
           mapResultRef.current = addMapRaster('terrain-result', url, bbox as Bbox, opacity / 100);
@@ -88,6 +105,19 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const setSunValue = (key: 'azimuth' | 'altitude') => (v: number | string) =>
+    setSun((s) => (typeof v === 'number' ? { ...s, [key]: v } : s));
+
+  // slope and hillshade also render as on-demand tiles, so they can go on as a
+  // normal XYZ layer the layer panel manages
+  const isLive = analysis === 'slope' || analysis === 'hillshade';
+
+  const addLive = () => {
+    if (analysis !== 'slope' && analysis !== 'hillshade') return;
+    const layer = addXyzLayer(liveLayerName(analysis, sun), liveTileTemplate(analysis, sun));
+    setStatus(`Showing ${layer.name}`);
   };
 
   return (
@@ -132,6 +162,29 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
           styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
+        {analysis === 'hillshade' && (
+          <Group grow>
+            <NumberInput
+              size="xs"
+              label="Azimuth"
+              min={0}
+              max={360}
+              value={sun.azimuth}
+              onChange={setSunValue('azimuth')}
+              styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
+            />
+            <NumberInput
+              size="xs"
+              label="Altitude"
+              min={0}
+              max={90}
+              value={sun.altitude}
+              onChange={setSunValue('altitude')}
+              styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
+            />
+          </Group>
+        )}
+
         <Text size="xs" c="dimmed">Opacity: {opacity}%</Text>
         <Slider
           size="xs"
@@ -157,6 +210,22 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
             Clear
           </Button>
         </Group>
+
+        <Button
+          size="xs"
+          variant="light"
+          color="violet"
+          onClick={addLive}
+          disabled={!isLive}
+        >
+          Add live layer
+        </Button>
+
+        {status && (
+          <Text size="xs" c="dimmed" data-testid="terrain-live-status">
+            {status}
+          </Text>
+        )}
 
         {needsSignIn && (
           <Text size="xs" c="dimmed" data-testid="terrain-signin">

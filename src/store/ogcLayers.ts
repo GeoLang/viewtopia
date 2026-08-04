@@ -23,6 +23,8 @@ export interface OGCLayer {
 interface OGCLayerState {
   layers: OGCLayer[];
   addLayer: (name: string, url: string, type: OGCType) => OGCLayer;
+  /** Add an XYZ layer, or return the one already drawing the same tile URL. */
+  addXyzLayer: (name: string, url: string) => OGCLayer;
   removeLayer: (id: string) => void;
   setPmtilesInfo: (id: string, info: PmtilesInfo) => void;
 }
@@ -163,6 +165,11 @@ export const useOgcLayerStore = create<OGCLayerState>((set, get) => ({
     const layer: OGCLayer = { id: crypto.randomUUID(), name, url, type };
     set((s) => ({ layers: [...s.layers, layer] }));
     return layer;
+  },
+  addXyzLayer: (name, url) => {
+    const template = absolute(url);
+    const existing = get().layers.find((l) => rasterTileTemplate(l) === template);
+    return existing ?? get().addLayer(name, url, 'xyz');
   },
   removeLayer: (id) => {
     const layer = get().layers.find((l) => l.id === id);

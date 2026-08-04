@@ -14,6 +14,16 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-04: **live terrain analysis layers**. The terrain panel can add
+  hillshade or slope as an XYZ layer over tiletopia's
+  `/tiles/v1/analysis/xyz/{op}/{z}/{x}/{y}.png`, rendered per tile on demand
+  instead of one PNG for the current view. Hillshade gained azimuth and
+  altitude inputs, which the one-shot Run now sends too, and they are baked
+  into the layer's tile URL and name (`hillshade 315/45 (live)`). The layer
+  goes into the OGC layer store, so the layer panel toggles and removes it like
+  any other, and adding the same op and parameters twice reuses the layer
+  already on the map. The tiles are anonymous, so this works signed out.
+
 - 2026-08-02: **PMTiles as a layer source and an export target**. As a source:
   a PMTiles archive can be added by URL from the OGC panel or dropped onto the
   import panel as a local file (`src/features/pmtiles/source.ts`); vector

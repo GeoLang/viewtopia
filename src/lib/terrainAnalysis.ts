@@ -3,6 +3,9 @@
  * the /tiles/ proxy (nginx rewrites /tiles/(.*) -> tiletopia /api/$1). Also holds
  * the result-drawing helpers the panels share: PNG raster overlays and GeoJSON
  * results, on Cesium and on MapLibre.
+ *
+ * The analysis POSTs need a session token. The live XYZ tiles under /xyz/ are
+ * anonymous, so a signed-out panel can still add one as a layer.
  */
 import {
   type ImageryLayer,
@@ -68,12 +71,39 @@ export function contours(bbox: Bbox): Promise<GeoJSON.FeatureCollection> {
 export function terrainRaster(
   op: 'slope' | 'aspect' | 'hillshade',
   bbox: Bbox,
+  params?: SunParams,
 ): Promise<string> {
-  return postBlobUrl('/terrain', { op, bbox });
+  return postBlobUrl('/terrain', { op, bbox, params });
 }
 
 export function solarRaster(bbox: Bbox, date: string): Promise<string> {
   return postBlobUrl('/solar', { bbox, date });
+}
+
+/** The ops the live tile endpoint renders on demand. */
+export type LiveOp = 'slope' | 'hillshade';
+
+/** Sun position for hillshade, in degrees. */
+export interface SunParams {
+  azimuth: number;
+  altitude: number;
+}
+
+export const DEFAULT_SUN: SunParams = { azimuth: 315, altitude: 45 };
+
+/**
+ * Tile template for a live analysis layer. The {z}/{x}/{y} placeholders stay
+ * literal so the renderers substitute them per tile.
+ */
+export function liveTileTemplate(op: LiveOp, sun: SunParams): string {
+  const path = `${BASE}/xyz/${op}/{z}/{x}/{y}.png`;
+  // slope takes no parameters
+  return op === 'hillshade' ? `${path}?azimuth=${sun.azimuth}&altitude=${sun.altitude}` : path;
+}
+
+/** Layer name carrying the op and, for hillshade, the sun it was added with. */
+export function liveLayerName(op: LiveOp, sun: SunParams): string {
+  return op === 'hillshade' ? `hillshade ${sun.azimuth}/${sun.altitude} (live)` : 'slope (live)';
 }
 
 /** Drape a PNG (object URL) over a bbox as a Cesium imagery layer. */
