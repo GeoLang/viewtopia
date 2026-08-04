@@ -4,18 +4,23 @@
 > Status keys: `[ ]` todo · `[~]` in progress · `[!]` blocked.
 > **Open work only** — a completed item is deleted; durable design knowledge folds
 > into DESIGN.md's current-state sections, dated history goes in per-repo changelogs.
-> Last brought current: **2026-08-02**.
+> Last brought current: **2026-08-04**.
 
 ---
 
 
 ## OPEN — platform hygiene
 
-- [ ] **the terrain panel cannot consume tiletopia's terrain `layer.json`.**
-      `GlobalTerrainPanel` points `CesiumTerrainProvider.fromUrl` at
-      `/tiles/v1/terrain/` and falls back to its no-source state when the
-      service's `layer.json` does not parse. Make tiletopia's document
-      Cesium-consumable or record why it cannot be.
+- [ ] **terrain panel NO_SOURCE is not a document problem, reproduce it live.**
+      tiletopia's `/api/v1/terrain/layer.json` and its quantized-mesh tiles are
+      proven Cesium-consumable in isolation (probed 2026-08-04:
+      `CesiumTerrainProvider.fromUrl` with cesium 1.143.0 resolves against a
+      live local tiletopia and `requestTileGeometry(0,0,0)` decodes). If the
+      panel still shows NO_SOURCE, the failure is deployment-side (nginx
+      `/tiles/` prefix, auth, tiletopia not running), and the catch in
+      `GlobalTerrainPanel` maps every rejection to NO_SOURCE. Reproduce against
+      the live platform stack and surface the underlying error instead of the
+      catch-all message.
 - [ ] **drop the `geolang-pgdata` volume.** Kept as a rollback artifact when the
       embedded Letta server and its postgres were removed for sibyl. Nothing reads
       it, and the rollback it insures against is long past. Delete it once nobody
@@ -127,21 +132,20 @@ left is the edges neither reaches.
 ## OPEN — ptolemy: what the route sweep still reports (2026-08-01)
 
 The sweep closed the missing-column class: every mounted route is called against
-a migrated database and 42703/42P01 fails CI (see the changelog). It reports
-these on every run without failing on them, because each needs a decision rather
-than a fix. All are 500s today.
+a migrated database and 42703/42P01 fails CI (see the changelog). The fixable
+class of its standing 500s closed 2026-08-04 (changelog again); what is left
+needs a decision rather than a fix.
 
-- [ ] `analytics/anomalies` nests aggregate calls (42803).
-- [ ] `analytics/union` and `geoprocessing/convex-hull` call `st_union` and
-      `st_collect` on `geography`, which has no such function (42883).
-- [ ] the four pgRouting routes cast uuid junction ids to bigint (42846).
+- [ ] the four pgRouting routes bind uuid junction ids into the `pgr_*` bigint
+      node parameters, so even with the extension installed shortest-path,
+      astar, isochrone and tsp fail on the cast. Needs an id-mapping layer.
 - [ ] `branches/{id}/reproject` writes through the read-only `features` view
-      (55000).
-- [ ] `POST /incidents` uses `fetch_one`, so no row is a 500 where it should be
-      a 404.
-- [ ] the h3, pointcloud, sfcgal and pgrouting routes need an absent extension
-      and are candidates for the same 501 capability check MobilityDB and
-      pgvector now use.
+      (55000), so the route has never worked against the current schema.
+      Rewrite it against the underlying table or remove it.
+- [ ] two more standing defects of the same kind the sweep reports:
+      `POST /datasets/{id}/routes` inserts geometry without an M dimension into
+      an M-typed column, and `POST /rasters/{id}/tiles` casts bytea to `raster`,
+      which needs postgis_raster and a real raster blob.
 - [ ] the sweep only covers the SQL branches its fixtures reach, which is what
       query variants are for, and a handler that swallows its error is invisible
       to it. Add a variant when a route grows a second branch.

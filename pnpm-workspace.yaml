@@ -7,3 +7,10 @@
 allowBuilds:
   esbuild: true
   protobufjs: true
+
+# Force patched versions of dev-only advisories (undici via jsdom/vitest,
+# @babel/core via @vitejs/plugin-react). Nothing here ships to users; the
+# overrides just keep the audit clean.
+overrides:
+  undici: "^7.29.0"
+  "@babel/core": ">=7.29.1"

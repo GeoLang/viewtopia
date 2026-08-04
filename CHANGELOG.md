@@ -6,6 +6,11 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-04: `pnpm audit` is clean: overrides in pnpm-workspace.yaml force the
+  patched undici (`^7.29.0`, kept on 7.x because jsdom 29 deep-imports paths
+  undici 8 moved) and `@babel/core` (`>=7.29.1`). All 13 advisories were
+  dev-only (jsdom/vitest, the vite react plugin), nothing shipped to users.
+
 - 2026-08-02: geodukt's `/run` now follows the shared `PLATFORM_JWT_SECRET` in
   the platform compose instead of a separate never-set variable, and the agent
   client sends the bearer everywhere geolang now enforces it: `/agent/models`
