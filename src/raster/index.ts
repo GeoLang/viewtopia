@@ -23,15 +23,17 @@ export type {
 export { loadCogFromUrl, loadCogFromBuffer, loadCogOverview, getCogOverviews } from './loader';
 export type { LoadedRaster } from './loader';
 
+export { computeBandMath, computeStats } from './operations';
 export {
-  computeNdvi,
-  computeHillshade,
-  computeSlope,
-  computeAspect,
-  computeBandMath,
-  computeReclass,
-  computeContours,
-} from './operations';
+  cellSizeMeters,
+  terranoAspect,
+  terranoContours,
+  terranoHillshade,
+  terranoNdvi,
+  terranoReclass,
+  terranoSlope,
+} from './terrano';
+export * as rasterEngine from './engine';
 
 export { renderToImageData, renderToDataUrl, sampleRamp, generateLegend } from './renderer';
 

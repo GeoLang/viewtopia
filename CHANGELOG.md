@@ -32,7 +32,19 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- 2026-08-04: **analysis GeoTIFF download**. The terrain panel exports any live
+- 2026-08-04: **in-browser raster processing on terrano wasm**. The Data menu's
+  Raster panel left the preview gate: load a GeoTIFF/COG by URL or file
+  (geotiff.js, auto-downsampled to 1024px), run hillshade, slope
+  (degrees/percent), aspect, NDVI and contours computed by terrano-core
+  compiled to wasm in a web worker, the same engine tiletopia runs
+  server-side, replacing the orphaned JS reimplementations in src/raster.
+  Band math (expression over b1..bn) stays JS. Geographic rasters convert
+  their degree cell size to ground meters at center latitude, so gradients
+  read true. Results preview inline with the color ramps and drape onto
+  MapLibre or Cesium when the raster is EPSG:4326, contours as GeoJSON lines.
+  The wasm artifact is vendored (src/raster/wasm, regeneration steps in its
+  README), unit tests run the real module via initSync, and a panels e2e
+  exercises the worker path end to end in a browser. The terrain panel exports any live
   op (hillshade with its sun, slope, ndvi) over the current view as a web
   mercator COG through tiletopia's new gated `/analysis/export/` route: a
   resolution input in m/px, bearer-authenticated fetch, blob anchor download,

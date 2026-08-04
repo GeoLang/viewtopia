@@ -77,7 +77,7 @@ export const DATA_MENU: ToolMenuItem[][] = [
     { panel: 'modelImport', label: '🧊 3D Models', preview: true },
     { panel: 'trackImport', label: '🗺 Tracks' },
     { panel: 'vectorTiles', label: '🔷 Vector Tiles' },
-    { panel: 'rasterViewer', label: '🖼 Raster/COG', preview: true },
+    { panel: 'rasterViewer', label: '🖼 Raster Analysis' },
   ],
   [
     { panel: 'cesiumIon', label: '🌍 Cesium Ion', preview: true },

@@ -20,7 +20,6 @@ const GATED_PANELS = [
   'pointCloudCompare',
   'classification',
   'cesiumIon',
-  'rasterViewer',
   'google3d',
   'assets',
   'modelImport',
@@ -29,6 +28,7 @@ const GATED_PANELS = [
 
 const SHIPPED_PANELS = [
   'crossSection',
+  'rasterViewer',
   'terrainProfile',
   'charts',
   'dataTable',

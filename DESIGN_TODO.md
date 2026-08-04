@@ -380,9 +380,12 @@ desktop/mobile wrapper (competes with the terravista/collecta track).
 
 High value, existing GeoLang crates supply the engine:
 
-- [ ] **in-browser raster processing** (terrano via WASM): hillshade, slope,
-      aspect, contour, polygonize, zonal/focal stats, raster calculator,
-      reclassify, spectral index presets (NDVI/NDWI/EVI).
+- [ ] **in-browser raster processing, what the first cut left open** (the
+      terrano-wasm panel shipped 2026-08-04: hillshade, slope, aspect,
+      contours, NDVI, band math, see the changelog): polygonize, zonal/focal
+      stats, a reclassify UI (the engine op exists, nothing calls it),
+      one-click NDWI/EVI presets, and results as real layers in the layer
+      panel instead of a single drape per panel.
 - [ ] **browser geoprocessing toolbox** (topoi WASM instead of turf): catalogued
       buffer/dissolve/overlay/voronoi/joins/grids plus a batch runner with tool
       chaining. The geoprocessing plugin covers only the basics.

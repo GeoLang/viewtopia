@@ -69,7 +69,7 @@ import { CesiumIonPanel } from './tools/CesiumIonPanel';
 import { Google3DPanel } from './tools/Google3DPanel';
 import { GlobalTerrainPanel } from './tools/GlobalTerrainPanel';
 import { VectorTilesPanel } from './tools/VectorTilesPanel';
-import { RasterViewerPanel } from './tools/RasterViewerPanel';
+import { RasterPanel } from '../raster/RasterPanel';
 import { PrintExportPanel } from './tools/PrintExportPanel';
 
 /** floating marker over unfinished tools so they never pass as shipped features */
@@ -294,7 +294,7 @@ export function ToolPanels() {
     case 'vectorTiles':
       return <VectorTilesPanel onClose={close} />;
     case 'rasterViewer':
-      return <RasterViewerPanel onClose={close} />;
+      return <RasterPanel onClose={close} />;
     case 'printExport':
       return <PrintExportPanel onClose={close} />;
     default:

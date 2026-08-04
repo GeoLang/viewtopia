@@ -1,7 +1,7 @@
 {
 	"$schema": "https://biomejs.dev/schemas/2.5.5/schema.json",
 	"files": {
-		"includes": ["src/**", "scripts/**", "tests/**", "*.ts", "*.js", "*.mjs"]
+		"includes": ["src/**", "scripts/**", "tests/**", "*.ts", "*.js", "*.mjs", "!src/raster/wasm"]
 	},
 	"formatter": {
 		"enabled": false
