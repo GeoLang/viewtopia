@@ -14,6 +14,13 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-04: **live NDVI layer**. The terrain panel's live section grew an
+  NDVI button: sentinel-2 red and nir reduced to a monthly median and painted
+  brown-tan-green, served tile by tile from the same
+  `/tiles/v1/analysis/xyz/` endpoint as hillshade and slope and managed as an
+  ordinary XYZ layer. The op takes no parameters, so it dedups on its plain
+  tile URL. Requires the tiletopia analysis bbox to be configured, tiles
+  answer 500 otherwise.
 - 2026-08-04: **live terrain analysis layers**. The terrain panel can add
   hillshade or slope as an XYZ layer over tiletopia's
   `/tiles/v1/analysis/xyz/{op}/{z}/{x}/{y}.png`, rendered per tile on demand

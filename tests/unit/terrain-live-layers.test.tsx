@@ -48,6 +48,13 @@ describe('live analysis tile templates', () => {
     expect(liveLayerName('hillshade', DEFAULT_SUN)).toBe('hillshade 315/45 (live)');
     expect(liveLayerName('slope', DEFAULT_SUN)).toBe('slope (live)');
   });
+
+  it('asks for no parameters on ndvi, the sun means nothing to vegetation', () => {
+    expect(liveTileTemplate('ndvi', { azimuth: 120, altitude: 30 })).toBe(
+      '/tiles/v1/analysis/xyz/ndvi/{z}/{x}/{y}.png',
+    );
+    expect(liveLayerName('ndvi', DEFAULT_SUN)).toBe('ndvi (live)');
+  });
 });
 
 describe('addXyzLayer', () => {
@@ -121,5 +128,18 @@ describe('TerrainAnalysisPanel live layer action', () => {
     fireEvent.click(button);
 
     expect(useOgcLayerStore.getState().layers).toHaveLength(1);
+  });
+
+  it('adds the ndvi layer regardless of the selected op', () => {
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: /add live ndvi layer/i }));
+
+    const [layer] = useOgcLayerStore.getState().layers;
+    expect(layer).toMatchObject({
+      name: 'ndvi (live)',
+      type: 'xyz',
+      url: '/tiles/v1/analysis/xyz/ndvi/{z}/{x}/{y}.png',
+    });
+    expect(screen.getByTestId('terrain-live-status')).toHaveTextContent('ndvi (live)');
   });
 });

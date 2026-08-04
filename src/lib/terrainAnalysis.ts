@@ -81,7 +81,7 @@ export function solarRaster(bbox: Bbox, date: string): Promise<string> {
 }
 
 /** The ops the live tile endpoint renders on demand. */
-export type LiveOp = 'slope' | 'hillshade';
+export type LiveOp = 'slope' | 'hillshade' | 'ndvi';
 
 /** Sun position for hillshade, in degrees. */
 export interface SunParams {
@@ -97,13 +97,13 @@ export const DEFAULT_SUN: SunParams = { azimuth: 315, altitude: 45 };
  */
 export function liveTileTemplate(op: LiveOp, sun: SunParams): string {
   const path = `${BASE}/xyz/${op}/{z}/{x}/{y}.png`;
-  // slope takes no parameters
+  // only hillshade takes parameters
   return op === 'hillshade' ? `${path}?azimuth=${sun.azimuth}&altitude=${sun.altitude}` : path;
 }
 
 /** Layer name carrying the op and, for hillshade, the sun it was added with. */
 export function liveLayerName(op: LiveOp, sun: SunParams): string {
-  return op === 'hillshade' ? `hillshade ${sun.azimuth}/${sun.altitude} (live)` : 'slope (live)';
+  return op === 'hillshade' ? `hillshade ${sun.azimuth}/${sun.altitude} (live)` : `${op} (live)`;
 }
 
 /** Drape a PNG (object URL) over a bbox as a Cesium imagery layer. */

@@ -120,6 +120,13 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
     setStatus(`Showing ${layer.name}`);
   };
 
+  // ndvi is served by the same live endpoint (sentinel-2, monthly median) but
+  // is not one of the panel's one-shot ops, so it gets its own button
+  const addNdvi = () => {
+    const layer = addXyzLayer(liveLayerName('ndvi', sun), liveTileTemplate('ndvi', sun));
+    setStatus(`Showing ${layer.name}`);
+  };
+
   return (
     <Paper
       shadow="xl"
@@ -219,6 +226,10 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
           disabled={!isLive}
         >
           Add live layer
+        </Button>
+
+        <Button size="xs" variant="light" color="green" onClick={addNdvi}>
+          Add live NDVI layer
         </Button>
 
         {status && (
