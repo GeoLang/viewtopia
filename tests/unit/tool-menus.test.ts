@@ -12,9 +12,7 @@ const GATED_PANELS = [
   'photo',
   'timelapse',
   'indoor',
-  'drone',
   'export3d',
-  'flythrough',
   'volume',
   'pointCloudCompare',
   'classification',
@@ -34,6 +32,8 @@ const SHIPPED_PANELS = [
   'cesiumIon',
   'google3d',
   'modelImport',
+  'flythrough',
+  'drone',
   // settings is a top-level toolbar button now, not a menu registry entry
 ] as const;
 

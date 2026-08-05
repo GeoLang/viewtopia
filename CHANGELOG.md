@@ -6,6 +6,17 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-05: the flythrough and drone panels left the preview gate over a
+  shared camera path helper (src/lib/cameraPath.ts): catmull-rom or linear
+  spline parametrised by cumulative arc length so uneven waypoints fly at
+  one speed, camera driven per animation frame with heading from a
+  great-circle bearing and pitch from the height change, user input locked
+  during playback and restored on pause, stop, completion, Escape and
+  unmount. Flythrough records camera-position waypoints and flies them at
+  a m/s speed. Drone draws a ground track by click (double-click ends),
+  shows it as point and polyline entities, and simulates the flight
+  raised by the altitude input above each clicked height.
+
 - 2026-08-05: the model import panel left the preview gate, scoped honestly
   to glTF/GLB (Cesium's entity model layer takes nothing else, the
   OBJ/FBX/IFC claims are gone). Choose a file, click the globe to place it
