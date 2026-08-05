@@ -1,0 +1,36 @@
+/* tslint:disable */
+/* eslint-disable */
+export const memory: WebAssembly.Memory;
+export const boundingBox: (a: any) => [number, number, number];
+export const bufferPolygon: (a: any, b: number) => [number, number, number];
+export const clipToRect: (a: any, b: number, c: number, d: number, e: number) => [number, number, number];
+export const convexHull: (a: any) => [number, number, number];
+export const delaunayTriangulation: (a: any) => [number, number, number];
+export const fcBuffer: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+export const fcCentroid: (a: number, b: number) => [number, number, number, number];
+export const fcClipRect: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+export const fcConvexHull: (a: number, b: number) => [number, number, number, number];
+export const fcDissolve: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+export const fcGrid: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number, number];
+export const fcMakeValid: (a: number, b: number) => [number, number, number, number];
+export const fcOverlay: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+export const fcSimplify: (a: number, b: number, c: number) => [number, number, number, number];
+export const fcSpatialJoin: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
+export const fcValidate: (a: number, b: number) => [number, number, number, number];
+export const fcVoronoi: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+export const pointInPolygon: (a: any, b: any) => [number, number, number];
+export const polygonDifference: (a: any, b: any) => [number, number, number];
+export const polygonIntersection: (a: any, b: any) => [number, number, number];
+export const polygonUnion: (a: any, b: any) => [number, number, number];
+export const polygonXor: (a: any, b: any) => [number, number, number];
+export const polygonsIntersect: (a: any, b: any) => [number, number, number];
+export const simplifyLine: (a: any, b: number) => [number, number, number];
+export const splitPolygon: (a: any, b: any) => [number, number, number];
+export const __wbindgen_malloc: (a: number, b: number) => number;
+export const __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
+export const __wbindgen_exn_store: (a: number) => void;
+export const __externref_table_alloc: () => number;
+export const __wbindgen_externrefs: WebAssembly.Table;
+export const __externref_table_dealloc: (a: number) => void;
+export const __wbindgen_free: (a: number, b: number, c: number) => void;
+export const __wbindgen_start: () => void;

@@ -11,12 +11,6 @@
 
 ## OPEN — platform hygiene
 
-- [ ] **tiletopia serves flat terrain as success.** With an empty data dir it
-      downloads SRTM per request, and when that download fails it answers 200
-      with a zero-elevation mesh instead of an error. Terrain looks enabled and
-      is perfectly flat, and no status message can catch it client-side. Found
-      2026-08-04 while proving the NO_SOURCE panel path. Decide: error, or an
-      honest flat-fallback marker in the response.
 - [ ] **drop the `geolang-pgdata` volume.** Kept as a rollback artifact when the
       embedded Letta server and its postgres were removed for sibyl. Nothing reads
       it, and the rollback it insures against is long past. Delete it once nobody
