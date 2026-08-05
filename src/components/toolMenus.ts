@@ -21,7 +21,7 @@ export const ANALYSIS_MENU: ToolMenuItem[][] = [
   [
     { panel: 'shadows', label: '🌑 Shadows' },
     { panel: 'viewshed', label: '👁 Viewshed' },
-    { panel: 'volume', label: '📦 Volume', preview: true },
+    { panel: 'volume', label: '📦 Volume' },
     { panel: 'terrainAnalysis', label: '⛰ Terrain' },
     { panel: 'terrainProfile', label: '📈 Profile' },
     { panel: 'spatialStats', label: '📊 Statistics' },
@@ -69,7 +69,7 @@ export const TOOLS_MENU: ToolMenuItem[][] = [
 export const DATA_MENU: ToolMenuItem[][] = [
   [{ panel: 'portal', label: '🗂 Catalog' }],
   [
-    { panel: 'assets', label: '📦 Assets', preview: true },
+    { panel: 'assets', label: '📦 Assets' },
     { panel: 'ogc', label: '🌐 OGC Layers' },
     { panel: 'import', label: '📂 Import' },
     { panel: 'project', label: '💾 Project' },

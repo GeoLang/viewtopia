@@ -6,6 +6,17 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-05: the volume and assets panels left the preview gate. Volume:
+  cut and fill over a polygon from the draw store, 64x64 grid clipped by
+  even-odd test, heights from sampleTerrainMostDetailed, base height min,
+  mean or typed, refuses to sample the ellipsoid provider and points at
+  the Global Terrain panel instead of reporting zeros. Assets: real
+  tiletopia pipeline, authed list/upload/delete on /api/v1/assets with
+  XHR upload progress, asset status polled every 3s until ready or error
+  (the upload response carries no job id, so job progress is not
+  reachable from the viewer, recorded in DESIGN_TODO), add-to-globe
+  loads the public tileset.json for ready assets.
+
 - 2026-08-05: the flythrough and drone panels left the preview gate over a
   shared camera path helper (src/lib/cameraPath.ts): catmull-rom or linear
   spline parametrised by cumulative arc length so uneven waypoints fly at
