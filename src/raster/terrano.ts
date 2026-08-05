@@ -12,9 +12,12 @@ import * as wasm from './wasm/terrano_wasm';
 import { computeStats } from './operations';
 import type {
   ContourResult,
+  FocalStat,
+  Neighborhood,
   PolygonizeResult,
   RasterMetadata,
   RasterResult,
+  ZonalResult,
 } from './types';
 
 /**
@@ -273,4 +276,105 @@ export function terranoPolygonize(
   }
 
   return { geojson: { type: 'FeatureCollection', features }, regions: features.length };
+}
+
+export function terranoFocalStats(
+  data: Float32Array,
+  width: number,
+  height: number,
+  radius: number,
+  shape: Neighborhood,
+  stat: FocalStat,
+  noData: number | null,
+): RasterResult {
+  const nodata = noData ?? NO_NODATA;
+  const out = wasm.focalStats(toF64(data), width, height, nodata, radius, shape, stat);
+  return result('focal', toF32(out, nodata), width, height, 'viridis');
+}
+
+function decodeZoneRows(flat: Float64Array): ZonalResult[] {
+  const rows: ZonalResult[] = [];
+  // [zone, count, min, max, mean, sum, std, median] per zone
+  for (let i = 0; i + 7 < flat.length; i += 8) {
+    rows.push({
+      zoneId: flat[i],
+      count: flat[i + 1],
+      min: flat[i + 2],
+      max: flat[i + 3],
+      mean: flat[i + 4],
+      sum: flat[i + 5],
+      std: flat[i + 6],
+      median: flat[i + 7],
+    });
+  }
+  return rows;
+}
+
+/** Summarize `values` per zone, both grids sharing one shape. */
+export function terranoZonalStats(
+  values: Float32Array,
+  zones: Float32Array,
+  width: number,
+  height: number,
+  noData: number | null,
+): ZonalResult[] {
+  const nodata = noData ?? NO_NODATA;
+  return decodeZoneRows(wasm.zonalStats(toF64(values), toF64(zones), width, height, 1.0, nodata));
+}
+
+/**
+ * Polygons in the flat encoding terrano reads, one entry per Polygon and one
+ * per member of a MultiPolygon. A feature's zone label is its 1-based position
+ * in the collection, so a non-polygon feature still consumes a label and the
+ * rows line up with the layer's features.
+ */
+function encodePolygons(features: GeoJSON.Feature[]): Float64Array {
+  const flat: number[] = [];
+  features.forEach((feature, i) => {
+    const geometry = feature.geometry;
+    const polygons: GeoJSON.Position[][][] =
+      geometry?.type === 'Polygon'
+        ? [geometry.coordinates]
+        : geometry?.type === 'MultiPolygon'
+          ? geometry.coordinates
+          : [];
+    for (const rings of polygons) {
+      flat.push(i + 1, rings.length);
+      for (const ring of rings) {
+        // terrano walks ring edges pairwise, so an unclosed ring would leak
+        const closed =
+          ring.length > 0 &&
+          (ring[0][0] !== ring[ring.length - 1][0] || ring[0][1] !== ring[ring.length - 1][1])
+            ? [...ring, ring[0]]
+            : ring;
+        flat.push(closed.length);
+        for (const [x, y] of closed) flat.push(x, y);
+      }
+    }
+  });
+  return Float64Array.from(flat);
+}
+
+/**
+ * Zonal stats over polygon zones: the features burn onto the raster's own grid
+ * first, so a zone is whichever cells its outline covers.
+ */
+export function terranoZonalStatsByPolygons(
+  values: Float32Array,
+  features: GeoJSON.Feature[],
+  width: number,
+  height: number,
+  bbox: [number, number, number, number],
+  noData: number | null,
+): ZonalResult[] {
+  const nodata = noData ?? NO_NODATA;
+  const zones = wasm.rasterize(
+    encodePolygons(features),
+    width,
+    height,
+    Float64Array.from(bbox),
+    1.0,
+    nodata,
+  );
+  return decodeZoneRows(wasm.zonalStats(toF64(values), zones, width, height, 1.0, nodata));
 }

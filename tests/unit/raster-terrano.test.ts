@@ -12,9 +12,12 @@ import {
   terranoContours,
   terranoHillshade,
   terranoNormalizedDifference,
+  terranoFocalStats,
   terranoPolygonize,
   terranoReclass,
   terranoSlope,
+  terranoZonalStats,
+  terranoZonalStatsByPolygons,
 } from '../../src/raster/terrano';
 
 beforeAll(() => {
@@ -181,6 +184,89 @@ describe('terrano wasm wrappers', () => {
   it('polygonize refuses a raster that was never classified', () => {
     const data = new Float32Array(1024).map((_, i) => i);
     expect(() => terranoPolygonize(data, 32, 32, [0, 0, 1, 1], null)).toThrow(/classified/);
+  });
+
+  it('focal mean averages the window and clips it at the edge', () => {
+    const src = new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    const res = terranoFocalStats(src, 3, 3, 1, 'square', 'mean', null);
+
+    expect(res.data[4]).toBeCloseTo(5, 6);
+    expect(res.data[0]).toBeCloseTo((1 + 2 + 4 + 5) / 4, 6);
+    expect(res.operation).toBe('focal');
+  });
+
+  it('a circle window drops the corners a square window would keep', () => {
+    const src = new Float32Array([0, 0, 0, 0, 0, 0, 0, 0, 100]);
+    const square = terranoFocalStats(src, 3, 3, 1, 'square', 'max', null);
+    const circle = terranoFocalStats(src, 3, 3, 1, 'circle', 'max', null);
+
+    expect(square.data[4]).toBe(100);
+    expect(circle.data[4]).toBe(0);
+  });
+
+  it('zonal stats group the values by a zone grid, one row per label', () => {
+    const values = new Float32Array([10, 20, 30, 40]);
+    const zones = new Float32Array([2, 1, 2, 1]);
+    const rows = terranoZonalStats(values, zones, 4, 1, null);
+
+    expect(rows.map((r) => r.zoneId)).toEqual([1, 2]);
+    expect(rows[0].mean).toBe(30); // 20 and 40
+    expect(rows[1].mean).toBe(20); // 10 and 30
+    expect(rows[0].count).toBe(2);
+  });
+
+  it('polygon zones burn onto the raster grid before the summary', () => {
+    // left half 10, right half 20, over a bbox of 0..4 in both axes
+    const values = new Float32Array(16);
+    for (let i = 0; i < 16; i++) values[i] = i % 4 < 2 ? 10 : 20;
+    const leftHalf: GeoJSON.Feature = {
+      type: 'Feature',
+      properties: { name: 'west' },
+      geometry: {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [0, 0],
+            [2, 0],
+            [2, 4],
+            [0, 4],
+            [0, 0],
+          ],
+        ],
+      },
+    };
+
+    const rows = terranoZonalStatsByPolygons(values, [leftHalf], 4, 4, [0, 0, 4, 4], null);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].zoneId).toBe(1);
+    expect(rows[0].count).toBe(8);
+    expect(rows[0].mean).toBe(10);
+    expect(rows[0].max).toBe(10);
+  });
+
+  it('an unclosed polygon ring still fills, the encoder closes it', () => {
+    const values = new Float32Array(16).fill(7);
+    const unclosed: GeoJSON.Feature = {
+      type: 'Feature',
+      properties: {},
+      geometry: {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [0, 0],
+            [4, 0],
+            [4, 4],
+            [0, 4],
+          ],
+        ],
+      },
+    };
+
+    const rows = terranoZonalStatsByPolygons(values, [unclosed], 4, 4, [0, 0, 4, 4], null);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].count).toBe(16);
   });
 
   it('cell size converts degrees to ground meters at the center latitude', () => {

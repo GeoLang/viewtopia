@@ -15,6 +15,8 @@ export type {
   ReclassParams,
   ContourParams,
   ContourResult,
+  FocalStat,
+  Neighborhood,
   PolygonizeResult,
   ZonalStatsParams,
   ZonalResult,
@@ -29,11 +31,14 @@ export {
   cellSizeMeters,
   terranoAspect,
   terranoContours,
+  terranoFocalStats,
   terranoHillshade,
   terranoNormalizedDifference,
   terranoPolygonize,
   terranoReclass,
   terranoSlope,
+  terranoZonalStats,
+  terranoZonalStatsByPolygons,
 } from './terrano';
 export * as rasterEngine from './engine';
 

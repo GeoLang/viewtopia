@@ -70,12 +70,23 @@ test('raster panel runs terrano wasm ops on an uploaded dem', async ({ page }) =
   await panel.getByRole('button', { name: 'Run slope' }).click();
   await expect(panel.getByText('Result: slope')).toBeVisible({ timeout: 15000 });
 
+  // focal stats smooth band 1 in a moving window
+  await panel.getByRole('button', { name: 'Run focal statistics' }).click();
+  await expect(panel.getByText('Result: focal')).toBeVisible({ timeout: 15000 });
+
   // reclass bins band 1, with the classes generated from its own range
   await panel.getByRole('button', { name: 'Fill' }).click();
   await panel.getByRole('button', { name: 'Run reclass' }).click();
   await expect(panel.getByText('Result: reclass')).toBeVisible({ timeout: 15000 });
   await expect(panel.getByText('Min 1.000')).toBeVisible();
   await expect(panel.getByText('Max 5.000')).toBeVisible();
+
+  // zonal stats summarize band 1 grouped by those same classes
+  await panel.getByLabel('Zones').click();
+  await page.getByRole('option', { name: 'Result: reclass' }).click();
+  await panel.getByRole('button', { name: 'Run zonal statistics' }).click();
+  await expect(panel.getByText('Zonal statistics')).toBeVisible({ timeout: 15000 });
+  await expect(panel.getByText('5 zones')).toBeVisible();
 
   // polygonize the classes just produced: each class is a contiguous band of
   // rows, so the five classes trace five polygons

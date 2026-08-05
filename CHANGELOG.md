@@ -32,6 +32,15 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-04: **focal and zonal statistics in the Raster panel**, on new
+  terrano-core ops. Focal runs a moving window (min/max/mean/sum/std/median/
+  majority/range, square or circular, any radius) over a source band or the
+  panel's last result and drapes like any other grid. Zonal summarizes one
+  input grouped by another, and the zones can be a band, a previous result, or
+  a polygon layer already on the map, which burns onto the raster's own grid
+  through the new rasterize op first. Rows land in a table keyed by zone, named
+  after the source feature when the zones came from a layer.
+
 - 2026-08-04: **polygonize in the Raster panel**, on a new terrano-core op of
   the same name. Traces connected runs of equal cells into GeoJSON polygons
   with holes, reading a source band or the panel's last result, so the flow is

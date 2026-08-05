@@ -8,11 +8,14 @@ import init from './wasm/terrano_wasm';
 import {
   terranoAspect,
   terranoContours,
+  terranoFocalStats,
   terranoHillshade,
   terranoNormalizedDifference,
   terranoPolygonize,
   terranoReclass,
   terranoSlope,
+  terranoZonalStats,
+  terranoZonalStatsByPolygons,
 } from './terrano';
 
 export type WorkerRequest = { id: number; op: string; args: never[] };
@@ -25,6 +28,9 @@ const ops: Record<string, (...args: never[]) => unknown> = {
   reclass: terranoReclass,
   contours: terranoContours,
   polygonize: terranoPolygonize,
+  focal: terranoFocalStats,
+  zonal: terranoZonalStats,
+  'zonal-polygons': terranoZonalStatsByPolygons,
 };
 
 let ready: Promise<unknown> | null = null;

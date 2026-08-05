@@ -11,6 +11,11 @@ export function contours(data: Float64Array, width: number, height: number, cell
 
 export function fillSinks(data: Float64Array, width: number, height: number, cell_size: number, nodata: number): Float64Array;
 
+/**
+ * Windows are measured in cells, so this one takes no cell size.
+ */
+export function focalStats(data: Float64Array, width: number, height: number, nodata: number, radius: number, shape: string, stat: string): Float64Array;
+
 export function hillshade(data: Float64Array, width: number, height: number, cell_size: number, nodata: number, azimuth: number, altitude: number): Float64Array;
 
 /**
@@ -22,11 +27,22 @@ export function normalizedDifference(a: Float64Array, b: Float64Array, width: nu
 export function polygonize(data: Float64Array, width: number, height: number, cell_size: number, nodata: number): Float64Array;
 
 /**
+ * `polygons` uses the same encoding `polygonize` returns, in the north-up
+ * coordinates of `bbox` (xmin, ymin, xmax, ymax).
+ */
+export function rasterize(polygons: Float64Array, width: number, height: number, bbox: Float64Array, cell_size: number, nodata: number): Float64Array;
+
+/**
  * `classes` is flat (min_inclusive, max_exclusive, new_value) triples.
  */
 export function reclassify(data: Float64Array, width: number, height: number, cell_size: number, nodata: number, classes: Float64Array): Float64Array;
 
 export function slope(data: Float64Array, width: number, height: number, cell_size: number, nodata: number): Float64Array;
+
+/**
+ * Rows come back flat as [zone, count, min, max, mean, sum, std, median].
+ */
+export function zonalStats(values: Float64Array, zones: Float64Array, width: number, height: number, cell_size: number, nodata: number): Float64Array;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
@@ -37,11 +53,14 @@ export interface InitOutput {
     readonly aspect: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly contours: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
     readonly fillSinks: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+    readonly focalStats: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => [number, number, number, number];
     readonly hillshade: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
     readonly normalizedDifference: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
     readonly polygonize: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+    readonly rasterize: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
     readonly reclassify: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
     readonly slope: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+    readonly zonalStats: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;

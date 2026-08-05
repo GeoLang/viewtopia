@@ -113,6 +113,33 @@ export function fillSinks(data, width, height, cell_size, nodata) {
 }
 
 /**
+ * Windows are measured in cells, so this one takes no cell size.
+ * @param {Float64Array} data
+ * @param {number} width
+ * @param {number} height
+ * @param {number} nodata
+ * @param {number} radius
+ * @param {string} shape
+ * @param {string} stat
+ * @returns {Float64Array}
+ */
+export function focalStats(data, width, height, nodata, radius, shape, stat) {
+    const ptr0 = passArrayF64ToWasm0(data, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(shape, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passStringToWasm0(stat, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.focalStats(ptr0, len0, width, height, nodata, radius, ptr1, len1, ptr2, len2);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v4 = getArrayF64FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 8, 8);
+    return v4;
+}
+
+/**
  * @param {Float64Array} data
  * @param {number} width
  * @param {number} height
@@ -180,6 +207,31 @@ export function polygonize(data, width, height, cell_size, nodata) {
 }
 
 /**
+ * `polygons` uses the same encoding `polygonize` returns, in the north-up
+ * coordinates of `bbox` (xmin, ymin, xmax, ymax).
+ * @param {Float64Array} polygons
+ * @param {number} width
+ * @param {number} height
+ * @param {Float64Array} bbox
+ * @param {number} cell_size
+ * @param {number} nodata
+ * @returns {Float64Array}
+ */
+export function rasterize(polygons, width, height, bbox, cell_size, nodata) {
+    const ptr0 = passArrayF64ToWasm0(polygons, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArrayF64ToWasm0(bbox, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.rasterize(ptr0, len0, width, height, ptr1, len1, cell_size, nodata);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v3 = getArrayF64FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 8, 8);
+    return v3;
+}
+
+/**
  * `classes` is flat (min_inclusive, max_exclusive, new_value) triples.
  * @param {Float64Array} data
  * @param {number} width
@@ -221,6 +273,30 @@ export function slope(data, width, height, cell_size, nodata) {
     var v2 = getArrayF64FromWasm0(ret[0], ret[1]).slice();
     wasm.__wbindgen_free(ret[0], ret[1] * 8, 8);
     return v2;
+}
+
+/**
+ * Rows come back flat as [zone, count, min, max, mean, sum, std, median].
+ * @param {Float64Array} values
+ * @param {Float64Array} zones
+ * @param {number} width
+ * @param {number} height
+ * @param {number} cell_size
+ * @param {number} nodata
+ * @returns {Float64Array}
+ */
+export function zonalStats(values, zones, width, height, cell_size, nodata) {
+    const ptr0 = passArrayF64ToWasm0(values, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArrayF64ToWasm0(zones, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.zonalStats(ptr0, len0, ptr1, len1, width, height, cell_size, nodata);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v3 = getArrayF64FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 8, 8);
+    return v3;
 }
 function __wbg_get_imports() {
     const import0 = {

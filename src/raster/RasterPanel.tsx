@@ -22,6 +22,8 @@ import {
 } from '@mantine/core';
 import {
   IconCalculator,
+  IconChartHistogram,
+  IconGridDots,
   IconLeaf,
   IconLink,
   IconMap,
@@ -50,8 +52,10 @@ import * as engine from './engine';
 import { cellSizeMeters } from './terrano';
 import { INDEX_PRESETS } from './indices';
 import { equalIntervals, ReclassEditor, type ReclassClass } from './ReclassEditor';
+import { ZonalTable } from './ZonalTable';
+import { useAgentLayerStore } from '../store/agentLayers';
 import { renderToDataUrl } from './renderer';
-import type { RasterResult, ColorRamp } from './types';
+import type { RasterResult, ColorRamp, FocalStat, Neighborhood, ZonalResult } from './types';
 
 const inputStyles = { input: { background: '#0d1117', borderColor: '#30363d' } };
 
@@ -80,6 +84,14 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
   const [indexBands, setIndexBands] = useState<number[]>(INDEX_PRESETS.ndvi.defaults);
   const [reclassInput, setReclassInput] = useState('0');
   const [polygonInput, setPolygonInput] = useState('0');
+  const [focalInput, setFocalInput] = useState('0');
+  const [focalStat, setFocalStat] = useState<FocalStat>('mean');
+  const [focalShape, setFocalShape] = useState<Neighborhood>('square');
+  const [focalRadius, setFocalRadius] = useState(1);
+  const [zonalValues, setZonalValues] = useState('0');
+  const [zonalZones, setZonalZones] = useState('0');
+  const [zonalRows, setZonalRows] = useState<ZonalResult[] | null>(null);
+  const [zonalLabels, setZonalLabels] = useState<string[] | null>(null);
   const [reclassCount, setReclassCount] = useState(5);
   const [reclassClasses, setReclassClasses] = useState<ReclassClass[]>([]);
   const [azimuth, setAzimuth] = useState(315);
@@ -90,6 +102,7 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
   const [contourInterval, setContourInterval] = useState(10);
 
   const renderer = useAppStore((s) => s.renderer);
+  const mapLayers = useAgentLayerStore((s) => s.layers);
   const layerRef = useRef<ImageryLayer | null>(null);
   const dsRef = useRef<GeoJsonDataSource | undefined>(undefined);
   const mapResultRef = useRef<MapResult | null>(null);
@@ -129,6 +142,17 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
   const sourceData = (input: string) =>
     input === 'result' ? (result?.data ?? null) : (raster?.bands[Number(input)] ?? null);
   const reclassData = sourceData(reclassInput);
+  // zones can also come from a polygon layer already on the map, which burns
+  // onto the raster's grid before the summary runs
+  const polygonLayers = mapLayers.filter((l) =>
+    l.geojson.features.some(
+      (f) => f.geometry?.type === 'Polygon' || f.geometry?.type === 'MultiPolygon',
+    ),
+  );
+  const zoneOptions = [
+    ...sourceOptions,
+    ...polygonLayers.map((l) => ({ value: `layer:${l.id}`, label: l.name })),
+  ];
 
   async function handleLoadUrl() {
     if (!url.trim()) return;
@@ -140,6 +164,7 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
       setResult(null);
       setResultImage(null);
       setVector(null);
+      setZonalRows(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load raster');
     } finally {
@@ -158,6 +183,7 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
       setResult(null);
       setResultImage(null);
       setVector(null);
+      setZonalRows(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load raster');
     } finally {
@@ -240,6 +266,49 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
           });
           setResult(null);
           setResultImage(null);
+          return;
+        }
+        case 'focal': {
+          const data = sourceData(focalInput);
+          if (!data) throw new Error('no input for focal statistics');
+          res = await engine.focalStats(
+            data,
+            width,
+            height,
+            focalRadius,
+            focalShape,
+            focalStat,
+            noData,
+          );
+          break;
+        }
+        case 'zonal': {
+          const values = sourceData(zonalValues);
+          if (!values) throw new Error('no values to summarize');
+          if (zonalZones.startsWith('layer:')) {
+            const layer = mapLayers.find((l) => l.id === zonalZones.slice('layer:'.length));
+            if (!layer) throw new Error('that layer is no longer on the map');
+            setZonalRows(
+              await engine.zonalStatsByPolygons(
+                values,
+                layer.geojson.features,
+                width,
+                height,
+                bbox,
+                noData,
+              ),
+            );
+            setZonalLabels(
+              layer.geojson.features.map(
+                (f, i) => String(f.properties?.name ?? f.properties?.label ?? `Feature ${i + 1}`),
+              ),
+            );
+          } else {
+            const zones = sourceData(zonalZones);
+            if (!zones) throw new Error('no zones to group by');
+            setZonalRows(await engine.zonalStats(values, zones, width, height, noData));
+            setZonalLabels(null);
+          }
           return;
         }
         case 'polygonize': {
@@ -676,6 +745,122 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
               </Text>
             </Paper>
 
+            <Paper p="xs" withBorder bg="#0d1117">
+              <Group justify="space-between" mb={4}>
+                <Group gap={4}>
+                  <IconGridDots size={14} />
+                  <Text size="xs" fw={500} c="white">
+                    Focal Statistics
+                  </Text>
+                </Group>
+                <Button
+                  size="xs"
+                  variant="light"
+                  color="grape"
+                  aria-label="Run focal statistics"
+                  onClick={() => runAnalysis('focal')}
+                  loading={running === 'focal'}
+                >
+                  Run
+                </Button>
+              </Group>
+              <Group gap={8} mb={4}>
+                <Select
+                  aria-label="Focal input"
+                  label="Input"
+                  size="xs"
+                  w={120}
+                  data={sourceOptions}
+                  value={focalInput}
+                  onChange={(v) => setFocalInput(v ?? '0')}
+                  styles={inputStyles}
+                />
+                <NumberInput
+                  label="Radius"
+                  value={focalRadius}
+                  onChange={(v) => setFocalRadius(Number(v))}
+                  size="xs"
+                  w={70}
+                  min={1}
+                  max={15}
+                  styles={inputStyles}
+                />
+              </Group>
+              <Group gap={8}>
+                <Select
+                  aria-label="Focal statistic"
+                  label="Statistic"
+                  size="xs"
+                  w={120}
+                  data={['mean', 'median', 'majority', 'min', 'max', 'sum', 'std', 'range']}
+                  value={focalStat}
+                  onChange={(v) => setFocalStat((v as FocalStat) ?? 'mean')}
+                  styles={inputStyles}
+                />
+                <Select
+                  aria-label="Window shape"
+                  label="Window"
+                  size="xs"
+                  w={90}
+                  data={[
+                    { value: 'square', label: 'Square' },
+                    { value: 'circle', label: 'Circle' },
+                  ]}
+                  value={focalShape}
+                  onChange={(v) => setFocalShape((v as Neighborhood) ?? 'square')}
+                  styles={inputStyles}
+                />
+              </Group>
+            </Paper>
+
+            <Paper p="xs" withBorder bg="#0d1117">
+              <Group justify="space-between" mb={4}>
+                <Group gap={4}>
+                  <IconChartHistogram size={14} />
+                  <Text size="xs" fw={500} c="white">
+                    Zonal Statistics
+                  </Text>
+                </Group>
+                <Button
+                  size="xs"
+                  variant="light"
+                  color="yellow"
+                  aria-label="Run zonal statistics"
+                  onClick={() => runAnalysis('zonal')}
+                  loading={running === 'zonal'}
+                >
+                  Run
+                </Button>
+              </Group>
+              <Group gap={8}>
+                <Select
+                  aria-label="Zonal values"
+                  label="Values"
+                  size="xs"
+                  w={120}
+                  data={sourceOptions}
+                  value={zonalValues}
+                  onChange={(v) => setZonalValues(v ?? '0')}
+                  styles={inputStyles}
+                />
+                <Select
+                  aria-label="Zones"
+                  label="Zones"
+                  size="xs"
+                  w={140}
+                  data={zoneOptions}
+                  value={zonalZones}
+                  onChange={(v) => setZonalZones(v ?? '0')}
+                  styles={inputStyles}
+                />
+              </Group>
+              {polygonLayers.length === 0 && (
+                <Text size="xs" c="dimmed" mt={4}>
+                  Add a polygon layer to the map to group by its features.
+                </Text>
+              )}
+            </Paper>
+
             <Select
               label="Color Ramp"
               size="xs"
@@ -743,6 +928,13 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
               {vector.detail}
             </Text>
           </Paper>
+        )}
+
+        {zonalRows && (
+          <ZonalTable
+            rows={zonalRows}
+            zoneLabel={zonalLabels ? (z) => zonalLabels[z - 1] ?? String(z) : undefined}
+          />
         )}
 
         {(result || vector) && (

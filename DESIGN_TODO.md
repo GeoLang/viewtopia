@@ -382,11 +382,10 @@ High value, existing GeoLang crates supply the engine:
 
 - [ ] **in-browser raster processing, what the panel still leaves open** (it
       covers hillshade, slope, aspect, contours, band math, the NDVI/NDWI/EVI
-      presets, reclassify and polygonize, see the changelog): zonal and focal
-      stats, which terrano-core has no op for, so they start in Rust; and
-      results as real layers in the layer panel instead of a single drape per
-      panel, which needs a raster layer in the agent layer store (it holds
-      GeoJSON only today).
+      presets, reclassify, polygonize and focal/zonal stats, see the
+      changelog): results as real layers in the layer panel instead of a single
+      drape per panel, which needs a raster layer in the agent layer store (it
+      holds GeoJSON only today).
 - [ ] **browser geoprocessing toolbox** (topoi WASM instead of turf): catalogued
       buffer/dissolve/overlay/voronoi/joins/grids plus a batch runner with tool
       chaining. The geoprocessing plugin covers only the basics.

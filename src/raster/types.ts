@@ -14,6 +14,7 @@ export type RasterOperation =
   | 'classification'
   | 'contours'
   | 'zonal-stats'
+  | 'focal'
   | 'reclass';
 
 /** Band reference (0-indexed) */
@@ -80,6 +81,12 @@ export interface ClassDef {
 export interface ReclassParams {
   classes: ClassDef[];
 }
+
+/** Which summary a focal window reports */
+export type FocalStat = 'min' | 'max' | 'mean' | 'sum' | 'std' | 'median' | 'majority' | 'range';
+
+/** Focal window shape at a given radius */
+export type Neighborhood = 'square' | 'circle';
 
 /** Parameters for zonal statistics */
 export interface ZonalStatsParams {

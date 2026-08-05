@@ -3,7 +3,14 @@
  * initialized wasm module for the whole session, calls resolve in request
  * order per op but interleave freely across ops.
  */
-import type { ContourResult, PolygonizeResult, RasterResult } from './types';
+import type {
+  ContourResult,
+  FocalStat,
+  Neighborhood,
+  PolygonizeResult,
+  RasterResult,
+  ZonalResult,
+} from './types';
 
 let worker: Worker | null = null;
 let seq = 0;
@@ -112,4 +119,37 @@ export function contours(
   noData: number | null,
 ): Promise<ContourResult> {
   return call('contours', [dem, width, height, bbox, interval, base, noData]);
+}
+
+export function focalStats(
+  data: Float32Array,
+  width: number,
+  height: number,
+  radius: number,
+  shape: Neighborhood,
+  stat: FocalStat,
+  noData: number | null,
+): Promise<RasterResult> {
+  return call('focal', [data, width, height, radius, shape, stat, noData]);
+}
+
+export function zonalStats(
+  values: Float32Array,
+  zones: Float32Array,
+  width: number,
+  height: number,
+  noData: number | null,
+): Promise<ZonalResult[]> {
+  return call('zonal', [values, zones, width, height, noData]);
+}
+
+export function zonalStatsByPolygons(
+  values: Float32Array,
+  features: GeoJSON.Feature[],
+  width: number,
+  height: number,
+  bbox: [number, number, number, number],
+  noData: number | null,
+): Promise<ZonalResult[]> {
+  return call('zonal-polygons', [values, features, width, height, bbox, noData]);
 }
