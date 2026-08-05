@@ -3,6 +3,7 @@ import maplibregl from 'maplibre-gl';
 // markers and controls are DOM overlays that need maplibre's stylesheet
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { registerPmtilesProtocol } from '../features/pmtiles/source';
+import { registerCachedTileProtocol } from '../offline/tileProtocol';
 import { useAppStore } from '../store/app';
 import { useSplitViewStore } from '../store/splitView';
 import { getSharedCamera, setSharedCamera } from './sharedCamera';
@@ -66,6 +67,7 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
     if (!container || mapRef.current) return;
 
     registerPmtilesProtocol();
+    registerCachedTileProtocol();
 
     const cam = getSharedCamera();
 

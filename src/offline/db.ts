@@ -305,7 +305,7 @@ export const apiCache = {
 // ─── Tile Cache ──────────────────────────────────────────────────────
 
 export interface CachedTile {
-  key: string; // "{z}/{x}/{y}@{sourceId}"
+  key: string; // "{z}/{x}/{y}@{tileUrlTemplate}"
   blob: ArrayBuffer;
   contentType: string;
   cachedAt: number;

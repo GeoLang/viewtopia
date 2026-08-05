@@ -6,6 +6,7 @@
  */
 import type { StyleSpecification } from 'maplibre-gl';
 import { layers, namedFlavor } from '@protomaps/basemaps';
+import { cachedTileUrl } from '../offline/tileProtocol';
 
 export type Basemap =
   | 'osm'
@@ -144,7 +145,8 @@ export function maplibreRasterStyle(
     sources: {
       basemap: {
         type: 'raster',
-        tiles: [tile.url],
+        // cached:// falls back to the offline tile cache when the network fails
+        tiles: [cachedTileUrl(tile.url)],
         tileSize: 256,
         attribution: tile.attr,
       },

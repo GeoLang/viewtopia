@@ -6,6 +6,14 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-05: cached tiles now serve back to MapLibre. Raster basemap
+  styles reference a cached:// scheme (registered beside the pmtiles
+  protocol) that fetches from the network while online and answers from
+  the offline tile cache when the fetch fails or the browser is offline,
+  so regions downloaded in the Offline panel keep rendering without a
+  network. MapLibre only: Cesium and Leaflet still build plain tile URLs,
+  recorded in DESIGN_TODO.
+
 - 2026-08-05: four preview stubs deleted instead of implemented (owner
   decision): noise and energy had no engine or data source anywhere in
   the platform, webxr had no Cesium XR path, point cloud compare had no

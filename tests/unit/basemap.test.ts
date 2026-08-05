@@ -13,6 +13,7 @@ import {
   pmtilesStyle,
   rasterTiles,
 } from '../../src/hooks/basemapTiles';
+import { cachedTileUrl } from '../../src/offline/tileProtocol';
 import { useAppStore } from '../../src/store/app';
 
 const asStyle = (s: StyleSpecification | string): StyleSpecification => {
@@ -48,11 +49,11 @@ describe('raster basemaps', () => {
     expect(Object.keys(BASEMAP_TILES)).toEqual(['osm', 'satellite', 'topo', 'dark']);
   });
 
-  it('builds a raster style with the tile URL and attribution', () => {
+  it('builds a raster style with the cache-backed tile URL and attribution', () => {
     const style = asStyle(maplibreStyle('osm'));
     expect(style.sources.basemap).toMatchObject({
       type: 'raster',
-      tiles: [BASEMAP_TILES.osm.url],
+      tiles: [cachedTileUrl(BASEMAP_TILES.osm.url)],
       attribution: BASEMAP_TILES.osm.attr,
     });
     expect(style.layers).toEqual([{ id: 'basemap', type: 'raster', source: 'basemap' }]);
@@ -67,7 +68,9 @@ describe('raster basemaps', () => {
 
   it('keeps maplibreRasterStyle usable on its own', () => {
     const style = maplibreRasterStyle('satellite');
-    expect(style.sources.basemap).toMatchObject({ tiles: [BASEMAP_TILES.satellite.url] });
+    expect(style.sources.basemap).toMatchObject({
+      tiles: [cachedTileUrl(BASEMAP_TILES.satellite.url)],
+    });
   });
 });
 
