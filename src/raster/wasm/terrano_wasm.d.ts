@@ -19,6 +19,8 @@ export function hillshade(data: Float64Array, width: number, height: number, cel
  */
 export function normalizedDifference(a: Float64Array, b: Float64Array, width: number, height: number, cell_size: number, nodata: number): Float64Array;
 
+export function polygonize(data: Float64Array, width: number, height: number, cell_size: number, nodata: number): Float64Array;
+
 /**
  * `classes` is flat (min_inclusive, max_exclusive, new_value) triples.
  */
@@ -37,6 +39,7 @@ export interface InitOutput {
     readonly fillSinks: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly hillshade: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
     readonly normalizedDifference: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
+    readonly polygonize: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly reclassify: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
     readonly slope: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;

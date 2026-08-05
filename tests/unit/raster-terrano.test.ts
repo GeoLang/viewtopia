@@ -11,7 +11,8 @@ import {
   terranoAspect,
   terranoContours,
   terranoHillshade,
-  terranoNdvi,
+  terranoNormalizedDifference,
+  terranoPolygonize,
   terranoReclass,
   terranoSlope,
 } from '../../src/raster/terrano';
@@ -29,17 +30,42 @@ function ramp(width: number, height: number, rise: number): Float32Array {
   return out;
 }
 
+/** 4x4 field of 1s with a 2x2 block of 5s in the middle */
+function blockInField(): Float32Array {
+  const data = new Float32Array(16).fill(1);
+  for (const i of [5, 6, 9, 10]) data[i] = 5;
+  return data;
+}
+
+function polygonRings(fc: GeoJSON.FeatureCollection, value: number): GeoJSON.Position[][] {
+  const feature = fc.features.find((f) => f.properties?.value === value);
+  if (!feature) throw new Error(`no polygon for value ${value}`);
+  return (feature.geometry as GeoJSON.Polygon).coordinates;
+}
+
 describe('terrano wasm wrappers', () => {
   it('ndvi is (nir - red) / (nir + red) with nodata and zero-sum masked', () => {
     const nir = new Float32Array([0.8, 0.5, -9999, 0.0]);
     const red = new Float32Array([0.2, 0.5, 0.1, 0.0]);
-    const res = terranoNdvi(nir, red, 2, 2, -9999);
+    const res = terranoNormalizedDifference(nir, red, 2, 2, -9999, 'ndvi', 'rdylgn');
 
     expect(res.data[0]).toBeCloseTo(0.6, 6);
     expect(res.data[1]).toBeCloseTo(0, 6);
     expect(Number.isNaN(res.data[2])).toBe(true);
     expect(Number.isNaN(res.data[3])).toBe(true);
     expect(res.colorMap).toBe('rdylgn');
+  });
+
+  it('ndwi swaps the band roles, so water reads positive where ndvi reads negative', () => {
+    const green = new Float32Array([0.3]);
+    const nir = new Float32Array([0.1]);
+    const ndwi = terranoNormalizedDifference(green, nir, 1, 1, null, 'ndwi', 'blues');
+    const ndvi = terranoNormalizedDifference(nir, green, 1, 1, null, 'ndvi', 'rdylgn');
+
+    expect(ndwi.data[0]).toBeCloseTo(0.5, 6);
+    expect(ndvi.data[0]).toBeCloseTo(-0.5, 6);
+    expect(ndwi.operation).toBe('ndwi');
+    expect(ndwi.colorMap).toBe('blues');
   });
 
   it('hillshade fills the interior in 0..255 and NaNs the border', () => {
@@ -93,6 +119,8 @@ describe('terrano wasm wrappers', () => {
     expect(res.data[1]).toBe(200);
     expect(Number.isNaN(res.data[2])).toBe(true, );
     expect(Number.isNaN(res.data[3])).toBe(true);
+    // the ramp has to span the assigned values, not the class count
+    expect(res.range).toEqual([100, 200]);
   });
 
   it('contours land inside the bbox with their level as a property', () => {
@@ -115,6 +143,44 @@ describe('terrano wasm wrappers', () => {
       }
     }
     expect(res.elevationRange).toEqual([0, 100]);
+  });
+
+  it('polygonize traces equal-value regions onto the raster bbox', () => {
+    const res = terranoPolygonize(blockInField(), 4, 4, [0, 0, 4, 4], null);
+
+    expect(res.regions).toBe(2);
+    const ring = polygonRings(res.geojson, 5)[0];
+    expect(polygonRings(res.geojson, 5)).toHaveLength(1);
+    // the block covers columns 1..3 and rows 1..3, and rows count down from ymax
+    expect(ring.slice(0, -1).map(([x, y]) => `${x},${y}`).sort()).toEqual([
+      '1,1',
+      '1,3',
+      '3,1',
+      '3,3',
+    ]);
+    expect(ring[0]).toEqual(ring[ring.length - 1]);
+    // the field wraps the block, so it comes back with a hole
+    expect(polygonRings(res.geojson, 1)).toHaveLength(2);
+  });
+
+  it('polygonize winds exteriors counter-clockwise and holes clockwise', () => {
+    const res = terranoPolygonize(blockInField(), 4, 4, [0, 0, 4, 4], null);
+
+    const shoelace = (ring: GeoJSON.Position[]) => {
+      let sum = 0;
+      for (let i = 0; i < ring.length - 1; i++) {
+        sum += ring[i][0] * ring[i + 1][1] - ring[i + 1][0] * ring[i][1];
+      }
+      return sum;
+    };
+    const [exterior, hole] = polygonRings(res.geojson, 1);
+    expect(shoelace(exterior)).toBeGreaterThan(0);
+    expect(shoelace(hole)).toBeLessThan(0);
+  });
+
+  it('polygonize refuses a raster that was never classified', () => {
+    const data = new Float32Array(1024).map((_, i) => i);
+    expect(() => terranoPolygonize(data, 32, 32, [0, 0, 1, 1], null)).toThrow(/classified/);
   });
 
   it('cell size converts degrees to ground meters at the center latitude', () => {

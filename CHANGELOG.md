@@ -32,6 +32,27 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-04: **polygonize in the Raster panel**, on a new terrano-core op of
+  the same name. Traces connected runs of equal cells into GeoJSON polygons
+  with holes, reading a source band or the panel's last result, so the flow is
+  reclass then polygonize. Contours and polygons now share one result slot and
+  one drape path. Polygonizing a continuous raster returns a square per cell,
+  so the wrapper refuses an input with more than 256 distinct values and says
+  to reclass first. Rings are wound to the GeoJSON convention (exterior
+  counter-clockwise) after the flip to north-up.
+
+- 2026-08-04: **spectral index presets and a reclassify UI in the Raster
+  panel**. The NDVI block became a preset picker over NDVI, NDWI and EVI,
+  each declaring its band roles and ramp in one table (`src/raster/indices.ts`):
+  a normalized-difference index runs the wasm call, EVI runs its expression
+  through band math, and preset band defaults clamp to what the raster
+  actually holds. Reclass now has a class table with an equal-interval
+  generator, reading either a source band or the panel's last result, which
+  is how a slope or NDVI raster gets binned. Its top class runs past the data
+  maximum because terrano bins by [min, max). Fixes the reclass result range,
+  which was the class count rather than the assigned values, so the render
+  saturated.
+
 - 2026-08-04: **in-browser raster processing on terrano wasm**. The Data menu's
   Raster panel left the preview gate: load a GeoTIFF/COG by URL or file
   (geotiff.js, auto-downsampled to 1024px), run hillshade, slope

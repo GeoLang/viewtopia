@@ -15,6 +15,7 @@ export type {
   ReclassParams,
   ContourParams,
   ContourResult,
+  PolygonizeResult,
   ZonalStatsParams,
   ZonalResult,
   ClassDef,
@@ -29,7 +30,8 @@ export {
   terranoAspect,
   terranoContours,
   terranoHillshade,
-  terranoNdvi,
+  terranoNormalizedDifference,
+  terranoPolygonize,
   terranoReclass,
   terranoSlope,
 } from './terrano';

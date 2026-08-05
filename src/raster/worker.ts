@@ -9,7 +9,8 @@ import {
   terranoAspect,
   terranoContours,
   terranoHillshade,
-  terranoNdvi,
+  terranoNormalizedDifference,
+  terranoPolygonize,
   terranoReclass,
   terranoSlope,
 } from './terrano';
@@ -17,12 +18,13 @@ import {
 export type WorkerRequest = { id: number; op: string; args: never[] };
 
 const ops: Record<string, (...args: never[]) => unknown> = {
-  ndvi: terranoNdvi,
+  normdiff: terranoNormalizedDifference,
   hillshade: terranoHillshade,
   slope: terranoSlope,
   aspect: terranoAspect,
   reclass: terranoReclass,
   contours: terranoContours,
+  polygonize: terranoPolygonize,
 };
 
 let ready: Promise<unknown> | null = null;

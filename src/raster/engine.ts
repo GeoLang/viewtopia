@@ -3,7 +3,7 @@
  * initialized wasm module for the whole session, calls resolve in request
  * order per op but interleave freely across ops.
  */
-import type { ContourResult, RasterResult } from './types';
+import type { ContourResult, PolygonizeResult, RasterResult } from './types';
 
 let worker: Worker | null = null;
 let seq = 0;
@@ -35,14 +35,16 @@ function call<T>(op: string, args: unknown[]): Promise<T> {
   });
 }
 
-export function ndvi(
-  nir: Float32Array,
-  red: Float32Array,
+export function normalizedDifference(
+  a: Float32Array,
+  b: Float32Array,
   width: number,
   height: number,
   noData: number | null,
+  operation: RasterResult['operation'],
+  colorMap: string,
 ): Promise<RasterResult> {
-  return call('ndvi', [nir, red, width, height, noData]);
+  return call('normdiff', [a, b, width, height, noData, operation, colorMap]);
 }
 
 export function hillshade(
@@ -88,6 +90,16 @@ export function reclass(
   noData: number | null,
 ): Promise<RasterResult> {
   return call('reclass', [data, width, height, classes, noData]);
+}
+
+export function polygonize(
+  data: Float32Array,
+  width: number,
+  height: number,
+  bbox: [number, number, number, number],
+  noData: number | null,
+): Promise<PolygonizeResult> {
+  return call('polygonize', [data, width, height, bbox, noData]);
 }
 
 export function contours(

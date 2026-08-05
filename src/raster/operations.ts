@@ -41,13 +41,13 @@ export function computeBandMath(
   }
 
   return {
-    operation: 'band-math',
+    operation: params.operation ?? 'band-math',
     data: result,
     width,
     height,
     bbox: [0, 0, 0, 0],
     range: [min, max],
-    colorMap: 'viridis',
+    colorMap: params.colorMap ?? 'viridis',
     stats: computeStats(result),
   };
 }

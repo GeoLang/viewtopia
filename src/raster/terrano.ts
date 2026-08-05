@@ -10,7 +10,12 @@
  */
 import * as wasm from './wasm/terrano_wasm';
 import { computeStats } from './operations';
-import type { ContourResult, RasterMetadata, RasterResult } from './types';
+import type {
+  ContourResult,
+  PolygonizeResult,
+  RasterMetadata,
+  RasterResult,
+} from './types';
 
 /**
  * Ground cell size for gradient ops. Geographic rasters carry degrees in
@@ -63,16 +68,19 @@ function result(
 // nodata value still masks correctly
 const NO_NODATA = Number.NaN;
 
-export function terranoNdvi(
-  nir: Float32Array,
-  red: Float32Array,
+/** (a - b) / (a + b), the shape every normalized-difference index shares. */
+export function terranoNormalizedDifference(
+  a: Float32Array,
+  b: Float32Array,
   width: number,
   height: number,
   noData: number | null,
+  operation: RasterResult['operation'],
+  colorMap: string,
 ): RasterResult {
   const nodata = noData ?? NO_NODATA;
-  const out = wasm.normalizedDifference(toF64(nir), toF64(red), width, height, 1.0, nodata);
-  return result('ndvi', toF32(out, nodata), width, height, 'rdylgn');
+  const out = wasm.normalizedDifference(toF64(a), toF64(b), width, height, 1.0, nodata);
+  return result(operation, toF32(out, nodata), width, height, colorMap);
 }
 
 export function terranoHillshade(
@@ -140,10 +148,8 @@ export function terranoReclass(
     flat[i * 3 + 2] = c.value;
   });
   const out = wasm.reclassify(toF64(data), width, height, 1.0, nodata, flat);
-  return result('reclass', toF32(out, nodata), width, height, 'viridis', [
-    0,
-    Math.max(0, classes.length - 1),
-  ]);
+  // the range comes from the assigned class values, which are arbitrary
+  return result('reclass', toF32(out, nodata), width, height, 'viridis');
 }
 
 /**
@@ -198,4 +204,73 @@ export function terranoContours(
     interval,
     elevationRange: [min, max],
   };
+}
+
+/**
+ * A continuous raster has a distinct value in nearly every cell, and
+ * polygonizing that returns one square per cell, which is a million features
+ * on a full-size read. Reclass first.
+ */
+const MAX_DISTINCT_VALUES = 256;
+
+function distinctValuesWithin(data: Float32Array, cap: number): boolean {
+  const seen = new Set<number>();
+  for (const v of data) {
+    if (Number.isNaN(v)) continue;
+    seen.add(v);
+    if (seen.size > cap) return false;
+  }
+  return true;
+}
+
+/**
+ * Regions as GeoJSON polygons. terrano returns [value, ring_count, then per
+ * ring (vertex_count, x, y, ...)] with the exterior ring first, in cell-corner
+ * units (cell_size 1), so the raster spans `width` cells rather than the
+ * width-1 centre spacing contours work in.
+ */
+export function terranoPolygonize(
+  data: Float32Array,
+  width: number,
+  height: number,
+  bbox: [number, number, number, number],
+  noData: number | null,
+): PolygonizeResult {
+  if (!distinctValuesWithin(data, MAX_DISTINCT_VALUES)) {
+    throw new Error(
+      `polygonize needs a classified raster (at most ${MAX_DISTINCT_VALUES} distinct values); reclass it first`,
+    );
+  }
+  const nodata = noData ?? NO_NODATA;
+  const flat = wasm.polygonize(toF64(data), width, height, 1.0, nodata);
+  const [xmin, ymin, xmax, ymax] = bbox;
+  const cellW = (xmax - xmin) / width;
+  const cellH = (ymax - ymin) / height;
+
+  const features: GeoJSON.Feature[] = [];
+  let i = 0;
+  while (i < flat.length) {
+    const value = flat[i];
+    const ringCount = flat[i + 1];
+    i += 2;
+    const rings: [number, number][][] = [];
+    for (let r = 0; r < ringCount; r++) {
+      const n = flat[i];
+      const ring: [number, number][] = [];
+      // flipping y to north-up reverses winding, so each ring reads backwards
+      // to land on the GeoJSON convention: exterior CCW, holes CW
+      for (let v = n - 1; v >= 0; v--) {
+        ring.push([xmin + flat[i + 1 + v * 2] * cellW, ymax - flat[i + 2 + v * 2] * cellH]);
+      }
+      rings.push(ring);
+      i += 1 + n * 2;
+    }
+    features.push({
+      type: 'Feature',
+      properties: { value },
+      geometry: { type: 'Polygon', coordinates: rings },
+    });
+  }
+
+  return { geojson: { type: 'FeatureCollection', features }, regions: features.length };
 }

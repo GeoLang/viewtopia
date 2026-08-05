@@ -160,6 +160,26 @@ export function normalizedDifference(a, b, width, height, cell_size, nodata) {
 }
 
 /**
+ * @param {Float64Array} data
+ * @param {number} width
+ * @param {number} height
+ * @param {number} cell_size
+ * @param {number} nodata
+ * @returns {Float64Array}
+ */
+export function polygonize(data, width, height, cell_size, nodata) {
+    const ptr0 = passArrayF64ToWasm0(data, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.polygonize(ptr0, len0, width, height, cell_size, nodata);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayF64FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 8, 8);
+    return v2;
+}
+
+/**
  * `classes` is flat (min_inclusive, max_exclusive, new_value) triples.
  * @param {Float64Array} data
  * @param {number} width

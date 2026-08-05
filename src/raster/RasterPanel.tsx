@@ -27,8 +27,10 @@ import {
   IconMap,
   IconMountain,
   IconSatellite,
+  IconStack2,
   IconTopologyRing3,
   IconUpload,
+  IconVector,
   IconX,
 } from '@tabler/icons-react';
 import type { GeoJsonDataSource, ImageryLayer } from 'cesium';
@@ -43,13 +45,24 @@ import {
   type MapResult,
 } from '../lib/terrainAnalysis';
 import { loadCogFromUrl, loadCogFromBuffer, type LoadedRaster } from './loader';
-import { computeBandMath } from './operations';
+import { computeBandMath, computeStats } from './operations';
 import * as engine from './engine';
 import { cellSizeMeters } from './terrano';
+import { INDEX_PRESETS } from './indices';
+import { equalIntervals, ReclassEditor, type ReclassClass } from './ReclassEditor';
 import { renderToDataUrl } from './renderer';
-import type { RasterResult, ColorRamp, ContourResult } from './types';
+import type { RasterResult, ColorRamp } from './types';
 
 const inputStyles = { input: { background: '#0d1117', borderColor: '#30363d' } };
+
+/** a run that produced features rather than a grid: contours, polygonize */
+interface VectorResult {
+  id: string;
+  geojson: GeoJSON.FeatureCollection;
+  summary: string;
+  detail: string;
+  color: string;
+}
 
 export function RasterPanel({ onClose }: { onClose: () => void }) {
   const [url, setUrl] = useState('');
@@ -58,13 +71,17 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
   const [running, setRunning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<RasterResult | null>(null);
-  const [contourResult, setContourResult] = useState<ContourResult | null>(null);
+  const [vector, setVector] = useState<VectorResult | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [colorRamp, setColorRamp] = useState<ColorRamp>('viridis');
 
   // Operation params
-  const [nirBand, setNirBand] = useState(3); // Band 4 (0-indexed)
-  const [redBand, setRedBand] = useState(2); // Band 3
+  const [indexKey, setIndexKey] = useState('ndvi');
+  const [indexBands, setIndexBands] = useState<number[]>(INDEX_PRESETS.ndvi.defaults);
+  const [reclassInput, setReclassInput] = useState('0');
+  const [polygonInput, setPolygonInput] = useState('0');
+  const [reclassCount, setReclassCount] = useState(5);
+  const [reclassClasses, setReclassClasses] = useState<ReclassClass[]>([]);
   const [azimuth, setAzimuth] = useState(315);
   const [altitude, setAltitude] = useState(45);
   const [zFactor, setZFactor] = useState(1);
@@ -94,6 +111,25 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
   // the drape helpers place a bbox in lon/lat, so any other frame stays inline
   const canMap = raster?.metadata.crs === 'EPSG:4326';
 
+  const preset = INDEX_PRESETS[indexKey];
+  // preset defaults assume a Landsat-style stack, so a narrower raster clamps
+  // rather than indexing a band that isn't there
+  const bandCount = raster?.metadata.bands ?? 0;
+  const pickedBands = indexBands.map((b) => Math.min(b, Math.max(0, bandCount - 1)));
+  // reclass and polygonize read a source band or whatever the panel last
+  // computed, which is how a slope raster gets binned and a reclass gets
+  // turned into features
+  const sourceOptions = [
+    ...Array.from({ length: bandCount }, (_, i) => ({
+      value: String(i),
+      label: `Band ${i + 1}`,
+    })),
+    ...(result ? [{ value: 'result', label: `Result: ${result.operation}` }] : []),
+  ];
+  const sourceData = (input: string) =>
+    input === 'result' ? (result?.data ?? null) : (raster?.bands[Number(input)] ?? null);
+  const reclassData = sourceData(reclassInput);
+
   async function handleLoadUrl() {
     if (!url.trim()) return;
     setLoading(true);
@@ -103,7 +139,7 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
       setRaster(loaded);
       setResult(null);
       setResultImage(null);
-      setContourResult(null);
+      setVector(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load raster');
     } finally {
@@ -121,7 +157,7 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
       setRaster(loaded);
       setResult(null);
       setResultImage(null);
-      setContourResult(null);
+      setVector(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load raster');
     } finally {
@@ -140,9 +176,30 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
     try {
       let res: RasterResult;
       switch (op) {
-        case 'ndvi':
-          res = await engine.ndvi(bands[nirBand], bands[redBand], width, height, noData);
+        case 'index': {
+          res = preset.expression
+            ? computeBandMath(bands, width, height, {
+                expression: preset.expression(pickedBands.map((b) => b + 1)),
+                operation: preset.operation,
+                colorMap: preset.ramp,
+              }, noData)
+            : await engine.normalizedDifference(
+                bands[pickedBands[0]],
+                bands[pickedBands[1]],
+                width,
+                height,
+                noData,
+                preset.operation,
+                preset.ramp,
+              );
           break;
+        }
+        case 'reclass': {
+          if (!reclassData) throw new Error('no input to reclassify');
+          if (reclassClasses.length === 0) throw new Error('add at least one class');
+          res = await engine.reclass(reclassData, width, height, reclassClasses, noData);
+          break;
+        }
         case 'hillshade':
           res = await engine.hillshade(
             bands[0],
@@ -165,7 +222,7 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
           res = computeBandMath(bands, width, height, { expression: bandMathExpr }, noData);
           break;
         case 'contours': {
-          const cResult = await engine.contours(
+          const c = await engine.contours(
             bands[0],
             width,
             height,
@@ -174,7 +231,28 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
             0,
             noData,
           );
-          setContourResult(cResult);
+          setVector({
+            id: 'raster-contours',
+            geojson: c.geojson,
+            summary: `${c.geojson.features.length} contour lines`,
+            detail: `Elevation ${c.elevationRange[0].toFixed(0)}–${c.elevationRange[1].toFixed(0)}`,
+            color: '#f59e0b',
+          });
+          setResult(null);
+          setResultImage(null);
+          return;
+        }
+        case 'polygonize': {
+          const data = sourceData(polygonInput);
+          if (!data) throw new Error('no input to polygonize');
+          const p = await engine.polygonize(data, width, height, bbox, noData);
+          setVector({
+            id: 'raster-polygons',
+            geojson: p.geojson,
+            summary: `${p.regions} polygons`,
+            detail: 'one feature per connected run of equal cells',
+            color: '#38bdf8',
+          });
           setResult(null);
           setResultImage(null);
           return;
@@ -185,7 +263,7 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
 
       res.bbox = bbox;
       setResult(res);
-      setContourResult(null);
+      setVector(null);
       setResultImage(renderToDataUrl(res, { ramp: colorRamp }));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Analysis failed');
@@ -202,11 +280,11 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
       } else {
         layerRef.current = await addRasterOverlay(resultImage, result.bbox, 0.8);
       }
-    } else if (contourResult) {
+    } else if (vector) {
       if (renderer === 'maplibre') {
-        mapResultRef.current = addMapGeoJson('raster-contours', contourResult.geojson, '#f59e0b');
+        mapResultRef.current = addMapGeoJson(vector.id, vector.geojson, vector.color);
       } else {
-        dsRef.current = await renderGeoJson(contourResult.geojson, '#f59e0b', false, 'raster-contours');
+        dsRef.current = await renderGeoJson(vector.geojson, vector.color, false, vector.id);
       }
     }
   };
@@ -292,42 +370,58 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
                   <Group gap={4}>
                     <IconLeaf size={14} />
                     <Text size="xs" fw={500} c="white">
-                      NDVI
+                      Spectral Index
                     </Text>
                   </Group>
                   <Button
                     size="xs"
                     variant="light"
                     color="green"
-                    aria-label="Run NDVI"
-                  onClick={() => runAnalysis('ndvi')}
-                    loading={running === 'ndvi'}
+                    aria-label="Run index"
+                    onClick={() => runAnalysis('index')}
+                    loading={running === 'index'}
                   >
                     Run
                   </Button>
                 </Group>
+                <Select
+                  aria-label="Index preset"
+                  size="xs"
+                  data={Object.entries(INDEX_PRESETS).map(([value, p]) => ({
+                    value,
+                    label: p.label,
+                  }))}
+                  value={indexKey}
+                  onChange={(v) => {
+                    const key = v ?? 'ndvi';
+                    setIndexKey(key);
+                    setIndexBands(INDEX_PRESETS[key].defaults);
+                  }}
+                  mb={4}
+                  styles={inputStyles}
+                />
                 <Group gap={8}>
-                  <NumberInput
-                    label="NIR Band"
-                    value={nirBand + 1}
-                    onChange={(v) => setNirBand(Number(v) - 1)}
-                    size="xs"
-                    w={80}
-                    min={1}
-                    max={raster.metadata.bands}
-                    styles={inputStyles}
-                  />
-                  <NumberInput
-                    label="Red Band"
-                    value={redBand + 1}
-                    onChange={(v) => setRedBand(Number(v) - 1)}
-                    size="xs"
-                    w={80}
-                    min={1}
-                    max={raster.metadata.bands}
-                    styles={inputStyles}
-                  />
+                  {preset.roles.map((role, i) => (
+                    <NumberInput
+                      key={role}
+                      label={`${role} band`}
+                      value={pickedBands[i] + 1}
+                      onChange={(v) =>
+                        setIndexBands(indexBands.map((b, j) => (j === i ? Number(v) - 1 : b)))
+                      }
+                      size="xs"
+                      w={72}
+                      min={1}
+                      max={raster.metadata.bands}
+                      styles={inputStyles}
+                    />
+                  ))}
                 </Group>
+                {preset.hint && (
+                  <Text size="xs" c="dimmed" mt={4}>
+                    {preset.hint}
+                  </Text>
+                )}
               </Paper>
             )}
 
@@ -492,6 +586,96 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
               />
             </Paper>
 
+            <Paper p="xs" withBorder bg="#0d1117">
+              <Group justify="space-between" mb={4}>
+                <Group gap={4}>
+                  <IconStack2 size={14} />
+                  <Text size="xs" fw={500} c="white">
+                    Reclass
+                  </Text>
+                </Group>
+                <Button
+                  size="xs"
+                  variant="light"
+                  color="orange"
+                  aria-label="Run reclass"
+                  onClick={() => runAnalysis('reclass')}
+                  loading={running === 'reclass'}
+                >
+                  Run
+                </Button>
+              </Group>
+              <Group gap={8} align="flex-end" mb={4}>
+                <Select
+                  aria-label="Reclass input"
+                  label="Input"
+                  size="xs"
+                  w={110}
+                  data={sourceOptions}
+                  value={reclassInput}
+                  onChange={(v) => setReclassInput(v ?? '0')}
+                  styles={inputStyles}
+                />
+                <NumberInput
+                  label="Classes"
+                  value={reclassCount}
+                  onChange={(v) => setReclassCount(Number(v))}
+                  size="xs"
+                  w={70}
+                  min={1}
+                  max={20}
+                  styles={inputStyles}
+                />
+                <Button
+                  size="xs"
+                  variant="default"
+                  disabled={!reclassData}
+                  onClick={() => {
+                    if (!reclassData) return;
+                    const { min, max } = computeStats(reclassData);
+                    setReclassClasses(equalIntervals(min, max, reclassCount));
+                  }}
+                >
+                  Fill
+                </Button>
+              </Group>
+              <ReclassEditor classes={reclassClasses} onChange={setReclassClasses} />
+            </Paper>
+
+            <Paper p="xs" withBorder bg="#0d1117">
+              <Group justify="space-between" mb={4}>
+                <Group gap={4}>
+                  <IconVector size={14} />
+                  <Text size="xs" fw={500} c="white">
+                    Polygonize
+                  </Text>
+                </Group>
+                <Button
+                  size="xs"
+                  variant="light"
+                  color="cyan"
+                  aria-label="Run polygonize"
+                  onClick={() => runAnalysis('polygonize')}
+                  loading={running === 'polygonize'}
+                >
+                  Run
+                </Button>
+              </Group>
+              <Select
+                aria-label="Polygonize input"
+                label="Input"
+                size="xs"
+                w={140}
+                data={sourceOptions}
+                value={polygonInput}
+                onChange={(v) => setPolygonInput(v ?? '0')}
+                styles={inputStyles}
+              />
+              <Text size="xs" c="dimmed" mt={4}>
+                Traces equal-valued cells, so reclass first.
+              </Text>
+            </Paper>
+
             <Select
               label="Color Ramp"
               size="xs"
@@ -550,19 +734,18 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
           </Paper>
         )}
 
-        {contourResult && (
+        {vector && (
           <Paper p="xs" withBorder bg="#0d1117">
             <Text size="xs" fw={500} c="white">
-              {contourResult.geojson.features.length} contour lines
+              {vector.summary}
             </Text>
             <Text size="xs" c="dimmed">
-              Elevation {contourResult.elevationRange[0].toFixed(0)}–
-              {contourResult.elevationRange[1].toFixed(0)}
+              {vector.detail}
             </Text>
           </Paper>
         )}
 
-        {(result || contourResult) && (
+        {(result || vector) && (
           <Group gap="xs">
             <Button
               size="xs"
@@ -580,7 +763,7 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
             </Button>
           </Group>
         )}
-        {(result || contourResult) && !canMap && (
+        {(result || vector) && !canMap && (
           <Text size="xs" c="dimmed">
             Map overlay needs an EPSG:4326 raster; this one is{' '}
             {raster?.metadata.crs ?? 'unknown'}.

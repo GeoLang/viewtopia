@@ -25,6 +25,28 @@ async function demTif() {
   return Buffer.from(buffer);
 }
 
+/**
+ * 8x8 two-band tif: band 1 green, band 2 nir, water on the left half.
+ * geotiff.js writes these as 8-bit DN, so the values stay whole.
+ */
+async function twoBandTif() {
+  const size = 8;
+  const green = [];
+  const nir = [];
+  for (let y = 0; y < size; y++) {
+    green.push(Array.from({ length: size }, (_, x) => (x < size / 2 ? 200 : 50)));
+    nir.push(Array.from({ length: size }, (_, x) => (x < size / 2 ? 50 : 150)));
+  }
+  const buffer = await writeArrayBuffer([green, nir], {
+    height: size,
+    width: size,
+    ModelPixelScale: [0.01, 0.01, 0],
+    ModelTiepoint: [0, 0, 0, 7.0, 46.0, 0],
+    GeographicTypeGeoKey: 4326,
+  });
+  return Buffer.from(buffer);
+}
+
 test('raster panel runs terrano wasm ops on an uploaded dem', async ({ page }) => {
   await openApp(page);
   await page.getByRole('button', { name: 'Data' }).click();
@@ -48,6 +70,22 @@ test('raster panel runs terrano wasm ops on an uploaded dem', async ({ page }) =
   await panel.getByRole('button', { name: 'Run slope' }).click();
   await expect(panel.getByText('Result: slope')).toBeVisible({ timeout: 15000 });
 
+  // reclass bins band 1, with the classes generated from its own range
+  await panel.getByRole('button', { name: 'Fill' }).click();
+  await panel.getByRole('button', { name: 'Run reclass' }).click();
+  await expect(panel.getByText('Result: reclass')).toBeVisible({ timeout: 15000 });
+  await expect(panel.getByText('Min 1.000')).toBeVisible();
+  await expect(panel.getByText('Max 5.000')).toBeVisible();
+
+  // polygonize the classes just produced: each class is a contiguous band of
+  // rows, so the five classes trace five polygons
+  await panel.getByLabel('Polygonize input').click();
+  await page.getByRole('option', { name: 'Result: reclass' }).click();
+  await panel.getByRole('button', { name: 'Run polygonize' }).click();
+  await expect(panel.getByText('5 polygons')).toBeVisible({ timeout: 15000 });
+  await panel.getByRole('button', { name: 'Add to map' }).click();
+  await panel.getByRole('button', { name: 'Clear' }).click();
+
   await panel.getByRole('button', { name: 'Run contours' }).click();
   await expect(panel.getByText(/\d+ contour lines/)).toBeVisible({ timeout: 15000 });
 
@@ -56,4 +94,38 @@ test('raster panel runs terrano wasm ops on an uploaded dem', async ({ page }) =
   const addToMap = panel.getByRole('button', { name: 'Add to map' });
   await expect(addToMap).toBeEnabled();
   await addToMap.click();
+});
+
+test('spectral index presets pick their own bands', async ({ page }) => {
+  await openApp(page);
+  await page.getByRole('button', { name: 'Data' }).click();
+  await page.locator(MENU_ITEM).filter({ hasText: 'Raster Analysis' }).first().click();
+  const panel = page.locator(PANEL).filter({ hasText: 'Raster Analysis' });
+
+  await panel.locator('input[type="file"]').setInputFiles({
+    name: 'scene.tif',
+    mimeType: 'image/tiff',
+    buffer: await twoBandTif(),
+  });
+  await expect(panel.getByText('8×8 · 2 bands · EPSG:4326')).toBeVisible();
+
+  await panel.getByLabel('Index preset').click();
+  await page.getByRole('option', { name: /NDWI/ }).click();
+  await panel.getByLabel('Green band').fill('1');
+  await panel.getByLabel('NIR band').fill('2');
+
+  await panel.getByRole('button', { name: 'Run index' }).click();
+  await expect(panel.getByText('Result: ndwi')).toBeVisible({ timeout: 30000 });
+  // water half is (200 - 50) / 250, land half is (50 - 150) / 200
+  await expect(panel.getByText('Min -0.500')).toBeVisible();
+  await expect(panel.getByText('Max 0.600')).toBeVisible();
+
+  // EVI runs the expression path instead, over three picked bands
+  await panel.getByLabel('Index preset').click();
+  await page.getByRole('option', { name: /EVI/ }).click();
+  await panel.getByLabel('NIR band').fill('2');
+  await panel.getByLabel('Red band').fill('1');
+  await panel.getByLabel('Blue band').fill('1');
+  await panel.getByRole('button', { name: 'Run index' }).click();
+  await expect(panel.getByText('Result: evi')).toBeVisible({ timeout: 15000 });
 });

@@ -5,6 +5,8 @@
 /** Supported raster operations */
 export type RasterOperation =
   | 'ndvi'
+  | 'ndwi'
+  | 'evi'
   | 'hillshade'
   | 'slope'
   | 'aspect'
@@ -60,6 +62,9 @@ export interface AspectParams {
 export interface BandMathParams {
   /** Expression using b1, b2, b3... for bands, e.g. "(b4 - b3) / (b4 + b3)" */
   expression: string;
+  /** what to label the result as, for an index preset built on an expression */
+  operation?: RasterOperation;
+  colorMap?: ColorRamp;
 }
 
 /** Classification class definition */
@@ -126,6 +131,12 @@ export interface ContourResult {
   geojson: GeoJSON.FeatureCollection;
   interval: number;
   elevationRange: [number, number];
+}
+
+/** Polygonize result: one Polygon feature per region, its cell value in `value` */
+export interface PolygonizeResult {
+  geojson: GeoJSON.FeatureCollection;
+  regions: number;
 }
 
 /** Color ramp for visualization */

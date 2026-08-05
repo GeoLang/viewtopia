@@ -8,6 +8,7 @@ export const contours: (a: number, b: number, c: number, d: number, e: number, f
 export const fillSinks: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
 export const hillshade: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
 export const normalizedDifference: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
+export const polygonize: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
 export const reclassify: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
 export const slope: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
 export const __wbindgen_externrefs: WebAssembly.Table;
