@@ -98,10 +98,12 @@ test.describe('More menu panels', () => {
   test('settings: display switch removes the minimap and persists', async ({ page }) => {
     await openApp(page);
 
-    // the overview map is the only Leaflet instance while the globe tab is up
+    // the overview map is the only Leaflet instance while the globe tab is up,
+    // which is what proves the default is on. The persisted copy cannot say so
+    // yet: openApp seeds a partial settings object and merge() backfills the
+    // rest in memory, so nothing reaches localStorage until the first write.
     const minimap = page.locator('.leaflet-container:not(#leaflet-container)');
     await expect(minimap).toHaveCount(1);
-    expect((await persistedSettings(page)).showMinimap).toBe(true);
 
     const panel = await openSettings(page);
 

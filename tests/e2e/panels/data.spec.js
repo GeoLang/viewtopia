@@ -568,6 +568,11 @@ test.describe('Data panels', () => {
     await panel.getByPlaceholder('Source name').fill('panel-e2e parcels');
     await panel.getByPlaceholder('/api/v1/branches').fill(template);
     await panel.getByLabel('Source layer').fill('features');
+    // jumpTo above started a fresh round of tile loads, so the style is busy
+    // again and the panel refuses with "Map still loading, try again"
+    await page.waitForFunction(() => window.__viewtopiaMap?.isStyleLoaded(), null, {
+      timeout: 60000,
+    });
     await panel.getByRole('button', { name: 'Add Source' }).click();
 
     await expect(panel.getByTestId('vt-status')).toHaveText('Added panel-e2e parcels');
