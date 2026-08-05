@@ -47,7 +47,7 @@ export const TOOLS_MENU: ToolMenuItem[][] = [
     { panel: 'indoor', label: '🏛 Indoor', preview: true },
     { panel: 'drone', label: '🛸 Drone' },
     { panel: 'accessibility', label: '♿ A11y' },
-    { panel: 'export3d', label: '🖨 3D Print', preview: true },
+    { panel: 'export3d', label: '🖨 Export' },
     { panel: 'flythrough', label: '🎬 Flythrough' },
   ],
   [

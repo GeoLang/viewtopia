@@ -10,7 +10,6 @@ const GATED_PANELS = [
   'photo',
   'timelapse',
   'indoor',
-  'export3d',
   'classification',
 ] as const;
 
@@ -30,6 +29,7 @@ const SHIPPED_PANELS = [
   'drone',
   'volume',
   'assets',
+  'export3d',
   // settings is a top-level toolbar button now, not a menu registry entry
 ] as const;
 

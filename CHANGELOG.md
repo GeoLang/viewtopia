@@ -6,6 +6,14 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-05: the export panel left the preview gate as a real client for
+  tiletopia's newly routed export API: ready assets and the server's
+  advertised formats populate the pickers, start posts the job, status
+  polls every 3s until ready or failed, and the download link pulls the
+  file through an authed fetch into a blob anchor the way the COG export
+  does. The fake resolution slider and the hardcoded stl/obj/gltf/ply
+  list are gone, formats come from the backend.
+
 - 2026-08-05: cached tiles now serve back to MapLibre. Raster basemap
   styles reference a cached:// scheme (registered beside the pmtiles
   protocol) that fetches from the network while online and answers from
