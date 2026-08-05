@@ -116,19 +116,41 @@ export async function precacheUrls(urls: string[]): Promise<{ cached: number; fa
   return { cached, failed };
 }
 
+export interface TileBounds {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+}
+
+export interface ZoomRange {
+  min: number;
+  max: number;
+}
+
+/** How many tiles an area covers, for sizing a download before starting it. */
+export function countTilesForArea(bounds: TileBounds, zoomRange: ZoomRange): number {
+  return getTilesInBounds(bounds, zoomRange).length;
+}
+
+function tileKey(tileUrlTemplate: string, z: number, x: number, y: number): string {
+  return `${z}/${x}/${y}@${tileUrlTemplate}`;
+}
+
 /**
  * Cache map tiles for a given bounding box and zoom range.
  * This downloads and stores tiles for offline map viewing.
  */
 export async function cacheTilesForArea(
   tileUrlTemplate: string,
-  bounds: { west: number; south: number; east: number; north: number },
-  zoomRange: { min: number; max: number },
+  bounds: TileBounds,
+  zoomRange: ZoomRange,
   onProgress?: (done: number, total: number) => void,
-): Promise<{ cached: number; total: number }> {
+): Promise<{ cached: number; total: number; bytes: number }> {
   const { tileCache } = await import('./db');
   const tiles = getTilesInBounds(bounds, zoomRange);
   let cached = 0;
+  let bytes = 0;
 
   for (let i = 0; i < tiles.length; i++) {
     const { z, x, y } = tiles[i];
@@ -137,19 +159,18 @@ export async function cacheTilesForArea(
       .replace('{x}', String(x))
       .replace('{y}', String(y));
 
-    const key = `${z}/${x}/${y}@${tileUrlTemplate}`;
-
     try {
       const resp = await fetch(url);
       if (resp.ok) {
         const blob = await resp.arrayBuffer();
         await tileCache.put({
-          key,
+          key: tileKey(tileUrlTemplate, z, x, y),
           blob,
           contentType: resp.headers.get('content-type') || 'image/png',
           cachedAt: Date.now(),
         });
         cached++;
+        bytes += blob.byteLength;
       }
     } catch {
       // Skip failed tiles
@@ -158,13 +179,25 @@ export async function cacheTilesForArea(
     onProgress?.(i + 1, tiles.length);
   }
 
-  return { cached, total: tiles.length };
+  return { cached, total: tiles.length, bytes };
+}
+
+/** Drop the tiles an earlier cacheTilesForArea call stored for the same area. */
+export async function evictTilesForArea(
+  tileUrlTemplate: string,
+  bounds: TileBounds,
+  zoomRange: ZoomRange,
+): Promise<void> {
+  const { tileCache } = await import('./db');
+  for (const { z, x, y } of getTilesInBounds(bounds, zoomRange)) {
+    await tileCache.remove(tileKey(tileUrlTemplate, z, x, y));
+  }
 }
 
 /** Calculate tile coordinates for a bounding box at given zoom levels */
 function getTilesInBounds(
-  bounds: { west: number; south: number; east: number; north: number },
-  zoomRange: { min: number; max: number },
+  bounds: TileBounds,
+  zoomRange: ZoomRange,
 ): Array<{ z: number; x: number; y: number }> {
   const tiles: Array<{ z: number; x: number; y: number }> = [];
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Paper,
   Text,
@@ -8,34 +8,107 @@ import {
   Button,
   Badge,
   Progress,
+  TextInput,
 } from '@mantine/core';
 import { IconDeviceFloppy, IconX, IconDownload, IconTrash } from '@tabler/icons-react';
+import { cacheTilesForArea, countTilesForArea, evictTilesForArea } from '../../offline/cache';
+import { cachedRegions, type CachedRegion } from '../../offline/db';
+import { getViewBounds } from '../../lib/viewBounds';
+import { getSharedCamera } from '../../hooks/sharedCamera';
+import { isVectorBasemap, rasterTiles } from '../../hooks/basemapTiles';
+import { useAppStore } from '../../store/app';
 
-interface CachedRegion {
-  id: string;
-  name: string;
-  tiles: number;
-  sizeMb: number;
+/** a full world view at any zoom is far past this, so the cap has to bite early */
+const MAX_TILES = 2000;
+/** levels below the current one, so a cached area stays useful when zooming in */
+const ZOOM_DEPTH = 2;
+const MAX_ZOOM = 19;
+
+function megabytes(bytes: number): string {
+  return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
 }
 
 export function OfflinePanel({ onClose }: { onClose: () => void }) {
   const [caching, setCaching] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [regions] = useState<CachedRegion[]>([]);
+  const [done, setDone] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [name, setName] = useState('');
+  const [regions, setRegions] = useState<CachedRegion[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const basemap = useAppStore((s) => s.basemap);
+  const customBasemap = useAppStore((s) => s.customBasemap);
 
-  const handleCache = () => {
+  const load = useCallback(async () => {
+    try {
+      const all = await cachedRegions.getAll();
+      setRegions(all.sort((a, b) => b.createdAt - a.createdAt));
+    } catch {
+      setError('Cannot read the offline store');
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const handleCache = async () => {
+    const view = getViewBounds();
+    const bounds = { west: view.west, south: view.south, east: view.east, north: view.north };
+    const min = Math.max(0, Math.min(MAX_ZOOM, Math.round(getSharedCamera().zoom)));
+    const zoomRange = { min, max: Math.min(MAX_ZOOM, min + ZOOM_DEPTH) };
+    const tiles = countTilesForArea(bounds, zoomRange);
+
+    setError(null);
+    if (tiles > MAX_TILES) {
+      setError(`This view needs ${tiles} tiles, over the ${MAX_TILES} limit. Zoom in first.`);
+      return;
+    }
+
+    const tile = rasterTiles(basemap, customBasemap);
     setCaching(true);
-    setProgress(0);
-    const iv = setInterval(() => {
-      setProgress((p) => {
-        if (p >= 100) {
-          clearInterval(iv);
-          setCaching(false);
-          return 100;
-        }
-        return p + 10;
+    setDone(0);
+    setTotal(tiles);
+    try {
+      const result = await cacheTilesForArea(tile.url, bounds, zoomRange, (d, t) => {
+        setDone(d);
+        setTotal(t);
       });
-    }, 300);
+      await cachedRegions.put({
+        id: crypto.randomUUID(),
+        name:
+          name.trim() ||
+          `${view.centerLat.toFixed(2)}, ${view.centerLng.toFixed(2)} z${zoomRange.min}-${zoomRange.max}`,
+        tileUrlTemplate: tile.url,
+        bounds,
+        minZoom: zoomRange.min,
+        maxZoom: zoomRange.max,
+        tiles: result.cached,
+        bytes: result.bytes,
+        createdAt: Date.now(),
+      });
+      setName('');
+      await load();
+      if (result.cached < result.total) {
+        setError(`${result.total - result.cached} of ${result.total} tiles failed to download`);
+      }
+    } catch {
+      setError('Caching failed');
+    } finally {
+      setCaching(false);
+    }
+  };
+
+  const handleDelete = async (region: CachedRegion) => {
+    try {
+      await evictTilesForArea(region.tileUrlTemplate, region.bounds, {
+        min: region.minZoom,
+        max: region.maxZoom,
+      });
+      await cachedRegions.remove(region.id);
+      await load();
+    } catch {
+      setError('Delete failed');
+    }
   };
 
   return (
@@ -70,7 +143,18 @@ export function OfflinePanel({ onClose }: { onClose: () => void }) {
           Cache the current view area for offline use.
         </Text>
 
-        {caching && <Progress value={progress} color="violet" size="sm" animated />}
+        <TextInput
+          size="xs"
+          placeholder="Region name"
+          value={name}
+          onChange={(e) => setName(e.currentTarget.value)}
+          disabled={caching}
+          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
+        />
+
+        {caching && (
+          <Progress value={total ? (done / total) * 100 : 0} color="violet" size="sm" animated />
+        )}
 
         <Button
           size="xs"
@@ -81,17 +165,37 @@ export function OfflinePanel({ onClose }: { onClose: () => void }) {
           disabled={caching}
           fullWidth
         >
-          {caching ? `Caching... ${progress}%` : 'Cache Current View'}
+          {caching ? `Caching... ${done}/${total}` : 'Cache Current View'}
         </Button>
+
+        {isVectorBasemap(basemap) && (
+          <Text size="xs" c="dimmed" data-testid="offline-raster-notice">
+            Vector basemap, so the closest raster tiles are cached instead.
+          </Text>
+        )}
+
+        {error && (
+          <Text size="xs" c="red" data-testid="offline-error">
+            {error}
+          </Text>
+        )}
 
         {regions.length > 0 ? (
           regions.map((r) => (
-            <Group key={r.id} justify="space-between">
-              <Text size="xs" c="white">{r.name}</Text>
-              <Group gap={4}>
+            <Group key={r.id} justify="space-between" wrap="nowrap">
+              <Text size="xs" c="white" truncate>
+                {r.name}
+              </Text>
+              <Group gap={4} wrap="nowrap">
                 <Badge size="xs" variant="light">{r.tiles} tiles</Badge>
-                <Badge size="xs" variant="light">{r.sizeMb}MB</Badge>
-                <ActionIcon size="xs" variant="subtle" color="red">
+                <Badge size="xs" variant="light">{megabytes(r.bytes)}</Badge>
+                <ActionIcon
+                  size="xs"
+                  variant="subtle"
+                  color="red"
+                  aria-label={`Delete ${r.name}`}
+                  onClick={() => handleDelete(r)}
+                >
                   <IconTrash size={12} />
                 </ActionIcon>
               </Group>

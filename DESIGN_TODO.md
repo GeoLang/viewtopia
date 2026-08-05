@@ -419,11 +419,11 @@ online/offline detection, mutation queue with retry, three-way column-level
 conflict merge, `offlineFetch()` API response cache. Data already loaded
 survives reloads and syncs back. Everything below is what does not work.
 
-- [ ] **OfflinePanel is a stub behind the preview gate.** "Cache Current View"
-      animates a timer-driven progress bar and caches nothing, the regions list
-      is hardcoded empty. `cacheTilesForArea()` and `precacheUrls()` in
-      `src/offline/cache.ts` are defined and never called, the `tileCache`
-      IndexedDB store sits unused. Wire the panel to them or delete both.
+- [ ] **cached tiles are stored but never served back.** The Offline panel
+      downloads viewport tiles into the `tileCache` store with named regions
+      and eviction, but MapLibre and Cesium still fetch from the network, so
+      a download today only warms nothing. Serving needs a MapLibre
+      `addProtocol` handler or the service worker below.
 - [ ] **no service worker.** `public/manifest.json` exists but nothing
       registers a worker and vite has no PWA plugin, so the app shell needs the
       server on every load. Offline today only means "the tab was already

@@ -11,7 +11,6 @@ const GATED_PANELS = [
   'energy',
   'photo',
   'timelapse',
-  'offline',
   'indoor',
   'drone',
   'export3d',
@@ -19,8 +18,6 @@ const GATED_PANELS = [
   'volume',
   'pointCloudCompare',
   'classification',
-  'cesiumIon',
-  'google3d',
   'assets',
   'modelImport',
   'webxr',
@@ -34,6 +31,9 @@ const SHIPPED_PANELS = [
   'dataTable',
   'timeline',
   'shadows',
+  'offline',
+  'cesiumIon',
+  'google3d',
   // settings is a top-level toolbar button now, not a menu registry entry
 ] as const;
 

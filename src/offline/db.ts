@@ -6,7 +6,7 @@
  */
 
 const DB_NAME = 'viewtopia-offline';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 export interface OfflineLayer {
   id: string;
@@ -109,6 +109,11 @@ function openDb(): Promise<IDBDatabase> {
       // Tile cache (map tiles for offline viewing)
       if (!db.objectStoreNames.contains('tileCache')) {
         db.createObjectStore('tileCache', { keyPath: 'key' });
+      }
+
+      // Areas the user downloaded for offline use
+      if (!db.objectStoreNames.contains('cachedRegions')) {
+        db.createObjectStore('cachedRegions', { keyPath: 'id' });
       }
 
       // Projects
@@ -311,6 +316,7 @@ export const tileCache = {
     return getById<CachedTile>('tileCache', key);
   },
   put: (tile: CachedTile) => put('tileCache', tile),
+  remove: (key: string) => remove('tileCache', key),
   clear: () => clear('tileCache'),
 
   /** Get total cache size in bytes */
@@ -318,6 +324,27 @@ export const tileCache = {
     const all = await getAll<CachedTile>('tileCache');
     return all.reduce((sum, t) => sum + t.blob.byteLength, 0);
   },
+};
+
+// ─── Cached Regions ──────────────────────────────────────────────────
+
+export interface CachedRegion {
+  id: string;
+  name: string;
+  /** tile template the region was downloaded from, part of every tile key */
+  tileUrlTemplate: string;
+  bounds: { west: number; south: number; east: number; north: number };
+  minZoom: number;
+  maxZoom: number;
+  tiles: number;
+  bytes: number;
+  createdAt: number;
+}
+
+export const cachedRegions = {
+  getAll: () => getAll<CachedRegion>('cachedRegions'),
+  put: (region: CachedRegion) => put('cachedRegions', region),
+  remove: (id: string) => remove('cachedRegions', id),
 };
 
 // ─── Projects ────────────────────────────────────────────────────────

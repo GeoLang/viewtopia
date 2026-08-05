@@ -6,6 +6,26 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-05: the Cesium Ion and Google 3D panels left the preview gate.
+  Ion: a token validates against api.cesium.com, becomes
+  `Ion.defaultAccessToken`, persists in settings, and the account's assets
+  list with per-asset add and remove (3D Tiles to primitives, imagery to
+  imagery layers, terrain to the terrain provider, removal resets terrain
+  to the ellipsoid as the Global Terrain panel does). Google 3D: an API
+  key toggles Photorealistic 3D Tiles via the public root.json with
+  on-screen credits, key persisted only after a successful load. Both
+  show the switch-to-Cesium notice on other renderers.
+
+- 2026-08-05: the Offline panel left the preview gate and caches for real.
+  "Cache Current View" downloads the active raster basemap's tiles for the
+  viewport at the current zoom plus two (capped at z19, refused over 2000
+  tiles), with progress from tiles actually fetched, and records a named
+  region (bbox, zoom range, tile count, bytes) in IndexedDB. Regions list
+  from the store and delete evicts their tiles. Vector basemaps cache the
+  nearest raster equivalent and say so. Cached tiles are not yet served
+  back to the renderers offline, that needs the service worker tracked in
+  DESIGN_TODO.
+
 - 2026-08-04: the Global Terrain panel names the rejection behind its
   NO_SOURCE status. The catch-all message stays, with the provider's own error
   ("An error occurred while accessing /tiles/v1/terrain/layer.json.", "The tile

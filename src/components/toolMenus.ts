@@ -46,7 +46,7 @@ export const SIMULATE_MENU: ToolMenuItem[][] = [
 export const TOOLS_MENU: ToolMenuItem[][] = [
   [
     { panel: 'photo', label: '📷 Photo', preview: true },
-    { panel: 'offline', label: '💾 Offline', preview: true },
+    { panel: 'offline', label: '💾 Offline' },
     { panel: 'indoor', label: '🏛 Indoor', preview: true },
     { panel: 'drone', label: '🛸 Drone', preview: true },
     { panel: 'webxr', label: '🥽 WebXR', preview: true },
@@ -80,8 +80,8 @@ export const DATA_MENU: ToolMenuItem[][] = [
     { panel: 'rasterViewer', label: '🖼 Raster Analysis' },
   ],
   [
-    { panel: 'cesiumIon', label: '🌍 Cesium Ion', preview: true },
-    { panel: 'google3d', label: '🏙 Google 3D', preview: true },
+    { panel: 'cesiumIon', label: '🌍 Cesium Ion' },
+    { panel: 'google3d', label: '🏙 Google 3D' },
     { panel: 'globalTerrain', label: '⛰ Terrain' },
   ],
 ];

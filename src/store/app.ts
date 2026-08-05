@@ -118,6 +118,9 @@ interface Settings {
   tiletopiaUrl: string;
   geolangUrl: string;
   livekitUrl: string;
+  /** Cesium Ion access token, used for both the asset REST API and Ion.defaultAccessToken */
+  cesiumIonToken: string;
+  googleMapsApiKey: string;
 }
 
 interface AppState {
@@ -186,6 +189,8 @@ const DEFAULT_SETTINGS: Settings = {
   tiletopiaUrl: '/api/v1',
   geolangUrl: '/agent',
   livekitUrl: '',
+  cesiumIonToken: '',
+  googleMapsApiKey: '',
 };
 
 export const useAppStore = create<AppState>()(
