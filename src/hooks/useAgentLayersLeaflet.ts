@@ -14,6 +14,7 @@ import { agentLayersBounds } from './agentLayerBounds';
  */
 export function useAgentLayersLeaflet(mapRef: MutableRefObject<L.Map | null>) {
   const layers = useAgentLayerStore((s) => s.layers);
+  const rasterLayers = useAgentLayerStore((s) => s.rasterLayers);
   const markers = useAgentLayerStore((s) => s.markers);
   const generation = useAgentLayerStore((s) => s.generation);
   const activeTab = useAppStore((s) => s.activeTab);
@@ -37,6 +38,25 @@ export function useAgentLayersLeaflet(mapRef: MutableRefObject<L.Map | null>) {
       for (const o of objs) o.remove();
     };
   }, [markers, mapRef, activeTab]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const overlays = rasterLayers.map((layer) => {
+      const [west, south, east, north] = layer.bbox;
+      return L.imageOverlay(
+        layer.url,
+        [
+          [south, west],
+          [north, east],
+        ],
+        { opacity: layer.opacity },
+      ).addTo(map);
+    });
+    return () => {
+      for (const o of overlays) o.remove();
+    };
+  }, [rasterLayers, mapRef, activeTab]);
 
   useEffect(() => {
     const map = mapRef.current;

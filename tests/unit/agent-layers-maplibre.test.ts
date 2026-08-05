@@ -57,7 +57,7 @@ const layer = (): AgentLayer => ({
 describe('useAgentLayersMapLibre', () => {
   beforeEach(() => {
     cleanup();
-    useAgentLayerStore.setState({ layers: [], markers: [], generation: 0 });
+    useAgentLayerStore.setState({ layers: [], rasterLayers: [], markers: [], generation: 0 });
     useAppStore.setState({ renderer: 'maplibre', activeTab: 'globe' });
   });
 
@@ -115,5 +115,83 @@ describe('useAgentLayersMapLibre', () => {
     });
     const plain = map.source('agent-layer-risk')?.data as GeoJSON.FeatureCollection;
     expect(plain.features.map((f) => f.properties?.fill)).toEqual([undefined, undefined]);
+  });
+
+  it('drapes a raster layer as an image source cornered on its bbox', () => {
+    const map = fakeMap();
+    act(() => {
+      useAgentLayerStore.getState().addRasterLayer({
+        id: 'hs',
+        name: 'hillshade',
+        url: 'data:image/png;base64,AAA',
+        bbox: [12, 45, 13, 46],
+        opacity: 0.8,
+      });
+    });
+    mount(map);
+
+    const src = map.source('agent-raster-hs') as unknown as {
+      type: string;
+      url: string;
+      coordinates: [number, number][];
+    };
+    expect(src.type).toBe('image');
+    expect(src.url).toBe('data:image/png;base64,AAA');
+    // clockwise from the top left
+    expect(src.coordinates).toEqual([
+      [12, 46],
+      [13, 46],
+      [13, 45],
+      [12, 45],
+    ]);
+    expect(map.layer('agent-raster-hs-raster')?.paint['raster-opacity']).toBe(0.8);
+  });
+
+  it('removing a raster layer takes its source and layer off the map', () => {
+    const map = fakeMap();
+    act(() => {
+      useAgentLayerStore.getState().addRasterLayer({
+        id: 'hs',
+        name: 'hillshade',
+        url: 'data:image/png;base64,AAA',
+        bbox: [12, 45, 13, 46],
+        opacity: 0.8,
+      });
+    });
+    mount(map);
+    expect(map.source('agent-raster-hs')).toBeDefined();
+
+    act(() => {
+      useAgentLayerStore.getState().removeRasterLayer('hs');
+    });
+
+    expect(map.source('agent-raster-hs')).toBeUndefined();
+    expect(map.layer('agent-raster-hs-raster')).toBeUndefined();
+  });
+
+  it('raster layers stack rather than replacing one another', () => {
+    const map = fakeMap();
+    act(() => {
+      const store = useAgentLayerStore.getState();
+      store.addRasterLayer({
+        id: 'a',
+        name: 'slope',
+        url: 'data:image/png;base64,AAA',
+        bbox: [12, 45, 13, 46],
+        opacity: 0.8,
+      });
+      store.addRasterLayer({
+        id: 'b',
+        name: 'aspect',
+        url: 'data:image/png;base64,BBB',
+        bbox: [12, 45, 13, 46],
+        opacity: 0.5,
+      });
+    });
+    mount(map);
+
+    expect(useAgentLayerStore.getState().rasterLayers).toHaveLength(2);
+    expect(map.source('agent-raster-a')).toBeDefined();
+    expect(map.source('agent-raster-b')).toBeDefined();
   });
 });

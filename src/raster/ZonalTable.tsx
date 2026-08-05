@@ -26,7 +26,7 @@ export function ZonalTable({
     <Paper p="xs" withBorder bg="#0d1117">
       <Group justify="space-between" mb={4}>
         <Text size="xs" fw={500} c="white">
-          Zonal statistics
+          Zonal result
         </Text>
         <Text size="xs" c="dimmed">
           {rows.length} zone{rows.length === 1 ? '' : 's'}

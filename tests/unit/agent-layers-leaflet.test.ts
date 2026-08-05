@@ -90,7 +90,7 @@ describe('useAgentLayersLeaflet', () => {
   beforeEach(() => {
     cleanup();
     container = makeContainer();
-    useAgentLayerStore.setState({ layers: [], markers: [], generation: 0 });
+    useAgentLayerStore.setState({ layers: [], rasterLayers: [], markers: [], generation: 0 });
     useAppStore.setState({ activeTab: 'map' });
     setSharedCamera({ longitude: 0, latitude: 20, zoom: 2 });
   });

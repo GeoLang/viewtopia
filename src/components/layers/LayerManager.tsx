@@ -15,7 +15,12 @@ import {
 import { IconChevronRight, IconDownload, IconStack2, IconX, } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { downloadOutput } from '../../features/workflow/plan';
-import { layerStyle, useAgentLayerStore, type AgentLayer } from '../../store/agentLayers';
+import {
+  layerStyle,
+  useAgentLayerStore,
+  type AgentLayer,
+  type AgentRasterLayer,
+} from '../../store/agentLayers';
 import { SymbologyEditor } from '../../features/symbology/SymbologyEditor';
 import { geojsonToPmtiles } from '../../features/pmtiles/writer';
 
@@ -166,6 +171,82 @@ function AgentLayerRow({
   );
 }
 
+/**
+ * An analysis result draped over its bbox. No symbology or export: it is an
+ * image, so opacity and remove are the whole surface.
+ */
+function RasterLayerRow({
+  layer,
+  expanded,
+  onExpand,
+}: {
+  layer: AgentRasterLayer;
+  expanded: boolean;
+  onExpand: () => void;
+}) {
+  const setOpacity = useAgentLayerStore((s) => s.setRasterOpacity);
+  const removeLayer = useAgentLayerStore((s) => s.removeRasterLayer);
+
+  return (
+    <Paper
+      p="xs"
+      radius="sm"
+      style={{ background: '#21262d', border: '1px solid #30363d', cursor: 'pointer' }}
+      onClick={onExpand}
+      data-testid="raster-layer-row"
+    >
+      <Group justify="space-between" wrap="nowrap">
+        <Group gap={4} wrap="nowrap" style={{ minWidth: 0 }}>
+          <IconChevronRight
+            size={12}
+            color="#8b949e"
+            style={{ flexShrink: 0, transform: expanded ? 'rotate(90deg)' : undefined }}
+          />
+          <Text size="xs" c="white" lineClamp={1}>
+            {layer.name}
+          </Text>
+        </Group>
+        <Badge size="xs" variant="light" color="gray">
+          raster
+        </Badge>
+      </Group>
+
+      {expanded && (
+        <Stack gap="xs" mt="xs">
+          <Group gap="xs">
+            <Text size="xs" c="dimmed" w={50}>
+              Opacity
+            </Text>
+            <Slider
+              size="xs"
+              flex={1}
+              min={0}
+              max={1}
+              step={0.05}
+              value={layer.opacity}
+              onChange={(v) => setOpacity(layer.id, v)}
+            />
+            <Text size="xs" c="dimmed" w={30}>
+              {Math.round(layer.opacity * 100)}%
+            </Text>
+          </Group>
+          <Button
+            size="xs"
+            variant="subtle"
+            color="red"
+            onClick={(e) => {
+              e.stopPropagation();
+              removeLayer(layer.id);
+            }}
+          >
+            Remove
+          </Button>
+        </Stack>
+      )}
+    </Paper>
+  );
+}
+
 interface LayerManagerProps {
   layers: LayerItem[];
   onToggle: (id: string) => void;
@@ -188,7 +269,8 @@ export function LayerManager({
   // anything already listed above is skipped rather than shown twice
   const listed = new Set(layers.map((l) => l.id));
   const agentLayers = useAgentLayerStore((s) => s.layers).filter((l) => !listed.has(l.id));
-  const total = layers.length + agentLayers.length;
+  const rasterLayers = useAgentLayerStore((s) => s.rasterLayers);
+  const total = layers.length + agentLayers.length + rasterLayers.length;
 
   return (
     <Paper
@@ -296,6 +378,14 @@ export function LayerManager({
           ))}
           {agentLayers.map((layer) => (
             <AgentLayerRow
+              key={layer.id}
+              layer={layer}
+              expanded={expandedId === layer.id}
+              onExpand={() => setExpandedId(expandedId === layer.id ? null : layer.id)}
+            />
+          ))}
+          {rasterLayers.map((layer) => (
+            <RasterLayerRow
               key={layer.id}
               layer={layer}
               expanded={expandedId === layer.id}

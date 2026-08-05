@@ -5,6 +5,9 @@ import {
   Cartesian3,
   Color,
   GeoJsonDataSource,
+  type ImageryLayer,
+  Rectangle,
+  SingleTileImageryProvider,
   VerticalOrigin,
   type Viewer,
 } from 'cesium';
@@ -17,6 +20,7 @@ const MARKER_PREFIX = 'agent-marker-';
 /** Draws the agent's ui_spec layers and markers on Cesium, re-applying after a renderer switch. */
 export function useAgentLayersCesium(viewerRef: MutableRefObject<Viewer | null>) {
   const layers = useAgentLayerStore((s) => s.layers);
+  const rasterLayers = useAgentLayerStore((s) => s.rasterLayers);
   const markers = useAgentLayerStore((s) => s.markers);
   const generation = useAgentLayerStore((s) => s.generation);
   const renderer = useAppStore((s) => s.renderer);
@@ -47,6 +51,36 @@ export function useAgentLayersCesium(viewerRef: MutableRefObject<Viewer | null>)
       });
     }
   }, [markers, viewerRef, renderer, activeTab]);
+
+  // imagery layers live outside the dataSources collection, so they are added
+  // and taken off by hand rather than swept by name like the vector ones
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed()) return;
+    let cancelled = false;
+    const added: ImageryLayer[] = [];
+
+    const apply = async () => {
+      for (const layer of rasterLayers) {
+        const provider = await SingleTileImageryProvider.fromUrl(layer.url, {
+          rectangle: Rectangle.fromDegrees(...layer.bbox),
+        });
+        if (cancelled || viewer.isDestroyed()) return;
+        const imagery = viewer.imageryLayers.addImageryProvider(provider);
+        imagery.alpha = layer.opacity;
+        added.push(imagery);
+      }
+    };
+
+    void apply();
+    return () => {
+      cancelled = true;
+      if (viewer.isDestroyed()) return;
+      for (const imagery of added) {
+        if (viewer.imageryLayers.contains(imagery)) viewer.imageryLayers.remove(imagery, true);
+      }
+    };
+  }, [rasterLayers, viewerRef, renderer, activeTab]);
 
   useEffect(() => {
     const viewer = viewerRef.current;

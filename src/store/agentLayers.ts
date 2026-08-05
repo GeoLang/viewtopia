@@ -43,6 +43,22 @@ export function layerStyle(layer: AgentLayer): Required<AgentLayerStyle> {
   };
 }
 
+/**
+ * An image draped over a bbox: a raster analysis result, not features. Kept
+ * apart from the vector layers because it shares none of their machinery
+ * (symbology, PMTiles export, feature bounds) and because its data URL runs to
+ * megabytes, which a saved project file has no business carrying.
+ */
+export interface AgentRasterLayer {
+  id: string;
+  name: string;
+  /** data URL of the rendered image */
+  url: string;
+  /** [west, south, east, north] in lon/lat */
+  bbox: [number, number, number, number];
+  opacity: number;
+}
+
 /** A point the agent dropped via add_marker. Accumulates until clear_entities. */
 export interface AgentMarker {
   id: string;
@@ -54,6 +70,7 @@ export interface AgentMarker {
 
 interface AgentLayerState {
   layers: AgentLayer[];
+  rasterLayers: AgentRasterLayer[];
   markers: AgentMarker[];
   /** Bumped each time a new spec lands, so renderers know to reframe. */
   generation: number;
@@ -66,6 +83,10 @@ interface AgentLayerState {
   setLayerOpacity: (id: string, opacity: number) => void;
   /** Style one layer by its data, or null to go back to one colour. */
   setSymbology: (id: string, symbology: Symbology | null) => void;
+  /** Drape an image over a bbox; a known id replaces that layer. */
+  addRasterLayer: (layer: AgentRasterLayer) => void;
+  removeRasterLayer: (id: string) => void;
+  setRasterOpacity: (id: string, opacity: number) => void;
   addMarker: (marker: Omit<AgentMarker, 'id'>) => void;
   clearMarkers: () => void;
   clear: () => void;
@@ -119,6 +140,7 @@ function sanitizeLayers(layers: AgentLayer[]): AgentLayer[] {
 
 export const useAgentLayerStore = create<AgentLayerState>((set) => ({
   layers: [],
+  rasterLayers: [],
   markers: [],
   generation: 0,
   setLayers: (layers) => set((s) => ({ layers: sanitizeLayers(layers), generation: s.generation + 1 })),
@@ -147,6 +169,18 @@ export const useAgentLayerStore = create<AgentLayerState>((set) => ({
         l.id !== id ? l : symbology ? applySymbology(l, symbology) : clearSymbology(l),
       ),
     })),
+  addRasterLayer: (layer) =>
+    set((s) => ({
+      rasterLayers: s.rasterLayers.some((l) => l.id === layer.id)
+        ? s.rasterLayers.map((l) => (l.id === layer.id ? layer : l))
+        : [...s.rasterLayers, layer],
+    })),
+  removeRasterLayer: (id) =>
+    set((s) => ({ rasterLayers: s.rasterLayers.filter((l) => l.id !== id) })),
+  setRasterOpacity: (id, opacity) =>
+    set((s) => ({
+      rasterLayers: s.rasterLayers.map((l) => (l.id === id ? { ...l, opacity } : l)),
+    })),
   addMarker: (marker) =>
     set((s) => {
       if (Math.abs(marker.lon) > 180 || Math.abs(marker.lat) > 90) {
@@ -156,5 +190,5 @@ export const useAgentLayerStore = create<AgentLayerState>((set) => ({
       return { markers: [...s.markers, { ...marker, id: crypto.randomUUID() }] };
     }),
   clearMarkers: () => set({ markers: [] }),
-  clear: () => set({ layers: [], markers: [] }),
+  clear: () => set({ layers: [], rasterLayers: [], markers: [] }),
 }));

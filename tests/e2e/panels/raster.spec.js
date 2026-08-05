@@ -85,7 +85,7 @@ test('raster panel runs terrano wasm ops on an uploaded dem', async ({ page }) =
   await panel.getByLabel('Zones').click();
   await page.getByRole('option', { name: 'Result: reclass' }).click();
   await panel.getByRole('button', { name: 'Run zonal statistics' }).click();
-  await expect(panel.getByText('Zonal statistics')).toBeVisible({ timeout: 15000 });
+  await expect(panel.getByText('Zonal result')).toBeVisible({ timeout: 15000 });
   await expect(panel.getByText('5 zones')).toBeVisible();
 
   // polygonize the classes just produced: each class is a contiguous band of
@@ -94,17 +94,53 @@ test('raster panel runs terrano wasm ops on an uploaded dem', async ({ page }) =
   await page.getByRole('option', { name: 'Result: reclass' }).click();
   await panel.getByRole('button', { name: 'Run polygonize' }).click();
   await expect(panel.getByText('5 polygons')).toBeVisible({ timeout: 15000 });
-  await panel.getByRole('button', { name: 'Add to map' }).click();
-  await panel.getByRole('button', { name: 'Clear' }).click();
+  await panel.getByRole('button', { name: 'Add as layer' }).click();
 
   await panel.getByRole('button', { name: 'Run contours' }).click();
   await expect(panel.getByText(/\d+ contour lines/)).toBeVisible({ timeout: 15000 });
 
-  // 4326 raster, so the drape path is live; the console guard fails the test
+  // 4326 raster, so the layer path is live; the console guard fails the test
   // if the renderer rejects it
-  const addToMap = panel.getByRole('button', { name: 'Add to map' });
-  await expect(addToMap).toBeEnabled();
-  await addToMap.click();
+  const addAsLayer = panel.getByRole('button', { name: 'Add as layer' });
+  await expect(addAsLayer).toBeEnabled();
+  await addAsLayer.click();
+
+  // both results are real layers now, listed and removable rather than one
+  // drape the next run replaces
+  await page.getByRole('button', { name: 'Layers' }).click();
+  const layerPanel = page.locator(PANEL).filter({ hasText: 'Layers (' });
+  await expect(layerPanel.getByText('polygons')).toBeVisible();
+  await expect(layerPanel.getByText('contours')).toBeVisible();
+});
+
+test('a raster result becomes a layer that stacks and can be removed', async ({ page }) => {
+  await openApp(page);
+  await page.getByRole('button', { name: 'Data' }).click();
+  await page.locator(MENU_ITEM).filter({ hasText: 'Raster Analysis' }).first().click();
+  const panel = page.locator(PANEL).filter({ hasText: 'Raster Analysis' });
+
+  await panel.locator('input[type="file"]').setInputFiles({
+    name: 'dem.tif',
+    mimeType: 'image/tiff',
+    buffer: await demTif(),
+  });
+  await expect(panel.getByText('40×40 · 1 band · EPSG:4326')).toBeVisible();
+
+  await panel.getByRole('button', { name: 'Run hillshade' }).click();
+  await expect(panel.getByText('Result: hillshade')).toBeVisible({ timeout: 30000 });
+  await panel.getByRole('button', { name: 'Add as layer' }).click();
+
+  await panel.getByRole('button', { name: 'Run aspect' }).click();
+  await expect(panel.getByText('Result: aspect')).toBeVisible({ timeout: 15000 });
+  await panel.getByRole('button', { name: 'Add as layer' }).click();
+
+  await page.getByRole('button', { name: 'Layers' }).click();
+  const layerPanel = page.locator(PANEL).filter({ hasText: 'Layers (' });
+  await expect(layerPanel.getByText('Layers (2)')).toBeVisible();
+
+  await layerPanel.getByTestId('raster-layer-row').first().click();
+  await layerPanel.getByRole('button', { name: 'Remove' }).click();
+  await expect(layerPanel.getByText('Layers (1)')).toBeVisible();
 });
 
 test('spectral index presets pick their own bands', async ({ page }) => {

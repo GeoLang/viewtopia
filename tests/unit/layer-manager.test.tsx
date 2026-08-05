@@ -66,7 +66,7 @@ const renderPanel = () =>
 
 describe('LayerManager agent layers', () => {
   beforeEach(() => {
-    useAgentLayerStore.setState({ layers: [], markers: [], generation: 0 });
+    useAgentLayerStore.setState({ layers: [], rasterLayers: [], markers: [], generation: 0 });
   });
 
   afterEach(cleanup);
@@ -223,5 +223,48 @@ describe('LayerManager agent layers', () => {
 
     expect(screen.getByText('Layers (1)')).toBeInTheDocument();
     expect(screen.queryByTestId('agent-layer-row')).not.toBeInTheDocument();
+  });
+
+  it('lists a raster result and acts on the store, with no symbology to offer', async () => {
+    act(() => {
+      useAgentLayerStore.getState().addRasterLayer({
+        id: 'hs',
+        name: 'hillshade',
+        url: 'data:image/png;base64,AAA',
+        bbox: [12, 45, 13, 46],
+        opacity: 0.8,
+      });
+    });
+
+    renderPanel();
+
+    expect(screen.getByText('Layers (1)')).toBeInTheDocument();
+    expect(screen.getByText('hillshade')).toBeInTheDocument();
+    expect(screen.getByText('raster')).toBeInTheDocument();
+
+    await act(async () => fireEvent.click(screen.getByTestId('raster-layer-row')));
+    // an image has no data to shade by, so the expanded row is opacity and remove
+    expect(screen.getByText('80%')).toBeInTheDocument();
+    expect(screen.queryByTestId('agent-layer-export-pmtiles')).not.toBeInTheDocument();
+
+    await act(async () => fireEvent.click(screen.getByText('Remove')));
+    expect(useAgentLayerStore.getState().rasterLayers).toHaveLength(0);
+  });
+
+  it('counts vector and raster layers together', () => {
+    act(() => {
+      useAgentLayerStore.getState().setLayers([layer('a')]);
+      useAgentLayerStore.getState().addRasterLayer({
+        id: 'hs',
+        name: 'hillshade',
+        url: 'data:image/png;base64,AAA',
+        bbox: [12, 45, 13, 46],
+        opacity: 0.5,
+      });
+    });
+
+    renderPanel();
+
+    expect(screen.getByText('Layers (2)')).toBeInTheDocument();
   });
 });

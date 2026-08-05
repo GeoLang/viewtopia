@@ -7,6 +7,7 @@ import { useAppStore } from '../store/app';
 import { agentLayersBounds } from './agentLayerBounds';
 
 const PREFIX = 'agent-layer-';
+const RASTER_PREFIX = 'agent-raster-';
 
 /**
  * A classified layer carries its class colour on each feature as a simplestyle
@@ -36,6 +37,7 @@ function markerElement(m: AgentMarker): HTMLElement {
 /** Draws the agent's ui_spec layers and markers on MapLibre, so switching renderers keeps them. */
 export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map | null>) {
   const layers = useAgentLayerStore((s) => s.layers);
+  const rasterLayers = useAgentLayerStore((s) => s.rasterLayers);
   const markers = useAgentLayerStore((s) => s.markers);
   const generation = useAgentLayerStore((s) => s.generation);
   const renderer = useAppStore((s) => s.renderer);
@@ -62,10 +64,35 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
     const apply = () => {
       // Drop everything we previously added, then redraw from the store.
       for (const layer of map.getStyle()?.layers ?? []) {
-        if (layer.id.startsWith(PREFIX)) map.removeLayer(layer.id);
+        if (layer.id.startsWith(PREFIX) || layer.id.startsWith(RASTER_PREFIX)) {
+          map.removeLayer(layer.id);
+        }
       }
       for (const id of Object.keys(map.getStyle()?.sources ?? {})) {
-        if (id.startsWith(PREFIX)) map.removeSource(id);
+        if (id.startsWith(PREFIX) || id.startsWith(RASTER_PREFIX)) map.removeSource(id);
+      }
+
+      // rasters first, so features draw over the image they describe
+      for (const layer of rasterLayers) {
+        const src = `${RASTER_PREFIX}${layer.id}`;
+        const [west, south, east, north] = layer.bbox;
+        map.addSource(src, {
+          type: 'image',
+          url: layer.url,
+          // image source corners run clockwise from the top left
+          coordinates: [
+            [west, north],
+            [east, north],
+            [east, south],
+            [west, south],
+          ],
+        });
+        map.addLayer({
+          id: `${src}-raster`,
+          type: 'raster',
+          source: src,
+          paint: { 'raster-opacity': layer.opacity },
+        });
       }
 
       for (const layer of layers) {
@@ -125,7 +152,10 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
     const reapplyIfDropped = () => {
       if (!map.isStyleLoaded()) return;
       const sources = Object.keys(map.getStyle()?.sources ?? {});
-      if (layers.some((layer) => !sources.includes(`${PREFIX}${layer.id}`))) apply();
+      const missing =
+        layers.some((layer) => !sources.includes(`${PREFIX}${layer.id}`)) ||
+        rasterLayers.some((layer) => !sources.includes(`${RASTER_PREFIX}${layer.id}`));
+      if (missing) apply();
     };
 
     if (map.isStyleLoaded()) apply();
@@ -138,5 +168,5 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
       map.off('styledata', reapplyIfDropped);
       map.off('idle', reapplyIfDropped);
     };
-  }, [layers, generation, mapRef, renderer, activeTab]);
+  }, [layers, rasterLayers, generation, mapRef, renderer, activeTab]);
 }

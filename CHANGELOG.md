@@ -32,6 +32,17 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-04: **raster analysis results are real layers**. Add as layer hands a
+  result to the layer store every renderer draws from, so runs stack, survive a
+  renderer switch, and get listed in the Layers panel with their own opacity and
+  remove, instead of the single drape the panel used to own and replace on the
+  next run. Raster results ride a new `rasterLayers` list rather than widening
+  `AgentLayer`: an image shares none of the vector machinery (symbology, PMTiles
+  export, feature bounds), and keeping it out of the vector list also keeps its
+  multi-megabyte data URL out of saved project files. Drawn on all three
+  renderers (MapLibre image source, Cesium single-tile imagery, Leaflet image
+  overlay). The panel loses its overlay bookkeeping entirely.
+
 - 2026-08-04: **focal and zonal statistics in the Raster panel**, on new
   terrano-core ops. Focal runs a moving window (min/max/mean/sum/std/median/
   majority/range, square or circular, any radius) over a source band or the

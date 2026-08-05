@@ -3,7 +3,7 @@
  * it, computed by terrano-core over wasm in a worker (engine.ts). Results
  * preview inline and can drape onto the map when the raster is EPSG:4326.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import {
   ActionIcon,
   Alert,
@@ -35,17 +35,6 @@ import {
   IconVector,
   IconX,
 } from '@tabler/icons-react';
-import type { GeoJsonDataSource, ImageryLayer } from 'cesium';
-import { getActiveCesiumViewer } from '../viewer/registry';
-import { renderGeoJson } from '../viewer/renderGeoJson';
-import { useAppStore } from '../store/app';
-import {
-  addMapGeoJson,
-  addMapRaster,
-  addRasterOverlay,
-  removeOverlay,
-  type MapResult,
-} from '../lib/terrainAnalysis';
 import { loadCogFromUrl, loadCogFromBuffer, type LoadedRaster } from './loader';
 import { computeBandMath, computeStats } from './operations';
 import * as engine from './engine';
@@ -61,7 +50,7 @@ const inputStyles = { input: { background: '#0d1117', borderColor: '#30363d' } }
 
 /** a run that produced features rather than a grid: contours, polygonize */
 interface VectorResult {
-  id: string;
+  name: string;
   geojson: GeoJSON.FeatureCollection;
   summary: string;
   detail: string;
@@ -101,27 +90,11 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
   const [bandMathExpr, setBandMathExpr] = useState('(b4 - b3) / (b4 + b3)');
   const [contourInterval, setContourInterval] = useState(10);
 
-  const renderer = useAppStore((s) => s.renderer);
   const mapLayers = useAgentLayerStore((s) => s.layers);
-  const layerRef = useRef<ImageryLayer | null>(null);
-  const dsRef = useRef<GeoJsonDataSource | undefined>(undefined);
-  const mapResultRef = useRef<MapResult | null>(null);
+  const addRasterLayer = useAgentLayerStore((s) => s.addRasterLayer);
+  const addVectorLayer = useAgentLayerStore((s) => s.addLayer);
 
-  const clearMapResult = () => {
-    removeOverlay(layerRef.current);
-    layerRef.current = null;
-    mapResultRef.current?.remove();
-    mapResultRef.current = null;
-    const viewer = getActiveCesiumViewer();
-    if (dsRef.current && viewer && !viewer.isDestroyed()) {
-      viewer.dataSources.remove(dsRef.current);
-    }
-    dsRef.current = undefined;
-  };
-
-  useEffect(() => clearMapResult, []);
-
-  // the drape helpers place a bbox in lon/lat, so any other frame stays inline
+  // a layer is placed by its lon/lat bbox, so any other frame stays inline
   const canMap = raster?.metadata.crs === 'EPSG:4326';
 
   const preset = INDEX_PRESETS[indexKey];
@@ -258,7 +231,7 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
             noData,
           );
           setVector({
-            id: 'raster-contours',
+            name: 'contours',
             geojson: c.geojson,
             summary: `${c.geojson.features.length} contour lines`,
             detail: `Elevation ${c.elevationRange[0].toFixed(0)}–${c.elevationRange[1].toFixed(0)}`,
@@ -316,7 +289,7 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
           if (!data) throw new Error('no input to polygonize');
           const p = await engine.polygonize(data, width, height, bbox, noData);
           setVector({
-            id: 'raster-polygons',
+            name: 'polygons',
             geojson: p.geojson,
             summary: `${p.regions} polygons`,
             detail: 'one feature per connected run of equal cells',
@@ -341,20 +314,27 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
     }
   }
 
-  const addResultToMap = async () => {
-    clearMapResult();
+  /**
+   * Hand the result to the layer store, which every renderer draws from, so it
+   * survives a renderer switch and stacks with the runs before it instead of
+   * replacing the one drape this panel used to own.
+   */
+  const addAsLayer = () => {
     if (result && resultImage) {
-      if (renderer === 'maplibre') {
-        mapResultRef.current = addMapRaster('raster-analysis', resultImage, result.bbox, 0.8);
-      } else {
-        layerRef.current = await addRasterOverlay(resultImage, result.bbox, 0.8);
-      }
+      addRasterLayer({
+        id: crypto.randomUUID(),
+        name: result.operation,
+        url: resultImage,
+        bbox: result.bbox,
+        opacity: 0.8,
+      });
     } else if (vector) {
-      if (renderer === 'maplibre') {
-        mapResultRef.current = addMapGeoJson(vector.id, vector.geojson, vector.color);
-      } else {
-        dsRef.current = await renderGeoJson(vector.geojson, vector.color, false, vector.id);
-      }
+      addVectorLayer({
+        id: crypto.randomUUID(),
+        name: vector.name,
+        color: vector.color,
+        geojson: vector.geojson,
+      });
     }
   };
 
@@ -938,26 +918,20 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
         )}
 
         {(result || vector) && (
-          <Group gap="xs">
-            <Button
-              size="xs"
-              variant="light"
-              color="violet"
-              leftSection={<IconMap size={14} />}
-              onClick={addResultToMap}
-              disabled={!canMap}
-              style={{ flex: 1 }}
-            >
-              Add to map
-            </Button>
-            <Button size="xs" variant="default" onClick={clearMapResult}>
-              Clear
-            </Button>
-          </Group>
+          <Button
+            size="xs"
+            variant="light"
+            color="violet"
+            leftSection={<IconMap size={14} />}
+            onClick={addAsLayer}
+            disabled={!canMap}
+          >
+            Add as layer
+          </Button>
         )}
         {(result || vector) && !canMap && (
           <Text size="xs" c="dimmed">
-            Map overlay needs an EPSG:4326 raster; this one is{' '}
+            A layer needs an EPSG:4326 raster; this one is{' '}
             {raster?.metadata.crs ?? 'unknown'}.
           </Text>
         )}
