@@ -74,7 +74,7 @@ export const DATA_MENU: ToolMenuItem[][] = [
     { panel: 'import', label: '📂 Import' },
     { panel: 'project', label: '💾 Project' },
     { panel: 'sqlWorkspace', label: '🗄 SQL' },
-    { panel: 'modelImport', label: '🧊 3D Models', preview: true },
+    { panel: 'modelImport', label: '🧊 glTF Models' },
     { panel: 'trackImport', label: '🗺 Tracks' },
     { panel: 'vectorTiles', label: '🔷 Vector Tiles' },
     { panel: 'rasterViewer', label: '🖼 Raster Analysis' },

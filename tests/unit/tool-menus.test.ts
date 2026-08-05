@@ -19,7 +19,6 @@ const GATED_PANELS = [
   'pointCloudCompare',
   'classification',
   'assets',
-  'modelImport',
   'webxr',
 ] as const;
 
@@ -34,6 +33,7 @@ const SHIPPED_PANELS = [
   'offline',
   'cesiumIon',
   'google3d',
+  'modelImport',
   // settings is a top-level toolbar button now, not a menu registry entry
 ] as const;
 

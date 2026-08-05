@@ -6,6 +6,14 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-05: the model import panel left the preview gate, scoped honestly
+  to glTF/GLB (Cesium's entity model layer takes nothing else, the
+  OBJ/FBX/IFC claims are gone). Choose a file, click the globe to place it
+  with the chosen scale and heading, placed models list with remove, blob
+  URLs revoked on remove and unmount, entities stay on the globe after the
+  panel closes. minimumPixelSize 64 keeps metre-scale models visible at
+  globe zoom.
+
 - 2026-08-05: the Cesium Ion and Google 3D panels left the preview gate.
   Ion: a token validates against api.cesium.com, becomes
   `Ion.defaultAccessToken`, persists in settings, and the account's assets
