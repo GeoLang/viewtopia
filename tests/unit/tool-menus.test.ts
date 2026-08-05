@@ -7,15 +7,11 @@ import {
 import { useAppStore } from '../../src/store/app';
 
 const GATED_PANELS = [
-  'noise',
-  'energy',
   'photo',
   'timelapse',
   'indoor',
   'export3d',
-  'pointCloudCompare',
   'classification',
-  'webxr',
 ] as const;
 
 const SHIPPED_PANELS = [

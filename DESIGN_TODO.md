@@ -455,12 +455,13 @@ survives reloads and syncs back. Everything below is what does not work.
 - [ ] **viewtopia FleetPanel** — currently an honest "no live feed" state; nothing serves
       vehicle positions. Decide whether real-time fleet tracking is in scope before building
       a WS/ingest path for it.
-- [ ] Preview-gated panels, 9 left after the 2026-08-05 burndown shipped
-      offline, cesium ion, google 3d, model import, flythrough, drone,
-      volume and assets: timelapse, pointCloudCompare, classification,
-      noise, energy, photo, indoor, webxr, export3d. Each needs a backend,
-      an external data source, or a heavy library, so each is an
-      implement-vs-delete decision rather than wiring.
+- [ ] Preview-gated panels, 4 left after the 2026-08-05 burndown shipped
+      eight and deleted four (noise, energy, webxr, pointCloudCompare,
+      owner decision, nothing supplied their engines): timelapse waits on
+      geoplumb's per-pull time axis, indoor waits on an interiora
+      integration decision, photo waits on choosing an external imagery
+      API, classification stays gated until point cloud tooling is
+      wanted.
 - [ ] tiletopia upload response returns the Asset struct without the job id
       minted by job_queue.submit, and the only job-by-asset lookup is the
       admin-gated /api/v1/admin/jobs, so the viewer cannot show tiling

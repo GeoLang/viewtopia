@@ -320,7 +320,6 @@ const PANEL_COMMANDS: Record<string, ToolPanel> = {
   shadow_analysis: 'shadows',
   classify: 'classification',
   classify_pointcloud: 'classification',
-  compare_pointclouds: 'pointCloudCompare',
   load_google_3d: 'google3d',
   import_model: 'modelImport',
   weather: 'weather',

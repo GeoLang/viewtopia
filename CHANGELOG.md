@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-05: four preview stubs deleted instead of implemented (owner
+  decision): noise and energy had no engine or data source anywhere in
+  the platform, webxr had no Cesium XR path, point cloud compare had no
+  registration or alignment substrate. Their panel keys, menu entries,
+  switch cases and the compare_pointclouds agent command mapping are
+  gone. tiletopia's server-side arvr module is untouched.
+
 - 2026-08-05: the volume and assets panels left the preview gate. Volume:
   cut and fill over a polygon from the draw store, 64x64 grid clipped by
   even-odd test, heights from sampleTerrainMostDetailed, base height min,

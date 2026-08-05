@@ -32,22 +32,18 @@ import { WeatherPanel } from './tools/WeatherPanel';
 import { FloodPanel } from './tools/FloodPanel';
 import { WindPanel } from './tools/WindPanel';
 import { LightingPanel } from './tools/LightingPanel';
-import { NoisePanel } from './tools/NoisePanel';
-import { EnergyPanel } from './tools/EnergyPanel';
 import { SolarPanel } from './tools/SolarPanel';
 import { TrafficPanel } from './tools/TrafficPanel';
 import { PhotoPanel } from './tools/PhotoPanel';
 import { OfflinePanel } from './tools/OfflinePanel';
 import { IndoorPanel } from './tools/IndoorPanel';
 import { DronePanel } from './tools/DronePanel';
-import { WebXRPanel } from './tools/WebXRPanel';
 import { AccessibilityPanel } from './tools/AccessibilityPanel';
 import { Export3DPanel } from './tools/Export3DPanel';
 import { FlythroughPanel } from './tools/FlythroughPanel';
 import { ShadowsPanel } from './tools/ShadowsPanel';
 import { ViewshedPanel } from './tools/ViewshedPanel';
 import { VolumePanel } from './tools/VolumePanel';
-import { PointCloudComparePanel } from './tools/PointCloudComparePanel';
 import { TerrainAnalysisPanel } from './tools/TerrainAnalysisPanel';
 import { TerrainProfilePanel } from './tools/TerrainProfilePanel';
 import { SpatialStatsPanel } from './tools/SpatialStatsPanel';
@@ -219,10 +215,6 @@ export function ToolPanels() {
       return <WindPanel onClose={close} />;
     case 'lighting':
       return <LightingPanel onClose={close} />;
-    case 'noise':
-      return <NoisePanel onClose={close} />;
-    case 'energy':
-      return <EnergyPanel onClose={close} />;
     case 'solar':
       return <SolarPanel onClose={close} />;
     case 'traffic':
@@ -235,8 +227,6 @@ export function ToolPanels() {
       return <IndoorPanel onClose={close} />;
     case 'drone':
       return <DronePanel onClose={close} />;
-    case 'webxr':
-      return <WebXRPanel onClose={close} />;
     case 'accessibility':
       return <AccessibilityPanel onClose={close} />;
     case 'export3d':
@@ -249,8 +239,6 @@ export function ToolPanels() {
       return <ViewshedPanel onClose={close} />;
     case 'volume':
       return <VolumePanel onClose={close} />;
-    case 'pointCloudCompare':
-      return <PointCloudComparePanel onClose={close} />;
     case 'terrainAnalysis':
       return <TerrainAnalysisPanel onClose={close} />;
     case 'terrainProfile':
