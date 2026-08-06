@@ -131,7 +131,9 @@ test('a raster result becomes a layer that stacks and can be removed', async ({ 
   await panel.getByRole('button', { name: 'Add as layer' }).click();
 
   await panel.getByRole('button', { name: 'Run aspect' }).click();
-  await expect(panel.getByText('Result: aspect')).toBeVisible({ timeout: 15000 });
+  // 30s like hillshade above: the starved-worker effect the config header
+  // describes hit this assert at 15s in the 2026-08-05 nightly, both attempts
+  await expect(panel.getByText('Result: aspect')).toBeVisible({ timeout: 30000 });
   await panel.getByRole('button', { name: 'Add as layer' }).click();
 
   await page.getByRole('button', { name: 'Layers' }).click();

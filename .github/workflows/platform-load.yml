@@ -72,8 +72,9 @@ jobs:
       - name: Download OSM extract for routing and geocoding
         working-directory: viewtopia
         run: |
-          curl -sSL -o data/region.osm.pbf \
-            https://download.geofabrik.de/europe/monaco-latest.osm.pbf
+          scripts/fetch-osm-extract.sh \
+            https://download.geofabrik.de/europe/monaco-latest.osm.pbf \
+            data/region.osm.pbf
 
       - name: Build platform images (data plane only)
         working-directory: viewtopia

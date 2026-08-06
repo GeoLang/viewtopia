@@ -72,12 +72,9 @@ jobs:
       - name: Download OSM extract for routing
         working-directory: viewtopia
         run: |
-          curl -fsSL --retry 3 --retry-all-errors -o data/region.osm.pbf \
-            https://download.geofabrik.de/europe/monaco-latest.osm.pbf
-          # geokode/itinera fail 25 min later if an html error page lands here
-          if [ "$(head -c1 data/region.osm.pbf)" = "<" ]; then
-            echo "downloaded HTML instead of a PBF"; exit 1
-          fi
+          scripts/fetch-osm-extract.sh \
+            https://download.geofabrik.de/europe/monaco-latest.osm.pbf \
+            data/region.osm.pbf
 
       - name: Build platform images (golden-path subset)
         working-directory: viewtopia
