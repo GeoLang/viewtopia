@@ -4,13 +4,20 @@ import {
   Text,
   Group,
   ActionIcon,
+  Button,
   Table,
   ScrollArea,
   TextInput,
   Badge,
   Select,
 } from '@mantine/core';
-import { IconTable, IconX, IconSearch } from '@tabler/icons-react';
+import {
+  IconTable,
+  IconX,
+  IconSearch,
+  IconSortAscending,
+  IconSortDescending,
+} from '@tabler/icons-react';
 import type { Entity } from 'cesium';
 import {
   useEntityLayers,
@@ -18,6 +25,13 @@ import {
   entityAttributes,
   flyToEntity,
 } from '../../lib/entityLayers';
+import {
+  attributeColumns,
+  nextSort,
+  sortRows,
+  type SortState,
+} from '../../features/attributes/attributes';
+import { StatsSection } from '../../features/attributes/AttributeTools';
 
 const MAX_ROWS = 500;
 
@@ -28,9 +42,12 @@ interface FeatureRow {
 
 export function DataTablePanel({ onClose }: { onClose: () => void }) {
   const layers = useEntityLayers();
+
   const [filter, setFilter] = useState('');
   const [selectedLayer, setSelectedLayer] = useState<string | null>(null);
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
+  const [sort, setSort] = useState<SortState | null>(null);
+  const [statsOpen, setStatsOpen] = useState(false);
 
   const layerOptions = layers.map((l) => ({
     value: String(l.index),
@@ -41,14 +58,11 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
     if (selectedLayer == null) return { columns: [], rows: [] };
     const ds = getEntityLayer(Number(selectedLayer));
     if (!ds) return { columns: [], rows: [] };
-    const entities = ds.entities.values.slice(0, MAX_ROWS);
-    const rows = entities.map((entity) => ({ entity, attrs: entityAttributes(entity) }));
-    const columns: string[] = [];
-    for (const row of rows) {
-      for (const key of Object.keys(row.attrs)) {
-        if (!columns.includes(key)) columns.push(key);
-      }
-    }
+    const rows = ds.entities.values.map((entity) => ({
+      entity,
+      attrs: entityAttributes(entity),
+    }));
+    const columns = attributeColumns(rows.map((r) => r.attrs));
     // entities without a property bag still get a row via their name/id
     if (columns.length === 0 && rows.length > 0) {
       for (const row of rows) row.attrs = { name: row.entity.name ?? row.entity.id };
@@ -65,6 +79,10 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
       )
     : rows;
 
+  // sorted before the cap, so the cap shows the true top rows
+  const sortedRows = sortRows(filteredRows, (r) => r.attrs[sort?.column ?? ''], sort);
+  const shownRows = sortedRows.slice(0, MAX_ROWS);
+
   const selectRow = (row: FeatureRow) => {
     setSelectedRowId(row.entity.id);
     flyToEntity(row.entity);
@@ -80,7 +98,7 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
         bottom: 16,
         left: 16,
         right: 16,
-        maxHeight: '40vh',
+        maxHeight: statsOpen ? '60vh' : '40vh',
         background: '#161b22',
         border: '1px solid #30363d',
         zIndex: 300,
@@ -101,13 +119,25 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
           )}
         </Group>
         <Group gap="xs">
+          <Button
+            size="xs"
+            variant={statsOpen ? 'filled' : 'light'}
+            color="violet"
+            disabled={selectedLayer == null}
+            onClick={() => setStatsOpen(!statsOpen)}
+          >
+            Stats
+          </Button>
           <Select
             size="xs"
             w={200}
             placeholder={layers.length ? 'Select layer…' : 'No layers loaded'}
             data={layerOptions}
             value={selectedLayer}
-            onChange={setSelectedLayer}
+            onChange={(v) => {
+              setSelectedLayer(v);
+              setSort(null);
+            }}
             styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
           />
           <TextInput
@@ -125,20 +155,38 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
         </Group>
       </Group>
 
+      {statsOpen && (
+        <StatsSection columns={columns} rows={filteredRows.map((r) => r.attrs)} />
+      )}
+
       <ScrollArea flex={1}>
         {columns.length > 0 ? (
           <Table striped highlightOnHover withTableBorder withColumnBorders>
             <Table.Thead>
               <Table.Tr>
                 {columns.map((col) => (
-                  <Table.Th key={col}>
-                    <Text size="xs" c="white">{col}</Text>
+                  <Table.Th
+                    key={col}
+                    onClick={() => setSort(nextSort(sort, col))}
+                    style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  >
+                    <Group gap={4} wrap="nowrap">
+                      <Text size="xs" c="white">
+                        {col}
+                      </Text>
+                      {sort?.column === col &&
+                        (sort.dir === 'asc' ? (
+                          <IconSortAscending size={12} color="#a78bfa" />
+                        ) : (
+                          <IconSortDescending size={12} color="#a78bfa" />
+                        ))}
+                    </Group>
                   </Table.Th>
                 ))}
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {filteredRows.map((row) => (
+              {shownRows.map((row) => (
                 <Table.Tr
                   key={row.entity.id}
                   onClick={() => selectRow(row)}
