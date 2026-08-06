@@ -25,7 +25,6 @@ export const ANALYSIS_MENU: ToolMenuItem[][] = [
     { panel: 'terrainAnalysis', label: '⛰ Terrain' },
     { panel: 'terrainProfile', label: '📈 Profile' },
     { panel: 'spatialStats', label: '📊 Statistics' },
-    { panel: 'classification', label: '🏷 Classification', preview: true },
   ],
 ];
 

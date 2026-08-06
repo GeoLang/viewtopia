@@ -10,7 +10,6 @@ const GATED_PANELS = [
   'photo',
   'timelapse',
   'indoor',
-  'classification',
 ] as const;
 
 const SHIPPED_PANELS = [

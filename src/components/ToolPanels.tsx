@@ -47,7 +47,6 @@ import { VolumePanel } from './tools/VolumePanel';
 import { TerrainAnalysisPanel } from './tools/TerrainAnalysisPanel';
 import { TerrainProfilePanel } from './tools/TerrainProfilePanel';
 import { SpatialStatsPanel } from './tools/SpatialStatsPanel';
-import { ClassificationPanel } from './tools/ClassificationPanel';
 import { ChartsPanel } from './tools/ChartsPanel';
 import { SplitViewPanel } from './tools/SplitViewPanel';
 import { StoriesPanel } from './tools/StoriesPanel';
@@ -247,8 +246,6 @@ export function ToolPanels() {
       return <TerrainProfilePanel onClose={close} />;
     case 'spatialStats':
       return <SpatialStatsPanel onClose={close} />;
-    case 'classification':
-      return <ClassificationPanel onClose={close} />;
     case 'charts':
       return <ChartsPanel onClose={close} />;
     case 'splitView':

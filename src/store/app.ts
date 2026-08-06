@@ -54,7 +54,6 @@ export type ToolPanel =
   | 'terrainAnalysis'
   | 'terrainProfile'
   | 'spatialStats'
-  | 'classification'
   | 'charts'
   | 'splitView'
   | 'stories'
