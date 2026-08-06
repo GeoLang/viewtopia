@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Paper,
   Text,
@@ -26,14 +26,22 @@ import {
   flyToEntity,
 } from '../../lib/entityLayers';
 import {
+  agentLayerId,
   attributeColumns,
+  layerWithField,
   nextSort,
   sortRows,
   type SortState,
 } from '../../features/attributes/attributes';
-import { StatsSection } from '../../features/attributes/AttributeTools';
+import { evaluateFields, type VirtualField } from '../../features/attributes/expressions';
+import { useVirtualFieldStore } from '../../features/attributes/virtualFields';
+import { FieldsSection, StatsSection } from '../../features/attributes/AttributeTools';
+import { useAgentLayerStore } from '../../store/agentLayers';
 
 const MAX_ROWS = 500;
+const NO_FIELDS: VirtualField[] = [];
+
+type Tool = 'fields' | 'stats';
 
 interface FeatureRow {
   entity: Entity;
@@ -42,17 +50,29 @@ interface FeatureRow {
 
 export function DataTablePanel({ onClose }: { onClose: () => void }) {
   const layers = useEntityLayers();
+  const agentLayers = useAgentLayerStore((s) => s.layers);
+  const allVirtualFields = useVirtualFieldStore((s) => s.fields);
+  const addVirtualField = useVirtualFieldStore((s) => s.addField);
+  const removeVirtualField = useVirtualFieldStore((s) => s.removeField);
 
   const [filter, setFilter] = useState('');
   const [selectedLayer, setSelectedLayer] = useState<string | null>(null);
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [sort, setSort] = useState<SortState | null>(null);
-  const [statsOpen, setStatsOpen] = useState(false);
+  const [tool, setTool] = useState<Tool | null>(null);
+  const [virtualValues, setVirtualValues] = useState<Record<string, unknown[]>>({});
+  const [evalError, setEvalError] = useState<string | null>(null);
 
   const layerOptions = layers.map((l) => ({
     value: String(l.index),
     label: `${l.name} (${l.count})`,
   }));
+
+  const layerKey = layers.find((l) => String(l.index) === selectedLayer)?.name ?? null;
+  const layerId = layerKey ? agentLayerId(layerKey) : null;
+  const storeLayer = layerId ? agentLayers.find((l) => l.id === layerId) : undefined;
+  const virtualFields = (layerKey && allVirtualFields[layerKey]) || NO_FIELDS;
+  const isVirtual = (column: string) => virtualFields.some((f) => f.name === column);
 
   const { columns, rows } = useMemo((): { columns: string[]; rows: FeatureRow[] } => {
     if (selectedLayer == null) return { columns: [], rows: [] };
@@ -71,13 +91,52 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
     return { columns, rows };
   }, [selectedLayer, layers]);
 
+  useEffect(() => {
+    if (virtualFields.length === 0) {
+      setVirtualValues((current) => (Object.keys(current).length === 0 ? current : {}));
+      setEvalError(null);
+      return;
+    }
+    let cancelled = false;
+    evaluateFields(
+      rows.map((r) => r.attrs),
+      virtualFields,
+    )
+      .then((values) => {
+        if (cancelled) return;
+        setVirtualValues(values);
+        setEvalError(null);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setVirtualValues({});
+        setEvalError(err instanceof Error ? err.message : String(err));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [rows, virtualFields]);
+
+  const viewRows = useMemo(() => {
+    if (virtualFields.length === 0) return rows;
+    return rows.map((row, i) => ({
+      ...row,
+      attrs: {
+        ...row.attrs,
+        ...Object.fromEntries(virtualFields.map((f) => [f.name, virtualValues[f.name]?.[i]])),
+      },
+    }));
+  }, [rows, virtualFields, virtualValues]);
+
+  const allColumns = [...columns, ...virtualFields.map((f) => f.name)];
+
   const filteredRows = filter
-    ? rows.filter((r) =>
+    ? viewRows.filter((r) =>
         Object.values(r.attrs).some(
           (v) => v != null && String(v).toLowerCase().includes(filter.toLowerCase()),
         ),
       )
-    : rows;
+    : viewRows;
 
   // sorted before the cap, so the cap shows the true top rows
   const sortedRows = sortRows(filteredRows, (r) => r.attrs[sort?.column ?? ''], sort);
@@ -87,6 +146,18 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
     setSelectedRowId(row.entity.id);
     flyToEntity(row.entity);
   };
+
+  async function calculateField(field: VirtualField): Promise<string> {
+    if (!storeLayer) throw new Error('this layer is not one the viewer owns');
+    const values = await evaluateFields(
+      storeLayer.geojson.features.map((f) => ({ ...f.properties })),
+      [field],
+    );
+    useAgentLayerStore
+      .getState()
+      .addLayer(layerWithField(storeLayer, field.name, values[field.name]), false);
+    return `${field.name} added to ${storeLayer.name} (${storeLayer.geojson.features.length} features)`;
+  }
 
   return (
     <Paper
@@ -98,7 +169,7 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
         bottom: 16,
         left: 16,
         right: 16,
-        maxHeight: statsOpen ? '60vh' : '40vh',
+        maxHeight: tool ? '60vh' : '40vh',
         background: '#161b22',
         border: '1px solid #30363d',
         zIndex: 300,
@@ -119,15 +190,18 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
           )}
         </Group>
         <Group gap="xs">
-          <Button
-            size="xs"
-            variant={statsOpen ? 'filled' : 'light'}
-            color="violet"
-            disabled={selectedLayer == null}
-            onClick={() => setStatsOpen(!statsOpen)}
-          >
-            Stats
-          </Button>
+          {(['fields', 'stats'] as Tool[]).map((name) => (
+            <Button
+              key={name}
+              size="xs"
+              variant={tool === name ? 'filled' : 'light'}
+              color="violet"
+              disabled={selectedLayer == null}
+              onClick={() => setTool(tool === name ? null : name)}
+            >
+              {name === 'fields' ? 'Fields' : 'Stats'}
+            </Button>
+          ))}
           <Select
             size="xs"
             w={200}
@@ -155,23 +229,33 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
         </Group>
       </Group>
 
-      {statsOpen && (
-        <StatsSection columns={columns} rows={filteredRows.map((r) => r.attrs)} />
+      {tool === 'fields' && (
+        <FieldsSection
+          fields={virtualFields}
+          onAddVirtual={(field) => layerKey && addVirtualField(layerKey, field)}
+          onRemoveVirtual={(name) => layerKey && removeVirtualField(layerKey, name)}
+          onCalculate={calculateField}
+          calculable={!!storeLayer}
+          evalError={evalError}
+        />
+      )}
+      {tool === 'stats' && (
+        <StatsSection columns={allColumns} rows={filteredRows.map((r) => r.attrs)} />
       )}
 
       <ScrollArea flex={1}>
-        {columns.length > 0 ? (
+        {allColumns.length > 0 ? (
           <Table striped highlightOnHover withTableBorder withColumnBorders>
             <Table.Thead>
               <Table.Tr>
-                {columns.map((col) => (
+                {allColumns.map((col) => (
                   <Table.Th
                     key={col}
                     onClick={() => setSort(nextSort(sort, col))}
                     style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}
                   >
                     <Group gap={4} wrap="nowrap">
-                      <Text size="xs" c="white">
+                      <Text size="xs" c={isVirtual(col) ? 'violet.3' : 'white'}>
                         {col}
                       </Text>
                       {sort?.column === col &&
@@ -196,7 +280,7 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
                       row.entity.id === selectedRowId ? 'rgba(167,139,250,0.2)' : undefined,
                   }}
                 >
-                  {columns.map((col) => (
+                  {allColumns.map((col) => (
                     <Table.Td key={col}>
                       <Text size="xs" c="gray.3">{String(row.attrs[col] ?? '')}</Text>
                     </Table.Td>

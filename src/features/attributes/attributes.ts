@@ -1,6 +1,19 @@
 /**
- * What the attribute table shows and how it orders and summarizes it.
+ * What the attribute table shows and how it orders and summarizes it. The SQL
+ * side (calculated fields, virtual fields, joins) is in expressions.ts.
  */
+import type { AgentLayer } from '../../store/agentLayers';
+
+/** The Cesium renderer names each agent layer's data source `agent-layer-<id>`. */
+const DATA_SOURCE_PREFIX = 'agent-layer-';
+
+/** The store id behind a viewer data source, or null for one nothing owns. */
+export function agentLayerId(dataSourceName: string): string | null {
+  return dataSourceName.startsWith(DATA_SOURCE_PREFIX)
+    ? dataSourceName.slice(DATA_SOURCE_PREFIX.length)
+    : null;
+}
+
 export type SortDir = 'asc' | 'desc';
 
 export interface SortState {
@@ -79,5 +92,38 @@ export function columnStats(values: unknown[]): ColumnStats {
     max: sorted[sorted.length - 1],
     mean: nums.reduce((sum, n) => sum + n, 0) / nums.length,
     median: sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2,
+  };
+}
+
+function featuresWithField(
+  geojson: GeoJSON.FeatureCollection,
+  name: string,
+  values: unknown[],
+): GeoJSON.FeatureCollection {
+  return {
+    ...geojson,
+    features: geojson.features.map((feature, i) => ({
+      ...feature,
+      properties: { ...feature.properties, [name]: values[i] ?? null },
+    })),
+  };
+}
+
+/**
+ * The layer with one computed value per feature written into its properties.
+ * A styled layer keeps a pre-styling copy of the same features, so the field
+ * has to land on both or clearing the symbology would drop it.
+ */
+export function layerWithField(
+  layer: AgentLayer,
+  name: string,
+  values: unknown[],
+): AgentLayer {
+  return {
+    ...layer,
+    geojson: featuresWithField(layer.geojson, name, values),
+    sourceGeojson: layer.sourceGeojson
+      ? featuresWithField(layer.sourceGeojson, name, values)
+      : undefined,
   };
 }

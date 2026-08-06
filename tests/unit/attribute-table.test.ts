@@ -1,11 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import {
+  agentLayerId,
   attributeColumns,
   columnStats,
   compareValues,
+  layerWithField,
   nextSort,
   sortRows,
 } from '../../src/features/attributes/attributes';
+import type { AgentLayer } from '../../src/store/agentLayers';
 
 const row = (attrs: Record<string, unknown>) => ({ attrs });
 
@@ -98,5 +101,65 @@ describe('column stats', () => {
       mean: null,
       median: null,
     });
+  });
+});
+
+describe('the layer behind a data source', () => {
+  it('reads the store id out of the renderer\'s name, and refuses anything else', () => {
+    expect(agentLayerId('agent-layer-0-parcels.geojson')).toBe('0-parcels.geojson');
+    expect(agentLayerId('some imported thing')).toBeNull();
+  });
+});
+
+describe('materializing a field', () => {
+  const layer: AgentLayer = {
+    id: 'plots',
+    name: 'parcels',
+    color: '#fff',
+    geojson: {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: { pop: 10, fill: '#f00' },
+          geometry: { type: 'Point', coordinates: [7, 45] },
+        },
+        {
+          type: 'Feature',
+          properties: { pop: 20, fill: '#0f0' },
+          geometry: { type: 'Point', coordinates: [8, 46] },
+        },
+      ],
+    },
+    sourceGeojson: {
+      type: 'FeatureCollection',
+      features: [
+        { type: 'Feature', properties: { pop: 10 }, geometry: { type: 'Point', coordinates: [7, 45] } },
+        { type: 'Feature', properties: { pop: 20 }, geometry: { type: 'Point', coordinates: [8, 46] } },
+      ],
+    },
+  };
+
+  it('writes one value per feature without touching the geometry', () => {
+    const next = layerWithField(layer, 'doubled', [20, 40]);
+    expect(next.geojson.features.map((f) => f.properties)).toEqual([
+      { pop: 10, fill: '#f00', doubled: 20 },
+      { pop: 20, fill: '#0f0', doubled: 40 },
+    ]);
+    expect(next.geojson.features[0].geometry).toEqual(layer.geojson.features[0].geometry);
+    expect(layer.geojson.features[0].properties).toEqual({ pop: 10, fill: '#f00' });
+  });
+
+  it('puts the field on the pre-styling copy too, so clearing symbology keeps it', () => {
+    const next = layerWithField(layer, 'doubled', [20, 40]);
+    expect(next.sourceGeojson?.features.map((f) => f.properties)).toEqual([
+      { pop: 10, doubled: 20 },
+      { pop: 20, doubled: 40 },
+    ]);
+  });
+
+  it('writes null where the expression produced nothing', () => {
+    const next = layerWithField(layer, 'doubled', [20]);
+    expect(next.geojson.features[1].properties?.doubled).toBeNull();
   });
 });
