@@ -292,9 +292,10 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
             items: toolsInGroup(group).map(({ id, label }) => ({ value: id, label })),
           }))}
           value={tool}
+          // the result outlives the switch: picking the next tool is how a run
+          // gets chained onto the last one
           onChange={(v) => {
             setTool((v as ToolId) ?? 'buffer');
-            setResult(null);
             setError(null);
           }}
           styles={inputStyles}
