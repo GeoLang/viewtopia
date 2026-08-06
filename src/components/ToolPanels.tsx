@@ -66,6 +66,7 @@ import { Google3DPanel } from './tools/Google3DPanel';
 import { GlobalTerrainPanel } from './tools/GlobalTerrainPanel';
 import { VectorTilesPanel } from './tools/VectorTilesPanel';
 import { RasterPanel } from '../raster/RasterPanel';
+import { ToolboxPanel } from '../toolbox/ToolboxPanel';
 import { PrintExportPanel } from './tools/PrintExportPanel';
 
 /** floating marker over unfinished tools so they never pass as shipped features */
@@ -283,6 +284,8 @@ export function ToolPanels() {
       return <VectorTilesPanel onClose={close} />;
     case 'rasterViewer':
       return <RasterPanel onClose={close} />;
+    case 'toolbox':
+      return <ToolboxPanel onClose={close} />;
     case 'printExport':
       return <PrintExportPanel onClose={close} />;
     default:

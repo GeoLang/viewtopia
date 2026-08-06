@@ -74,6 +74,7 @@ export const DATA_MENU: ToolMenuItem[][] = [
     { panel: 'trackImport', label: '🗺 Tracks' },
     { panel: 'vectorTiles', label: '🔷 Vector Tiles' },
     { panel: 'rasterViewer', label: '🖼 Raster Analysis' },
+    { panel: 'toolbox', label: '🧰 Geoprocessing' },
   ],
   [
     { panel: 'cesiumIon', label: '🌍 Cesium Ion' },

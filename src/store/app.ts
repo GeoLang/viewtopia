@@ -73,6 +73,7 @@ export type ToolPanel =
   | 'globalTerrain'
   | 'vectorTiles'
   | 'rasterViewer'
+  | 'toolbox'
   | 'featurePicker'
   | 'geojsonEditor'
   | 'styleEditor'
