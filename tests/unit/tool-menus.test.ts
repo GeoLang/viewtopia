@@ -8,7 +8,6 @@ import { useAppStore } from '../../src/store/app';
 
 const GATED_PANELS = [
   'timelapse',
-  'indoor',
 ] as const;
 
 const SHIPPED_PANELS = [
@@ -29,6 +28,7 @@ const SHIPPED_PANELS = [
   'assets',
   'export3d',
   'photo',
+  'indoor',
   // settings is a top-level toolbar button now, not a menu registry entry
 ] as const;
 

@@ -6,6 +6,20 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-06: the indoor panel left the preview gate as a real client of
+  interiora, proxied at /api/indoor/. Venues come from the service, the floor
+  picker is built from each venue's own ordinals, and the chosen floor's
+  GeoJSON (unit polygons, doors, amenities) is drawn as an agent layer, so
+  Cesium, MapLibre and Leaflet all show it; switching floors swaps it and
+  closing the panel takes it off. Two map clicks set the route ends on the
+  floor on screen, an accessible switch picks the wheelchair mode, and the
+  answer draws as a line with its distance, ETA and turn instructions, showing
+  the server's own message when a floor carries no graph node. An IndoorMapDoc
+  .json can be uploaded, which refreshes the catalogue; a viewer-role account
+  is told it needs editor rights. The hardcoded B1-to-Floor-3 list and the
+  dead load button are gone. The platform compose gains the interiora service
+  and a named volume for its documents.
+
 - 2026-08-06: the photo panel left the preview gate as a real keyless client
   over two catalogues. Turning on photo markers arms a map click, which
   searches Panoramax (bbox from the click and the radius slider, metres

@@ -16,6 +16,7 @@
 #   - tiletopia:  3D Tiles / terrain / asset server (port 3100)
 #   - geokode:    Geocoding service (port 3001)
 #   - itinera:    Routing + isochrones (port 3002)
+#   - interiora:  Indoor venue maps + indoor routing (internal port 3000)
 #   - sibyl:      Rust agent loop service (internal port 8090)
 #   - geodukt:    Declarative pipeline runner for agent plans (internal port 8100)
 #   - geolang-api: AI/NLP geospatial agent API + tool executor (port 8080)
@@ -147,6 +148,20 @@ services:
       - "0.0.0.0:3000"
       - --graph
       - /data/graph.bin
+
+  # Indoor venue maps: floor GeoJSON and indoor routing for the viewer's Indoor
+  # panel. Internal only, nginx routes /api/indoor/ here. Every /venues route
+  # needs the shared platform token, and the server refuses to start without the
+  # secret, so it is as mandatory here as it is for ptolemy.
+  interiora:
+    build:
+      context: ../interiora
+    environment:
+      PLATFORM_JWT_SECRET: ${PLATFORM_JWT_SECRET:-}
+      INTERIORA_DATA_DIR: /data
+      RUST_LOG: info
+    volumes:
+      - interiora-data:/data
 
   # ── AI / Agent Layer ──────────────────────────────────────────────
 
@@ -304,3 +319,4 @@ volumes:
   tiletopia-data:
   geolang-cache:
   sibyl-data:
+  interiora-data:
