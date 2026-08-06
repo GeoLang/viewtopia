@@ -36,8 +36,11 @@ export function ViewerArea() {
   const { activeTab, renderer } = useAppStore();
   const splitActive = useSplitViewStore((s) => s.active);
   const paneRenderer = useSplitViewStore((s) => s.paneRenderer);
+  const swipeAt = useSplitViewStore((s) => s.swipeAt);
   // the second pane is a globe renderer, so the 2D map tab stays single
   const split = splitActive && activeTab === 'globe';
+  // a swipe overlays the panes instead of halving them
+  const swipe = split && swipeAt !== null;
   const setCursorCoords = useAppStore((s) => s.setCursorCoords);
   const showContextMenu = useAppStore((s) => s.showContextMenu);
   const hideContextMenu = useAppStore((s) => s.hideContextMenu);
@@ -201,7 +204,7 @@ export function ViewerArea() {
       }
     }, 150);
     return () => clearTimeout(timer);
-  }, [activeTab, renderer, split, cesiumRef, maplibreRef, leafletRef]);
+  }, [activeTab, renderer, split, swipe, cesiumRef, maplibreRef, leafletRef]);
 
   return (
     <Box
@@ -223,7 +226,7 @@ export function ViewerArea() {
           top: 0,
           bottom: 0,
           left: 0,
-          width: split ? '50%' : '100%',
+          width: split && !swipe ? '50%' : '100%',
         }}
       >
         {/* CesiumJS 3D Globe */}
@@ -273,8 +276,9 @@ export function ViewerArea() {
             top: 0,
             bottom: 0,
             right: 0,
-            width: '50%',
-            borderLeft: '2px solid #30363d',
+            width: swipe ? '100%' : '50%',
+            borderLeft: swipe ? undefined : '2px solid #30363d',
+            clipPath: swipe ? `inset(0 0 0 ${swipeAt}%)` : undefined,
           }}
         >
           <SplitPane renderer={paneRenderer} />

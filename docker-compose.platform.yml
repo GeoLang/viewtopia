@@ -17,6 +17,7 @@
 #   - geokode:    Geocoding service (port 3001)
 #   - itinera:    Routing + isochrones (port 3002)
 #   - interiora:  Indoor venue maps + indoor routing (internal port 3000)
+#   - geoplumb:   Windowed raster tiles over STAC (:5174/plumb/, internal port 3000)
 #   - sibyl:      Rust agent loop service (internal port 8090)
 #   - geodukt:    Declarative pipeline runner for agent plans (internal port 8100)
 #   - geolang-api: AI/NLP geospatial agent API + tool executor (port 8080)
@@ -162,6 +163,32 @@ services:
       RUST_LOG: info
     volumes:
       - interiora-data:/data
+
+  # Windowed raster compute: renders XYZ png tiles out of public STAC
+  # collections, each request naming the time interval to composite over, which
+  # is what the viewer's Timelapse panel compares two of. Internal only, nginx
+  # routes /plumb/ here. Public by decision, like tiletopia's public tiles, so
+  # no platform token is involved. The layer file is mandatory: without
+  # GEOPLUMB_LAYERS the server exits rather than invent a layer.
+  geoplumb:
+    build:
+      context: ../geoplumb
+    environment:
+      GEOPLUMB_LAYERS: /etc/geoplumb/layers.toml
+      # per layer, not in total, and the disk tier is 8x it again per layer:
+      # the two layers below come to 256 MiB resident and 2 GiB spilled
+      GEOPLUMB_CACHE_BYTES: 134217728
+      GEOPLUMB_DISK_CACHE: /tmp
+      RUST_LOG: info
+    volumes:
+      - ./deploy/geoplumb-layers.toml:/etc/geoplumb/layers.toml:ro
+      # the spill tier. It sits on /tmp because the image runs as a non-root
+      # user and creates no cache dir of its own: a fresh named volume takes
+      # the mode of the image directory under it, and /tmp's 1777 is the only
+      # one this image offers that the server can write. Every run spills into
+      # its own pid-named subdir and nothing reaps the old ones, so this volume
+      # is scratch to delete, not a cache worth keeping.
+      - geoplumb-cache:/tmp
 
   # ── AI / Agent Layer ──────────────────────────────────────────────
 
@@ -320,3 +347,4 @@ volumes:
   geolang-cache:
   sibyl-data:
   interiora-data:
+  geoplumb-cache:

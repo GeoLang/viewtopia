@@ -4,11 +4,11 @@ import {
   visibleToolItems,
   isPreviewPanel,
 } from '../../src/components/toolMenus';
-import { useAppStore } from '../../src/store/app';
+import { useAppStore, type ToolPanel } from '../../src/store/app';
 
-const GATED_PANELS = [
-  'timelapse',
-] as const;
+// every stub has shipped, so the registry gates nothing today. A new preview
+// panel is listed here and moves to SHIPPED_PANELS when it becomes real.
+const GATED_PANELS: NonNullable<ToolPanel>[] = [];
 
 const SHIPPED_PANELS = [
   'crossSection',
@@ -29,6 +29,7 @@ const SHIPPED_PANELS = [
   'export3d',
   'photo',
   'indoor',
+  'timelapse',
   // settings is a top-level toolbar button now, not a menu registry entry
 ] as const;
 
@@ -40,6 +41,22 @@ describe('tool menu preview gating', () => {
       expect(entry?.preview, `${panel} should be preview`).toBe(true);
       expect(isPreviewPanel(panel)).toBe(true);
     }
+  });
+
+  // with nothing gated the loops above assert nothing, so pin the two sides
+  // together: a stray preview flag has to show up in GATED_PANELS
+  it('gates exactly the panels the list names', () => {
+    const flagged = ALL_TOOL_MENU_ITEMS.filter((i) => i.preview).map((i) => i.panel);
+    expect(flagged.sort()).toEqual([...GATED_PANELS].sort());
+  });
+
+  it('filters on the preview flag whatever the registry holds', () => {
+    const items = [
+      { panel: 'timelapse' as const, label: 'shipped' },
+      { panel: 'indoor' as const, label: 'stub', preview: true },
+    ];
+    expect(visibleToolItems(items, false).map((i) => i.panel)).toEqual(['timelapse']);
+    expect(visibleToolItems(items, true)).toHaveLength(2);
   });
 
   it('does not flag shipped panels', () => {

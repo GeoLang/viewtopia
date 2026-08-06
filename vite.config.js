@@ -8,7 +8,7 @@ import react from '@vitejs/plugin-react';
 // rewrites. Proxying to it rather than to each service keeps dev from having to
 // mirror per-service ports, which drift.
 const PLATFORM_STACK = 'http://localhost:5174';
-const BACKEND_PREFIXES = ['/agent', '/api', '/tiles', '/jupyter', '/ws'];
+const BACKEND_PREFIXES = ['/agent', '/api', '/plumb', '/tiles', '/jupyter', '/ws'];
 
 // @panoramax/web-viewer uses css module scripts (import x from "a.css" with
 // { type: "css" }), which rollup can't bundle. Rewrite them to constructable

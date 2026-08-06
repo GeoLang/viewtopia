@@ -16,7 +16,7 @@ export const ANALYSIS_MENU: ToolMenuItem[][] = [
     { panel: 'clipping', label: '✂ Clip' },
     { panel: 'crossSection', label: '📐 Section' },
     { panel: 'heatmap', label: '🔥 Heatmap' },
-    { panel: 'timelapse', label: '⏳ Timelapse', preview: true },
+    { panel: 'timelapse', label: '⏳ Timelapse' },
   ],
   [
     { panel: 'shadows', label: '🌑 Shadows' },

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
@@ -75,6 +75,10 @@ const measure = async () => {
 
 const numberOf = (testId: string) =>
   Number(screen.getByTestId(testId).textContent?.replace(/[^0-9.-]/g, ''));
+
+// the last test's tree would otherwise still be mounted when the file's jsdom
+// is torn down, and react's pending work then lands on a window that is gone
+afterEach(cleanup);
 
 beforeEach(() => {
   cleanup();

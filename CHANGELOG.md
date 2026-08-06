@@ -6,6 +6,21 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-06: the timelapse panel left the preview gate as a real A/B time
+  compare over geoplumb, proxied at /plumb/. The layer picker is the tile
+  service's own list, filtered to the layers whose STAC collection advertises a
+  temporal extent, and that extent becomes a sequence of month or year steps
+  that A and B each pick from; each step asks for its own half-open interval,
+  so the tiles are composited over that calendar month or year rather than a
+  fixed date. Swipe puts B in the split view's second map clipped at the
+  position slider, side by side leaves the split halved, and opacity blend
+  draws both on the one map. Play walks B through the sequence at the speed
+  slider's steps per second and any hand on B stops it. The panel is MapLibre
+  only and says so on the other renderers, and it puts the split view back the
+  way it found it on close. The platform compose gains the geoplumb service,
+  its layer file (Copernicus DEM hillshade and Sentinel-2 NDVI) and a spill
+  volume.
+
 - 2026-08-06: the indoor panel left the preview gate as a real client of
   interiora, proxied at /api/indoor/. Venues come from the service, the floor
   picker is built from each venue's own ordinals, and the chosen floor's

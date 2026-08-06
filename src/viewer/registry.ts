@@ -22,6 +22,7 @@ declare global {
 
 let cesiumViewer: Viewer | null = null;
 let maplibreMap: MapLibreMap | null = null;
+let paneMap: MapLibreMap | null = null;
 let deckInstance: Deck | null = null;
 
 export function setActiveCesiumViewer(v: Viewer | null): void {
@@ -52,7 +53,16 @@ export function setPaneCesiumViewer(v: Viewer | null): void {
 }
 
 export function setPaneMapLibre(m: MapLibreMap | null): void {
+  paneMap = m;
   window.__viewtopiaPaneMap = m;
+}
+
+/**
+ * The pane's map, for the one tool that compares two of them: timelapse draws
+ * its B step here, which is what its swipe and side-by-side modes compare.
+ */
+export function getPaneMapLibre(): MapLibreMap | null {
+  return paneMap;
 }
 
 /**

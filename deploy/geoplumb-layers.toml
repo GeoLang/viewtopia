@@ -1,0 +1,40 @@
+# Layers the platform stack's geoplumb-server serves, mounted read-only at
+# /etc/geoplumb/layers.toml (GEOPLUMB_LAYERS names it, and the server refuses
+# to start without one). Every layer ends reprojected to web mercator and
+# encoded as grayscale png, so only the source and the ops belong here.
+#
+# Both layers anchor on the same corner of the Bernese Alps: a stac source
+# searches its bbox once at startup to fix the grid, crs and band count, and
+# tiles past it search the api lazily, so the anchor wants to be a small
+# populated area rather than the whole world.
+
+# Static relief. The DEM collection advertises no temporal extent, so the
+# viewer's timelapse panel does not offer it: it is here as the basemap-like
+# layer that proves the service without any time axis.
+[[layer]]
+name = "cop-dem-hillshade"
+source = { kind = "stac", api = "https://earth-search.aws.element84.com/v1", collection = "cop-dem-glo-30", assets = [
+    "data",
+], bbox = [7.0, 46.3, 8.0, 46.9] }
+
+[[layer.op]]
+kind = "hillshade"
+azimuth = 315.0
+altitude = 45.0
+
+# Vegetation index over time, the layer the timelapse panel compares. Sentinel
+# 2 spreads its bands across per-band cogs, so b0 is red and b1 is nir. The
+# median over the requested interval is what drops most of the cloud; without
+# a ?t= the request falls back to the summer below.
+[[layer]]
+name = "ndvi"
+source = { kind = "stac", api = "https://earth-search.aws.element84.com/v1", collection = "sentinel-2-l2a", assets = [
+    "red",
+    "nir",
+], bbox = [7.0, 46.3, 8.0, 46.9], datetime = "2025-06-01T00:00:00Z/2025-09-01T00:00:00Z", composite = "median" }
+
+[[layer.op]]
+kind = "bandmath"
+expr = "(b1 - b0) / (b1 + b0)"
+min = -1.0
+max = 1.0
