@@ -14,3 +14,8 @@ allowBuilds:
 overrides:
   undici: "^7.29.0"
   "@babel/core": "^7.29.1"
+
+# flatgeobuf ships an OpenLayers adapter we never import, and it drags in
+# openlayers, a geotiff beta and zarrita. only the geojson module is used.
+ignoredOptionalDependencies:
+  - ol
