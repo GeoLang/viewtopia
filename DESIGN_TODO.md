@@ -11,10 +11,6 @@
 
 ## OPEN — platform hygiene
 
-- [ ] **drop the `geolang-pgdata` volume.** Kept as a rollback artifact when the
-      embedded Letta server and its postgres were removed for sibyl. Nothing reads
-      it, and the rollback it insures against is long past. Delete it once nobody
-      wants the old sessions back.
 - [ ] **tiletopia multi-node HA (raft)** — future reference, no open work. The
       openraft half of cluster.rs was deleted 2026-07-27: it was a never-compiled
       textbook key-value example wired to nothing (no transport, no discovery, no
@@ -374,11 +370,6 @@ desktop/mobile wrapper (competes with the terravista/collecta track).
 
 High value, existing GeoLang crates supply the engine:
 
-- [ ] **browser geoprocessing toolbox** (topoi WASM instead of turf): catalogued
-      buffer/dissolve/overlay/voronoi/joins/grids plus a batch runner with tool
-      chaining. The geoprocessing plugin covers only the basics.
-- [ ] **data quality tools** (topoi): check validity, fix geometries, topology
-      checks.
 - [ ] **convert loaded data to cloud-native formats**: GeoParquet, FlatGeobuf,
       COG (PMTiles shipped 2026-08-02).
 

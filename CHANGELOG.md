@@ -105,6 +105,20 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-06: **browser geoprocessing toolbox** (Data ▸ 🧰 Geoprocessing),
+  computed by topoi over wasm in a worker. Eighteen tools in one panel that
+  renders from the catalogue in `src/toolbox/catalog.ts`: buffer, simplify,
+  centroid, convex hull, explode, collect, intersection, difference, clip to
+  a layer or to an extent, dissolve, union, voronoi, square and hex grids,
+  spatial join, a per-feature validity report and make valid. Inputs are the
+  drawn features and every loaded or plugin layer, results become map layers,
+  and a batch runner chains steps so each reads a layer or the step before
+  it, stopping at the first error with the failing step named. Every op runs
+  in a local equirectangular frame centred on its inputs, so distances,
+  tolerances and cell sizes are metres. The Turf.js geoprocessing plugin it
+  supersedes is deleted, and that plugin's collect-with-field aggregation is
+  replaced by plain multi-part collect.
+
 - 2026-08-04: **raster analysis results are real layers**. Add as layer hands a
   result to the layer store every renderer draws from, so runs stack, survive a
   renderer switch, and get listed in the Layers panel with their own opacity and

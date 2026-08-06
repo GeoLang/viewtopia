@@ -111,7 +111,6 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 | **OSM Downloader** | QuickOSM | 3.0M | Overpass API, 12 presets |
 | **Raster Classification** | Semi-Auto Classification | 2.6M | K-means, ISODATA in-browser |
 | **Coordinate Tools** | Lat Lon Tools | 1.7M | DD/DMS/UTM/Geohash/WKT/GeoJSON |
-| **Geoprocessing** | mmqgis | 1.7M | Turf.js: buffer, dissolve, intersect, union, voronoi |
 | **Terrain Profile** | Profile tool | 1.6M | Open-Elevation API, SVG chart |
 | **Export Map** | qgis2web | 1.6M | PNG/JPEG/HTML + embed codes |
 | **3D Viewer** | Qgis2threejs | 1.4M | deck.gl terrain + buildings |
@@ -199,6 +198,21 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 | **Reclassification** | Map value ranges to discrete classes |
 | **Color Ramps** | 11 built-in ramps (viridis, magma, terrain, spectral, etc.) |
 | **Legend** | Auto-generated color legends for any ramp |
+
+### Geoprocessing
+| Feature | Description |
+|---------|-------------|
+| **Geometry** | Buffer, simplify, centroid, convex hull, explode, collect |
+| **Overlay** | Intersection, difference, clip to a layer or to an extent |
+| **Aggregate** | Dissolve by field, union of several layers |
+| **Generate** | Voronoi cells, square and hex grids |
+| **Join** | Spatial join by intersects, within or nearest |
+| **Quality** | Validity report per feature, make valid |
+| **Batch** | Chain steps, each reading a layer or the previous step's output |
+
+Runs topoi compiled to WASM in a worker. Every distance, tolerance and cell
+size is metres: ops compute in a local equirectangular frame centred on their
+inputs.
 
 ### Notebooks
 | Feature | Description |

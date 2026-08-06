@@ -1,81 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { runOperation } from '../../src/plugins/geoprocessing/index';
 import { slopeAspect } from '../../src/plugins/point-sampling/index';
 import { fetchElevations } from '../../src/lib/elevationProfile';
-import type { GeoJsonSource } from '../../src/lib/geojsonSources';
 
 /**
- * The three analysis plugins used to run on hardcoded empty geometry, random
- * values and a sine-wave DEM fallback, so these cover the real inputs.
+ * Point sampling and the elevation lookup used to run on random values and a
+ * sine-wave DEM fallback, so these cover the real inputs.
  */
-
-function square(west: number, name: string): GeoJsonSource {
-  return {
-    id: name,
-    name,
-    geojson: {
-      type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          properties: { kind: 'plot' },
-          geometry: {
-            type: 'Polygon',
-            coordinates: [
-              [
-                [west, 0],
-                [west + 1, 0],
-                [west + 1, 1],
-                [west, 1],
-                [west, 0],
-              ],
-            ],
-          },
-        },
-      ],
-    },
-  };
-}
-
-const params = { bufferDist: 100, bufferUnits: 'meters' as const, simplifyTol: 0.001, field: '' };
-
-describe('geoprocessing runs on the selected source', () => {
-  it('buffers the source features instead of an empty collection', () => {
-    const out = runOperation('buffer', square(0, 'a'), undefined, params);
-    expect(out.features).toHaveLength(1);
-    expect(out.features[0].geometry.type).toBe('Polygon');
-    // the buffer has to be bigger than the input square
-    const [w, s, e, n] = out.features[0].geometry.type === 'Polygon'
-      ? out.features[0].geometry.coordinates[0].reduce(
-          ([mw, ms, me, mn], [x, y]) => [Math.min(mw, x), Math.min(ms, y), Math.max(me, x), Math.max(mn, y)],
-          [Infinity, Infinity, -Infinity, -Infinity],
-        )
-      : [0, 0, 0, 0];
-    expect(w).toBeLessThan(0);
-    expect(s).toBeLessThan(0);
-    expect(e).toBeGreaterThan(1);
-    expect(n).toBeGreaterThan(1);
-  });
-
-  it('intersects two overlapping sources', () => {
-    const out = runOperation('intersect', square(0, 'a'), square(0.5, 'b'), params);
-    expect(out.features).toHaveLength(1);
-    const ring = (out.features[0].geometry as GeoJSON.Polygon).coordinates[0];
-    for (const [x] of ring) {
-      expect(x).toBeGreaterThanOrEqual(0.5);
-      expect(x).toBeLessThanOrEqual(1);
-    }
-  });
-
-  it('reports layers that cannot satisfy the operation', () => {
-    expect(() => runOperation('intersect', square(0, 'a'), square(5, 'far'), params)).toThrow(
-      /produced no geometry/,
-    );
-    const empty: GeoJsonSource = { id: 'e', name: 'empty', geojson: { type: 'FeatureCollection', features: [] } };
-    expect(() => runOperation('buffer', empty, undefined, params)).toThrow(/no features/);
-    expect(() => runOperation('union', square(0, 'a'), undefined, params)).toThrow(/overlay/);
-  });
-});
 
 describe('point sampling derives slope and aspect from neighbour elevations', () => {
   it('gives the downhill bearing of the neighbour cross', () => {
