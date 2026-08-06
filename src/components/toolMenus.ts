@@ -41,7 +41,7 @@ export const SIMULATE_MENU: ToolMenuItem[][] = [
 
 export const TOOLS_MENU: ToolMenuItem[][] = [
   [
-    { panel: 'photo', label: '📷 Photo', preview: true },
+    { panel: 'photo', label: '📷 Photo' },
     { panel: 'offline', label: '💾 Offline' },
     { panel: 'indoor', label: '🏛 Indoor', preview: true },
     { panel: 'drone', label: '🛸 Drone' },

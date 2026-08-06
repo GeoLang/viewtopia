@@ -6,6 +6,18 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-06: the photo panel left the preview gate as a real keyless client
+  over two catalogues. Turning on photo markers arms a map click, which
+  searches Panoramax (bbox from the click and the radius slider, metres
+  converted at the clicked latitude) and Wikimedia Commons geosearch
+  (lat|lon plus radius, origin=* for anonymous CORS) at once. Results land
+  as Cesium point entities coloured per source, cleared when the toggle
+  goes off or the panel closes. Clicking a marker or a result row shows the
+  thumbnail with its author and license link, and the full image opens in a
+  new tab. A source that fails costs its own results only. Panoramax
+  thumbnails are host-probed the way the Panoramax plugin does, so photos
+  on a down origin instance are dropped instead of rendering broken.
+
 - 2026-08-05: the export panel left the preview gate as a real client for
   tiletopia's newly routed export API: ready assets and the server's
   advertised formats populate the pickers, start posts the job, status
