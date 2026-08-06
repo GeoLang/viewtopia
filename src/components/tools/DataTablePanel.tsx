@@ -33,24 +33,39 @@ import {
   sortRows,
   type SortState,
 } from '../../features/attributes/attributes';
-import { evaluateFields, type VirtualField } from '../../features/attributes/expressions';
+import {
+  evaluateFields,
+  joinLayers,
+  type VirtualField,
+} from '../../features/attributes/expressions';
 import { useVirtualFieldStore } from '../../features/attributes/virtualFields';
-import { FieldsSection, StatsSection } from '../../features/attributes/AttributeTools';
+import {
+  FieldsSection,
+  JoinSection,
+  StatsSection,
+} from '../../features/attributes/AttributeTools';
 import { useAgentLayerStore } from '../../store/agentLayers';
+import { useGeoJsonSources } from '../../lib/geojsonSources';
 
 const MAX_ROWS = 500;
 const NO_FIELDS: VirtualField[] = [];
 
-type Tool = 'fields' | 'stats';
+type Tool = 'fields' | 'join' | 'stats';
 
 interface FeatureRow {
   entity: Entity;
   attrs: Record<string, unknown>;
 }
 
+/** A right-hand column name that collides gets this in front of it. */
+function joinPrefix(name: string): string {
+  return `${name.replace(/\.[a-z0-9]+$/i, '').replace(/[^a-zA-Z0-9]+/g, '_')}_`;
+}
+
 export function DataTablePanel({ onClose }: { onClose: () => void }) {
   const layers = useEntityLayers();
   const agentLayers = useAgentLayerStore((s) => s.layers);
+  const sources = useGeoJsonSources();
   const allVirtualFields = useVirtualFieldStore((s) => s.fields);
   const addVirtualField = useVirtualFieldStore((s) => s.addField);
   const removeVirtualField = useVirtualFieldStore((s) => s.removeField);
@@ -159,6 +174,24 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
     return `${field.name} added to ${storeLayer.name} (${storeLayer.geojson.features.length} features)`;
   }
 
+  async function join(sourceId: string, leftKey: string, rightKey: string): Promise<string> {
+    const right = sources.find((s) => s.id === sourceId);
+    if (!storeLayer || !right) throw new Error('pick a layer to join');
+    const geojson = await joinLayers({
+      left: storeLayer.geojson,
+      right: right.geojson,
+      leftKey,
+      rightKey,
+      prefix: joinPrefix(right.name),
+    });
+    const name = `${storeLayer.name} + ${right.name}`;
+    useAgentLayerStore.getState().addLayer(
+      { id: `join-${crypto.randomUUID()}`, name, color: storeLayer.color, geojson },
+      false,
+    );
+    return `${name}: ${geojson.features.length} features`;
+  }
+
   return (
     <Paper
       shadow="xl"
@@ -190,7 +223,7 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
           )}
         </Group>
         <Group gap="xs">
-          {(['fields', 'stats'] as Tool[]).map((name) => (
+          {(['fields', 'join', 'stats'] as Tool[]).map((name) => (
             <Button
               key={name}
               size="xs"
@@ -199,7 +232,7 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
               disabled={selectedLayer == null}
               onClick={() => setTool(tool === name ? null : name)}
             >
-              {name === 'fields' ? 'Fields' : 'Stats'}
+              {name === 'fields' ? 'Fields' : name === 'join' ? 'Join' : 'Stats'}
             </Button>
           ))}
           <Select
@@ -237,6 +270,14 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
           onCalculate={calculateField}
           calculable={!!storeLayer}
           evalError={evalError}
+        />
+      )}
+      {tool === 'join' && (
+        <JoinSection
+          columns={columns}
+          sources={sources.filter((s) => s.id !== storeLayer?.id)}
+          onJoin={join}
+          joinable={!!storeLayer}
         />
       )}
       {tool === 'stats' && (

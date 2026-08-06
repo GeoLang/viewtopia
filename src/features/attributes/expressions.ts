@@ -1,13 +1,16 @@
 /**
  * The attribute table's SQL side. A calculated or virtual field is one DuckDB
- * expression evaluated over the rows' property bags. No geometry goes through
- * here: the rows carry a row index and the caller puts the results back on its
- * own features.
+ * expression evaluated over the rows' property bags; an attribute join is a
+ * LEFT JOIN between two layers' properties. No geometry goes through here: the
+ * rows carry a row index and the caller puts the results back on its own
+ * features, so a join can duplicate a feature per match without duckdb ever
+ * parsing the shape.
  */
 import { getConnection, getDb } from '../../duckdb/worker';
 
-/** Row index carried through the SQL, overwriting any column of the same name. */
+/** Row indexes carried through the SQL, overwriting any column of the same name. */
 const ROW = '__vt_row';
+const RIGHT_ROW = '__vt_rrow';
 
 export interface VirtualField {
   name: string;
@@ -99,5 +102,72 @@ export async function evaluateFields(
     return Object.fromEntries(fields.map((f, i) => [f.name, rows.map((r) => r[`c${i}`])]));
   } finally {
     await dropTable(handle, table, file);
+  }
+}
+
+export interface AttributeJoin {
+  left: GeoJSON.FeatureCollection;
+  right: GeoJSON.FeatureCollection;
+  leftKey: string;
+  rightKey: string;
+  /** Put in front of a joined column whose name the left side already uses. */
+  prefix: string;
+}
+
+/**
+ * The left layer's features carrying the matched right-hand properties. Keys
+ * are compared as text, because the two sides' types are inferred separately
+ * and a parcel id read as a number on one side and a string on the other is
+ * the ordinary case.
+ */
+export async function joinLayers(
+  join: AttributeJoin,
+  target?: AttributeTarget,
+): Promise<GeoJSON.FeatureCollection> {
+  if (join.left.features.length === 0) throw new Error('the table layer has no features to join');
+  if (join.right.features.length === 0) throw new Error('the join layer has no features');
+
+  const handle = await handleFor(target);
+  const leftTable = tableName();
+  const rightTable = tableName();
+  const leftFile = await registerRows(
+    handle,
+    leftTable,
+    join.left.features.map((f, i) => ({ ...f.properties, [ROW]: i })),
+  );
+  const rightFile = await registerRows(
+    handle,
+    rightTable,
+    join.right.features.map((f, i) => {
+      const props = { ...f.properties };
+      delete props[ROW];
+      return { ...props, [RIGHT_ROW]: i };
+    }),
+  );
+
+  try {
+    // both indexes order the result, so a left feature with several matches
+    // comes out in the join layer's own order rather than the engine's
+    const matched = await queryRows(
+      handle,
+      `SELECT l.${quote(ROW)} AS ${quote(ROW)}, r.* EXCLUDE (${quote(RIGHT_ROW)})
+         FROM ${quote(leftTable)} l
+         LEFT JOIN ${quote(rightTable)} r
+           ON CAST(l.${quote(join.leftKey)} AS VARCHAR) = CAST(r.${quote(join.rightKey)} AS VARCHAR)
+        ORDER BY l.${quote(ROW)}, r.${quote(RIGHT_ROW)}`,
+    );
+    const features = matched.map((row) => {
+      const source = join.left.features[Number(row[ROW])];
+      const properties: Record<string, unknown> = { ...source.properties };
+      for (const [key, value] of Object.entries(row)) {
+        if (key === ROW) continue;
+        properties[key in properties ? `${join.prefix}${key}` : key] = value;
+      }
+      return { ...source, properties };
+    });
+    return { type: 'FeatureCollection', features };
+  } finally {
+    await dropTable(handle, leftTable, leftFile);
+    await dropTable(handle, rightTable, rightFile);
   }
 }

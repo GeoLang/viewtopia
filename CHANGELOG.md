@@ -105,6 +105,20 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-06: **attribute table upgrades** (Tools ▸ 📋 Data Table): column
+  sorting, a field calculator, virtual fields, attribute joins and column
+  statistics, in `src/features/attributes/`. Headers cycle asc, desc and off,
+  and the order is applied before the 500-row cap so the cap shows the true
+  top rows. Fields are DuckDB SQL expressions over the layer's columns, with
+  no expression parser added: as a virtual field the expression is evaluated
+  for display only, added to the layer it is materialized into the features
+  and the layer is replaced in place, so every renderer redraws it. A join
+  picks a second layer and a key on each side, left joins them in DuckDB with
+  the keys compared as text, and lands the match as a new layer with
+  colliding columns prefixed. Stats give count, distinct, min, max, mean and
+  median over the filtered rows, with a bar, line or pie chart through the
+  existing chart views. In-place cell editing stays out.
+
 - 2026-08-06: **convert loaded layers to cloud-native formats** (Data ▸ 🔄
   Convert). Pick a drawn or loaded vector layer and write it out as
   GeoParquet, FlatGeobuf, PMTiles or GeoJSON, downloaded straight from the

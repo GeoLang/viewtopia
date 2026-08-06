@@ -1,7 +1,7 @@
 /**
- * The attribute table's tool strips: calculated and virtual fields, and column
- * statistics with a chart. Each owns its own form state and reports back
- * through one callback, so the table itself stays a table.
+ * The attribute table's tool strips: calculated and virtual fields, attribute
+ * joins, and column statistics with a chart. Each owns its own form state and
+ * reports back through one callback, so the table itself stays a table.
  */
 import { useState } from 'react';
 import {
@@ -19,6 +19,7 @@ import { IconTrash } from '@tabler/icons-react';
 import { ChartView } from '../dashboards/ChartWidget';
 import type { ChartType } from '../dashboards/types';
 import { buildChartData } from '../../components/tools/ChartsPanel';
+import { propertyKeys, type GeoJsonSource } from '../../lib/geojsonSources';
 import { columnStats } from './attributes';
 import type { VirtualField } from './expressions';
 
@@ -170,6 +171,92 @@ export function FieldsSection({
       {(error || evalError) && (
         <Text size="xs" c="red" mt={4} data-testid="attr-field-error">
           {error ?? evalError}
+        </Text>
+      )}
+    </Paper>
+  );
+}
+
+export function JoinSection({
+  columns,
+  sources,
+  onJoin,
+  joinable,
+}: {
+  columns: string[];
+  sources: GeoJsonSource[];
+  onJoin: (sourceId: string, leftKey: string, rightKey: string) => Promise<string>;
+  joinable: boolean;
+}) {
+  const [sourceId, setSourceId] = useState<string | null>(null);
+  const [leftKey, setLeftKey] = useState<string | null>(null);
+  const [rightKey, setRightKey] = useState<string | null>(null);
+  const { running, status, error, run } = useAction();
+
+  const source = sources.find((s) => s.id === sourceId);
+  const ready = !!(source && leftKey && rightKey && joinable);
+
+  return (
+    <Paper p="xs" mb="xs" style={strip}>
+      <Group gap="xs" align="flex-end">
+        <Select
+          size="xs"
+          w={180}
+          label="Join layer"
+          placeholder={sources.length ? 'pick a layer' : 'no other layer loaded'}
+          data={sources.map((s) => ({ value: s.id, label: s.name }))}
+          value={sourceId}
+          onChange={(v) => {
+            setSourceId(v);
+            setRightKey(null);
+          }}
+          styles={inputStyles}
+        />
+        <Select
+          size="xs"
+          w={150}
+          label="Table field"
+          placeholder="pick a field"
+          data={columns}
+          value={leftKey}
+          onChange={setLeftKey}
+          styles={inputStyles}
+        />
+        <Select
+          size="xs"
+          w={150}
+          label="Join field"
+          placeholder="pick a field"
+          data={propertyKeys(source)}
+          value={rightKey}
+          onChange={setRightKey}
+          styles={inputStyles}
+        />
+        <Button
+          size="xs"
+          color="violet"
+          disabled={!ready}
+          loading={running}
+          onClick={() => run(() => onJoin(sourceId as string, leftKey as string, rightKey as string))}
+        >
+          Join layers
+        </Button>
+      </Group>
+
+      <Text size="xs" c="dimmed" mt={4}>
+        {joinable
+          ? 'The match is a left join and lands as a new layer; the table layer is left alone.'
+          : 'Only a layer the viewer owns can be joined.'}
+      </Text>
+
+      {status && (
+        <Text size="xs" c="teal" mt={4} data-testid="attr-join-status">
+          {status}
+        </Text>
+      )}
+      {error && (
+        <Text size="xs" c="red" mt={4} data-testid="attr-join-error">
+          {error}
         </Text>
       )}
     </Paper>

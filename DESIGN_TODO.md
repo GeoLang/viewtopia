@@ -382,8 +382,6 @@ High value, product-level:
       rule-based renderers plus the legend panel shipped 2026-08-02):
       expression renderers, scale-dependent visibility, and SLD/QML/Mapbox
       style import/export (fenestra already parses SLD server-side).
-- [ ] **attribute table upgrades**: field calculator, virtual fields,
-      attribute joins, stats/charts from the table.
 - [ ] **embedding support**: URL params for chrome-less/compact layouts and a
       postMessage API for host pages. Cheap, widens adoption.
 - [ ] **runtime plugin install**: plugins are build-time only

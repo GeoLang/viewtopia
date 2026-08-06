@@ -4,9 +4,9 @@ import { render, screen, cleanup, fireEvent, act, within } from '@testing-librar
 import { MantineProvider } from '@mantine/core';
 
 /**
- * The panel drives the table itself; the SQL behind the fields is covered
- * against the real engine by attribute-expressions.test.ts, so only that call
- * is stubbed here.
+ * The panel drives the table itself; the SQL behind the fields and the join is
+ * covered against the real engine by attribute-expressions.test.ts, so only
+ * those two calls are stubbed here.
  */
 vi.mock('../../src/lib/entityLayers', () => ({
   // one array for every render, the way the real hook's state behaves
@@ -19,10 +19,11 @@ vi.mock('../../src/lib/entityLayers', () => ({
 vi.mock('../../src/features/attributes/expressions', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../src/features/attributes/expressions')>()),
   evaluateFields: vi.fn(),
+  joinLayers: vi.fn(),
 }));
 
 import { DataTablePanel } from '../../src/components/tools/DataTablePanel';
-import { evaluateFields } from '../../src/features/attributes/expressions';
+import { evaluateFields, joinLayers } from '../../src/features/attributes/expressions';
 import { useAgentLayerStore } from '../../src/store/agentLayers';
 import { useVirtualFieldStore } from '../../src/features/attributes/virtualFields';
 
@@ -94,6 +95,7 @@ async function addField(name: string, expression: string, button: string) {
 
 beforeEach(() => {
   vi.mocked(evaluateFields).mockReset();
+  vi.mocked(joinLayers).mockReset();
 });
 
 afterEach(() => {
@@ -171,6 +173,60 @@ describe('the attribute table', () => {
     expect(layers[0].geojson.features.map((f) => f.properties?.density)).toEqual([12, 4, 9]);
     expect(screen.getByTestId('attr-field-status')).toHaveTextContent(
       'density added to parcels.geojson (3 features)',
+    );
+  });
+
+  it('lands a join as a new layer and leaves the table layer alone', async () => {
+    const joined: GeoJSON.FeatureCollection = {
+      type: 'FeatureCollection',
+      features: FC.features.map((f) => ({
+        ...f,
+        properties: { ...f.properties, residents: 5 },
+      })),
+    };
+    vi.mocked(joinLayers).mockResolvedValue(joined);
+    useAgentLayerStore.setState({ layers: [], rasterLayers: [], markers: [] });
+    renderPanel();
+    useAgentLayerStore.getState().addLayer(
+      {
+        id: 'census',
+        name: 'census.geojson',
+        color: '#0f0',
+        geojson: {
+          type: 'FeatureCollection',
+          features: [
+            {
+              type: 'Feature',
+              properties: { parcel: 'A-100', residents: 5 },
+              geometry: { type: 'Point', coordinates: [7, 45] },
+            },
+          ],
+        },
+      },
+      false,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Join' }));
+    pick('Join layer', 'census.geojson');
+    pick('Table field', 'parcel');
+    pick('Join field', 'parcel');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Join layers' }));
+    });
+
+    expect(vi.mocked(joinLayers).mock.calls[0][0]).toMatchObject({
+      leftKey: 'parcel',
+      rightKey: 'parcel',
+      prefix: 'census_',
+    });
+    const layers = useAgentLayerStore.getState().layers;
+    expect(layers).toHaveLength(3);
+    expect(layers[2].name).toBe('parcels.geojson + census.geojson');
+    expect(layers[2].geojson.features).toHaveLength(3);
+    // the table's own layer is untouched by the join
+    expect(layers[0].geojson.features[0].properties).toEqual({ parcel: 'A-100', pop: 1200 });
+    expect(screen.getByTestId('attr-join-status')).toHaveTextContent(
+      'parcels.geojson + census.geojson: 3 features',
     );
   });
 });
