@@ -370,8 +370,11 @@ desktop/mobile wrapper (competes with the terravista/collecta track).
 
 High value, existing GeoLang crates supply the engine:
 
-- [ ] **convert loaded data to cloud-native formats**: GeoParquet, FlatGeobuf,
-      COG (PMTiles shipped 2026-08-02).
+- [ ] **convert loaded rasters to COG**: waits on a browser-capable COG writer.
+      The duckdb-wasm build has no GDAL write path and nothing else in the tree
+      writes a tiled, overviewed TIFF; an upstream Rust writer is in progress.
+      (Vector conversion shipped 2026-08-06: GeoParquet, FlatGeobuf, GeoJSON,
+      PMTiles. PMTiles per-layer export shipped 2026-08-02.)
 
 High value, product-level:
 

@@ -74,6 +74,7 @@ export type ToolPanel =
   | 'vectorTiles'
   | 'rasterViewer'
   | 'toolbox'
+  | 'convert'
   | 'featurePicker'
   | 'geojsonEditor'
   | 'styleEditor'

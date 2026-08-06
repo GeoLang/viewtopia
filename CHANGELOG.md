@@ -105,6 +105,16 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-06: **convert loaded layers to cloud-native formats** (Data ▸ 🔄
+  Convert). Pick a drawn or loaded vector layer and write it out as
+  GeoParquet, FlatGeobuf, PMTiles or GeoJSON, downloaded straight from the
+  browser. GeoParquet is a DuckDB spatial COPY, which stamps the GeoParquet
+  `geo` metadata (1.0.0, WKB, bbox, PROJJSON CRS) onto the parquet; FlatGeobuf
+  is serialized by the flatgeobuf package, because the GDAL write drivers in
+  this duckdb-wasm build abort the wasm instance instead of writing a file;
+  PMTiles calls the writer the layer list already uses. COG stays open, no
+  browser-side writer exists yet.
+
 - 2026-08-06: **browser geoprocessing toolbox** (Data ▸ 🧰 Geoprocessing),
   computed by topoi over wasm in a worker. Eighteen tools in one panel that
   renders from the catalogue in `src/toolbox/catalog.ts`: buffer, simplify,
