@@ -445,6 +445,33 @@ survives reloads and syncs back. Everything below is what does not work.
       cached or local answer is worth it: Nominatim geocoding, public OSRM
       routing, open-elevation, open-meteo, Overpass.
 
+## OPEN — geoplumb: gaps to Earth Engine parity (consolidated 2026-08-06)
+
+The per-pull time axis and geoplumb-server shipped, so one graph now serves
+any interval as on-demand composite tiles (the Timelapse panel is the proof).
+What still separates it from GEE, engine details in geoplumb's DESIGN.md
+Known limits:
+
+- [ ] **mixed-CRS collections**: StacSrc anchors one CRS and skips items
+      projected differently, so a sentinel-2 layer dies at UTM zone
+      boundaries unless its anchor bbox sits in one zone's core (bit the
+      live demo). Real fix is reprojecting items onto the anchor grid at
+      read, not config discipline.
+- [ ] **composite latency and memory on dense collections**: a reducing
+      composite reads every intersecting item with the whole stack resident
+      per window. Fine at a few items, not at hundreds. Streaming reductions
+      for mean/min/max would come cheap; median needs the stack.
+- [ ] **in-region deployment**: cold pulls are bound by the residential
+      link to us-west-2. Serving next to the data is the remaining latency
+      lever; blocked on an AWS account decision (2026-08-05).
+- [ ] **per-interval state never evicts**: searched-block and matched-href
+      sets grow per distinct pull interval for the source's lifetime, so a
+      driver minting fresh intervals per request grows them without bound.
+- [ ] **breadth**: GEE ships a huge operator library and charting/reduction
+      over regions; geoplumb has hillshade, slope, map algebra, band math,
+      reclassify, convolution and the composites. Grow by demand, not by
+      checklist.
+
 ## OPEN — Phase 3 (mobile & ML breadth, after v1)
 
 - [ ] **terravista v0.2** — HTTP tile fetch + MVT decode (the SDK can't fetch/draw tiles yet).
