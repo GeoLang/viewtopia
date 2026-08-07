@@ -1,14 +1,16 @@
 name: Platform E2E (golden path)
 
-# Runs the golden-path Playwright suite (tests/e2e/golden-path.spec.js) against the
-# REAL platform stack — no geolang stub. This is the "is it shippable?" gate.
+# Runs the platform Playwright suite (tests/e2e/golden-path.spec.js and
+# tests/e2e/live-session.spec.js among them, see playwright.platform.config.js)
+# against the REAL platform stack — no geolang stub. This is the "is it
+# shippable?" gate.
 #
 # Optional repository secrets:
 #   XAI_API_KEY     - (optional) written into geolang/.env. The golden path does not
 #   OPENAI_API_KEY  - (optional) issue an LLM call, so empty values still pass; provide
 #                     them if you later add an agent NL->map step.
 #
-# Building six Rust service images from scratch is slow, so this does NOT run on every
+# Building seven Rust service images from scratch is slow, so this does NOT run on every
 # PR — only master pushes that touch code, the weekly schedule, and manual dispatch.
 # Docs-only pushes are skipped: a run takes ~30 min and cancel-in-progress means a
 # markdown commit would otherwise kill the run testing the code before it.
@@ -29,7 +31,7 @@ concurrency:
 jobs:
   golden-path:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 75
     # throwaway secret for this ephemeral CI stack, not a real credential. the
     # fail-closed services refuse to start without it, and the e2e mints editor
     # tokens from the same value (scripts/platform-token.mjs reads this var).
@@ -53,6 +55,9 @@ jobs:
       - name: Checkout itinera
         uses: actions/checkout@v4
         with: { repository: GeoLang/itinera, path: itinera }
+      - name: Checkout agora
+        uses: actions/checkout@v4
+        with: { repository: GeoLang/agora, path: agora }
 
       - name: Checkout geolang
         uses: actions/checkout@v4
@@ -84,7 +89,7 @@ jobs:
         working-directory: viewtopia
         run: |
           docker compose -f docker-compose.platform.yml build \
-            ptolemy tiletopia geokode itinera geolang-api sibyl geodukt viewtopia
+            ptolemy tiletopia geokode itinera agora geolang-api sibyl geodukt viewtopia
 
       # itinera's entrypoint builds data/graph.bin from the extract on first start,
       # so there is no separate graph-build step.
@@ -96,12 +101,12 @@ jobs:
           export DOCKER_UID="$(id -u)" DOCKER_GID="$(id -g)"
           docker compose -f docker-compose.platform.yml down --remove-orphans
           docker compose -f docker-compose.platform.yml up -d \
-            ptolemy tiletopia geokode itinera sibyl geodukt geolang-api jupyter viewtopia
+            ptolemy tiletopia geokode itinera agora sibyl geodukt geolang-api jupyter viewtopia
 
       - name: Wait for all services healthy
         working-directory: viewtopia
         run: |
-          services="ptolemy tiletopia geokode itinera sibyl geodukt geolang-api jupyter"
+          services="ptolemy tiletopia geokode itinera agora sibyl geodukt geolang-api jupyter"
           deadline=$(( $(date +%s) + 600 ))
           while :; do
             pending=""
@@ -132,7 +137,7 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm exec playwright install --with-deps chromium
 
-      - name: Run golden-path E2E
+      - name: Run platform E2E
         working-directory: viewtopia
         run: pnpm run test:e2e:platform
 

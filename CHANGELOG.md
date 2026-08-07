@@ -6,6 +6,17 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-07: **the platform E2E gate covers live multiplayer**. agora is
+  checked out, built, started and health-waited in platform-e2e.yml, and
+  tests/e2e/live-session.spec.js runs a real browser client against one raw
+  websocket peer: the browser starts a session from the header control, mints an
+  edit share link, and the peer joins through nginx with the session token. It
+  asserts both directions, an annotation placed in the browser arriving as an op
+  on the peer and an op from the peer showing in the browser's panel, so the
+  websocket upgrade on /agora/, agora's ordering and fan-out, and the viewtopia
+  client are all in the gate. The job timeout went to 75 minutes to leave room
+  for the added Rust build.
+
 - 2026-08-07: **annotations render and place on MapLibre**, not Cesium only.
   Both renderer bindings moved out of AnnotatePanel into useAnnotationsCesium
   and useAnnotationsMapLibre, called from ViewerArea, so an annotation arriving
