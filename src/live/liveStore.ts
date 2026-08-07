@@ -31,6 +31,8 @@ interface LiveState {
   connection: LiveConnectionState;
   documentId: string | null;
   role: LiveRole;
+  /** our own id in this session, learnt from the snapshot frame */
+  actor: string | null;
   seq: number;
   document: LiveDocument;
   peers: LivePeer[];
@@ -81,6 +83,7 @@ export const useLiveStore = create<LiveState>((set, get) => ({
   connection: 'idle',
   documentId: null,
   role: 'edit',
+  actor: null,
   seq: 0,
   document: emptyLiveDocument(),
   peers: [],
@@ -94,6 +97,7 @@ export const useLiveStore = create<LiveState>((set, get) => ({
     set({
       documentId,
       role,
+      actor: null,
       connection: 'connecting',
       seq: 0,
       document: emptyLiveDocument(),
@@ -129,6 +133,7 @@ export const useLiveStore = create<LiveState>((set, get) => ({
     set({
       connection: 'idle',
       documentId: null,
+      actor: null,
       seq: 0,
       document: emptyLiveDocument(),
       peers: [],
@@ -172,7 +177,7 @@ export const useLiveStore = create<LiveState>((set, get) => ({
           for (const frame of pendingInOrder(state.pending)) {
             document = applyOperations(document, frame.operations);
           }
-          return { document, seq: message.seq };
+          return { document, seq: message.seq, actor: message.actor ?? state.actor };
         });
         return;
       case 'op':

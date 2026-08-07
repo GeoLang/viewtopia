@@ -42,6 +42,32 @@ export interface LiveBookmark {
   createdAt: number;
 }
 
+/** Where a comment points on the map, captured when it was written. */
+export interface LiveCommentAnchor {
+  lng: number;
+  lat: number;
+  zoom: number;
+}
+
+/**
+ * One comment. A reply carries the id of the top level comment it answers, so a
+ * thread is a group rather than a nested value, and `resolved` only ever sits on
+ * a top level comment.
+ *
+ * `authorName` is the display name at write time. A share link guest has no
+ * platform identity to look the name up from later.
+ */
+export interface LiveComment {
+  id: string;
+  actor: string;
+  authorName: string;
+  text: string;
+  createdAt: number;
+  parentId?: string | null;
+  anchor?: LiveCommentAnchor | null;
+  resolved?: boolean;
+}
+
 export interface LiveDocumentMeta {
   name: string;
 }
@@ -51,9 +77,16 @@ export interface LiveDocument {
   layers: Record<string, LiveLayerEntry>;
   annotations: Record<string, LiveAnnotation>;
   bookmarks: Record<string, LiveBookmark>;
+  comments: Record<string, LiveComment>;
 }
 
-export const DOCUMENT_NAMESPACES = ['meta', 'layers', 'annotations', 'bookmarks'] as const;
+export const DOCUMENT_NAMESPACES = [
+  'meta',
+  'layers',
+  'annotations',
+  'bookmarks',
+  'comments',
+] as const;
 
 export type DocumentNamespace = (typeof DOCUMENT_NAMESPACES)[number];
 
@@ -110,6 +143,9 @@ export interface ServerSnapshotMessage {
   type: 'snapshot';
   seq: number;
   state: LiveDocument;
+  /** who the server says we are, which is how our own writes get attributed */
+  actor?: string;
+  role?: LiveRole;
 }
 
 export interface ServerOperationMessage {
@@ -181,7 +217,7 @@ export interface LiveLinkResolution {
 }
 
 export function emptyLiveDocument(name = ''): LiveDocument {
-  return { meta: { name }, layers: {}, annotations: {}, bookmarks: {} };
+  return { meta: { name }, layers: {}, annotations: {}, bookmarks: {}, comments: {} };
 }
 
 export function documentKey(namespace: DocumentNamespace, id: string): string {
@@ -234,6 +270,11 @@ export function applyDocumentKey(
       return {
         ...document,
         bookmarks: withEntry(document.bookmarks, parsed.id, value as LiveBookmark | null),
+      };
+    case 'comments':
+      return {
+        ...document,
+        comments: withEntry(document.comments, parsed.id, value as LiveComment | null),
       };
   }
 }

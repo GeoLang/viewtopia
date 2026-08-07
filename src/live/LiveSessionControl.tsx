@@ -15,6 +15,7 @@ import { IconBroadcast, IconLogout, IconShare } from '@tabler/icons-react';
 import { useAuthStore } from '../features/auth/store';
 import { createLiveDocument, listLiveDocuments } from './api';
 import { captureStateForNewDocument } from './documentBridge';
+import { LiveComments } from './LiveComments';
 import { LivePeers } from './LivePeers';
 import { LiveShareDialog } from './LiveShareDialog';
 import { useLiveStore } from './liveStore';
@@ -82,6 +83,7 @@ export function LiveSessionControl() {
           </Badge>
         )}
         <LivePeers />
+        <LiveComments />
         <Tooltip label="Share this live map">
           <ActionIcon
             size="sm"
