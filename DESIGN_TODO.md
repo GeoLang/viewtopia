@@ -25,40 +25,28 @@ versioned feature store with branch/diff/merge/audit (ptolemy, the version
 history half, which Felt does not have), GEE-track compute (geoplumb), tiles,
 mobile capture, auth and multi-tenancy, one-click deploy.
 
-The two gaps between "open GIS platform" and "Figma of GIS":
+Live multiplayer shipped 2026-08-07 (agora service + viewtopia client,
+current state in DESIGN.md). Open work from it:
 
-- [ ] **live multiplayer on a shared map document** — the defining feature.
-      Architecture grilled and decided 2026-08-07, not yet built:
-      - **agora** (name vetoable), a new Rust axum websocket service, owns
-        composition documents in its own Postgres database on the existing
-        instance. Single instance v1, sticky-per-document sharding is the
-        later scale move. Joins the platform compose behind nginx.
-      - **Composition first, features second.** The v1 document is the map
-        composition: layer list (order, visibility, opacity, style
-        overrides, referencing layers by id, never embedding data),
-        annotations, camera bookmarks, metadata and members. Comments are
-        v1.1 (append-only op type, slots into the same log). Feature
-        co-editing is phase two: new op types on the same session that the
-        service routes to ptolemy, which stays the feature authority. The
-        viewer's existing client-side Project (src/projects/, IndexedDB)
-        imports into server documents on first login.
-      - **Server-ordered ops, last-writer-wins per key.** No CRDT, no OT.
-        Monotonic sequence per document, optimistic client apply, persisted
-        as checkpoint plus bounded op log (long enough for reconnects, full
-        history is phase two's ptolemy story). Join sends snapshot + seq,
-        reconnect replays since seq. Revisit CRDTs only if offline-while-
-        shared editing becomes a real complaint.
-      - **Presence** (cursors, selections, viewport) is throttled and
-        ephemeral, never in the log. Protocol is JSON over one websocket per
-        client, rooms per document, messages join/snapshot/op/ack/presence,
-        generic op envelope (doc, actor, seq, type, payload).
-      - **Share links carry a role** (view or edit), members use the shared
-        platform JWT, anonymous link-holders are read-only. Anonymous
-        editing is a non-goal. Undo is per-user inverse ops, no global undo.
-      - Client side: a viewtopia Zustand store bridges ops both ways, the
-        existing offline queue's operations become ops on reconnect under
-        LWW. Phoenix/Elixir considered and rejected: stack stays Rust, the
-        hard part is the protocol, not the socket layer.
+- [!] **publish agora to GitHub** — the repo GeoLang/agora does not exist
+      and the agent permission layer refuses repo creation, so agora is
+      local-only until the owner runs
+      `gh repo create GeoLang/agora --public` and pushes master. CI has
+      never run.
+- [ ] **document membership route** — nothing adds a platform member to a
+      document, so multi-member docs only work via edit links today.
+- [ ] **comments** (v1.1) — append-only op type on the same log, needs
+      thread/resolve UX.
+- [ ] **presence merge** — agora presence should subsume the older
+      tiletopia collaboration path's cursors and camera-follow; the collab
+      panel keeps chat and AV, collaboration.ts loses its presence half.
+- [ ] **bookmarks leave-restore** — annotations restore local state when a
+      live session ends, bookmarks do not (app-store persist middleware
+      makes gating messy).
+- [ ] **hash share tokens at rest** — the share_links column stores raw
+      bearer tokens.
+- [ ] **local project import** — IndexedDB projects do not import into a
+      live document (TODO at captureStateForNewDocument).
 - [ ] **hosted flagship instance + share links** — Figma's zero-install magic
       is a link that opens the document. Self-host is free with open source,
       but the "click a link, you're in the map" experience needs a hosted

@@ -69,6 +69,34 @@ Maturity (test-fn counts via `grep -rE '#\[(test|tokio::test|sqlx::test)'`):
 
 ## 2. Current architecture (as built)
 
+### 2.0 Live shared map documents (agora)
+
+agora is the live multiplayer service behind `/agora/`: a Rust axum websocket
+service owning composition documents in its own Postgres database on the shared
+instance. A document is the map composition, not the feature data: the layer
+list (order as base62 fractional indexes, visibility, opacity, style overrides,
+layers referenced by id, never embedded), annotations, camera bookmarks,
+metadata and members. Concurrency is server-ordered ops with last-writer-wins
+per key, no CRDT: the server assigns a monotonic sequence per document,
+persists every op, folds them into a checkpoint every 256 ops and keeps a
+4096-op reconnect tail, so a join gets a snapshot (carrying the caller's own
+actor id and role) and a reconnect replays from `since` or falls back to a
+snapshot. Presence (cursor, selection, viewport) relays with a server-stamped
+actor, never to its sender, never persisted. Members authenticate with the
+shared platform JWT, share links carry a view or edit role and resolve to
+short-lived session tokens (`aud: "agora-session"`, so neither token kind can
+stand in for the other), the link row decides the role so revocation bites on
+the next connect, and the websocket handshake offers the token as the
+`["bearer", jwt]` subprotocol, the tiletopia realtime contract, so tokens stay
+out of access logs. Everything from the wire is capped by named constants and
+rate limited without dropping the connection. The viewtopia client
+(`src/live/`) applies ops optimistically, reconciles on ack, bridges the
+`useAppStore` layer registry, the annotation store and camera bookmarks both
+ways, draws peer cursors on MapLibre, and re-offers unacked ops after a
+reconnect. Undo is per-user inverse ops. Feature co-editing is phase two: new
+op types on the same session routed to ptolemy, which stays the feature
+authority. Phoenix/Elixir was considered and rejected, the stack stays Rust.
+
 ### 2.1 Platform topology
 
 The shipping unit is `docker-compose.platform.yml`, all fronted by ViewTopia's nginx on
