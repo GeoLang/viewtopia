@@ -6,6 +6,20 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-06: the client half of agora, live multiplayer on a shared map
+  document, landed in src/live/. A live document holds the layer list (order as
+  a base62 fractional index, visibility, opacity, style overrides, layers by id
+  only), annotations and camera bookmarks; ops are server ordered and last
+  writer wins per key, applied optimistically and reconciled on ack. The socket
+  resumes from the last applied sequence with exponential backoff and takes a
+  snapshot when the service cannot replay; presence is throttled to one frame
+  per 100 ms and dropped rather than buffered across reconnects. The header
+  carries the session control, peer avatars and a view/edit share link dialog,
+  peer cursors draw on MapLibre, and a share link opens the document through
+  ?live=<token>. Annotations moved out of AnnotatePanel into a store so a
+  session can own them. The client-side Project store stays as it is for local
+  projects.
+
 - 2026-08-06: the timelapse panel shows a "Pulling tiles…" spinner while
   either compare source still has tiles in flight, driven by MapLibre's
   source data events on whichever map holds each source, so a cold step's
