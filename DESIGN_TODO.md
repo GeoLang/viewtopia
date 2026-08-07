@@ -48,6 +48,14 @@ current state in DESIGN.md). Open work from it:
       live demo). Render annotations as MapLibre markers and arm the map
       click there too, which also gives shared annotations a visible home
       in live sessions on the renderer people actually share from.
+- [ ] **agora batch op** (idea from uMap's sync design) — a frame carrying
+      several ops that the server applies all-or-nothing under one
+      sequence number, so a multi-feature paste or multi-layer reorder
+      never renders a torn intermediate state on peers, and undo groups
+      it as one step.
+- [ ] **undo waits for quiet** (idea from uMap's UndoManager) — the live
+      client's per-user undo must disable while any local op is still
+      unacked, since undoing an unacked op races the server's ordering.
 - [ ] **hosted flagship instance + share links** — Figma's zero-install magic
       is a link that opens the document. Self-host is free with open source,
       but the "click a link, you're in the map" experience needs a hosted
