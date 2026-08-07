@@ -28,13 +28,37 @@ mobile capture, auth and multi-tenancy, one-click deploy.
 The two gaps between "open GIS platform" and "Figma of GIS":
 
 - [ ] **live multiplayer on a shared map document** — the defining feature.
-      Nothing in the stack does presence, live edit broadcast, or comments
-      anchored to features; viewtopia has no websocket infrastructure at all.
-      Recommended shape: a live session service that broadcasts ephemeral
-      edits over websockets and persists them as ptolemy changesets, so the
-      git model becomes the durable layer under a live surface rather than
-      the UX itself. Largest missing subsystem. Grill the architecture before
-      building.
+      Architecture grilled and decided 2026-08-07, not yet built:
+      - **agora** (name vetoable), a new Rust axum websocket service, owns
+        composition documents in its own Postgres database on the existing
+        instance. Single instance v1, sticky-per-document sharding is the
+        later scale move. Joins the platform compose behind nginx.
+      - **Composition first, features second.** The v1 document is the map
+        composition: layer list (order, visibility, opacity, style
+        overrides, referencing layers by id, never embedding data),
+        annotations, camera bookmarks, metadata and members. Comments are
+        v1.1 (append-only op type, slots into the same log). Feature
+        co-editing is phase two: new op types on the same session that the
+        service routes to ptolemy, which stays the feature authority. The
+        viewer's existing client-side Project (src/projects/, IndexedDB)
+        imports into server documents on first login.
+      - **Server-ordered ops, last-writer-wins per key.** No CRDT, no OT.
+        Monotonic sequence per document, optimistic client apply, persisted
+        as checkpoint plus bounded op log (long enough for reconnects, full
+        history is phase two's ptolemy story). Join sends snapshot + seq,
+        reconnect replays since seq. Revisit CRDTs only if offline-while-
+        shared editing becomes a real complaint.
+      - **Presence** (cursors, selections, viewport) is throttled and
+        ephemeral, never in the log. Protocol is JSON over one websocket per
+        client, rooms per document, messages join/snapshot/op/ack/presence,
+        generic op envelope (doc, actor, seq, type, payload).
+      - **Share links carry a role** (view or edit), members use the shared
+        platform JWT, anonymous link-holders are read-only. Anonymous
+        editing is a non-goal. Undo is per-user inverse ops, no global undo.
+      - Client side: a viewtopia Zustand store bridges ops both ways, the
+        existing offline queue's operations become ops on reconnect under
+        LWW. Phoenix/Elixir considered and rejected: stack stays Rust, the
+        hard part is the protocol, not the socket layer.
 - [ ] **hosted flagship instance + share links** — Figma's zero-install magic
       is a link that opens the document. Self-host is free with open source,
       but the "click a link, you're in the map" experience needs a hosted
