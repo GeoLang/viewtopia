@@ -1,0 +1,207 @@
+import type { Symbology } from '../features/symbology/symbology';
+import type { AgentLayerStyle } from '../store/agentLayers';
+import type { LayerItem } from '../store/app';
+
+export type LiveRole = 'view' | 'edit';
+
+export interface LiveLayerStyleOverrides {
+  style?: AgentLayerStyle;
+  symbology?: Symbology | null;
+}
+
+/** A reference to a platform layer, never the layer data itself. */
+export interface LiveLayerEntry {
+  layerId: string;
+  name: string;
+  type: LayerItem['type'];
+  visible: boolean;
+  opacity: number;
+  order: string;
+  styleOverrides?: LiveLayerStyleOverrides;
+}
+
+export interface LiveAnnotation {
+  id: string;
+  label: string;
+  color: string;
+  lat: number;
+  lng: number;
+  createdAt: number;
+}
+
+export interface LiveBookmark {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  zoom: number;
+  heading?: number;
+  pitch?: number;
+  createdAt: number;
+}
+
+export interface LiveDocumentMeta {
+  name: string;
+}
+
+export interface LiveDocument {
+  meta: LiveDocumentMeta;
+  layers: Record<string, LiveLayerEntry>;
+  annotations: Record<string, LiveAnnotation>;
+  bookmarks: Record<string, LiveBookmark>;
+}
+
+export const DOCUMENT_NAMESPACES = ['meta', 'layers', 'annotations', 'bookmarks'] as const;
+
+export type DocumentNamespace = (typeof DOCUMENT_NAMESPACES)[number];
+
+export interface DocumentKey {
+  namespace: DocumentNamespace;
+  id: string;
+}
+
+export interface LiveViewport {
+  center: [number, number];
+  zoom: number;
+}
+
+export interface LivePresence {
+  cursor: [number, number] | null;
+  selection: string[];
+  viewport: LiveViewport | null;
+}
+
+export interface LivePeer {
+  actor: string;
+  name: string;
+  role: LiveRole;
+}
+
+export interface ClientOperationMessage {
+  type: 'op';
+  clientSeq: number;
+  key: string;
+  value: unknown;
+}
+
+export interface ClientPresenceMessage extends LivePresence {
+  type: 'presence';
+}
+
+export type ClientMessage = ClientOperationMessage | ClientPresenceMessage;
+
+export interface ServerSnapshotMessage {
+  type: 'snapshot';
+  seq: number;
+  state: LiveDocument;
+}
+
+export interface ServerOperationMessage {
+  type: 'op';
+  seq: number;
+  actor: string;
+  key: string;
+  value: unknown;
+}
+
+export interface ServerAckMessage {
+  type: 'ack';
+  clientSeq: number;
+  seq: number;
+}
+
+export interface ServerPeersMessage {
+  type: 'peers';
+  peers: LivePeer[];
+}
+
+export interface ServerErrorMessage {
+  type: 'error';
+  reason: string;
+}
+
+/**
+ * The pinned server frames carry no presence relay, yet cursors have to reach
+ * peers somehow, so we read the symmetric echo of the client frame plus actor.
+ */
+export interface ServerPresenceMessage extends LivePresence {
+  type: 'presence';
+  actor: string;
+}
+
+export type ServerMessage =
+  | ServerSnapshotMessage
+  | ServerOperationMessage
+  | ServerAckMessage
+  | ServerPeersMessage
+  | ServerErrorMessage
+  | ServerPresenceMessage;
+
+export interface LiveDocumentSummary {
+  id: string;
+  name: string;
+}
+
+export interface LiveLinkResolution {
+  doc: string;
+  role: LiveRole;
+  sessionToken: string;
+}
+
+export function emptyLiveDocument(name = ''): LiveDocument {
+  return { meta: { name }, layers: {}, annotations: {}, bookmarks: {} };
+}
+
+export function documentKey(namespace: DocumentNamespace, id: string): string {
+  return `${namespace}/${id}`;
+}
+
+export function parseDocumentKey(key: string): DocumentKey | null {
+  const separator = key.indexOf('/');
+  if (separator <= 0) return null;
+  const namespace = key.slice(0, separator) as DocumentNamespace;
+  const id = key.slice(separator + 1);
+  if (id.length === 0) return null;
+  if (!DOCUMENT_NAMESPACES.includes(namespace)) return null;
+  return { namespace, id };
+}
+
+function withEntry<Entry>(
+  entries: Record<string, Entry>,
+  id: string,
+  value: Entry | null,
+): Record<string, Entry> {
+  const next = { ...entries };
+  if (value === null) delete next[id];
+  else next[id] = value;
+  return next;
+}
+
+/** Writes one key into a copy of the document, treating null as a delete. */
+export function applyDocumentKey(
+  document: LiveDocument,
+  key: string,
+  value: unknown,
+): LiveDocument {
+  const parsed = parseDocumentKey(key);
+  if (!parsed) return document;
+  switch (parsed.namespace) {
+    case 'meta':
+      return { ...document, meta: { ...document.meta, [parsed.id]: value as string } };
+    case 'layers':
+      return {
+        ...document,
+        layers: withEntry(document.layers, parsed.id, value as LiveLayerEntry | null),
+      };
+    case 'annotations':
+      return {
+        ...document,
+        annotations: withEntry(document.annotations, parsed.id, value as LiveAnnotation | null),
+      };
+    case 'bookmarks':
+      return {
+        ...document,
+        bookmarks: withEntry(document.bookmarks, parsed.id, value as LiveBookmark | null),
+      };
+  }
+}
