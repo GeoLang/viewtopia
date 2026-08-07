@@ -512,11 +512,18 @@ any interval as on-demand composite tiles (the Timelapse panel is the proof).
 What still separates it from GEE, engine details in geoplumb's DESIGN.md
 Known limits:
 
-- [ ] **mixed-CRS collections**: StacSrc anchors one CRS and skips items
-      projected differently, so a sentinel-2 layer dies at UTM zone
-      boundaries unless its anchor bbox sits in one zone's core (bit the
-      live demo). Real fix is reprojecting items onto the anchor grid at
-      read, not config discipline.
+- [ ] **item footprint under-coverage** (remainder of the mixed-CRS fix,
+      2026-08-07): cross-CRS items now warp onto the anchor grid at read,
+      but an item's lon/lat footprint converts to the anchor CRS through
+      two opposite corners, under-covering a rotated cross-zone quad by up
+      to ~2 km on its far side, so a chunk entirely inside that strip
+      still skips the item. Fix is converting the footprint through a
+      densified envelope, which also widens same-CRS footprints slightly.
+- [ ] **zonal endpoint edge protections**: /zonal and /zonal/series ship
+      with input validation and resource caps but no per-request timeout
+      or concurrency limit; that belongs at the edge (nginx or a tower
+      layer), not in the crate. Also document that overlapping zones
+      resolve by burn order (a contained zone reads empty, not an error).
 - [ ] **composite latency and memory on dense collections**: a reducing
       composite reads every intersecting item with the whole stack resident
       per window. Fine at a few items, not at hundreds. Streaming reductions
@@ -532,7 +539,9 @@ Known limits:
       math (arithmetic, comparisons, where, log/exp), reclassify, convolution,
       quality masking, focal statistics, composites through
       percentile/stddev/count, and zonal statistics plus per-step time series
-      as pull drivers (2026-08-06). Grow by demand, not by checklist.
+      as pull drivers (2026-08-06) and as public server endpoints
+      (POST /zonal/{layer} and /zonal/{layer}/series, 2026-08-07). Grow by
+      demand, not by checklist.
 
 ## OPEN — Phase 3 (mobile & ML breadth, after v1)
 
