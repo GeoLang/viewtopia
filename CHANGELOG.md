@@ -6,6 +6,18 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-07: **live documents have comment threads**. A comments panel in the
+  live session controls: top-level comments with replies, resolve/unresolve
+  with a resolved filter, delete-own, and an optional map anchor that flies
+  the camera to where the comment was written. Carried as `comments/{id}`
+  ops on the same agora log as every other live edit, so guests with edit
+  links comment too, attribution frozen at write time. Deletion authority
+  is UI-level only, the generic op log cannot enforce authorship.
+- 2026-08-07: **the share dialog manages document members**. Members list
+  with per-row role toggle and remove, an add row taking an exact platform
+  user id (there is no directory to search), driving agora's PUT/DELETE
+  membership routes. Server refusals surface verbatim, including the
+  last-editor guard. Share-link guests see no members section.
 - 2026-08-07: **the platform E2E gate covers live multiplayer**. agora is
   checked out, built, started and health-waited in platform-e2e.yml, and
   tests/e2e/live-session.spec.js runs a real browser client against one raw
