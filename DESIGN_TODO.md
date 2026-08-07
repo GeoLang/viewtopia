@@ -9,6 +9,42 @@
 ---
 
 
+## OPEN — direction: the Figma of GIS, only open (stated 2026-08-06)
+
+The owner's product thesis: GeoLang becomes what Figma is to design, for GIS,
+as open source. Assessed feasible 2026-08-06. The proprietary occupant of this
+position is Felt (browser-native, real-time collaboration, freemium, "Google
+Docs of GIS", 500+ teams as of 2026), which proves the demand; the open-source
+quadrant is empty (QGIS is desktop single-user, GeoNode et al are plumbing).
+The counter-position: open, self-hostable, data stays in your PostGIS, plus an
+analysis engine (geoplumb) at a depth Felt lacks. AGPL already guards against
+cloud strip-mining.
+
+What the stack already covers: browser viewer with real tools (viewtopia),
+versioned feature store with branch/diff/merge/audit (ptolemy, the version
+history half, which Felt does not have), GEE-track compute (geoplumb), tiles,
+mobile capture, auth and multi-tenancy, one-click deploy.
+
+The two gaps between "open GIS platform" and "Figma of GIS":
+
+- [ ] **live multiplayer on a shared map document** — the defining feature.
+      Nothing in the stack does presence, live edit broadcast, or comments
+      anchored to features; viewtopia has no websocket infrastructure at all.
+      Recommended shape: a live session service that broadcasts ephemeral
+      edits over websockets and persists them as ptolemy changesets, so the
+      git model becomes the durable layer under a live surface rather than
+      the UX itself. Largest missing subsystem. Grill the architecture before
+      building.
+- [ ] **hosted flagship instance + share links** — Figma's zero-install magic
+      is a link that opens the document. Self-host is free with open source,
+      but the "click a link, you're in the map" experience needs a hosted
+      deployment. Ops and money, parked on the same AWS account decision as
+      geoplumb in-region serving (2026-08-05).
+
+Scope discipline that follows from the thesis: Figma did not beat Photoshop
+on features, it won one workflow. Win "a team makes and analyzes a map
+together in the browser" and refuse feature-parity fights with ArcGIS.
+
 ## OPEN — platform hygiene
 
 - [ ] **tiletopia multi-node HA (raft)** — future reference, no open work. The
