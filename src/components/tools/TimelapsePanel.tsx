@@ -10,7 +10,11 @@ import {
   Select,
   Loader,
 } from '@mantine/core';
-import type { Map as MapLibreMap } from 'maplibre-gl';
+import type {
+  ErrorEvent as MapErrorEvent,
+  Map as MapLibreMap,
+  MapSourceDataEvent,
+} from 'maplibre-gl';
 import { IconClock, IconX, IconPlayerPlay, IconPlayerPause } from '@tabler/icons-react';
 import { getActiveMapLibre, getPaneMapLibre } from '../../viewer/registry';
 import { useAppStore } from '../../store/app';
@@ -91,6 +95,46 @@ function whenMapReady(
   };
 }
 
+/**
+ * Say whether one source still has tiles in flight, on whichever map holds it.
+ * Every `sourcedataloading` is followed by a `sourcedata`, `sourcedataabort` or
+ * `error`, and each of those carries the source's own outstanding-request
+ * state, so the last event for the source is the answer.
+ */
+function watchTileLoading(
+  get: () => MapLibreMap | null,
+  source: string,
+  setTilesLoading: (loading: boolean) => void,
+): () => void {
+  let detach: (() => void) | null = null;
+  const stopWaiting = whenMapReady(get, (map) => {
+    const onSourceData = (event: MapSourceDataEvent) => {
+      if (event.sourceId !== source) return;
+      setTilesLoading(!event.isSourceLoaded);
+    };
+    // the error event carries no loaded flag, so ask the source itself
+    const onError = (event: MapErrorEvent) => {
+      if (!('sourceId' in event) || event.sourceId !== source) return;
+      setTilesLoading(!!map.getSource(source) && !map.isSourceLoaded(source));
+    };
+    map.on('sourcedataloading', onSourceData);
+    map.on('sourcedata', onSourceData);
+    map.on('sourcedataabort', onSourceData);
+    map.on('error', onError);
+    detach = () => {
+      map.off('sourcedataloading', onSourceData);
+      map.off('sourcedata', onSourceData);
+      map.off('sourcedataabort', onSourceData);
+      map.off('error', onError);
+    };
+  });
+  return () => {
+    stopWaiting();
+    detach?.();
+    setTilesLoading(false);
+  };
+}
+
 export function TimelapsePanel({ onClose }: { onClose: () => void }) {
   const [layers, setLayers] = useState<PlumbLayer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,6 +148,8 @@ export function TimelapsePanel({ onClose }: { onClose: () => void }) {
   const [blend, setBlend] = useState(50);
   const [speed, setSpeed] = useState(1);
   const [playing, setPlaying] = useState(false);
+  const [aTilesLoading, setATilesLoading] = useState(false);
+  const [bTilesLoading, setBTilesLoading] = useState(false);
 
   // maplibre draws the raster tiles, and the compare's second view is the
   // split pane, which only exists on the globe tab
@@ -210,6 +256,26 @@ export function TimelapsePanel({ onClose }: { onClose: () => void }) {
       setRaster(map, B_SOURCE, url, bOnPane ? 1 : blendRef.current / 100),
     );
   }, [hasMap, layerName, bStep, stepSize, bOnPane]);
+
+  useEffect(() => {
+    if (!hasMap || !aStep || !layerName) {
+      setATilesLoading(false);
+      return;
+    }
+    return watchTileLoading(getActiveMapLibre, A_SOURCE, setATilesLoading);
+  }, [hasMap, layerName, aStep]);
+
+  useEffect(() => {
+    if (!hasMap || !bStep || !layerName) {
+      setBTilesLoading(false);
+      return;
+    }
+    return watchTileLoading(
+      bOnPane ? getPaneMapLibre : getActiveMapLibre,
+      B_SOURCE,
+      setBTilesLoading,
+    );
+  }, [hasMap, layerName, bStep, bOnPane]);
 
   // the blend slider repaints rather than re-adding the source, which would
   // refetch every tile on each drag
@@ -423,6 +489,15 @@ export function TimelapsePanel({ onClose }: { onClose: () => void }) {
               >
                 {playing ? 'Pause' : 'Play'}
               </Button>
+
+              {(aTilesLoading || bTilesLoading) && (
+                <Group gap="xs">
+                  <Loader size="xs" color="violet" />
+                  <Text size="xs" c="dimmed">
+                    Pulling tiles…
+                  </Text>
+                </Group>
+              )}
 
               <Text size="xs" c="dimmed">
                 {aStep && bStep
