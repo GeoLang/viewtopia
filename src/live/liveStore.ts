@@ -114,7 +114,9 @@ export const useLiveStore = create<LiveState>((set, get) => ({
     socket = new LiveSocket({
       documentId,
       token: token ?? getAuthToken() ?? '',
-      lastSeq: () => get().seq,
+      // actor is only ever set by a snapshot, so null means this connection
+      // epoch has no state yet and must not claim a since
+      sinceForResume: () => (get().actor === null ? null : get().seq),
       onMessage: (message) => get().receive(message),
       onStateChange: (connection) => {
         set({ connection });

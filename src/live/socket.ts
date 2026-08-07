@@ -9,15 +9,23 @@ export type LiveConnectionState = 'idle' | 'connecting' | 'open' | 'reconnecting
 export interface LiveSocketOptions {
   documentId: string;
   token: string;
-  /** highest applied sequence, so a reconnect resumes instead of resyncing */
-  lastSeq: () => number;
+  /**
+   * Highest applied sequence, so a reconnect resumes instead of resyncing, or
+   * null before the first snapshot has arrived. `since` claims "I hold the
+   * state through this seq", and a fresh client holds nothing: sending
+   * since=0 to a fresh document (seq 0) reads as already current, so the
+   * server would skip the snapshot and the client would never learn the
+   * document state or its own actor and role.
+   */
+  sinceForResume: () => number | null;
   onMessage: (message: ServerMessage) => void;
   onStateChange: (state: LiveConnectionState) => void;
 }
 
-export function agoraSocketUrl(documentId: string, since: number): string {
+export function agoraSocketUrl(documentId: string, since: number | null): string {
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const query = new URLSearchParams({ doc: documentId, since: String(since) });
+  const query = new URLSearchParams({ doc: documentId });
+  if (since !== null) query.set('since', String(since));
   return `${protocol}//${location.host}/agora/ws?${query.toString()}`;
 }
 
@@ -33,7 +41,7 @@ export class LiveSocket {
     this.closedByCaller = false;
     this.options.onStateChange(this.reconnectAttempt === 0 ? 'connecting' : 'reconnecting');
     const socket = new WebSocket(
-      agoraSocketUrl(this.options.documentId, this.options.lastSeq()),
+      agoraSocketUrl(this.options.documentId, this.options.sinceForResume()),
       [BEARER_SUBPROTOCOL, this.options.token],
     );
     this.socket = socket;

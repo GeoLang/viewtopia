@@ -6,14 +6,14 @@ import { FakeAgoraServer } from './stubs/fakeAgoraServer';
 let server: FakeAgoraServer;
 let states: LiveConnectionState[];
 let received: ServerMessage[];
-let lastSeq: number;
+let sinceForResume: number | null;
 let socket: LiveSocket;
 
 function makeSocket(): LiveSocket {
   return new LiveSocket({
     documentId: 'doc-1',
     token: 'jwt-token',
-    lastSeq: () => lastSeq,
+    sinceForResume: () => sinceForResume,
     onMessage: (message) => received.push(message),
     onStateChange: (state) => states.push(state),
   });
@@ -26,7 +26,7 @@ describe('live socket', () => {
     server.install();
     states = [];
     received = [];
-    lastSeq = 0;
+    sinceForResume = null;
     socket = makeSocket();
   });
 
@@ -38,6 +38,12 @@ describe('live socket', () => {
 
   it('builds a same origin resume url that carries no credential', () => {
     expect(agoraSocketUrl('doc-1', 12)).toBe(`ws://${location.host}/agora/ws?doc=doc-1&since=12`);
+  });
+
+  it('a first connect claims no since, so the server sends the snapshot', () => {
+    expect(agoraSocketUrl('doc-1', null)).toBe(`ws://${location.host}/agora/ws?doc=doc-1`);
+    socket.connect();
+    expect(server.connection.url).not.toContain('since');
   });
 
   it('offers the bearer token as the second subprotocol', () => {
@@ -108,7 +114,7 @@ describe('live socket', () => {
   it('resumes from the caller sequence on reconnect', () => {
     socket.connect();
     server.accept();
-    lastSeq = 9;
+    sinceForResume = 9;
     server.connection.dropConnection();
     vi.advanceTimersByTime(500);
     expect(server.connection.sinceParameter).toBe(9);

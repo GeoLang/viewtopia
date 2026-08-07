@@ -38,10 +38,10 @@ describe('live store', () => {
     vi.useRealTimers();
   });
 
-  it('connects with the document and resume point on the url, the token as a subprotocol', () => {
+  it('connects with the document on the url, the token as a subprotocol, no since', () => {
     connectAndAccept();
     expect(server.connection.documentParameter).toBe(DOCUMENT_ID);
-    expect(server.connection.sinceParameter).toBe(0);
+    expect(server.connection.url).not.toContain('since');
     expect(server.connection.url).not.toContain(TOKEN);
     expect(server.connection.offeredToken).toBe(TOKEN);
     expect(useLiveStore.getState().connection).toBe('open');

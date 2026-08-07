@@ -30,8 +30,10 @@ const PEER_ANNOTATION = 'placed by the peer';
 
 const MESSAGE_TIMEOUT_MS = 15_000;
 
+// no `since`: the peer holds nothing, and claiming since=0 on a document at
+// seq 0 reads as already current, so the server would skip the snapshot
 function openPeer(origin, documentId, sessionToken) {
-  const url = `${origin.replace(/^http/, 'ws')}/agora/ws?doc=${encodeURIComponent(documentId)}&since=0`;
+  const url = `${origin.replace(/^http/, 'ws')}/agora/ws?doc=${encodeURIComponent(documentId)}`;
   const socket = new WebSocket(url, [BEARER_SUBPROTOCOL, sessionToken]);
   const messages = [];
   socket.addEventListener('message', (event) => messages.push(JSON.parse(String(event.data))));

@@ -144,7 +144,7 @@ export class FakeAgoraServer {
   }
 
   /** complete the handshake, then either replay from since or send a snapshot */
-  accept(options: { replay?: boolean } = {}): FakeSocket {
+  accept(options: { replay?: boolean; actor?: string } = {}): FakeSocket {
     const connection = this.connection;
     connection.acceptHandshake();
     if (options.replay) {
@@ -153,7 +153,14 @@ export class FakeAgoraServer {
       }
       return connection;
     }
-    connection.deliver({ type: 'snapshot', seq: this.seq, state: this.document });
+    // the real server always stamps the snapshot with the caller's identity
+    connection.deliver({
+      type: 'snapshot',
+      seq: this.seq,
+      state: this.document,
+      actor: options.actor ?? 'self',
+      role: 'edit',
+    });
     return connection;
   }
 
