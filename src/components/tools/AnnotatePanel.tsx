@@ -24,40 +24,18 @@ import {
 } from 'cesium';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { getSharedCamera } from '../../hooks/sharedCamera';
-
-interface Annotation {
-  id: string;
-  label: string;
-  color: string;
-  lat: number;
-  lng: number;
-  createdAt: number;
-}
-
-const STORAGE_KEY = 'viewtopia-annotations';
-
-function loadAnnotations(): Annotation[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Annotation[]) : [];
-  } catch {
-    return [];
-  }
-}
+import { useAnnotationStore } from '../../store/annotations';
 
 export function AnnotatePanel({ onClose }: { onClose: () => void }) {
-  const [annotations, setAnnotations] = useState<Annotation[]>(loadAnnotations);
+  const annotations = useAnnotationStore((s) => s.annotations);
+  const addAnnotation = useAnnotationStore((s) => s.addAnnotation);
+  const removeAnnotation = useAnnotationStore((s) => s.removeAnnotation);
   const [label, setLabel] = useState('');
   const [color, setColor] = useState('#a78bfa');
   const [placing, setPlacing] = useState(false);
   const [status, setStatus] = useState('');
   const placingRef = useRef({ label, color });
   placingRef.current = { label, color };
-
-  // persist on every change
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(annotations));
-  }, [annotations]);
 
   // keep the live Cesium entities in sync with the annotation list
   useEffect(() => {
@@ -96,10 +74,14 @@ export function AnnotatePanel({ onClose }: { onClose: () => void }) {
       setStatus('Enter a label first');
       return;
     }
-    setAnnotations((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), label: l.trim(), color: c, lat, lng, createdAt: Date.now() },
-    ]);
+    addAnnotation({
+      id: crypto.randomUUID(),
+      label: l.trim(),
+      color: c,
+      lat,
+      lng,
+      createdAt: Date.now(),
+    });
     setLabel('');
     setStatus(`Placed at ${lat.toFixed(3)}, ${lng.toFixed(3)}`);
   };
@@ -141,7 +123,7 @@ export function AnnotatePanel({ onClose }: { onClose: () => void }) {
   };
 
   const handleRemove = (id: string) => {
-    setAnnotations((prev) => prev.filter((a) => a.id !== id));
+    removeAnnotation(id);
   };
 
   return (

@@ -1,6 +1,7 @@
 import type { Symbology } from '../features/symbology/symbology';
 import type { AgentLayerStyle } from '../store/agentLayers';
 import type { LayerItem } from '../store/app';
+import type { CameraState } from '../store/cameraViews';
 
 export type LiveRole = 'view' | 'edit';
 
@@ -37,6 +38,7 @@ export interface LiveBookmark {
   zoom: number;
   heading?: number;
   pitch?: number;
+  camera?: CameraState;
   createdAt: number;
 }
 
