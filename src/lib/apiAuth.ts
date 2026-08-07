@@ -24,3 +24,11 @@ export function authHeaders(): Record<string, string> {
   const token = getAuthToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
+
+/**
+ * A browser cannot set Authorization on a WebSocket, so the platform sockets
+ * take the bearer as the second offered subprotocol behind this marker:
+ * `new WebSocket(url, [BEARER_SUBPROTOCOL, jwt])`. The 101 echoes only the
+ * marker, never the token.
+ */
+export const BEARER_SUBPROTOCOL = 'bearer';

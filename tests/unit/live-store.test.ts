@@ -38,11 +38,12 @@ describe('live store', () => {
     vi.useRealTimers();
   });
 
-  it('connects with the document, token and resume point on the query string', () => {
+  it('connects with the document and resume point on the url, the token as a subprotocol', () => {
     connectAndAccept();
     expect(server.connection.documentParameter).toBe(DOCUMENT_ID);
-    expect(server.connection.tokenParameter).toBe(TOKEN);
     expect(server.connection.sinceParameter).toBe(0);
+    expect(server.connection.url).not.toContain(TOKEN);
+    expect(server.connection.offeredToken).toBe(TOKEN);
     expect(useLiveStore.getState().connection).toBe('open');
   });
 

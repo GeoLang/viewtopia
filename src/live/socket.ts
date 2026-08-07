@@ -1,3 +1,4 @@
+import { BEARER_SUBPROTOCOL } from '../lib/apiAuth';
 import type { ClientMessage, ServerMessage } from './types';
 
 const RECONNECT_BASE_MS = 500;
@@ -14,9 +15,9 @@ export interface LiveSocketOptions {
   onStateChange: (state: LiveConnectionState) => void;
 }
 
-export function agoraSocketUrl(documentId: string, token: string, since: number): string {
+export function agoraSocketUrl(documentId: string, since: number): string {
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const query = new URLSearchParams({ doc: documentId, since: String(since), token });
+  const query = new URLSearchParams({ doc: documentId, since: String(since) });
   return `${protocol}//${location.host}/agora/ws?${query.toString()}`;
 }
 
@@ -32,7 +33,8 @@ export class LiveSocket {
     this.closedByCaller = false;
     this.options.onStateChange(this.reconnectAttempt === 0 ? 'connecting' : 'reconnecting');
     const socket = new WebSocket(
-      agoraSocketUrl(this.options.documentId, this.options.token, this.options.lastSeq()),
+      agoraSocketUrl(this.options.documentId, this.options.lastSeq()),
+      [BEARER_SUBPROTOCOL, this.options.token],
     );
     this.socket = socket;
 

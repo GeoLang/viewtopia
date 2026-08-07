@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { useAppStore } from './app';
 import { getAuthToken } from '../features/auth/store';
+import { BEARER_SUBPROTOCOL } from '../lib/apiAuth';
 import { getSharedCamera, setSharedCamera } from '../hooks/sharedCamera';
 
 /**
@@ -21,9 +22,6 @@ import { getSharedCamera, setSharedCamera } from '../hooks/sharedCamera';
  * and either tab closing drops it. A presence list without us in it is normal
  * and says nothing about this socket, so we neither re-join nor reconnect on it.
  */
-
-/** Marker the server looks for as the first offered subprotocol. */
-const BEARER_SUBPROTOCOL = 'bearer';
 
 // tiletopia's ROOM_LIMIT_CLOSE_CODE: the account already holds its 32 concurrent
 // rooms and this one would be a new room (joining someone else's never counts).

@@ -26,7 +26,10 @@ export class FakeSocket {
   readonly sentMessages: ClientMessage[] = [];
   private readonly server: FakeAgoraServer;
 
-  constructor(readonly url: string) {
+  constructor(
+    readonly url: string,
+    readonly protocols?: string | string[],
+  ) {
     if (!installedServer) throw new Error('no fake agora server installed');
     this.server = installedServer;
     this.server.connections.push(this);
@@ -66,8 +69,10 @@ export class FakeSocket {
     return this.parameter('doc');
   }
 
-  get tokenParameter(): string | null {
-    return this.parameter('token');
+  /** the bearer the client offered behind the subprotocol marker */
+  get offeredToken(): string | null {
+    const offered = Array.isArray(this.protocols) ? this.protocols : [];
+    return offered[0] === 'bearer' ? (offered[1] ?? null) : null;
   }
 
   get sinceParameter(): number {

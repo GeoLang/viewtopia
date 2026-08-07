@@ -36,10 +36,14 @@ describe('live socket', () => {
     vi.useRealTimers();
   });
 
-  it('builds a same origin resume url', () => {
-    expect(agoraSocketUrl('doc-1', 'jwt-token', 12)).toBe(
-      `ws://${location.host}/agora/ws?doc=doc-1&since=12&token=jwt-token`,
-    );
+  it('builds a same origin resume url that carries no credential', () => {
+    expect(agoraSocketUrl('doc-1', 12)).toBe(`ws://${location.host}/agora/ws?doc=doc-1&since=12`);
+  });
+
+  it('offers the bearer token as the second subprotocol', () => {
+    socket.connect();
+    expect(server.connection.protocols).toEqual(['bearer', 'jwt-token']);
+    expect(server.connection.offeredToken).toBe('jwt-token');
   });
 
   it('reports state transitions and hands messages to the caller', () => {

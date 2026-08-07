@@ -80,7 +80,7 @@ function ordersForList(layers: LayerItem[], entries: Record<string, LiveLayerEnt
   for (let index = 0; index < layers.length; index += 1) {
     const kept =
       index >= run.start && index < run.end ? entries[layers[index].id].order : null;
-    const order =
+    const order: string =
       kept ??
       generateIndexBetween(
         previousOrder,
