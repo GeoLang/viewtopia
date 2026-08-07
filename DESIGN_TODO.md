@@ -28,8 +28,12 @@ mobile capture, auth and multi-tenancy, one-click deploy.
 Live multiplayer shipped 2026-08-07 (agora service + viewtopia client,
 current state in DESIGN.md). Open work from it:
 
-- [ ] **membership UI** — agora has the routes now (PUT/DELETE
-      `/documents/{id}/members/{user_id}`), nothing in viewtopia calls them.
+- [ ] **live store guest flag** — the store does not record whether the
+      session came from a share link, so the share dialog infers member vs
+      guest from platform sign-in. A signed-in platform user who joins a
+      document by edit link without being a member sees the members section
+      try to load and show agora's 404 text. Harmless, but the store knowing
+      "this session is a guest" is the clean fix.
 - [ ] **comments** (v1.1) — append-only op type on the same log, needs
       thread/resolve UX.
 - [ ] **presence merge** — agora presence should subsume the older
@@ -53,6 +57,41 @@ current state in DESIGN.md). Open work from it:
       but the "click a link, you're in the map" experience needs a hosted
       deployment. Ops and money, parked on the same AWS account decision as
       geoplumb in-region serving (2026-08-05).
+
+From the Felt comparison (2026-08-07, sourced from their docs): the gaps
+below are where their product is ahead in ways that serve the same
+collaborative workflow, so they are in-thesis rather than parity chasing.
+Felt has no versioning, no routing, no 3D and self-hosts only on
+enterprise contracts, so those fronts need no response.
+
+- [ ] **comment mentions + notifications** — @mention a document member in
+      a comment and they find out. In-app notification first (a member has
+      no live socket when absent, so it needs a poll or a badge on the
+      documents list); email belongs to the hosted instance. This is what
+      turns comments from sticky notes into a workflow, and Felt's
+      comments have it.
+- [ ] **per-comment deep links + comment export** — a share URL that opens
+      the document at a comment thread, and export of a document's
+      comments as georeferenced CSV/JSON.
+- [ ] **embed mode** — a read-only iframe embed of a live document or
+      shared map for posts and dashboards. View-role share links already
+      carry the auth story; this is a chrome-less viewer route plus an
+      embed snippet in the share dialog.
+- [ ] **georeferenced image + PDF overlays** — drop a site plan or scanned
+      map, place it by world file or manual corner pinning, keep it as a
+      layer. Common field workflow, nothing in the stack does it, and it
+      fits "a team makes a map together" (the team's source material is
+      often a PDF).
+- [ ] **agent MCP server** — expose the geolang tool surface over MCP
+      (streamable HTTP) so Claude, Cursor and the rest can drive a map
+      session. Felt ships this enterprise-gated and cloud-only; an open
+      self-hosted one is exactly the counter-position, and the tool
+      manifest + executor already exist in geolang-api.
+- [ ] **read-only warehouse sources** (weigh before building) — Felt reads
+      Snowflake/BigQuery/Databricks live, enterprise-only. Ptolemy already
+      does external read-only PostGIS tables; the same model could take a
+      warehouse driver. Only worth it when a real user asks: it is
+      enterprise-pull, and the thesis says refuse parity fights.
 
 Scope discipline that follows from the thesis: Figma did not beat Photoshop
 on features, it won one workflow. Win "a team makes and analyzes a map
