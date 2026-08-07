@@ -440,16 +440,6 @@ test.describe('Tools panels (batch 2)', () => {
     await expect(panel.getByText('Playwright Tester (you)')).toBeVisible();
     expect(sent.filter((m) => m.type === 'Join')).toHaveLength(1);
 
-    // joining also starts the view broadcast the other clients follow
-    await expect
-      .poll(() => sent.filter((m) => m.type === 'ViewChanged').length, { timeout: 15000 })
-      .toBeGreaterThan(0);
-    const view = sent.find((m) => m.type === 'ViewChanged');
-    expect(view.user_id).toBe(localUserId);
-    for (const key of ['longitude', 'latitude', 'height', 'heading', 'pitch', 'roll']) {
-      expect(Number.isFinite(view.camera[key]), `ViewChanged camera.${key} is finite`).toBe(true);
-    }
-
     // leaving tears the room down and returns the panel to its join form
     await panel.getByRole('button', { name: 'Leave' }).click();
     await expect(panel.getByRole('button', { name: 'Join Room' })).toBeVisible();

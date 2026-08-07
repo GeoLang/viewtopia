@@ -93,7 +93,10 @@ rate limited without dropping the connection. The viewtopia client
 (`src/live/`) applies ops optimistically, reconciles on ack, bridges the
 `useAppStore` layer registry, the annotation store and camera bookmarks both
 ways, draws peer cursors on MapLibre, and re-offers unacked ops after a
-reconnect. Undo is per-user inverse ops. Feature co-editing is phase two: new
+reconnect. Clicking a peer avatar in the header follows that peer, putting the
+local camera on each presence viewport it reports until a local camera gesture
+takes it back, told apart from the client's own `jumpTo` by MapLibre only
+setting `originalEvent` on a real gesture. Undo is per-user inverse ops. Feature co-editing is phase two: new
 op types on the same session routed to ptolemy, which stays the feature
 authority. Phoenix/Elixir was considered and rejected, the stack stays Rust.
 
@@ -395,12 +398,13 @@ Tools" setting with a Preview badge, so there are no dead buttons in the default
 - The building-data toggle self-disables on styles with native 3D buildings and re-enables on
   raster styles at `style.load`.
 
-**Collaboration client.** tiletopia mounts the collaboration WebSocket. The JWT travels in the
-WebSocket subprotocol and query tokens are rejected, sender identity is server-stamped from the
-JWT `sub`, and SRTM fetches are bounded per terrain request. The viewer takes its token from the
-session, opens no socket when signed out, and keys identity off the JWT `sub` because a presence
-roster has no self marker and names are spoofable. Follow-view sends `ViewChanged` with
-zoom↔height conversion. The socket URL is built from an absolute `tiletopiaUrl` (http → ws,
+**Collaboration client.** tiletopia mounts the room WebSocket, which now carries chat and the
+online roster only: peer cursors and camera-follow belong to a live document's agora presence, so
+a room without a live session has neither. The JWT travels in the WebSocket subprotocol and query
+tokens are rejected, sender identity is server-stamped from the JWT `sub`, and SRTM fetches are
+bounded per terrain request. The viewer takes its token from the session, opens no socket when
+signed out, and keys identity off the JWT `sub` because a presence roster has no self marker and
+names are spoofable. The socket URL is built from an absolute `tiletopiaUrl` (http → ws,
 https → wss, root-relative unchanged). Server-side: presence is refcounted per connection so two
 tabs of one account survive one closing, rooms are reclaimed when empty, and room creation is
 capped at 32 per user with refusals closing as 4029, which the client surfaces as "too many rooms

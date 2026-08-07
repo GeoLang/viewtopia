@@ -3,6 +3,7 @@ import maplibregl from 'maplibre-gl';
 import { useAppStore } from '../store/app';
 import { getActiveMapLibre } from '../viewer/registry';
 import { useLiveStore } from './liveStore';
+import type { LiveViewport } from './types';
 
 const PEER_COLORS = ['#a78bfa', '#f87171', '#34d399', '#60a5fa', '#fbbf24', '#f472b6'];
 
@@ -61,6 +62,43 @@ export function attachPresenceBroadcast(map: PresenceMap): () => void {
   };
 }
 
+interface CameraEvent {
+  originalEvent?: unknown;
+}
+
+interface FollowMap {
+  jumpTo: (options: { center: [number, number]; zoom: number }) => void;
+  on: (event: string, handler: (event: CameraEvent) => void) => void;
+  off: (event: string, handler: (event: CameraEvent) => void) => void;
+}
+
+/**
+ * Puts the local camera on one peer's presence viewport until a local gesture
+ * takes it back. Only a gesture carries `originalEvent`, which is what keeps the
+ * jumpTo below from reading as the user grabbing the map.
+ */
+export function attachCameraFollow(map: FollowMap, actor: string): () => void {
+  const stopOnLocalGesture = (event: CameraEvent) => {
+    if (event.originalEvent) useLiveStore.getState().setFollowedActor(null);
+  };
+  map.on('movestart', stopOnLocalGesture);
+
+  let applied: LiveViewport | null = null;
+  const follow = () => {
+    const viewport = useLiveStore.getState().presence[actor]?.viewport ?? null;
+    if (!viewport || viewport === applied) return;
+    applied = viewport;
+    map.jumpTo({ center: viewport.center, zoom: viewport.zoom });
+  };
+  follow();
+  const unsubscribe = useLiveStore.subscribe(follow);
+
+  return () => {
+    map.off('movestart', stopOnLocalGesture);
+    unsubscribe();
+  };
+}
+
 /**
  * Peer cursors on the MapLibre map. The other renderers get nothing: Cesium and
  * Leaflet would each need their own overlay, the way Timelapse gates on MapLibre.
@@ -71,6 +109,7 @@ export function MapPresence() {
   const documentId = useLiveStore((s) => s.documentId);
   const peers = useLiveStore((s) => s.peers);
   const presence = useLiveStore((s) => s.presence);
+  const followedActor = useLiveStore((s) => s.followedActor);
   const markersRef = useRef(new Map<string, maplibregl.Marker>());
   const onMapLibre = renderer === 'maplibre' && activeTab === 'globe' && documentId !== null;
 
@@ -80,6 +119,13 @@ export function MapPresence() {
     if (!map) return;
     return attachPresenceBroadcast(map);
   }, [onMapLibre]);
+
+  useEffect(() => {
+    if (!onMapLibre || followedActor === null) return;
+    const map = getActiveMapLibre();
+    if (!map) return;
+    return attachCameraFollow(map, followedActor);
+  }, [onMapLibre, followedActor]);
 
   useEffect(() => {
     const markers = markersRef.current;

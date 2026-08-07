@@ -97,6 +97,20 @@ describe('live session ui', () => {
     expect(screen.getByLabelText('Grace Hopper')).toHaveTextContent('GH');
   });
 
+  it('follows a peer on click and stops on the next click', () => {
+    useLiveStore.setState({ peers: [{ actor: 'ada', name: 'Ada Lovelace', role: 'edit' }] });
+    draw(<LivePeers />);
+    const avatar = screen.getByLabelText('Ada Lovelace');
+    expect(avatar).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(avatar);
+    expect(useLiveStore.getState().followedActor).toBe('ada');
+    expect(screen.getByLabelText('Ada Lovelace')).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(screen.getByLabelText('Ada Lovelace'));
+    expect(useLiveStore.getState().followedActor).toBeNull();
+  });
+
   it('starts a live session from the header control', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse([]));
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: 'doc-9', name: 'Field survey' }));

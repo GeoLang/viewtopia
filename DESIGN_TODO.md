@@ -34,9 +34,6 @@ current state in DESIGN.md). Open work from it:
       document by edit link without being a member sees the members section
       try to load and show agora's 404 text. Harmless, but the store knowing
       "this session is a guest" is the clean fix.
-- [ ] **presence merge** — agora presence should subsume the older
-      tiletopia collaboration path's cursors and camera-follow; the collab
-      panel keeps chat and AV, collaboration.ts loses its presence half.
 - [ ] **bookmarks leave-restore** — annotations restore local state when a
       live session ends, bookmarks do not (app-store persist middleware
       makes gating messy).

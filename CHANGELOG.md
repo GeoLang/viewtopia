@@ -6,6 +6,18 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-07: **one presence system, agora's**. Clicking a peer avatar in the live
+  session header follows that peer: the local camera lands on every presence
+  viewport they report until a local camera gesture takes it back, or a second
+  click, or the peer leaving. Only a real gesture carries MapLibre's
+  `originalEvent`, which is what keeps the client's own `jumpTo` from reading as
+  the user grabbing the map, and because that jump publishes to the shared camera
+  the minimap and the other renderers come along. The older room path lost its
+  presence half: `collaboration.ts` no longer handles `Cursor` or `ViewChanged`,
+  broadcasts no camera, and has no follow state, and the collab panel's eye icon
+  is gone. That panel keeps chat, the online roster and LiveKit voice/video on the
+  same tiletopia socket. Cursors and camera-follow now exist only inside a live
+  document, which is the intended end state.
 - 2026-08-07: **live documents have comment threads**. A comments panel in the
   live session controls: top-level comments with replies, resolve/unresolve
   with a resolved filter, delete-own, and an optional map anchor that flies

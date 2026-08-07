@@ -2,6 +2,8 @@ import { Avatar, Tooltip } from '@mantine/core';
 import { useLiveStore } from './liveStore';
 import { peerColor } from './MapPresence';
 
+const FOLLOWED_OUTLINE = '2px solid #a78bfa';
+
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return '?';
@@ -14,6 +16,8 @@ function initials(name: string): string {
 export function LivePeers() {
   const peers = useLiveStore((s) => s.peers);
   const connection = useLiveStore((s) => s.connection);
+  const followedActor = useLiveStore((s) => s.followedActor);
+  const setFollowedActor = useLiveStore((s) => s.setFollowedActor);
   if (peers.length === 0) return null;
 
   return (
@@ -22,25 +26,41 @@ export function LivePeers() {
       data-testid="live-peers"
       style={{ opacity: connection === 'open' ? 1 : 0.5 }}
     >
-      {peers.map((peer) => (
-        <Tooltip key={peer.actor} label={`${peer.name} (${peer.role})`} withinPortal>
-          <Avatar
-            size="sm"
-            radius="xl"
-            aria-label={peer.name}
-            styles={{
-              placeholder: {
-                background: peerColor(peer.actor),
-                color: '#0d1117',
-                fontWeight: 700,
-                fontSize: 10,
-              },
-            }}
+      {peers.map((peer) => {
+        const followed = peer.actor === followedActor;
+        return (
+          <Tooltip
+            key={peer.actor}
+            label={
+              followed
+                ? `Following ${peer.name}, click to stop`
+                : `${peer.name} (${peer.role}), click to follow`
+            }
+            withinPortal
           >
-            {initials(peer.name)}
-          </Avatar>
-        </Tooltip>
-      ))}
+            <Avatar
+              component="button"
+              type="button"
+              size="sm"
+              radius="xl"
+              aria-label={peer.name}
+              aria-pressed={followed}
+              onClick={() => setFollowedActor(followed ? null : peer.actor)}
+              style={{ cursor: 'pointer', outline: followed ? FOLLOWED_OUTLINE : undefined }}
+              styles={{
+                placeholder: {
+                  background: peerColor(peer.actor),
+                  color: '#0d1117',
+                  fontWeight: 700,
+                  fontSize: 10,
+                },
+              }}
+            >
+              {initials(peer.name)}
+            </Avatar>
+          </Tooltip>
+        );
+      })}
     </Avatar.Group>
   );
 }

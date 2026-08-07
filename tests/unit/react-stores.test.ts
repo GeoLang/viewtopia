@@ -191,7 +191,6 @@ describe('collaboration store', () => {
     expect(state.roomId).toBeNull();
     expect(state.users).toEqual([]);
     expect(state.messages).toEqual([]);
-    expect(state.followUserId).toBeNull();
     expect(state.error).toBeNull();
   });
 
@@ -199,13 +198,6 @@ describe('collaboration store', () => {
     useCollabStore.getState().setUserName('TestUser');
     expect(useCollabStore.getState().userName).toBe('TestUser');
     useCollabStore.getState().setUserName('Anonymous');
-  });
-
-  it('sets follow user', () => {
-    useCollabStore.getState().setFollow('user-abc');
-    expect(useCollabStore.getState().followUserId).toBe('user-abc');
-    useCollabStore.getState().setFollow(null);
-    expect(useCollabStore.getState().followUserId).toBeNull();
   });
 
   it('has no identity of its own: the server assigns one on connect', () => {

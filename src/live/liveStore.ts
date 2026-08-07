@@ -37,6 +37,8 @@ interface LiveState {
   document: LiveDocument;
   peers: LivePeer[];
   presence: Record<string, LivePresence>;
+  /** the peer whose presence viewport the local camera tracks, null when not following */
+  followedActor: string | null;
   pending: Record<number, PendingFrame>;
   error: string | null;
 
@@ -45,6 +47,7 @@ interface LiveState {
   sendOperation: (key: string, value: unknown) => void;
   sendOperations: (operations: LiveOperation[]) => void;
   sendPresence: (presence: LivePresence) => void;
+  setFollowedActor: (actor: string | null) => void;
   receive: (message: ServerMessage) => void;
 }
 
@@ -88,6 +91,7 @@ export const useLiveStore = create<LiveState>((set, get) => ({
   document: emptyLiveDocument(),
   peers: [],
   presence: {},
+  followedActor: null,
   pending: {},
   error: null,
 
@@ -103,6 +107,7 @@ export const useLiveStore = create<LiveState>((set, get) => ({
       document: emptyLiveDocument(),
       peers: [],
       presence: {},
+      followedActor: null,
       pending: {},
       error: null,
     });
@@ -138,6 +143,7 @@ export const useLiveStore = create<LiveState>((set, get) => ({
       document: emptyLiveDocument(),
       peers: [],
       presence: {},
+      followedActor: null,
       pending: {},
     });
   },
@@ -168,6 +174,8 @@ export const useLiveStore = create<LiveState>((set, get) => ({
       if (outgoing && get().connection === 'open') socket?.send({ type: 'presence', ...outgoing });
     }, PRESENCE_INTERVAL_MS);
   },
+
+  setFollowedActor: (followedActor) => set({ followedActor }),
 
   receive: (message) => {
     switch (message.type) {
@@ -210,7 +218,12 @@ export const useLiveStore = create<LiveState>((set, get) => ({
           const presence = Object.fromEntries(
             Object.entries(state.presence).filter(([actor]) => actors.has(actor)),
           );
-          return { peers: message.peers, presence };
+          const following = state.followedActor !== null && actors.has(state.followedActor);
+          return {
+            peers: message.peers,
+            presence,
+            followedActor: following ? state.followedActor : null,
+          };
         });
         return;
       case 'presence':

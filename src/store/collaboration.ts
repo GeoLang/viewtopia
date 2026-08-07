@@ -2,10 +2,10 @@ import { create } from 'zustand';
 import { useAppStore } from './app';
 import { getAuthToken } from '../features/auth/store';
 import { BEARER_SUBPROTOCOL } from '../lib/apiAuth';
-import { getSharedCamera, setSharedCamera } from '../hooks/sharedCamera';
 
 /**
- * Collaboration client for tiletopia's /api/v1/realtime/{room} socket.
+ * Chat client for tiletopia's /api/v1/realtime/{room} socket. Cursors and
+ * camera-follow are not here: those belong to a live document's agora presence.
  *
  * Handshake: a browser cannot set Authorization on a WebSocket, so the session
  * JWT rides in the subprotocol, marker first:
@@ -56,8 +56,6 @@ export interface CollabUser {
   userId: string;
   userName: string;
   color: string;
-  lat?: number;
-  lng?: number;
 }
 
 interface ChatMessage {
@@ -75,7 +73,6 @@ interface CollabState {
   userName: string;
   users: CollabUser[];
   messages: ChatMessage[];
-  followUserId: string | null;
   /** Why the last join attempt produced no room, for the panel to show. */
   error: string | null;
 
@@ -83,12 +80,9 @@ interface CollabState {
   disconnect: () => void;
   setUserName: (name: string) => void;
   sendChat: (message: string) => void;
-  setFollow: (userId: string | null) => void;
 }
 
 let ws: WebSocket | null = null;
-let cameraInterval: ReturnType<typeof setInterval> | null = null;
-let lastCameraSent = '';
 
 function send(msg: Record<string, unknown>) {
   if (ws && ws.readyState === WebSocket.OPEN) {
@@ -115,7 +109,6 @@ export const useCollabStore = create<CollabState>()((set, get) => ({
   userName: 'Anonymous',
   users: [],
   messages: [],
-  followUserId: null,
   error: null,
 
   setUserName: (userName) => set({ userName }),
@@ -157,7 +150,6 @@ export const useCollabStore = create<CollabState>()((set, get) => ({
         asset_id: roomId,
         user_name: get().userName,
       });
-      startCameraBroadcast();
     });
 
     socket.addEventListener('message', (evt) => {
@@ -172,7 +164,6 @@ export const useCollabStore = create<CollabState>()((set, get) => ({
       // a socket we already replaced or left must not touch the current state
       if (ws !== socket) return;
       ws = null;
-      stopCameraBroadcast();
       set({
         connected: false,
         roomId: null,
@@ -195,13 +186,11 @@ export const useCollabStore = create<CollabState>()((set, get) => ({
       ws = null;
       socket.close();
     }
-    stopCameraBroadcast();
     set({
       connected: false,
       roomId: null,
       users: [],
       userId: null,
-      followUserId: null,
       error: null,
     });
   },
@@ -216,63 +205,7 @@ export const useCollabStore = create<CollabState>()((set, get) => ({
       timestamp: new Date().toISOString(),
     });
   },
-
-  setFollow: (followUserId) => set({ followUserId }),
 }));
-
-/**
- * ViewChanged carries a camera height in metres while our renderers work in
- * web-mercator zoom, so convert on the wire. Metres across a nominal 512px
- * viewport at that latitude: monotonic and exact on a round trip between two
- * viewtopia clients, close enough for a Cesium-native one.
- */
-const EARTH_CIRCUMFERENCE_M = 40075016.686;
-
-/** Latitude in radians, off the poles so cos() never reaches 0. */
-function clampedLatRad(latitude: number): number {
-  return (Math.min(Math.max(latitude, -85), 85) * Math.PI) / 180;
-}
-
-function zoomToHeight(zoom: number, latitude: number): number {
-  return (EARTH_CIRCUMFERENCE_M * Math.cos(clampedLatRad(latitude))) / 2 ** (zoom + 1);
-}
-
-function heightToZoom(height: number, latitude: number): number {
-  if (!(height > 0)) return 0;
-  const zoom = Math.log2((EARTH_CIRCUMFERENCE_M * Math.cos(clampedLatRad(latitude))) / height) - 1;
-  return Math.min(Math.max(zoom, 0), 24);
-}
-
-function startCameraBroadcast() {
-  stopCameraBroadcast();
-  cameraInterval = setInterval(() => {
-    const cam = getSharedCamera();
-    const key = `${cam.latitude.toFixed(6)},${cam.longitude.toFixed(6)},${cam.zoom.toFixed(2)},${cam.bearing.toFixed(1)},${cam.pitch.toFixed(1)}`;
-    if (key === lastCameraSent) return;
-    lastCameraSent = key;
-    const { userId } = useCollabStore.getState();
-    send({
-      type: 'ViewChanged',
-      user_id: userId ?? '',
-      camera: {
-        longitude: cam.longitude,
-        latitude: cam.latitude,
-        height: zoomToHeight(cam.zoom, cam.latitude),
-        heading: cam.bearing,
-        pitch: cam.pitch,
-        roll: 0,
-      },
-    });
-  }, 200);
-}
-
-function stopCameraBroadcast() {
-  if (cameraInterval) {
-    clearInterval(cameraInterval);
-    cameraInterval = null;
-  }
-  lastCameraSent = '';
-}
 
 function handleMessage(msg: Record<string, unknown>) {
   const store = useCollabStore.getState();
@@ -293,32 +226,6 @@ function handleMessage(msg: Record<string, unknown>) {
         users.push({ userId: self, userName: store.userName, color: SELF_COLOR });
       }
       useCollabStore.setState({ users });
-      break;
-    }
-
-    case 'Cursor':
-      if (msg.user_id !== store.userId) {
-        useCollabStore.setState((s) => ({
-          users: s.users.map((u) =>
-            u.userId === msg.user_id
-              ? { ...u, lat: msg.latitude as number, lng: msg.longitude as number }
-              : u,
-          ),
-        }));
-      }
-      break;
-
-    case 'ViewChanged': {
-      const cam = msg.camera as Record<string, number> | undefined;
-      if (!cam) break;
-      if (msg.user_id === store.userId || msg.user_id !== store.followUserId) break;
-      setSharedCamera({
-        latitude: cam.latitude,
-        longitude: cam.longitude,
-        zoom: heightToZoom(cam.height, cam.latitude),
-        bearing: cam.heading,
-        pitch: cam.pitch,
-      });
       break;
     }
 

@@ -6,13 +6,12 @@ import { useCollabStore } from '../../src/store/collaboration';
 import { CollaborationPanel } from '../../src/components/tools/CollaborationPanel';
 import { useAuthStore } from '../../src/features/auth/store';
 import { useAppStore } from '../../src/store/app';
-import { getSharedCamera, setSharedCamera } from '../../src/hooks/sharedCamera';
 
 /**
- * The collaboration client against tiletopia's realtime contract: the bearer
- * subprotocol handshake, the server-stamped sender id, and presence that is per
- * user rather than per tab. The server is a fixture here, so every frame below
- * is a shape crates/tiletopia-server/src/realtime.rs defines.
+ * The chat client against tiletopia's realtime contract: the bearer subprotocol
+ * handshake, the server-stamped sender id, and presence that is per user rather
+ * than per tab. The server is a fixture here, so every frame below is a shape
+ * crates/tiletopia-server/src/realtime.rs defines.
  */
 
 /** Enough of a JWT for the client to read `sub` out of; the signature is never checked here. */
@@ -104,7 +103,6 @@ beforeEach(() => {
     userName: 'Alice',
     users: [],
     messages: [],
-    followUserId: null,
     error: null,
   });
   useAuthStore.setState({ loggedIn: false, token: null, user: null });
@@ -113,7 +111,6 @@ beforeEach(() => {
 afterEach(() => {
   useCollabStore.getState().disconnect();
   globalThis.WebSocket = realWebSocket;
-  vi.useRealTimers();
   cleanup();
 });
 
@@ -221,7 +218,7 @@ describe('server-stamped identity', () => {
     ]);
   });
 
-  it('stamps chat and view frames with the same id', () => {
+  it('stamps chat frames with the same id', () => {
     signIn();
     const socket = joinRoom();
     useCollabStore.getState().sendChat('hello');
@@ -247,27 +244,6 @@ describe('server-stamped identity', () => {
     expect(users.map((u) => u.userId)).toEqual([SUB, 'auth0|impostor']);
   });
 
-  it('ignores our own cursor echo and applies a peer cursor by id', () => {
-    signIn();
-    const socket = joinRoom();
-    socket.receive({
-      type: 'Presence',
-      users: [{ user_id: SUB, user_name: 'Alice', color: '#a78bfa' }, PEER],
-    });
-
-    socket.receive({ type: 'Cursor', user_id: SUB, longitude: 1, latitude: 2, height: 0 });
-    socket.receive({
-      type: 'Cursor',
-      user_id: PEER.user_id,
-      longitude: 10,
-      latitude: 20,
-      height: 0,
-    });
-
-    const users = useCollabStore.getState().users;
-    expect(users.find((u) => u.userId === SUB)?.lat).toBeUndefined();
-    expect(users.find((u) => u.userId === PEER.user_id)).toMatchObject({ lat: 20, lng: 10 });
-  });
 });
 
 describe('presence is per user, not per tab', () => {
@@ -319,59 +295,6 @@ describe('presence is per user, not per tab', () => {
     expect(state.connected).toBe(true);
     expect(state.roomId).toBe('room-2');
     expect(second.closed).toBe(false);
-  });
-});
-
-describe('view sharing', () => {
-  it('broadcasts ViewChanged with the nested camera the server expects', () => {
-    vi.useFakeTimers();
-    signIn();
-    const socket = joinRoom();
-    setSharedCamera({ longitude: 12, latitude: 34, zoom: 6, bearing: 45, pitch: 30 });
-    vi.advanceTimersByTime(200);
-
-    const view = socket.frames('ViewChanged');
-    expect(view).toHaveLength(1);
-    expect(view[0].user_id).toBe(SUB);
-    expect(view[0].camera).toMatchObject({ longitude: 12, latitude: 34, heading: 45, pitch: 30 });
-    expect(view[0].camera.height).toBeGreaterThan(0);
-    expect(Number.isFinite(view[0].camera.roll)).toBe(true);
-    // unchanged camera, so nothing more goes out
-    vi.advanceTimersByTime(400);
-    expect(socket.frames('ViewChanged')).toHaveLength(1);
-  });
-
-  it('applies a followed peer view and round-trips the zoom', () => {
-    vi.useFakeTimers();
-    signIn();
-    const socket = joinRoom();
-    setSharedCamera({ longitude: 12, latitude: 34, zoom: 6, bearing: 45, pitch: 30 });
-    vi.advanceTimersByTime(200);
-    const { height } = socket.frames('ViewChanged')[0].camera;
-
-    useCollabStore.getState().setFollow(PEER.user_id);
-    socket.receive({
-      type: 'ViewChanged',
-      user_id: PEER.user_id,
-      camera: { longitude: 12, latitude: 34, height, heading: 45, pitch: 30, roll: 0 },
-    });
-    expect(getSharedCamera().zoom).toBeCloseTo(6, 6);
-  });
-
-  it('ignores views from anyone we are not following, including our own echo', () => {
-    signIn();
-    const socket = joinRoom();
-    setSharedCamera({ longitude: 0, latitude: 0, zoom: 3, bearing: 0, pitch: 0 });
-    const camera = { longitude: 90, latitude: 45, height: 1000, heading: 10, pitch: 20, roll: 0 };
-
-    socket.receive({ type: 'ViewChanged', user_id: PEER.user_id, camera });
-    expect(getSharedCamera().longitude).toBe(0);
-
-    // following ourselves is not a thing the panel offers, but a stamped echo
-    // still arrives on every socket in the room
-    useCollabStore.getState().setFollow(SUB);
-    socket.receive({ type: 'ViewChanged', user_id: SUB, camera });
-    expect(getSharedCamera().longitude).toBe(0);
   });
 });
 

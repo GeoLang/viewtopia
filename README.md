@@ -231,12 +231,11 @@ inputs.
 | Feature | Description |
 |---------|-------------|
 | **Room-based sessions** | Join a named room — all participants see each other |
-| **View sync (Follow mode)** | Click the eye icon on a user to lock your camera to theirs in real-time |
-| **Cursor sharing** | See where other users are pointing on the map |
 | **Presence** | Online user list with coloured indicators |
 | **Chat** | Real-time text messaging within the room |
 | **Voice & Video** | LiveKit WebRTC — mic, camera, and screen share |
-| **Backend** | Connects to Ptolemy's `/ws/rooms/{room_id}` ephemeral relay |
+| **Backend** | Connects to tiletopia's `/api/v1/realtime/{room}` ephemeral relay |
+| **Cursors and camera-follow** | Not here: start a live session, then click a peer avatar in the header |
 
 ---
 
@@ -511,13 +510,14 @@ shipping plan). See [DESIGN.md §2 — Current architecture](DESIGN.md#2-current
 
 ## Collaboration Guide
 
-ViewTopia supports real-time collaboration via Ptolemy's ephemeral room relay and
-optional LiveKit WebRTC for voice/video.
+Chat and voice/video run over tiletopia's ephemeral room relay plus optional
+LiveKit WebRTC. Peer cursors and camera-follow are not part of a room: they belong
+to a live document, where a peer avatar in the header is the follow control.
 
 ### Setup
 
 1. **Configure server URLs** in the Settings panel (⚙️):
-   - **GeoLang / Ptolemy URL** — e.g. `https://ptolemy.example.com/api/v1`
+   - **tiletopia URL** — e.g. `https://tiletopia.example.com/api/v1`
    - **LiveKit URL** (optional) — e.g. `wss://livekit.example.com`
 
 2. **Open the Collaboration panel** from the toolbar menu (👥 Collab).
@@ -527,14 +527,6 @@ optional LiveKit WebRTC for voice/video.
 1. Enter your **display name** and a **Room ID** (any string — share it with teammates).
 2. Click **Join Room**.
 3. All participants in the same room see each other in the user list.
-
-### View Sync (Follow Mode)
-
-Click the **eye icon** (👁) next to another user to follow their view. Your camera
-will mirror theirs in real-time — zoom, pan, pitch, bearing — all synced. Click again
-to stop following.
-
-This is great for guided reviews, presentations, or "show me what you see" workflows.
 
 ### Chat
 
@@ -556,15 +548,15 @@ If a **LiveKit URL** is configured in Settings:
 
 ### Protocol
 
-The collaboration relay is at `{ptolemyUrl}/../../ws/rooms/{room_id}` (WebSocket).
-Messages are opaque JSON relayed to all other participants:
+The room relay is at `{tiletopiaUrl}/realtime/{room}` (WebSocket). The session JWT
+rides in the subprotocol, `['bearer', jwt]`, and the server stamps `user_id` from
+the JWT `sub` on every frame it relays. The frames this client sends and reads:
 
 ```jsonc
-{ "type": "Join",   "user_id": "u1", "user_name": "Alice" }
-{ "type": "Camera", "user_id": "u1", "latitude": 40.7, "longitude": -73.9, "zoom": 14, "bearing": 0, "pitch": 45 }
-{ "type": "Cursor", "user_id": "u1", "latitude": 40.71, "longitude": -73.91 }
-{ "type": "Chat",   "user_id": "u1", "user_name": "Alice", "message": "Look here" }
-{ "type": "Leave",  "user_id": "u1" }
+{ "type": "Join",     "user_id": "u1", "asset_id": "room-1", "user_name": "Alice" }
+{ "type": "Chat",     "user_id": "u1", "user_name": "Alice", "message": "Look here" }
+{ "type": "Leave",    "user_id": "u1", "asset_id": "room-1" }
+{ "type": "Presence", "users": [{ "user_id": "u1", "user_name": "Alice", "color": "#a78bfa" }] }
 ```
 
 ---

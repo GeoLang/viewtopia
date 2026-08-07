@@ -16,8 +16,6 @@ import {
   IconUsers,
   IconX,
   IconSend,
-  IconEye,
-  IconEyeOff,
   IconMicrophone,
   IconMicrophoneOff,
   IconVideo,
@@ -37,13 +35,11 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
     userName,
     users,
     messages,
-    followUserId,
     error,
     connect,
     disconnect,
     setUserName,
     sendChat,
-    setFollow,
   } = useCollabStore();
 
   const lk = useLiveKitStore();
@@ -215,39 +211,20 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
             <Text size="xs" c="dimmed" fw={600}>Users</Text>
 
             {users.map((u) => (
-              <Group key={u.userId} gap="xs" justify="space-between">
-                <Group gap="xs">
-                  <div
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      background: u.color,
-                    }}
-                  />
-                  {/* a peer picks its own display name, so cap the room it gets */}
-                  <Text size="xs" c="white" maw={200} truncate>
-                    {u.userName}
-                    {u.userId === userId ? ' (you)' : ''}
-                  </Text>
-                </Group>
-                {u.userId !== userId && (
-                  <ActionIcon
-                    size="xs"
-                    variant="subtle"
-                    color={followUserId === u.userId ? 'violet' : 'gray'}
-                    title={followUserId === u.userId ? 'Stop following' : 'Follow view'}
-                    onClick={() =>
-                      setFollow(followUserId === u.userId ? null : u.userId)
-                    }
-                  >
-                    {followUserId === u.userId ? (
-                      <IconEyeOff size={12} />
-                    ) : (
-                      <IconEye size={12} />
-                    )}
-                  </ActionIcon>
-                )}
+              <Group key={u.userId} gap="xs">
+                <div
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: u.color,
+                  }}
+                />
+                {/* a peer picks its own display name, so cap the room it gets */}
+                <Text size="xs" c="white" maw={200} truncate>
+                  {u.userName}
+                  {u.userId === userId ? ' (you)' : ''}
+                </Text>
               </Group>
             ))}
 
