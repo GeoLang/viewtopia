@@ -28,11 +28,6 @@ mobile capture, auth and multi-tenancy, one-click deploy.
 Live multiplayer shipped 2026-08-07 (agora service + viewtopia client,
 current state in DESIGN.md). Open work from it:
 
-- [!] **publish agora to GitHub** — the repo GeoLang/agora does not exist
-      and the agent permission layer refuses repo creation, so agora is
-      local-only until the owner runs
-      `gh repo create GeoLang/agora --public` and pushes master. CI has
-      never run.
 - [ ] **document membership route** — nothing adds a platform member to a
       document, so multi-member docs only work via edit links today.
 - [ ] **comments** (v1.1) — append-only op type on the same log, needs
