@@ -26,12 +26,17 @@ altitude = 45.0
 # 2 spreads its bands across per-band cogs, so b0 is red and b1 is nir. The
 # median over the requested interval is what drops most of the cloud; without
 # a ?t= the request falls back to the summer below.
+#
+# The anchor bbox must sit in ONE utm zone's core: the source pins its crs on
+# the most recent anchor item and skips items projected differently, and
+# sentinel-2 granules overlap zone boundaries. 7.0-8.0E caught a zone-31
+# granule as anchor and skipped all of zone 32, rendering nothing.
 [[layer]]
 name = "ndvi"
 source = { kind = "stac", api = "https://earth-search.aws.element84.com/v1", collection = "sentinel-2-l2a", assets = [
     "red",
     "nir",
-], bbox = [7.0, 46.3, 8.0, 46.9], datetime = "2025-06-01T00:00:00Z/2025-09-01T00:00:00Z", composite = "median" }
+], bbox = [8.0, 46.5, 8.2, 46.7], datetime = "2025-06-01T00:00:00Z/2025-09-01T00:00:00Z", composite = "median" }
 
 [[layer.op]]
 kind = "bandmath"
