@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import type { ReactNode } from 'react';
 import { useAuthStore } from '../../src/features/auth/store';
+import type { LiveMember } from '../../src/live/api';
 import { joinLiveFromToken } from '../../src/live/joinFromLink';
 import { LivePeers } from '../../src/live/LivePeers';
 import { LiveSessionControl } from '../../src/live/LiveSessionControl';
@@ -23,6 +24,27 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 function draw(ui: ReactNode) {
   return render(<MantineProvider>{ui}</MantineProvider>);
+}
+
+function noContentResponse(): Response {
+  return new Response(null, { status: 204 });
+}
+
+function documentDetail(members: LiveMember[]) {
+  return { id: 'doc-1', name: 'Coastline', members };
+}
+
+/** An editor already in the document, which is what unlocks the members section. */
+function drawShareDialogAsEditor(members: LiveMember[]) {
+  useLiveStore.setState({ documentId: 'doc-1', role: 'edit' });
+  fetchMock.mockResolvedValueOnce(jsonResponse(documentDetail(members)));
+  draw(<LiveShareDialog documentId="doc-1" opened onClose={() => {}} />);
+}
+
+function requestTo(url: string): RequestInit {
+  const call = fetchMock.mock.calls.find(([called]) => called === url);
+  if (!call) throw new Error(`no request to ${url}`);
+  return call[1] as RequestInit;
 }
 
 let server: FakeAgoraServer;
@@ -136,6 +158,83 @@ describe('live session ui', () => {
     draw(<LiveShareDialog documentId="doc-1" opened onClose={() => {}} />);
     fireEvent.click(screen.getByTestId('create-share-link'));
     expect(await screen.findByTestId('share-error')).toHaveTextContent('403');
+  });
+
+  it('lists the members the document reports, with their roles', async () => {
+    drawShareDialogAsEditor([
+      { userId: 'ada', role: 'edit' },
+      { userId: 'grace', role: 'view' },
+    ]);
+
+    const row = await screen.findByTestId('live-member-grace');
+    expect(row).toHaveTextContent('grace');
+    expect(within(row).getByRole('radio', { name: 'View' })).toBeChecked();
+    expect(within(screen.getByTestId('live-member-ada')).getByRole('radio', { name: 'Edit' })).toBeChecked();
+    expect(fetchMock.mock.calls[0][0]).toBe('/agora/documents/doc-1');
+  });
+
+  it('adds a member by user id and reloads the list', async () => {
+    drawShareDialogAsEditor([{ userId: 'ada', role: 'edit' }]);
+    await screen.findByTestId('live-member-ada');
+    fetchMock.mockResolvedValueOnce(noContentResponse());
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(
+        documentDetail([
+          { userId: 'ada', role: 'edit' },
+          { userId: 'grace', role: 'edit' },
+        ]),
+      ),
+    );
+
+    fireEvent.change(screen.getByTestId('new-member-id'), { target: { value: ' grace ' } });
+    fireEvent.click(within(screen.getByTestId('new-member-role')).getByText('Edit'));
+    fireEvent.click(screen.getByTestId('add-member'));
+
+    expect(await screen.findByTestId('live-member-grace')).toBeInTheDocument();
+    const put = requestTo('/agora/documents/doc-1/members/grace');
+    expect(put.method).toBe('PUT');
+    expect(put.body).toBe(JSON.stringify({ role: 'edit' }));
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('removes a member and reloads the list', async () => {
+    drawShareDialogAsEditor([
+      { userId: 'ada', role: 'edit' },
+      { userId: 'grace', role: 'view' },
+    ]);
+    await screen.findByTestId('live-member-grace');
+    fetchMock.mockResolvedValueOnce(noContentResponse());
+    fetchMock.mockResolvedValueOnce(jsonResponse(documentDetail([{ userId: 'ada', role: 'edit' }])));
+
+    fireEvent.click(screen.getByLabelText('Remove grace'));
+
+    await waitFor(() => expect(screen.queryByTestId('live-member-grace')).not.toBeInTheDocument());
+    expect(requestTo('/agora/documents/doc-1/members/grace').method).toBe('DELETE');
+  });
+
+  it('shows the refusal when the last editor cannot be demoted', async () => {
+    drawShareDialogAsEditor([{ userId: 'ada', role: 'edit' }]);
+    const row = await screen.findByTestId('live-member-ada');
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ error: 'the last editor cannot be demoted' }, 400),
+    );
+
+    fireEvent.click(within(row).getByText('View'));
+
+    expect(await screen.findByTestId('live-member-error')).toHaveTextContent(
+      'the last editor cannot be demoted',
+    );
+    expect(within(screen.getByTestId('live-member-ada')).getByRole('radio', { name: 'Edit' })).toBeChecked();
+  });
+
+  it('shows no members section to a share link guest', async () => {
+    useAuthStore.setState({ token: null });
+    useLiveStore.setState({ documentId: 'doc-1', role: 'view' });
+    draw(<LiveShareDialog documentId="doc-1" opened onClose={() => {}} />);
+
+    await waitFor(() => expect(screen.getByTestId('create-share-link')).toBeInTheDocument());
+    expect(screen.queryByTestId('live-members')).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('joins with the session token a share link resolves to', async () => {
