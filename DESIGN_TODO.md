@@ -26,6 +26,16 @@
 - [ ] **CloudFront realtime WS untested**: auth rides Sec-WebSocket-Protocol, which
       the distribution never forwards explicitly; collab may fail closed through the
       CDN. Test on a live distribution before relying on it.
+- [ ] **ALB rules cannot strip path prefixes**, so every nginx location that
+      rewrites before proxying (/plumb, /api/indoor, /api/geocode, /api/route,
+      /tiles) reaches its container unstripped on ECS and 404s. Works through
+      the compose nginx only. Fix is either prefix-aware routes in each service
+      or an ECS-side proxy layer; the ecs module comment documents it.
+- [ ] **No terraform service wires PLATFORM_JWT_SECRET**, so every service that
+      refuses to start without it (ptolemy, tiletopia, interiora) crash-loops on
+      Fargate until a secrets path (SSM/Secrets Manager → task env) exists.
+      geoplumb also needs its layers TOML baked into the deployed image, since
+      the ecs module mounts no volumes.
 
 ## OPEN — post-MVP: tiletopia tile edge caching (decided 2026-07-28)
 
@@ -397,10 +407,10 @@ Medium value:
 - [ ] **isochrones/service areas and OD matrices**, served by itinera.
 - [ ] **print layout with atlas/map-series generation**: current export is a
       canvas screenshot.
-- [ ] **time slider over tiled/mosaic data** (STAC, PMTiles), not only the
-      Cesium clock.
-- [ ] **map-to-video recording and route animation with MP4 export**: would
-      finish the preview-gated flythrough panel.
+- [ ] **time slider over PMTiles archives** (the STAC side shipped 2026-08-06
+      as the Timelapse panel over geoplumb).
+- [ ] **map-to-video recording and route animation with MP4 export**: the
+      flythrough panel plays live but exports nothing.
 - [ ] **offline area download** with service-worker caching. See the offline
       story section below for the audit.
 
@@ -446,13 +456,6 @@ survives reloads and syncs back. Everything below is what does not work.
 - [ ] **viewtopia FleetPanel** — currently an honest "no live feed" state; nothing serves
       vehicle positions. Decide whether real-time fleet tracking is in scope before building
       a WS/ingest path for it.
-- [ ] Preview-gated panels, 4 left after the 2026-08-05 burndown shipped
-      eight and deleted four (noise, energy, webxr, pointCloudCompare,
-      owner decision, nothing supplied their engines): timelapse waits on
-      geoplumb's per-pull time axis, indoor waits on an interiora
-      integration decision, photo waits on choosing an external imagery
-      API, classification stays gated until point cloud tooling is
-      wanted.
 - [ ] tiletopia upload response returns the Asset struct without the job id
       minted by job_queue.submit, and the only job-by-asset lookup is the
       admin-gated /api/v1/admin/jobs, so the viewer cannot show tiling

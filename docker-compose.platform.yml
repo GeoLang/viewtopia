@@ -178,17 +178,15 @@ services:
       # per layer, not in total, and the disk tier is 8x it again per layer:
       # the two layers below come to 256 MiB resident and 2 GiB spilled
       GEOPLUMB_CACHE_BYTES: 134217728
-      GEOPLUMB_DISK_CACHE: /tmp
+      GEOPLUMB_DISK_CACHE: /cache
       RUST_LOG: info
     volumes:
       - ./deploy/geoplumb-layers.toml:/etc/geoplumb/layers.toml:ro
-      # the spill tier. It sits on /tmp because the image runs as a non-root
-      # user and creates no cache dir of its own: a fresh named volume takes
-      # the mode of the image directory under it, and /tmp's 1777 is the only
-      # one this image offers that the server can write. Every run spills into
-      # its own pid-named subdir and nothing reaps the old ones, so this volume
-      # is scratch to delete, not a cache worth keeping.
-      - geoplumb-cache:/tmp
+      # the spill tier. The image chowns /cache to its non-root user, so a
+      # fresh named volume inherits a writable dir. Every run spills into
+      # its own pid-named subdir and nothing reaps the old ones, so this
+      # volume is scratch to delete, not a cache worth keeping.
+      - geoplumb-cache:/cache
 
   # ── AI / Agent Layer ──────────────────────────────────────────────
 
