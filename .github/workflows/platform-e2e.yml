@@ -9,11 +9,15 @@ name: Platform E2E (golden path)
 #                     them if you later add an agent NL->map step.
 #
 # Building six Rust service images from scratch is slow, so this does NOT run on every
-# PR — only master pushes, the weekly schedule, and manual dispatch.
+# PR — only master pushes that touch code, the weekly schedule, and manual dispatch.
+# Docs-only pushes are skipped: a run takes ~30 min and cancel-in-progress means a
+# markdown commit would otherwise kill the run testing the code before it.
 
 on:
   push:
     branches: [master]
+    paths-ignore:
+      - "**.md"
   workflow_dispatch:
   schedule:
     - cron: "30 6 * * 1"
