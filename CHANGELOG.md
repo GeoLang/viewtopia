@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-06: the timelapse panel shows a "Pulling tiles…" spinner while
+  either compare source still has tiles in flight, driven by MapLibre's
+  source data events on whichever map holds each source, so a cold step's
+  on-demand compute no longer looks like a hang.
 - 2026-08-06: the timelapse panel left the preview gate as a real A/B time
   compare over geoplumb, proxied at /plumb/. The layer picker is the tile
   service's own list, filtered to the layers whose STAC collection advertises a
