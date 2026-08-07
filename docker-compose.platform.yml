@@ -18,6 +18,7 @@
 #   - itinera:    Routing + isochrones (port 3002)
 #   - interiora:  Indoor venue maps + indoor routing (internal port 3000)
 #   - geoplumb:   Windowed raster tiles over STAC (:5174/plumb/, internal port 3000)
+#   - agora:      Live shared map documents over websockets (:5174/agora/, internal port 3000)
 #   - sibyl:      Rust agent loop service (internal port 8090)
 #   - geodukt:    Declarative pipeline runner for agent plans (internal port 8100)
 #   - geolang-api: AI/NLP geospatial agent API + tool executor (port 8080)
@@ -41,6 +42,9 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      # initdb scripts run on a fresh volume only, see the script for the
+      # one-time step an existing volume needs
+      - ./deploy/init-agora-db.sh:/docker-entrypoint-initdb.d/init-agora-db.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ptolemy"]
       interval: 2s
@@ -163,6 +167,25 @@ services:
       RUST_LOG: info
     volumes:
       - interiora-data:/data
+
+  # Live shared map documents: websocket rooms with server-ordered ops,
+  # presence, and role-bearing share links. nginx routes /agora/ here,
+  # websockets included. Members present the shared platform token and
+  # share-link sessions get short-lived tokens minted with the same secret,
+  # so the secret is as mandatory here as it is for ptolemy. Its database
+  # is separate from ptolemy's on the same instance: a fresh pgdata volume
+  # creates it via deploy/init-agora-db.sh, an existing one needs the
+  # one-time create the script's comment shows.
+  agora:
+    build:
+      context: ../agora
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://ptolemy:${POSTGRES_PASSWORD:-ptolemy}@db/agora
+      PLATFORM_JWT_SECRET: ${PLATFORM_JWT_SECRET:-}
+      RUST_LOG: info
 
   # Windowed raster compute: renders XYZ png tiles out of public STAC
   # collections, each request naming the time interval to composite over, which
