@@ -28,8 +28,8 @@ mobile capture, auth and multi-tenancy, one-click deploy.
 Live multiplayer shipped 2026-08-07 (agora service + viewtopia client,
 current state in DESIGN.md). Open work from it:
 
-- [ ] **document membership route** — nothing adds a platform member to a
-      document, so multi-member docs only work via edit links today.
+- [ ] **membership UI** — agora has the routes now (PUT/DELETE
+      `/documents/{id}/members/{user_id}`), nothing in viewtopia calls them.
 - [ ] **comments** (v1.1) — append-only op type on the same log, needs
       thread/resolve UX.
 - [ ] **presence merge** — agora presence should subsume the older
@@ -38,18 +38,16 @@ current state in DESIGN.md). Open work from it:
 - [ ] **bookmarks leave-restore** — annotations restore local state when a
       live session ends, bookmarks do not (app-store persist middleware
       makes gating messy).
-- [ ] **hash share tokens at rest** — the share_links column stores raw
-      bearer tokens.
 - [ ] **local project import** — IndexedDB projects do not import into a
       live document (TODO at captureStateForNewDocument).
-- [ ] **agora batch op** (idea from uMap's sync design) — a frame carrying
-      several ops that the server applies all-or-nothing under one
-      sequence number, so a multi-feature paste or multi-layer reorder
-      never renders a torn intermediate state on peers, and undo groups
-      it as one step.
-- [ ] **undo waits for quiet** (idea from uMap's UndoManager) — the live
-      client's per-user undo must disable while any local op is still
-      unacked, since undoing an unacked op races the server's ordering.
+- [ ] **batch-aware reconnect replay** — a batch applies and relays as one
+      frame, but `ops_between` replays it as N separate op frames, so a
+      client resuming with `since` still sees it torn. The end state is
+      correct. Fixing it needs a batch identity column on `ops`.
+- [ ] **per-user undo** — does not exist yet, despite the earlier backlog
+      entry that assumed it did. When it is built it must disable while any
+      local op is unacked, since undoing an unacked op races the server's
+      ordering, and it should group a batch as one step.
 - [ ] **hosted flagship instance + share links** — Figma's zero-install magic
       is a link that opens the document. Self-host is free with open source,
       but the "click a link, you're in the map" experience needs a hosted
