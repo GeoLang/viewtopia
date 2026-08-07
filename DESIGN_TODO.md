@@ -42,6 +42,12 @@ current state in DESIGN.md). Open work from it:
       bearer tokens.
 - [ ] **local project import** — IndexedDB projects do not import into a
       live document (TODO at captureStateForNewDocument).
+- [ ] **annotations on MapLibre** — the annotate panel renders and places
+      through Cesium entities only, so on MapLibre "place on map" says "no
+      active viewer" and only "add at center" works (hit in the 2026-08-07
+      live demo). Render annotations as MapLibre markers and arm the map
+      click there too, which also gives shared annotations a visible home
+      in live sessions on the renderer people actually share from.
 - [ ] **hosted flagship instance + share links** — Figma's zero-install magic
       is a link that opens the document. Self-host is free with open source,
       but the "click a link, you're in the map" experience needs a hosted
