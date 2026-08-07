@@ -468,9 +468,11 @@ Known limits:
       sets grow per distinct pull interval for the source's lifetime, so a
       driver minting fresh intervals per request grows them without bound.
 - [ ] **breadth**: GEE ships a huge operator library and charting/reduction
-      over regions; geoplumb has hillshade, slope, map algebra, band math,
-      reclassify, convolution and the composites. Grow by demand, not by
-      checklist.
+      over regions; geoplumb has hillshade, slope, aspect, map algebra, band
+      math (arithmetic, comparisons, where, log/exp), reclassify, convolution,
+      quality masking, focal statistics, composites through
+      percentile/stddev/count, and zonal statistics plus per-step time series
+      as pull drivers (2026-08-06). Grow by demand, not by checklist.
 
 ## OPEN — Phase 3 (mobile & ML breadth, after v1)
 
