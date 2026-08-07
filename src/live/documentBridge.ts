@@ -10,6 +10,7 @@ import {
   type LiveDocument,
   type LiveLayerEntry,
   type LiveLayerStyleOverrides,
+  type LiveOperation,
 } from './types';
 
 interface LocalState {
@@ -34,8 +35,12 @@ function sameJson(left: unknown, right: unknown): boolean {
   return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
 }
 
-function sendOperation(key: string, value: unknown): void {
-  useLiveStore.getState().sendOperation(key, value);
+/**
+ * One store change travels as one frame, so a reorder or a multi feature edit
+ * cannot land on a peer half applied.
+ */
+function sendOperations(operations: LiveOperation[]): void {
+  useLiveStore.getState().sendOperations(operations);
 }
 
 function orderedLayerEntries(document: LiveDocument): LiveLayerEntry[] {
@@ -106,13 +111,14 @@ function sameLayerEntry(left: LiveLayerEntry, right: LiveLayerEntry): boolean {
 function syncLayersToDocument(layers: LayerItem[]): void {
   const entries = useLiveStore.getState().document.layers;
   const listed = new Set(layers.map((layer) => layer.id));
+  const operations: LiveOperation[] = [];
   for (const id of Object.keys(entries)) {
-    if (!listed.has(id)) sendOperation(documentKey('layers', id), null);
+    if (!listed.has(id)) operations.push({ key: documentKey('layers', id), value: null });
   }
 
   const orders = ordersForList(layers, entries);
   layers.forEach((layer, index) => {
-    const current = useLiveStore.getState().document.layers[layer.id];
+    const current = entries[layer.id];
     const entry: LiveLayerEntry = {
       layerId: layer.id,
       name: layer.name,
@@ -123,9 +129,10 @@ function syncLayersToDocument(layers: LayerItem[]): void {
       ...(current?.styleOverrides ? { styleOverrides: current.styleOverrides } : {}),
     };
     if (!current || !sameLayerEntry(current, entry)) {
-      sendOperation(documentKey('layers', layer.id), entry);
+      operations.push({ key: documentKey('layers', layer.id), value: entry });
     }
   });
+  sendOperations(operations);
 }
 
 /**
@@ -133,40 +140,50 @@ function syncLayersToDocument(layers: LayerItem[]): void {
  * carry their features in the browser, so only their overrides can travel.
  */
 function syncStyleOverridesToDocument(): void {
+  const entries = useLiveStore.getState().document.layers;
+  const operations: LiveOperation[] = [];
   for (const layer of useAgentLayerStore.getState().layers) {
-    const entry = useLiveStore.getState().document.layers[layer.id];
+    const entry = entries[layer.id];
     if (!entry) continue;
     const overrides: LiveLayerStyleOverrides = {};
     if (layer.style) overrides.style = layer.style;
     if (layer.symbology) overrides.symbology = layer.symbology;
     const next = Object.keys(overrides).length > 0 ? overrides : undefined;
     if (sameJson(entry.styleOverrides, next)) continue;
-    sendOperation(documentKey('layers', layer.id), { ...entry, styleOverrides: next });
+    operations.push({
+      key: documentKey('layers', layer.id),
+      value: { ...entry, styleOverrides: next },
+    });
   }
+  sendOperations(operations);
 }
 
 function syncAnnotationsToDocument(annotations: Annotation[]): void {
   const entries = useLiveStore.getState().document.annotations;
   const listed = new Set(annotations.map((annotation) => annotation.id));
+  const operations: LiveOperation[] = [];
   for (const id of Object.keys(entries)) {
-    if (!listed.has(id)) sendOperation(documentKey('annotations', id), null);
+    if (!listed.has(id)) operations.push({ key: documentKey('annotations', id), value: null });
   }
   for (const annotation of annotations) {
     if (sameJson(entries[annotation.id], annotation)) continue;
-    sendOperation(documentKey('annotations', annotation.id), annotation);
+    operations.push({ key: documentKey('annotations', annotation.id), value: annotation });
   }
+  sendOperations(operations);
 }
 
 function syncBookmarksToDocument(bookmarks: Bookmark[]): void {
   const entries = useLiveStore.getState().document.bookmarks;
   const listed = new Set(bookmarks.map((bookmark) => bookmark.id));
+  const operations: LiveOperation[] = [];
   for (const id of Object.keys(entries)) {
-    if (!listed.has(id)) sendOperation(documentKey('bookmarks', id), null);
+    if (!listed.has(id)) operations.push({ key: documentKey('bookmarks', id), value: null });
   }
   for (const bookmark of bookmarks) {
     if (sameJson(entries[bookmark.id], bookmark)) continue;
-    sendOperation(documentKey('bookmarks', bookmark.id), bookmark);
+    operations.push({ key: documentKey('bookmarks', bookmark.id), value: bookmark });
   }
+  sendOperations(operations);
 }
 
 function applyLayersFromDocument(document: LiveDocument): void {

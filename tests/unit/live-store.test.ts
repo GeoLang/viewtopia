@@ -93,6 +93,101 @@ describe('live store', () => {
     expect(state.seq).toBe(1);
   });
 
+  it('sends several operations as one batch and settles them on one ack', () => {
+    server.autoAck = false;
+    connectAndAccept();
+    useLiveStore.getState().sendOperations([
+      { key: 'layers/layer-a', value: layerEntry() },
+      { key: 'layers/layer-b', value: layerEntry({ layerId: 'layer-b', order: 'W' }) },
+      { key: 'layers/layer-c', value: null },
+    ]);
+
+    let state = useLiveStore.getState();
+    expect(state.document.layers['layer-a'].name).toBe('Terrain');
+    expect(state.document.layers['layer-b'].order).toBe('W');
+    expect(Object.keys(state.pending)).toEqual(['1']);
+    expect(server.connection.operationsSent).toHaveLength(0);
+    expect(server.connection.batchesSent).toEqual([
+      {
+        type: 'batch',
+        clientSeq: 1,
+        ops: [
+          { key: 'layers/layer-a', value: layerEntry() },
+          { key: 'layers/layer-b', value: layerEntry({ layerId: 'layer-b', order: 'W' }) },
+          { key: 'layers/layer-c', value: null },
+        ],
+      },
+    ]);
+
+    server.ackPending(server.connection, 1);
+    state = useLiveStore.getState();
+    expect(state.pending).toEqual({});
+    expect(state.seq).toBe(3);
+    expect(Object.keys(state.document.layers).sort()).toEqual(['layer-a', 'layer-b']);
+  });
+
+  it('applies a peer batch in order and takes the last seq in it', () => {
+    connectAndAccept();
+    server.applyBatchFromPeer('ada', [
+      { key: 'layers/layer-a', value: layerEntry({ opacity: 0.1 }) },
+      { key: 'layers/layer-b', value: layerEntry({ layerId: 'layer-b', order: 'W' }) },
+      { key: 'layers/layer-a', value: layerEntry({ opacity: 0.9 }) },
+    ]);
+    const state = useLiveStore.getState();
+    expect(state.document.layers['layer-a'].opacity).toBe(0.9);
+    expect(state.document.layers['layer-b'].order).toBe('W');
+    expect(state.seq).toBe(3);
+  });
+
+  it('restates a whole pending batch on top of a snapshot and on its ack', () => {
+    server.autoAck = false;
+    connectAndAccept();
+    useLiveStore.getState().sendOperations([
+      { key: 'layers/layer-a', value: layerEntry({ opacity: 1 }) },
+      { key: 'layers/layer-b', value: layerEntry({ layerId: 'layer-b', order: 'W' }) },
+    ]);
+
+    server.document = {
+      ...emptyLiveDocument('theirs'),
+      layers: { 'layer-a': layerEntry({ opacity: 0.3 }) },
+    };
+    server.seq = 9;
+    server.connection.deliver({ type: 'snapshot', seq: server.seq, state: server.document });
+
+    let state = useLiveStore.getState();
+    expect(state.document.meta.name).toBe('theirs');
+    expect(state.document.layers['layer-a'].opacity).toBe(1);
+    expect(state.document.layers['layer-b'].order).toBe('W');
+
+    server.applyFromPeer('ada', 'layers/layer-b', layerEntry({ layerId: 'layer-b', order: 'Z' }));
+    expect(useLiveStore.getState().document.layers['layer-b'].order).toBe('Z');
+
+    server.ackPending(server.connection, 1);
+    state = useLiveStore.getState();
+    expect(state.pending).toEqual({});
+    expect(state.document.layers['layer-b'].order).toBe('W');
+  });
+
+  it('resends an unacked batch as a batch after a reconnect', () => {
+    server.autoAck = false;
+    connectAndAccept();
+    const operations = [
+      { key: 'layers/layer-a', value: layerEntry() },
+      { key: 'layers/layer-b', value: layerEntry({ layerId: 'layer-b', order: 'W' }) },
+    ];
+    useLiveStore.getState().sendOperations(operations);
+    useLiveStore.getState().sendOperation('layers/layer-c', null);
+
+    server.connection.dropConnection();
+    vi.advanceTimersByTime(500);
+    server.accept({ replay: true });
+
+    expect(server.connections[1].sentMessages).toEqual([
+      { type: 'batch', clientSeq: 1, ops: operations },
+      { type: 'op', clientSeq: 2, key: 'layers/layer-c', value: null },
+    ]);
+  });
+
   it('lets a peer edit overwrite a pending local edit until the ack restates it', () => {
     server.autoAck = false;
     connectAndAccept();

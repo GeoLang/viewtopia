@@ -107,6 +107,28 @@ describe('live document bridge', () => {
     expect(orderedLayerIds()).toEqual(['c', 'a', 'b']);
   });
 
+  it('sends one batch when a single store change touches several layers', () => {
+    goLive();
+    useAppStore.setState({ layers: ['a', 'b', 'c'].map((id) => appLayer(id)) });
+
+    expect(server.connection.operationsSent).toHaveLength(0);
+    expect(server.connection.batchesSent).toHaveLength(1);
+    expect(server.connection.batchesSent[0].ops.map((operation) => operation.key)).toEqual([
+      'layers/a',
+      'layers/b',
+      'layers/c',
+    ]);
+    expect(orderedLayerIds()).toEqual(['a', 'b', 'c']);
+
+    // a removal and the reorder it forces also travel together
+    const before = server.connection.batchesSent.length;
+    useAppStore.setState({ layers: ['c', 'a'].map((id) => appLayer(id)) });
+    const sent = server.connection.batchesSent.slice(before);
+    expect(sent).toHaveLength(1);
+    expect(sent[0].ops.map((operation) => operation.key)).toEqual(['layers/b', 'layers/a']);
+    expect(orderedLayerIds()).toEqual(['c', 'a']);
+  });
+
   it('writes visibility and opacity changes to the document', () => {
     goLive();
     useAppStore.getState().addLayer(appLayer('roads'));

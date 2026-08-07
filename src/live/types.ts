@@ -79,18 +79,32 @@ export interface LivePeer {
   role: LiveRole;
 }
 
-export interface ClientOperationMessage {
-  type: 'op';
-  clientSeq: number;
+/** One key and the value to write there, `null` being a delete. */
+export interface LiveOperation {
   key: string;
   value: unknown;
+}
+
+export interface ClientOperationMessage extends LiveOperation {
+  type: 'op';
+  clientSeq: number;
+}
+
+/**
+ * Operations the server applies all or nothing, so peers never render a torn
+ * intermediate state. One clientSeq covers the frame and one ack answers it.
+ */
+export interface ClientBatchMessage {
+  type: 'batch';
+  clientSeq: number;
+  ops: LiveOperation[];
 }
 
 export interface ClientPresenceMessage extends LivePresence {
   type: 'presence';
 }
 
-export type ClientMessage = ClientOperationMessage | ClientPresenceMessage;
+export type ClientMessage = ClientOperationMessage | ClientBatchMessage | ClientPresenceMessage;
 
 export interface ServerSnapshotMessage {
   type: 'snapshot';
@@ -104,6 +118,21 @@ export interface ServerOperationMessage {
   actor: string;
   key: string;
   value: unknown;
+}
+
+/** An operation the server ordered, carrying the seq it gave it. */
+export interface AppliedOperation extends LiveOperation {
+  seq: number;
+}
+
+/**
+ * A batch as the server relays it. The ops decompose into exactly the `op`
+ * frames a reconnect would replay, so a batch only groups them.
+ */
+export interface ServerBatchMessage {
+  type: 'batch';
+  actor: string;
+  ops: AppliedOperation[];
 }
 
 export interface ServerAckMessage {
@@ -134,6 +163,7 @@ export interface ServerPresenceMessage extends LivePresence {
 export type ServerMessage =
   | ServerSnapshotMessage
   | ServerOperationMessage
+  | ServerBatchMessage
   | ServerAckMessage
   | ServerPeersMessage
   | ServerErrorMessage

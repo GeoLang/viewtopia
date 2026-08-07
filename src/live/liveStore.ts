@@ -4,7 +4,9 @@ import { LiveSocket, type LiveConnectionState } from './socket';
 import {
   applyDocumentKey,
   emptyLiveDocument,
+  type ClientMessage,
   type LiveDocument,
+  type LiveOperation,
   type LivePeer,
   type LivePresence,
   type LiveRole,
@@ -13,10 +15,10 @@ import {
 
 const PRESENCE_INTERVAL_MS = 100;
 
-export interface PendingOperation {
+/** One frame of unacked operations, whether it went out as an op or a batch. */
+export interface PendingFrame {
   clientSeq: number;
-  key: string;
-  value: unknown;
+  operations: LiveOperation[];
 }
 
 export interface ConnectOptions {
@@ -33,12 +35,13 @@ interface LiveState {
   document: LiveDocument;
   peers: LivePeer[];
   presence: Record<string, LivePresence>;
-  pending: Record<number, PendingOperation>;
+  pending: Record<number, PendingFrame>;
   error: string | null;
 
   connect: (options: ConnectOptions) => void;
   disconnect: () => void;
   sendOperation: (key: string, value: unknown) => void;
+  sendOperations: (operations: LiveOperation[]) => void;
   sendPresence: (presence: LivePresence) => void;
   receive: (message: ServerMessage) => void;
 }
@@ -54,8 +57,24 @@ function dropPresence(): void {
   latestPresence = null;
 }
 
-function pendingInOrder(pending: Record<number, PendingOperation>): PendingOperation[] {
+function pendingInOrder(pending: Record<number, PendingFrame>): PendingFrame[] {
   return Object.values(pending).sort((left, right) => left.clientSeq - right.clientSeq);
+}
+
+function applyOperations(document: LiveDocument, operations: LiveOperation[]): LiveDocument {
+  return operations.reduce(
+    (applied, operation) => applyDocumentKey(applied, operation.key, operation.value),
+    document,
+  );
+}
+
+/** One operation goes out as an op and several as a batch. */
+function frameFor(frame: PendingFrame): ClientMessage {
+  const [single] = frame.operations;
+  if (frame.operations.length === 1) {
+    return { type: 'op', clientSeq: frame.clientSeq, key: single.key, value: single.value };
+  }
+  return { type: 'batch', clientSeq: frame.clientSeq, ops: frame.operations };
 }
 
 export const useLiveStore = create<LiveState>((set, get) => ({
@@ -95,8 +114,8 @@ export const useLiveStore = create<LiveState>((set, get) => ({
           return;
         }
         // unacked local edits may never have reached the server, so offer them again
-        for (const operation of pendingInOrder(get().pending)) {
-          socket?.send({ type: 'op', ...operation });
+        for (const frame of pendingInOrder(get().pending)) {
+          socket?.send(frameFor(frame));
         }
       },
     });
@@ -119,15 +138,19 @@ export const useLiveStore = create<LiveState>((set, get) => ({
   },
 
   sendOperation: (key, value) => {
+    get().sendOperations([{ key, value }]);
+  },
+
+  sendOperations: (operations) => {
     const { documentId, role } = get();
-    if (documentId === null || role !== 'edit') return;
+    if (documentId === null || role !== 'edit' || operations.length === 0) return;
     clientSeqCounter += 1;
-    const operation: PendingOperation = { clientSeq: clientSeqCounter, key, value };
+    const frame: PendingFrame = { clientSeq: clientSeqCounter, operations };
     set((state) => ({
-      document: applyDocumentKey(state.document, key, value),
-      pending: { ...state.pending, [operation.clientSeq]: operation },
+      document: applyOperations(state.document, operations),
+      pending: { ...state.pending, [frame.clientSeq]: frame },
     }));
-    socket?.send({ type: 'op', ...operation });
+    socket?.send(frameFor(frame));
   },
 
   sendPresence: (presence) => {
@@ -146,8 +169,8 @@ export const useLiveStore = create<LiveState>((set, get) => ({
       case 'snapshot':
         set((state) => {
           let document: LiveDocument = { ...emptyLiveDocument(), ...message.state };
-          for (const operation of pendingInOrder(state.pending)) {
-            document = applyDocumentKey(document, operation.key, operation.value);
+          for (const frame of pendingInOrder(state.pending)) {
+            document = applyOperations(document, frame.operations);
           }
           return { document, seq: message.seq };
         });
@@ -158,14 +181,20 @@ export const useLiveStore = create<LiveState>((set, get) => ({
           seq: Math.max(state.seq, message.seq),
         }));
         return;
+      case 'batch':
+        set((state) => ({
+          document: applyOperations(state.document, message.ops),
+          seq: Math.max(state.seq, ...message.ops.map((operation) => operation.seq)),
+        }));
+        return;
       case 'ack':
         set((state) => {
           const acked = state.pending[message.clientSeq];
           const pending = { ...state.pending };
           delete pending[message.clientSeq];
-          // the ack places our edit after everything already applied, so restate it
+          // the ack places our edits after everything already applied, so restate them
           const document = acked
-            ? applyDocumentKey(state.document, acked.key, acked.value)
+            ? applyOperations(state.document, acked.operations)
             : state.document;
           return { document, pending, seq: Math.max(state.seq, message.seq) };
         });

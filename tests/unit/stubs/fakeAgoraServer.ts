@@ -1,16 +1,26 @@
 import {
   applyDocumentKey,
   emptyLiveDocument,
+  type AppliedOperation,
+  type ClientBatchMessage,
   type ClientMessage,
   type ClientOperationMessage,
   type ClientPresenceMessage,
   type LiveDocument,
+  type LiveOperation,
   type LivePeer,
   type ServerMessage,
   type ServerOperationMessage,
 } from '../../../src/live/types';
 
 let installedServer: FakeAgoraServer | null = null;
+
+/** every client frame that carries operations, whichever shape it took */
+type ClientEditMessage = ClientOperationMessage | ClientBatchMessage;
+
+function operationsOf(message: ClientEditMessage): LiveOperation[] {
+  return message.type === 'op' ? [{ key: message.key, value: message.value }] : message.ops;
+}
 
 export class FakeSocket {
   static readonly CONNECTING = 0;
@@ -85,6 +95,18 @@ export class FakeSocket {
     );
   }
 
+  get batchesSent(): ClientBatchMessage[] {
+    return this.sentMessages.filter(
+      (message): message is ClientBatchMessage => message.type === 'batch',
+    );
+  }
+
+  get editsSent(): ClientEditMessage[] {
+    return this.sentMessages.filter(
+      (message): message is ClientEditMessage => message.type !== 'presence',
+    );
+  }
+
   get presenceSent(): ClientPresenceMessage[] {
     return this.sentMessages.filter(
       (message): message is ClientPresenceMessage => message.type === 'presence',
@@ -140,8 +162,13 @@ export class FakeAgoraServer {
   }
 
   /** an edit from another client, ordered by the server and broadcast */
-  applyFromPeer(actor: string, key: string, value: unknown): ServerOperationMessage {
-    return this.commit(actor, key, value, null);
+  applyFromPeer(actor: string, key: string, value: unknown): ServerMessage {
+    return this.commit(actor, [{ key, value }], null);
+  }
+
+  /** several edits from another client, ordered and broadcast as one frame */
+  applyBatchFromPeer(actor: string, operations: LiveOperation[]): ServerMessage {
+    return this.commit(actor, operations, null);
   }
 
   receiveFromClient(connection: FakeSocket, message: ClientMessage): void {
@@ -152,16 +179,14 @@ export class FakeAgoraServer {
       return;
     }
     if (!this.autoAck) return;
-    this.commit('client', message.key, message.value, connection);
+    this.commit('client', operationsOf(message), connection);
     connection.deliver({ type: 'ack', clientSeq: message.clientSeq, seq: this.seq });
   }
 
   ackPending(connection: FakeSocket, clientSeq: number): void {
-    const operation = connection.operationsSent.find(
-      (candidate) => candidate.clientSeq === clientSeq,
-    );
-    if (!operation) throw new Error(`no operation sent with clientSeq ${clientSeq}`);
-    this.commit('client', operation.key, operation.value, connection);
+    const sent = connection.editsSent.find((candidate) => candidate.clientSeq === clientSeq);
+    if (!sent) throw new Error(`no operation sent with clientSeq ${clientSeq}`);
+    this.commit('client', operationsOf(sent), connection);
     connection.deliver({ type: 'ack', clientSeq, seq: this.seq });
   }
 
@@ -169,16 +194,28 @@ export class FakeAgoraServer {
     return this.connections.filter((connection) => connection.readyState === FakeSocket.OPEN);
   }
 
+  /**
+   * Order the operations, one seq each, and relay them as a single frame. The
+   * log keeps them apart, because a reconnect replays a batch op by op.
+   */
   private commit(
     actor: string,
-    key: string,
-    value: unknown,
+    operations: LiveOperation[],
     origin: FakeSocket | null,
-  ): ServerOperationMessage {
-    this.seq += 1;
-    this.document = applyDocumentKey(this.document, key, value);
-    const frame: ServerOperationMessage = { type: 'op', seq: this.seq, actor, key, value };
-    this.log.push(frame);
+  ): ServerMessage {
+    const applied: AppliedOperation[] = [];
+    for (const operation of operations) {
+      this.seq += 1;
+      this.document = applyDocumentKey(this.document, operation.key, operation.value);
+      applied.push({ seq: this.seq, key: operation.key, value: operation.value });
+      this.log.push({ type: 'op', seq: this.seq, actor, ...operation });
+    }
+
+    const [single] = applied;
+    const frame: ServerMessage =
+      applied.length === 1
+        ? { type: 'op', seq: single.seq, actor, key: single.key, value: single.value }
+        : { type: 'batch', actor, ops: applied };
     for (const connection of this.openConnections) {
       if (connection !== origin) connection.deliver(frame);
     }
