@@ -1,5 +1,8 @@
 /**
  * Sharing module — invite users to projects/workspaces, generate share links.
+ *
+ * These invites stay client side, for the local projects in IndexedDB. A live
+ * map document shares through agora instead, see src/live.
  */
 import { shareInvites as invitesDb } from '../offline/db';
 import { queueOperation } from '../offline/sync';

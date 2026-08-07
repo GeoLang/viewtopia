@@ -24,6 +24,9 @@ import { useSpaceTimeStore } from './features/spacetime/store';
 import { useCallback, useRef, useEffect, useState } from 'react';
 import { initNetworkMonitor } from './offline/network';
 import { initSync } from './offline/sync';
+import { startDocumentBridge } from './live/documentBridge';
+import { useJoinLiveFromLink } from './live/joinFromLink';
+import { MapPresence } from './live/MapPresence';
 
 const MOBILE_SHEET_HEIGHT = '45vh';
 
@@ -51,6 +54,10 @@ export function App() {
     initNetworkMonitor();
     initSync();
   }, []);
+
+  // mirrors layers, annotations and bookmarks while a live document is open
+  useEffect(() => startDocumentBridge(), []);
+  useJoinLiveFromLink();
 
   useBackendDiscovery();
   useKeyboardShortcuts({
@@ -185,6 +192,7 @@ export function App() {
               <SpaceTimePanel />
             </ErrorBoundary>
             <ToolPanels />
+            <MapPresence />
           </AppShell.Main>
         </AppShell>
       </ModalsProvider>

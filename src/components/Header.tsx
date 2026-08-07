@@ -20,6 +20,7 @@ import { MOBILE_QUERY } from '../theme';
 import { OfflineIndicator } from '../offline/OfflineIndicator';
 import { ProjectSwitcher } from '../projects/ProjectSwitcher';
 import { AuthControl } from '../features/auth/AuthControl';
+import { LiveSessionControl } from '../live/LiveSessionControl';
 
 export function Header() {
   const { tiletopiaOnline, geolangOnline } = useAppStore();
@@ -62,6 +63,7 @@ export function Header() {
           </>
         )}
         <ProjectSwitcher />
+        <LiveSessionControl />
         {!isMobile && <OfflineIndicator />}
       </Group>
 

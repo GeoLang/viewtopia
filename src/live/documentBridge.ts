@@ -240,6 +240,9 @@ function publishLocalState(local: LocalState): void {
 /**
  * Hold what this browser has on screen so the first snapshot of a document we
  * just created starts from it instead of wiping it.
+ *
+ * TODO: importing a stored project out of IndexedDB into a live document is not
+ * built, only what the running session holds travels.
  */
 export function captureStateForNewDocument(): void {
   const { layers, bookmarks } = useAppStore.getState();
