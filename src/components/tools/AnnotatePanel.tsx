@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Paper,
   Text,
@@ -12,99 +12,74 @@ import {
   Badge,
 } from '@mantine/core';
 import { IconMapPin, IconX, IconTrash } from '@tabler/icons-react';
-import {
-  Cartesian2,
-  Cartesian3,
-  Color,
-  Math as CesiumMath,
-  ScreenSpaceEventHandler,
-  ScreenSpaceEventType,
-  VerticalOrigin,
-  LabelStyle,
-} from 'cesium';
+import { Cartesian2, Math as CesiumMath } from 'cesium';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { getSharedCamera } from '../../hooks/sharedCamera';
 import { useAnnotationStore } from '../../store/annotations';
+import { useAppStore } from '../../store/app';
+
+function placedMessage(lat: number, lng: number): string {
+  return `Placed at ${lat.toFixed(3)}, ${lng.toFixed(3)}`;
+}
 
 export function AnnotatePanel({ onClose }: { onClose: () => void }) {
   const annotations = useAnnotationStore((s) => s.annotations);
   const addAnnotation = useAnnotationStore((s) => s.addAnnotation);
   const removeAnnotation = useAnnotationStore((s) => s.removeAnnotation);
+  const pendingPlacement = useAnnotationStore((s) => s.pendingPlacement);
+  const startPlacement = useAnnotationStore((s) => s.startPlacement);
+  const cancelPlacement = useAnnotationStore((s) => s.cancelPlacement);
+  // both globe renderers bind the click, the 2D map has no annotation binding
+  const clickToPlaceWorks = useAppStore((s) => s.activeTab) === 'globe';
   const [label, setLabel] = useState('');
   const [color, setColor] = useState('#a78bfa');
-  const [placing, setPlacing] = useState(false);
   const [status, setStatus] = useState('');
-  const placingRef = useRef({ label, color });
-  placingRef.current = { label, color };
 
-  // keep the live Cesium entities in sync with the annotation list
-  useEffect(() => {
-    const viewer = getActiveCesiumViewer();
-    if (!viewer) return;
-    const wanted = new Set(annotations.map((a) => `annot-${a.id}`));
-    for (const a of annotations) {
-      const eid = `annot-${a.id}`;
-      if (viewer.entities.getById(eid)) continue;
-      viewer.entities.add({
-        id: eid,
-        position: Cartesian3.fromDegrees(a.lng, a.lat),
-        point: { pixelSize: 8, color: Color.fromCssColorString(a.color), outlineColor: Color.WHITE, outlineWidth: 1 },
-        label: {
-          text: a.label,
-          font: '13px sans-serif',
-          fillColor: Color.WHITE,
-          outlineColor: Color.BLACK,
-          outlineWidth: 2,
-          style: LabelStyle.FILL_AND_OUTLINE,
-          verticalOrigin: VerticalOrigin.BOTTOM,
-          pixelOffset: new Cartesian2(0, -14),
-        },
-      });
-    }
-    // remove entities whose annotation is gone
-    const toRemove = viewer.entities.values.filter(
-      (e) => e.id.startsWith('annot-') && !wanted.has(e.id),
-    );
-    for (const e of toRemove) viewer.entities.remove(e);
-  }, [annotations]);
+  // closing the panel disarms the map, which would otherwise stay in
+  // click-to-place with nothing on screen saying so
+  useEffect(() => cancelPlacement, [cancelPlacement]);
+
+  // the renderer hooks own the map click, so the panel learns that its pending
+  // placement was consumed from the store rather than from its own handler
+  useEffect(
+    () =>
+      useAnnotationStore.subscribe((state, previous) => {
+        const consumed = previous.pendingPlacement !== null && state.pendingPlacement === null;
+        if (!consumed || state.annotations.length <= previous.annotations.length) return;
+        const placed = state.annotations[state.annotations.length - 1];
+        setLabel('');
+        setStatus(placedMessage(placed.lat, placed.lng));
+      }),
+    [],
+  );
 
   const addAt = (lng: number, lat: number) => {
-    const { label: l, color: c } = placingRef.current;
-    if (!l.trim()) {
-      setStatus('Enter a label first');
-      return;
-    }
     addAnnotation({
       id: crypto.randomUUID(),
-      label: l.trim(),
-      color: c,
+      label: label.trim(),
+      color,
       lat,
       lng,
       createdAt: Date.now(),
     });
+    cancelPlacement();
     setLabel('');
-    setStatus(`Placed at ${lat.toFixed(3)}, ${lng.toFixed(3)}`);
+    setStatus(placedMessage(lat, lng));
   };
 
-  // click-to-place handler on the live Cesium canvas
-  useEffect(() => {
-    if (!placing) return;
-    const viewer = getActiveCesiumViewer();
-    if (!viewer) {
-      setStatus('No active viewer');
+  const handlePlaceOnMap = () => {
+    if (pendingPlacement) {
+      cancelPlacement();
+      setStatus('');
       return;
     }
-    const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
-    handler.setInputAction((click: { position: Cartesian2 }) => {
-      const cartesian = viewer.camera.pickEllipsoid(click.position, viewer.scene.globe.ellipsoid);
-      if (!cartesian) return;
-      const carto = viewer.scene.globe.ellipsoid.cartesianToCartographic(cartesian);
-      addAt(CesiumMath.toDegrees(carto.longitude), CesiumMath.toDegrees(carto.latitude));
-      setPlacing(false);
-    }, ScreenSpaceEventType.LEFT_CLICK);
+    if (!clickToPlaceWorks) {
+      setStatus('Click to place needs the 3D globe');
+      return;
+    }
+    startPlacement(label.trim(), color);
     setStatus('Click the map to place');
-    return () => handler.destroy();
-  }, [placing]);
+  };
 
   const handlePlaceAtCenter = () => {
     const viewer = getActiveCesiumViewer();
@@ -178,12 +153,12 @@ export function AnnotatePanel({ onClose }: { onClose: () => void }) {
         <Group gap="xs" grow>
           <Button
             size="xs"
-            variant={placing ? 'filled' : 'light'}
+            variant={pendingPlacement ? 'filled' : 'light'}
             color="violet"
-            onClick={() => setPlacing((p) => !p)}
+            onClick={handlePlaceOnMap}
             disabled={!label.trim()}
           >
-            {placing ? 'Click map…' : 'Place on map'}
+            {pendingPlacement ? 'Click map…' : 'Place on map'}
           </Button>
           <Button size="xs" variant="light" color="violet" onClick={handlePlaceAtCenter} disabled={!label.trim()}>
             Add at center

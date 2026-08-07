@@ -42,12 +42,6 @@ current state in DESIGN.md). Open work from it:
       bearer tokens.
 - [ ] **local project import** — IndexedDB projects do not import into a
       live document (TODO at captureStateForNewDocument).
-- [ ] **annotations on MapLibre** — the annotate panel renders and places
-      through Cesium entities only, so on MapLibre "place on map" says "no
-      active viewer" and only "add at center" works (hit in the 2026-08-07
-      live demo). Render annotations as MapLibre markers and arm the map
-      click there too, which also gives shared annotations a visible home
-      in live sessions on the renderer people actually share from.
 - [ ] **agora batch op** (idea from uMap's sync design) — a frame carrying
       several ops that the server applies all-or-nothing under one
       sequence number, so a multi-feature paste or multi-layer reorder

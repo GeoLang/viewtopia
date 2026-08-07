@@ -21,6 +21,8 @@ import { useOgcLayersCesium } from '../hooks/useOgcLayersCesium';
 import { useOgcLayersMapLibre } from '../hooks/useOgcLayersMapLibre';
 import { useDrawCesium } from '../hooks/useDrawCesium';
 import { useDrawMapLibre } from '../hooks/useDrawMapLibre';
+import { useAnnotationsCesium } from '../hooks/useAnnotationsCesium';
+import { useAnnotationsMapLibre } from '../hooks/useAnnotationsMapLibre';
 import { useMeasureCesium } from '../hooks/useMeasureCesium';
 import { useFeaturePickerCesium } from '../hooks/useFeaturePickerCesium';
 import { useFeaturePickerMapLibre } from '../hooks/useFeaturePickerMapLibre';
@@ -81,6 +83,11 @@ export function ViewerArea() {
   // Drawing tools
   useDrawCesium(cesiumRef);
   useDrawMapLibre(maplibreRef);
+
+  // Annotations, bound here rather than in the panel so one arriving from a
+  // live peer still draws while the panel is closed
+  useAnnotationsCesium(cesiumRef);
+  useAnnotationsMapLibre(maplibreRef);
 
   // Measurement tools (Cesium + MapLibre)
   useMeasureCesium(cesiumRef);

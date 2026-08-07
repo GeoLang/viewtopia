@@ -6,6 +6,16 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-07: **annotations render and place on MapLibre**, not Cesium only.
+  Both renderer bindings moved out of AnnotatePanel into useAnnotationsCesium
+  and useAnnotationsMapLibre, called from ViewerArea, so an annotation arriving
+  from a live peer draws even with the panel closed. The pending placement is
+  store state the renderer hooks watch, which is what lets either of them arm
+  the map click, and "Place on map" no longer answers "No active viewer" on
+  MapLibre. MapLibre draws each annotation as a DOM marker carrying its dot and
+  label: a symbol layer needs a `glyphs` entry the basemaps mostly lack, so the
+  label would go missing on all but one of them.
+
 - 2026-08-06: the client half of agora, live multiplayer on a shared map
   document, landed in src/live/. A live document holds the layer list (order as
   a base62 fractional index, visibility, opacity, style overrides, layers by id
