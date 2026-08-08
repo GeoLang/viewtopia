@@ -16,10 +16,14 @@ export function useKeyboardShortcuts(shortcuts: ShortcutMap) {
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
 
       const key = e.key.toLowerCase();
-      const combo = `${e.ctrlKey || e.metaKey ? 'ctrl+' : ''}${key}`;
-
-      // Try combo first, then plain key
-      const fn = shortcuts[combo] ?? shortcuts[key];
+      // a modifier chord only matches a chord entry: falling back to the
+      // bare key would shadow browser shortcuts like ctrl+r
+      const fn =
+        e.ctrlKey || e.metaKey
+          ? shortcuts[`ctrl+${key}`]
+          : e.altKey
+            ? undefined
+            : shortcuts[key];
       if (fn) {
         e.preventDefault();
         fn();
