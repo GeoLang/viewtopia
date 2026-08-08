@@ -70,16 +70,19 @@ export function useShareLinkHash() {
     const shared = asRenderer(params.get('renderer'));
     if (shared) setRenderer(shared);
 
+    const zoom = Math.max(0, Math.log2(4e7 / Math.max(height || 1, 1)));
     // seed shared camera so a freshly-mounted viewer starts here
     setSharedCamera({
       longitude: lng,
       latitude: lat,
-      zoom: Math.max(0, Math.log2(4e7 / Math.max(height || 1, 1))),
+      zoom,
       bearing: heading || 0,
       pitch: (pitch || 0) + 90,
     });
 
-    // fly the live Cesium viewer once it is ready
+    // fly whichever viewer comes up. The seed alone is not enough: viewers are
+    // children of this hook's component, so their mount effects ran first and
+    // their cameras were already built from the pre-seed state.
     let tries = 0;
     const timer = setInterval(() => {
       const viewer = getActiveCesiumViewer();
@@ -93,9 +96,21 @@ export function useShareLinkHash() {
           roll: 0,
         }, { reduceMotion: true });
         clearInterval(timer);
-      } else if (++tries > 40) {
-        clearInterval(timer);
+        return;
       }
+      // a cesium hash mid renderer switch can still see the outgoing map
+      const map = shared === 'cesium' ? null : getActiveMapLibre();
+      if (map) {
+        map.jumpTo({
+          center: [lng, lat],
+          zoom,
+          bearing: heading || 0,
+          pitch: (pitch || 0) + 90,
+        });
+        clearInterval(timer);
+        return;
+      }
+      if (++tries > 40) clearInterval(timer);
     }, 100);
 
     return () => clearInterval(timer);

@@ -48,6 +48,15 @@ All notable changes to this project will be documented in this file.
   scenario; unit tests cover the trigger parsing, candidate matching,
   posting, segment rendering and the bell.
 
+### Fixed
+
+- 2026-08-08: **`#cam=` hashes now restore MapLibre views**. The share hash
+  hook seeded the shared camera and then flew only a Cesium viewer, but
+  viewers mount before the hook's effect runs, so a maplibre link (every
+  embed snippet, most share links) landed at the default view. The hook now
+  flies whichever viewer registers, and the embed golden-path e2e asserts
+  the landing camera.
+
 ### Changed
 
 - 2026-08-08: **the tour drives the app**. The static five-step TourPanel

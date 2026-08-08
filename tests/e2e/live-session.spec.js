@@ -354,10 +354,12 @@ test.describe('Live multiplayer — live platform stack', () => {
       body: JSON.stringify({ role: 'view' }),
     }).then((response) => response.json());
 
-    // an anonymous visitor inside the iframe: no sign in, no chrome, live map
+    // an anonymous visitor inside the iframe: no sign in, no chrome, live map,
+    // landing at the camera the link carries
+    const monacoHash = 'cam=7.42207,43.72750,20000.00000,0.00000,-90.00000&renderer=maplibre';
     const visitorContext = await browser.newContext();
     const visitor = await visitorContext.newPage();
-    await visitor.goto(`${origin}/?live=${encodeURIComponent(minted.token)}&embed=1`);
+    await visitor.goto(`${origin}/?live=${encodeURIComponent(minted.token)}&embed=1#${monacoHash}`);
 
     const badge = visitor.getByTestId('embed-badge');
     await expect(badge).toBeVisible();
@@ -369,6 +371,19 @@ test.describe('Live multiplayer — live platform stack', () => {
     await expect(visitor.getByRole('button', { name: 'Live', exact: true })).toBeHidden();
     await expect(visitor.getByRole('button', { name: 'Analysis' })).toBeHidden();
     await expect(visitor.locator('canvas').first()).toBeVisible();
+
+    await expect
+      .poll(
+        () =>
+          visitor.evaluate(() => {
+            const map = window.__viewtopiaMap;
+            if (!map) return false;
+            const center = map.getCenter();
+            return Math.abs(center.lng - 7.42207) < 0.5 && Math.abs(center.lat - 43.7275) < 0.5;
+          }),
+        { message: 'the embed never landed at the camera the link carries', timeout: 15_000 },
+      )
+      .toBe(true);
 
     await visitorContext.close();
   });
