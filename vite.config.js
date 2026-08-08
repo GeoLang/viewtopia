@@ -18,7 +18,9 @@ function cssModuleScripts() {
     name: 'css-module-scripts',
     enforce: 'pre',
     transform(code, id) {
-      if (!id.includes('@panoramax/web-viewer') || !id.endsWith('.js')) return null;
+      // dev-server ids carry a ?v= cache-busting query, build ids don't
+      const file = id.split('?')[0];
+      if (!file.includes('@panoramax/web-viewer') || !file.endsWith('.js')) return null;
       return code.replace(
         /import\s+(\w+)\s+from\s*"([^"]+\.css)"\s*with\s*\{\s*type:\s*"css"\s*\};?/g,
         (_m, name, path) =>
