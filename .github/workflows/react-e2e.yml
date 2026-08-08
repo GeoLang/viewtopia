@@ -1,0 +1,27 @@
+# Runs the standalone react e2e suite (playwright.react.config.js): boot,
+# panels, agent layers, renderer switches. No platform stack, the config
+# serves the app itself via vite on 5175. One retry absorbs the transient
+# tile-host DNS failures the console guard would otherwise fail on.
+name: React E2E
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  react-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Run react E2E
+        run: pnpm exec playwright test --config=playwright.react.config.js --retries=1
