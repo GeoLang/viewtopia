@@ -21,6 +21,14 @@ All notable changes to this project will be documented in this file.
   and the agent-layer chat seed moved to `addInitScript` so the running
   page can no longer clobber it before reload.
 
+- 2026-08-08: **Cesium frames agent results top-down**, matching MapLibre's
+  fitBounds. The shared camera records the camera's ground point as the
+  look-at center, which only holds untilted: Cesium's default tilted flyTo
+  poisoned that state, so a cesium → maplibre → cesium round trip could
+  restore a view with the result off screen (caught by the e2e pick test,
+  flaky since July; the react e2e suite runs in no CI workflow, so nothing
+  flagged it).
+
 - 2026-08-08: **the map owns the viewport (UI polish phase 1)**. The chat
   sidebar starts closed and toggles from a header icon (Ctrl+B unchanged, on
   phones the floating button remains); its header session switcher is the one

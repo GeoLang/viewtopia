@@ -5,7 +5,9 @@ import {
   Cartesian3,
   Color,
   GeoJsonDataSource,
+  HeadingPitchRange,
   type ImageryLayer,
+  Math as CesiumMath,
   Rectangle,
   SingleTileImageryProvider,
   VerticalOrigin,
@@ -110,9 +112,14 @@ export function useAgentLayersCesium(viewerRef: MutableRefObject<Viewer | null>)
       }
 
       // Frame only when a new spec arrives, never on a plain renderer switch.
+      // Top-down, matching MapLibre's fitBounds: the shared camera stores the
+      // camera's ground point as the look-at center, which only holds untilted,
+      // so a tilted frame here would shift the view on every renderer switch.
       if (last && framedRef.current !== generation) {
         framedRef.current = generation;
-        await viewer.flyTo(last).catch(() => undefined);
+        await viewer
+          .flyTo(last, { offset: new HeadingPitchRange(0, CesiumMath.toRadians(-90), 0) })
+          .catch(() => undefined);
       }
     };
 
