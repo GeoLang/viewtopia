@@ -1,12 +1,14 @@
 import { Group, ActionIcon, Title, Tooltip } from '@mantine/core';
 import {
   IconGlobe,
+  IconMaximize,
   IconMessage,
+  IconMinimize,
   IconMoon,
   IconSun,
 } from '@tabler/icons-react';
 import { useMantineColorScheme } from '@mantine/core';
-import { useMediaQuery } from '@mantine/hooks';
+import { useFullscreen, useMediaQuery } from '@mantine/hooks';
 import { useAppStore } from '../store/app';
 import { MOBILE_QUERY } from '../theme';
 import { OfflineIndicator } from '../offline/OfflineIndicator';
@@ -18,6 +20,7 @@ import { ViewerToolbar } from './ViewerToolbar';
 
 export function Header() {
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
+  const { toggle: toggleFullscreen, fullscreen } = useFullscreen();
   const navOpened = useAppStore((s) => s.navOpened);
   const toggleNav = useAppStore((s) => s.toggleNav);
   const isMobile = useMediaQuery(MOBILE_QUERY, false, {
@@ -58,6 +61,17 @@ export function Header() {
             </ActionIcon>
           </Tooltip>
         )}
+
+        <Tooltip label={fullscreen ? 'Exit full screen' : 'Full screen'}>
+          <ActionIcon
+            aria-label={fullscreen ? 'Exit full screen' : 'Full screen'}
+            variant="subtle"
+            color="gray"
+            onClick={toggleFullscreen}
+          >
+            {fullscreen ? <IconMinimize size={16} /> : <IconMaximize size={16} />}
+          </ActionIcon>
+        </Tooltip>
 
         <Tooltip label="Toggle theme">
           <ActionIcon

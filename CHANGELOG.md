@@ -244,6 +244,10 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-08: **fullscreen toggle in the header**, on every renderer, via
+  the browser fullscreen API. Cesium's own fullscreen widget is disabled
+  so there is one control.
+
 - 2026-08-06: **attribute table upgrades** (Tools ▸ 📋 Data Table): column
   sorting, a field calculator, virtual fields, attribute joins and column
   statistics, in `src/features/attributes/`. Headers cycle asc, desc and off,

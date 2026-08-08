@@ -89,6 +89,7 @@ export function useCesium(opts: UseCesiumOptions = {}) {
     try {
       viewer = new Viewer(container, {
         baseLayerPicker: false,
+        fullscreenButton: false,
         geocoder: false,
         animation: false,
         timeline: false,
