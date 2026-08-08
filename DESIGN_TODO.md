@@ -92,6 +92,55 @@ Scope discipline that follows from the thesis: Figma did not beat Photoshop
 on features, it won one workflow. Win "a team makes and analyzes a map
 together in the browser" and refuse feature-parity fights with ArcGIS.
 
+## OPEN: viewtopia UI polish to Felt level (audited 2026-08-07)
+
+From a running-app audit, a code audit of all ~76 panels, and Felt's
+published design writing. Felt's bar is three commitments: the map is the
+whole screen, one design system with no raw edges, desktop-grade
+micro-interaction. Where viewtopia misses today: the map gets ~70% of pixels
+at rest (chat sidebar always open, two-row toolbar, always-on minimap),
+internal service names and raw errors sit in the chrome (TILETOPIA/GEOLANG
+chips, "agora GET /documents failed with 500" in the Live dialog), 510
+hardcoded hex values across 111 files and 249 inline style objects bypass
+theme.ts, no shared panel primitives (the close-button pattern is retyped
+156 times, ToolPanels.tsx is a 137-case switch), floating panels collide
+(Legend opens over the chat header), the toolbar overflows at phone widths,
+3 keyboard shortcuts app-wide, default white map widgets on dark chrome.
+Phases ordered so each is visible alone, real estate first because it
+changes every later layout decision.
+
+- [ ] **phase 1, map real estate** (target: map above 90% of viewport at
+      rest): collapse chat to a button that opens an overlay or dock on
+      demand, merge the toolbar to one row (brand and project left, tools
+      center, share and settings right), move the renderer and basemap
+      pickers into a single map-corner control, fold the service chips into
+      one status dot with a popover, minimap off by default, one document
+      noun in the header (chat sessions live inside the chat panel, drop the
+      duplicate session select), Cmd+. hides all UI.
+- [ ] **phase 2, design system**: palette as Mantine theme tokens plus
+      defaultProps for inputs, then sweep the hex literals and inline styles
+      (parallelizes by directory once tokens land). Extract PanelCard,
+      PanelHeader, CloseButton and replace the hand-rolled panels. Replace
+      absolute-positioned cards with a docked inspector column that stacks
+      without collisions, which also fixes mobile. Restyle the MapLibre,
+      Leaflet and Cesium widgets and the scrollbars to the theme. Replace
+      alert/confirm with modals and emoji menu icons with Tabler. Pick a
+      dark default basemap or light chrome, one decision.
+- [ ] **phase 3, interaction polish**: Cmd+K command palette over the
+      existing plugin and panel registries (demotes the seven dropdown
+      menus), one-letter shortcuts for draw and measure tools with tooltip
+      hints, loading skeletons in data panels, empty states that offer an
+      action, status text consolidated into toasts, panel enter/exit
+      transitions, per-tool cursor states, focus rings, dialog focus traps
+      and an aria pass.
+- [ ] **phase 4, first run and share**: first-visit detection that offers a
+      demo dataset and a load-style-share spine auto-starting the existing
+      tour, a full-window drag-drop affordance with import progress,
+      view-only chrome for shared links (feeds the embed-mode item above).
+
+Not chased: Felt's canvas annotation renderer and per-frame cursor
+rotation, below the visible waterline until phases 1 to 3 land.
+
 ## OPEN — platform hygiene
 
 - [ ] **tiletopia multi-node HA (raft)** — future reference, no open work. The
