@@ -25,3 +25,10 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - name: Run react E2E
         run: pnpm exec playwright test --config=playwright.react.config.js --retries=1
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: react-e2e-results
+          path: test-results/
+          retention-days: 7
