@@ -1,5 +1,5 @@
 import { test, expect } from '../console-guard';
-import { MENU_ITEM, openApp } from '../panel-helpers.js';
+import { MENU_ITEM, openApp, openBasemapRendererControl } from '../panel-helpers.js';
 
 /**
  * Annotations with MapLibre as the displayed renderer. The panel used to bind
@@ -16,6 +16,7 @@ const VIEW = { lon: 7.425, lat: 43.735, zoom: 13 };
 const CLICK_AT = { x: 240, y: 180 };
 
 async function useMapLibre(page) {
+  await openBasemapRendererControl(page);
   await page.getByRole('textbox', { name: 'Renderer' }).click();
   await page.getByRole('option', { name: 'MapLibre' }).click();
   await page.waitForFunction(() => window.__viewtopiaMap?.isStyleLoaded(), null, { timeout: 60000 });

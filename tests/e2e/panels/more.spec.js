@@ -1,5 +1,5 @@
 import { test, expect } from '../console-guard';
-import { PANEL, MENU_ITEM, openApp } from '../panel-helpers';
+import { PANEL, MENU_ITEM, openApp, openBasemapRendererControl } from '../panel-helpers';
 
 /**
  * Functional smoke for the More menu panels against the live platform stack.
@@ -95,36 +95,34 @@ async function closePanel(page, panel) {
 }
 
 test.describe('More menu panels', () => {
-  test('settings: display switch removes the minimap and persists', async ({ page }) => {
+  test('settings: display switch adds the minimap and persists', async ({ page }) => {
     await openApp(page);
 
-    // the overview map is the only Leaflet instance while the globe tab is up,
-    // which is what proves the default is on. The persisted copy cannot say so
-    // yet: openApp seeds a partial settings object and merge() backfills the
-    // rest in memory, so nothing reaches localStorage until the first write.
+    // the overview map would be the only Leaflet instance while the globe tab
+    // is up, so zero instances proves the default is off
     const minimap = page.locator('.leaflet-container:not(#leaflet-container)');
-    await expect(minimap).toHaveCount(1);
+    await expect(minimap).toHaveCount(0);
 
     const panel = await openSettings(page);
 
     await panel.getByText('Show Minimap').click();
 
-    // the widget unmounts and the choice survives in the persisted store
-    await expect(minimap).toHaveCount(0);
-    await expect
-      .poll(async () => (await persistedSettings(page)).showMinimap)
-      .toBe(false);
-
-    // switching it back rebuilds the widget, so the toggle drives both directions
-    await panel.getByText('Show Minimap').click();
+    // the widget mounts and the choice survives in the persisted store
     await expect(minimap).toHaveCount(1);
     await expect
       .poll(async () => (await persistedSettings(page)).showMinimap)
       .toBe(true);
 
+    // switching it back unmounts the widget, so the toggle drives both directions
+    await panel.getByText('Show Minimap').click();
+    await expect(minimap).toHaveCount(0);
+    await expect
+      .poll(async () => (await persistedSettings(page)).showMinimap)
+      .toBe(false);
+
     await closePanel(page, panel);
     // closing does not undo the change
-    await expect(minimap).toHaveCount(1);
+    await expect(minimap).toHaveCount(0);
   });
 
   test('settings: the ai model select switches the agent model', async ({ page }) => {
@@ -192,6 +190,7 @@ test.describe('More menu panels', () => {
     // the camera and the renderer field both have to follow the renderer on
     // screen, so switch it, put that map somewhere else and regenerate: the link
     // must carry the MapLibre camera, not the Cesium one it replaced
+    await openBasemapRendererControl(page);
     await page.getByRole('textbox', { name: 'Renderer' }).click();
     await page.getByRole('option', { name: 'MapLibre' }).click();
     await page.waitForFunction(() => window.__viewtopiaMap?.isStyleLoaded(), null, {
@@ -225,6 +224,7 @@ test.describe('More menu panels', () => {
     await closePanel(page, mapPanel);
 
     // back on Cesium the link is the Cesium camera again
+    await openBasemapRendererControl(page);
     await page.getByRole('textbox', { name: 'Renderer' }).click();
     await page.getByRole('option', { name: 'CesiumJS' }).click();
     await page.waitForFunction(() => !!window.__viewtopiaViewer, null, { timeout: 60000 });

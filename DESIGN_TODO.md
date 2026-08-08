@@ -97,26 +97,17 @@ together in the browser" and refuse feature-parity fights with ArcGIS.
 From a running-app audit, a code audit of all ~76 panels, and Felt's
 published design writing. Felt's bar is three commitments: the map is the
 whole screen, one design system with no raw edges, desktop-grade
-micro-interaction. Where viewtopia misses today: the map gets ~70% of pixels
-at rest (chat sidebar always open, two-row toolbar, always-on minimap),
-internal service names and raw errors sit in the chrome (TILETOPIA/GEOLANG
-chips, "agora GET /documents failed with 500" in the Live dialog), 510
-hardcoded hex values across 111 files and 249 inline style objects bypass
-theme.ts, no shared panel primitives (the close-button pattern is retyped
-156 times, ToolPanels.tsx is a 137-case switch), floating panels collide
-(Legend opens over the chat header), the toolbar overflows at phone widths,
-3 keyboard shortcuts app-wide, default white map widgets on dark chrome.
-Phases ordered so each is visible alone, real estate first because it
-changes every later layout decision.
+micro-interaction. Phase 1 (map real estate) shipped 2026-08-08, see the
+changelog and DESIGN.md's shell layout paragraph. Where viewtopia still
+misses: raw errors sit in the chrome ("agora GET /documents failed with
+500" in the Live dialog), 510 hardcoded hex values across 111 files and
+249 inline style objects bypass theme.ts, no shared panel primitives (the
+close-button pattern is retyped 156 times, ToolPanels.tsx is a 137-case
+switch), floating panels collide (Legend opens over the chat header), the
+toolbar at phone widths only scrolls, 4 keyboard shortcuts app-wide,
+default white map widgets on dark chrome. Phases ordered so each is
+visible alone.
 
-- [ ] **phase 1, map real estate** (target: map above 90% of viewport at
-      rest): collapse chat to a button that opens an overlay or dock on
-      demand, merge the toolbar to one row (brand and project left, tools
-      center, share and settings right), move the renderer and basemap
-      pickers into a single map-corner control, fold the service chips into
-      one status dot with a popover, minimap off by default, one document
-      noun in the header (chat sessions live inside the chat panel, drop the
-      duplicate session select), Cmd+. hides all UI.
 - [ ] **phase 2, design system**: palette as Mantine theme tokens plus
       defaultProps for inputs, then sweep the hex literals and inline styles
       (parallelizes by directory once tokens land). Extract PanelCard,
@@ -125,7 +116,12 @@ changes every later layout decision.
       without collisions, which also fixes mobile. Restyle the MapLibre,
       Leaflet and Cesium widgets and the scrollbars to the theme. Replace
       alert/confirm with modals and emoji menu icons with Tabler. Pick a
-      dark default basemap or light chrome, one decision.
+      dark default basemap or light chrome, one decision, together with the
+      decided default-renderer flip: MapLibre on first load (faster boot,
+      vector styles, the 2D collaborative workflow), Cesium one click away
+      on the 3D tab (owner, 2026-08-08). The flip is one store line plus a
+      deliberate pass over the e2e specs that wait for the Cesium viewer
+      on load.
 - [ ] **phase 3, interaction polish**: Cmd+K command palette over the
       existing plugin and panel registries (demotes the seven dropdown
       menus), one-letter shortcuts for draw and measure tools with tooltip

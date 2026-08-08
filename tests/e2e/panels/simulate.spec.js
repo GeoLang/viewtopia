@@ -1,5 +1,5 @@
 import { test, expect } from '../console-guard';
-import { PANEL, MENU_ITEM, openApp } from '../panel-helpers';
+import { PANEL, MENU_ITEM, openApp, openBasemapRendererControl } from '../panel-helpers';
 import { mintToken } from '../../../scripts/platform-token.mjs';
 
 /**
@@ -361,6 +361,7 @@ test.describe('Simulate panels', () => {
     await openApp(page);
 
     // the panel draws on MapLibre, so switch renderer and wait for its style
+    await openBasemapRendererControl(page);
     await page.getByRole('textbox', { name: 'Renderer' }).click();
     await page.getByRole('option', { name: 'MapLibre' }).click();
     await page.waitForFunction(() => window.__viewtopiaMap?.isStyleLoaded(), null, {

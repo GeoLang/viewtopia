@@ -248,6 +248,7 @@ test.describe('local tool panels (batch 2)', () => {
 
   test('share link: hash on load applies the encoded renderer', async ({ page }) => {
     await page.goto('/#cam=10,20,1000000,0,-30&renderer=maplibre');
+    await page.getByRole('button', { name: 'Basemap & renderer' }).click();
     await expect(page.getByRole('textbox', { name: 'Renderer' })).toHaveValue('MapLibre');
     // renderer actually switched: the MapLibre canvas mounts
     await expect(page.locator('#maplibre-container canvas').first()).toBeVisible({ timeout: 15000 });
@@ -334,6 +335,7 @@ test.describe('local tool panels (batch 2)', () => {
     );
     await page.goto(REACT_URL);
     // switch to MapLibre and wait for the map to render
+    await page.getByRole('button', { name: 'Basemap & renderer' }).click();
     await page.getByRole('textbox', { name: 'Renderer' }).click();
     await page.getByRole('option', { name: 'MapLibre' }).click();
     await expect(page.locator('#maplibre-container canvas').first()).toBeVisible({ timeout: 15000 });
@@ -453,6 +455,7 @@ test.describe('weather/wind/traffic panels', () => {
     await page.goto(REACT_URL);
 
     // traffic renders on MapLibre, so switch renderer and wait for the style
+    await page.getByRole('button', { name: 'Basemap & renderer' }).click();
     await page.getByRole('textbox', { name: 'Renderer' }).click();
     await page.getByRole('option', { name: 'MapLibre' }).click();
     await expect(page.locator('#maplibre-container canvas').first()).toBeVisible({ timeout: 15000 });

@@ -4,8 +4,9 @@ import { useAppStore } from '../store/app';
 export function CoordReadout() {
   const cursorCoords = useAppStore((s) => s.cursorCoords);
   const settings = useAppStore((s) => s.settings);
+  const uiHidden = useAppStore((s) => s.uiHidden);
 
-  if (!settings.showCoordReadout || !cursorCoords) return null;
+  if (!settings.showCoordReadout || !cursorCoords || uiHidden) return null;
 
   const { lat, lng, elevation } = cursorCoords;
 
@@ -14,7 +15,8 @@ export function CoordReadout() {
       style={{
         position: 'absolute',
         bottom: 16,
-        left: 16,
+        // to the right of the basemap control button in the corner
+        left: 60,
         background: 'rgba(13, 17, 23, 0.9)',
         border: '1px solid #30363d',
         borderRadius: 6,

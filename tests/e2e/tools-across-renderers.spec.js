@@ -20,6 +20,7 @@ const drawEntityCount = (page) =>
   });
 
 async function switchRenderer(page, label) {
+  await page.getByRole('button', { name: 'Basemap & renderer' }).click();
   await page
     .locator('input[value="CesiumJS"], input[value="MapLibre"]')
     .first()

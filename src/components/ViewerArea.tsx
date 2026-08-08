@@ -32,6 +32,7 @@ import { CesiumNavControl } from './CesiumNavControl';
 import { Minimap } from './Minimap';
 import { CoordReadout } from './CoordReadout';
 import { ContextMenu } from './ContextMenu';
+import { BasemapRendererControl } from './BasemapRendererControl';
 import { SplitPane } from './SplitPane';
 
 export function ViewerArea() {
@@ -293,6 +294,7 @@ export function ViewerArea() {
       )}
 
       {/* Overlay widgets */}
+      <BasemapRendererControl />
       <Minimap />
       <CoordReadout />
       <ContextMenu />

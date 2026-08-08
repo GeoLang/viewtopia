@@ -69,10 +69,13 @@ async function seedAndReplay(page) {
   }, SESSION);
   await page.reload();
   await page.waitForFunction(() => !!window.__viewtopiaViewer, null, { timeout: 60000 });
+  // chat starts closed, and the replay control lives in its history
+  await page.getByRole('button', { name: 'Show chat' }).click();
   await page.getByTitle('Click to replay this result on the map').click();
 }
 
 async function switchRenderer(page, label) {
+  await page.getByRole('button', { name: 'Basemap & renderer' }).click();
   await page
     .locator('input[value="CesiumJS"], input[value="MapLibre"]')
     .first()
@@ -152,6 +155,8 @@ test.describe('agent layers across renderers', () => {
     await expect.poll(() => maplibreLayerIds(page), { timeout: 30000 }).not.toHaveLength(0);
 
     // setStyle drops every source and layer; ours must come back.
+    // (selecting a renderer closed the corner popover, so reopen it)
+    await page.getByRole('button', { name: 'Basemap & renderer' }).click();
     await page.getByRole('textbox', { name: 'Basemap', exact: true }).click();
     await page.getByRole('option', { name: 'Satellite', exact: true }).click();
 

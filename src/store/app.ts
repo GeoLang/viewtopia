@@ -126,6 +126,9 @@ interface AppState {
   toggleNav: () => void;
   asideWidth: number;
   setAsideWidth: (w: number) => void;
+  /** presentation mode: every piece of chrome hidden, only the map (Ctrl+.) */
+  uiHidden: boolean;
+  toggleUiHidden: () => void;
 
   // Viewer
   activeTab: ViewerTab;
@@ -176,7 +179,7 @@ interface AppState {
 }
 
 const DEFAULT_SETTINGS: Settings = {
-  showMinimap: true,
+  showMinimap: false,
   showCoordReadout: true,
   showPreviewTools: false,
   defaultRenderer: 'cesium',
@@ -193,10 +196,12 @@ const DEFAULT_SETTINGS: Settings = {
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
-      navOpened: true,
+      navOpened: false,
       toggleNav: () => set((s) => ({ navOpened: !s.navOpened })),
       asideWidth: 340,
       setAsideWidth: (asideWidth) => set({ asideWidth: Math.max(250, Math.min(700, asideWidth)) }),
+      uiHidden: false,
+      toggleUiHidden: () => set((s) => ({ uiHidden: !s.uiHidden })),
 
       activeTab: 'globe',
       setActiveTab: (tab) => set({ activeTab: tab }),

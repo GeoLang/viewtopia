@@ -33,8 +33,14 @@ const PANEL = 'main > *, [class*="mantine-Modal-content"]';
 const NEEDS_KEY = {
   // the three jawg tile previews answer 400 without an access token
   'basemap-catalog': { testId: 'basemap-needs-key', host: 'tile.jawg.io' },
-  // the google embed answers 401 when built with an empty key
-  'street-view': { testId: 'street-view-needs-key', host: 'google.com/maps/embed' },
+  // the google embed answers 401 when built with an empty key. The panel opens
+  // on the keyless mapillary provider, so switch to google first: the state
+  // under test is google-without-a-key.
+  'street-view': {
+    testId: 'street-view-needs-key',
+    host: 'google.com/maps/embed',
+    prepare: (panel) => panel.getByText('Google', { exact: true }).click(),
+  },
 };
 
 /** how long a panel's own requests may stay on the wire before we give up on them */
@@ -48,8 +54,10 @@ const BOOT = 'app boot';
 const firstLine = (e) => String(e && e.message ? e.message : e).split('\n')[0];
 
 test('plugin panel sweep', async ({ page }) => {
-  // one boot, then an open/close cycle per plugin inside it
-  test.setTimeout(300000);
+  // one boot, then an open/close cycle per plugin inside it. Each plugin can
+  // hold the drain for its full 15s while basemap tiles stream, so the honest
+  // worst case is minutes, not the default 120s.
+  test.setTimeout(600000);
 
   const errors = new Map();
   /** request url -> whoever was open when it started */
@@ -112,7 +120,10 @@ test('plugin panel sweep', async ({ page }) => {
         await expect(panel).toBeVisible();
         await expect(panel).toHaveText(/\S/);
 
-        if (keyed) await expect(panel.getByTestId(keyed.testId).first()).toBeVisible();
+        if (keyed) {
+          if (keyed.prepare) await keyed.prepare(panel);
+          await expect(panel.getByTestId(keyed.testId).first()).toBeVisible();
+        }
 
         // Drain while the panel is still mounted: closing it first cancels its
         // in-flight requests, and a cancelled load never reaches the console.

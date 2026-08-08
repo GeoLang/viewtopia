@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Badge, Tabs, Group, Stack, Select, Button, Menu, ActionIcon, Tooltip } from '@mantine/core';
+import { Badge, Tabs, Group, Button, Menu, ActionIcon, Tooltip } from '@mantine/core';
 import {
   IconGlobe,
   IconMap,
@@ -25,7 +25,7 @@ import {
   IconWand,
   IconDots,
 } from '@tabler/icons-react';
-import { useAppStore, type Renderer, type Basemap, type ViewerTab } from '../store/app';
+import { useAppStore, type ViewerTab } from '../store/app';
 import { useFeaturePickerStore } from '../store/featurePicker';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { getPlugins } from '../plugins/registry';
@@ -39,42 +39,24 @@ import {
   type ToolMenuItem,
 } from './toolMenus';
 import { FlyToSearch } from './FlyToSearch';
-import { BASEMAP_SELECT_GROUPS } from '../hooks/basemapTiles';
 
-const TAB_DATA: { value: ViewerTab; label: string; icon: React.ReactNode }[] = [
-  { value: 'globe', label: '3D Globe', icon: <IconGlobe size={14} /> },
-  { value: 'map', label: '2D Map', icon: <IconMap size={14} /> },
-];
-
-const RENDERER_OPTIONS: { value: Renderer; label: string }[] = [
-  { value: 'cesium', label: 'CesiumJS' },
-  { value: 'maplibre', label: 'MapLibre' },
+const TAB_DATA: {
+  value: ViewerTab;
+  label: string;
+  ariaLabel: string;
+  icon: React.ReactNode;
+}[] = [
+  { value: 'globe', label: '3D', ariaLabel: '3D Globe', icon: <IconGlobe size={14} /> },
+  { value: 'map', label: '2D', ariaLabel: '2D Map', icon: <IconMap size={14} /> },
 ];
 
 export function ViewerToolbar() {
-  const { activeTab, setActiveTab, renderer, setRenderer, basemap, setBasemap, togglePanel } = useAppStore();
+  const { activeTab, setActiveTab, togglePanel } = useAppStore();
   const activePanel = useAppStore((s) => s.activePanel);
   const setPickerEnabled = useFeaturePickerStore((s) => s.setEnabled);
   const toggleSpaceTime = useSpaceTimeStore((s) => s.togglePanel);
   const showPreviewTools = useAppStore((s) => s.settings.showPreviewTools);
   const plugins = getPlugins();
-
-  // the 2d map is leaflet: the renderer choice doesn't apply, and vector
-  // styles can't render there (leaflet shows their raster approximation)
-  const onMapTab = activeTab === 'map';
-  const availableGroups = onMapTab
-    ? BASEMAP_SELECT_GROUPS.map((g) =>
-        g.group.startsWith('Vector')
-          ? { ...g, items: g.items.map((i) => ({ ...i, disabled: true })) }
-          : g,
-      )
-    : BASEMAP_SELECT_GROUPS;
-  // a plugin can set tiles outside the built-in list, and the select renders
-  // blank on a value with no matching option
-  const basemapGroups =
-    basemap === 'custom'
-      ? [...availableGroups, { group: 'Plugin', items: [{ value: 'custom', label: 'Custom' }] }]
-      : availableGroups;
 
   const renderMenuItems = (items: ToolMenuItem[]) =>
     visibleToolItems(items, showPreviewTools).map((item) => (
@@ -119,10 +101,8 @@ export function ViewerToolbar() {
 
   return (
     <Group
-      px="sm"
-      py={4}
-      justify="space-between"
-      style={{ borderBottom: '1px solid #30363d', background: '#161b22', overflowX: 'auto' }}
+      gap={6}
+      style={{ flex: 1, minWidth: 0, overflowX: 'auto' }}
       wrap="nowrap"
     >
       <Tabs
@@ -130,14 +110,16 @@ export function ViewerToolbar() {
         onChange={(v) => v && setActiveTab(v as ViewerTab)}
         variant="pills"
         radius="sm"
+        style={{ flexShrink: 0 }}
       >
-        <Tabs.List>
+        <Tabs.List style={{ flexWrap: 'nowrap' }}>
           {TAB_DATA.map((tab) => (
             <Tabs.Tab
               key={tab.value}
               value={tab.value}
               leftSection={tab.icon}
               size="xs"
+              aria-label={tab.ariaLabel}
             >
               {tab.label}
             </Tabs.Tab>
@@ -145,35 +127,8 @@ export function ViewerToolbar() {
         </Tabs.List>
       </Tabs>
 
-      <Group gap="xs" wrap="nowrap">
+      <Group gap={6} wrap="nowrap">
         <FlyToSearch />
-        <Stack gap={4}>
-          <Select
-            size="xs"
-            w={110}
-            aria-label="Renderer"
-            data={RENDERER_OPTIONS}
-            value={renderer}
-            disabled={onMapTab}
-            onChange={(v) => v && setRenderer(v as Renderer)}
-            styles={{
-              input: { background: '#0d1117', borderColor: '#30363d' },
-            }}
-          />
-
-          <Select
-            size="xs"
-            w={110}
-            aria-label="Basemap"
-            comboboxProps={{ width: 190, position: 'bottom-start' }}
-            data={basemapGroups}
-            value={basemap}
-            onChange={(v) => v && setBasemap(v as Basemap)}
-            styles={{
-              input: { background: '#0d1117', borderColor: '#30363d' },
-            }}
-          />
-        </Stack>
 
         <Tooltip label="Measure"><ActionIcon aria-label="Measure" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('measure')}><IconRuler size={14} /></ActionIcon></Tooltip>
         <Tooltip label="Layers"><ActionIcon aria-label="Layers" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('layers')}><IconStack2 size={14} /></ActionIcon></Tooltip>
@@ -276,28 +231,23 @@ export function ViewerToolbar() {
 
         <Menu shadow="md" width={160}>
           <Menu.Target>
-            <Button size="xs" variant="subtle" leftSection={<IconDots size={14} />}>
-              More
-            </Button>
+            <Tooltip label="More">
+              <ActionIcon aria-label="More" size="sm" variant="subtle" color="gray">
+                <IconDots size={14} />
+              </ActionIcon>
+            </Tooltip>
           </Menu.Target>
           <Menu.Dropdown>{renderMenuItems(MORE_MENU[0])}</Menu.Dropdown>
         </Menu>
 
-        <Button
-          size="xs"
-          variant="subtle"
-          leftSection={<IconSettings size={14} />}
-          onClick={() => togglePanel('settings')}
-        >
-          Settings
-        </Button>
-
         {plugins.length > 0 && (
           <Menu shadow="md" width={200}>
             <Menu.Target>
-              <Button size="xs" variant="subtle" leftSection={<IconCategory size={14} />}>
-                Plugins ({plugins.length})
-              </Button>
+              <Tooltip label={`Plugins (${plugins.length})`}>
+                <ActionIcon aria-label={`Plugins (${plugins.length})`} size="sm" variant="subtle" color="gray">
+                  <IconCategory size={14} />
+                </ActionIcon>
+              </Tooltip>
             </Menu.Target>
             <Menu.Dropdown>
               {plugins.map((p) => (
@@ -308,6 +258,18 @@ export function ViewerToolbar() {
             </Menu.Dropdown>
           </Menu>
         )}
+
+        <Tooltip label="Settings">
+          <ActionIcon
+            aria-label="Settings"
+            size="sm"
+            variant="subtle"
+            color="gray"
+            onClick={() => togglePanel('settings')}
+          >
+            <IconSettings size={14} />
+          </ActionIcon>
+        </Tooltip>
       </Group>
     </Group>
   );

@@ -1,15 +1,7 @@
-import {
-  Group,
-  ActionIcon,
-  Title,
-  Badge,
-  Select,
-  TextInput,
-  Button,
-  Tooltip,
-} from '@mantine/core';
+import { Group, ActionIcon, Title, Tooltip } from '@mantine/core';
 import {
   IconGlobe,
+  IconMessage,
   IconMoon,
   IconSun,
 } from '@tabler/icons-react';
@@ -21,10 +13,13 @@ import { OfflineIndicator } from '../offline/OfflineIndicator';
 import { ProjectSwitcher } from '../projects/ProjectSwitcher';
 import { AuthControl } from '../features/auth/AuthControl';
 import { LiveSessionControl } from '../live/LiveSessionControl';
+import { BackendStatus } from './BackendStatus';
+import { ViewerToolbar } from './ViewerToolbar';
 
 export function Header() {
-  const { tiletopiaOnline, geolangOnline } = useAppStore();
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
+  const navOpened = useAppStore((s) => s.navOpened);
+  const toggleNav = useAppStore((s) => s.toggleNav);
   const isMobile = useMediaQuery(MOBILE_QUERY, false, {
     getInitialValueInEffect: false,
   });
@@ -33,67 +28,35 @@ export function Header() {
     <Group
       h="100%"
       px={isMobile ? 'xs' : 'md'}
-      justify="space-between"
+      gap="sm"
       wrap="nowrap"
     >
       <Group gap="xs" wrap="nowrap">
         <IconGlobe size={20} color="#a78bfa" />
-        <Title order={4} c="white" fw={600} visibleFrom="xs">
+        <Title order={4} c="white" fw={600} visibleFrom="md">
           ViewTopia
         </Title>
-      </Group>
-
-      <Group gap="xs" wrap="nowrap">
-        {!isMobile && (
-          <>
-            <Badge
-              variant="dot"
-              color={tiletopiaOnline ? 'green' : 'red'}
-              size="xs"
-            >
-              TileTopia
-            </Badge>
-            <Badge
-              variant="dot"
-              color={geolangOnline ? 'green' : 'yellow'}
-              size="xs"
-            >
-              GeoLang
-            </Badge>
-          </>
-        )}
         <ProjectSwitcher />
         <LiveSessionControl />
-        {!isMobile && <OfflineIndicator />}
       </Group>
 
-      <Group gap="xs" wrap="nowrap">
+      {!isMobile && <ViewerToolbar />}
+
+      <Group gap="xs" wrap="nowrap" ml="auto">
+        {!isMobile && <OfflineIndicator />}
+        {!isMobile && <BackendStatus />}
+
         {!isMobile && (
-          <>
-            <Select
-              size="xs"
-              w={120}
-              data={[{ value: 'default', label: 'Session 1' }]}
-              defaultValue="default"
-              styles={{
-                input: { background: '#161b22', borderColor: '#30363d' },
-              }}
-            />
-            <TextInput
-              size="xs"
-              placeholder="Session name…"
-              w={130}
-              styles={{
-                input: { background: '#161b22', borderColor: '#30363d' },
-              }}
-            />
-            <Button size="xs" variant="subtle" color="violet">
-              + New
-            </Button>
-            <Button size="xs" variant="subtle" color="red">
-              Clear
-            </Button>
-          </>
+          <Tooltip label={navOpened ? 'Hide chat (Ctrl+B)' : 'Show chat (Ctrl+B)'}>
+            <ActionIcon
+              aria-label={navOpened ? 'Hide chat' : 'Show chat'}
+              variant={navOpened ? 'filled' : 'subtle'}
+              color="violet"
+              onClick={toggleNav}
+            >
+              <IconMessage size={16} />
+            </ActionIcon>
+          </Tooltip>
         )}
 
         <Tooltip label="Toggle theme">

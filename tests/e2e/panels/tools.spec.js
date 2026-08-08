@@ -86,6 +86,8 @@ async function openAppWithLayer(page) {
     );
   }, SESSION);
   await openApp(page);
+  // chat starts closed, and the replay control lives in its history
+  await page.getByRole('button', { name: 'Show chat' }).click();
   await page.getByTitle('Click to replay this result on the map').click();
   await expect
     .poll(() => entityCount(page, LAYER_NAME), { timeout: 30000 })

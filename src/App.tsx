@@ -2,6 +2,7 @@ import {
   MantineProvider,
   AppShell,
   Box,
+  Group,
   ActionIcon,
   Tooltip,
 } from '@mantine/core';
@@ -35,6 +36,8 @@ export function App() {
   const asideWidth = useAppStore((s) => s.asideWidth);
   const setAsideWidth = useAppStore((s) => s.setAsideWidth);
   const toggleNav = useAppStore((s) => s.toggleNav);
+  const uiHidden = useAppStore((s) => s.uiHidden);
+  const toggleUiHidden = useAppStore((s) => s.toggleUiHidden);
   const toggleSpaceTime = useSpaceTimeStore((s) => s.togglePanel);
 
   const isMobile = useMediaQuery(MOBILE_QUERY, false, {
@@ -64,6 +67,7 @@ export function App() {
     'ctrl+b': toggleChat,
     'b': toggleChat,
     't': toggleSpaceTime,
+    'ctrl+.': toggleUiHidden,
   });
 
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
@@ -98,11 +102,14 @@ export function App() {
       <Notifications position="top-right" />
       <ModalsProvider>
         <AppShell
-          header={{ height: 48 }}
+          header={{ height: 48, collapsed: uiHidden }}
           aside={{
             width: isMobile ? '100vw' : asideWidth,
             breakpoint: 'sm',
-            collapsed: { mobile: !mobileChatOpen, desktop: !navOpened },
+            collapsed: {
+              mobile: !mobileChatOpen || uiHidden,
+              desktop: !navOpened || uiHidden,
+            },
           }}
           padding={0}
         >
@@ -148,50 +155,57 @@ export function App() {
             <ChatPanel />
           </AppShell.Aside>
 
-          {/* Floating chat toggle button */}
-          <Tooltip label={chatOpen ? 'Hide chat (Ctrl+B)' : 'Show chat (Ctrl+B)'} position="left">
-            <ActionIcon
-              aria-label={chatOpen ? 'Hide chat' : 'Show chat'}
-              variant="filled"
-              color="violet"
-              size="lg"
-              radius="xl"
-              onClick={toggleChat}
-              style={{
-                position: 'fixed',
-                // on phones it rides just above the sheet so it never covers chat
-                ...(isMobile
-                  ? {
-                      bottom: mobileChatOpen
-                        ? `calc(${MOBILE_SHEET_HEIGHT} + 12px)`
-                        : 24,
-                      right: 12,
-                    }
-                  : { top: 56, right: 8 }),
-                zIndex: 400,
-              }}
-            >
-              {isMobile && chatOpen ? <IconX size={18} /> : <IconMenu2 size={18} />}
-            </ActionIcon>
-          </Tooltip>
+          {/* Floating chat toggle: phones only, desktop has the header icon */}
+          {isMobile && !uiHidden && (
+            <Tooltip label={chatOpen ? 'Hide chat (Ctrl+B)' : 'Show chat (Ctrl+B)'} position="left">
+              <ActionIcon
+                aria-label={chatOpen ? 'Hide chat' : 'Show chat'}
+                variant="filled"
+                color="violet"
+                size="lg"
+                radius="xl"
+                onClick={toggleChat}
+                style={{
+                  position: 'fixed',
+                  // it rides just above the sheet so it never covers chat
+                  bottom: mobileChatOpen ? `calc(${MOBILE_SHEET_HEIGHT} + 12px)` : 24,
+                  right: 12,
+                  zIndex: 400,
+                }}
+              >
+                {chatOpen ? <IconX size={18} /> : <IconMenu2 size={18} />}
+              </ActionIcon>
+            </Tooltip>
+          )}
 
           <AppShell.Main
             style={{
               background: '#0d1117',
               display: 'flex',
               flexDirection: 'column',
-              height: 'calc(100vh - 48px)',
+              height: uiHidden ? '100vh' : 'calc(100vh - 48px)',
               position: 'relative',
             }}
           >
-            <ViewerToolbar />
+            {isMobile && !uiHidden && (
+              <Group
+                px="sm"
+                py={4}
+                style={{ borderBottom: '1px solid #30363d', background: '#161b22', overflowX: 'auto' }}
+                wrap="nowrap"
+              >
+                <ViewerToolbar />
+              </Group>
+            )}
             <ErrorBoundary fallbackMessage="Map viewer encountered an error">
               <ViewerArea />
             </ErrorBoundary>
-            <ErrorBoundary fallbackMessage="SpaceTime panel error">
-              <SpaceTimePanel />
-            </ErrorBoundary>
-            <ToolPanels />
+            {!uiHidden && (
+              <ErrorBoundary fallbackMessage="SpaceTime panel error">
+                <SpaceTimePanel />
+              </ErrorBoundary>
+            )}
+            {!uiHidden && <ToolPanels />}
             <MapPresence />
           </AppShell.Main>
         </AppShell>

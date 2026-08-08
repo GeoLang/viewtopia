@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { crc32, deflateSync } from 'node:zlib';
 import { allowConsoleError, test, expect } from '../console-guard';
-import { PANEL, MENU_ITEM, openApp } from '../panel-helpers';
+import { PANEL, MENU_ITEM, openApp, openBasemapRendererControl } from '../panel-helpers';
 import { mintToken, platformAuthHeaders } from '../../../scripts/platform-token.mjs';
 
 /**
@@ -525,6 +525,7 @@ test.describe('Data panels', () => {
 
     // the panel draws on MapLibre, so switch renderer and put the map over the
     // parcels before adding the source
+    await openBasemapRendererControl(page);
     await page.getByRole('textbox', { name: 'Renderer' }).click();
     await page.getByRole('option', { name: 'MapLibre' }).click();
     await page.waitForFunction(() => window.__viewtopiaMap?.isStyleLoaded(), null, {
@@ -753,6 +754,7 @@ test.describe('Data panels', () => {
     });
 
     await openViewer(page);
+    await openBasemapRendererControl(page);
     await page.getByRole('textbox', { name: 'Renderer' }).click();
     await page.getByRole('option', { name: 'MapLibre' }).click();
     await page.waitForFunction(() => window.__viewtopiaMap?.isStyleLoaded(), null, {
@@ -809,6 +811,7 @@ test.describe('Data panels', () => {
     // rather than claiming relief that went with it
     await panel.getByRole('button', { name: 'Enable Terrain' }).click();
     await expect(status).toHaveText('Platform terrain enabled');
+    await openBasemapRendererControl(page);
     await page.getByRole('textbox', { name: 'Renderer' }).click();
     await page.getByRole('option', { name: 'CesiumJS' }).click();
     await page.waitForFunction(() => !!window.__viewtopiaViewer, null, { timeout: 30000 });

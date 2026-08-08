@@ -1,5 +1,5 @@
 import { test, expect } from '../console-guard';
-import { PANEL, MENU_ITEM, openApp } from '../panel-helpers';
+import { PANEL, MENU_ITEM, openApp, openBasemapRendererControl } from '../panel-helpers';
 import { mintToken } from '../../../scripts/platform-token.mjs';
 
 /**
@@ -105,6 +105,7 @@ const namedEntityCount = (page, name) =>
  * bbox a panel reads can only have come from the renderer on screen.
  */
 async function useMapLibreAt(page, view) {
+  await openBasemapRendererControl(page);
   await page.getByRole('textbox', { name: 'Renderer' }).click();
   await page.getByRole('option', { name: 'MapLibre' }).click();
   await page.waitForFunction(() => window.__viewtopiaMap?.isStyleLoaded(), null, { timeout: 60000 });

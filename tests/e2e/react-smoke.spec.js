@@ -129,7 +129,8 @@ test.describe('React shell smoke', () => {
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto(REACT_URL);
-    // Switch renderer Cesium → MapLibre via the toolbar Select.
+    // Switch renderer Cesium → MapLibre via the map-corner control's Select.
+    await page.getByRole('button', { name: 'Basemap & renderer' }).click();
     await page.locator('input[aria-label="Renderer"]').click();
     await page.getByRole('option', { name: 'MapLibre' }).click();
     await expect(page.locator('#maplibre-container canvas').first()).toBeVisible({

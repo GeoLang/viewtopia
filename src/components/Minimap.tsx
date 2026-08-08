@@ -19,7 +19,8 @@ export function Minimap() {
   const isMobile = useMediaQuery(MOBILE_QUERY, false, {
     getInitialValueInEffect: false,
   });
-  const hidden = !settings.showMinimap || isMobile;
+  const uiHidden = useAppStore((s) => s.uiHidden);
+  const hidden = !settings.showMinimap || isMobile || uiHidden;
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const rectRef = useRef<L.Rectangle | null>(null);

@@ -50,7 +50,7 @@ export function FlyToSearch() {
   return (
     <TextInput
       size="xs"
-      w={180}
+      w={140}
       aria-label="Fly to place"
       placeholder="Fly to place…"
       value={query}

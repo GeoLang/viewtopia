@@ -6,6 +6,18 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-08: **the map owns the viewport (UI polish phase 1)**. The chat
+  sidebar starts closed and toggles from a header icon (Ctrl+B unchanged, on
+  phones the floating button remains); its header session switcher is the one
+  session control, the dead Session 1/name/New/Clear row is gone. The toolbar
+  merged into the single header row: brand and project left, viewer tabs and
+  tools in the middle, offline/status/chat/theme right, with More, Plugins and
+  Settings as icon buttons. The renderer and basemap selects moved off the
+  toolbar into a map-corner popover control, the TILETOPIA/GEOLANG chips folded
+  into one status dot with a per-service popover, and the minimap is off by
+  default (Settings still has it). Ctrl+. (Cmd+. on mac) hides every piece of
+  chrome for a map-only view. Map is now >90% of the viewport at rest.
+
 - 2026-08-07: **one presence system, agora's**. Clicking a peer avatar in the live
   session header follows that peer: the local camera lands on every presence
   viewport they report until a local camera gesture takes it back, or a second

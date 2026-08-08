@@ -8,11 +8,12 @@ import { useLiveKitStore } from '../../src/store/livekit';
 describe('app store', () => {
   it('toggles nav', () => {
     const { toggleNav } = useAppStore.getState();
-    expect(useAppStore.getState().navOpened).toBe(true);
-    toggleNav();
+    // chat starts closed so the map owns the viewport
     expect(useAppStore.getState().navOpened).toBe(false);
     toggleNav();
     expect(useAppStore.getState().navOpened).toBe(true);
+    toggleNav();
+    expect(useAppStore.getState().navOpened).toBe(false);
   });
 
   it('sets active tab and renderer', () => {

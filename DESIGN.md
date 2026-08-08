@@ -335,6 +335,15 @@ model scores 1.00 over the 10-task set.
 
 ### 2.6 ViewTopia internals (this repo)
 
+**Shell layout.** One 48px header row holds everything: brand and project switcher left, the
+viewer toolbar (tab pills, fly-to, tool icons and menus) in the middle, offline indicator,
+backend status dot, chat toggle and theme toggle right. The chat sidebar starts closed and the
+chat panel owns session management. The renderer and basemap selects live in a popover behind a
+map-corner button, not in the toolbar. The minimap is opt-in via Settings. Ctrl+. (metaKey maps
+to the same combo, so Cmd+. on mac) collapses header, aside, panels and map widgets for a
+map-only view. On phones the toolbar is its own scrollable row under the header and chat is a
+bottom sheet with a floating toggle.
+
 **Renderers.** Two globe renderers, not three: CesiumJS (3D globe) and MapLibre GL (vector
 globe) with the deck.gl data-viz layers interleaved into MapLibre through `MapboxOverlay`
 (`@deck.gl/mapbox`, `interleaved: true`), so analysis/agent/panel layers draw in the same view

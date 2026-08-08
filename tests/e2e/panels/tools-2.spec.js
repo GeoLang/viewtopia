@@ -154,6 +154,8 @@ test.describe('Tools panels (batch 2)', () => {
     await openApp(page);
 
     // put the parcels on the globe, so the panel has a data source to read
+    // (chat starts closed, and the replay control lives in its history)
+    await page.getByRole('button', { name: 'Show chat' }).click();
     await page.getByTitle('Click to replay this result on the map').click();
     await page.waitForFunction(
       () => {

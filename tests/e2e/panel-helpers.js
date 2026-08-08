@@ -7,6 +7,15 @@ import { expect } from '@playwright/test';
 /** A panel is either a Paper appended next to the viewer or a modal in a portal. */
 export const PANEL = 'main > [class*="mantine-Paper-root"], [class*="mantine-Modal-content"]';
 
+/**
+ * The renderer and basemap selects live in a popover behind the map-corner
+ * button. Selecting an option closes it (the select's dropdown is a portal,
+ * so the click lands outside the popover), so reopen before every use.
+ */
+export async function openBasemapRendererControl(page) {
+  await page.getByRole('button', { name: 'Basemap & renderer' }).click();
+}
+
 export const MENU_ITEM = '[class*="mantine-Menu-dropdown"] [class*="mantine-Menu-item"]';
 
 /** Boot the app with preview tools visible and the default renderer up. */

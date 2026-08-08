@@ -14,6 +14,9 @@ export default defineConfig({
   timeout: 120000,
   // 8 workers gives spurious timeouts on a loaded box; 4 is stable
   workers: 4,
+  // same reason as the panels config: a starved swiftshader worker can miss a
+  // 5s visibility window, and the retry lands when the queue has drained
+  retries: 1,
   use: {
     baseURL: 'http://localhost:5174',
     headless: true,
