@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Paper, Text, Stack, Group, ActionIcon, Button, Slider } from '@mantine/core';
-import { IconEye, IconX } from '@tabler/icons-react';
+import { Text, Stack, Group, Button, Slider } from '@mantine/core';
+import { IconEye } from '@tabler/icons-react';
 import {
   Math as CesiumMath,
   ScreenSpaceEventHandler,
@@ -8,6 +8,7 @@ import {
   type Cartesian2,
   type GeoJsonDataSource,
 } from 'cesium';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { renderGeoJson } from '../../viewer/renderGeoJson';
 import { useAuthStore } from '../../features/auth/store';
@@ -70,31 +71,12 @@ export function ViewshedPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 260,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconEye size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Viewshed Analysis
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={260}>
+      <PanelHeader
+        icon={<IconEye size={16} />}
+        title="Viewshed Analysis"
+        onClose={onClose}
+      />
 
       <Stack gap="xs">
         <Button
@@ -146,6 +128,6 @@ export function ViewshedPanel({ onClose }: { onClose: () => void }) {
           </Text>
         )}
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

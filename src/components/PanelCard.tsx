@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
-import { ActionIcon, Group, Paper, Text } from '@mantine/core';
+import { ActionIcon, Box, Group, Paper, Text } from '@mantine/core';
 import { IconX } from '@tabler/icons-react';
 
 const PANEL_TOP = 60;
@@ -47,21 +47,27 @@ export function PanelCard({ width, anchor = 'right', maxHeight, children }: Pane
 }
 
 interface PanelHeaderProps {
+  /** rendered in the accent color; icons inherit it via currentColor */
   icon: ReactNode;
   title: string;
   onClose: () => void;
   /** extra ActionIcons rendered left of the close button */
   actions?: ReactNode;
+  /** rendered right of the title, e.g. a count Badge */
+  badge?: ReactNode;
 }
 
-export function PanelHeader({ icon, title, onClose, actions }: PanelHeaderProps) {
+export function PanelHeader({ icon, title, onClose, actions, badge }: PanelHeaderProps) {
   return (
     <Group justify="space-between" mb="xs">
       <Group gap="xs">
-        {icon}
+        <Box c="violet.4" display="flex">
+          {icon}
+        </Box>
         <Text size="sm" fw={600} c="white">
           {title}
         </Text>
+        {badge}
       </Group>
       <Group gap={4}>
         {actions}

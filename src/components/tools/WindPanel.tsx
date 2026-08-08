@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Paper, Text, Stack, Group, ActionIcon, Button, Loader, Slider } from '@mantine/core';
-import { IconWind, IconX, IconRefresh } from '@tabler/icons-react';
+import { Text, Stack, Group, ActionIcon, Button, Loader, Slider } from '@mantine/core';
+import { IconWind, IconRefresh } from '@tabler/icons-react';
 import { LineLayer, ScatterplotLayer } from '@deck.gl/layers';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import {
   getViewBounds,
   fetchWeatherGrid,
@@ -114,36 +115,17 @@ export function WindPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 260,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconWind size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Wind Field
-          </Text>
-        </Group>
-        <Group gap={4}>
+    <PanelCard width={260}>
+      <PanelHeader
+        icon={<IconWind size={16} />}
+        title="Wind Field"
+        onClose={handleClose}
+        actions={
           <ActionIcon size="sm" variant="subtle" color="gray" onClick={() => load()} aria-label="Refresh wind">
             <IconRefresh size={14} />
           </ActionIcon>
-          <ActionIcon size="sm" variant="subtle" color="gray" onClick={handleClose}>
-            <IconX size={14} />
-          </ActionIcon>
-        </Group>
-      </Group>
+        }
+      />
 
       <Stack gap="xs">
         {loading && (
@@ -199,6 +181,6 @@ export function WindPanel({ onClose }: { onClose: () => void }) {
           Refresh
         </Button>
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

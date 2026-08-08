@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Paper, Text, Stack, Group, ActionIcon, Slider, Button } from '@mantine/core';
-import { IconDroplet, IconX } from '@tabler/icons-react';
+import { Text, Stack, Group, Slider, Button } from '@mantine/core';
+import { IconDroplet } from '@tabler/icons-react';
 import type { GeoJsonDataSource } from 'cesium';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { renderGeoJson } from '../../viewer/renderGeoJson';
 import { useAppStore } from '../../store/app';
@@ -62,31 +63,12 @@ export function FloodPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 260,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconDroplet size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Flood Simulation
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={260}>
+      <PanelHeader
+        icon={<IconDroplet size={16} />}
+        title="Flood Simulation"
+        onClose={onClose}
+      />
 
       <Stack gap="xs">
         <Text size="xs" c="dimmed">
@@ -129,6 +111,6 @@ export function FloodPanel({ onClose }: { onClose: () => void }) {
           </Text>
         )}
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

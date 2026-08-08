@@ -5,7 +5,6 @@
  */
 import { useState } from 'react';
 import {
-  ActionIcon,
   Alert,
   Badge,
   Button,
@@ -33,8 +32,8 @@ import {
   IconTopologyRing3,
   IconUpload,
   IconVector,
-  IconX,
 } from '@tabler/icons-react';
+import { PanelHeader } from '../components/PanelCard';
 import { loadCogFromUrl, loadCogFromBuffer, type LoadedRaster } from './loader';
 import { computeBandMath, computeStats } from './operations';
 import * as engine from './engine';
@@ -348,22 +347,16 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
         width: 320,
         maxHeight: 'calc(100vh - 120px)',
         overflowY: 'auto',
-        background: '#161b22',
-        border: '1px solid #30363d',
+        background: 'var(--mantine-color-dark-7)',
+        border: '1px solid var(--mantine-color-dark-5)',
         zIndex: 300,
       }}
     >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconSatellite size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Raster Analysis
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+      <PanelHeader
+        icon={<IconSatellite size={16} />}
+        title="Raster Analysis"
+        onClose={onClose}
+      />
 
       <Stack gap="xs">
         <Group gap="xs" wrap="nowrap">
@@ -410,7 +403,7 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
             <Divider label="Operations" labelPosition="center" />
 
             {raster.metadata.bands >= 2 && (
-              <Paper p="xs" withBorder bg="#0d1117">
+              <Paper p="xs" withBorder bg="var(--mantine-color-dark-8)">
                 <Group justify="space-between" mb={4}>
                   <Group gap={4}>
                     <IconLeaf size={14} />
@@ -468,7 +461,7 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
               </Paper>
             )}
 
-            <Paper p="xs" withBorder bg="#0d1117">
+            <Paper p="xs" withBorder bg="var(--mantine-color-dark-8)">
               <Group justify="space-between" mb={4}>
                 <Group gap={4}>
                   <IconMountain size={14} />
@@ -517,7 +510,7 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
               </Group>
             </Paper>
 
-            <Paper p="xs" withBorder bg="#0d1117">
+            <Paper p="xs" withBorder bg="var(--mantine-color-dark-8)">
               <Group justify="space-between" mb={4}>
                 <Text size="xs" fw={500} c="white">
                   Slope
@@ -545,7 +538,7 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
               />
             </Paper>
 
-            <Paper p="xs" withBorder bg="#0d1117">
+            <Paper p="xs" withBorder bg="var(--mantine-color-dark-8)">
               <Group justify="space-between">
                 <Text size="xs" fw={500} c="white">
                   Aspect
@@ -562,7 +555,7 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
               </Group>
             </Paper>
 
-            <Paper p="xs" withBorder bg="#0d1117">
+            <Paper p="xs" withBorder bg="var(--mantine-color-dark-8)">
               <Group justify="space-between" mb={4}>
                 <Group gap={4}>
                   <IconCalculator size={14} />
@@ -594,7 +587,7 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
               </Text>
             </Paper>
 
-            <Paper p="xs" withBorder bg="#0d1117">
+            <Paper p="xs" withBorder bg="var(--mantine-color-dark-8)">
               <Group justify="space-between" mb={4}>
                 <Group gap={4}>
                   <IconTopologyRing3 size={14} />
@@ -623,7 +616,7 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
               />
             </Paper>
 
-            <Paper p="xs" withBorder bg="#0d1117">
+            <Paper p="xs" withBorder bg="var(--mantine-color-dark-8)">
               <Group justify="space-between" mb={4}>
                 <Group gap={4}>
                   <IconStack2 size={14} />
@@ -677,7 +670,7 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
               <ReclassEditor classes={reclassClasses} onChange={setReclassClasses} />
             </Paper>
 
-            <Paper p="xs" withBorder bg="#0d1117">
+            <Paper p="xs" withBorder bg="var(--mantine-color-dark-8)">
               <Group justify="space-between" mb={4}>
                 <Group gap={4}>
                   <IconVector size={14} />
@@ -710,7 +703,7 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
               </Text>
             </Paper>
 
-            <Paper p="xs" withBorder bg="#0d1117">
+            <Paper p="xs" withBorder bg="var(--mantine-color-dark-8)">
               <Group justify="space-between" mb={4}>
                 <Group gap={4}>
                   <IconGridDots size={14} />
@@ -774,7 +767,7 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
               </Group>
             </Paper>
 
-            <Paper p="xs" withBorder bg="#0d1117">
+            <Paper p="xs" withBorder bg="var(--mantine-color-dark-8)">
               <Group justify="space-between" mb={4}>
                 <Group gap={4}>
                   <IconChartHistogram size={14} />
@@ -847,7 +840,7 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
         )}
 
         {result && (
-          <Paper p="xs" withBorder bg="#0d1117">
+          <Paper p="xs" withBorder bg="var(--mantine-color-dark-8)">
             <Text size="xs" fw={500} c="white" mb={4}>
               Result: {result.operation}
             </Text>
@@ -878,7 +871,7 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
         )}
 
         {vector && (
-          <Paper p="xs" withBorder bg="#0d1117">
+          <Paper p="xs" withBorder bg="var(--mantine-color-dark-8)">
             <Text size="xs" fw={500} c="white">
               {vector.summary}
             </Text>

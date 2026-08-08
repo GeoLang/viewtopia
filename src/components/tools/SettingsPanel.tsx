@@ -3,15 +3,14 @@ import {
   Paper,
   Text,
   Stack,
-  Group,
-  ActionIcon,
   Switch,
   Select,
   Slider,
   Divider,
   TextInput,
 } from '@mantine/core';
-import { IconSettings, IconX } from '@tabler/icons-react';
+import { IconSettings } from '@tabler/icons-react';
+import { PanelHeader } from '../PanelCard';
 import { useAppStore, type Renderer, type Basemap } from '../../store/app';
 import { BASEMAP_SELECT_GROUPS, isPmtilesUrl } from '../../hooks/basemapTiles';
 import { apiHeaders } from '../../lib/apiAuth';
@@ -30,23 +29,17 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         top: 60,
         right: 16,
         width: 300,
-        background: '#161b22',
-        border: '1px solid #30363d',
+        background: 'var(--mantine-color-dark-7)',
+        border: '1px solid var(--mantine-color-dark-5)',
         // above the nav toggle (zIndex 400) so the close X isn't covered
         zIndex: 500,
       }}
     >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconSettings size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Settings
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+      <PanelHeader
+        icon={<IconSettings size={16} />}
+        title="Settings"
+        onClose={onClose}
+      />
 
       <Stack gap="xs">
         <Text size="xs" c="dimmed" fw={600}>Display</Text>
@@ -72,7 +65,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           onChange={(e) => updateSettings({ showPreviewTools: e.currentTarget.checked })}
           color="violet"
         />
-        <Divider color="#30363d" />
+        <Divider color="var(--mantine-color-dark-5)" />
         <Text size="xs" c="dimmed" fw={600}>Defaults</Text>
 
         <Select
@@ -110,7 +103,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           onChange={(e) => updateSettings({ selfHostedBasemapUrl: e.currentTarget.value })}
         />
 
-        <Divider color="#30363d" />
+        <Divider color="var(--mantine-color-dark-5)" />
         <Text size="xs" c="dimmed" fw={600}>Backend</Text>
 
         <TextInput
@@ -148,11 +141,11 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           color="violet"
         />
 
-        <Divider color="#30363d" />
+        <Divider color="var(--mantine-color-dark-5)" />
         <Text size="xs" c="dimmed" fw={600}>AI Model</Text>
         <AiModelSelect />
 
-        <Divider color="#30363d" />
+        <Divider color="var(--mantine-color-dark-5)" />
         <Text size="xs" c="dimmed" fw={600}>Plugin Settings</Text>
         <PluginSettingsPanel />
       </Stack>

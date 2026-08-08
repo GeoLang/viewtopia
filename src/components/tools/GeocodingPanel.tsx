@@ -37,7 +37,7 @@ export function GeocodingPanel({ onFlyTo, onClose }: GeocodingPanelProps) {
   return (
     <PanelCard width={400} anchor="center" maxHeight="50vh">
       <PanelHeader
-        icon={<IconSearch size={16} color="#a78bfa" />}
+        icon={<IconSearch size={16} />}
         title="Search Places"
         onClose={onClose}
       />
@@ -63,14 +63,14 @@ export function GeocodingPanel({ onFlyTo, onClose }: GeocodingPanelProps) {
               key={`${r.lat},${r.lng},${i}`}
               p="xs"
               style={{
-                background: '#21262d',
+                background: 'var(--mantine-color-dark-6)',
                 borderRadius: 4,
                 cursor: 'pointer',
               }}
               onClick={() => onFlyTo(r.lat, r.lng, 12)}
               wrap="nowrap"
             >
-              <IconMapPin size={14} color="#a78bfa" />
+              <IconMapPin size={14} style={{ color: 'var(--mantine-color-violet-4)' }} />
               <Stack gap={0} flex={1}>
                 <Text size="xs" c="white" lineClamp={1}>
                   {r.label}

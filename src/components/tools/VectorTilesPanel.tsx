@@ -130,7 +130,7 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
   return (
     <PanelCard width={320} maxHeight="55vh">
       <PanelHeader
-        icon={<IconVectorTriangle size={16} color="#a78bfa" />}
+        icon={<IconVectorTriangle size={16} />}
         title="Vector Tiles"
         onClose={onClose}
       />
@@ -187,7 +187,7 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
               key={s.id}
               justify="space-between"
               p="xs"
-              style={{ background: '#21262d', borderRadius: 4, marginBottom: 4 }}
+              style={{ background: 'var(--mantine-color-dark-6)', borderRadius: 4, marginBottom: 4 }}
               wrap="nowrap"
             >
               <Text size="xs" c="white" lineClamp={1}>

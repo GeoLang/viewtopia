@@ -18,7 +18,7 @@ export function CoordReadout() {
         // to the right of the basemap control button in the corner
         left: 60,
         background: 'rgba(13, 17, 23, 0.9)',
-        border: '1px solid #30363d',
+        border: '1px solid var(--mantine-color-dark-5)',
         borderRadius: 6,
         padding: '4px 10px',
         zIndex: 200,

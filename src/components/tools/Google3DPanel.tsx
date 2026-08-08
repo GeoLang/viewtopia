@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Paper, Text, Stack, Group, ActionIcon, TextInput, Switch } from '@mantine/core';
-import { IconBrandGoogle, IconX } from '@tabler/icons-react';
+import { Text, Stack, TextInput, Switch } from '@mantine/core';
+import { IconBrandGoogle } from '@tabler/icons-react';
 import { Cesium3DTileset } from 'cesium';
 import type { Viewer } from 'cesium';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { useAppStore } from '../../store/app';
 
@@ -65,33 +66,14 @@ export function Google3DPanel({ onClose }: { onClose: () => void }) {
   };
 
   const shell = (children: ReactNode) => (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 280,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconBrandGoogle size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Google 3D Tiles
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={280}>
+      <PanelHeader
+        icon={<IconBrandGoogle size={16} />}
+        title="Google 3D Tiles"
+        onClose={onClose}
+      />
       {children}
-    </Paper>
+    </PanelCard>
   );
 
   if (!viewer) {

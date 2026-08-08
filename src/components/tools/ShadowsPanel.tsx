@@ -1,17 +1,15 @@
 import { useEffect, useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
-  Group,
-  ActionIcon,
   Switch,
   Slider,
   Select,
   TextInput,
 } from '@mantine/core';
-import { IconShadow, IconX } from '@tabler/icons-react';
+import { IconShadow } from '@tabler/icons-react';
 import { JulianDate } from 'cesium';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 
 /** Build a JulianDate for the given yyyy-mm-dd date at a fractional hour (local). */
@@ -51,31 +49,12 @@ export function ShadowsPanel({ onClose }: { onClose: () => void }) {
   }, [enabled, hour, date, softShadows, darkness, size, timeLabel]);
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 260,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconShadow size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Shadow Analysis
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={260}>
+      <PanelHeader
+        icon={<IconShadow size={16} />}
+        title="Shadow Analysis"
+        onClose={onClose}
+      />
 
       <Stack gap="xs">
         <Switch
@@ -118,6 +97,6 @@ export function ShadowsPanel({ onClose }: { onClose: () => void }) {
 
         <Text size="xs" c="green" data-testid="shadows-status">{status}</Text>
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

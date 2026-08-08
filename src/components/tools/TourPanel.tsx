@@ -31,7 +31,7 @@ export function TourPanel({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const el = document.querySelector(current.target);
     if (el) {
-      (el as HTMLElement).style.outline = '2px solid #a78bfa';
+      (el as HTMLElement).style.outline = '2px solid var(--mantine-color-violet-4)';
       (el as HTMLElement).style.outlineOffset = '2px';
       return () => {
         (el as HTMLElement).style.outline = '';
@@ -51,14 +51,14 @@ export function TourPanel({ onClose }: { onClose: () => void }) {
         left: '50%',
         transform: 'translate(-50%, -50%)',
         width: 360,
-        background: '#161b22',
-        border: '1px solid #30363d',
+        background: 'var(--mantine-color-dark-7)',
+        border: '1px solid var(--mantine-color-dark-5)',
         zIndex: 500,
       }}
     >
       <Group justify="space-between" mb="xs">
         <Group gap="xs">
-          <IconInfoCircle size={16} color="#a78bfa" />
+          <IconInfoCircle size={16} style={{ color: 'var(--mantine-color-violet-4)' }} />
           <Text size="sm" fw={600} c="white">
             {current.title}
           </Text>

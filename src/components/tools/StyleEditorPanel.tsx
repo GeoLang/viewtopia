@@ -1,17 +1,16 @@
 import { useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
-  ActionIcon,
   Button,
   TextInput,
   Slider,
   Divider,
 } from '@mantine/core';
-import { IconPalette, IconX } from '@tabler/icons-react';
+import { IconPalette } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import {
   colorByProperty,
   colorByHeight,
@@ -39,31 +38,12 @@ export function StyleEditorPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 300,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconPalette size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Style Editor
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={300}>
+      <PanelHeader
+        icon={<IconPalette size={16} />}
+        title="Style Editor"
+        onClose={onClose}
+      />
 
       <Stack gap="sm">
         <Stack gap={4}>
@@ -101,7 +81,7 @@ export function StyleEditorPanel({ onClose }: { onClose: () => void }) {
           Reset Style
         </Button>
 
-        <Divider color="#30363d" />
+        <Divider color="dark.5" />
 
         <Stack gap={4}>
           <Text size="xs" c="dimmed">
@@ -135,6 +115,6 @@ export function StyleEditorPanel({ onClose }: { onClose: () => void }) {
           />
         </Stack>
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

@@ -33,7 +33,7 @@ export function MapView({ center, zoom }: { center: [number, number]; zoom: numb
   return (
     <div
       ref={containerRef}
-      style={{ height: 140, borderRadius: 8, overflow: 'hidden', background: '#0d1117' }}
+      style={{ height: 140, borderRadius: 8, overflow: 'hidden', background: 'var(--mantine-color-dark-8)' }}
     />
   );
 }

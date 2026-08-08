@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
@@ -11,8 +10,9 @@ import {
   ScrollArea,
   Badge,
 } from '@mantine/core';
-import { IconMapPin, IconX, IconTrash } from '@tabler/icons-react';
+import { IconMapPin, IconTrash } from '@tabler/icons-react';
 import { Cartesian2, Math as CesiumMath } from 'cesium';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { getSharedCamera } from '../../hooks/sharedCamera';
 import { useAnnotationStore } from '../../store/annotations';
@@ -102,37 +102,17 @@ export function AnnotatePanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 280,
-        maxHeight: 'calc(100vh - 120px)',
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconMapPin size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Annotations
-          </Text>
+    <PanelCard width={280} maxHeight="calc(100vh - 120px)">
+      <PanelHeader
+        icon={<IconMapPin size={16} />}
+        title="Annotations"
+        onClose={onClose}
+        badge={
           <Badge size="xs" variant="light" color="violet" data-testid="annotate-count">
             {annotations.length}
           </Badge>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+        }
+      />
 
       <Stack gap="xs">
         <TextInput
@@ -175,7 +155,7 @@ export function AnnotatePanel({ onClose }: { onClose: () => void }) {
             <Group
               key={a.id}
               p="xs"
-              style={{ background: '#21262d', borderRadius: 4 }}
+              style={{ background: 'var(--mantine-color-dark-6)', borderRadius: 4 }}
               justify="space-between"
               wrap="nowrap"
             >
@@ -197,6 +177,6 @@ export function AnnotatePanel({ onClose }: { onClose: () => void }) {
           ))}
         </Stack>
       </ScrollArea>
-    </Paper>
+    </PanelCard>
   );
 }

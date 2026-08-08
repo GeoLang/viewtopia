@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
-  ActionIcon,
   Button,
   Slider,
   Select,
@@ -15,7 +13,8 @@ import type {
   Map as MapLibreMap,
   MapSourceDataEvent,
 } from 'maplibre-gl';
-import { IconClock, IconX, IconPlayerPlay, IconPlayerPause } from '@tabler/icons-react';
+import { IconClock, IconPlayerPlay, IconPlayerPause } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveMapLibre, getPaneMapLibre } from '../../viewer/registry';
 import { useAppStore } from '../../store/app';
 import { useSplitViewStore, type PaneRenderer } from '../../store/splitView';
@@ -313,31 +312,12 @@ export function TimelapsePanel({ onClose }: { onClose: () => void }) {
   const stepData = steps.map((s, i) => ({ value: String(i), label: stepLabel(s, stepSize) }));
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 280,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconClock size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Timelapse
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={280}>
+      <PanelHeader
+        icon={<IconClock size={16} />}
+        title="Timelapse"
+        onClose={onClose}
+      />
 
       {!hasMap ? (
         <Text size="xs" c="orange">
@@ -505,6 +485,6 @@ export function TimelapsePanel({ onClose }: { onClose: () => void }) {
           )}
         </Stack>
       )}
-    </Paper>
+    </PanelCard>
   );
 }

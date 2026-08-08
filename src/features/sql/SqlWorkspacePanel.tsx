@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
-  ActionIcon,
   Button,
   Textarea,
   TextInput,
@@ -14,13 +12,13 @@ import {
 } from '@mantine/core';
 import {
   IconDatabase,
-  IconX,
   IconPlayerPlay,
   IconMap,
   IconDownload,
   IconLink,
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
+import { PanelCard, PanelHeader } from '../../components/PanelCard';
 import { query, queryAsGeoJson, NoGeometryError } from '../../duckdb';
 import { exportQuery, type ExportFormat } from '../../duckdb/exportFile';
 import { attachCsvUrl, attachParquetUrl } from '../../duckdb/loaders';
@@ -184,31 +182,12 @@ export function SqlWorkspacePanel({ onClose }: { onClose: () => void }) {
   const shown = results ? results.rows.slice(0, MAX_ROWS) : [];
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 460,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconDatabase size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            SQL
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={460}>
+      <PanelHeader
+        icon={<IconDatabase size={16} />}
+        title="SQL"
+        onClose={onClose}
+      />
 
       <Stack gap="xs">
         <Textarea
@@ -226,8 +205,8 @@ export function SqlWorkspacePanel({ onClose }: { onClose: () => void }) {
           data-testid="sql-editor"
           styles={{
             input: {
-              background: '#0d1117',
-              borderColor: '#30363d',
+              background: 'var(--mantine-color-dark-8)',
+              borderColor: 'var(--mantine-color-dark-5)',
               fontFamily: 'monospace',
               fontSize: 12,
             },
@@ -353,7 +332,7 @@ export function SqlWorkspacePanel({ onClose }: { onClose: () => void }) {
                 <Text
                   key={entry}
                   size="xs"
-                  c="#8b949e"
+                  c="dark.2"
                   data-testid="sql-history-item"
                   onClick={() => setSql(entry)}
                   style={{
@@ -371,6 +350,6 @@ export function SqlWorkspacePanel({ onClose }: { onClose: () => void }) {
           </Stack>
         )}
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

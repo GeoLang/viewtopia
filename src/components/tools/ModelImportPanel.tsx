@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
@@ -11,7 +10,7 @@ import {
   Slider,
   ScrollArea,
 } from '@mantine/core';
-import { IconCube, IconX, IconUpload, IconTrash } from '@tabler/icons-react';
+import { IconCube, IconUpload, IconTrash } from '@tabler/icons-react';
 import {
   HeadingPitchRoll,
   Math as CesiumMath,
@@ -20,6 +19,7 @@ import {
   Transforms,
 } from 'cesium';
 import type { Cartesian2, Entity, Viewer } from 'cesium';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { useAppStore } from '../../store/app';
 
@@ -119,36 +119,14 @@ export function ModelImportPanel({ onClose }: { onClose: () => void }) {
   };
 
   const shell = (children: ReactNode) => (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 280,
-        maxHeight: '60vh',
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconCube size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            glTF Model Import
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={280} maxHeight="60vh">
+      <PanelHeader
+        icon={<IconCube size={16} />}
+        title="glTF Model Import"
+        onClose={onClose}
+      />
       {children}
-    </Paper>
+    </PanelCard>
   );
 
   if (!viewer) {
@@ -201,7 +179,7 @@ export function ModelImportPanel({ onClose }: { onClose: () => void }) {
               wrap="nowrap"
               p="xs"
               data-testid="model-import-row"
-              style={{ background: '#21262d', borderRadius: 4 }}
+              style={{ background: 'var(--mantine-color-dark-6)', borderRadius: 4 }}
             >
               <Text size="xs" c="white" truncate>
                 {entry.name}

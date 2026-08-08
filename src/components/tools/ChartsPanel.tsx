@@ -3,11 +3,10 @@ import {
   Paper,
   Text,
   Stack,
-  Group,
-  ActionIcon,
   Select,
 } from '@mantine/core';
-import { IconChartBar, IconX } from '@tabler/icons-react';
+import { IconChartBar } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { ChartView } from '../../features/dashboards/ChartWidget';
 import type { ChartDatum, ChartType } from '../../features/dashboards/types';
 import { useEntityLayers, getEntityLayer, entityAttributes } from '../../lib/entityLayers';
@@ -84,31 +83,12 @@ export function ChartsPanel({ onClose }: { onClose: () => void }) {
   );
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 320,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconChartBar size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Charts
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={320}>
+      <PanelHeader
+        icon={<IconChartBar size={16} />}
+        title="Charts"
+        onClose={onClose}
+      />
 
       <Stack gap="xs">
         <Select
@@ -150,7 +130,7 @@ export function ChartsPanel({ onClose }: { onClose: () => void }) {
           onChange={setChartType}
         />
 
-        <Paper p="sm" style={{ background: '#21262d', borderRadius: 4, minHeight: 150 }}>
+        <Paper p="sm" style={{ background: 'var(--mantine-color-dark-6)', borderRadius: 4, minHeight: 150 }}>
           {chartData.length > 0 ? (
             <ChartView chartType={(chartType as ChartType) ?? 'bar'} data={chartData} />
           ) : (
@@ -168,6 +148,6 @@ export function ChartsPanel({ onClose }: { onClose: () => void }) {
           </Text>
         )}
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

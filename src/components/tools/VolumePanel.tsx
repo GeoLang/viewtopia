@@ -1,20 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
-  ActionIcon,
   Button,
   Badge,
   SegmentedControl,
   Select,
   NumberInput,
 } from '@mantine/core';
-import { IconCube, IconX } from '@tabler/icons-react';
+import { IconCube } from '@tabler/icons-react';
 import { Cartographic, EllipsoidTerrainProvider, sampleTerrainMostDetailed } from 'cesium';
 import type { Viewer } from 'cesium';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { useAppStore } from '../../store/app';
 import { useDrawStore } from '../../store/draw';
@@ -188,33 +187,14 @@ export function VolumePanel({ onClose }: { onClose: () => void }) {
   };
 
   const shell = (children: ReactNode) => (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 280,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconCube size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Volume Measurement
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={280}>
+      <PanelHeader
+        icon={<IconCube size={16} />}
+        title="Volume Measurement"
+        onClose={onClose}
+      />
       {children}
-    </Paper>
+    </PanelCard>
   );
 
   if (!viewer) {

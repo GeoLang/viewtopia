@@ -114,15 +114,15 @@ export function App() {
           padding={0}
         >
           <AppShell.Header
-            style={{ background: '#0d1117', borderColor: '#30363d' }}
+            style={{ background: 'var(--mantine-color-dark-8)', borderColor: 'var(--mantine-color-dark-5)' }}
           >
             <Header />
           </AppShell.Header>
 
           <AppShell.Aside
             style={{
-              background: '#161b22',
-              borderColor: '#30363d',
+              background: 'var(--mantine-color-dark-7)',
+              borderColor: 'var(--mantine-color-dark-5)',
               // phone: a bottom sheet, so the map stays visible above the chat.
               // the explicit transform overrides Mantine's slide-out-right.
               ...(isMobile && {
@@ -130,7 +130,7 @@ export function App() {
                 bottom: 0,
                 insetInlineStart: 0,
                 height: MOBILE_SHEET_HEIGHT,
-                borderTop: '1px solid #30363d',
+                borderTop: '1px solid var(--mantine-color-dark-5)',
                 transform: mobileChatOpen ? 'translateY(0)' : 'translateY(100%)',
               }),
             }}
@@ -148,7 +148,7 @@ export function App() {
                   zIndex: 10,
                   background: 'transparent',
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#7c3aed'; }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--mantine-color-violet-7)'; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
               />
             )}
@@ -180,7 +180,7 @@ export function App() {
 
           <AppShell.Main
             style={{
-              background: '#0d1117',
+              background: 'var(--mantine-color-dark-8)',
               display: 'flex',
               flexDirection: 'column',
               height: uiHidden ? '100vh' : 'calc(100vh - 48px)',
@@ -191,7 +191,7 @@ export function App() {
               <Group
                 px="sm"
                 py={4}
-                style={{ borderBottom: '1px solid #30363d', background: '#161b22', overflowX: 'auto' }}
+                style={{ borderBottom: '1px solid var(--mantine-color-dark-5)', background: 'var(--mantine-color-dark-7)', overflowX: 'auto' }}
                 wrap="nowrap"
               >
                 <ViewerToolbar />

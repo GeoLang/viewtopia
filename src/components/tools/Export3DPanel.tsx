@@ -1,17 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
-  ActionIcon,
   Anchor,
   Badge,
   Button,
   ScrollArea,
   Select,
 } from '@mantine/core';
-import { IconDownload, IconPrinter, IconX } from '@tabler/icons-react';
+import { IconDownload, IconPrinter } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { getAuthToken } from '../../features/auth/store';
 
 const API = '/api/v1';
@@ -224,34 +223,12 @@ export function Export3DPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 300,
-        maxHeight: '60vh',
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconPrinter size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Asset Export
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={300} maxHeight="60vh">
+      <PanelHeader
+        icon={<IconPrinter size={16} />}
+        title="Asset Export"
+        onClose={onClose}
+      />
 
       {needsSignIn ? (
         <Text size="xs" c="dimmed" py="lg" ta="center" data-testid="export3d-signin">
@@ -306,7 +283,7 @@ export function Export3DPanel({ onClose }: { onClose: () => void }) {
                   wrap="nowrap"
                   p="xs"
                   data-testid={`export3d-job-${job.id}`}
-                  style={{ background: '#21262d', borderRadius: 4 }}
+                  style={{ background: 'var(--mantine-color-dark-6)', borderRadius: 4 }}
                 >
                   <Badge size="xs" variant="light" color={STATE_COLOR[job.state]}>
                     {job.detail}
@@ -333,6 +310,6 @@ export function Export3DPanel({ onClose }: { onClose: () => void }) {
           </ScrollArea>
         </Stack>
       )}
-    </Paper>
+    </PanelCard>
   );
 }

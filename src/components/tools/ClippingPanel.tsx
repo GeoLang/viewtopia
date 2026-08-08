@@ -1,16 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
-  Group,
-  ActionIcon,
   Button,
   Slider,
   SegmentedControl,
 } from '@mantine/core';
-import { IconScissors, IconX } from '@tabler/icons-react';
+import { IconScissors } from '@tabler/icons-react';
 import { Cartesian3, ClippingPlane, ClippingPlaneCollection, Ellipsoid } from 'cesium';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { useAppStore } from '../../store/app';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 
@@ -72,31 +70,12 @@ export function ClippingPanel({ onClose }: { onClose: () => void }) {
   }, [axis, position, active]);
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 260,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconScissors size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Clipping Plane
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={260}>
+      <PanelHeader
+        icon={<IconScissors size={16} />}
+        title="Clipping Plane"
+        onClose={onClose}
+      />
 
       <Stack gap="xs">
         <Text size="xs" c="dimmed">Clip Axis</Text>
@@ -139,6 +118,6 @@ export function ClippingPanel({ onClose }: { onClose: () => void }) {
           </Text>
         )}
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

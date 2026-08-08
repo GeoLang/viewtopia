@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
@@ -11,6 +10,7 @@ import {
   Badge,
 } from '@mantine/core';
 import { IconVectorTriangle, IconX, IconPlus, IconTrash, IconDownload } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { useDrawStore, featuresToGeoJSON } from '../../store/draw';
 
 interface Row {
@@ -69,34 +69,17 @@ export function GeoJsonEditorPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 320,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconVectorTriangle size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            GeoJSON Editor
-          </Text>
+    <PanelCard width={320}>
+      <PanelHeader
+        icon={<IconVectorTriangle size={16} />}
+        title="GeoJSON Editor"
+        onClose={onClose}
+        badge={
           <Badge size="xs" variant="light" color="violet">
             {features.length}
           </Badge>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+        }
+      />
 
       {features.length === 0 ? (
         <Text size="xs" c="dimmed">
@@ -116,7 +99,7 @@ export function GeoJsonEditorPanel({ onClose }: { onClose: () => void }) {
                   style={{
                     borderRadius: 4,
                     cursor: 'pointer',
-                    background: f.id === selectedId ? '#21262d' : 'transparent',
+                    background: f.id === selectedId ? 'var(--mantine-color-dark-6)' : 'transparent',
                   }}
                   onClick={() => setSelectedId(f.id)}
                 >
@@ -217,6 +200,6 @@ export function GeoJsonEditorPanel({ onClose }: { onClose: () => void }) {
           </Button>
         </Stack>
       )}
-    </Paper>
+    </PanelCard>
   );
 }

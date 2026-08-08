@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
-  ActionIcon,
   NumberInput,
   Progress,
   Slider,
@@ -13,7 +11,6 @@ import {
 } from '@mantine/core';
 import {
   IconDrone,
-  IconX,
   IconRoute,
   IconPlayerPlay,
   IconPlayerPause,
@@ -29,6 +26,7 @@ import {
   ScreenSpaceEventType,
 } from 'cesium';
 import type { Cartesian2, Entity, Viewer } from 'cesium';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { useAppStore } from '../../store/app';
 import { pathLength, useCameraFlight } from '../../lib/cameraPath';
@@ -124,33 +122,14 @@ export function DronePanel({ onClose }: { onClose: () => void }) {
   };
 
   const shell = (children: ReactNode) => (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 280,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconDrone size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Drone Flight Planner
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={280}>
+      <PanelHeader
+        icon={<IconDrone size={16} />}
+        title="Drone Flight Planner"
+        onClose={onClose}
+      />
       {children}
-    </Paper>
+    </PanelCard>
   );
 
   if (!viewer) {

@@ -1,13 +1,11 @@
 import {
-  Paper,
   Text,
   Stack,
-  Group,
-  ActionIcon,
   Select,
   Switch,
 } from '@mantine/core';
-import { IconColumns, IconX } from '@tabler/icons-react';
+import { IconColumns } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { useAppStore, type Renderer } from '../../store/app';
 import { useSplitViewStore, type PaneRenderer } from '../../store/splitView';
 
@@ -27,31 +25,12 @@ export function SplitViewPanel({ onClose }: { onClose: () => void }) {
   const setPaneRenderer = useSplitViewStore((s) => s.setPaneRenderer);
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 280,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconColumns size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Split View
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={280}>
+      <PanelHeader
+        icon={<IconColumns size={16} />}
+        title="Split View"
+        onClose={onClose}
+      />
 
       <Stack gap="xs">
         <Switch
@@ -93,6 +72,6 @@ export function SplitViewPanel({ onClose }: { onClose: () => void }) {
           measure — stay in the left pane.
         </Text>
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

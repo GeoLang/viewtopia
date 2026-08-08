@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
@@ -8,7 +7,8 @@ import {
   TextInput,
   ScrollArea,
 } from '@mantine/core';
-import { IconBookmark, IconX, IconCamera, IconTrash } from '@tabler/icons-react';
+import { IconBookmark, IconCamera, IconTrash } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { useAppStore } from '../../store/app';
 import { useSpaceTimeStore } from '../../features/spacetime/store';
 import { getActiveCesiumViewer } from '../../viewer/registry';
@@ -63,34 +63,12 @@ export function BookmarkPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 280,
-        maxHeight: '50vh',
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconBookmark size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Bookmarks
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={280} maxHeight="50vh">
+      <PanelHeader
+        icon={<IconBookmark size={16} />}
+        title="Bookmarks"
+        onClose={onClose}
+      />
 
       <Group gap="xs" mb="xs">
         <TextInput
@@ -131,7 +109,7 @@ export function BookmarkPanel({ onClose }: { onClose: () => void }) {
                 key={bm.id}
                 justify="space-between"
                 p="xs"
-                style={{ background: '#21262d', borderRadius: 4, cursor: 'pointer' }}
+                style={{ background: 'var(--mantine-color-dark-6)', borderRadius: 4, cursor: 'pointer' }}
                 onClick={() => handleFlyTo(bm.id)}
               >
                 <Stack gap={0}>
@@ -158,6 +136,6 @@ export function BookmarkPanel({ onClose }: { onClose: () => void }) {
           )}
         </Stack>
       </ScrollArea>
-    </Paper>
+    </PanelCard>
   );
 }

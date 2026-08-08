@@ -135,7 +135,7 @@ export function PortalPanel({ onClose }: { onClose: () => void }) {
                 padding="sm"
                 radius="md"
                 withBorder
-                style={{ cursor: 'pointer', background: '#161b22', borderColor: '#30363d' }}
+                style={{ cursor: 'pointer', background: 'var(--mantine-color-dark-7)', borderColor: 'var(--mantine-color-dark-5)' }}
                 onClick={() => openPortalItem(item)}
               >
                 <Group justify="space-between" mb={4} wrap="nowrap">
@@ -184,7 +184,7 @@ export function PortalPanel({ onClose }: { onClose: () => void }) {
         )}
 
         {adding && (
-          <Box p="sm" style={{ border: '1px solid #30363d', borderRadius: 8 }}>
+          <Box p="sm" style={{ border: '1px solid var(--mantine-color-dark-5)', borderRadius: 8 }}>
             <Stack gap="xs">
               <TextInput
                 label="Title"

@@ -158,14 +158,14 @@ export function DragDropImport({ onImport, onClose }: DragDropImportProps) {
         left: '50%',
         transform: 'translate(-50%, -50%)',
         width: 360,
-        background: '#161b22',
-        border: '1px solid #30363d',
+        background: 'var(--mantine-color-dark-7)',
+        border: '1px solid var(--mantine-color-dark-5)',
         zIndex: 400,
       }}
     >
       <Group justify="space-between" mb="sm">
         <Group gap="xs">
-          <IconUpload size={16} color="#a78bfa" />
+          <IconUpload size={16} style={{ color: 'var(--mantine-color-violet-4)' }} />
           <Text size="sm" fw={600} c="white">
             Import Data
           </Text>
@@ -190,12 +190,12 @@ export function DragDropImport({ onImport, onClose }: DragDropImportProps) {
           void handleFiles([...e.dataTransfer.files]);
         }}
         style={{
-          border: `2px dashed ${dragging ? '#a78bfa' : '#30363d'}`,
+          border: `2px dashed ${dragging ? 'var(--mantine-color-violet-4)' : 'var(--mantine-color-dark-5)'}`,
           borderRadius: 8,
-          background: '#0d1117',
+          background: 'var(--mantine-color-dark-8)',
         }}
       >
-        <IconFile size={32} color="#484f58" />
+        <IconFile size={32} style={{ color: 'var(--mantine-color-dark-4)' }} />
         <Text size="sm" c="dimmed" ta="center">
           Drop files here or click Browse
         </Text>

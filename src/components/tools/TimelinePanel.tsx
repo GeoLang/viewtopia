@@ -120,8 +120,8 @@ export function TimelinePanel({ onClose }: { onClose: () => void }) {
           left: 16,
           right: 16,
           maxWidth: 700,
-          background: '#161b22',
-          border: '1px solid #30363d',
+          background: 'var(--mantine-color-dark-7)',
+          border: '1px solid var(--mantine-color-dark-5)',
           zIndex: 300,
         }}
       >
@@ -176,14 +176,14 @@ export function TimelinePanel({ onClose }: { onClose: () => void }) {
         left: 16,
         right: 16,
         maxWidth: 700,
-        background: '#161b22',
-        border: '1px solid #30363d',
+        background: 'var(--mantine-color-dark-7)',
+        border: '1px solid var(--mantine-color-dark-5)',
         zIndex: 300,
       }}
     >
       <Group justify="space-between" mb="xs">
         <Group gap="xs">
-          <IconTimeline size={16} color="#a78bfa" />
+          <IconTimeline size={16} style={{ color: 'var(--mantine-color-violet-4)' }} />
           <Text size="sm" fw={600} c="white">
             Timeline
           </Text>

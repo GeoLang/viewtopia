@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
-  ActionIcon,
   Anchor,
   Badge,
   Loader,
@@ -14,7 +12,7 @@ import {
   Slider,
   UnstyledButton,
 } from '@mantine/core';
-import { IconCamera, IconX } from '@tabler/icons-react';
+import { IconCamera } from '@tabler/icons-react';
 import {
   Cartesian3,
   Cartographic,
@@ -24,6 +22,7 @@ import {
   ScreenSpaceEventType,
 } from 'cesium';
 import type { Cartesian2, Entity, Viewer } from 'cesium';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { useAppStore } from '../../store/app';
 import { SOURCE_COLOR, searchPhotos, type PhotoResult } from '../../lib/photoSearch';
@@ -119,33 +118,14 @@ export function PhotoPanel({ onClose }: { onClose: () => void }) {
   }, [viewer, photos]);
 
   const shell = (children: ReactNode) => (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 300,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconCamera size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Street-Level Photos
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={300}>
+      <PanelHeader
+        icon={<IconCamera size={16} />}
+        title="Street-Level Photos"
+        onClose={onClose}
+      />
       {children}
-    </Paper>
+    </PanelCard>
   );
 
   if (!viewer) {
@@ -238,7 +218,8 @@ export function PhotoPanel({ onClose }: { onClose: () => void }) {
                 style={{
                   padding: '4px 6px',
                   borderRadius: 4,
-                  background: selected?.id === photo.id ? '#21262d' : 'transparent',
+                  background:
+                    selected?.id === photo.id ? 'var(--mantine-color-dark-6)' : 'transparent',
                 }}
               >
                 <Group gap="xs" wrap="nowrap">
@@ -249,7 +230,7 @@ export function PhotoPanel({ onClose }: { onClose: () => void }) {
                   >
                     {photo.source === 'panoramax' ? 'PNX' : 'WC'}
                   </Badge>
-                  <Text size="xs" c="#c9d1d9" truncate>
+                  <Text size="xs" c="dark.0" truncate>
                     {photo.title}
                   </Text>
                 </Group>

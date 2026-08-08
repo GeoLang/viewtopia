@@ -51,7 +51,7 @@ function Sparkline({ hourly, variable }: { hourly: HourlyPoint[]; variable: 'tem
       data-testid="weather-sparkline"
       width={width}
       height={height}
-      style={{ border: '1px solid #30363d', borderRadius: 6, background: '#0d1117' }}
+      style={{ border: '1px solid var(--mantine-color-dark-5)', borderRadius: 6, background: 'var(--mantine-color-dark-8)' }}
     >
       <path d={`${path} L${width},${height} L0,${height} Z`} fill={color} fillOpacity={0.15} />
       <path d={path} fill="none" stroke={color} strokeWidth={1.5} />
@@ -145,7 +145,7 @@ export function WeatherPanel({ onClose }: { onClose: () => void }) {
   return (
     <PanelCard width={272}>
       <PanelHeader
-        icon={<IconCloud size={16} color="#a78bfa" />}
+        icon={<IconCloud size={16} />}
         title="Weather"
         onClose={handleClose}
         actions={

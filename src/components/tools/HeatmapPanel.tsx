@@ -1,17 +1,16 @@
 import { useEffect, useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
-  ActionIcon,
   Slider,
   Select,
   Textarea,
   Button,
   ColorInput,
 } from '@mantine/core';
-import { IconFlame, IconX } from '@tabler/icons-react';
+import { IconFlame } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { useDrawStore } from '../../store/draw';
 import {
   collectPoints,
@@ -78,31 +77,12 @@ export function HeatmapPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 280,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconFlame size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Heatmap Layer
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={280}>
+      <PanelHeader
+        icon={<IconFlame size={16} />}
+        title="Heatmap Layer"
+        onClose={onClose}
+      />
 
       <Stack gap="xs">
         <Select
@@ -146,6 +126,6 @@ export function HeatmapPanel({ onClose }: { onClose: () => void }) {
           <Text size="xs" c="green" data-testid="heatmap-status">{status}</Text>
         )}
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

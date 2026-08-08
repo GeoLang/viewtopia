@@ -1,18 +1,17 @@
 import { useEffect, useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
-  ActionIcon,
   SegmentedControl,
   TextInput,
   Button,
   Badge,
   Loader,
 } from '@mantine/core';
-import { IconCar, IconX } from '@tabler/icons-react';
+import { IconCar } from '@tabler/icons-react';
 import type { FeatureCollection } from 'geojson';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveMapLibre } from '../../viewer/registry';
 import { getViewBounds } from '../../lib/weatherData';
 
@@ -157,31 +156,12 @@ export function TrafficPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 288,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconCar size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Traffic
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={handleClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={288}>
+      <PanelHeader
+        icon={<IconCar size={16} />}
+        title="Traffic"
+        onClose={handleClose}
+      />
 
       <Stack gap="xs">
         <SegmentedControl
@@ -243,6 +223,6 @@ export function TrafficPanel({ onClose }: { onClose: () => void }) {
           </Text>
         )}
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

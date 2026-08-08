@@ -219,7 +219,7 @@ export function ViewerArea() {
       flex={1}
       style={{
         position: 'relative',
-        background: '#0d1117',
+        background: 'var(--mantine-color-dark-8)',
         overflow: 'hidden',
       }}
       onMouseMove={handleMouseMove}
@@ -285,7 +285,7 @@ export function ViewerArea() {
             bottom: 0,
             right: 0,
             width: swipe ? '100%' : '50%',
-            borderLeft: swipe ? undefined : '2px solid #30363d',
+            borderLeft: swipe ? undefined : '2px solid var(--mantine-color-dark-5)',
             clipPath: swipe ? `inset(0 0 0 ${swipeAt}%)` : undefined,
           }}
         >

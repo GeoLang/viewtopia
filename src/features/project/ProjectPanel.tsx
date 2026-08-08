@@ -1,15 +1,14 @@
 import { useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
-  ActionIcon,
   Button,
   TextInput,
   FileButton,
 } from '@mantine/core';
-import { IconDeviceFloppy, IconX, IconFolderOpen } from '@tabler/icons-react';
+import { IconDeviceFloppy, IconFolderOpen } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../../components/PanelCard';
 import { applyProject, parseProject, saveProjectFile } from './projectFile';
 
 export function ProjectPanel({ onClose }: { onClose: () => void }) {
@@ -30,31 +29,12 @@ export function ProjectPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 340,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconDeviceFloppy size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Project
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={340}>
+      <PanelHeader
+        icon={<IconDeviceFloppy size={16} />}
+        title="Project"
+        onClose={onClose}
+      />
 
       <Stack gap="xs">
         <Text size="xs" c="dimmed">
@@ -100,6 +80,6 @@ export function ProjectPanel({ onClose }: { onClose: () => void }) {
           </Text>
         )}
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

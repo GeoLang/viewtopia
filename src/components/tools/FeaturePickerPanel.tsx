@@ -1,5 +1,4 @@
 import {
-  Paper,
   Text,
   Stack,
   Group,
@@ -10,6 +9,7 @@ import {
   ScrollArea,
 } from '@mantine/core';
 import { IconClick, IconX } from '@tabler/icons-react';
+import { PanelCard } from '../PanelCard';
 import { useFeaturePickerStore } from '../../store/featurePicker';
 
 export function FeaturePickerPanel({ onClose }: { onClose: () => void }) {
@@ -18,23 +18,10 @@ export function FeaturePickerPanel({ onClose }: { onClose: () => void }) {
   const selected = useFeaturePickerStore((s) => s.selected);
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 300,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
+    <PanelCard width={300}>
       <Group justify="space-between" mb="xs">
         <Group gap="xs">
-          <IconClick size={16} color="#a78bfa" />
+          <IconClick size={16} style={{ color: 'var(--mantine-color-violet-4)' }} />
           <Text size="sm" fw={600} c="white">
             Feature Info
           </Text>
@@ -80,10 +67,10 @@ export function FeaturePickerPanel({ onClose }: { onClose: () => void }) {
               <Table.Tbody>
                 {selected.map((row) => (
                   <Table.Tr key={row.id}>
-                    <Table.Td style={{ color: '#a78bfa', verticalAlign: 'top' }}>
+                    <Table.Td style={{ color: 'var(--mantine-color-violet-4)', verticalAlign: 'top' }}>
                       {row.id}
                     </Table.Td>
-                    <Table.Td style={{ color: '#c9d1d9', wordBreak: 'break-word' }}>
+                    <Table.Td style={{ color: 'var(--mantine-color-dark-0)', wordBreak: 'break-word' }}>
                       {row.value}
                     </Table.Td>
                   </Table.Tr>
@@ -93,6 +80,6 @@ export function FeaturePickerPanel({ onClose }: { onClose: () => void }) {
           </ScrollArea.Autosize>
         )}
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

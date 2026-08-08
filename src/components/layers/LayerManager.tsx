@@ -12,8 +12,9 @@ import {
   Button,
   Box,
 } from '@mantine/core';
-import { IconChevronRight, IconDownload, IconStack2, IconX, } from '@tabler/icons-react';
+import { IconChevronRight, IconDownload, IconStack2 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { downloadOutput } from '../../features/workflow/plan';
 import {
   layerStyle,
@@ -76,7 +77,11 @@ function AgentLayerRow({
     <Paper
       p="xs"
       radius="sm"
-      style={{ background: '#21262d', border: '1px solid #30363d', cursor: 'pointer' }}
+      style={{
+        background: 'var(--mantine-color-dark-6)',
+        border: '1px solid var(--mantine-color-dark-5)',
+        cursor: 'pointer',
+      }}
       onClick={onExpand}
       data-testid="agent-layer-row"
     >
@@ -84,10 +89,13 @@ function AgentLayerRow({
         <Group gap={4} wrap="nowrap" style={{ minWidth: 0 }}>
           <IconChevronRight
             size={12}
-            color="#8b949e"
             data-testid="agent-layer-chevron"
             data-expanded={expanded}
-            style={{ flexShrink: 0, transform: expanded ? 'rotate(90deg)' : undefined }}
+            style={{
+              color: 'var(--mantine-color-dark-2)',
+              flexShrink: 0,
+              transform: expanded ? 'rotate(90deg)' : undefined,
+            }}
           />
           <Text size="xs" c="white" lineClamp={1}>
             {layer.name}
@@ -191,7 +199,11 @@ function RasterLayerRow({
     <Paper
       p="xs"
       radius="sm"
-      style={{ background: '#21262d', border: '1px solid #30363d', cursor: 'pointer' }}
+      style={{
+        background: 'var(--mantine-color-dark-6)',
+        border: '1px solid var(--mantine-color-dark-5)',
+        cursor: 'pointer',
+      }}
       onClick={onExpand}
       data-testid="raster-layer-row"
     >
@@ -199,8 +211,11 @@ function RasterLayerRow({
         <Group gap={4} wrap="nowrap" style={{ minWidth: 0 }}>
           <IconChevronRight
             size={12}
-            color="#8b949e"
-            style={{ flexShrink: 0, transform: expanded ? 'rotate(90deg)' : undefined }}
+            style={{
+              color: 'var(--mantine-color-dark-2)',
+              flexShrink: 0,
+              transform: expanded ? 'rotate(90deg)' : undefined,
+            }}
           />
           <Text size="xs" c="white" lineClamp={1}>
             {layer.name}
@@ -273,34 +288,12 @@ export function LayerManager({
   const total = layers.length + agentLayers.length + rasterLayers.length;
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 300,
-        maxHeight: '60vh',
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconStack2 size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Layers ({total})
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={300} maxHeight="60vh">
+      <PanelHeader
+        icon={<IconStack2 size={16} />}
+        title={`Layers (${total})`}
+        onClose={onClose}
+      />
 
       <ScrollArea flex={1}>
         <Stack gap={4}>
@@ -315,8 +308,8 @@ export function LayerManager({
               p="xs"
               radius="sm"
               style={{
-                background: '#21262d',
-                border: '1px solid #30363d',
+                background: 'var(--mantine-color-dark-6)',
+                border: '1px solid var(--mantine-color-dark-5)',
                 cursor: 'pointer',
               }}
               onClick={() =>
@@ -394,6 +387,6 @@ export function LayerManager({
           ))}
         </Stack>
       </ScrollArea>
-    </Paper>
+    </PanelCard>
   );
 }

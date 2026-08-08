@@ -203,8 +203,8 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
         left: 16,
         right: 16,
         maxHeight: tool ? '60vh' : '40vh',
-        background: '#161b22',
-        border: '1px solid #30363d',
+        background: 'var(--mantine-color-dark-7)',
+        border: '1px solid var(--mantine-color-dark-5)',
         zIndex: 300,
         display: 'flex',
         flexDirection: 'column',
@@ -212,7 +212,7 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
     >
       <Group justify="space-between" mb="xs">
         <Group gap="xs">
-          <IconTable size={16} color="#a78bfa" />
+          <IconTable size={16} style={{ color: 'var(--mantine-color-violet-4)' }} />
           <Text size="sm" fw={600} c="white">
             Attribute Table
           </Text>
@@ -299,9 +299,9 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
                       </Text>
                       {sort?.column === col &&
                         (sort.dir === 'asc' ? (
-                          <IconSortAscending size={12} color="#a78bfa" />
+                          <IconSortAscending size={12} style={{ color: 'var(--mantine-color-violet-4)' }} />
                         ) : (
-                          <IconSortDescending size={12} color="#a78bfa" />
+                          <IconSortDescending size={12} style={{ color: 'var(--mantine-color-violet-4)' }} />
                         ))}
                     </Group>
                   </Table.Th>

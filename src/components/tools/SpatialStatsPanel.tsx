@@ -1,18 +1,17 @@
 import { useMemo, useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
-  ActionIcon,
   Select,
   Textarea,
   Slider,
   Button,
   Code,
 } from '@mantine/core';
-import { IconChartDots, IconX } from '@tabler/icons-react';
+import { IconChartDots } from '@tabler/icons-react';
 import { GridLayer } from '@deck.gl/aggregation-layers';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { useDrawStore } from '../../store/draw';
 import {
   collectPoints,
@@ -108,31 +107,12 @@ export function SpatialStatsPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 280,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconChartDots size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Spatial Statistics
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={280}>
+      <PanelHeader
+        icon={<IconChartDots size={16} />}
+        title="Spatial Statistics"
+        onClose={onClose}
+      />
 
       <Stack gap="xs">
         <Select
@@ -191,6 +171,6 @@ export function SpatialStatsPanel({ onClose }: { onClose: () => void }) {
           <Code block data-testid="spatialstats-result">{result}</Code>
         )}
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

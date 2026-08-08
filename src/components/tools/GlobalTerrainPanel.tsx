@@ -1,22 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
-  Group,
-  ActionIcon,
   Select,
   Slider,
   Button,
   TextInput,
 } from '@mantine/core';
-import { IconWorld, IconX } from '@tabler/icons-react';
+import { IconWorld } from '@tabler/icons-react';
 import {
   createWorldTerrainAsync,
   CesiumTerrainProvider,
   EllipsoidTerrainProvider,
   type TerrainProvider,
 } from 'cesium';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer, getActiveMapLibre } from '../../viewer/registry';
 import { useAppStore, type Renderer } from '../../store/app';
 import { addMapTerrain, TERRAIN_RGB_URL, type MapTerrain } from '../../lib/mapTerrain';
@@ -151,31 +149,12 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 260,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconWorld size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Global Terrain
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={260}>
+      <PanelHeader
+        icon={<IconWorld size={16} />}
+        title="Global Terrain"
+        onClose={onClose}
+      />
 
       <Stack gap="xs">
         {onMap ? (
@@ -246,6 +225,6 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
           </Text>
         )}
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

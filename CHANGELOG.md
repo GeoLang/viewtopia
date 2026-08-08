@@ -6,6 +6,19 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-08: **one panel chrome, tokenized (UI polish phase 2, part 2)**.
+  Every standard floating tool panel (~50 files) now renders through
+  PanelCard/PanelHeader, which paints the header icon accent itself, and
+  the GitHub-dark chrome hexes moved to Mantine theme variables app-wide
+  (violet-4 in the theme is now the #a78bfa accent). Kept hand-rolled
+  where the shape differs: SettingsPanel's wrapper (z-index above the nav
+  toggle), the bottom bars (DataTable, Timeline), centered overlays (Tour,
+  DragDropImport), self-scrolling wrappers (Raster, Toolbox), wrappers and
+  close buttons pinned by tests (LiveComments, Legend, FeaturePicker), and
+  ConvertPanel's blue-accented header. Map and data colors (MapLibre
+  paint, Cesium colors, deck.gl, swatches, entity defaults) keep their
+  literals by design.
+
 - 2026-08-08: **MapLibre boots first, on the dark vector basemap (UI polish
   phase 2, part 1)**. A clean profile starts on the MapLibre globe with
   OpenFreeMap's dark style instead of Cesium on liberty; Cesium is one

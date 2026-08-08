@@ -1,16 +1,15 @@
 import {
-  Paper,
   Text,
   Stack,
   Group,
-  ActionIcon,
   Button,
   SegmentedControl,
   ColorSwatch,
   Slider,
   Badge,
 } from '@mantine/core';
-import { IconPencil, IconX } from '@tabler/icons-react';
+import { IconPencil } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { useDrawStore, type DrawMode } from '../../store/draw';
 
 const COLORS = ['#a78bfa', '#f472b6', '#34d399', '#60a5fa', '#fbbf24', '#f87171'];
@@ -36,36 +35,19 @@ export function DrawPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 260,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconPencil size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Draw
-          </Text>
-          {features.length > 0 && (
+    <PanelCard width={260}>
+      <PanelHeader
+        icon={<IconPencil size={16} />}
+        title="Draw"
+        onClose={onClose}
+        badge={
+          features.length > 0 && (
             <Badge size="xs" variant="light" color="violet">
               {features.length}
             </Badge>
-          )}
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+          )
+        }
+      />
 
       <Stack gap="xs">
         <SegmentedControl
@@ -149,6 +131,6 @@ export function DrawPanel({ onClose }: { onClose: () => void }) {
           Clear All ({features.length})
         </Button>
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

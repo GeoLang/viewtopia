@@ -1,15 +1,14 @@
 import { useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
-  ActionIcon,
   Button,
   Select,
   NumberInput,
 } from '@mantine/core';
-import { IconFileExport, IconX } from '@tabler/icons-react';
+import { IconFileExport } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { useAppStore } from '../../store/app';
 
 /** CSS reference resolution: at 96 DPI the requested pixels are the output pixels. */
@@ -95,31 +94,12 @@ export function PrintExportPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 260,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconFileExport size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Print / Export
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={260}>
+      <PanelHeader
+        icon={<IconFileExport size={16} />}
+        title="Print / Export"
+        onClose={onClose}
+      />
 
       <Stack gap="xs">
         <Select
@@ -160,6 +140,6 @@ export function PrintExportPanel({ onClose }: { onClose: () => void }) {
           </Text>
         )}
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

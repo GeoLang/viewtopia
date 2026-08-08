@@ -1,10 +1,8 @@
 import { useState, useRef, useCallback } from 'react';
 import {
-  Paper,
   Tabs,
   Text,
   Group,
-  ActionIcon,
   Stack,
   Button,
   ScrollArea,
@@ -12,7 +10,6 @@ import {
   Box,
 } from '@mantine/core';
 import {
-  IconX,
   IconClock,
   IconUsers,
   IconLink,
@@ -20,6 +17,7 @@ import {
   IconUpload,
   IconFileTypeCsv,
 } from '@tabler/icons-react';
+import { PanelCard, PanelCloseButton } from '../../components/PanelCard';
 import { useSpaceTimeStore } from './store';
 import { EntityList } from './components/EntityList';
 import { TrackPlayer } from './components/TrackPlayer';
@@ -169,29 +167,14 @@ export function SpaceTimePanel() {
   if (!panelOpen) return null;
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      style={{
-        position: 'absolute',
-        top: 60,
-        left: 16,
-        width: 380,
-        maxHeight: 'calc(100vh - 120px)',
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <PanelCard width={380} anchor="left" maxHeight="calc(100vh - 120px)">
       <Group
         justify="space-between"
         p="xs"
-        style={{ borderBottom: '1px solid #30363d' }}
+        style={{ borderBottom: '1px solid var(--mantine-color-dark-5)' }}
       >
         <Group gap="xs">
-          <IconClock size={16} color="#a78bfa" />
+          <IconClock size={16} style={{ color: 'var(--mantine-color-violet-4)' }} />
           <Text size="sm" fw={600} c="white">
             Space-Time Intelligence
           </Text>
@@ -203,14 +186,7 @@ export function SpaceTimePanel() {
           <Badge size="xs" variant="light" color="blue">
             {tracks.length} tracks
           </Badge>
-          <ActionIcon
-            size="sm"
-            variant="subtle"
-            color="gray"
-            onClick={togglePanel}
-          >
-            <IconX size={14} />
-          </ActionIcon>
+          <PanelCloseButton onClose={togglePanel} />
         </Group>
       </Group>
 
@@ -238,7 +214,7 @@ export function SpaceTimePanel() {
               onDrop={handleDrop}
               onClick={handleBrowse}
               style={{
-                border: `2px dashed ${dragging ? '#a78bfa' : '#30363d'}`,
+                border: `2px dashed ${dragging ? 'var(--mantine-color-violet-4)' : 'var(--mantine-color-dark-5)'}`,
                 borderRadius: 8,
                 padding: '12px 16px',
                 textAlign: 'center',
@@ -248,11 +224,25 @@ export function SpaceTimePanel() {
               }}
             >
               <Group justify="center" gap="xs">
-                <IconFileTypeCsv size={18} color={dragging ? '#a78bfa' : '#8b949e'} />
+                <IconFileTypeCsv
+                  size={18}
+                  style={{
+                    color: dragging
+                      ? 'var(--mantine-color-violet-4)'
+                      : 'var(--mantine-color-dark-2)',
+                  }}
+                />
                 <Text size="xs" c={dragging ? 'violet' : 'dimmed'}>
                   Drop CSV here or click to browse
                 </Text>
-                <IconUpload size={14} color={dragging ? '#a78bfa' : '#8b949e'} />
+                <IconUpload
+                  size={14}
+                  style={{
+                    color: dragging
+                      ? 'var(--mantine-color-violet-4)'
+                      : 'var(--mantine-color-dark-2)',
+                  }}
+                />
               </Group>
               <input
                 ref={fileInputRef}
@@ -287,7 +277,7 @@ export function SpaceTimePanel() {
                   key={link.id}
                   p="xs"
                   mb={4}
-                  style={{ background: '#21262d', borderRadius: 4 }}
+                  style={{ background: 'var(--mantine-color-dark-6)', borderRadius: 4 }}
                   justify="space-between"
                 >
                   <Text size="xs" c="white">
@@ -329,6 +319,6 @@ export function SpaceTimePanel() {
           </Stack>
         </Tabs.Panel>
       </Tabs>
-    </Paper>
+    </PanelCard>
   );
 }

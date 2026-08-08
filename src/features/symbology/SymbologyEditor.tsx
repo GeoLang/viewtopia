@@ -221,8 +221,8 @@ export function SymbologyEditor({ layer }: { layer: AgentLayer }) {
                   data-testid="agent-layer-rule-value"
                   style={{
                     width: 54,
-                    background: '#0d1117',
-                    border: '1px solid #30363d',
+                    background: 'var(--mantine-color-dark-8)',
+                    border: '1px solid var(--mantine-color-dark-5)',
                     borderRadius: 4,
                     color: 'white',
                     fontSize: 12,

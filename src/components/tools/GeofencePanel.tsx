@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
@@ -12,7 +11,8 @@ import {
   Badge,
   SegmentedControl,
 } from '@mantine/core';
-import { IconMapPins, IconX, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconMapPins, IconPlus, IconTrash } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { useSpaceTimeStore } from '../../features/spacetime/store';
 import type { Geofence } from '../../features/spacetime/types';
 
@@ -45,37 +45,17 @@ export function GeofencePanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 300,
-        maxHeight: 'calc(100vh - 120px)',
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconMapPins size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Geofences
-          </Text>
+    <PanelCard width={300} maxHeight="calc(100vh - 120px)">
+      <PanelHeader
+        icon={<IconMapPins size={16} />}
+        title="Geofences"
+        onClose={onClose}
+        badge={
           <Badge size="xs" variant="light" color="violet">
             {geofences.length}
           </Badge>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+        }
+      />
 
       <Stack gap="xs">
         <TextInput
@@ -153,7 +133,7 @@ export function GeofencePanel({ onClose }: { onClose: () => void }) {
               <Group
                 key={f.id}
                 p="xs"
-                style={{ background: '#21262d', borderRadius: 4 }}
+                style={{ background: 'var(--mantine-color-dark-6)', borderRadius: 4 }}
                 justify="space-between"
                 wrap="nowrap"
               >
@@ -178,6 +158,6 @@ export function GeofencePanel({ onClose }: { onClose: () => void }) {
           )}
         </Stack>
       </ScrollArea>
-    </Paper>
+    </PanelCard>
   );
 }

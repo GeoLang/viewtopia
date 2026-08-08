@@ -24,8 +24,8 @@ import { columnStats } from './attributes';
 import type { VirtualField } from './expressions';
 
 const strip = {
-  background: '#0d1117',
-  border: '1px solid #30363d',
+  background: 'var(--mantine-color-dark-8)',
+  border: '1px solid var(--mantine-color-dark-5)',
   borderRadius: 4,
 };
 
@@ -310,7 +310,7 @@ export function StatsSection({
       </Group>
 
       {chartData.length > 0 && (
-        <Paper p="xs" mt="xs" style={{ background: '#21262d', borderRadius: 4, maxWidth: 360 }}>
+        <Paper p="xs" mt="xs" style={{ background: 'var(--mantine-color-dark-6)', borderRadius: 4, maxWidth: 360 }}>
           <ChartView chartType={(chartType as ChartType) ?? 'bar'} data={chartData} />
         </Paper>
       )}

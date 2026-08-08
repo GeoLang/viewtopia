@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
@@ -14,7 +13,6 @@ import {
 } from '@mantine/core';
 import {
   IconUsers,
-  IconX,
   IconSend,
   IconMicrophone,
   IconMicrophoneOff,
@@ -22,6 +20,7 @@ import {
   IconVideoOff,
   IconPhoneOff,
 } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { useCollabStore } from '../../store/collaboration';
 import { useLiveKitStore } from '../../store/livekit';
 import { useAppStore } from '../../store/app';
@@ -72,36 +71,19 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 300,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconUsers size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Collaboration
-          </Text>
-          {connected && (
+    <PanelCard width={300}>
+      <PanelHeader
+        icon={<IconUsers size={16} />}
+        title="Collaboration"
+        onClose={onClose}
+        badge={
+          connected && (
             <Badge size="xs" variant="light" color="green">
               {users.length} online
             </Badge>
-          )}
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+          )
+        }
+      />
 
       <Stack gap="xs">
         {!loggedIn ? (
@@ -148,7 +130,7 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
             {/* Voice / Video (LiveKit) */}
             {livekitUrl && (
               <>
-                <Divider color="#30363d" />
+                <Divider color="var(--mantine-color-dark-5)" />
                 <Text size="xs" c="dimmed" fw={600}>Voice &amp; Video</Text>
                 {!lk.connected ? (
                   <Group gap="xs">
@@ -204,7 +186,7 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
               </>
             )}
 
-            <Divider color="#30363d" />
+            <Divider color="var(--mantine-color-dark-5)" />
             <Text size="xs" c="dimmed" fw={600}>Users</Text>
 
             {users.map((u) => (
@@ -225,15 +207,15 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
               </Group>
             ))}
 
-            <Divider color="#30363d" />
+            <Divider color="var(--mantine-color-dark-5)" />
             <Text size="xs" c="dimmed" fw={600}>Chat</Text>
 
-            <ScrollArea mah={150} style={{ background: '#0d1117', borderRadius: 4, padding: 4 }}>
+            <ScrollArea mah={150} style={{ background: 'var(--mantine-color-dark-8)', borderRadius: 4, padding: 4 }}>
               {messages.map((m, i) => (
                 <Text
                   key={i}
                   size="xs"
-                  c={m.userId === userId ? '#a78bfa' : 'white'}
+                  c={m.userId === userId ? 'violet.4' : 'white'}
                   style={{ overflowWrap: 'anywhere' }}
                 >
                   <Text span fw={600}>{m.userName}: </Text>
@@ -264,6 +246,6 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
           </>
         )}
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

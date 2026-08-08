@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
@@ -11,7 +10,7 @@ import {
   Badge,
   ScrollArea,
 } from '@mantine/core';
-import { IconSatellite, IconX, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconSatellite, IconPlus, IconTrash } from '@tabler/icons-react';
 import {
   Cesium3DTileset,
   CesiumTerrainProvider,
@@ -20,6 +19,7 @@ import {
   IonImageryProvider,
 } from 'cesium';
 import type { ImageryLayer, Viewer } from 'cesium';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { useAppStore } from '../../store/app';
 
@@ -158,41 +158,21 @@ export function CesiumIonPanel({ onClose }: { onClose: () => void }) {
   };
 
   const shell = (children: ReactNode) => (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 300,
-        maxHeight: '60vh',
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconSatellite size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Cesium Ion
-          </Text>
-          {connected && (
+    <PanelCard width={300} maxHeight="60vh">
+      <PanelHeader
+        icon={<IconSatellite size={16} />}
+        title="Cesium Ion"
+        onClose={onClose}
+        badge={
+          connected && (
             <Badge size="xs" color="green">
               Connected
             </Badge>
-          )}
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+          )
+        }
+      />
       {children}
-    </Paper>
+    </PanelCard>
   );
 
   if (!viewer) {
@@ -241,7 +221,7 @@ export function CesiumIonPanel({ onClose }: { onClose: () => void }) {
                 wrap="nowrap"
                 p="xs"
                 data-testid={`ion-asset-${asset.id}`}
-                style={{ background: '#21262d', borderRadius: 4, marginBottom: 4 }}
+                style={{ background: 'var(--mantine-color-dark-6)', borderRadius: 4, marginBottom: 4 }}
               >
                 <Stack gap={2} style={{ minWidth: 0 }}>
                   <Text size="xs" c="white" truncate>

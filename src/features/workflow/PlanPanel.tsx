@@ -118,7 +118,7 @@ export function PlanPanel({ messageId, plan }: { messageId: string; plan: Workfl
       p="xs"
       radius={8}
       data-testid="plan-panel"
-      style={{ background: '#161b22', border: '1px solid #30363d', maxWidth: '85%' }}
+      style={{ background: 'var(--mantine-color-dark-7)', border: '1px solid var(--mantine-color-dark-5)', maxWidth: '85%' }}
     >
       <Stack gap={6}>
         <Group gap={6} justify="space-between" wrap="nowrap">
@@ -264,7 +264,7 @@ export function PlanPanel({ messageId, plan }: { messageId: string; plan: Workfl
 
         <Collapse in={showManifest}>
           <Stack gap={4}>
-            <Code block data-testid="plan-manifest" style={{ fontSize: 11, background: '#0d1117' }}>
+            <Code block data-testid="plan-manifest" style={{ fontSize: 11, background: 'var(--mantine-color-dark-8)' }}>
               {plan.manifest}
             </Code>
             <Group gap={6} wrap="nowrap">
@@ -277,7 +277,7 @@ export function PlanPanel({ messageId, plan }: { messageId: string; plan: Workfl
               >
                 Download {manifestFile}
               </Button>
-              <Code style={{ fontSize: 11, background: '#0d1117' }} data-testid="plan-rerun-command">
+              <Code style={{ fontSize: 11, background: 'var(--mantine-color-dark-8)' }} data-testid="plan-rerun-command">
                 geodukt run {manifestFile}
               </Code>
               <CopyButton value={`geodukt run ${manifestFile}`}>
@@ -303,8 +303,8 @@ export function PlanPanel({ messageId, plan }: { messageId: string; plan: Workfl
             c={failed ? 'red.4' : 'gray.3'}
             data-testid="plan-run-result"
             style={{
-              background: failed ? '#2d1517' : '#0d1117',
-              border: `1px solid ${failed ? '#f8514966' : '#30363d'}`,
+              background: failed ? '#2d1517' : 'var(--mantine-color-dark-8)',
+              border: `1px solid ${failed ? '#f8514966' : 'var(--mantine-color-dark-5)'}`,
               borderRadius: 6,
               padding: '6px 8px',
               whiteSpace: 'pre-wrap',

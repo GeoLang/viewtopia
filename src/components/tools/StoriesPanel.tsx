@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
@@ -12,7 +11,8 @@ import {
   ScrollArea,
   Badge,
 } from '@mantine/core';
-import { IconBook, IconX, IconPlus, IconPlayerPlay, IconPlayerStop, IconTrash } from '@tabler/icons-react';
+import { IconBook, IconPlus, IconPlayerPlay, IconPlayerStop, IconTrash } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { getSharedCamera } from '../../hooks/sharedCamera';
 import { captureCameraState, flyToCameraState, type CameraState } from '../../store/cameraViews';
@@ -101,37 +101,17 @@ export function StoriesPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 300,
-        maxHeight: '60vh',
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconBook size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Stories
-          </Text>
+    <PanelCard width={300} maxHeight="60vh">
+      <PanelHeader
+        icon={<IconBook size={16} />}
+        title="Stories"
+        onClose={onClose}
+        badge={
           <Badge size="xs" variant="light" color="violet" data-testid="stories-count">
             {steps.length} steps
           </Badge>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+        }
+      />
 
       <Stack gap="xs" mb="xs">
         <TextInput
@@ -178,7 +158,7 @@ export function StoriesPanel({ onClose }: { onClose: () => void }) {
               justify="space-between"
               p="xs"
               style={{
-                background: i === current ? '#2d2140' : '#21262d',
+                background: i === current ? '#2d2140' : 'var(--mantine-color-dark-6)',
                 borderRadius: 4,
               }}
             >
@@ -219,6 +199,6 @@ export function StoriesPanel({ onClose }: { onClose: () => void }) {
           {playing ? 'Stop Story' : 'Play Story'}
         </Button>
       )}
-    </Paper>
+    </PanelCard>
   );
 }

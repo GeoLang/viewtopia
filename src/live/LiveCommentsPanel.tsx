@@ -87,7 +87,7 @@ function CommentBody({
           )}
         </Group>
       </Group>
-      <Text size="xs" c="#c9d1d9" style={{ whiteSpace: 'pre-wrap' }}>
+      <Text size="xs" c="dark.0" style={{ whiteSpace: 'pre-wrap' }}>
         {comment.text}
       </Text>
     </Stack>
@@ -118,7 +118,7 @@ function Thread({
       p="xs"
       data-testid="comment-thread"
       style={{
-        background: '#21262d',
+        background: 'var(--mantine-color-dark-6)',
         borderRadius: 4,
         opacity: thread.root.resolved ? 0.6 : 1,
       }}
@@ -130,7 +130,7 @@ function Thread({
         onDelete={() => deleteCommentThread(thread)}
       />
       {thread.replies.length > 0 && (
-        <Stack gap={6} pl="sm" style={{ borderLeft: '1px solid #30363d' }}>
+        <Stack gap={6} pl="sm" style={{ borderLeft: '1px solid var(--mantine-color-dark-5)' }}>
           {thread.replies.map((reply) => (
             <CommentBody
               key={reply.id}
@@ -228,8 +228,8 @@ export function LiveCommentsPanel({ onClose }: { onClose: () => void }) {
         right: 16,
         width: 320,
         maxHeight: 'calc(100vh - 120px)',
-        background: '#161b22',
-        border: '1px solid #30363d',
+        background: 'var(--mantine-color-dark-7)',
+        border: '1px solid var(--mantine-color-dark-5)',
         zIndex: 300,
         display: 'flex',
         flexDirection: 'column',
@@ -237,7 +237,7 @@ export function LiveCommentsPanel({ onClose }: { onClose: () => void }) {
     >
       <Group justify="space-between" mb="xs">
         <Group gap="xs">
-          <IconMessage size={16} color="#a78bfa" />
+          <IconMessage size={16} style={{ color: 'var(--mantine-color-violet-4)' }} />
           <Text size="sm" fw={600} c="white">
             Comments
           </Text>

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Paper, Text, Stack, Group, ActionIcon, Slider, Button, TextInput } from '@mantine/core';
-import { IconSolarPanel, IconX } from '@tabler/icons-react';
+import { Text, Stack, Group, Slider, Button, TextInput } from '@mantine/core';
+import { IconSolarPanel } from '@tabler/icons-react';
 import type { ImageryLayer } from 'cesium';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { useAppStore } from '../../store/app';
 import { useAuthStore } from '../../features/auth/store';
 import {
@@ -69,31 +70,12 @@ export function SolarPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 270,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconSolarPanel size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Solar Planner
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={270}>
+      <PanelHeader
+        icon={<IconSolarPanel size={16} />}
+        title="Solar Planner"
+        onClose={onClose}
+      />
 
       <Stack gap="xs">
         <Text size="xs" c="dimmed">
@@ -138,6 +120,6 @@ export function SolarPanel({ onClose }: { onClose: () => void }) {
           </Text>
         )}
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

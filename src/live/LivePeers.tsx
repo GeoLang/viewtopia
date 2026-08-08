@@ -2,7 +2,7 @@ import { Avatar, Tooltip } from '@mantine/core';
 import { useLiveStore } from './liveStore';
 import { peerColor } from './MapPresence';
 
-const FOLLOWED_OUTLINE = '2px solid #a78bfa';
+const FOLLOWED_OUTLINE = '2px solid var(--mantine-color-violet-4)';
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -50,7 +50,7 @@ export function LivePeers() {
               styles={{
                 placeholder: {
                   background: peerColor(peer.actor),
-                  color: '#0d1117',
+                  color: 'var(--mantine-color-dark-8)',
                   fontWeight: 700,
                   fontSize: 10,
                 },

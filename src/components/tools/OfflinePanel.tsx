@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
@@ -10,7 +9,8 @@ import {
   Progress,
   TextInput,
 } from '@mantine/core';
-import { IconDeviceFloppy, IconX, IconDownload, IconTrash } from '@tabler/icons-react';
+import { IconDeviceFloppy, IconDownload, IconTrash } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { cacheTilesForArea, countTilesForArea, evictTilesForArea } from '../../offline/cache';
 import { cachedRegions, type CachedRegion } from '../../offline/db';
 import { getViewBounds } from '../../lib/viewBounds';
@@ -112,31 +112,12 @@ export function OfflinePanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 280,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconDeviceFloppy size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Offline Cache
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={280}>
+      <PanelHeader
+        icon={<IconDeviceFloppy size={16} />}
+        title="Offline Cache"
+        onClose={onClose}
+      />
 
       <Stack gap="xs">
         <Text size="xs" c="dimmed">
@@ -206,6 +187,6 @@ export function OfflinePanel({ onClose }: { onClose: () => void }) {
           </Text>
         )}
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

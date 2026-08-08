@@ -1,5 +1,4 @@
 import {
-  Paper,
   Text,
   Stack,
   Group,
@@ -8,7 +7,8 @@ import {
   Button,
   SegmentedControl,
 } from '@mantine/core';
-import { IconRuler, IconX, IconTrash } from '@tabler/icons-react';
+import { IconRuler, IconTrash } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { useMeasureStore, type MeasureMode } from '../../store/measure';
 
 export function MeasurementPanel({
@@ -40,36 +40,19 @@ export function MeasurementPanel({
       : `${liveDistance.toFixed(1)} m`;
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 280,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconRuler size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Measurement
-          </Text>
-          {results.length > 0 && (
+    <PanelCard width={280}>
+      <PanelHeader
+        icon={<IconRuler size={16} />}
+        title="Measurement"
+        onClose={onClose}
+        badge={
+          results.length > 0 && (
             <Badge size="xs" variant="light" color="violet">
               {results.length}
             </Badge>
-          )}
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+          )
+        }
+      />
 
       <SegmentedControl
         size="xs"
@@ -105,7 +88,7 @@ export function MeasurementPanel({
       <Stack gap={4}>
         {results.map((r) => (
           <Group key={r.id} justify="space-between" p="xs"
-            style={{ background: '#21262d', borderRadius: 4 }}
+            style={{ background: 'var(--mantine-color-dark-6)', borderRadius: 4 }}
           >
             <Group gap="xs">
               <Badge size="xs" variant="light" color="yellow">
@@ -137,6 +120,6 @@ export function MeasurementPanel({
           Clear All
         </Button>
       </Group>
-    </Paper>
+    </PanelCard>
   );
 }

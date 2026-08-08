@@ -25,7 +25,7 @@ export function cursorElement(name: string, color: string): HTMLElement {
 
   const label = document.createElement('span');
   label.textContent = name;
-  label.style.cssText = `background:${color};color:#0d1117;font:600 10px sans-serif;padding:1px 4px;border-radius:3px;white-space:nowrap`;
+  label.style.cssText = `background:${color};color:var(--mantine-color-dark-8);font:600 10px sans-serif;padding:1px 4px;border-radius:3px;white-space:nowrap`;
 
   wrapper.append(arrow, label);
   return wrapper;

@@ -100,22 +100,19 @@ whole screen, one design system with no raw edges, desktop-grade
 micro-interaction. Phase 1 (map real estate) shipped 2026-08-08, see the
 changelog and DESIGN.md's shell layout paragraph. Where viewtopia still
 misses: raw errors sit in the chrome ("agora GET /documents failed with
-500" in the Live dialog), 510 hardcoded hex values across 111 files and
-249 inline style objects bypass theme.ts, no shared panel primitives (the
-close-button pattern is retyped 156 times, ToolPanels.tsx is a 137-case
-switch), floating panels collide (Legend opens over the chat header), the
-toolbar at phone widths only scrolls, 4 keyboard shortcuts app-wide,
-default white map widgets on dark chrome. Phases ordered so each is
-visible alone.
+500" in the Live dialog), floating panels collide (Legend opens over the
+chat header), the toolbar at phone widths only scrolls, 4 keyboard
+shortcuts app-wide, default white map widgets on dark chrome. Phases
+ordered so each is visible alone.
 
-- [ ] **phase 2, design system**: palette as Mantine theme tokens, then
-      sweep the hex literals and inline styles (parallelizes by directory
-      once tokens land; input chrome and the panel-card sweep are done, see
-      changelog). Replace absolute-positioned cards with a docked inspector
-      column that stacks without collisions, which also fixes mobile.
-      Restyle the MapLibre, Leaflet and Cesium widgets and the scrollbars
-      to the theme. Replace alert/confirm with modals and emoji menu icons
-      with Tabler.
+- [ ] **phase 2, design system (remainder)**: the panel-primitive and
+      chrome-token sweeps shipped 2026-08-08 (changelog), so all standard
+      floating panels render through PanelCard. Replace their
+      absolute-positioned placement with a docked inspector column that
+      stacks without collisions, which also fixes mobile and is now a
+      change in one component. Restyle the MapLibre, Leaflet and Cesium
+      widgets and the scrollbars to the theme. Replace alert/confirm with
+      modals and emoji menu icons with Tabler.
 - [ ] **phase 3, interaction polish**: Cmd+K command palette over the
       existing plugin and panel registries (demotes the seven dropdown
       menus), one-letter shortcuts for draw and measure tools with tooltip

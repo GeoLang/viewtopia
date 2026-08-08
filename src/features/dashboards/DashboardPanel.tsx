@@ -130,7 +130,7 @@ export function DashboardPanel({ onClose }: { onClose: () => void }) {
                 padding="sm"
                 radius="md"
                 withBorder
-                style={{ cursor: 'pointer', background: '#161b22', borderColor: '#30363d' }}
+                style={{ cursor: 'pointer', background: 'var(--mantine-color-dark-7)', borderColor: 'var(--mantine-color-dark-5)' }}
                 onClick={() => open(d.id)}
               >
                 <Group justify="space-between">
@@ -224,7 +224,7 @@ export function DashboardPanel({ onClose }: { onClose: () => void }) {
                   padding="xs"
                   radius="md"
                   withBorder
-                  style={{ background: '#161b22', borderColor: '#30363d' }}
+                  style={{ background: 'var(--mantine-color-dark-7)', borderColor: 'var(--mantine-color-dark-5)' }}
                 >
                   <Group justify="space-between" mb={4} wrap="nowrap">
                     <Text size="xs" fw={600} c="white" lineClamp={1}>

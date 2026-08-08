@@ -1,5 +1,4 @@
 import {
-  Paper,
   Text,
   Stack,
   Group,
@@ -12,6 +11,7 @@ import {
 } from '@mantine/core';
 import { IconWorld, IconX, IconPlus } from '@tabler/icons-react';
 import { useState } from 'react';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { loadPmtilesLayer, loadWfsLayer, type OGCLayer, type OGCType } from '../../store/ogcLayers';
 
 interface OGCLayersPanelProps {
@@ -71,36 +71,14 @@ export function OGCLayersPanel({
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 340,
-        maxHeight: '60vh',
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconWorld size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            OGC Layers
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={340} maxHeight="60vh">
+      <PanelHeader
+        icon={<IconWorld size={16} />}
+        title="OGC Layers"
+        onClose={onClose}
+      />
 
-      <Stack gap="xs" mb="xs" p="xs" style={{ background: '#21262d', borderRadius: 4 }}>
+      <Stack gap="xs" mb="xs" p="xs" style={{ background: 'var(--mantine-color-dark-6)', borderRadius: 4 }}>
         <TextInput
           size="xs"
           placeholder="Layer name"
@@ -169,7 +147,7 @@ export function OGCLayersPanel({
                 key={layer.id}
                 justify="space-between"
                 p="xs"
-                style={{ background: '#21262d', borderRadius: 4 }}
+                style={{ background: 'var(--mantine-color-dark-6)', borderRadius: 4 }}
               >
                 <Stack gap={0}>
                   <Text size="xs" c="white">
@@ -197,6 +175,6 @@ export function OGCLayersPanel({
           )}
         </Stack>
       </ScrollArea>
-    </Paper>
+    </PanelCard>
   );
 }

@@ -24,6 +24,7 @@ import {
   TextInput,
 } from '@mantine/core';
 import { IconMap, IconPlayerPlay, IconVectorTriangle, IconX } from '@tabler/icons-react';
+import { PanelHeader } from '../components/PanelCard';
 import { TOOLS, TOOL_GROUPS, toolsInGroup, type ParamKey, type ToolId } from './catalog';
 import { runTool, type ToolOutput, type ToolParams } from './engine';
 import { bboxOf, frameFor, projectBbox, type Bbox } from './projection';
@@ -264,22 +265,16 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
         width: 340,
         maxHeight: 'calc(100vh - 120px)',
         overflowY: 'auto',
-        background: '#161b22',
-        border: '1px solid #30363d',
+        background: 'var(--mantine-color-dark-7)',
+        border: '1px solid var(--mantine-color-dark-5)',
         zIndex: 300,
       }}
     >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconVectorTriangle size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Geoprocessing
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+      <PanelHeader
+        icon={<IconVectorTriangle size={16} />}
+        title="Geoprocessing"
+        onClose={onClose}
+      />
 
       <Stack gap="xs">
         <Select
@@ -458,7 +453,7 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
         )}
 
         {result?.output.kind === 'features' && (
-          <Paper p="xs" withBorder bg="#0d1117">
+          <Paper p="xs" withBorder bg="var(--mantine-color-dark-8)">
             <Text size="xs" fw={500} c="white">
               {TOOLS[result.tool].label}: {result.output.geojson.features.length} features
             </Text>
@@ -476,7 +471,7 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
         )}
 
         {result?.output.kind === 'report' && (
-          <Paper p="xs" withBorder bg="#0d1117">
+          <Paper p="xs" withBorder bg="var(--mantine-color-dark-8)">
             {result.output.report.valid ? (
               <Text size="xs" c="teal">
                 Every feature is valid.
@@ -519,7 +514,7 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
             {steps.map((step, i) => {
               const out = outputs[i];
               return (
-                <Paper key={step.id} p={6} withBorder bg="#0d1117">
+                <Paper key={step.id} p={6} withBorder bg="var(--mantine-color-dark-8)">
                   <Group justify="space-between" wrap="nowrap">
                     <Text size="xs" c="white">
                       {i + 1}. {TOOLS[step.tool].label}

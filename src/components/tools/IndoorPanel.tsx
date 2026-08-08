@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
@@ -12,7 +11,8 @@ import {
   FileButton,
   ScrollArea,
 } from '@mantine/core';
-import { IconBuilding, IconX, IconRefresh, IconUpload, IconRoute } from '@tabler/icons-react';
+import { IconBuilding, IconRefresh, IconUpload, IconRoute } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { useAgentLayerStore } from '../../store/agentLayers';
 import { getAuthToken } from '../../features/auth/store';
 import {
@@ -192,31 +192,12 @@ export function IndoorPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 300,
-        maxHeight: '70vh',
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconBuilding size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Indoor Navigation
-          </Text>
-        </Group>
-        <Group gap={4}>
+    <PanelCard width={300} maxHeight="70vh">
+      <PanelHeader
+        icon={<IconBuilding size={16} />}
+        title="Indoor Navigation"
+        onClose={onClose}
+        actions={
           <ActionIcon
             size="sm"
             variant="subtle"
@@ -227,11 +208,8 @@ export function IndoorPanel({ onClose }: { onClose: () => void }) {
           >
             <IconRefresh size={14} />
           </ActionIcon>
-          <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-            <IconX size={14} />
-          </ActionIcon>
-        </Group>
-      </Group>
+        }
+      />
 
       {needsSignIn ? (
         <Text size="xs" c="dimmed" py="lg" ta="center" data-testid="indoor-signin">
@@ -366,6 +344,6 @@ export function IndoorPanel({ onClose }: { onClose: () => void }) {
           </Stack>
         </ScrollArea>
       )}
-    </Paper>
+    </PanelCard>
   );
 }

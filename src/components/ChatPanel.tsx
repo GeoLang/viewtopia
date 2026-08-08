@@ -112,7 +112,7 @@ export function ChatPanel() {
   return (
     <Stack h="100%" gap={0}>
       {/* Session bar */}
-      <Group p="xs" gap="xs" style={{ borderBottom: '1px solid #30363d' }}>
+      <Group p="xs" gap="xs" style={{ borderBottom: '1px solid var(--mantine-color-dark-5)' }}>
         <Select
           size="xs"
           flex={1}
@@ -169,13 +169,13 @@ export function ChatPanel() {
                 style={{
                   display: 'inline-block',
                   background:
-                    msg.role === 'user' ? '#7c3aed' : '#21262d',
+                    msg.role === 'user' ? 'var(--mantine-color-violet-7)' : 'var(--mantine-color-dark-6)',
                   padding: '6px 10px',
                   borderRadius: 8,
                   maxWidth: '85%',
                   whiteSpace: 'pre-wrap',
                   cursor: replayable ? 'pointer' : undefined,
-                  borderLeft: replayable ? '2px solid #a78bfa' : undefined,
+                  borderLeft: replayable ? '2px solid var(--mantine-color-violet-4)' : undefined,
                 }}
               >
                 {msg.content}
@@ -212,7 +212,7 @@ export function ChatPanel() {
       </ScrollArea>
 
       {/* Input */}
-      <Group p="sm" gap="xs" style={{ borderTop: '1px solid #30363d' }}>
+      <Group p="sm" gap="xs" style={{ borderTop: '1px solid var(--mantine-color-dark-5)' }}>
         <TextInput
           flex={1}
           size="sm"

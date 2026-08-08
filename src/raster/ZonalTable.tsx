@@ -14,7 +14,7 @@ export function ZonalTable({
 }) {
   if (rows.length === 0) {
     return (
-      <Paper p="xs" withBorder bg="#0d1117">
+      <Paper p="xs" withBorder bg="dark.8">
         <Text size="xs" c="dimmed">
           No zone covered a cell with data.
         </Text>
@@ -23,7 +23,7 @@ export function ZonalTable({
   }
 
   return (
-    <Paper p="xs" withBorder bg="#0d1117">
+    <Paper p="xs" withBorder bg="dark.8">
       <Group justify="space-between" mb={4}>
         <Text size="xs" fw={500} c="white">
           Zonal result

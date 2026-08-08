@@ -1,15 +1,14 @@
 import { useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
-  ActionIcon,
   TextInput,
   Button,
   Badge,
 } from '@mantine/core';
-import { IconRoute, IconX, IconMapPin } from '@tabler/icons-react';
+import { IconRoute, IconMapPin } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { geocode } from '../../services/geocode';
 import { route, type RouteResult } from '../../services/route';
 
@@ -50,31 +49,12 @@ export function RoutingPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 300,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconRoute size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Routing
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={300}>
+      <PanelHeader
+        icon={<IconRoute size={16} />}
+        title="Routing"
+        onClose={onClose}
+      />
 
       <Stack gap="xs">
         <TextInput
@@ -127,6 +107,6 @@ export function RoutingPanel({ onClose }: { onClose: () => void }) {
           </Stack>
         )}
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

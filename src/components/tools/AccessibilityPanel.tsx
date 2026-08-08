@@ -1,12 +1,10 @@
 import {
-  Paper,
   Text,
   Stack,
-  Group,
-  ActionIcon,
   Switch,
 } from '@mantine/core';
-import { IconAccessible, IconX } from '@tabler/icons-react';
+import { IconAccessible } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { useAccessibilityStore } from '../../store/accessibility';
 
 export function AccessibilityPanel({ onClose }: { onClose: () => void }) {
@@ -18,31 +16,12 @@ export function AccessibilityPanel({ onClose }: { onClose: () => void }) {
   const setReduceMotion = useAccessibilityStore((s) => s.setReduceMotion);
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 260,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconAccessible size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Accessibility
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={260}>
+      <PanelHeader
+        icon={<IconAccessible size={16} />}
+        title="Accessibility"
+        onClose={onClose}
+      />
 
       <Stack gap="xs">
         <Switch
@@ -70,6 +49,6 @@ export function AccessibilityPanel({ onClose }: { onClose: () => void }) {
           Reduced motion skips camera flight animations in bookmarks and stories.
         </Text>
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

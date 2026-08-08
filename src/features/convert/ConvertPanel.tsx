@@ -4,8 +4,9 @@
  * picks a layer, calls the writer and hands the bytes to a download.
  */
 import { useState } from 'react';
-import { ActionIcon, Alert, Button, Group, Paper, Select, Stack, Text } from '@mantine/core';
-import { IconDownload, IconTransform, IconX } from '@tabler/icons-react';
+import { Alert, Button, Group, Select, Stack, Text } from '@mantine/core';
+import { IconDownload, IconTransform } from '@tabler/icons-react';
+import { PanelCard, PanelCloseButton } from '../../components/PanelCard';
 import { CONVERT_FORMATS, convertFileName, convertLayer, type ConvertFormat } from './formats';
 import { useGeoJsonSources } from '../../lib/geojsonSources';
 
@@ -49,20 +50,7 @@ export function ConvertPanel({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 320,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
+    <PanelCard width={320}>
       <Group justify="space-between" mb="xs">
         <Group gap="xs">
           <IconTransform size={16} color="#38bdf8" />
@@ -70,9 +58,7 @@ export function ConvertPanel({ onClose }: { onClose: () => void }) {
             Convert
           </Text>
         </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
+        <PanelCloseButton onClose={onClose} />
       </Group>
 
       <Stack gap="xs">
@@ -135,6 +121,6 @@ export function ConvertPanel({ onClose }: { onClose: () => void }) {
           </Text>
         )}
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

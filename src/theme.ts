@@ -9,7 +9,7 @@ const violet: MantineColorsTuple = [
   '#e5dbff',
   '#d0bfff',
   '#b197fc',
-  '#9775fa',
+  '#a78bfa',
   '#845ef7',
   '#7950f2',
   '#7c3aed',

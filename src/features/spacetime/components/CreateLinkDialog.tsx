@@ -73,7 +73,7 @@ export function CreateLinkDialog() {
   }
 
   return (
-    <Paper p="xs" style={{ background: '#21262d', borderRadius: 6 }}>
+    <Paper p="xs" style={{ background: 'var(--mantine-color-dark-6)', borderRadius: 6 }}>
       <Group justify="space-between" mb="xs">
         <Text size="xs" fw={600} c="white">
           Create Link

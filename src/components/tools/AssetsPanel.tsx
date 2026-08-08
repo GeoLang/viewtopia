@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
@@ -13,7 +12,6 @@ import {
 } from '@mantine/core';
 import {
   IconPackage,
-  IconX,
   IconUpload,
   IconTrash,
   IconRefresh,
@@ -21,6 +19,7 @@ import {
 } from '@tabler/icons-react';
 import { Cesium3DTileset } from 'cesium';
 import type { Viewer } from 'cesium';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { getAuthToken } from '../../features/auth/store';
 import { useAppStore } from '../../store/app';
@@ -257,34 +256,17 @@ export function AssetsPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 320,
-        maxHeight: '60vh',
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconPackage size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Assets
-          </Text>
+    <PanelCard width={320} maxHeight="60vh">
+      <PanelHeader
+        icon={<IconPackage size={16} />}
+        title="Assets"
+        onClose={onClose}
+        badge={
           <Badge size="xs" variant="light" color="violet">
             {assets.length}
           </Badge>
-        </Group>
-        <Group gap={4}>
+        }
+        actions={
           <ActionIcon
             size="sm"
             variant="subtle"
@@ -295,11 +277,8 @@ export function AssetsPanel({ onClose }: { onClose: () => void }) {
           >
             <IconRefresh size={14} />
           </ActionIcon>
-          <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-            <IconX size={14} />
-          </ActionIcon>
-        </Group>
-      </Group>
+        }
+      />
 
       {needsSignIn ? (
         <Text size="xs" c="dimmed" py="lg" ta="center" data-testid="assets-signin">
@@ -354,7 +333,7 @@ export function AssetsPanel({ onClose }: { onClose: () => void }) {
                     wrap="nowrap"
                     p="xs"
                     data-testid={`assets-row-${asset.id}`}
-                    style={{ background: '#21262d', borderRadius: 4 }}
+                    style={{ background: 'var(--mantine-color-dark-6)', borderRadius: 4 }}
                   >
                     <Stack gap={2} style={{ minWidth: 0 }}>
                       <Text size="xs" c="white" fw={500} truncate>
@@ -421,6 +400,6 @@ export function AssetsPanel({ onClose }: { onClose: () => void }) {
           </ScrollArea>
         </>
       )}
-    </Paper>
+    </PanelCard>
   );
 }

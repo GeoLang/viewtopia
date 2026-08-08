@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
-  Group,
-  ActionIcon,
   Switch,
   Slider,
   Select,
 } from '@mantine/core';
-import { IconSun, IconX } from '@tabler/icons-react';
+import { IconSun } from '@tabler/icons-react';
 import { Cartesian3, DirectionalLight, SunLight, JulianDate } from 'cesium';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 
 /** A downward light direction derived from the time of day (rough sun sweep). */
@@ -51,31 +49,12 @@ export function LightingPanel({ onClose }: { onClose: () => void }) {
   }, [enabled, hour, lightType, hdr, atmosphere]);
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 260,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconSun size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Day Lighting
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={260}>
+      <PanelHeader
+        icon={<IconSun size={16} />}
+        title="Day Lighting"
+        onClose={onClose}
+      />
 
       <Stack gap="xs">
         <Switch
@@ -118,6 +97,6 @@ export function LightingPanel({ onClose }: { onClose: () => void }) {
 
         <Text size="xs" c="green" data-testid="lighting-status">{status}</Text>
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

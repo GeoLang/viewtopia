@@ -1,5 +1,6 @@
-import { ActionIcon, Group, Paper, ScrollArea, Stack, Text } from '@mantine/core';
-import { IconListDetails, IconX } from '@tabler/icons-react';
+import { Group, Paper, ScrollArea, Stack, Text } from '@mantine/core';
+import { IconListDetails } from '@tabler/icons-react';
+import { PanelHeader } from '../../components/PanelCard';
 import { useAgentLayerStore } from '../../store/agentLayers';
 import { legendEntries, symbologyField } from './symbology';
 
@@ -21,25 +22,19 @@ export function LegendPanel({ onClose }: { onClose: () => void }) {
         right: 16,
         width: 260,
         maxHeight: '60vh',
-        background: '#161b22',
-        border: '1px solid #30363d',
+        background: 'var(--mantine-color-dark-7)',
+        border: '1px solid var(--mantine-color-dark-5)',
         zIndex: 300,
         display: 'flex',
         flexDirection: 'column',
       }}
       data-testid="legend-panel"
     >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconListDetails size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Legend
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+      <PanelHeader
+        icon={<IconListDetails size={16} />}
+        title="Legend"
+        onClose={onClose}
+      />
 
       <ScrollArea flex={1}>
         <Stack gap="sm">
@@ -74,7 +69,7 @@ export function LegendPanel({ onClose }: { onClose: () => void }) {
                           flexShrink: 0,
                         }}
                       />
-                      <Text size="xs" c="#c9d1d9" lineClamp={1}>
+                      <Text size="xs" c="dark.0" lineClamp={1}>
                         {entry.label}
                       </Text>
                     </Group>

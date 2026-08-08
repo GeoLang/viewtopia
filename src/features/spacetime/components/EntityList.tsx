@@ -91,12 +91,12 @@ export function EntityList() {
                 p="xs"
                 style={{
                   background:
-                    selectedEntityId === entity.id ? '#2d1b69' : '#21262d',
+                    selectedEntityId === entity.id ? '#2d1b69' : 'var(--mantine-color-dark-6)',
                   borderRadius: 4,
                   cursor: 'pointer',
                   border:
                     selectedEntityId === entity.id
-                      ? '1px solid #7c3aed'
+                      ? '1px solid var(--mantine-color-violet-7)'
                       : '1px solid transparent',
                 }}
                 onClick={() => selectEntity(entity.id)}

@@ -1,16 +1,14 @@
 import { useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
-  Group,
-  ActionIcon,
   Switch,
   Button,
   Badge,
   Tooltip,
 } from '@mantine/core';
-import { IconBuildingSkyscraper, IconX } from '@tabler/icons-react';
+import { IconBuildingSkyscraper } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { useBuildingStore, fetchOsmBuildings } from '../../store/buildings';
 import { useAppStore } from '../../store/app';
 import { getSharedCamera } from '../../hooks/sharedCamera';
@@ -67,31 +65,12 @@ export function BuildingsPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 260,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconBuildingSkyscraper size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            OSM Buildings
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={260}>
+      <PanelHeader
+        icon={<IconBuildingSkyscraper size={16} />}
+        title="OSM Buildings"
+        onClose={onClose}
+      />
 
       <Stack gap="xs">
         <Text size="xs" c="dimmed">
@@ -160,6 +139,6 @@ export function BuildingsPanel({ onClose }: { onClose: () => void }) {
           </Button>
         )}
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

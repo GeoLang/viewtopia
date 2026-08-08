@@ -127,8 +127,8 @@ export function ContextMenu() {
         left: x,
         top: y,
         width: 220,
-        background: '#161b22',
-        border: '1px solid #30363d',
+        background: 'var(--mantine-color-dark-7)',
+        border: '1px solid var(--mantine-color-dark-5)',
         zIndex: 1000,
       }}
       onClick={(e: React.MouseEvent) => e.stopPropagation()}
@@ -136,7 +136,7 @@ export function ContextMenu() {
       <Text size="xs" c="dimmed" px="xs" py={2}>
         {lat.toFixed(6)}, {lng.toFixed(6)}
       </Text>
-      <Divider color="#30363d" my={2} />
+      <Divider color="dark.5" my={2} />
       <Stack gap={0}>
         {actions.map((action, i) => (
           <Text
@@ -153,7 +153,7 @@ export function ContextMenu() {
               gap: 8,
             }}
             onMouseEnter={(e: React.MouseEvent) =>
-              ((e.target as HTMLElement).style.background = '#21262d')
+              ((e.target as HTMLElement).style.background = 'var(--mantine-color-dark-6)')
             }
             onMouseLeave={(e: React.MouseEvent) =>
               ((e.target as HTMLElement).style.background = 'transparent')
