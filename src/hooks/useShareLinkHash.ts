@@ -1,8 +1,52 @@
 import { useEffect } from 'react';
-import { useAppStore, asRenderer } from '../store/app';
-import { setSharedCamera } from './sharedCamera';
-import { getActiveCesiumViewer } from '../viewer/registry';
-import { flyToCameraState } from '../store/cameraViews';
+import { useAppStore, asRenderer, type Renderer } from '../store/app';
+import { getSharedCamera, setSharedCamera } from './sharedCamera';
+import { getActiveCesiumViewer, getActiveMapLibre } from '../viewer/registry';
+import { captureCameraState, flyToCameraState } from '../store/cameraViews';
+
+/**
+ * The five hash numbers (lng, lat, height, heading, pitch) read off the renderer
+ * that is on screen. Cesium pitch convention: 0 = horizon, -90 = straight down.
+ */
+function activeCamera(renderer: Renderer): number[] {
+  if (renderer === 'cesium') {
+    const viewer = getActiveCesiumViewer();
+    const cam = viewer ? captureCameraState(viewer) : null;
+    if (cam) return [cam.lng, cam.lat, cam.height, cam.heading, cam.pitch];
+  }
+  if (renderer === 'maplibre') {
+    const map = getActiveMapLibre();
+    if (map) {
+      const c = map.getCenter();
+      return [
+        c.lng,
+        c.lat,
+        4e7 / 2 ** map.getZoom(),
+        map.getBearing(),
+        map.getPitch() - 90,
+      ];
+    }
+  }
+  const shared = getSharedCamera();
+  return [
+    shared.longitude,
+    shared.latitude,
+    4e7 / 2 ** shared.zoom,
+    shared.bearing,
+    shared.pitch - 90,
+  ];
+}
+
+/**
+ * The hash fragment a share url carries so its recipient lands at the current
+ * view, in the format the boot hook below reads back.
+ */
+export function cameraHashFragment(renderer: Renderer): string {
+  const params = new URLSearchParams();
+  params.set('cam', activeCamera(renderer).map((n) => n.toFixed(5)).join(','));
+  params.set('renderer', renderer);
+  return params.toString();
+}
 
 /**
  * On first mount, apply camera + renderer encoded in the URL hash

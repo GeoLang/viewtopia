@@ -150,21 +150,42 @@ describe('live session ui', () => {
     expect(useLiveStore.getState().documentId).toBeNull();
   });
 
-  it('creates a role scoped share link from the dialog', async () => {
+  it('creates a role scoped share link carrying the current camera', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ token: 'link-token' }));
     draw(<LiveShareDialog documentId="doc-1" opened onClose={() => {}} />);
 
     fireEvent.click(screen.getByText('Can edit'));
     fireEvent.click(screen.getByTestId('create-share-link'));
 
-    await waitFor(() =>
-      expect(screen.getByTestId('share-link')).toHaveValue(
-        `${location.origin}/?live=link-token`,
-      ),
-    );
+    await waitFor(() => {
+      const value = (screen.getByTestId('share-link') as HTMLInputElement).value;
+      expect(value.startsWith(`${location.origin}/?live=link-token#cam=`)).toBe(true);
+      expect(value).toContain('renderer=');
+    });
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('/agora/documents/doc-1/links');
     expect(init.body).toBe(JSON.stringify({ role: 'edit' }));
+  });
+
+  it('offers an embed snippet only for view links, camera included', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ token: 'view-token' }));
+    draw(<LiveShareDialog documentId="doc-1" opened onClose={() => {}} />);
+
+    fireEvent.click(screen.getByTestId('create-share-link'));
+    await waitFor(() => {
+      const snippet = (screen.getByTestId('embed-snippet') as HTMLInputElement).value;
+      expect(snippet).toContain('<iframe src=');
+      expect(snippet).toContain('live=view-token');
+      expect(snippet).toContain('embed=1');
+      expect(snippet).toContain('#cam=');
+    });
+
+    fetchMock.mockResolvedValueOnce(jsonResponse({ token: 'edit-token' }));
+    fireEvent.click(screen.getByText('Can edit'));
+    fireEvent.click(screen.getByTestId('create-share-link'));
+    await waitFor(() =>
+      expect(screen.queryByTestId('embed-snippet')).not.toBeInTheDocument(),
+    );
   });
 
   it('reports a share link the service refused', async () => {

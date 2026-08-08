@@ -13,6 +13,8 @@ import {
 } from '@mantine/core';
 import { IconTrash } from '@tabler/icons-react';
 import { useAuthStore } from '../features/auth/store';
+import { cameraHashFragment } from '../hooks/useShareLinkHash';
+import { useAppStore } from '../store/app';
 import {
   AgoraRequestError,
   createShareLink,
@@ -68,12 +70,16 @@ export function LiveShareDialog({
   const canManageMembers =
     platformSignedIn && liveDocumentId === documentId && liveRole === 'edit';
 
+  const renderer = useAppStore((state) => state.renderer);
+
   const create = async () => {
     setCreating(true);
     setError('');
     try {
       const { token } = await createShareLink(documentId, role);
-      setLink(shareLinkUrl(token));
+      // the document syncs layers and annotations but holds no camera, so the
+      // link carries the sharer's current view as the landing point
+      setLink(`${shareLinkUrl(token)}#${cameraHashFragment(renderer)}`);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'could not create the link');
     } finally {

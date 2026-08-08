@@ -12,8 +12,12 @@ All notable changes to this project will be documented in this file.
   back to the full app (same URL minus the param). Pairs with a view role
   share link for a read only live embed, and with hash share links for
   static maps. The share dialog offers a copyable iframe snippet under view
-  links. e2e: a golden-path scenario mints a view link and asserts an
-  anonymous visitor gets the live map, the badge and none of the chrome.
+  links. Live share links and embed snippets now carry the sharer's current
+  camera as the existing `#cam=` hash (built by cameraHashFragment, shared
+  with ShareLinkPanel), because the live document syncs layers but holds no
+  camera, so recipients used to land at the default view. e2e: a golden-path
+  scenario mints a view link and asserts an anonymous visitor gets the live
+  map, the badge and none of the chrome.
 
 - 2026-08-08: **comment deep links and export**. Every thread offers a Link
   button copying a URL that opens the document at that thread: guests keep
