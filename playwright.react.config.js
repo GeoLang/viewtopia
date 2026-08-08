@@ -16,6 +16,9 @@ export default defineConfig({
     'default-boot.spec.js',
   ],
   timeout: 60000,
+  // one worker on CI: two concurrent Cesium tabs on swiftshader starve the
+  // runner's cores until clicks and evaluate never dispatch
+  workers: process.env.CI ? 1 : undefined,
   use: {
     baseURL: 'http://localhost:5175',
     headless: true,
