@@ -61,9 +61,12 @@ export function BasemapRendererControl() {
             size="xs"
             label="Renderer"
             aria-label="Renderer"
-            data={RENDERER_OPTIONS}
-            value={renderer}
+            // the 2d tab always draws with leaflet, so show that instead of
+            // freezing on the persisted globe renderer
+            data={onMapTab ? [{ value: 'leaflet', label: 'Leaflet' }] : RENDERER_OPTIONS}
+            value={onMapTab ? 'leaflet' : renderer}
             disabled={onMapTab}
+            description={onMapTab ? '2D always renders with Leaflet — switch to 3D to change engines' : undefined}
             onChange={(v) => v && setRenderer(v as Renderer)}
           />
         </Stack>
