@@ -97,22 +97,11 @@ together in the browser" and refuse feature-parity fights with ArcGIS.
 From a running-app audit, a code audit of all ~76 panels, and Felt's
 published design writing. Felt's bar is three commitments: the map is the
 whole screen, one design system with no raw edges, desktop-grade
-micro-interaction. Phase 1 (map real estate) shipped 2026-08-08, see the
-changelog and DESIGN.md's shell layout paragraph. Where viewtopia still
-misses: raw errors sit in the chrome ("agora GET /documents failed with
-500" in the Live dialog), floating panels collide (Legend opens over the
-chat header), the toolbar at phone widths only scrolls, 4 keyboard
-shortcuts app-wide, default white map widgets on dark chrome. Phases
-ordered so each is visible alone.
-
-- [ ] **phase 2, design system (remainder)**: the panel-primitive and
-      chrome-token sweeps shipped 2026-08-08 (changelog), so all standard
-      floating panels render through PanelCard. Replace their
-      absolute-positioned placement with a docked inspector column that
-      stacks without collisions, which also fixes mobile and is now a
-      change in one component. Restyle the MapLibre, Leaflet and Cesium
-      widgets and the scrollbars to the theme. Replace alert/confirm with
-      modals and emoji menu icons with Tabler.
+micro-interaction. Phases 1 and 2 shipped 2026-08-08, see the changelog
+and DESIGN.md's shell layout paragraph. Where viewtopia still misses: raw
+errors sit in the chrome ("agora GET /documents failed with 500" in the
+Live dialog), the toolbar at phone widths only scrolls, 4 keyboard
+shortcuts app-wide. Phases ordered so each is visible alone.
 - [ ] **phase 3, interaction polish**: Cmd+K command palette over the
       existing plugin and panel registries (demotes the seven dropdown
       menus), one-letter shortcuts for draw and measure tools with tooltip

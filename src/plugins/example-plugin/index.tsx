@@ -9,6 +9,7 @@
 
 import { useState } from 'react';
 import { Paper, Text, Button, Stack, TextInput, Group, Badge } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 import { IconMapSearch } from '@tabler/icons-react';
 import type { PluginDefinition, PluginContext } from '../sdk';
 
@@ -44,9 +45,9 @@ function ExamplePanel({ ctx }: { ctx: PluginContext }) {
     try {
       const resp = await ctx.api.fetch('/health');
       const text = await resp.text();
-      alert(`API response: ${text}`);
+      notifications.show({ title: 'API response', message: text });
     } catch (e) {
-      alert(`API error: ${e}`);
+      notifications.show({ color: 'red', title: 'API error', message: String(e) });
     }
   };
 

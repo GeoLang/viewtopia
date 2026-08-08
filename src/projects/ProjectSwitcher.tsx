@@ -28,6 +28,7 @@ import {
   IconCheck,
   IconUsers,
 } from '@tabler/icons-react';
+import { modals } from '@mantine/modals';
 import { useProjectsStore } from './projectsStore';
 import { useWorkspacesStore } from './workspacesStore';
 import { inviteByEmail, generateShareLink } from './sharing';
@@ -173,7 +174,14 @@ export function ProjectSwitcher() {
                 <Menu.Item
                   color="red"
                   leftSection={<IconTrash size={14} />}
-                  onClick={() => { if (confirm(`Delete "${activeProject.name}"?`)) removeProject(activeProject.id); }}
+                  onClick={() =>
+                    modals.openConfirmModal({
+                      title: `Delete "${activeProject.name}"?`,
+                      labels: { confirm: 'Delete', cancel: 'Cancel' },
+                      confirmProps: { color: 'red' },
+                      onConfirm: () => removeProject(activeProject.id),
+                    })
+                  }
                 >
                   Delete Project
                 </Menu.Item>

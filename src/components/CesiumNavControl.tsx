@@ -25,7 +25,7 @@ const buttonStyle: React.CSSProperties = {
   fontSize: 18,
   lineHeight: '29px',
   padding: 0,
-  color: '#333',
+  color: 'var(--mantine-color-dark-0)',
 };
 
 /**
@@ -141,7 +141,8 @@ export function CesiumNavControl() {
         top: 10,
         right: 10,
         zIndex: 10,
-        background: '#fff',
+        background: 'var(--mantine-color-dark-7)',
+        border: '1px solid var(--mantine-color-dark-5)',
         borderRadius: 4,
         boxShadow: '0 0 0 2px rgba(0,0,0,.1)',
       }}
@@ -149,7 +150,7 @@ export function CesiumNavControl() {
       <button
         type="button"
         aria-label="Zoom in"
-        style={{ ...buttonStyle, borderBottom: '1px solid #ddd' }}
+        style={{ ...buttonStyle, borderBottom: '1px solid var(--mantine-color-dark-5)' }}
         onClick={() => zoom(1)}
       >
         +
@@ -157,7 +158,7 @@ export function CesiumNavControl() {
       <button
         type="button"
         aria-label="Zoom out"
-        style={{ ...buttonStyle, borderBottom: '1px solid #ddd' }}
+        style={{ ...buttonStyle, borderBottom: '1px solid var(--mantine-color-dark-5)' }}
         onClick={() => zoom(-1)}
       >
         −

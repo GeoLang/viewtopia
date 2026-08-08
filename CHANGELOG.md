@@ -6,6 +6,21 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-08: **panels dock, widgets go dark (UI polish phase 2, part 3)**.
+  Right-anchored PanelCards now portal into a dock column at the map's top
+  right and stack without collisions (Legend, live Comments and a tool
+  panel can all be open); left/center panels and unit tests keep the
+  floating card via a no-dock fallback. Map widgets match the chrome: the
+  Cesium nav control loses its white box, MapLibre/Leaflet controls and
+  attributions restyle via global.css, scrollbars are thin and dark. The
+  toolbar dropdown menus swap emoji for Tabler icons from the registry,
+  and the last alert/confirm calls became a confirm modal (project
+  delete) and notifications (plugin errors). React e2e's console guard
+  now records the failing resource URL and allows only the two backend
+  health probes, which is what failed every CI run of the suite (no
+  platform stack in that workflow, so the dev proxy answers 500; locally
+  a running stack masked it).
+
 - 2026-08-08: **one panel chrome, tokenized (UI polish phase 2, part 2)**.
   Every standard floating tool panel (~50 files) now renders through
   PanelCard/PanelHeader, which paints the header icon accent itself, and

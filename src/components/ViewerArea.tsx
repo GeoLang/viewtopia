@@ -31,6 +31,7 @@ import { useShareLinkHash } from '../hooks/useShareLinkHash';
 import { CesiumNavControl } from './CesiumNavControl';
 import { Minimap } from './Minimap';
 import { CoordReadout } from './CoordReadout';
+import { setPanelDockElement } from './PanelCard';
 import { ContextMenu } from './ContextMenu';
 import { BasemapRendererControl } from './BasemapRendererControl';
 import { SplitPane } from './SplitPane';
@@ -298,6 +299,9 @@ export function ViewerArea() {
       <Minimap />
       <CoordReadout />
       <ContextMenu />
+
+      {/* right-anchored PanelCards portal in here and stack without collisions */}
+      <div className="panel-dock" ref={setPanelDockElement} />
     </Box>
   );
 }

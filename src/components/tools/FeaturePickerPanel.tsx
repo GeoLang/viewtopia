@@ -1,15 +1,13 @@
 import {
   Text,
   Stack,
-  Group,
-  ActionIcon,
   Switch,
   Badge,
   Table,
   ScrollArea,
 } from '@mantine/core';
-import { IconClick, IconX } from '@tabler/icons-react';
-import { PanelCard } from '../PanelCard';
+import { IconClick } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { useFeaturePickerStore } from '../../store/featurePicker';
 
 export function FeaturePickerPanel({ onClose }: { onClose: () => void }) {
@@ -19,28 +17,20 @@ export function FeaturePickerPanel({ onClose }: { onClose: () => void }) {
 
   return (
     <PanelCard width={300}>
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconClick size={16} style={{ color: 'var(--mantine-color-violet-4)' }} />
-          <Text size="sm" fw={600} c="white">
-            Feature Info
-          </Text>
-          {selected && selected.length > 0 && (
+      <PanelHeader
+        icon={<IconClick size={16} />}
+        title="Feature Info"
+        onClose={onClose}
+        closeLabel="Close feature info"
+        badge={
+          selected &&
+          selected.length > 0 && (
             <Badge size="xs" variant="light" color="violet">
               {selected.length}
             </Badge>
-          )}
-        </Group>
-        <ActionIcon
-          aria-label="Close feature info"
-          size="sm"
-          variant="subtle"
-          color="gray"
-          onClick={onClose}
-        >
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+          )
+        }
+      />
 
       <Stack gap="xs">
         <Switch

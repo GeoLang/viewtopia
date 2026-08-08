@@ -1,6 +1,6 @@
-import { Group, Paper, ScrollArea, Stack, Text } from '@mantine/core';
+import { Group, ScrollArea, Stack, Text } from '@mantine/core';
 import { IconListDetails } from '@tabler/icons-react';
-import { PanelHeader } from '../../components/PanelCard';
+import { PanelCard, PanelHeader } from '../../components/PanelCard';
 import { useAgentLayerStore } from '../../store/agentLayers';
 import { legendEntries, symbologyField } from './symbology';
 
@@ -12,24 +12,7 @@ export function LegendPanel({ onClose }: { onClose: () => void }) {
   const layers = useAgentLayerStore((s) => s.layers);
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 260,
-        maxHeight: '60vh',
-        background: 'var(--mantine-color-dark-7)',
-        border: '1px solid var(--mantine-color-dark-5)',
-        zIndex: 300,
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-      data-testid="legend-panel"
-    >
+    <PanelCard width={260} maxHeight="60vh" testId="legend-panel">
       <PanelHeader
         icon={<IconListDetails size={16} />}
         title="Legend"
@@ -95,6 +78,6 @@ export function LegendPanel({ onClose }: { onClose: () => void }) {
           })}
         </Stack>
       </ScrollArea>
-    </Paper>
+    </PanelCard>
   );
 }

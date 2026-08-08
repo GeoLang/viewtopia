@@ -4,7 +4,6 @@ import {
   Badge,
   Button,
   Group,
-  Paper,
   ScrollArea,
   Stack,
   Switch,
@@ -18,8 +17,8 @@ import {
   IconMapPin,
   IconMessage,
   IconTrash,
-  IconX,
 } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../components/PanelCard';
 import {
   COMMENT_TEXT_LIMIT,
   commentThreads,
@@ -217,44 +216,18 @@ export function LiveCommentsPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      data-testid="live-comments-panel"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 320,
-        maxHeight: 'calc(100vh - 120px)',
-        background: 'var(--mantine-color-dark-7)',
-        border: '1px solid var(--mantine-color-dark-5)',
-        zIndex: 300,
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconMessage size={16} style={{ color: 'var(--mantine-color-violet-4)' }} />
-          <Text size="sm" fw={600} c="white">
-            Comments
-          </Text>
+    <PanelCard width={320} maxHeight="calc(100vh - 120px)" testId="live-comments-panel">
+      <PanelHeader
+        icon={<IconMessage size={16} />}
+        title="Comments"
+        onClose={onClose}
+        closeLabel="Close comments"
+        badge={
           <Badge size="xs" variant="light" color="violet" data-testid="comment-count">
             {visible.length}
           </Badge>
-        </Group>
-        <ActionIcon
-          size="sm"
-          variant="subtle"
-          color="gray"
-          aria-label="Close comments"
-          onClick={onClose}
-        >
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+        }
+      />
 
       {canWrite ? (
         <Stack gap="xs">
@@ -321,6 +294,6 @@ export function LiveCommentsPanel({ onClose }: { onClose: () => void }) {
           )}
         </Stack>
       </ScrollArea>
-    </Paper>
+    </PanelCard>
   );
 }

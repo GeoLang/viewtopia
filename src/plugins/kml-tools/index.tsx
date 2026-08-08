@@ -6,6 +6,7 @@
 
 import { useState, useRef } from 'react';
 import { Paper, Text, Stack, Button, Group, Badge, FileInput, Code, SegmentedControl, Textarea } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 import { IconFileImport, IconFileExport, IconFile } from '@tabler/icons-react';
 import { kml, gpx } from '@tmcw/togeojson';
 import type { PluginDefinition, PluginContext } from '../sdk';
@@ -121,7 +122,11 @@ function KmlToolsPanel({ ctx }: { ctx: PluginContext }) {
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
-      alert(`Export error: ${e instanceof Error ? e.message : 'Invalid GeoJSON'}`);
+      notifications.show({
+        color: 'red',
+        title: 'Export error',
+        message: e instanceof Error ? e.message : 'Invalid GeoJSON',
+      });
     }
   };
 

@@ -68,7 +68,7 @@ test.describe('tool panels', () => {
   test('shadows: enabling drives the live scene or reports no viewer', async ({ page }) => {
     await page.goto(REACT_URL);
     await page.getByRole('button', { name: 'Analysis' }).click();
-    await page.getByText('🌑 Shadows').click();
+    await page.getByRole('menuitem', { name: 'Shadows' }).click();
     await expect(page.getByText('Shadow Analysis')).toBeVisible();
 
     await page.getByText('Enable Shadows').click();
@@ -86,7 +86,7 @@ test.describe('tool panels', () => {
   test('lighting: enabling toggles globe lighting on the live scene', async ({ page }) => {
     await page.goto(REACT_URL);
     await page.getByRole('button', { name: 'Simulate' }).click();
-    await page.getByText('☀ Lighting').click();
+    await page.getByRole('menuitem', { name: 'Lighting' }).click();
     await expect(page.getByText('Day Lighting')).toBeVisible();
 
     await page.getByText('Enable Sun Simulation').click();
@@ -111,7 +111,7 @@ test.describe('tool panels', () => {
     );
     await page.goto(REACT_URL);
     await page.getByRole('button', { name: 'Data' }).click();
-    await page.getByText('⛰ Terrain').click();
+    await page.getByRole('menuitem', { name: 'Terrain' }).click();
     await expect(page.getByText('Global Terrain')).toBeVisible();
 
     // The viewer boots on the flat ellipsoid provider. Comparing against that
@@ -154,7 +154,7 @@ test.describe('tool panels', () => {
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto(REACT_URL);
     await page.getByRole('button', { name: 'Analysis' }).click();
-    await page.getByText('🔥 Heatmap').click();
+    await page.getByRole('menuitem', { name: 'Heatmap' }).click();
     await expect(page.getByText('Heatmap Layer')).toBeVisible();
 
     await page.getByRole('textbox', { name: 'GeoJSON' }).fill(SAMPLE_POINTS);
@@ -183,7 +183,7 @@ test.describe('tool panels', () => {
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto(REACT_URL);
     await page.getByRole('button', { name: 'Analysis' }).click();
-    await page.getByText('📊 Statistics').click();
+    await page.getByRole('menuitem', { name: 'Statistics' }).click();
     await expect(page.getByText('Spatial Statistics')).toBeVisible();
 
     await page.getByRole('textbox', { name: 'GeoJSON' }).fill(SAMPLE_POINTS);
@@ -197,7 +197,7 @@ test.describe('tool panels', () => {
   test('cross section: samples a two-point line into an elevation profile', async ({ page }) => {
     await page.goto(REACT_URL);
     await page.getByRole('button', { name: 'Analysis' }).click();
-    await page.getByText('📐 Section').click();
+    await page.getByRole('menuitem', { name: 'Section' }).click();
     await expect(page.getByText('Cross Section')).toBeVisible();
 
     await page.getByRole('button', { name: 'Generate Profile' }).click();
@@ -247,7 +247,7 @@ test.describe('local tool panels (batch 2)', () => {
   test('share link: generate encodes camera + renderer into the hash', async ({ page }) => {
     await page.goto(REACT_URL);
     await page.getByRole('button', { name: 'More' }).click();
-    await page.getByText('🔗 Share Link').click();
+    await page.getByRole('menuitem', { name: 'Share Link' }).click();
     await expect(page.getByText('Share Link', { exact: true })).toBeVisible();
 
     await page.getByRole('button', { name: 'Generate Share Link' }).click();
@@ -271,7 +271,7 @@ test.describe('local tool panels (batch 2)', () => {
   test('stories: add step then toggle play mode', async ({ page }) => {
     await page.goto(REACT_URL);
     await page.getByRole('button', { name: 'Tools' }).click();
-    await page.getByText('📖 Stories').click();
+    await page.getByRole('menuitem', { name: 'Stories' }).click();
     await expect(page.getByText('Stories', { exact: true })).toBeVisible();
 
     await page.getByPlaceholder('Step title…').fill('Intro');
@@ -289,7 +289,7 @@ test.describe('local tool panels (batch 2)', () => {
   test('accessibility: toggles set classes and root font-size on <html>', async ({ page }) => {
     await page.goto(REACT_URL);
     await page.getByRole('button', { name: 'Tools' }).click();
-    await page.getByText('♿ A11y').click();
+    await page.getByRole('menuitem', { name: 'A11y' }).click();
     await expect(page.getByText('Accessibility')).toBeVisible();
 
     await page.getByText('High Contrast').click();
@@ -303,7 +303,7 @@ test.describe('local tool panels (batch 2)', () => {
   test('track import: parses inline GPX into listed points', async ({ page }) => {
     await page.goto(REACT_URL);
     await page.getByRole('button', { name: 'Data' }).click();
-    await page.getByText('🗺 Tracks').click();
+    await page.getByRole('menuitem', { name: 'Tracks' }).click();
     await expect(page.getByText('Track Import')).toBeVisible();
 
     await page.locator('input[type="file"]').setInputFiles({
@@ -322,7 +322,7 @@ test.describe('local tool panels (batch 2)', () => {
   test('space-time: importing the sample CSV lists its entities', async ({ page }) => {
     await page.goto(REACT_URL);
     await page.getByRole('button', { name: 'Analysis' }).click();
-    await page.getByText('🕐 Space-Time').click();
+    await page.getByRole('menuitem', { name: 'Space-Time' }).click();
 
     const panel = page
       .locator('main > [class*="mantine-Paper-root"]')
@@ -356,8 +356,8 @@ test.describe('local tool panels (batch 2)', () => {
     await page.waitForFunction(() => window.__viewtopiaMap && window.__viewtopiaMap.isStyleLoaded(), null, { timeout: 15000 });
 
     await page.getByRole('button', { name: 'Data' }).click();
-    await page.getByText('🔷 Vector Tiles').click();
-    await expect(page.getByText('Vector Tiles', { exact: true })).toBeVisible();
+    await page.getByRole('menuitem', { name: 'Vector Tiles' }).click();
+    await expect(page.locator('.panel-dock').getByText('Vector Tiles', { exact: true })).toBeVisible();
 
     await page.getByPlaceholder('Source name').fill('Parcels');
     await page.getByPlaceholder('/api/v1/branches/{id}/tiles/{z}/{x}/{y}').fill('https://tiles.test/{z}/{x}/{y}.pbf');
@@ -426,8 +426,8 @@ test.describe('weather/wind/traffic panels', () => {
     await page.goto(REACT_URL);
 
     await page.getByRole('button', { name: 'Simulate' }).click();
-    await page.getByText('🌦 Weather').click();
-    await expect(page.getByText('Weather', { exact: true })).toBeVisible();
+    await page.getByRole('menuitem', { name: 'Weather' }).click();
+    await expect(page.locator('.panel-dock').getByText('Weather', { exact: true })).toBeVisible();
 
     await expect(page.getByTestId('weather-current')).toContainText('21.4°C');
     await expect(page.getByTestId('weather-sparkline')).toBeVisible();
@@ -445,7 +445,7 @@ test.describe('weather/wind/traffic panels', () => {
     await page.goto(REACT_URL);
 
     await page.getByRole('button', { name: 'Simulate' }).click();
-    await page.getByText('💨 Wind').click();
+    await page.getByRole('menuitem', { name: 'Wind' }).click();
     await expect(page.getByText('Wind Field')).toBeVisible();
 
     await expect(page.getByTestId('wind-status')).toContainText('arrows');
@@ -478,8 +478,8 @@ test.describe('weather/wind/traffic panels', () => {
     });
 
     await page.getByRole('button', { name: 'Simulate' }).click();
-    await page.getByText('🚗 Traffic').click();
-    await expect(page.getByText('Traffic', { exact: true })).toBeVisible();
+    await page.getByRole('menuitem', { name: 'Traffic' }).click();
+    await expect(page.locator('.panel-dock').getByText('Traffic', { exact: true })).toBeVisible();
 
     await page.getByRole('button', { name: 'Load demo traffic' }).click();
     await expect(page.getByTestId('traffic-status')).toContainText('demo data');

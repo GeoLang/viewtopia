@@ -105,7 +105,7 @@ test.describe('React shell smoke', () => {
   test('portal catalog opens from the Data menu', async ({ page }) => {
     await page.goto(REACT_URL);
     await page.getByRole('button', { name: 'Data' }).click();
-    await page.getByText('🗂 Catalog').click();
+    await page.getByRole('menuitem', { name: 'Catalog' }).click();
     // Modal renders with search + the signed-out state (no token, so the catalog
     // is never requested).
     await expect(page.getByText('Content Catalog')).toBeVisible();
@@ -146,7 +146,7 @@ test.describe('React shell smoke', () => {
     await page.addInitScript(() => localStorage.removeItem('viewtopia_dashboards'));
     await page.goto(REACT_URL);
     await page.getByRole('button', { name: 'Tools' }).click();
-    await page.getByText('📈 Dashboards').click();
+    await page.getByRole('menuitem', { name: 'Dashboards' }).click();
     await expect(page.getByText(/no dashboards yet/i)).toBeVisible();
     // Create → enters the editor view.
     await page.getByRole('button', { name: 'New Dashboard' }).click();

@@ -24,8 +24,10 @@ import {
   IconPalette,
   IconWand,
   IconDots,
+  IconClockHour4,
+  IconPlug,
 } from '@tabler/icons-react';
-import { useAppStore, type ViewerTab } from '../store/app';
+import { useAppStore, type ToolPanel, type ViewerTab } from '../store/app';
 import { useFeaturePickerStore } from '../store/featurePicker';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { getPlugins } from '../plugins/registry';
@@ -62,6 +64,7 @@ export function ViewerToolbar() {
     visibleToolItems(items, showPreviewTools).map((item) => (
       <Menu.Item
         key={item.panel}
+        leftSection={<item.icon size={14} />}
         onClick={() => togglePanel(item.panel)}
         rightSection={
           item.preview ? (
@@ -186,7 +189,9 @@ export function ViewerToolbar() {
           </Menu.Target>
           <Menu.Dropdown>
             {renderMenuItems(ANALYSIS_MENU[0])}
-            <Menu.Item onClick={toggleSpaceTime}>🕐 Space-Time</Menu.Item>
+            <Menu.Item leftSection={<IconClockHour4 size={14} />} onClick={toggleSpaceTime}>
+              Space-Time
+            </Menu.Item>
             <Menu.Divider />
             {renderMenuItems(ANALYSIS_MENU[1])}
           </Menu.Dropdown>
@@ -251,8 +256,12 @@ export function ViewerToolbar() {
             </Menu.Target>
             <Menu.Dropdown>
               {plugins.map((p) => (
-                <Menu.Item key={p.id} onClick={() => togglePanel(p.id as any)}>
-                  {p.icon || '🔌'} {p.name}
+                <Menu.Item
+                  key={p.id}
+                  leftSection={p.icon ?? <IconPlug size={14} />}
+                  onClick={() => togglePanel(p.id as ToolPanel)}
+                >
+                  {p.name}
                 </Menu.Item>
               ))}
             </Menu.Dropdown>

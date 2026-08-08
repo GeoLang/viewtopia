@@ -29,6 +29,106 @@
   height: 100%;
 }
 
+/* Dark scrollbars; Mantine ScrollArea themes its own, this covers native ones */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--mantine-color-dark-4) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--mantine-color-dark-4);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* MapLibre controls on the dark chrome. The ctrl icons are dark SVG
+   background-images: invert lightens them, hue-rotate keeps the compass red */
+.maplibregl-ctrl-group {
+  background: var(--mantine-color-dark-7);
+  border: 1px solid var(--mantine-color-dark-5);
+}
+
+.maplibregl-ctrl-group button + button {
+  border-top: 1px solid var(--mantine-color-dark-5);
+}
+
+.maplibregl-ctrl button .maplibregl-ctrl-icon {
+  filter: invert(0.85) hue-rotate(180deg);
+}
+
+.maplibregl-ctrl-attrib {
+  background: rgba(13, 17, 23, 0.7);
+}
+
+.maplibregl-ctrl-attrib,
+.maplibregl-ctrl-attrib a {
+  color: var(--mantine-color-dark-2);
+}
+
+/* Leaflet controls, same treatment */
+.leaflet-bar a {
+  background: var(--mantine-color-dark-7);
+  color: var(--mantine-color-dark-0);
+  border-bottom-color: var(--mantine-color-dark-5);
+}
+
+.leaflet-bar a:hover,
+.leaflet-bar a:focus {
+  background: var(--mantine-color-dark-6);
+  color: var(--mantine-color-dark-0);
+}
+
+.leaflet-control-attribution {
+  background: rgba(13, 17, 23, 0.7);
+}
+
+.leaflet-control-attribution,
+.leaflet-control-attribution a {
+  color: var(--mantine-color-dark-2);
+}
+
+/* Cesium data attribution line */
+#cesium-container .cesium-widget-credits,
+#cesium-container .cesium-widget-credits a {
+  color: var(--mantine-color-dark-2);
+}
+
+/* Docked panel column: right-anchored PanelCards portal in here and stack.
+   The gutter on the right keeps the renderer nav controls clickable. */
+.panel-dock {
+  position: absolute;
+  top: 8px;
+  right: 48px;
+  bottom: 8px;
+  width: 360px;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  pointer-events: none;
+}
+
+.panel-dock > * {
+  pointer-events: auto;
+  flex-shrink: 0;
+}
+
+@media (max-width: 48em) {
+  .panel-dock {
+    left: 8px;
+    width: auto;
+  }
+}
+
 /* Accessibility toggles (AccessibilityPanel) */
 .a11y-high-contrast {
   filter: contrast(1.35) saturate(1.25);
