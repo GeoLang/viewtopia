@@ -251,6 +251,10 @@ export function isLiveDocumentActive(): boolean {
   return useLiveStore.getState().documentId !== null;
 }
 
+/** true when this session joined a live document through a view-role link */
+export const useViewOnlyLive = () =>
+  useLiveStore((s) => s.documentId !== null && s.role === 'view');
+
 export function canEditLiveDocument(): boolean {
   const { documentId, role } = useLiveStore.getState();
   return documentId !== null && role === 'edit';

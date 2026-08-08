@@ -6,6 +6,22 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-08: **first run and share (UI polish phase 4)**. A clean profile
+  gets a bottom-center welcome card offering a demo dataset and the tour:
+  accepting fetches the bundled SF-landmarks GeoJSON (public/demo/), adds
+  it as an agent layer (the framing generation bump frames it) and opens
+  the tour; dismissal persists in the viewtopia-welcome key. Dragging
+  files anywhere over the window raises a full-screen drop affordance
+  with an importing state; drops route through the Import panel's paths,
+  now extracted to lib/importFiles.ts (a drop on the panel's own zone
+  still wins via defaultPrevented). Joining a live document by view-role
+  link renders view-only chrome: the toolbar collapses to tabs, search,
+  Measure/Layers/Legend/Inspect and a "View only" badge, chat and its
+  toggles hide, draw shortcuts drop (measure keys stay), and the command
+  palette filters to view-safe groups. e2e: default-boot covers the
+  welcome accept and dismiss-persists paths, react-smoke seeds the
+  welcome flag; three unit tests pin the view-only toolbar.
+
 - 2026-08-08: **command palette, tool shortcuts, panel states (UI polish
   phase 3)**. Cmd/Ctrl+K opens a Spotlight palette (@mantine/spotlight)
   over the same registries the toolbar renders: view switches, the quick

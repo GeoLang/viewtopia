@@ -16,13 +16,16 @@ import { Header } from './components/Header';
 import { ChatPanel } from './components/ChatPanel';
 import { ViewerToolbar } from './components/ViewerToolbar';
 import { CommandPalette } from './components/CommandPalette';
+import { WindowDropZone } from './components/WindowDropZone';
+import { WelcomeCard } from './components/WelcomeCard';
 import { ViewerArea } from './components/ViewerArea';
 import { SpaceTimePanel } from './features/spacetime/SpaceTimePanel';
 import { ToolPanels } from './components/ToolPanels';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useBackendDiscovery } from './hooks/useBackendDiscovery';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
-import { TOOL_SHORTCUTS } from './hooks/toolShortcuts';
+import { MEASURE_SHORTCUTS, TOOL_SHORTCUTS } from './hooks/toolShortcuts';
+import { useViewOnlyLive } from './live/liveStore';
 import { useSpaceTimeStore } from './features/spacetime/store';
 import { useCallback, useRef, useEffect, useState } from 'react';
 import { initNetworkMonitor } from './offline/network';
@@ -64,14 +67,25 @@ export function App() {
   useEffect(() => startDocumentBridge(), []);
   useJoinLiveFromLink();
 
+  // a view-role share link renders view-only chrome: no chat, no draw
+  const viewOnly = useViewOnlyLive();
+
   useBackendDiscovery();
-  useKeyboardShortcuts({
-    'ctrl+b': toggleChat,
-    'b': toggleChat,
-    't': toggleSpaceTime,
-    'ctrl+.': toggleUiHidden,
-    ...TOOL_SHORTCUTS,
-  });
+  useKeyboardShortcuts(
+    viewOnly
+      ? {
+          't': toggleSpaceTime,
+          'ctrl+.': toggleUiHidden,
+          ...MEASURE_SHORTCUTS,
+        }
+      : {
+          'ctrl+b': toggleChat,
+          'b': toggleChat,
+          't': toggleSpaceTime,
+          'ctrl+.': toggleUiHidden,
+          ...TOOL_SHORTCUTS,
+        },
+  );
 
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
 
@@ -111,8 +125,8 @@ export function App() {
             width: isMobile ? '100vw' : asideWidth,
             breakpoint: 'sm',
             collapsed: {
-              mobile: !mobileChatOpen || uiHidden,
-              desktop: !navOpened || uiHidden,
+              mobile: !mobileChatOpen || uiHidden || viewOnly,
+              desktop: !navOpened || uiHidden || viewOnly,
             },
           }}
           padding={0}
@@ -160,7 +174,7 @@ export function App() {
           </AppShell.Aside>
 
           {/* Floating chat toggle: phones only, desktop has the header icon */}
-          {isMobile && !uiHidden && (
+          {isMobile && !uiHidden && !viewOnly && (
             <Tooltip label={chatOpen ? 'Hide chat (Ctrl+B)' : 'Show chat (Ctrl+B)'} position="left">
               <ActionIcon
                 aria-label={chatOpen ? 'Hide chat' : 'Show chat'}
@@ -211,6 +225,8 @@ export function App() {
             )}
             {!uiHidden && <ToolPanels />}
             <MapPresence />
+            <WindowDropZone />
+            {!uiHidden && <WelcomeCard />}
           </AppShell.Main>
         </AppShell>
       </ModalsProvider>

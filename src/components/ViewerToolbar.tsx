@@ -20,6 +20,7 @@ import {
 } from '@tabler/icons-react';
 import { useAppStore, type ToolPanel, type ViewerTab } from '../store/app';
 import { toggleInspectPanel } from '../store/featurePicker';
+import { useViewOnlyLive } from '../live/liveStore';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { getPlugins } from '../plugins/registry';
 import {
@@ -49,6 +50,7 @@ export function ViewerToolbar() {
   const { activeTab, setActiveTab, togglePanel } = useAppStore();
   const toggleSpaceTime = useSpaceTimeStore((s) => s.togglePanel);
   const showPreviewTools = useAppStore((s) => s.settings.showPreviewTools);
+  const viewOnly = useViewOnlyLive();
   const plugins = getPlugins();
 
   const renderMenuItems = (items: ToolMenuItem[]) =>
@@ -105,6 +107,14 @@ export function ViewerToolbar() {
         <Tooltip label="Legend"><ActionIcon aria-label="Legend" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('legend')}><IconListDetails size={14} /></ActionIcon></Tooltip>
         <Tooltip label="Inspect"><ActionIcon aria-label="Inspect" size="sm" variant="subtle" color="gray" onClick={toggleInspectPanel}><IconClick size={14} /></ActionIcon></Tooltip>
 
+        {viewOnly && (
+          <Badge size="sm" variant="light" color="gray">
+            View only
+          </Badge>
+        )}
+
+        {!viewOnly && (
+        <>
         <Menu shadow="md" width={180}>
           <Menu.Target>
             <Button size="xs" variant="subtle" leftSection={<IconWand size={14} />}>
@@ -217,6 +227,8 @@ export function ViewerToolbar() {
             <IconSettings size={14} />
           </ActionIcon>
         </Tooltip>
+        </>
+        )}
       </Group>
     </Group>
   );

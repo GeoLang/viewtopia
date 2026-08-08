@@ -9,6 +9,33 @@ import { test, expect } from './console-guard';
  * Run: npm run test:e2e:react
  */
 
+test('first visit offers the demo dataset and hands over to the tour', async ({ page }) => {
+  await page.goto('/');
+  const card = page.getByTestId('welcome-card');
+  await expect(card).toBeVisible();
+  await card.getByRole('button', { name: 'Demo & tour' }).click();
+  await expect(card).not.toBeVisible();
+
+  // the tour starts on its first step
+  await expect(page.getByText('Welcome to ViewTopia').first()).toBeVisible();
+
+  // the demo layer joined the agent layers
+  await page.getByRole('button', { name: 'Layers' }).click();
+  await expect(page.getByText('San Francisco landmarks').first()).toBeVisible();
+});
+
+test('dismissing the welcome card persists across reloads', async ({ page }) => {
+  await page.goto('/');
+  const card = page.getByTestId('welcome-card');
+  await expect(card).toBeVisible();
+  await card.getByRole('button', { name: 'Dismiss' }).click();
+  await expect(card).not.toBeVisible();
+
+  await page.reload();
+  await expect(page.getByText('ViewTopia').first()).toBeVisible();
+  await expect(page.getByTestId('welcome-card')).not.toBeVisible();
+});
+
 test('a clean profile boots MapLibre on the dark vector basemap', async ({ page }) => {
   await page.goto('/');
   await page.waitForFunction(() => !!window.__viewtopiaMap, null, { timeout: 60000 });

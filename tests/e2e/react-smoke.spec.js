@@ -18,6 +18,11 @@ import { MENU_ITEM } from './panel-helpers';
 
 const REACT_URL = '/';
 
+// the first-visit welcome card is default-boot.spec.js's subject, not this one's
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('viewtopia-welcome', 'seen'));
+});
+
 test.describe('React shell smoke', () => {
   test('app mounts and renders the shell without runtime errors', async ({ page }) => {
     const errors = [];

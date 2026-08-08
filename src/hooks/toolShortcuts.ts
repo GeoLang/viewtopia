@@ -38,10 +38,17 @@ function activateMeasureMode(mode: NonNullable<MeasureMode>) {
   measure.setMode(mode);
 }
 
-export const TOOL_SHORTCUTS: Record<string, () => void> = {};
+export const DRAW_SHORTCUTS: Record<string, () => void> = {};
 for (const [mode, key] of Object.entries(DRAW_TOOL_KEYS)) {
-  TOOL_SHORTCUTS[key] = () => activateDrawMode(mode as NonNullable<DrawMode>);
+  DRAW_SHORTCUTS[key] = () => activateDrawMode(mode as NonNullable<DrawMode>);
 }
+
+export const MEASURE_SHORTCUTS: Record<string, () => void> = {};
 for (const [mode, key] of Object.entries(MEASURE_TOOL_KEYS)) {
-  TOOL_SHORTCUTS[key] = () => activateMeasureMode(mode as NonNullable<MeasureMode>);
+  MEASURE_SHORTCUTS[key] = () => activateMeasureMode(mode as NonNullable<MeasureMode>);
 }
+
+export const TOOL_SHORTCUTS: Record<string, () => void> = {
+  ...DRAW_SHORTCUTS,
+  ...MEASURE_SHORTCUTS,
+};

@@ -1,0 +1,15 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-122.4783, 37.8199] }, "properties": { "name": "Golden Gate Bridge", "category": "landmark" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-122.4230, 37.8267] }, "properties": { "name": "Alcatraz Island", "category": "landmark" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-122.3937, 37.7955] }, "properties": { "name": "Ferry Building", "category": "architecture" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-122.4058, 37.8024] }, "properties": { "name": "Coit Tower", "category": "architecture" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-122.4484, 37.8029] }, "properties": { "name": "Palace of Fine Arts", "category": "architecture" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-122.3893, 37.7786] }, "properties": { "name": "Oracle Park", "category": "sports" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-122.4862, 37.7694] }, "properties": { "name": "Golden Gate Park", "category": "park" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-122.4477, 37.7544] }, "properties": { "name": "Twin Peaks", "category": "viewpoint" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-122.4103, 37.8087] }, "properties": { "name": "Pier 39", "category": "landmark" } },
+    { "type": "Feature", "geometry": { "type": "Point", "coordinates": [-122.4193, 37.7793] }, "properties": { "name": "City Hall", "category": "architecture" } }
+  ]
+}

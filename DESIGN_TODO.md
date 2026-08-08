@@ -97,14 +97,10 @@ together in the browser" and refuse feature-parity fights with ArcGIS.
 From a running-app audit, a code audit of all ~76 panels, and Felt's
 published design writing. Felt's bar is three commitments: the map is the
 whole screen, one design system with no raw edges, desktop-grade
-micro-interaction. Phases 1 to 3 shipped 2026-08-08, see the changelog
+micro-interaction. Phases 1 to 4 shipped 2026-08-08, see the changelog
 and DESIGN.md's shell layout paragraph. Where viewtopia still misses: raw
 errors sit in the chrome ("agora GET /documents failed with 500" in the
 Live dialog), and the toolbar at phone widths only scrolls.
-- [ ] **phase 4, first run and share**: first-visit detection that offers a
-      demo dataset and a load-style-share spine auto-starting the existing
-      tour, a full-window drag-drop affordance with import progress,
-      view-only chrome for shared links (feeds the embed-mode item above).
 
 Not chased: Felt's canvas annotation renderer and per-frame cursor
 rotation, still below the visible waterline.

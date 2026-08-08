@@ -17,6 +17,7 @@ import {
 } from '@tabler/icons-react';
 import { useAppStore, type ToolPanel } from '../store/app';
 import { toggleInspectPanel } from '../store/featurePicker';
+import { useViewOnlyLive } from '../live/liveStore';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { getPlugins } from '../plugins/registry';
 import { TOOL_MENU_GROUPS, visibleToolItems, type ToolMenuItem } from './toolMenus';
@@ -35,6 +36,7 @@ export function CommandPalette() {
   const toggleUiHidden = useAppStore((s) => s.toggleUiHidden);
   const showPreviewTools = useAppStore((s) => s.settings.showPreviewTools);
   const toggleSpaceTime = useSpaceTimeStore((s) => s.togglePanel);
+  const viewOnly = useViewOnlyLive();
 
   const actionGroups = useMemo<SpotlightActionGroupData[]>(() => {
     const toolAction = (item: ToolMenuItem) => ({
@@ -143,8 +145,18 @@ export function CommandPalette() {
       });
     }
 
+    // view-only chrome keeps navigation and the view-safe map tools
+    if (viewOnly) {
+      return groups
+        .filter((g) => g.group === 'View' || g.group === 'Map')
+        .map((g) => ({
+          ...g,
+          actions: g.actions.filter((a) => a.id !== 'settings'),
+        }));
+    }
+
     return groups;
-  }, [togglePanel, setActiveTab, toggleUiHidden, toggleSpaceTime, showPreviewTools]);
+  }, [togglePanel, setActiveTab, toggleUiHidden, toggleSpaceTime, showPreviewTools, viewOnly]);
 
   return (
     <Spotlight

@@ -10,6 +10,7 @@ import {
 import { useMantineColorScheme } from '@mantine/core';
 import { useFullscreen, useMediaQuery } from '@mantine/hooks';
 import { useAppStore } from '../store/app';
+import { useViewOnlyLive } from '../live/liveStore';
 import { MOBILE_QUERY } from '../theme';
 import { OfflineIndicator } from '../offline/OfflineIndicator';
 import { ProjectSwitcher } from '../projects/ProjectSwitcher';
@@ -23,6 +24,7 @@ export function Header() {
   const { toggle: toggleFullscreen, fullscreen } = useFullscreen();
   const navOpened = useAppStore((s) => s.navOpened);
   const toggleNav = useAppStore((s) => s.toggleNav);
+  const viewOnly = useViewOnlyLive();
   const isMobile = useMediaQuery(MOBILE_QUERY, false, {
     getInitialValueInEffect: false,
   });
@@ -49,7 +51,7 @@ export function Header() {
         {!isMobile && <OfflineIndicator />}
         {!isMobile && <BackendStatus />}
 
-        {!isMobile && (
+        {!isMobile && !viewOnly && (
           <Tooltip label={navOpened ? 'Hide chat (Ctrl+B)' : 'Show chat (Ctrl+B)'}>
             <ActionIcon
               aria-label={navOpened ? 'Hide chat' : 'Show chat'}
