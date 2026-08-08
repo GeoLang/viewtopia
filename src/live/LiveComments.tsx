@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { ActionIcon, Indicator, Tooltip } from '@mantine/core';
 import { IconMessage } from '@tabler/icons-react';
 import { commentThreads } from './comments';
@@ -7,7 +6,8 @@ import { useLiveStore } from './liveStore';
 
 export function LiveComments() {
   const comments = useLiveStore((s) => s.document.comments);
-  const [open, setOpen] = useState(false);
+  const open = useLiveStore((s) => s.commentsOpen);
+  const setOpen = useLiveStore((s) => s.setCommentsOpen);
   const openThreads = commentThreads(comments).filter((thread) => !thread.root.resolved).length;
 
   return (
@@ -25,7 +25,7 @@ export function LiveComments() {
             variant="subtle"
             color="violet"
             aria-label="Comments on this live map"
-            onClick={() => setOpen((shown) => !shown)}
+            onClick={() => setOpen(!open)}
           >
             <IconMessage size={14} />
           </ActionIcon>

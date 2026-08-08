@@ -41,9 +41,12 @@ interface LiveState {
   followedActor: string | null;
   pending: Record<number, PendingFrame>;
   error: string | null;
+  /** lifted here so a mention notification can open the panel from outside it */
+  commentsOpen: boolean;
 
   connect: (options: ConnectOptions) => void;
   disconnect: () => void;
+  setCommentsOpen: (commentsOpen: boolean) => void;
   sendOperation: (key: string, value: unknown) => void;
   sendOperations: (operations: LiveOperation[]) => void;
   sendPresence: (presence: LivePresence) => void;
@@ -94,6 +97,7 @@ export const useLiveStore = create<LiveState>((set, get) => ({
   followedActor: null,
   pending: {},
   error: null,
+  commentsOpen: false,
 
   connect: ({ documentId, token, role = 'edit' }) => {
     if (get().documentId !== null) get().disconnect();
@@ -147,8 +151,11 @@ export const useLiveStore = create<LiveState>((set, get) => ({
       presence: {},
       followedActor: null,
       pending: {},
+      commentsOpen: false,
     });
   },
+
+  setCommentsOpen: (commentsOpen) => set({ commentsOpen }),
 
   sendOperation: (key, value) => {
     get().sendOperations([{ key, value }]);

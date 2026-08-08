@@ -50,6 +50,16 @@ export interface LiveCommentAnchor {
 }
 
 /**
+ * A member this comment names. `name` is the display name at pick time, which
+ * is what the text carries as `@name`, so rendering can find the token later.
+ * Agora reads `userId` to notify the member.
+ */
+export interface LiveCommentMention {
+  userId: string;
+  name: string;
+}
+
+/**
  * One comment. A reply carries the id of the top level comment it answers, so a
  * thread is a group rather than a nested value, and `resolved` only ever sits on
  * a top level comment.
@@ -66,6 +76,7 @@ export interface LiveComment {
   parentId?: string | null;
   anchor?: LiveCommentAnchor | null;
   resolved?: boolean;
+  mentions?: LiveCommentMention[];
 }
 
 export interface LiveDocumentMeta {

@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- 2026-08-08: **comment mentions and a notifications bell**. The comment
+  compose and reply boxes offer document members while an `@name` is being
+  typed (MentionTextarea over the members list, named by their peer entry
+  when online; share link guests get no suggestions because they cannot
+  list members). A posted comment carries the picked mentions the text
+  still names, agora turns each into a notification row for that member
+  (see agora's changelog), and rendered comment text highlights the
+  tokens. A bell in the header, for signed in users only, polls
+  `/agora/notifications` every minute, badges the unread count, and
+  clicking an entry marks it read, joins that document and opens its
+  comments panel (the panel open state moved into the live store for
+  this). e2e: the golden path live-session spec grew a mention + bell
+  scenario; unit tests cover the trigger parsing, candidate matching,
+  posting, segment rendering and the bell.
+
 ### Changed
 
 - 2026-08-08: **the tour drives the app**. The static five-step TourPanel

@@ -4,6 +4,7 @@ import { useSpaceTimeStore } from '../../src/features/spacetime/store';
 import { setSharedCamera } from '../../src/hooks/sharedCamera';
 import {
   COMMENT_TEXT_LIMIT,
+  commentTextSegments,
   commentThreads,
   currentCommentAuthor,
   currentMapAnchor,
@@ -259,5 +260,62 @@ describe('live comment writes', () => {
     useLiveStore.getState().disconnect();
     expect(useLiveStore.getState().actor).toBeNull();
     expect(currentCommentAuthor()).toBeNull();
+  });
+});
+
+describe('comment mentions', () => {
+  beforeEach(() => {
+    server = new FakeAgoraServer();
+    server.install();
+    useAuthStore.setState({ user: null, token: TOKEN });
+    setSharedCamera({ longitude: 0, latitude: 20, zoom: 2 });
+    vi.spyOn(crypto, 'randomUUID').mockReturnValue('11111111-2222-3333-4444-555555555555');
+    vi.spyOn(Date, 'now').mockReturnValue(1000);
+  });
+
+  afterEach(() => {
+    useLiveStore.getState().disconnect();
+    server.restore();
+    useAuthStore.setState({ user: null, token: null });
+    vi.restoreAllMocks();
+  });
+
+  it('keeps only picked mentions the text still names, deduped', () => {
+    joinAs();
+    const grace = { userId: 'grace', name: 'Grace' };
+    const erased = { userId: 'gone', name: 'Gone' };
+    const written = postComment({
+      text: 'ask @Grace about this',
+      mentions: [grace, grace, erased],
+    });
+    expect(written?.mentions).toEqual([grace]);
+  });
+
+  it('omits the field when nothing was picked', () => {
+    joinAs();
+    expect(postComment({ text: 'no pings here' })).not.toHaveProperty('mentions');
+  });
+
+  it('splits text into segments where the longer of two overlapping names wins', () => {
+    const segments = commentTextSegments(
+      comment({
+        text: 'ping @Ada Lovelace and @Ada now',
+        mentions: [
+          { userId: 'short', name: 'Ada' },
+          { userId: 'long', name: 'Ada Lovelace' },
+        ],
+      }),
+    );
+    expect(segments).toEqual([
+      { text: 'ping ' },
+      { text: '@Ada Lovelace', mention: true },
+      { text: ' and ' },
+      { text: '@Ada', mention: true },
+      { text: ' now' },
+    ]);
+  });
+
+  it('reads unmentioned text as one plain segment', () => {
+    expect(commentTextSegments(comment())).toEqual([{ text: 'is this the right coastline' }]);
   });
 });

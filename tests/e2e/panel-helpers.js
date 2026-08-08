@@ -61,6 +61,13 @@ export async function openApp(page) {
     }),
   );
 
+  // the notifications bell polls this whenever a test signs in, and these
+  // suites seed tokens agora's secret never signed, so the real answer is a
+  // 401 chrome logs as a console error. No mentions is the honest stub.
+  await page.route('**/agora/notifications', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
+  );
+
   await page.addInitScript(() => {
     // zustand/persist store for useAppStore ('viewtopia-app'); merge() backfills
     // every key we leave out

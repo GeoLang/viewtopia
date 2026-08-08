@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActionIcon,
   Badge,
@@ -8,7 +8,6 @@ import {
   Stack,
   Switch,
   Text,
-  Textarea,
   Tooltip,
 } from '@mantine/core';
 import {
@@ -19,8 +18,10 @@ import {
   IconTrash,
 } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../components/PanelCard';
+import { useAuthStore } from '../features/auth/store';
+import { fetchLiveDocument } from './api';
 import {
-  COMMENT_TEXT_LIMIT,
+  commentTextSegments,
   commentThreads,
   currentMapAnchor,
   deleteComment,
@@ -31,7 +32,43 @@ import {
   type CommentThread,
 } from './comments';
 import { useLiveStore } from './liveStore';
-import type { LiveComment } from './types';
+import { MentionTextarea } from './MentionTextarea';
+import type { LiveComment, LiveCommentMention } from './types';
+
+/**
+ * Who the compose boxes can @mention: the document's members, named by their
+ * peer entry when they are online. A share link guest cannot list members, so
+ * a guest composes without suggestions.
+ */
+function useMentionCandidates(canWrite: boolean): LiveCommentMention[] {
+  const documentId = useLiveStore((s) => s.documentId);
+  const ownActor = useLiveStore((s) => s.actor);
+  const peers = useLiveStore((s) => s.peers);
+  const signedIn = useAuthStore((s) => s.token) !== null;
+  const [memberIds, setMemberIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!canWrite || !signedIn || !documentId) return;
+    let stale = false;
+    fetchLiveDocument(documentId)
+      .then((detail) => {
+        if (!stale) setMemberIds(detail.members.map((member) => member.userId));
+      })
+      .catch(() => {
+        if (!stale) setMemberIds([]);
+      });
+    return () => {
+      stale = true;
+    };
+  }, [canWrite, signedIn, documentId]);
+
+  return memberIds
+    .filter((userId) => userId !== ownActor)
+    .map((userId) => ({
+      userId,
+      name: peers.find((peer) => peer.actor === userId)?.name || userId,
+    }));
+}
 
 function writtenAt(comment: LiveComment): string {
   return new Date(comment.createdAt).toLocaleString();
@@ -87,7 +124,15 @@ function CommentBody({
         </Group>
       </Group>
       <Text size="xs" c="dark.0" style={{ whiteSpace: 'pre-wrap' }}>
-        {comment.text}
+        {commentTextSegments(comment).map((segment, index) =>
+          segment.mention ? (
+            <Text key={index} span size="xs" c="violet.4" fw={600}>
+              {segment.text}
+            </Text>
+          ) : (
+            <span key={index}>{segment.text}</span>
+          ),
+        )}
       </Text>
     </Stack>
   );
@@ -97,17 +142,22 @@ function Thread({
   thread,
   ownActor,
   canWrite,
+  candidates,
 }: {
   thread: CommentThread;
   ownActor: string | null;
   canWrite: boolean;
+  candidates: LiveCommentMention[];
 }) {
   const [replyText, setReplyText] = useState('');
   const [replyOpen, setReplyOpen] = useState(false);
+  const [replyMentions, setReplyMentions] = useState<LiveCommentMention[]>([]);
 
   const sendReply = () => {
-    if (!postComment({ text: replyText, parentId: thread.root.id })) return;
+    if (!postComment({ text: replyText, parentId: thread.root.id, mentions: replyMentions }))
+      return;
     setReplyText('');
+    setReplyMentions([]);
     setReplyOpen(false);
   };
 
@@ -168,17 +218,15 @@ function Thread({
 
       {canWrite && replyOpen && (
         <Group gap="xs" wrap="nowrap" align="flex-start">
-          <Textarea
-            size="xs"
-            flex={1}
-            autosize
+          <MentionTextarea
+            value={replyText}
+            onChange={setReplyText}
+            onPick={(mention) => setReplyMentions((picked) => [...picked, mention])}
+            candidates={candidates}
+            placeholder="Reply…"
+            ariaLabel={`Reply to ${thread.root.authorName}`}
             minRows={1}
             maxRows={4}
-            maxLength={COMMENT_TEXT_LIMIT}
-            placeholder="Reply…"
-            aria-label={`Reply to ${thread.root.authorName}`}
-            value={replyText}
-            onChange={(event) => setReplyText(event.currentTarget.value)}
           />
           <Button
             size="compact-xs"
@@ -202,17 +250,20 @@ export function LiveCommentsPanel({ onClose }: { onClose: () => void }) {
   const [text, setText] = useState('');
   const [withAnchor, setWithAnchor] = useState(false);
   const [showResolved, setShowResolved] = useState(false);
+  const [mentions, setMentions] = useState<LiveCommentMention[]>([]);
 
   // no actor means the session has not told us who we are, so nothing to attribute to
   const canWrite = role === 'edit' && ownActor !== null;
+  const candidates = useMentionCandidates(canWrite);
   const threads = commentThreads(comments);
   const visible = showResolved ? threads : threads.filter((thread) => !thread.root.resolved);
   const resolvedCount = threads.filter((thread) => thread.root.resolved).length;
 
   const send = () => {
-    if (!postComment({ text, anchor: withAnchor ? currentMapAnchor() : null })) return;
+    if (!postComment({ text, anchor: withAnchor ? currentMapAnchor() : null, mentions })) return;
     setText('');
     setWithAnchor(false);
+    setMentions([]);
   };
 
   return (
@@ -231,16 +282,16 @@ export function LiveCommentsPanel({ onClose }: { onClose: () => void }) {
 
       {canWrite ? (
         <Stack gap="xs">
-          <Textarea
-            size="xs"
-            autosize
+          <MentionTextarea
+            value={text}
+            onChange={setText}
+            onPick={(mention) => setMentions((picked) => [...picked, mention])}
+            candidates={candidates}
+            placeholder="Leave a comment…"
+            ariaLabel="Leave a comment"
             minRows={2}
             maxRows={6}
-            maxLength={COMMENT_TEXT_LIMIT}
-            placeholder="Leave a comment…"
-            aria-label="Leave a comment"
-            value={text}
-            onChange={(event) => setText(event.currentTarget.value)}
+            testId="comment-compose"
           />
           <Group gap="xs" wrap="nowrap">
             <Button
@@ -285,7 +336,13 @@ export function LiveCommentsPanel({ onClose }: { onClose: () => void }) {
       <ScrollArea flex={1} mt="xs">
         <Stack gap={6}>
           {visible.map((thread) => (
-            <Thread key={thread.root.id} thread={thread} ownActor={ownActor} canWrite={canWrite} />
+            <Thread
+              key={thread.root.id}
+              thread={thread}
+              ownActor={ownActor}
+              canWrite={canWrite}
+              candidates={candidates}
+            />
           ))}
           {visible.length === 0 && (
             <Text size="xs" c="dimmed">

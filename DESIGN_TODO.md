@@ -59,12 +59,6 @@ collaborative workflow, so they are in-thesis rather than parity chasing.
 Felt has no versioning, no routing, no 3D and self-hosts only on
 enterprise contracts, so those fronts need no response.
 
-- [ ] **comment mentions + notifications** — @mention a document member in
-      a comment and they find out. In-app notification first (a member has
-      no live socket when absent, so it needs a poll or a badge on the
-      documents list); email belongs to the hosted instance. This is what
-      turns comments from sticky notes into a workflow, and Felt's
-      comments have it.
 - [ ] **per-comment deep links + comment export** — a share URL that opens
       the document at a comment thread, and export of a document's
       comments as georeferenced CSV/JSON.

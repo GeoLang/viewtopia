@@ -5,6 +5,8 @@ import {
   createShareLink,
   fetchLiveDocument,
   listLiveDocuments,
+  listNotifications,
+  markNotificationsRead,
   resolveShareLink,
   shareLinkUrl,
 } from '../../src/live/api';
@@ -86,5 +88,45 @@ describe('agora http api', () => {
 
   it('builds a share url carrying the link token', () => {
     expect(shareLinkUrl('link token')).toBe(`${location.origin}/?live=link%20token`);
+  });
+});
+
+describe('notifications api', () => {
+  beforeEach(() => {
+    useAuthStore.setState({ token: 'jwt-token' });
+    fetchMock = vi.fn(async () => jsonResponse({}));
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    useAuthStore.setState({ token: null });
+    vi.unstubAllGlobals();
+  });
+
+  it('lists the callers notifications', async () => {
+    const entry = {
+      id: 'n1',
+      docId: 'doc-1',
+      docName: 'atlas',
+      commentId: 'c1',
+      authorName: 'Ada',
+      excerpt: 'look here',
+      createdAt: '2026-08-08T10:00:00Z',
+      readAt: null,
+    };
+    fetchMock.mockResolvedValueOnce(jsonResponse([entry]));
+    await expect(listNotifications()).resolves.toEqual([entry]);
+    expect(lastRequest().url).toBe('/agora/notifications');
+  });
+
+  it('marks given ids read, or everything without ids', async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+    await markNotificationsRead(['n1', 'n2']);
+    expect(lastRequest().url).toBe('/agora/notifications/read');
+    expect(lastRequest().init.method).toBe('POST');
+    expect(lastRequest().init.body).toBe(JSON.stringify({ ids: ['n1', 'n2'] }));
+
+    await markNotificationsRead();
+    expect(lastRequest().init.body).toBe(JSON.stringify({}));
   });
 });

@@ -2,7 +2,13 @@ import { useAuthStore } from '../features/auth/store';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { getSharedCamera } from '../hooks/sharedCamera';
 import { useLiveStore } from './liveStore';
-import { documentKey, type LiveComment, type LiveCommentAnchor, type LiveOperation } from './types';
+import {
+  documentKey,
+  type LiveComment,
+  type LiveCommentAnchor,
+  type LiveCommentMention,
+  type LiveOperation,
+} from './types';
 
 /**
  * What the compose box accepts. The service caps an op value at 64 KiB, which is
@@ -72,13 +78,68 @@ export interface NewComment {
   text: string;
   parentId?: string;
   anchor?: LiveCommentAnchor | null;
+  mentions?: LiveCommentMention[];
+}
+
+/**
+ * The picked mentions the text still names, one entry per member. A token the
+ * writer erased after picking it must not notify, so the text is the authority.
+ */
+export function mentionsStillInText(
+  text: string,
+  picked: LiveCommentMention[],
+): LiveCommentMention[] {
+  const kept = new Map<string, LiveCommentMention>();
+  for (const mention of picked) {
+    if (!kept.has(mention.userId) && text.includes(`@${mention.name}`)) {
+      kept.set(mention.userId, mention);
+    }
+  }
+  return [...kept.values()];
+}
+
+/** A piece of comment text, marked when it is an `@name` mention token. */
+export interface CommentTextSegment {
+  text: string;
+  mention?: boolean;
+}
+
+/**
+ * Split a comment's text around its mention tokens so they can be rendered
+ * highlighted. Longer names match first, so a name that prefixes another
+ * cannot swallow its token.
+ */
+export function commentTextSegments(comment: LiveComment): CommentTextSegment[] {
+  const tokens = (comment.mentions ?? [])
+    .map((mention) => `@${mention.name}`)
+    .sort((left, right) => right.length - left.length);
+  if (tokens.length === 0) return [{ text: comment.text }];
+
+  const segments: CommentTextSegment[] = [];
+  let rest = comment.text;
+  while (rest.length > 0) {
+    let earliest: { index: number; token: string } | null = null;
+    for (const token of tokens) {
+      const index = rest.indexOf(token);
+      if (index === -1) continue;
+      if (!earliest || index < earliest.index) earliest = { index, token };
+    }
+    if (!earliest) {
+      segments.push({ text: rest });
+      break;
+    }
+    if (earliest.index > 0) segments.push({ text: rest.slice(0, earliest.index) });
+    segments.push({ text: earliest.token, mention: true });
+    rest = rest.slice(earliest.index + earliest.token.length);
+  }
+  return segments;
 }
 
 /**
  * Write one comment onto the live log. Returns what was written, or null when
  * there is nothing to write or no session to write it to.
  */
-export function postComment({ text, parentId, anchor }: NewComment): LiveComment | null {
+export function postComment({ text, parentId, anchor, mentions }: NewComment): LiveComment | null {
   const trimmed = text.trim();
   const author = currentCommentAuthor();
   if (!author || trimmed.length === 0 || trimmed.length > COMMENT_TEXT_LIMIT) return null;
@@ -92,6 +153,8 @@ export function postComment({ text, parentId, anchor }: NewComment): LiveComment
   if (parentId) comment.parentId = parentId;
   else comment.resolved = false;
   if (anchor) comment.anchor = anchor;
+  const named = mentionsStillInText(trimmed, mentions ?? []);
+  if (named.length > 0) comment.mentions = named;
   useLiveStore.getState().sendOperation(documentKey('comments', comment.id), comment);
   return comment;
 }

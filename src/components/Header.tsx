@@ -16,6 +16,7 @@ import { OfflineIndicator } from '../offline/OfflineIndicator';
 import { ProjectSwitcher } from '../projects/ProjectSwitcher';
 import { AuthControl } from '../features/auth/AuthControl';
 import { LiveSessionControl } from '../live/LiveSessionControl';
+import { NotificationsBell } from '../live/NotificationsBell';
 import { BackendStatus } from './BackendStatus';
 import { ViewerToolbar } from './ViewerToolbar';
 
@@ -43,6 +44,7 @@ export function Header() {
         </Title>
         <ProjectSwitcher />
         <LiveSessionControl />
+        <NotificationsBell />
       </Group>
 
       {!isMobile && <ViewerToolbar />}

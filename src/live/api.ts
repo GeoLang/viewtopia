@@ -97,6 +97,29 @@ export function resolveShareLink(token: string): Promise<LiveLinkResolution> {
   return agoraRequest(`/links/${encodeURIComponent(token)}`);
 }
 
+export interface LiveNotification {
+  id: string;
+  docId: string;
+  docName: string;
+  commentId: string;
+  authorName: string;
+  excerpt: string;
+  createdAt: string;
+  readAt: string | null;
+}
+
+export function listNotifications(): Promise<LiveNotification[]> {
+  return agoraRequest('/notifications');
+}
+
+/** Marks the given notifications read, or every unread one when ids is absent. */
+export async function markNotificationsRead(ids?: string[]): Promise<void> {
+  await agoraFetch('/notifications/read', {
+    method: 'POST',
+    body: JSON.stringify(ids ? { ids } : {}),
+  });
+}
+
 export const SHARE_LINK_PARAM = 'live';
 
 export function shareLinkUrl(token: string): string {
