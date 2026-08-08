@@ -118,7 +118,6 @@ export function CrossSectionPanel({ onClose }: { onClose: () => void }) {
           data={sourceData}
           value={source}
           onChange={(v) => v && setSource(v)}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         {source === 'twopoint' && (
@@ -128,14 +127,12 @@ export function CrossSectionPanel({ onClose }: { onClose: () => void }) {
               label="Start (lat,lng)"
               value={startCoord}
               onChange={(e) => setStartCoord(e.currentTarget.value)}
-              styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
             />
             <TextInput
               size="xs"
               label="End (lat,lng)"
               value={endCoord}
               onChange={(e) => setEndCoord(e.currentTarget.value)}
-              styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
             />
           </Group>
         )}
@@ -147,7 +144,6 @@ export function CrossSectionPanel({ onClose }: { onClose: () => void }) {
           onChange={(v) => setNumSamples(Number(v))}
           min={10}
           max={200}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         <Button

@@ -111,7 +111,6 @@ export function HeatmapPanel({ onClose }: { onClose: () => void }) {
           data={sourceData}
           value={source}
           onChange={(v) => v && setSource(v)}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         {source === 'pasted' && (
@@ -124,7 +123,6 @@ export function HeatmapPanel({ onClose }: { onClose: () => void }) {
             maxRows={5}
             value={pasted}
             onChange={(e) => setPasted(e.currentTarget.value)}
-            styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
           />
         )}
 

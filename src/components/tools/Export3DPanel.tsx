@@ -267,7 +267,6 @@ export function Export3DPanel({ onClose }: { onClose: () => void }) {
             value={assetId}
             onChange={setAssetId}
             disabled={assets.length === 0}
-            styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
           />
 
           <Select
@@ -278,7 +277,6 @@ export function Export3DPanel({ onClose }: { onClose: () => void }) {
             value={format}
             onChange={setFormat}
             disabled={formats.length === 0}
-            styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
           />
 
           <Button

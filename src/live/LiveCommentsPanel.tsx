@@ -180,7 +180,6 @@ function Thread({
             aria-label={`Reply to ${thread.root.authorName}`}
             value={replyText}
             onChange={(event) => setReplyText(event.currentTarget.value)}
-            styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
           />
           <Button
             size="compact-xs"
@@ -269,7 +268,6 @@ export function LiveCommentsPanel({ onClose }: { onClose: () => void }) {
             aria-label="Leave a comment"
             value={text}
             onChange={(event) => setText(event.currentTarget.value)}
-            styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
           />
           <Group gap="xs" wrap="nowrap">
             <Button

@@ -69,7 +69,6 @@ export function SplitViewPanel({ onClose }: { onClose: () => void }) {
           value={renderer}
           onChange={(v) => v && setRenderer(v as Renderer)}
           allowDeselect={false}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         <Select
@@ -79,7 +78,6 @@ export function SplitViewPanel({ onClose }: { onClose: () => void }) {
           value={paneRenderer}
           onChange={(v) => v && setPaneRenderer(v as PaneRenderer)}
           allowDeselect={false}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         {activeTab !== 'globe' && (

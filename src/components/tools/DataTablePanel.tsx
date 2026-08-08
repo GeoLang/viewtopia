@@ -245,7 +245,6 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
               setSelectedLayer(v);
               setSort(null);
             }}
-            styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
           />
           <TextInput
             size="xs"
@@ -254,7 +253,6 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
             value={filter}
             onChange={(e) => setFilter(e.currentTarget.value)}
             leftSection={<IconSearch size={12} />}
-            styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
           />
           <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
             <IconX size={14} />

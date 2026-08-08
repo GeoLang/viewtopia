@@ -35,10 +35,6 @@ export const BASEMAP_TILES: Record<string, { url: string; attr: string }> = {
     url: 'https://tile.opentopomap.org/{z}/{x}/{y}.png',
     attr: '© OpenTopoMap',
   },
-  dark: {
-    url: 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-    attr: '© CARTO',
-  },
 };
 
 /**
@@ -60,6 +56,10 @@ export const VECTOR_APPROX_RASTER: Record<string, { url: string; attr: string }>
     url: 'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
     attr: '© CARTO © OpenStreetMap',
   },
+  dark: {
+    url: 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+    attr: '© CARTO © OpenStreetMap',
+  },
   selfhosted: {
     url: 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
     attr: '© CARTO © OpenStreetMap',
@@ -75,6 +75,7 @@ export const VECTOR_BASEMAPS: Record<string, { styleUrl: string }> = {
   liberty: { styleUrl: 'https://tiles.openfreemap.org/styles/liberty' },
   bright: { styleUrl: 'https://tiles.openfreemap.org/styles/bright' },
   positron: { styleUrl: 'https://tiles.openfreemap.org/styles/positron' },
+  dark: { styleUrl: 'https://tiles.openfreemap.org/styles/dark' },
 };
 
 /** Vector style MapLibre falls back to when 'selfhosted' has no URL set. */
@@ -91,11 +92,11 @@ export const BASEMAP_OPTIONS: BasemapOption[] = [
   { value: 'liberty', label: 'Liberty', kind: 'vector' },
   { value: 'bright', label: 'Bright', kind: 'vector' },
   { value: 'positron', label: 'Positron', kind: 'vector' },
+  { value: 'dark', label: 'Dark', kind: 'vector' },
   { value: 'selfhosted', label: 'Self-hosted', kind: 'vector' },
   { value: 'osm', label: 'OSM', kind: 'raster' },
   { value: 'satellite', label: 'Satellite', kind: 'raster' },
   { value: 'topo', label: 'Topo', kind: 'raster' },
-  { value: 'dark', label: 'Dark', kind: 'raster' },
 ];
 
 /** Mantine Select groups, so the UI says which renderers each group covers. */

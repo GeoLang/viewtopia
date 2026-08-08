@@ -248,7 +248,6 @@ export function IndoorPanel({ onClose }: { onClose: () => void }) {
               value={venueId}
               onChange={pickVenue}
               data-testid="indoor-venue"
-              styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
             />
 
             {venue && (
@@ -259,7 +258,6 @@ export function IndoorPanel({ onClose }: { onClose: () => void }) {
                 value={floor}
                 onChange={setFloor}
                 data-testid="indoor-floor"
-                styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
               />
             )}
 

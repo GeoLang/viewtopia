@@ -1,4 +1,5 @@
 import { test, expect } from './console-guard';
+import { MENU_ITEM } from './panel-helpers';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -19,6 +20,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  */
 
 const REACT_URL = '/';
+
+// the Cesium panels here read the live Cesium scene; the shipped default
+// renderer is MapLibre, so seed the persisted one
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'viewtopia-app',
+      JSON.stringify({ state: { renderer: 'cesium' }, version: 0 }),
+    );
+  });
+});
 
 const SAMPLE_POINTS = JSON.stringify({
   type: 'FeatureCollection',
@@ -205,7 +217,8 @@ const SAMPLE_GPX = `<?xml version="1.0"?><gpx><trk><trkseg>` +
 test.describe('local tool panels (batch 2)', () => {
   test('annotate: add at center appends an annotation and a live entity', async ({ page }) => {
     await page.goto(REACT_URL);
-    await page.getByLabel('Annotate').click();
+    await page.getByRole('button', { name: 'Actions' }).click();
+    await page.locator(MENU_ITEM).filter({ hasText: 'Annotate' }).first().click();
     await expect(page.getByText('Annotations')).toBeVisible();
 
     await page.getByPlaceholder('Annotation label…').fill('Site A');
@@ -220,7 +233,8 @@ test.describe('local tool panels (batch 2)', () => {
 
   test('bookmark: saving captures a named view into the list', async ({ page }) => {
     await page.goto(REACT_URL);
-    await page.getByLabel('Bookmarks').click();
+    await page.getByRole('button', { name: 'Actions' }).click();
+    await page.locator(MENU_ITEM).filter({ hasText: 'Bookmarks' }).first().click();
     await expect(page.getByPlaceholder('Bookmark name…')).toBeVisible();
 
     await page.getByPlaceholder('Bookmark name…').fill('Home View');

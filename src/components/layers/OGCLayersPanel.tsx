@@ -106,14 +106,12 @@ export function OGCLayersPanel({
           placeholder="Layer name"
           value={name}
           onChange={(e) => setName(e.currentTarget.value)}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
         <TextInput
           size="xs"
           placeholder="Service URL"
           value={url}
           onChange={(e) => setUrl(e.currentTarget.value)}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
         <Group gap="xs">
           <Select
@@ -129,7 +127,6 @@ export function OGCLayersPanel({
             ]}
             value={type}
             onChange={(v) => v && setType(v as OGCType)}
-            styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
           />
           <Button
             size="xs"

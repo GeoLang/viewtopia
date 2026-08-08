@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
@@ -9,7 +8,8 @@ import {
   Button,
   ScrollArea,
 } from '@mantine/core';
-import { IconVectorTriangle, IconX, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconVectorTriangle, IconPlus, IconTrash } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import type { LayerSpecification } from 'maplibre-gl';
 import { getActiveMapLibre } from '../../viewer/registry';
 import { fetchDatasetStyle, PTOLEMY_SOURCE_LAYER } from '../../lib/datasetStyle';
@@ -128,34 +128,12 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 320,
-        maxHeight: '55vh',
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconVectorTriangle size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Vector Tiles
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={320} maxHeight="55vh">
+      <PanelHeader
+        icon={<IconVectorTriangle size={16} color="#a78bfa" />}
+        title="Vector Tiles"
+        onClose={onClose}
+      />
 
       <Stack gap="xs" mb="xs">
         <TextInput
@@ -163,14 +141,12 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
           placeholder="Source name"
           value={name}
           onChange={(e) => setName(e.currentTarget.value)}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
         <TextInput
           size="xs"
           placeholder={URL_PLACEHOLDER}
           value={url}
           onChange={(e) => setUrl(e.currentTarget.value)}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
         <TextInput
           size="xs"
@@ -179,11 +155,6 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
           placeholder="optional"
           value={datasetId}
           onChange={(e) => setDatasetId(e.currentTarget.value)}
-          styles={{
-            label: { color: '#8b949e' },
-            description: { color: '#6e7681' },
-            input: { background: '#0d1117', borderColor: '#30363d' },
-          }}
         />
         <TextInput
           size="xs"
@@ -191,10 +162,6 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
           value={dataset ? PTOLEMY_SOURCE_LAYER : sourceLayer}
           disabled={!!dataset}
           onChange={(e) => setSourceLayer(e.currentTarget.value)}
-          styles={{
-            label: { color: '#8b949e' },
-            input: { background: '#0d1117', borderColor: '#30363d' },
-          }}
         />
         <Button
           size="xs"
@@ -237,6 +204,6 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
           </Text>
         )}
       </ScrollArea>
-    </Paper>
+    </PanelCard>
   );
 }

@@ -23,7 +23,7 @@ const asStyle = (s: StyleSpecification | string): StyleSpecification => {
 
 describe('vector basemaps', () => {
   it('are OpenFreeMap styles that need no API key', () => {
-    expect(Object.keys(VECTOR_BASEMAPS)).toEqual(['liberty', 'bright', 'positron']);
+    expect(Object.keys(VECTOR_BASEMAPS)).toEqual(['liberty', 'bright', 'positron', 'dark']);
     for (const [name, def] of Object.entries(VECTOR_BASEMAPS)) {
       expect(def.styleUrl).toBe(`https://tiles.openfreemap.org/styles/${name}`);
       expect(def.styleUrl).not.toMatch(/[?&]|key|token/i);
@@ -39,14 +39,15 @@ describe('vector basemaps', () => {
   it('are reported as vector, raster ones are not', () => {
     expect(isVectorBasemap('liberty')).toBe(true);
     expect(isVectorBasemap('selfhosted')).toBe(true);
+    expect(isVectorBasemap('dark')).toBe(true);
     expect(isVectorBasemap('osm')).toBe(false);
-    expect(isVectorBasemap('dark')).toBe(false);
+    expect(isVectorBasemap('satellite')).toBe(false);
   });
 });
 
 describe('raster basemaps', () => {
-  it('keeps the four raster sources for Cesium, deck.gl and Leaflet', () => {
-    expect(Object.keys(BASEMAP_TILES)).toEqual(['osm', 'satellite', 'topo', 'dark']);
+  it('keeps the three raster sources for Cesium, deck.gl and Leaflet', () => {
+    expect(Object.keys(BASEMAP_TILES)).toEqual(['osm', 'satellite', 'topo']);
   });
 
   it('builds a raster style with the cache-backed tile URL and attribution', () => {
@@ -147,25 +148,26 @@ describe('basemap select groups', () => {
 });
 
 describe('basemap defaults', () => {
-  it('starts MapLibre on an OpenFreeMap vector style', () => {
-    expect(useAppStore.getState().basemap).toBe('liberty');
-    expect(useAppStore.getState().settings.defaultBasemap).toBe('liberty');
-    expect(maplibreStyle(useAppStore.getState().basemap)).toBe(
-      VECTOR_BASEMAPS.liberty.styleUrl,
-    );
+  it('starts MapLibre on the OpenFreeMap dark vector style', () => {
+    expect(useAppStore.getState().renderer).toBe('maplibre');
+    expect(useAppStore.getState().basemap).toBe('dark');
+    expect(useAppStore.getState().settings.defaultRenderer).toBe('maplibre');
+    expect(useAppStore.getState().settings.defaultBasemap).toBe('dark');
+    expect(maplibreStyle(useAppStore.getState().basemap)).toBe(VECTOR_BASEMAPS.dark.styleUrl);
   });
 
   it('approximates the default vector style with a raster for the other renderers', () => {
-    // MapLibre shows Liberty vector; Cesium/deck.gl show the closest raster so
-    // all three look approximately the same.
-    expect(rasterTiles(useAppStore.getState().basemap)).toBe(VECTOR_APPROX_RASTER.liberty);
+    // MapLibre shows the dark vector style; Cesium/deck.gl show the closest
+    // raster so all three look approximately the same.
+    expect(rasterTiles(useAppStore.getState().basemap)).toBe(VECTOR_APPROX_RASTER.dark);
   });
 
   it('maps each vector style to a distinct approximating raster', () => {
     expect(rasterTiles('positron')).toBe(VECTOR_APPROX_RASTER.positron);
     expect(rasterTiles('bright')).toBe(VECTOR_APPROX_RASTER.bright);
+    expect(rasterTiles('dark')).toBe(VECTOR_APPROX_RASTER.dark);
     // raster basemaps resolve to themselves
     expect(rasterTiles('satellite')).toBe(BASEMAP_TILES.satellite);
-    expect(rasterTiles('dark')).toBe(BASEMAP_TILES.dark);
+    expect(rasterTiles('topo')).toBe(BASEMAP_TILES.topo);
   });
 });

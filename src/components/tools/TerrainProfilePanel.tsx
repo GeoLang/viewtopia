@@ -117,7 +117,6 @@ export function TerrainProfilePanel({ onClose }: { onClose: () => void }) {
             data={lineFeatures.map((f, i) => ({ value: f.id, label: `Drawn line #${i + 1}` }))}
             value={activeLine?.id ?? null}
             onChange={setSelectedLine}
-            styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
           />
           <NumberInput
             size="xs"
@@ -127,7 +126,6 @@ export function TerrainProfilePanel({ onClose }: { onClose: () => void }) {
             onChange={(v) => setNumSamples(Number(v) || 100)}
             min={10}
             max={200}
-            styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
           />
           <Button
             size="xs"

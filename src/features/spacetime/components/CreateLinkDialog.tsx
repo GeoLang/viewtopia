@@ -90,7 +90,6 @@ export function CreateLinkDialog() {
           value={fromId}
           onChange={setFromId}
           placeholder="Select entity…"
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
         <Select
           size="xs"
@@ -99,7 +98,6 @@ export function CreateLinkDialog() {
           value={toId}
           onChange={setToId}
           placeholder="Select entity…"
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
         <Select
           size="xs"
@@ -107,7 +105,6 @@ export function CreateLinkDialog() {
           data={LINK_KINDS}
           value={kind}
           onChange={(v) => v && setKind(v as LinkKind)}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
         <TextInput
           size="xs"
@@ -115,7 +112,6 @@ export function CreateLinkDialog() {
           placeholder="Optional description…"
           value={evidence}
           onChange={(e) => setEvidence(e.currentTarget.value)}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
         <Group gap="xs">
           <Button size="xs" variant="subtle" color="gray" onClick={() => setOpen(false)}>

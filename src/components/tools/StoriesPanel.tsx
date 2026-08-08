@@ -139,14 +139,12 @@ export function StoriesPanel({ onClose }: { onClose: () => void }) {
           placeholder="Step title…"
           value={title}
           onChange={(e) => setTitle(e.currentTarget.value)}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
         <Textarea
           size="xs"
           placeholder="Caption…"
           value={description}
           onChange={(e) => setDescription(e.currentTarget.value)}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
         <Group gap="xs" wrap="nowrap">
           <Button
@@ -168,7 +166,6 @@ export function StoriesPanel({ onClose }: { onClose: () => void }) {
             value={dwellSec}
             onChange={(v) => setDwellSec(typeof v === 'number' ? v : 3)}
             suffix="s"
-            styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
           />
         </Group>
       </Stack>

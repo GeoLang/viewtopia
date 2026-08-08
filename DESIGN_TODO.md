@@ -108,20 +108,14 @@ toolbar at phone widths only scrolls, 4 keyboard shortcuts app-wide,
 default white map widgets on dark chrome. Phases ordered so each is
 visible alone.
 
-- [ ] **phase 2, design system**: palette as Mantine theme tokens plus
-      defaultProps for inputs, then sweep the hex literals and inline styles
-      (parallelizes by directory once tokens land). Extract PanelCard,
-      PanelHeader, CloseButton and replace the hand-rolled panels. Replace
-      absolute-positioned cards with a docked inspector column that stacks
-      without collisions, which also fixes mobile. Restyle the MapLibre,
-      Leaflet and Cesium widgets and the scrollbars to the theme. Replace
-      alert/confirm with modals and emoji menu icons with Tabler. Pick a
-      dark default basemap or light chrome, one decision, together with the
-      decided default-renderer flip: MapLibre on first load (faster boot,
-      vector styles, the 2D collaborative workflow), Cesium one click away
-      on the 3D tab (owner, 2026-08-08). The flip is one store line plus a
-      deliberate pass over the e2e specs that wait for the Cesium viewer
-      on load.
+- [ ] **phase 2, design system**: palette as Mantine theme tokens, then
+      sweep the hex literals and inline styles (parallelizes by directory
+      once tokens land; input chrome and the panel-card sweep are done, see
+      changelog). Replace absolute-positioned cards with a docked inspector
+      column that stacks without collisions, which also fixes mobile.
+      Restyle the MapLibre, Leaflet and Cesium widgets and the scrollbars
+      to the theme. Replace alert/confirm with modals and emoji menu icons
+      with Tabler.
 - [ ] **phase 3, interaction polish**: Cmd+K command palette over the
       existing plugin and panel registries (demotes the seven dropdown
       menus), one-letter shortcuts for draw and measure tools with tooltip

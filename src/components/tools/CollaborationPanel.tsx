@@ -121,7 +121,6 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
               placeholder="Anonymous"
               value={nameInput}
               onChange={(e) => setNameInput(e.currentTarget.value)}
-              styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
             />
             <TextInput
               size="xs"
@@ -130,7 +129,6 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
               value={roomInput}
               onChange={(e) => setRoomInput(e.currentTarget.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleConnect()}
-              styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
             />
             <Button size="xs" color="violet" onClick={handleConnect} disabled={!roomInput.trim()}>
               Join Room
@@ -160,7 +158,6 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
                       value={lkToken}
                       onChange={(e) => setLkToken(e.currentTarget.value)}
                       style={{ flex: 1 }}
-                      styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
                     />
                     <Button
                       size="xs"
@@ -254,7 +251,6 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
                 onChange={(e) => setChatInput(e.currentTarget.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
                 style={{ flex: 1 }}
-                styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
               />
               <ActionIcon
                 size="sm"

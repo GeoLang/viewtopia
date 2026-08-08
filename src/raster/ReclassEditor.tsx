@@ -14,8 +14,6 @@ export interface ReclassClass {
   value: number;
 }
 
-const inputStyles = { input: { background: '#0d1117', borderColor: '#30363d' } };
-
 let nextId = 0;
 const newId = () => String(++nextId);
 
@@ -65,7 +63,6 @@ export function ReclassEditor({
             onChange={(v) => update(i, { min: Number(v) })}
             size="xs"
             w={62}
-            styles={inputStyles}
           />
           <NumberInput
             aria-label={`Class ${i + 1} to`}
@@ -73,7 +70,6 @@ export function ReclassEditor({
             onChange={(v) => update(i, { max: Number(v) })}
             size="xs"
             w={62}
-            styles={inputStyles}
           />
           <NumberInput
             aria-label={`Class ${i + 1} value`}
@@ -81,7 +77,6 @@ export function ReclassEditor({
             onChange={(v) => update(i, { value: Number(v) })}
             size="xs"
             w={62}
-            styles={inputStyles}
           />
           <ActionIcon
             size="sm"

@@ -9,8 +9,6 @@ import { IconDownload, IconTransform, IconX } from '@tabler/icons-react';
 import { CONVERT_FORMATS, convertFileName, convertLayer, type ConvertFormat } from './formats';
 import { useGeoJsonSources } from '../../lib/geojsonSources';
 
-const inputStyles = { input: { background: '#0d1117', borderColor: '#30363d' } };
-
 function download(bytes: Uint8Array, fileName: string, mimeType: string): void {
   // copied off the wasm heap, whose buffer Blob will not take
   const blob = new Blob([Uint8Array.from(bytes)], { type: mimeType });
@@ -95,7 +93,6 @@ export function ConvertPanel({ onClose }: { onClose: () => void }) {
             setWritten(null);
           }}
           placeholder="pick a layer"
-          styles={inputStyles}
         />
 
         <Select
@@ -108,7 +105,6 @@ export function ConvertPanel({ onClose }: { onClose: () => void }) {
             setError(null);
             setWritten(null);
           }}
-          styles={inputStyles}
         />
 
         {source && (

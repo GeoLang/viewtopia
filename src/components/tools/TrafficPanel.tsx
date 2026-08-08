@@ -225,7 +225,6 @@ export function TrafficPanel({ onClose }: { onClose: () => void }) {
               placeholder="https://.../{z}/{x}/{y}.png?key=YOUR_KEY"
               value={tileUrl}
               onChange={(e) => setTileUrl(e.currentTarget.value)}
-              styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
             />
             <Group gap="xs" grow>
               <Button size="xs" color="violet" onClick={addTiles} disabled={!tileUrl.trim()}>

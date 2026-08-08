@@ -70,7 +70,6 @@ export function FlyToSearch() {
           </ActionIcon>
         )
       }
-      styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
     />
   );
 }

@@ -83,9 +83,6 @@ export function GeofencePanel({ onClose }: { onClose: () => void }) {
           placeholder="Fence name…"
           value={name}
           onChange={(e) => setName(e.currentTarget.value)}
-          styles={{
-            input: { background: '#0d1117', borderColor: '#30363d' },
-          }}
         />
 
         <SegmentedControl
@@ -108,7 +105,6 @@ export function GeofencePanel({ onClose }: { onClose: () => void }) {
                 value={lat}
                 onChange={setLat}
                 decimalScale={6}
-                styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
               />
               <NumberInput
                 size="xs"
@@ -116,7 +112,6 @@ export function GeofencePanel({ onClose }: { onClose: () => void }) {
                 value={lng}
                 onChange={setLng}
                 decimalScale={6}
-                styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
               />
             </Group>
             <NumberInput
@@ -126,7 +121,6 @@ export function GeofencePanel({ onClose }: { onClose: () => void }) {
               onChange={setRadius}
               min={10}
               max={100000}
-              styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
             />
           </>
         )}

@@ -1,4 +1,5 @@
 import { test, expect } from './console-guard';
+import { MENU_ITEM } from './panel-helpers';
 
 /**
  * React front-end smoke test (Track 2 verification harness).
@@ -62,9 +63,9 @@ test.describe('React shell smoke', () => {
 
   test('GeoJSON editor opens with its empty state', async ({ page }) => {
     await page.goto(REACT_URL);
-    const editor = page.getByRole('button', { name: 'GeoJSON Editor' });
-    await expect(editor).toBeVisible();
-    await editor.click();
+    // the editor lives in the Actions menu since the toolbar merged into the header
+    await page.getByRole('button', { name: 'Actions' }).click();
+    await page.locator(MENU_ITEM).filter({ hasText: 'GeoJSON Editor' }).first().click();
     // Panel renders its heading + the no-features empty state (nothing drawn yet).
     await expect(page.getByText('GeoJSON Editor').first()).toBeVisible();
     await expect(page.getByText(/no features yet/i)).toBeVisible();
@@ -72,9 +73,8 @@ test.describe('React shell smoke', () => {
 
   test('style editor opens with its controls', async ({ page }) => {
     await page.goto(REACT_URL);
-    const style = page.getByRole('button', { name: 'Style Editor' });
-    await expect(style).toBeVisible();
-    await style.click();
+    await page.getByRole('button', { name: 'Actions' }).click();
+    await page.locator(MENU_ITEM).filter({ hasText: 'Style Editor' }).first().click();
     // Panel renders its heading + the color-by-property control.
     await expect(page.getByText('Style Editor').first()).toBeVisible();
     await expect(page.getByText('Color by Property')).toBeVisible();

@@ -18,7 +18,11 @@ export async function openBasemapRendererControl(page) {
 
 export const MENU_ITEM = '[class*="mantine-Menu-dropdown"] [class*="mantine-Menu-item"]';
 
-/** Boot the app with preview tools visible and the default renderer up. */
+/**
+ * Boot the app with preview tools visible and the Cesium renderer up. The
+ * shipped default is MapLibre (default-boot.spec.js covers it); these suites
+ * exercise the Cesium scene surface, so they seed the persisted renderer.
+ */
 export async function openApp(page) {
   // this stack runs no geolang-api, so nginx answers the viewer's per-page-load
   // /agent/health probe with a 502 and chrome logs it as a console error. A 2xx is the
@@ -58,12 +62,15 @@ export async function openApp(page) {
     // every key we leave out
     localStorage.setItem(
       'viewtopia-app',
-      JSON.stringify({ state: { settings: { showPreviewTools: true } }, version: 0 }),
+      JSON.stringify({
+        state: { renderer: 'cesium', settings: { showPreviewTools: true } },
+        version: 0,
+      }),
     );
   });
   await page.goto('/');
   await expect(page.getByRole('button', { name: 'Analysis' })).toBeVisible();
-  // let the default renderer finish booting, so its errors land in no test but
-  // this one and panels that read the live viewer see it
+  // let the seeded Cesium renderer finish booting, so its errors land in no
+  // test but this one and panels that read the live viewer see it
   await page.waitForFunction(() => !!window.__viewtopiaViewer, null, { timeout: 60000 });
 }

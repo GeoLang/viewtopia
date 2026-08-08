@@ -212,7 +212,6 @@ export function CesiumIonPanel({ onClose }: { onClose: () => void }) {
         value={token}
         onChange={(e) => setToken(e.currentTarget.value)}
         type="password"
-        styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
       />
       <Button
         size="xs"

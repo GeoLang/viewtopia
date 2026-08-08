@@ -106,7 +106,6 @@ export function SolarPanel({ onClose }: { onClose: () => void }) {
           label="Date"
           value={date}
           onChange={(e) => setDate(e.currentTarget.value)}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         <Text size="xs" c="dimmed">Opacity: {opacity}%</Text>

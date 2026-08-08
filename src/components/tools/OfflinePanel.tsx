@@ -149,7 +149,6 @@ export function OfflinePanel({ onClose }: { onClose: () => void }) {
           value={name}
           onChange={(e) => setName(e.currentTarget.value)}
           disabled={caching}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         {caching && (

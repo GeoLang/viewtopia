@@ -188,7 +188,6 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
           ]}
           value={analysis}
           onChange={(v) => setAnalysis((v as Op) ?? 'slope')}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         {analysis === 'hillshade' && (
@@ -200,7 +199,6 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
               max={360}
               value={sun.azimuth}
               onChange={setSunValue('azimuth')}
-              styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
             />
             <NumberInput
               size="xs"
@@ -209,7 +207,6 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
               max={90}
               value={sun.altitude}
               onChange={setSunValue('altitude')}
-              styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
             />
           </Group>
         )}
@@ -246,7 +243,6 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
           min={1}
           value={resolution}
           onChange={(v) => typeof v === 'number' && setResolution(v)}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         <Group gap="xs" wrap="nowrap">

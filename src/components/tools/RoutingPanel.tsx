@@ -83,9 +83,6 @@ export function RoutingPanel({ onClose }: { onClose: () => void }) {
           value={origin}
           onChange={(e) => setOrigin(e.currentTarget.value)}
           leftSection={<IconMapPin size={12} />}
-          styles={{
-            input: { background: '#0d1117', borderColor: '#30363d' },
-          }}
         />
         <TextInput
           size="xs"
@@ -94,9 +91,6 @@ export function RoutingPanel({ onClose }: { onClose: () => void }) {
           onChange={(e) => setDestination(e.currentTarget.value)}
           leftSection={<IconMapPin size={12} />}
           onKeyDown={(e) => e.key === 'Enter' && handleRoute()}
-          styles={{
-            input: { background: '#0d1117', borderColor: '#30363d' },
-          }}
         />
         <Button
           size="xs"

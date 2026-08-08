@@ -377,7 +377,6 @@ export function TimelapsePanel({ onClose }: { onClose: () => void }) {
                 data={layers.map((l) => ({ value: l.name, label: l.name }))}
                 value={layerName}
                 onChange={setLayerName}
-                styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
               />
               {layer?.collection && (
                 <Text size="xs" c="dimmed">
@@ -396,7 +395,6 @@ export function TimelapsePanel({ onClose }: { onClose: () => void }) {
                 value={stepSize}
                 onChange={(v) => v && setStepSize(v as StepSize)}
                 allowDeselect={false}
-                styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
               />
 
               <Select
@@ -407,7 +405,6 @@ export function TimelapsePanel({ onClose }: { onClose: () => void }) {
                 onChange={(v) => v && setAIndex(Number(v))}
                 allowDeselect={false}
                 searchable
-                styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
               />
 
               <Select
@@ -418,7 +415,6 @@ export function TimelapsePanel({ onClose }: { onClose: () => void }) {
                 onChange={(v) => v && takeOverB(Number(v))}
                 allowDeselect={false}
                 searchable
-                styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
               />
 
               <Select
@@ -428,7 +424,6 @@ export function TimelapsePanel({ onClose }: { onClose: () => void }) {
                 value={mode}
                 onChange={(v) => v && setMode(v as Mode)}
                 allowDeselect={false}
-                styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
               />
 
               {mode === 'swipe' && (

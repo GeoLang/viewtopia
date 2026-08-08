@@ -84,7 +84,6 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           ]}
           value={settings.defaultRenderer}
           onChange={(v) => v && updateSettings({ defaultRenderer: v as Renderer })}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         <Select
@@ -94,7 +93,6 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           data={BASEMAP_SELECT_GROUPS}
           value={settings.defaultBasemap}
           onChange={(v) => v && updateSettings({ defaultBasemap: v as Basemap })}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         <TextInput
@@ -110,7 +108,6 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           placeholder="https://example.com/basemap.pmtiles"
           value={settings.selfHostedBasemapUrl}
           onChange={(e) => updateSettings({ selfHostedBasemapUrl: e.currentTarget.value })}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         <Divider color="#30363d" />
@@ -122,7 +119,6 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           placeholder="/api/v1"
           value={settings.tiletopiaUrl}
           onChange={(e) => updateSettings({ tiletopiaUrl: e.currentTarget.value })}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         <TextInput
@@ -131,7 +127,6 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           placeholder="/agent"
           value={settings.geolangUrl}
           onChange={(e) => updateSettings({ geolangUrl: e.currentTarget.value })}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         <TextInput
@@ -140,7 +135,6 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           placeholder="wss://livekit.example.com"
           value={settings.livekitUrl}
           onChange={(e) => updateSettings({ livekitUrl: e.currentTarget.value })}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         <Text size="xs" c="dimmed">Probe Interval: {settings.probeIntervalSec}s</Text>
@@ -253,7 +247,6 @@ function AiModelSelect() {
       comboboxProps={{ withinPortal: true, zIndex: 1500 }}
       data-testid="ai-model-select"
       errorProps={{ 'data-testid': 'ai-model-error' }}
-      styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
     />
   );
 }

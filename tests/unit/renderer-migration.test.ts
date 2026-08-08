@@ -38,13 +38,13 @@ describe('retired deck.gl renderer', () => {
   });
 
   it('keeps a persisted renderer that still exists', async () => {
-    const state = await loadStore({ renderer: 'maplibre' });
-    expect(state.renderer).toBe('maplibre');
+    const state = await loadStore({ renderer: 'cesium' });
+    expect(state.renderer).toBe('cesium');
   });
 
   it('keeps the default when the persisted renderer is unknown', async () => {
     const state = await loadStore({ renderer: 'nonsense' });
-    expect(state.renderer).toBe('cesium');
+    expect(state.renderer).toBe('maplibre');
   });
 
   it('falls back to maplibre for a deckgl share link', async () => {
@@ -62,6 +62,6 @@ describe('retired deck.gl renderer', () => {
     const { useAppStore } = await import('../../src/store/app');
     const { useShareLinkHash } = await import('../../src/hooks/useShareLinkHash');
     renderHook(() => useShareLinkHash());
-    expect(useAppStore.getState().renderer).toBe('cesium');
+    expect(useAppStore.getState().renderer).toBe('maplibre');
   });
 });

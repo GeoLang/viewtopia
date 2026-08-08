@@ -104,7 +104,6 @@ export function ShareLinkPanel({ onClose }: { onClose: () => void }) {
               value={shareUrl}
               readOnly
               data-testid="sharelink-url"
-              styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
             />
             <CopyButton value={shareUrl}>
               {({ copied, copy }) => (

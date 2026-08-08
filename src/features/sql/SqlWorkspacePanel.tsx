@@ -266,7 +266,6 @@ export function SqlWorkspacePanel({ onClose }: { onClose: () => void }) {
           value={null}
           onChange={(value) => value && setSql(value)}
           data-testid="sql-samples"
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         {error && (
@@ -333,7 +332,6 @@ export function SqlWorkspacePanel({ onClose }: { onClose: () => void }) {
             value={url}
             onChange={(e) => setUrl(e.currentTarget.value)}
             data-testid="sql-url"
-            styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
           />
           <Button
             size="xs"

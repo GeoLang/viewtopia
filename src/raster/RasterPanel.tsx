@@ -46,8 +46,6 @@ import { useAgentLayerStore } from '../store/agentLayers';
 import { renderToDataUrl } from './renderer';
 import type { RasterResult, ColorRamp, FocalStat, Neighborhood, ZonalResult } from './types';
 
-const inputStyles = { input: { background: '#0d1117', borderColor: '#30363d' } };
-
 /** a run that produced features rather than a grid: contours, polygonize */
 interface VectorResult {
   name: string;
@@ -376,7 +374,6 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
             size="xs"
             style={{ flex: 1 }}
             leftSection={<IconLink size={14} />}
-            styles={inputStyles}
           />
           <Button size="xs" onClick={handleLoadUrl} loading={loading}>
             Load
@@ -388,7 +385,6 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
           accept=".tif,.tiff"
           leftSection={<IconUpload size={14} />}
           onChange={handleLoadFile}
-          styles={inputStyles}
         />
 
         {error && (
@@ -447,7 +443,6 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
                     setIndexBands(INDEX_PRESETS[key].defaults);
                   }}
                   mb={4}
-                  styles={inputStyles}
                 />
                 <Group gap={8}>
                   {preset.roles.map((role, i) => (
@@ -462,7 +457,6 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
                       w={72}
                       min={1}
                       max={raster.metadata.bands}
-                      styles={inputStyles}
                     />
                   ))}
                 </Group>
@@ -501,7 +495,6 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
                   w={80}
                   min={0}
                   max={360}
-                  styles={inputStyles}
                 />
                 <NumberInput
                   label="Altitude"
@@ -511,7 +504,6 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
                   w={80}
                   min={0}
                   max={90}
-                  styles={inputStyles}
                 />
                 <NumberInput
                   label="Z Factor"
@@ -521,7 +513,6 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
                   w={80}
                   min={0.1}
                   step={0.1}
-                  styles={inputStyles}
                 />
               </Group>
             </Paper>
@@ -551,7 +542,6 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
                 onChange={(v) => setSlopeUnits((v as 'degrees' | 'percent') ?? 'degrees')}
                 size="xs"
                 w={120}
-                styles={inputStyles}
               />
             </Paper>
 
@@ -598,7 +588,6 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
                 onChange={(e) => setBandMathExpr(e.currentTarget.value)}
                 minRows={1}
                 autosize
-                styles={inputStyles}
               />
               <Text size="xs" c="dimmed" mt={4}>
                 b1, b2, … are bands; + - * / and Math.* work.
@@ -631,7 +620,6 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
                 size="xs"
                 w={100}
                 min={1}
-                styles={inputStyles}
               />
             </Paper>
 
@@ -663,7 +651,6 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
                   data={sourceOptions}
                   value={reclassInput}
                   onChange={(v) => setReclassInput(v ?? '0')}
-                  styles={inputStyles}
                 />
                 <NumberInput
                   label="Classes"
@@ -673,7 +660,6 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
                   w={70}
                   min={1}
                   max={20}
-                  styles={inputStyles}
                 />
                 <Button
                   size="xs"
@@ -718,7 +704,6 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
                 data={sourceOptions}
                 value={polygonInput}
                 onChange={(v) => setPolygonInput(v ?? '0')}
-                styles={inputStyles}
               />
               <Text size="xs" c="dimmed" mt={4}>
                 Traces equal-valued cells, so reclass first.
@@ -753,7 +738,6 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
                   data={sourceOptions}
                   value={focalInput}
                   onChange={(v) => setFocalInput(v ?? '0')}
-                  styles={inputStyles}
                 />
                 <NumberInput
                   label="Radius"
@@ -763,7 +747,6 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
                   w={70}
                   min={1}
                   max={15}
-                  styles={inputStyles}
                 />
               </Group>
               <Group gap={8}>
@@ -775,7 +758,6 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
                   data={['mean', 'median', 'majority', 'min', 'max', 'sum', 'std', 'range']}
                   value={focalStat}
                   onChange={(v) => setFocalStat((v as FocalStat) ?? 'mean')}
-                  styles={inputStyles}
                 />
                 <Select
                   aria-label="Window shape"
@@ -788,7 +770,6 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
                   ]}
                   value={focalShape}
                   onChange={(v) => setFocalShape((v as Neighborhood) ?? 'square')}
-                  styles={inputStyles}
                 />
               </Group>
             </Paper>
@@ -821,7 +802,6 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
                   data={sourceOptions}
                   value={zonalValues}
                   onChange={(v) => setZonalValues(v ?? '0')}
-                  styles={inputStyles}
                 />
                 <Select
                   aria-label="Zones"
@@ -831,7 +811,6 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
                   data={zoneOptions}
                   value={zonalZones}
                   onChange={(v) => setZonalZones(v ?? '0')}
-                  styles={inputStyles}
                 />
               </Group>
               {polygonLayers.length === 0 && (
@@ -863,7 +842,6 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
                 setColorRamp(ramp);
                 if (result) setResultImage(renderToDataUrl(result, { ramp }));
               }}
-              styles={inputStyles}
             />
           </>
         )}

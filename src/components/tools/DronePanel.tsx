@@ -177,7 +177,6 @@ export function DronePanel({ onClose }: { onClose: () => void }) {
         onChange={(v) => setAltitude(typeof v === 'number' ? v : Number(v) || 0)}
         min={10}
         max={500}
-        styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
       />
 
       <Text size="xs" c="dimmed">

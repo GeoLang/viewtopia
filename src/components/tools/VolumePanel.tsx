@@ -236,7 +236,6 @@ export function VolumePanel({ onClose }: { onClose: () => void }) {
           data={polygons.map((f, i) => ({ value: f.id, label: `Polygon #${i + 1}` }))}
           value={active?.id ?? null}
           onChange={setSelectedId}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
         <Button
           size="xs"
@@ -273,7 +272,6 @@ export function VolumePanel({ onClose }: { onClose: () => void }) {
           value={customBase}
           onChange={(v) => setCustomBase(Number(v) || 0)}
           step={1}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
       )}
 

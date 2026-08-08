@@ -119,9 +119,6 @@ export function ChatPanel() {
           data={sessionOptions}
           value={activeSessionId}
           onChange={(v) => v && setActiveSession(v)}
-          styles={{
-            input: { background: '#0d1117', borderColor: '#30363d' },
-          }}
         />
         <Tooltip label="New session">
           <ActionIcon
@@ -224,9 +221,6 @@ export function ChatPanel() {
           onChange={(e) => setInput(e.currentTarget.value)}
           onKeyDown={handleKeyDown}
           disabled={streaming}
-          styles={{
-            input: { background: '#0d1117', borderColor: '#30363d' },
-          }}
         />
         {streaming ? (
           <ActionIcon variant="filled" color="red" size="lg" onClick={abort}>

@@ -121,7 +121,6 @@ export function ChartsPanel({ onClose }: { onClose: () => void }) {
             setDataSource(v);
             setAttribute(null);
           }}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         <Select
@@ -137,7 +136,6 @@ export function ChartsPanel({ onClose }: { onClose: () => void }) {
           data={attributeNames}
           value={attribute}
           onChange={setAttribute}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         <Select
@@ -150,7 +148,6 @@ export function ChartsPanel({ onClose }: { onClose: () => void }) {
           ]}
           value={chartType}
           onChange={setChartType}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         <Paper p="sm" style={{ background: '#21262d', borderRadius: 4, minHeight: 150 }}>

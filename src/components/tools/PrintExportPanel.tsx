@@ -131,23 +131,19 @@ export function PrintExportPanel({ onClose }: { onClose: () => void }) {
           ]}
           value={format}
           onChange={setFormat}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         <Group gap="xs" grow>
           <NumberInput size="xs" label="Width" value={width} onChange={setWidth}
             min={100} max={8000}
-            styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
           />
           <NumberInput size="xs" label="Height" value={height} onChange={setHeight}
             min={100} max={8000}
-            styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
           />
         </Group>
 
         <NumberInput size="xs" label="DPI" value={dpi} onChange={setDpi}
           min={72} max={600}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         <Text size="xs" c="dimmed" data-testid="printexport-size">

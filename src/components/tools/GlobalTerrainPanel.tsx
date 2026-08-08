@@ -196,7 +196,6 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
               ]}
               value={provider}
               onChange={setProvider}
-              styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
             />
 
             {provider === 'stack' && (
@@ -212,7 +211,6 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
                 placeholder="https://…/terrain"
                 value={url}
                 onChange={(e) => setUrl(e.currentTarget.value)}
-                styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
               />
             )}
           </>

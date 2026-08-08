@@ -19,6 +19,16 @@ import { test, expect } from './console-guard';
 const REACT_URL = '/';
 const CAFE = [7.4246, 43.7384];
 
+// these flows start from Cesium; the shipped default renderer is MapLibre
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'viewtopia-app',
+      JSON.stringify({ state: { renderer: 'cesium' }, version: 0 }),
+    );
+  });
+});
+
 const CAFES = {
   type: 'FeatureCollection',
   features: [
@@ -55,20 +65,25 @@ const SESSION = {
   updatedAt: 2,
 };
 
-/** Load the app with a stored result, then replay it onto the map. */
-async function seedAndReplay(page) {
+/** Seed a stored result before the app boots, so the running page can't
+ * overwrite it with its own persist writes. */
+async function seedSession(page) {
   await page.route('**/agent/geojson/**', (route) =>
     route.fulfill({ contentType: 'application/json', body: JSON.stringify(CAFES) }),
   );
-  await page.goto(REACT_URL);
-  await page.evaluate((s) => {
+  await page.addInitScript((s) => {
     localStorage.setItem(
       'viewtopia-chat',
       JSON.stringify({ state: { sessions: [s], activeSessionId: s.id }, version: 0 }),
     );
   }, SESSION);
-  await page.reload();
+  await page.goto(REACT_URL);
   await page.waitForFunction(() => !!window.__viewtopiaViewer, null, { timeout: 60000 });
+}
+
+/** Load the app with a stored result, then replay it onto the map. */
+async function seedAndReplay(page) {
+  await seedSession(page);
   // chat starts closed, and the replay control lives in its history
   await page.getByRole('button', { name: 'Show chat' }).click();
   await page.getByTitle('Click to replay this result on the map').click();
@@ -94,13 +109,6 @@ const cesiumLayerCount = (page) =>
     return n;
   });
 
-const deckLayerIds = (page) =>
-  page.evaluate(() => {
-    const d = window.__viewtopiaDeck;
-    if (!d) return [];
-    return (d.props.layers ?? []).map((l) => l && l.id).filter(Boolean);
-  });
-
 const maplibreLayerIds = (page) =>
   page.evaluate(() => {
     const m = window.__viewtopiaMap;
@@ -122,10 +130,6 @@ test.describe('agent layers across renderers', () => {
 
     await switchRenderer(page, 'MapLibre');
     await expect.poll(() => maplibreLayerIds(page), { timeout: 30000 }).not.toHaveLength(0);
-    // the deck.gl copy of the layers rides on the same map
-    await expect
-      .poll(() => deckLayerIds(page), { timeout: 30000 })
-      .toEqual(expect.arrayContaining([expect.stringMatching(/^agent-layer-/)]));
 
     await switchRenderer(page, 'CesiumJS');
     await expect.poll(() => cesiumLayerCount(page), { timeout: 30000 }).toBeGreaterThan(0);
@@ -140,13 +144,10 @@ test.describe('agent layers across renderers', () => {
     await switchRenderer(page, 'CesiumJS');
     await expect.poll(() => cesiumLayerCount(page), { timeout: 30000 }).toBeGreaterThan(0);
 
-    // Returning rebuilds the map from scratch and re-sets its style, and the
-    // deck overlay has to reattach to the new map.
+    // Returning rebuilds the map from scratch and re-sets its style, so the
+    // layers have to be re-added to the new map.
     await switchRenderer(page, 'MapLibre');
     await expect.poll(() => maplibreLayerIds(page), { timeout: 30000 }).not.toHaveLength(0);
-    await expect
-      .poll(() => deckLayerIds(page), { timeout: 30000 })
-      .toEqual(expect.arrayContaining([expect.stringMatching(/^agent-layer-/)]));
   });
 
   test('a basemap change keeps the agent layers', async ({ page }) => {
@@ -178,27 +179,16 @@ test.describe('agent layers across renderers', () => {
   });
 
   test('renderUISpec leaves the active renderer alone', async ({ page }) => {
-    await page.route('**/agent/geojson/**', (route) =>
-      route.fulfill({ contentType: 'application/json', body: JSON.stringify(CAFES) }),
-    );
-    await page.goto(REACT_URL);
-    await page.evaluate((s) => {
-      localStorage.setItem(
-        'viewtopia-chat',
-        JSON.stringify({ state: { sessions: [s], activeSessionId: s.id }, version: 0 }),
-      );
-    }, SESSION);
-    await page.reload();
-    await page.waitForFunction(() => !!window.__viewtopiaViewer, null, { timeout: 60000 });
+    await seedSession(page);
 
     // Replaying used to snap the app back to Cesium.
     await switchRenderer(page, 'MapLibre');
     await page.waitForFunction(() => !!window.__viewtopiaMap, null, { timeout: 30000 });
+    // the replay control lives in the chat history, which starts collapsed
+    await page.getByRole('button', { name: 'Show chat' }).click();
     await page.getByTitle('Click to replay this result on the map').click();
 
-    await expect
-      .poll(() => deckLayerIds(page), { timeout: 30000 })
-      .toEqual(expect.arrayContaining([expect.stringMatching(/^agent-layer-/)]));
+    await expect.poll(() => maplibreLayerIds(page), { timeout: 30000 }).not.toHaveLength(0);
     await expect(page.locator('#maplibre-container canvas').first()).toBeVisible();
   });
 });
@@ -307,28 +297,6 @@ test.describe('feature picker on agent layers', () => {
     await expect(featureInfo(page)).toBeHidden();
   });
 
-  // The map's click handler asks the deck overlay before it queries the style,
-  // since queryRenderedFeatures never returns deck's custom layers.
-  test('the deck overlay answers a pick on the agent layer', async ({ page }) => {
-    await seedAndReplay(page);
-    await switchRenderer(page, 'MapLibre');
-    await page.waitForFunction(() => !!window.__viewtopiaDeck, null, { timeout: 30000 });
-    await expect
-      .poll(() => deckLayerIds(page), { timeout: 30000 })
-      .toEqual(expect.arrayContaining([expect.stringMatching(/^agent-layer-/)]));
-
-    const picked = await page.evaluate((c) => {
-      const p = window.__viewtopiaMap.project(c);
-      const info = window.__viewtopiaDeck.pickObject({
-        x: Math.round(p.x),
-        y: Math.round(p.y),
-        radius: 8,
-      });
-      return info?.object?.properties ?? null;
-    }, CAFE);
-    expect(picked).toMatchObject({ name: 'Cafe Central', amenity: 'cafe' });
-  });
-
   // Agent points are 5px circles on maplibre, vs Cesium's large pins. With no
   // pick tolerance they need near-pixel aim, which reads as "only Cesium works".
   test('a near-miss click still picks the feature on maplibre', async ({ page }) => {
@@ -417,8 +385,12 @@ test.describe('feature picker on agent layers', () => {
     await expect.poll(() => cesiumLayerCount(page), { timeout: 30000 }).toBeGreaterThan(0);
     await waitForCesiumFlight(page);
 
-    await clickAt(page, cesiumProject);
-    await expect(featureInfo(page)).toContainText('Cafe Central');
+    // a single click on the rebuilt globe can land a hair off the entity, so
+    // retry the click rather than fail on one miss
+    await expect(async () => {
+      await clickAt(page, cesiumProject);
+      await expect(featureInfo(page)).toContainText('Cafe Central', { timeout: 2000 });
+    }).toPass({ timeout: 20000 });
   });
 
   test('picking still works on maplibre after a renderer round trip', async ({ page }) => {

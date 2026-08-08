@@ -140,7 +140,6 @@ export function AnnotatePanel({ onClose }: { onClose: () => void }) {
           placeholder="Annotation label…"
           value={label}
           onChange={(e) => setLabel(e.currentTarget.value)}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
         <ColorInput
           size="xs"
@@ -148,7 +147,6 @@ export function AnnotatePanel({ onClose }: { onClose: () => void }) {
           onChange={setColor}
           format="hex"
           swatches={['#a78bfa', '#f87171', '#34d399', '#60a5fa', '#fbbf24']}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
         <Group gap="xs" grow>
           <Button

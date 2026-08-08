@@ -6,6 +6,21 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-08: **MapLibre boots first, on the dark vector basemap (UI polish
+  phase 2, part 1)**. A clean profile starts on the MapLibre globe with
+  OpenFreeMap's dark style instead of Cesium on liberty; Cesium is one
+  renderer switch away and persisted choices are untouched. 'dark' moved
+  from the raster basemap list to a real vector style (its raster
+  approximation stays for Cesium/Leaflet/minimap). Input chrome now comes
+  from a theme-level `Input.extend` defaultProps instead of per-component
+  `styles`, and the hand-rolled floating panel chrome collapsed into
+  `PanelCard`/`PanelHeader`/`PanelCloseButton` primitives across the tool
+  panels. e2e: a new default-boot spec pins the clean-profile boot, the
+  Cesium-surface suites seed a persisted cesium renderer, the specs that
+  still clicked pre-Actions-menu toolbar buttons go through the menu now,
+  and the agent-layer chat seed moved to `addInitScript` so the running
+  page can no longer clobber it before reload.
+
 - 2026-08-08: **the map owns the viewport (UI polish phase 1)**. The chat
   sidebar starts closed and toggles from a header icon (Ctrl+B unchanged, on
   phones the floating button remains); its header session switcher is the one

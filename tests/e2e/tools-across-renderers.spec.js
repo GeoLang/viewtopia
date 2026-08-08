@@ -1,4 +1,5 @@
 import { test, expect } from './console-guard';
+import { MENU_ITEM } from './panel-helpers';
 
 /**
  * Tool state across renderer switches.
@@ -11,6 +12,16 @@ import { test, expect } from './console-guard';
  */
 
 const REACT_URL = '/';
+
+// every flow here starts from Cesium; the shipped default renderer is MapLibre
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'viewtopia-app',
+      JSON.stringify({ state: { renderer: 'cesium' }, version: 0 }),
+    );
+  });
+});
 
 const drawEntityCount = (page) =>
   page.evaluate(() => {
@@ -73,7 +84,8 @@ test.describe('draw tool across renderers', () => {
     await page.goto(REACT_URL);
     await page.waitForFunction(() => !!window.__viewtopiaViewer, null, { timeout: 60000 });
 
-    await page.getByRole('button', { name: 'Draw' }).click();
+    await page.getByRole('button', { name: 'Actions' }).click();
+    await page.locator(MENU_ITEM).filter({ hasText: 'Draw' }).first().click();
     await page.getByText('Point', { exact: true }).click();
 
     for (const [dx, dy] of [
@@ -104,7 +116,8 @@ test.describe('draw tool across renderers', () => {
     await page.goto(REACT_URL);
     await page.waitForFunction(() => !!window.__viewtopiaViewer, null, { timeout: 60000 });
 
-    await page.getByRole('button', { name: 'Draw' }).click();
+    await page.getByRole('button', { name: 'Actions' }).click();
+    await page.locator(MENU_ITEM).filter({ hasText: 'Draw' }).first().click();
     await page.getByText('Point', { exact: true }).click();
 
     // The crosshair is set when the handler binds, so it stands in for "armed".

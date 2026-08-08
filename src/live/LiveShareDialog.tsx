@@ -170,7 +170,6 @@ export function LiveShareDialog({
               readOnly
               value={link}
               data-testid="share-link"
-              styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
             />
             <CopyButton value={link}>
               {({ copied, copy }) => (
@@ -243,7 +242,6 @@ export function LiveShareDialog({
                 value={newMemberId}
                 onChange={(event) => setNewMemberId(event.currentTarget.value)}
                 data-testid="new-member-id"
-                styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
               />
               <SegmentedControl
                 size="xs"

@@ -145,7 +145,6 @@ export function LiveSessionControl() {
               placeholder="New live map name…"
               value={name}
               onChange={(event) => setName(event.currentTarget.value)}
-              styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
             />
             <Button
               size="xs"

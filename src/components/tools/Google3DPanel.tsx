@@ -111,7 +111,6 @@ export function Google3DPanel({ onClose }: { onClose: () => void }) {
         value={apiKey}
         onChange={(e) => setApiKey(e.currentTarget.value)}
         type="password"
-        styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
       />
 
       <Switch

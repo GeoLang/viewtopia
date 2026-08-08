@@ -1,16 +1,15 @@
 import { useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
-  ActionIcon,
   TextInput,
   Button,
   Badge,
   ScrollArea,
 } from '@mantine/core';
-import { IconSearch, IconX, IconMapPin } from '@tabler/icons-react';
+import { IconSearch, IconMapPin } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { geocode, type GeoHit } from '../../services/geocode';
 
 interface GeocodingPanelProps {
@@ -36,35 +35,12 @@ export function GeocodingPanel({ onFlyTo, onClose }: GeocodingPanelProps) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: 400,
-        maxHeight: '50vh',
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconSearch size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Search Places
-          </Text>
-        </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={400} anchor="center" maxHeight="50vh">
+      <PanelHeader
+        icon={<IconSearch size={16} color="#a78bfa" />}
+        title="Search Places"
+        onClose={onClose}
+      />
 
       <Group gap="xs" mb="xs">
         <TextInput
@@ -74,9 +50,6 @@ export function GeocodingPanel({ onFlyTo, onClose }: GeocodingPanelProps) {
           value={query}
           onChange={(e) => setQuery(e.currentTarget.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          styles={{
-            input: { background: '#0d1117', borderColor: '#30363d' },
-          }}
         />
         <Button size="xs" color="violet" onClick={handleSearch} loading={loading}>
           Go
@@ -113,6 +86,6 @@ export function GeocodingPanel({ onFlyTo, onClose }: GeocodingPanelProps) {
           ))}
         </Stack>
       </ScrollArea>
-    </Paper>
+    </PanelCard>
   );
 }

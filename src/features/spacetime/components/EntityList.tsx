@@ -74,9 +74,6 @@ export function EntityList() {
         leftSection={<IconSearch size={12} />}
         value={search}
         onChange={(e) => setSearch(e.currentTarget.value)}
-        styles={{
-          input: { background: '#0d1117', borderColor: '#30363d' },
-        }}
       />
 
       <ScrollArea mah={350}>
@@ -171,9 +168,6 @@ export function EntityList() {
             value={newName}
             onChange={(e) => setNewName(e.currentTarget.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-            styles={{
-              input: { background: '#0d1117', borderColor: '#30363d' },
-            }}
           />
           <Select
             size="xs"
@@ -181,9 +175,6 @@ export function EntityList() {
             data={KIND_OPTIONS}
             value={newKind}
             onChange={(v) => v && setNewKind(v as EntityKind)}
-            styles={{
-              input: { background: '#0d1117', borderColor: '#30363d' },
-            }}
           />
           <Button size="xs" color="violet" onClick={handleAdd}>
             Add

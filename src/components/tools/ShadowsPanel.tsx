@@ -92,7 +92,6 @@ export function ShadowsPanel({ onClose }: { onClose: () => void }) {
           label="Date"
           value={date}
           onChange={(e) => setDate(e.currentTarget.value)}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         <Text size="xs" c="dimmed">Time of Day: {timeLabel}</Text>
@@ -107,7 +106,6 @@ export function ShadowsPanel({ onClose }: { onClose: () => void }) {
           data={['1024', '2048', '4096']}
           value={size}
           onChange={(v) => v && setSize(v)}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         <Switch

@@ -95,7 +95,6 @@ export function LightingPanel({ onClose }: { onClose: () => void }) {
           ]}
           value={lightType}
           onChange={(v) => v && setLightType(v)}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         <Text size="xs" c="dimmed">Time of Day: {timeLabel}</Text>

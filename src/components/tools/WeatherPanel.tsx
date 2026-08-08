@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Group,
@@ -10,7 +9,8 @@ import {
   Button,
   Loader,
 } from '@mantine/core';
-import { IconCloud, IconX, IconRefresh } from '@tabler/icons-react';
+import { IconCloud, IconRefresh } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { PolygonLayer } from '@deck.gl/layers';
 import {
   getViewBounds,
@@ -143,36 +143,17 @@ export function WeatherPanel({ onClose }: { onClose: () => void }) {
   const info = current ? weatherCodeInfo(current.weatherCode) : null;
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 272,
-        background: '#161b22',
-        border: '1px solid #30363d',
-        zIndex: 300,
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconCloud size={16} color="#a78bfa" />
-          <Text size="sm" fw={600} c="white">
-            Weather
-          </Text>
-        </Group>
-        <Group gap={4}>
+    <PanelCard width={272}>
+      <PanelHeader
+        icon={<IconCloud size={16} color="#a78bfa" />}
+        title="Weather"
+        onClose={handleClose}
+        actions={
           <ActionIcon size="sm" variant="subtle" color="gray" onClick={loadCurrent} aria-label="Refresh weather">
             <IconRefresh size={14} />
           </ActionIcon>
-          <ActionIcon size="sm" variant="subtle" color="gray" onClick={handleClose}>
-            <IconX size={14} />
-          </ActionIcon>
-        </Group>
-      </Group>
+        }
+      />
 
       <Stack gap="xs">
         {loading && (
@@ -238,7 +219,6 @@ export function WeatherPanel({ onClose }: { onClose: () => void }) {
               ]}
               value={sparkVar}
               onChange={setSparkVar}
-              styles={{ label: { color: '#8b949e' }, input: { background: '#0d1117', borderColor: '#30363d' } }}
             />
             <Sparkline hourly={hourly} variable={(sparkVar as 'temp' | 'precip') ?? 'temp'} />
           </>
@@ -261,7 +241,6 @@ export function WeatherPanel({ onClose }: { onClose: () => void }) {
             ]}
             value={gridVar}
             onChange={changeGridVar}
-            styles={{ label: { color: '#8b949e' }, input: { background: '#0d1117', borderColor: '#30363d' } }}
           />
         )}
         {gridStatus && (
@@ -274,6 +253,6 @@ export function WeatherPanel({ onClose }: { onClose: () => void }) {
           Refresh
         </Button>
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

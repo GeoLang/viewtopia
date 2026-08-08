@@ -23,8 +23,6 @@ import { propertyKeys, type GeoJsonSource } from '../../lib/geojsonSources';
 import { columnStats } from './attributes';
 import type { VirtualField } from './expressions';
 
-const inputStyles = { input: { background: '#0d1117', borderColor: '#30363d' } };
-
 const strip = {
   background: '#0d1117',
   border: '1px solid #30363d',
@@ -93,7 +91,6 @@ export function FieldsSection({
           placeholder="density"
           value={name}
           onChange={(e) => setName(e.currentTarget.value)}
-          styles={inputStyles}
         />
         <TextInput
           size="xs"
@@ -103,7 +100,6 @@ export function FieldsSection({
           placeholder="pop / area"
           value={expression}
           onChange={(e) => setExpression(e.currentTarget.value)}
-          styles={inputStyles}
         />
         <Button
           size="xs"
@@ -210,7 +206,6 @@ export function JoinSection({
             setSourceId(v);
             setRightKey(null);
           }}
-          styles={inputStyles}
         />
         <Select
           size="xs"
@@ -220,7 +215,6 @@ export function JoinSection({
           data={columns}
           value={leftKey}
           onChange={setLeftKey}
-          styles={inputStyles}
         />
         <Select
           size="xs"
@@ -230,7 +224,6 @@ export function JoinSection({
           data={propertyKeys(source)}
           value={rightKey}
           onChange={setRightKey}
-          styles={inputStyles}
         />
         <Button
           size="xs"
@@ -293,7 +286,6 @@ export function StatsSection({
           data={columns}
           value={column}
           onChange={setColumn}
-          styles={inputStyles}
         />
         <Select
           size="xs"
@@ -306,7 +298,6 @@ export function StatsSection({
           ]}
           value={chartType}
           onChange={setChartType}
-          styles={inputStyles}
         />
         {column && (
           <Stack gap={2} flex={1} miw={220}>

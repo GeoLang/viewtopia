@@ -262,7 +262,7 @@ describe('settings selfHostedBasemapUrl', () => {
     const s = useAppStore.getState().settings;
     expect(s.selfHostedBasemapUrl).toBe('');
     expect(s.showMinimap).toBe(false); // persisted value still wins
-    expect(s.defaultBasemap).toBe('liberty'); // other defaults present
+    expect(s.defaultBasemap).toBe('dark'); // other defaults present
     localStorage.removeItem('viewtopia-app');
     void useAppStore.persist.rehydrate();
   });

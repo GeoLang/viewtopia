@@ -100,7 +100,6 @@ export function BookmarkPanel({ onClose }: { onClose: () => void }) {
           value={name}
           onChange={(e) => setName(e.currentTarget.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
         <ActionIcon
           size="sm"

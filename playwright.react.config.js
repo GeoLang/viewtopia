@@ -13,6 +13,7 @@ export default defineConfig({
     'panels-smoke.spec.js',
     'agent-layers.spec.js',
     'tools-across-renderers.spec.js',
+    'default-boot.spec.js',
   ],
   timeout: 60000,
   use: {

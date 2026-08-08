@@ -34,8 +34,6 @@ import { getViewBounds } from '../lib/viewBounds';
 
 type Fc = GeoJSON.FeatureCollection;
 
-const inputStyles = { input: { background: '#0d1117', borderColor: '#30363d' } };
-
 /** the run parameters as the form holds them: an extent is typed as text */
 interface RawParams extends Omit<ToolParams, 'extent'> {
   extentText: string;
@@ -298,7 +296,6 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
             setTool((v as ToolId) ?? 'buffer');
             setError(null);
           }}
-          styles={inputStyles}
         />
 
         {sources.length === 0 && (
@@ -316,7 +313,6 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
               value={from}
               onChange={setFrom}
               placeholder="pick the layers"
-              styles={inputStyles}
             />
           ) : (
             <Select
@@ -326,7 +322,6 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
               value={from[0] ?? null}
               onChange={(v) => setFrom(v ? [v] : [])}
               placeholder="pick a layer"
-              styles={inputStyles}
             />
           ))}
 
@@ -338,7 +333,6 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
             value={second}
             onChange={setSecond}
             placeholder="pick a layer"
-            styles={inputStyles}
           />
         )}
 
@@ -350,7 +344,6 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
               w={100}
               value={params.distance}
               onChange={(v) => set({ distance: Number(v) })}
-              styles={inputStyles}
             />
           )}
           {has('segments') && (
@@ -362,7 +355,6 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
               max={64}
               value={params.segments}
               onChange={(v) => set({ segments: Number(v) })}
-              styles={inputStyles}
             />
           )}
           {has('tolerance') && (
@@ -373,7 +365,6 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
               min={0}
               value={params.tolerance}
               onChange={(v) => set({ tolerance: Number(v) })}
-              styles={inputStyles}
             />
           )}
           {has('cellSize') && (
@@ -384,7 +375,6 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
               min={1}
               value={params.cellSize}
               onChange={(v) => set({ cellSize: Number(v) })}
-              styles={inputStyles}
             />
           )}
         </Group>
@@ -398,7 +388,6 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
             onChange={(v) => set({ field: v ?? '' })}
             placeholder="every feature into one"
             clearable
-            styles={inputStyles}
           />
         )}
 
@@ -409,7 +398,6 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
             data={['intersects', 'within', 'nearest']}
             value={params.predicate}
             onChange={(v) => set({ predicate: (v as JoinPredicate) ?? 'intersects' })}
-            styles={inputStyles}
           />
         )}
 
@@ -419,7 +407,6 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
             size="xs"
             value={params.prefix}
             onChange={(e) => set({ prefix: e.currentTarget.value })}
-            styles={inputStyles}
           />
         )}
 
@@ -432,7 +419,6 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
               placeholder={spec.extentFrom === 'input' ? 'the input bounds' : 'the current view'}
               value={params.extentText}
               onChange={(e) => set({ extentText: e.currentTarget.value })}
-              styles={inputStyles}
             />
             <Button
               size="xs"
@@ -556,7 +542,6 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
                         data={refOptions(i)}
                         value={step.from}
                         onChange={(v) => setStepFrom(i, v)}
-                        styles={inputStyles}
                       />
                     ) : (
                       <Select
@@ -566,7 +551,6 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
                         value={step.from[0] ?? null}
                         onChange={(v) => setStepFrom(i, v ? [v] : [])}
                         placeholder="pick an input"
-                        styles={inputStyles}
                       />
                     ))}
                   {out && (

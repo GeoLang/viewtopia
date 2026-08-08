@@ -1,5 +1,6 @@
 import {
   createTheme,
+  Input,
   type MantineColorsTuple,
 } from '@mantine/core';
 
@@ -41,5 +42,16 @@ export const theme = createTheme({
   headings: {
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif',
+  },
+  components: {
+    // applies to every Input-based component (TextInput, Select, NumberInput, …)
+    Input: Input.extend({
+      styles: {
+        input: {
+          background: 'var(--mantine-color-dark-8)',
+          borderColor: 'var(--mantine-color-dark-5)',
+        },
+      },
+    }),
   },
 });

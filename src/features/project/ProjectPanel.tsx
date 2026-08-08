@@ -68,7 +68,6 @@ export function ProjectPanel({ onClose }: { onClose: () => void }) {
           value={name}
           onChange={(e) => setName(e.currentTarget.value)}
           data-testid="project-name"
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         <Group gap="xs" grow>

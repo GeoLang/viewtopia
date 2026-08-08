@@ -141,7 +141,6 @@ export function SpatialStatsPanel({ onClose }: { onClose: () => void }) {
           data={sourceData}
           value={source}
           onChange={(v) => v && setSource(v)}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         {source === 'pasted' && (
@@ -154,7 +153,6 @@ export function SpatialStatsPanel({ onClose }: { onClose: () => void }) {
             maxRows={5}
             value={pasted}
             onChange={(e) => setPasted(e.currentTarget.value)}
-            styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
           />
         )}
 
@@ -168,7 +166,6 @@ export function SpatialStatsPanel({ onClose }: { onClose: () => void }) {
           ]}
           value={method}
           onChange={(v) => v && setMethod(v as GridAggregation)}
-          styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
         />
 
         {method !== 'count' && (
@@ -179,7 +176,6 @@ export function SpatialStatsPanel({ onClose }: { onClose: () => void }) {
             data={propertyOptions}
             value={property}
             onChange={setProperty}
-            styles={{ input: { background: '#0d1117', borderColor: '#30363d' } }}
           />
         )}
 

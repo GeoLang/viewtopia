@@ -156,9 +156,6 @@ export function TrackPlayer() {
               data={['0.5x', '1x', '2x', '5x', '10x']}
               value={`${playbackSpeed}x`}
               onChange={(v) => v && setPlaybackSpeed(parseFloat(v))}
-              styles={{
-                input: { background: '#0d1117', borderColor: '#30363d' },
-              }}
             />
             <Text size="xs" c="dimmed" w={30}>
               Trail
@@ -174,9 +171,6 @@ export function TrackPlayer() {
               ]}
               value={String(trailDuration)}
               onChange={(v) => v && setTrailDuration(parseInt(v))}
-              styles={{
-                input: { background: '#0d1117', borderColor: '#30363d' },
-              }}
             />
           </Group>
 
