@@ -4,8 +4,12 @@ import { expect } from '@playwright/test';
  * Shared pieces of the panel sweeps (panel-sweep.spec.js, plugin-sweep.spec.js).
  */
 
-/** A panel is either a Paper appended next to the viewer or a modal in a portal. */
-export const PANEL = 'main > [class*="mantine-Paper-root"], [class*="mantine-Modal-content"]';
+/**
+ * A panel is a Paper appended next to the viewer, a right-anchored card
+ * portaled into the dock column, or a modal in a portal.
+ */
+export const PANEL =
+  'main > [class*="mantine-Paper-root"], .panel-dock [class*="mantine-Paper-root"], [class*="mantine-Modal-content"]';
 
 /**
  * The renderer and basemap selects live in a popover behind the map-corner
