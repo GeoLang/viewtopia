@@ -59,9 +59,6 @@ collaborative workflow, so they are in-thesis rather than parity chasing.
 Felt has no versioning, no routing, no 3D and self-hosts only on
 enterprise contracts, so those fronts need no response.
 
-- [ ] **per-comment deep links + comment export** — a share URL that opens
-      the document at a comment thread, and export of a document's
-      comments as georeferenced CSV/JSON.
 - [ ] **embed mode** — a read-only iframe embed of a live document or
       shared map for posts and dashboards. View-role share links already
       carry the auth story; this is a chrome-less viewer route plus an

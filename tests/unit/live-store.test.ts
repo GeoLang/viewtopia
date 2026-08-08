@@ -22,7 +22,7 @@ let server: FakeAgoraServer;
 
 function connectAndAccept(role: LiveRole = 'edit') {
   useLiveStore.getState().connect({ documentId: DOCUMENT_ID, token: TOKEN, role });
-  return server.accept();
+  return server.accept({ role });
 }
 
 describe('live store', () => {

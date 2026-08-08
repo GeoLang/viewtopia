@@ -1,6 +1,12 @@
 import { useEffect } from 'react';
 import { notifications } from '@mantine/notifications';
-import { resolveShareLink, SHARE_LINK_PARAM } from './api';
+import { getAuthToken } from '../features/auth/store';
+import {
+  COMMENT_LINK_PARAM,
+  LIVE_DOCUMENT_PARAM,
+  resolveShareLink,
+  SHARE_LINK_PARAM,
+} from './api';
 import { useLiveStore } from './liveStore';
 
 export async function joinLiveFromToken(token: string): Promise<void> {
@@ -8,17 +14,43 @@ export async function joinLiveFromToken(token: string): Promise<void> {
   useLiveStore.getState().connect({ documentId: doc, token: sessionToken, role });
 }
 
-/** Opens the document a share link points at, once, on first load. */
+function reportJoinFailure(failure: unknown): void {
+  notifications.show({
+    title: 'Live link failed',
+    message: failure instanceof Error ? failure.message : 'could not open that link',
+    color: 'red',
+  });
+}
+
+/**
+ * Opens the document the URL points at, once, on first load: a share link
+ * (`live` token), or a member deep link (`doc` id, needs a signed in member).
+ * A `comment` id on either focuses that thread once its comment arrives.
+ */
 export function useJoinLiveFromLink(): void {
   useEffect(() => {
-    const token = new URLSearchParams(location.search).get(SHARE_LINK_PARAM);
-    if (!token) return;
-    joinLiveFromToken(token).catch((failure: unknown) => {
+    const params = new URLSearchParams(location.search);
+    const shareToken = params.get(SHARE_LINK_PARAM);
+    const documentId = params.get(LIVE_DOCUMENT_PARAM);
+    const commentId = params.get(COMMENT_LINK_PARAM);
+    const focus = () => {
+      if (commentId) useLiveStore.getState().focusComment(commentId);
+    };
+
+    if (shareToken) {
+      joinLiveFromToken(shareToken).then(focus).catch(reportJoinFailure);
+      return;
+    }
+    if (!documentId) return;
+    if (getAuthToken() === null) {
       notifications.show({
-        title: 'Live link failed',
-        message: failure instanceof Error ? failure.message : 'could not open that link',
-        color: 'red',
+        title: 'Sign in to open this live map',
+        message: 'This link needs a signed in member of the document.',
+        color: 'orange',
       });
-    });
+      return;
+    }
+    useLiveStore.getState().connect({ documentId });
+    focus();
   }, []);
 }

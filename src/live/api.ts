@@ -125,3 +125,21 @@ export const SHARE_LINK_PARAM = 'live';
 export function shareLinkUrl(token: string): string {
   return `${location.origin}/?${SHARE_LINK_PARAM}=${encodeURIComponent(token)}`;
 }
+
+export const COMMENT_LINK_PARAM = 'comment';
+export const LIVE_DOCUMENT_PARAM = 'doc';
+
+/**
+ * A URL that opens this document at one comment thread. A session that came in
+ * through a share link keeps that token, so the recipient joins the same way.
+ * A member session links by document id instead, which the recipient can only
+ * follow as a signed in member.
+ */
+export function commentLinkUrl(documentId: string, commentId: string): string {
+  const url = new URL('/', location.origin);
+  const liveToken = new URLSearchParams(location.search).get(SHARE_LINK_PARAM);
+  if (liveToken) url.searchParams.set(SHARE_LINK_PARAM, liveToken);
+  else url.searchParams.set(LIVE_DOCUMENT_PARAM, documentId);
+  url.searchParams.set(COMMENT_LINK_PARAM, commentId);
+  return url.toString();
+}

@@ -9,6 +9,7 @@ import {
   type LiveDocument,
   type LiveOperation,
   type LivePeer,
+  type LiveRole,
   type ServerMessage,
   type ServerOperationMessage,
 } from '../../../src/live/types';
@@ -144,7 +145,7 @@ export class FakeAgoraServer {
   }
 
   /** complete the handshake, then either replay from since or send a snapshot */
-  accept(options: { replay?: boolean; actor?: string } = {}): FakeSocket {
+  accept(options: { replay?: boolean; actor?: string; role?: LiveRole } = {}): FakeSocket {
     const connection = this.connection;
     connection.acceptHandshake();
     if (options.replay) {
@@ -154,12 +155,13 @@ export class FakeAgoraServer {
       return connection;
     }
     // the real server always stamps the snapshot with the caller's identity
+    // and member role, which the client adopts
     connection.deliver({
       type: 'snapshot',
       seq: this.seq,
       state: this.document,
       actor: options.actor ?? 'self',
-      role: 'edit',
+      role: options.role ?? 'edit',
     });
     return connection;
   }

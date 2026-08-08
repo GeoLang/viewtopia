@@ -254,4 +254,74 @@ test.describe('Live multiplayer — live platform stack', () => {
 
     await memberContext.close();
   });
+
+  test('a comment deep link opens the document at its thread', async ({
+    page,
+    context,
+    browser,
+  }) => {
+    test.setTimeout(120_000);
+
+    const authorToken = mintToken({ role: 'editor', sub: BROWSER_USER });
+    const memberToken = mintToken({ role: 'editor', sub: MENTIONED_USER });
+    expect(authorToken, 'PLATFORM_JWT_SECRET is not set, so no live session can be opened').toBeTruthy();
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+
+    const documentName = `deep-link-e2e-${Date.now()}`;
+    await page.addInitScript((seed) => {
+      localStorage.setItem('viewtopia-tour-done', '1');
+      localStorage.setItem('viewtopia_auth', JSON.stringify(seed));
+    }, { user: { name: BROWSER_USER }, token: authorToken });
+    await page.goto('/');
+
+    await page.getByRole('button', { name: 'Live', exact: true }).click();
+    await page.getByPlaceholder('New live map name…').fill(documentName);
+    await page.getByTestId('start-live-session').click();
+    await expect(page.getByTestId('live-document-name')).toHaveText(documentName);
+
+    const origin = new URL(page.url()).origin;
+    const documents = await fetch(`${origin}/agora/documents`, {
+      headers: { Authorization: `Bearer ${authorToken}` },
+    }).then((response) => response.json());
+    const documentId = documents.find((entry) => entry.name === documentName)?.id;
+    const added = await fetch(
+      `${origin}/agora/documents/${documentId}/members/${encodeURIComponent(MENTIONED_USER)}`,
+      {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${authorToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: 'view' }),
+      },
+    );
+    expect(added.status).toBe(204);
+
+    await page.getByRole('button', { name: 'Comments on this live map' }).click();
+    await page.getByTestId('comment-compose').fill('deep link me');
+    await page.getByTestId('comment-anchor-toggle').click();
+    await page.getByTestId('comment-submit').click();
+    await expect(page.getByTestId('comment-count')).toHaveText('1');
+
+    await page.getByTestId('comment-copy-link').click();
+    const link = await page.evaluate(() => navigator.clipboard.readText());
+    expect(link).toContain(`doc=${documentId}`);
+    expect(link).toContain('comment=');
+
+    // the member follows the link in their own browser: same document, the
+    // linked thread ringed, the panel read only because their role is view
+    const memberContext = await browser.newContext();
+    const memberPage = await memberContext.newPage();
+    await memberPage.addInitScript((seed) => {
+      localStorage.setItem('viewtopia-tour-done', '1');
+      localStorage.setItem('viewtopia-welcome', 'dismissed');
+      localStorage.setItem('viewtopia_auth', JSON.stringify(seed));
+    }, { user: { name: MENTIONED_USER }, token: memberToken });
+    await memberPage.goto(link);
+
+    await expect(memberPage.getByTestId('live-document-name')).toHaveText(documentName);
+    const commentsPanel = memberPage.getByTestId('live-comments-panel');
+    await expect(commentsPanel.getByText('deep link me')).toBeVisible();
+    await expect(memberPage.locator('[data-testid="comment-thread"][data-highlighted]')).toBeVisible();
+    await expect(memberPage.getByTestId('comments-read-only')).toBeVisible();
+
+    await memberContext.close();
+  });
 });

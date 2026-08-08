@@ -6,6 +6,20 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-08: **comment deep links and export**. Every thread offers a Link
+  button copying a URL that opens the document at that thread: guests keep
+  their share token (`?live=…&comment=…`), members link by id
+  (`?doc=…&comment=…`, signed in members only, with a sign-in prompt
+  otherwise). Following one joins the document, opens Comments, reveals the
+  thread (resolved included), rings it for a few seconds and flies to the
+  comment's anchor. The panel header grew an export menu writing the
+  document's comments as CSV or GeoJSON (thread order, anchored comments as
+  Points, `geometry: null` for the rest). Fixed along the way: the client
+  now adopts the member role the snapshot carries, so joining through the
+  bell or a doc link as a view member renders view-only instead of
+  assuming edit. e2e: a golden-path deep-link scenario (copy in one
+  browser, follow in a second, read-only panel ringed at the thread).
+
 - 2026-08-08: **comment mentions and a notifications bell**. The comment
   compose and reply boxes offer document members while an `@name` is being
   typed (MentionTextarea over the members list, named by their peer entry

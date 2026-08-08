@@ -291,3 +291,60 @@ describe('live comments toggle', () => {
     expect(screen.queryByTestId('live-comments-panel')).not.toBeInTheDocument();
   });
 });
+
+describe('comment deep link focus and export controls', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({
+        matches: false,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+      }),
+    );
+    globalThis.ResizeObserver = class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+    server = new FakeAgoraServer();
+    server.install();
+    useAuthStore.setState({ user: null, token: 'jwt-token' });
+    setSharedCamera({ longitude: 0, latitude: 20, zoom: 2 });
+    useSpaceTimeStore.setState({ flyToTarget: null });
+  });
+
+  afterEach(() => {
+    cleanup();
+    useLiveStore.getState().disconnect();
+    useAuthStore.setState({ user: null, token: null });
+    server.restore();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('rings the deep linked thread, reveals resolved and flies to its anchor', () => {
+    joinWith([
+      comment({ resolved: true, anchor: { lng: 7.4, lat: 43.7, zoom: 11 } }),
+      comment({ id: 'reply-1', parentId: 'root-1', text: 'the reply the link names' }),
+    ]);
+    useLiveStore.getState().focusComment('reply-1');
+    draw(<LiveCommentsPanel onClose={() => {}} />);
+
+    expect(screen.getByTestId('comment-thread')).toHaveAttribute('data-highlighted');
+    expect(useLiveStore.getState().focusedCommentId).toBeNull();
+    expect(useSpaceTimeStore.getState().flyToTarget).toEqual({ lng: 7.4, lat: 43.7, zoom: 11 });
+  });
+
+  it('offers link copy and export to a view role, but no reply or resolve', () => {
+    joinWith([comment()], 'view');
+    draw(<LiveCommentsPanel onClose={() => {}} />);
+
+    expect(screen.getByTestId('comment-copy-link')).toBeInTheDocument();
+    expect(screen.getByTestId('comment-export')).toBeInTheDocument();
+    expect(screen.queryByText('Reply')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('comment-resolve')).not.toBeInTheDocument();
+  });
+});

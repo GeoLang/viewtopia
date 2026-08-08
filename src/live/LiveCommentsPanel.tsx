@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActionIcon,
   Badge,
   Button,
+  CopyButton,
   Group,
+  Menu,
   ScrollArea,
   Stack,
   Switch,
@@ -13,13 +15,17 @@ import {
 import {
   IconCheck,
   IconCornerDownRight,
+  IconDownload,
+  IconLink,
   IconMapPin,
   IconMessage,
   IconTrash,
 } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../components/PanelCard';
 import { useAuthStore } from '../features/auth/store';
-import { fetchLiveDocument } from './api';
+import { downloadFile } from '../features/spacetime/analysis/export';
+import { commentLinkUrl, fetchLiveDocument } from './api';
+import { commentExportFilename, commentsAsCsv, commentsAsGeoJson } from './commentExport';
 import {
   commentTextSegments,
   commentThreads,
@@ -143,15 +149,24 @@ function Thread({
   ownActor,
   canWrite,
   candidates,
+  documentId,
+  highlighted,
 }: {
   thread: CommentThread;
   ownActor: string | null;
   canWrite: boolean;
   candidates: LiveCommentMention[];
+  documentId: string;
+  highlighted: boolean;
 }) {
   const [replyText, setReplyText] = useState('');
   const [replyOpen, setReplyOpen] = useState(false);
   const [replyMentions, setReplyMentions] = useState<LiveCommentMention[]>([]);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (highlighted) cardRef.current?.scrollIntoView?.({ block: 'center' });
+  }, [highlighted]);
 
   const sendReply = () => {
     if (!postComment({ text: replyText, parentId: thread.root.id, mentions: replyMentions }))
@@ -163,13 +178,16 @@ function Thread({
 
   return (
     <Stack
+      ref={cardRef}
       gap={6}
       p="xs"
       data-testid="comment-thread"
+      data-highlighted={highlighted || undefined}
       style={{
         background: 'var(--mantine-color-dark-6)',
         borderRadius: 4,
         opacity: thread.root.resolved ? 0.6 : 1,
+        outline: highlighted ? '2px solid var(--mantine-color-violet-5)' : undefined,
       }}
     >
       <CommentBody
@@ -192,8 +210,8 @@ function Thread({
         </Stack>
       )}
 
-      {canWrite && (
-        <Group gap="xs" wrap="nowrap">
+      <Group gap="xs" wrap="nowrap">
+        {canWrite && (
           <Button
             size="compact-xs"
             variant="subtle"
@@ -203,6 +221,8 @@ function Thread({
           >
             Reply
           </Button>
+        )}
+        {canWrite && (
           <Button
             size="compact-xs"
             variant="subtle"
@@ -213,8 +233,22 @@ function Thread({
           >
             {thread.root.resolved ? 'Reopen' : 'Resolve'}
           </Button>
-        </Group>
-      )}
+        )}
+        <CopyButton value={commentLinkUrl(documentId, thread.root.id)}>
+          {({ copied, copy }) => (
+            <Button
+              size="compact-xs"
+              variant="subtle"
+              color={copied ? 'green' : 'gray'}
+              leftSection={<IconLink size={11} />}
+              data-testid="comment-copy-link"
+              onClick={copy}
+            >
+              {copied ? 'Copied' : 'Link'}
+            </Button>
+          )}
+        </CopyButton>
+      </Group>
 
       {canWrite && replyOpen && (
         <Group gap="xs" wrap="nowrap" align="flex-start">
@@ -243,14 +277,22 @@ function Thread({
   );
 }
 
+/** how long a deep linked thread keeps its highlight ring */
+const FOCUS_HIGHLIGHT_MS = 4000;
+
 export function LiveCommentsPanel({ onClose }: { onClose: () => void }) {
   const comments = useLiveStore((s) => s.document.comments);
   const ownActor = useLiveStore((s) => s.actor);
   const role = useLiveStore((s) => s.role);
+  const documentId = useLiveStore((s) => s.documentId) ?? '';
+  const documentName = useLiveStore((s) => s.document.meta.name);
+  const focusedCommentId = useLiveStore((s) => s.focusedCommentId);
+  const clearFocusedComment = useLiveStore((s) => s.clearFocusedComment);
   const [text, setText] = useState('');
   const [withAnchor, setWithAnchor] = useState(false);
   const [showResolved, setShowResolved] = useState(false);
   const [mentions, setMentions] = useState<LiveCommentMention[]>([]);
+  const [highlightedThreadId, setHighlightedThreadId] = useState<string | null>(null);
 
   // no actor means the session has not told us who we are, so nothing to attribute to
   const canWrite = role === 'edit' && ownActor !== null;
@@ -258,6 +300,26 @@ export function LiveCommentsPanel({ onClose }: { onClose: () => void }) {
   const threads = commentThreads(comments);
   const visible = showResolved ? threads : threads.filter((thread) => !thread.root.resolved);
   const resolvedCount = threads.filter((thread) => thread.root.resolved).length;
+
+  // a deep linked comment is acted on once it exists in the document: show its
+  // thread (even resolved), ring it, and fly to where it points
+  useEffect(() => {
+    if (!focusedCommentId) return;
+    const target = comments[focusedCommentId];
+    if (!target) return;
+    const rootId = target.parentId ?? target.id;
+    if (comments[rootId]?.resolved) setShowResolved(true);
+    setHighlightedThreadId(rootId);
+    const anchored = target.anchor ? target : comments[rootId];
+    if (anchored?.anchor) flyToComment(anchored);
+    clearFocusedComment();
+  }, [focusedCommentId, comments, clearFocusedComment]);
+
+  useEffect(() => {
+    if (highlightedThreadId === null) return;
+    const timer = setTimeout(() => setHighlightedThreadId(null), FOCUS_HIGHLIGHT_MS);
+    return () => clearTimeout(timer);
+  }, [highlightedThreadId]);
 
   const send = () => {
     if (!postComment({ text, anchor: withAnchor ? currentMapAnchor() : null, mentions })) return;
@@ -274,9 +336,54 @@ export function LiveCommentsPanel({ onClose }: { onClose: () => void }) {
         onClose={onClose}
         closeLabel="Close comments"
         badge={
-          <Badge size="xs" variant="light" color="violet" data-testid="comment-count">
-            {visible.length}
-          </Badge>
+          <Group gap={4} wrap="nowrap">
+            <Badge size="xs" variant="light" color="violet" data-testid="comment-count">
+              {visible.length}
+            </Badge>
+            {threads.length > 0 && (
+              <Menu position="bottom-end" withinPortal>
+                <Menu.Target>
+                  <Tooltip label="Export comments">
+                    <ActionIcon
+                      size="xs"
+                      variant="subtle"
+                      color="violet"
+                      aria-label="Export comments"
+                      data-testid="comment-export"
+                    >
+                      <IconDownload size={12} />
+                    </ActionIcon>
+                  </Tooltip>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Item
+                    data-testid="comment-export-csv"
+                    onClick={() =>
+                      downloadFile(
+                        commentsAsCsv(comments),
+                        commentExportFilename(documentName, 'csv'),
+                        'text/csv',
+                      )
+                    }
+                  >
+                    CSV
+                  </Menu.Item>
+                  <Menu.Item
+                    data-testid="comment-export-geojson"
+                    onClick={() =>
+                      downloadFile(
+                        commentsAsGeoJson(comments),
+                        commentExportFilename(documentName, 'geojson'),
+                        'application/geo+json',
+                      )
+                    }
+                  >
+                    GeoJSON
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
+            )}
+          </Group>
         }
       />
 
@@ -342,6 +449,8 @@ export function LiveCommentsPanel({ onClose }: { onClose: () => void }) {
               ownActor={ownActor}
               canWrite={canWrite}
               candidates={candidates}
+              documentId={documentId}
+              highlighted={thread.root.id === highlightedThreadId}
             />
           ))}
           {visible.length === 0 && (

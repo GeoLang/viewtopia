@@ -43,10 +43,14 @@ interface LiveState {
   error: string | null;
   /** lifted here so a mention notification can open the panel from outside it */
   commentsOpen: boolean;
+  /** the thread a deep link asked for, until the panel has shown it */
+  focusedCommentId: string | null;
 
   connect: (options: ConnectOptions) => void;
   disconnect: () => void;
   setCommentsOpen: (commentsOpen: boolean) => void;
+  focusComment: (commentId: string) => void;
+  clearFocusedComment: () => void;
   sendOperation: (key: string, value: unknown) => void;
   sendOperations: (operations: LiveOperation[]) => void;
   sendPresence: (presence: LivePresence) => void;
@@ -98,6 +102,7 @@ export const useLiveStore = create<LiveState>((set, get) => ({
   pending: {},
   error: null,
   commentsOpen: false,
+  focusedCommentId: null,
 
   connect: ({ documentId, token, role = 'edit' }) => {
     if (get().documentId !== null) get().disconnect();
@@ -152,10 +157,15 @@ export const useLiveStore = create<LiveState>((set, get) => ({
       followedActor: null,
       pending: {},
       commentsOpen: false,
+      focusedCommentId: null,
     });
   },
 
   setCommentsOpen: (commentsOpen) => set({ commentsOpen }),
+
+  focusComment: (commentId) => set({ focusedCommentId: commentId, commentsOpen: true }),
+
+  clearFocusedComment: () => set({ focusedCommentId: null }),
 
   sendOperation: (key, value) => {
     get().sendOperations([{ key, value }]);
@@ -194,7 +204,14 @@ export const useLiveStore = create<LiveState>((set, get) => ({
           for (const frame of pendingInOrder(state.pending)) {
             document = applyOperations(document, frame.operations);
           }
-          return { document, seq: message.seq, actor: message.actor ?? state.actor };
+          return {
+            document,
+            seq: message.seq,
+            actor: message.actor ?? state.actor,
+            // joins that carry no link role (the bell, a comment deep link)
+            // learn their member role here rather than assuming edit
+            role: message.role ?? state.role,
+          };
         });
         return;
       case 'op':
