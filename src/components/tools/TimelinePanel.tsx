@@ -129,7 +129,7 @@ export function TimelinePanel({ onClose }: { onClose: () => void }) {
           <Text size="sm" c="dimmed">
             Timeline needs the Cesium globe. Switch to the CesiumJS renderer.
           </Text>
-          <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
+          <ActionIcon aria-label="Close timeline" size="sm" variant="subtle" color="gray" onClick={onClose}>
             <IconX size={14} />
           </ActionIcon>
         </Group>
@@ -192,7 +192,7 @@ export function TimelinePanel({ onClose }: { onClose: () => void }) {
           <Text size="xs" c="violet.3" data-testid="timeline-current">
             {currentLabel}
           </Text>
-          <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
+          <ActionIcon aria-label="Close timeline" size="sm" variant="subtle" color="gray" onClick={onClose}>
             <IconX size={14} />
           </ActionIcon>
         </Group>

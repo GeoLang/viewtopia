@@ -78,7 +78,7 @@ export function CreateLinkDialog() {
         <Text size="xs" fw={600} c="white">
           Create Link
         </Text>
-        <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setOpen(false)}>
+        <ActionIcon aria-label="Close" size="xs" variant="subtle" color="gray" onClick={() => setOpen(false)}>
           <IconX size={12} />
         </ActionIcon>
       </Group>

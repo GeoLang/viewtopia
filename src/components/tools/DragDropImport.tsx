@@ -170,7 +170,7 @@ export function DragDropImport({ onImport, onClose }: DragDropImportProps) {
             Import Data
           </Text>
         </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
+        <ActionIcon aria-label="Close import" size="sm" variant="subtle" color="gray" onClick={onClose}>
           <IconX size={14} />
         </ActionIcon>
       </Group>

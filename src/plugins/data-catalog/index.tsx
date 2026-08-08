@@ -5,7 +5,9 @@
 
 import { useState } from 'react';
 import { Paper, Text, Stack, Button, Group, Badge, TextInput, Select, Table, Loader, } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 import { IconDatabase, IconSearch, } from '@tabler/icons-react';
+import { PanelEmptyState, PanelSkeleton } from '../../components/PanelStates';
 import type { PluginDefinition, PluginContext } from '../sdk';
 
 interface CatalogResult {
@@ -84,22 +86,32 @@ function DataCatalogPanel({ ctx }: { ctx: PluginContext }) {
   const [bbox, setBbox] = useState('');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<CatalogResult[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [searched, setSearched] = useState(false);
 
   const handleSearch = async () => {
     setLoading(true);
-    setError(null);
     setResults([]);
 
     try {
       const url = catalog === 'custom' ? customUrl : catalog;
       const items = await searchStac(url, searchQuery, bbox || undefined);
       setResults(items);
+      setSearched(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Search failed');
+      notifications.show({
+        title: 'Catalog search failed',
+        message: e instanceof Error ? e.message : 'Search failed',
+        color: 'red',
+      });
     } finally {
       setLoading(false);
     }
+  };
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setBbox('');
+    setSearched(false);
   };
 
   const handleAddToMap = (item: CatalogResult) => {
@@ -176,7 +188,15 @@ function DataCatalogPanel({ ctx }: { ctx: PluginContext }) {
           {loading ? 'Searching...' : 'Search Catalog'}
         </Button>
 
-        {error && <Text size="sm" c="red">{error}</Text>}
+        {loading && <PanelSkeleton rows={4} />}
+
+        {!loading && searched && results.length === 0 && (
+          <PanelEmptyState
+            message="No catalog items matched."
+            actionLabel="Clear filters"
+            onAction={clearFilters}
+          />
+        )}
 
         {results.length > 0 && (
           <>

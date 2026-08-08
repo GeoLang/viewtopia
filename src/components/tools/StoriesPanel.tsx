@@ -172,7 +172,7 @@ export function StoriesPanel({ onClose }: { onClose: () => void }) {
                   </Text>
                 )}
               </div>
-              <ActionIcon
+              <ActionIcon aria-label="Delete step"
                 size="xs"
                 variant="subtle"
                 color="red"

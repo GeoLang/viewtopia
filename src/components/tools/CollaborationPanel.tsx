@@ -154,7 +154,7 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
                 ) : (
                   <Group gap="xs">
                     <Tooltip label={lk.micEnabled ? 'Mute mic' : 'Unmute mic'}>
-                      <ActionIcon
+                      <ActionIcon aria-label={lk.micEnabled ? 'Mute mic' : 'Unmute mic'}
                         size="sm"
                         variant="light"
                         color={lk.micEnabled ? 'green' : 'gray'}
@@ -164,7 +164,7 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
                       </ActionIcon>
                     </Tooltip>
                     <Tooltip label={lk.camEnabled ? 'Turn off camera' : 'Turn on camera'}>
-                      <ActionIcon
+                      <ActionIcon aria-label={lk.camEnabled ? 'Turn off camera' : 'Turn on camera'}
                         size="sm"
                         variant="light"
                         color={lk.camEnabled ? 'green' : 'gray'}
@@ -174,7 +174,7 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
                       </ActionIcon>
                     </Tooltip>
                     <Tooltip label="Leave call">
-                      <ActionIcon size="sm" variant="light" color="red" onClick={() => lk.leave()}>
+                      <ActionIcon aria-label="Leave call" size="sm" variant="light" color="red" onClick={() => lk.leave()}>
                         <IconPhoneOff size={14} />
                       </ActionIcon>
                     </Tooltip>
@@ -234,7 +234,7 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
                 onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
                 style={{ flex: 1 }}
               />
-              <ActionIcon
+              <ActionIcon aria-label="Send message"
                 size="sm"
                 color="violet"
                 onClick={handleSendChat}

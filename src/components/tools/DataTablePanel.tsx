@@ -254,7 +254,7 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
             onChange={(e) => setFilter(e.currentTarget.value)}
             leftSection={<IconSearch size={12} />}
           />
-          <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
+          <ActionIcon aria-label="Close data table" size="sm" variant="subtle" color="gray" onClick={onClose}>
             <IconX size={14} />
           </ActionIcon>
         </Group>

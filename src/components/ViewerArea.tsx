@@ -2,6 +2,8 @@ import { useEffect, useCallback } from 'react';
 import { Box } from '@mantine/core';
 import { Cartesian2, Cartesian3, Cartographic, Math as CesiumMath } from 'cesium';
 import { useAppStore } from '../store/app';
+import { useDrawStore } from '../store/draw';
+import { useMeasureStore } from '../store/measure';
 import { useSplitViewStore } from '../store/splitView';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { useCesium } from '../hooks/useCesium';
@@ -50,6 +52,9 @@ export function ViewerArea() {
   const hideContextMenu = useAppStore((s) => s.hideContextMenu);
   const flyToTarget = useSpaceTimeStore((s) => s.flyToTarget);
   const clearFlyTo = useSpaceTimeStore((s) => s.clearFlyTo);
+  const drawModeActive = useDrawStore((s) => s.mode !== null);
+  const measureModeActive = useMeasureStore((s) => s.mode !== null);
+  const toolCursorActive = drawModeActive || measureModeActive;
 
   // Initialize all viewer engines (they mount into DOM containers below)
   const cesiumRef = useCesium({ containerId: 'cesium-container' });
@@ -218,6 +223,7 @@ export function ViewerArea() {
   return (
     <Box
       flex={1}
+      className={toolCursorActive ? 'tool-crosshair' : undefined}
       style={{
         position: 'relative',
         background: 'var(--mantine-color-dark-8)',

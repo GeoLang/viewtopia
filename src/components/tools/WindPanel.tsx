@@ -121,7 +121,7 @@ export function WindPanel({ onClose }: { onClose: () => void }) {
         title="Wind Field"
         onClose={handleClose}
         actions={
-          <ActionIcon size="sm" variant="subtle" color="gray" onClick={() => load()} aria-label="Refresh wind">
+          <ActionIcon aria-label="Refresh wind" size="sm" variant="subtle" color="gray" onClick={() => load()}>
             <IconRefresh size={14} />
           </ActionIcon>
         }

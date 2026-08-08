@@ -108,7 +108,7 @@ function AgentLayerRow({
           {/* on the header, not in the expanded block: a download nobody can see
               is a download nobody uses */}
           {layer.path && (
-            <ActionIcon
+            <ActionIcon aria-label="Download layer output"
               size="sm"
               variant="subtle"
               color="gray"

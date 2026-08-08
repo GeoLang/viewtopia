@@ -26,7 +26,7 @@ export function FleetPanel({ onClose }: FleetPanelProps) {
             <IconTruck size={18} />
             <Text fw={600} size="sm">Fleet Tracking</Text>
           </Group>
-          <ActionIcon size="sm" variant="subtle" onClick={onClose}><IconX size={14} /></ActionIcon>
+          <ActionIcon aria-label="Close fleet tracking" size="sm" variant="subtle" onClick={onClose}><IconX size={14} /></ActionIcon>
         </Group>
 
         <Stack gap="xs" align="center" py="xl">

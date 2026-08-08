@@ -193,7 +193,7 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
               <Text size="xs" c="white" lineClamp={1}>
                 {s.name}
               </Text>
-              <ActionIcon size="xs" variant="subtle" color="red" onClick={() => handleRemove(s.id)}>
+              <ActionIcon aria-label="Remove vector tile source" size="xs" variant="subtle" color="red" onClick={() => handleRemove(s.id)}>
                 <IconTrash size={12} />
               </ActionIcon>
             </Group>

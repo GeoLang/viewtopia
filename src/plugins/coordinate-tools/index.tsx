@@ -182,7 +182,7 @@ function CoordinateToolsPanel({ ctx }: { ctx: PluginContext }) {
                   <Table.Td>
                     <CopyButton value={formatCoord(fmt)}>
                       {({ copied, copy }) => (
-                        <ActionIcon size="xs" variant="subtle" onClick={copy}>
+                        <ActionIcon aria-label="Copy coordinate" size="xs" variant="subtle" onClick={copy}>
                           {copied ? <IconCheck size={12} /> : <IconCopy size={12} />}
                         </ActionIcon>
                       )}

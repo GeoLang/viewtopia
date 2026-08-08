@@ -8,21 +8,24 @@ import {
   Badge,
 } from '@mantine/core';
 import { IconRoute, IconMapPin } from '@tabler/icons-react';
+import { notifications } from '@mantine/notifications';
 import { PanelCard, PanelHeader } from '../PanelCard';
+import { PanelSkeleton } from '../PanelStates';
 import { geocode } from '../../services/geocode';
 import { route, type RouteResult } from '../../services/route';
+
+const routingFailed = (message: string) =>
+  notifications.show({ title: 'Routing failed', message, color: 'red' });
 
 export function RoutingPanel({ onClose }: { onClose: () => void }) {
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<RouteResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   const handleRoute = async () => {
     if (!origin.trim() || !destination.trim()) return;
     setLoading(true);
-    setError(null);
     setResult(null);
 
     try {
@@ -31,7 +34,7 @@ export function RoutingPanel({ onClose }: { onClose: () => void }) {
         geocode(destination, 1),
       ]);
       if (!orig || !dest) {
-        setError('Could not geocode one or both locations');
+        routingFailed('Could not geocode one or both locations');
         return;
       }
 
@@ -39,10 +42,10 @@ export function RoutingPanel({ onClose }: { onClose: () => void }) {
       if (r) {
         setResult(r);
       } else {
-        setError('No route found');
+        routingFailed('No route found');
       }
     } catch {
-      setError('Routing request failed');
+      routingFailed('Routing request failed');
     } finally {
       setLoading(false);
     }
@@ -82,11 +85,7 @@ export function RoutingPanel({ onClose }: { onClose: () => void }) {
           Find Route
         </Button>
 
-        {error && (
-          <Text size="xs" c="red">
-            {error}
-          </Text>
-        )}
+        {loading && <PanelSkeleton rows={2} />}
 
         {result && (
           <Stack gap={4}>

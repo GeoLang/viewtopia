@@ -102,7 +102,7 @@ export function TerrainProfilePanel({ onClose }: { onClose: () => void }) {
             Terrain Profile
           </Text>
         </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
+        <ActionIcon aria-label="Close terrain profile" size="sm" variant="subtle" color="gray" onClick={onClose}>
           <IconX size={14} />
         </ActionIcon>
       </Group>

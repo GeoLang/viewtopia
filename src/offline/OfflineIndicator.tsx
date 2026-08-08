@@ -23,7 +23,7 @@ export function OfflineIndicator() {
     <Popover width={260} position="bottom" withArrow>
       <Popover.Target>
         <Group gap={4} style={{ cursor: 'pointer' }}>
-          <ActionIcon size="sm" variant="subtle" color={color}>
+          <ActionIcon aria-label="Sync status" size="sm" variant="subtle" color={color}>
             {icon}
           </ActionIcon>
           {(!online || pendingCount > 0) && (

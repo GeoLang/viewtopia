@@ -162,7 +162,7 @@ function Cell({
     <Paper p="sm" withBorder style={{ borderLeft: `3px solid var(--mantine-color-${statusColor}-6)` }}>
       <Group justify="space-between" mb={cell.collapsed ? 0 : 8}>
         <Group gap={6}>
-          <ActionIcon size="xs" variant="subtle" onClick={() => toggleCellCollapse(notebookId, cell.id)}>
+          <ActionIcon aria-label="Toggle cell" size="xs" variant="subtle" onClick={() => toggleCellCollapse(notebookId, cell.id)}>
             {cell.collapsed ? <IconChevronRight size={12} /> : <IconChevronDown size={12} />}
           </ActionIcon>
           {typeIcon}
@@ -174,24 +174,24 @@ function Cell({
           {cell.type !== 'markdown' && (
             <>
               <Tooltip label="Run cell">
-                <ActionIcon size="sm" variant="subtle" color="green" onClick={() => runCell(notebookId, cell.id)}>
+                <ActionIcon aria-label="Run cell" size="sm" variant="subtle" color="green" onClick={() => runCell(notebookId, cell.id)}>
                   <IconPlayerPlay size={14} />
                 </ActionIcon>
               </Tooltip>
               <Tooltip label="Run up to here">
-                <ActionIcon size="sm" variant="subtle" color="blue" onClick={() => runUpTo(notebookId, cell.id)}>
+                <ActionIcon aria-label="Run up to here" size="sm" variant="subtle" color="blue" onClick={() => runUpTo(notebookId, cell.id)}>
                   <IconPlayerPlayFilled size={14} />
                 </ActionIcon>
               </Tooltip>
             </>
           )}
-          <ActionIcon size="sm" variant="subtle" onClick={() => moveCell(notebookId, cell.id, 'up')} disabled={index === 0}>
+          <ActionIcon aria-label="Move cell up" size="sm" variant="subtle" onClick={() => moveCell(notebookId, cell.id, 'up')} disabled={index === 0}>
             <IconArrowUp size={14} />
           </ActionIcon>
-          <ActionIcon size="sm" variant="subtle" onClick={() => moveCell(notebookId, cell.id, 'down')} disabled={index === totalCells - 1}>
+          <ActionIcon aria-label="Move cell down" size="sm" variant="subtle" onClick={() => moveCell(notebookId, cell.id, 'down')} disabled={index === totalCells - 1}>
             <IconArrowDown size={14} />
           </ActionIcon>
-          <ActionIcon size="sm" variant="subtle" color="red" onClick={() => removeCell(notebookId, cell.id)}>
+          <ActionIcon aria-label="Delete cell" size="sm" variant="subtle" color="red" onClick={() => removeCell(notebookId, cell.id)}>
             <IconTrash size={14} />
           </ActionIcon>
         </Group>
@@ -296,7 +296,7 @@ export function NotebookPanel() {
                     {nb.cells.length} cells · {new Date(nb.updatedAt).toLocaleDateString()}
                   </Text>
                 </div>
-                <ActionIcon
+                <ActionIcon aria-label="Delete notebook"
                   size="sm"
                   variant="subtle"
                   color="red"
@@ -317,7 +317,7 @@ export function NotebookPanel() {
     <Stack p="md" gap="sm">
       <Group justify="space-between">
         <Group gap={8}>
-          <ActionIcon size="sm" variant="subtle" onClick={() => setActive(null)}>
+          <ActionIcon aria-label="Back to notebooks" size="sm" variant="subtle" onClick={() => setActive(null)}>
             ←
           </ActionIcon>
           <Text fw={600} size="sm">{activeNotebook.name}</Text>
@@ -325,18 +325,18 @@ export function NotebookPanel() {
         </Group>
         <Group gap={4}>
           <Tooltip label="Run all cells">
-            <ActionIcon size="sm" variant="light" color="green" onClick={() => runAll(activeNotebook.id)}>
+            <ActionIcon aria-label="Run all cells" size="sm" variant="light" color="green" onClick={() => runAll(activeNotebook.id)}>
               <IconPlayerPlayFilled size={14} />
             </ActionIcon>
           </Tooltip>
           <Tooltip label="Clear all outputs">
-            <ActionIcon size="sm" variant="light" color="gray" onClick={() => clearOutputs(activeNotebook.id)}>
+            <ActionIcon aria-label="Clear all outputs" size="sm" variant="light" color="gray" onClick={() => clearOutputs(activeNotebook.id)}>
               <IconClearAll size={14} />
             </ActionIcon>
           </Tooltip>
           <Menu shadow="md" width={160}>
             <Menu.Target>
-              <ActionIcon size="sm" variant="subtle">
+              <ActionIcon aria-label="Notebook actions" size="sm" variant="subtle">
                 <IconDotsVertical size={14} />
               </ActionIcon>
             </Menu.Target>

@@ -6,6 +6,33 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-08: **command palette, tool shortcuts, panel states (UI polish
+  phase 3)**. Cmd/Ctrl+K opens a Spotlight palette (@mantine/spotlight)
+  over the same registries the toolbar renders: view switches, the quick
+  tools, all seven menus, Export PNG and every plugin, preview items
+  filtered by the existing setting. The toolbar's hardcoded Actions menu
+  moved into toolMenus.ts, and Export PNG and the inspect toggle became
+  shared helpers, so palette and toolbar render one table. One-letter
+  shortcuts arm tools: P/L/G/C/R for the draw modes, M/A for
+  distance/area, shown as tooltip hints on the mode controls; any armed
+  mode shows a crosshair cursor on all three renderers. The data panels
+  (geocoding, routing, weather, data-catalog) get skeleton loading rows
+  and empty states that offer an action (new PanelStates primitives);
+  their inline error text moved to red toasts, except weather, which
+  shows an inline Retry because it loads on open. Panel cards animate in
+  over 120ms (reduce-motion honored; close stays instant by design), the
+  MapLibre/Leaflet controls get focus-visible rings, and 58 icon-only
+  controls across 35 files got aria-labels. Dialog focus traps needed no
+  work: every dialog is a Mantine Modal.
+
+- 2026-08-08: **react e2e runs one worker on CI**. The suite's 3-per-run
+  CI-only failures were wedged pages, not selectors: clicks stalled after
+  "done scrolling", a page.evaluate never executed, and one browser died,
+  with a different victim list each run. Playwright defaults to 2 workers
+  on the 4-core runner, so two Cesium tabs software-rendering through
+  swiftshader starved the machine. Local runs never reproduced it because
+  spare cores absorbed the load.
+
 - 2026-08-08: **panels dock, widgets go dark (UI polish phase 2, part 3)**.
   Right-anchored PanelCards now portal into a dock column at the map's top
   right and stack without collisions (Legend, live Comments and a tool

@@ -7,10 +7,10 @@ import {
   Switch,
   Select,
   Button,
-  Loader,
 } from '@mantine/core';
 import { IconCloud, IconRefresh } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../PanelCard';
+import { PanelEmptyState, PanelSkeleton } from '../PanelStates';
 import { PolygonLayer } from '@deck.gl/layers';
 import {
   getViewBounds,
@@ -156,19 +156,10 @@ export function WeatherPanel({ onClose }: { onClose: () => void }) {
       />
 
       <Stack gap="xs">
-        {loading && (
-          <Group gap="xs">
-            <Loader size="xs" color="violet" />
-            <Text size="xs" c="dimmed">
-              Loading current conditions…
-            </Text>
-          </Group>
-        )}
+        {loading && <PanelSkeleton rows={2} />}
 
-        {error && (
-          <Text size="xs" c="red" data-testid="weather-error">
-            {error}
-          </Text>
+        {error && !loading && (
+          <PanelEmptyState message={error} actionLabel="Retry" onAction={loadCurrent} />
         )}
 
         {current && info && (

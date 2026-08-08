@@ -161,7 +161,7 @@ export function OGCLayersPanel({
                   <Badge size="xs" variant="light">
                     {layer.type.toUpperCase()}
                   </Badge>
-                  <ActionIcon
+                  <ActionIcon aria-label="Remove layer"
                     size="xs"
                     variant="subtle"
                     color="red"

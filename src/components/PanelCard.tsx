@@ -56,7 +56,14 @@ export function PanelCard({ width, anchor = 'right', maxHeight, testId, children
 
   if (anchor === 'right' && dock) {
     return createPortal(
-      <Paper shadow="xl" radius="md" p="sm" data-testid={testId} style={{ ...CARD_STYLE, maxHeight }}>
+      <Paper
+        shadow="xl"
+        radius="md"
+        p="sm"
+        className="panel-card-enter"
+        data-testid={testId}
+        style={{ ...CARD_STYLE, maxHeight }}
+      >
         {children}
       </Paper>,
       dock,
@@ -68,6 +75,7 @@ export function PanelCard({ width, anchor = 'right', maxHeight, testId, children
       shadow="xl"
       radius="md"
       p="sm"
+      className="panel-card-enter"
       data-testid={testId}
       style={{
         ...CARD_STYLE,

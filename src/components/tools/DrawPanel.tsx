@@ -7,12 +7,23 @@ import {
   ColorSwatch,
   Slider,
   Badge,
+  Tooltip,
 } from '@mantine/core';
 import { IconPencil } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { useDrawStore, type DrawMode } from '../../store/draw';
+import { DRAW_TOOL_KEYS } from '../../hooks/toolShortcuts';
 
 const COLORS = ['#a78bfa', '#f472b6', '#34d399', '#60a5fa', '#fbbf24', '#f87171'];
+
+const modeLabel = (mode: NonNullable<DrawMode>, label: string) => ({
+  value: mode,
+  label: (
+    <Tooltip label={`Shortcut: ${DRAW_TOOL_KEYS[mode].toUpperCase()}`} openDelay={300}>
+      <span>{label}</span>
+    </Tooltip>
+  ),
+});
 
 export function DrawPanel({ onClose }: { onClose: () => void }) {
   const mode = useDrawStore((s) => s.mode);
@@ -56,9 +67,9 @@ export function DrawPanel({ onClose }: { onClose: () => void }) {
           value={mode === 'point' || mode === 'line' || mode === 'polygon' ? mode : ''}
           onChange={(v) => v && activateMode(v as DrawMode)}
           data={[
-            { value: 'point', label: 'Point' },
-            { value: 'line', label: 'Line' },
-            { value: 'polygon', label: 'Polygon' },
+            modeLabel('point', 'Point'),
+            modeLabel('line', 'Line'),
+            modeLabel('polygon', 'Polygon'),
           ]}
         />
         <SegmentedControl
@@ -67,8 +78,8 @@ export function DrawPanel({ onClose }: { onClose: () => void }) {
           value={mode === 'circle' || mode === 'rectangle' ? mode : ''}
           onChange={(v) => v && activateMode(v as DrawMode)}
           data={[
-            { value: 'circle', label: 'Circle' },
-            { value: 'rectangle', label: 'Rectangle' },
+            modeLabel('circle', 'Circle'),
+            modeLabel('rectangle', 'Rectangle'),
           ]}
         />
 

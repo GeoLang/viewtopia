@@ -139,7 +139,7 @@ export function TrackImportPanel({ onClose }: { onClose: () => void }) {
                 <Badge size="xs" variant="light" color="orange">
                   {t.points.length} pts
                 </Badge>
-                <ActionIcon size="xs" variant="subtle" color="red" onClick={() => removeTrack(t.id)}>
+                <ActionIcon aria-label="Remove track" size="xs" variant="subtle" color="red" onClick={() => removeTrack(t.id)}>
                   <IconTrash size={12} />
                 </ActionIcon>
               </Group>

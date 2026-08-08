@@ -263,7 +263,7 @@ export function ProjectSwitcher() {
                 <CopyButton value={shareLink}>
                   {({ copied, copy }) => (
                     <Tooltip label={copied ? 'Copied' : 'Copy'}>
-                      <ActionIcon size="sm" variant="subtle" onClick={copy}>
+                      <ActionIcon aria-label="Copy share link" size="sm" variant="subtle" onClick={copy}>
                         {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
                       </ActionIcon>
                     </Tooltip>

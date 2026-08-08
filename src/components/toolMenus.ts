@@ -2,6 +2,7 @@ import type { Icon } from '@tabler/icons-react';
 import {
   IconAccessible,
   IconBook,
+  IconBookmark,
   IconBox,
   IconBuildingBank,
   IconBuildingSkyscraper,
@@ -23,17 +24,22 @@ import {
   IconLayoutColumns,
   IconLayoutDashboard,
   IconLink,
+  IconMapPin,
   IconMapRoute,
   IconMoon,
   IconMountain,
   IconMovie,
   IconPackage,
   IconPackageExport,
+  IconPalette,
+  IconPencil,
   IconPhoto,
   IconPlanet,
   IconPrinter,
+  IconRoute,
   IconRuler2,
   IconSchool,
+  IconSearch,
   IconScissors,
   IconSolarPanel,
   IconSun,
@@ -61,6 +67,19 @@ export interface ToolMenuItem {
 }
 
 /** each menu is a list of sections; the toolbar renders a divider between them */
+export const ACTIONS_MENU: ToolMenuItem[][] = [
+  [
+    { panel: 'draw', label: 'Draw', icon: IconPencil },
+    { panel: 'annotate', label: 'Annotate', icon: IconMapPin },
+    { panel: 'routing', label: 'Route', icon: IconRoute },
+    { panel: 'bookmark', label: 'Bookmarks', icon: IconBookmark },
+    { panel: 'geocoding', label: 'Search', icon: IconSearch },
+    { panel: 'buildings', label: 'Buildings', icon: IconBuildingSkyscraper },
+    { panel: 'geojsonEditor', label: 'GeoJSON Editor', icon: IconVectorTriangle },
+    { panel: 'styleEditor', label: 'Style Editor', icon: IconPalette },
+  ],
+];
+
 export const ANALYSIS_MENU: ToolMenuItem[][] = [
   [
     { panel: 'clipping', label: 'Clip', icon: IconScissors },
@@ -140,13 +159,19 @@ export const MORE_MENU: ToolMenuItem[][] = [
   ],
 ];
 
-export const ALL_TOOL_MENU_ITEMS: ToolMenuItem[] = [
-  ANALYSIS_MENU,
-  SIMULATE_MENU,
-  TOOLS_MENU,
-  DATA_MENU,
-  MORE_MENU,
-].flat(2);
+/** menus in toolbar order, with the group label the command palette shows */
+export const TOOL_MENU_GROUPS: { group: string; sections: ToolMenuItem[][] }[] = [
+  { group: 'Actions', sections: ACTIONS_MENU },
+  { group: 'Analysis', sections: ANALYSIS_MENU },
+  { group: 'Simulate', sections: SIMULATE_MENU },
+  { group: 'Tools', sections: TOOLS_MENU },
+  { group: 'Data', sections: DATA_MENU },
+  { group: 'More', sections: MORE_MENU },
+];
+
+export const ALL_TOOL_MENU_ITEMS: ToolMenuItem[] = TOOL_MENU_GROUPS.map(
+  (menu) => menu.sections,
+).flat(2);
 
 export function visibleToolItems(items: ToolMenuItem[], showPreview: boolean): ToolMenuItem[] {
   return showPreview ? items : items.filter((item) => !item.preview);

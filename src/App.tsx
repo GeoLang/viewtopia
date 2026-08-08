@@ -15,12 +15,14 @@ import { theme, MOBILE_QUERY } from './theme';
 import { Header } from './components/Header';
 import { ChatPanel } from './components/ChatPanel';
 import { ViewerToolbar } from './components/ViewerToolbar';
+import { CommandPalette } from './components/CommandPalette';
 import { ViewerArea } from './components/ViewerArea';
 import { SpaceTimePanel } from './features/spacetime/SpaceTimePanel';
 import { ToolPanels } from './components/ToolPanels';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useBackendDiscovery } from './hooks/useBackendDiscovery';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { TOOL_SHORTCUTS } from './hooks/toolShortcuts';
 import { useSpaceTimeStore } from './features/spacetime/store';
 import { useCallback, useRef, useEffect, useState } from 'react';
 import { initNetworkMonitor } from './offline/network';
@@ -68,6 +70,7 @@ export function App() {
     'b': toggleChat,
     't': toggleSpaceTime,
     'ctrl+.': toggleUiHidden,
+    ...TOOL_SHORTCUTS,
   });
 
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
@@ -100,6 +103,7 @@ export function App() {
   return (
     <MantineProvider theme={theme} defaultColorScheme="dark">
       <Notifications position="top-right" />
+      <CommandPalette />
       <ModalsProvider>
         <AppShell
           header={{ height: 48, collapsed: uiHidden }}

@@ -110,7 +110,7 @@ export function CoveragePanel({ onFlyTo, onShowCoverage, onShowViewshed, onClose
             <IconAntenna size={18} />
             <Text fw={600} size="sm">Network Coverage</Text>
           </Group>
-          <ActionIcon size="sm" variant="subtle" onClick={onClose}><IconX size={14} /></ActionIcon>
+          <ActionIcon aria-label="Close network coverage" size="sm" variant="subtle" onClick={onClose}><IconX size={14} /></ActionIcon>
         </Group>
 
         <Button size="xs" onClick={handleLoad} loading={loading} leftSection={<IconSignal4g size={14} />}>

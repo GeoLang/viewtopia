@@ -30,6 +30,15 @@ interface FeaturePickerState {
   setHovering: (hovering: boolean) => void;
 }
 
+// Inspect is the picking mode itself, not just a panel — opening it arms the
+// picker (the panel's switch mirrors this), closing it disarms.
+export function toggleInspectPanel() {
+  const { activePanel, togglePanel } = useAppStore.getState();
+  const opening = activePanel !== 'featurePicker';
+  togglePanel('featurePicker');
+  useFeaturePickerStore.getState().setEnabled(opening);
+}
+
 export const useFeaturePickerStore = create<FeaturePickerState>((set) => ({
   enabled: false,
   selected: null,

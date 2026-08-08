@@ -138,7 +138,7 @@ export function CompsPanel({
             </Text>
           </Group>
           {onClose && (
-            <ActionIcon size="sm" variant="subtle" onClick={onClose}>
+            <ActionIcon aria-label="Close comparable sales" size="sm" variant="subtle" onClick={onClose}>
               <IconX size={14} />
             </ActionIcon>
           )}

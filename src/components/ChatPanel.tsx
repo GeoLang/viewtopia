@@ -121,7 +121,7 @@ export function ChatPanel() {
           onChange={(v) => v && setActiveSession(v)}
         />
         <Tooltip label="New session">
-          <ActionIcon
+          <ActionIcon aria-label="New session"
             size="sm"
             variant="subtle"
             color="violet"
@@ -132,7 +132,7 @@ export function ChatPanel() {
         </Tooltip>
         {activeSessionId && (
           <Tooltip label="Delete session">
-            <ActionIcon
+            <ActionIcon aria-label="Delete session"
               size="sm"
               variant="subtle"
               color="red"
@@ -223,11 +223,11 @@ export function ChatPanel() {
           disabled={streaming}
         />
         {streaming ? (
-          <ActionIcon variant="filled" color="red" size="lg" onClick={abort}>
+          <ActionIcon aria-label="Stop generating" variant="filled" color="red" size="lg" onClick={abort}>
             <IconSquare size={14} />
           </ActionIcon>
         ) : (
-          <ActionIcon
+          <ActionIcon aria-label="Send message"
             variant="filled"
             color="violet"
             size="lg"

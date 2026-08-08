@@ -9,7 +9,9 @@ import {
   ScrollArea,
 } from '@mantine/core';
 import { IconSearch, IconMapPin } from '@tabler/icons-react';
+import { notifications } from '@mantine/notifications';
 import { PanelCard, PanelHeader } from '../PanelCard';
+import { PanelEmptyState, PanelSkeleton } from '../PanelStates';
 import { geocode, type GeoHit } from '../../services/geocode';
 
 interface GeocodingPanelProps {
@@ -21,17 +23,30 @@ export function GeocodingPanel({ onFlyTo, onClose }: GeocodingPanelProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GeoHit[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
 
   const handleSearch = async () => {
     if (!query.trim()) return;
     setLoading(true);
     try {
       setResults(await geocode(query, 8));
-    } catch {
+      setSearched(true);
+    } catch (err) {
       setResults([]);
+      notifications.show({
+        title: 'Place search failed',
+        message: err instanceof Error ? err.message : 'geocoding service unreachable',
+        color: 'red',
+      });
     } finally {
       setLoading(false);
     }
+  };
+
+  const clearSearch = () => {
+    setQuery('');
+    setResults([]);
+    setSearched(false);
   };
 
   return (
@@ -57,8 +72,16 @@ export function GeocodingPanel({ onFlyTo, onClose }: GeocodingPanelProps) {
       </Group>
 
       <ScrollArea flex={1}>
+        {loading && <PanelSkeleton rows={4} />}
+        {!loading && searched && results.length === 0 && (
+          <PanelEmptyState
+            message={`No places found for “${query}”.`}
+            actionLabel="Clear search"
+            onAction={clearSearch}
+          />
+        )}
         <Stack gap={4}>
-          {results.map((r, i) => (
+          {!loading && results.map((r, i) => (
             <Group
               key={`${r.lat},${r.lng},${i}`}
               p="xs"

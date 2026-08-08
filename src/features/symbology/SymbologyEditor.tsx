@@ -229,7 +229,7 @@ export function SymbologyEditor({ layer }: { layer: AgentLayer }) {
                     padding: '2px 4px',
                   }}
                 />
-                <ActionIcon
+                <ActionIcon aria-label="Remove rule"
                   size="xs"
                   variant="subtle"
                   color="gray"

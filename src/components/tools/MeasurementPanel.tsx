@@ -6,10 +6,23 @@ import {
   Badge,
   Button,
   SegmentedControl,
+  Tooltip,
 } from '@mantine/core';
 import { IconRuler, IconTrash } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { useMeasureStore, type MeasureMode } from '../../store/measure';
+import { MEASURE_TOOL_KEYS } from '../../hooks/toolShortcuts';
+
+const modeLabel = (mode: NonNullable<MeasureMode>, label: string) => ({
+  value: mode,
+  label: MEASURE_TOOL_KEYS[mode] ? (
+    <Tooltip label={`Shortcut: ${MEASURE_TOOL_KEYS[mode].toUpperCase()}`} openDelay={300}>
+      <span>{label}</span>
+    </Tooltip>
+  ) : (
+    label
+  ),
+});
 
 export function MeasurementPanel({
   onClose,
@@ -60,8 +73,8 @@ export function MeasurementPanel({
         value={mode ?? ''}
         onChange={(v) => v && activateMode(v as MeasureMode)}
         data={[
-          { value: 'distance', label: 'Distance' },
-          { value: 'area', label: 'Area' },
+          modeLabel('distance', 'Distance'),
+          modeLabel('area', 'Area'),
         ]}
         mb="xs"
       />
@@ -98,7 +111,7 @@ export function MeasurementPanel({
                 {r.value.toFixed(2)} {r.unit}
               </Text>
             </Group>
-            <ActionIcon size="xs" variant="subtle" color="red" onClick={() => removeResult(r.id)}>
+            <ActionIcon aria-label="Delete measurement" size="xs" variant="subtle" color="red" onClick={() => removeResult(r.id)}>
               <IconTrash size={10} />
             </ActionIcon>
           </Group>

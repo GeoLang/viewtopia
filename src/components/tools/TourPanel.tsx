@@ -66,7 +66,7 @@ export function TourPanel({ onClose }: { onClose: () => void }) {
             {step + 1}/{TOUR_STEPS.length}
           </Badge>
         </Group>
-        <ActionIcon size="sm" variant="subtle" color="gray" onClick={onClose}>
+        <ActionIcon aria-label="Close tour" size="sm" variant="subtle" color="gray" onClick={onClose}>
           <IconX size={14} />
         </ActionIcon>
       </Group>

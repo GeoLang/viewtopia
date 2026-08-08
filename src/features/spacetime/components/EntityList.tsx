@@ -132,7 +132,7 @@ export function EntityList() {
                   >
                     {entity.kind}
                   </Badge>
-                  <ActionIcon
+                  <ActionIcon aria-label="Delete entity"
                     size="xs"
                     variant="subtle"
                     color="red"

@@ -120,7 +120,7 @@ export function BookmarkPanel({ onClose }: { onClose: () => void }) {
                     {bm.lat.toFixed(4)}, {bm.lng.toFixed(4)}
                   </Text>
                 </Stack>
-                <ActionIcon
+                <ActionIcon aria-label="Remove bookmark"
                   size="xs"
                   variant="subtle"
                   color="red"

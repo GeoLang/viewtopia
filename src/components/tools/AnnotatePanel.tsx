@@ -170,7 +170,7 @@ export function AnnotatePanel({ onClose }: { onClose: () => void }) {
                   </Text>
                 </Stack>
               </Group>
-              <ActionIcon size="xs" variant="subtle" color="red" onClick={() => handleRemove(a.id)}>
+              <ActionIcon aria-label="Delete annotation" size="xs" variant="subtle" color="red" onClick={() => handleRemove(a.id)}>
                 <IconTrash size={10} />
               </ActionIcon>
             </Group>

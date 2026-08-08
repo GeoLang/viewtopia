@@ -145,7 +145,7 @@ export function GeofencePanel({ onClose }: { onClose: () => void }) {
                     {f.name}
                   </Text>
                 </Group>
-                <ActionIcon
+                <ActionIcon aria-label="Delete geofence"
                   size="xs"
                   variant="subtle"
                   color="red"

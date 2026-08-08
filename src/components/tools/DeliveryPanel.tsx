@@ -195,7 +195,7 @@ export function DeliveryPanel({
               Deliveries
             </Text>
           </Group>
-          <ActionIcon size="sm" variant="subtle" onClick={onClose}>
+          <ActionIcon aria-label="Close deliveries" size="sm" variant="subtle" onClick={onClose}>
             <IconX size={14} />
           </ActionIcon>
         </Group>
@@ -213,7 +213,7 @@ export function DeliveryPanel({
               {r.name}
             </Badge>
           ))}
-          <ActionIcon size="xs" variant="light" onClick={handleCreateRoute}>
+          <ActionIcon aria-label="Add route" size="xs" variant="light" onClick={handleCreateRoute}>
             <IconPlus size={12} />
           </ActionIcon>
         </Group>
@@ -271,7 +271,7 @@ export function DeliveryPanel({
                 onKeyDown={(e) => e.key === 'Enter' && handleAddStop()}
                 style={{ flex: 1 }}
               />
-              <ActionIcon size="sm" onClick={handleAddStop}>
+              <ActionIcon aria-label="Add delivery stop" size="sm" onClick={handleAddStop}>
                 <IconPlus size={14} />
               </ActionIcon>
             </Group>
@@ -319,7 +319,7 @@ export function DeliveryPanel({
                         </Group>
                       </Table.Td>
                       <Table.Td w={30}>
-                        <ActionIcon
+                        <ActionIcon aria-label="Remove stop"
                           size="xs"
                           variant="subtle"
                           color="red"

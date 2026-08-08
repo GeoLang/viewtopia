@@ -93,7 +93,7 @@ export function SensorPanel({ onFlyTo, onClose }: SensorPanelProps) {
             <IconActivity size={18} />
             <Text fw={600} size="sm">Sensors</Text>
           </Group>
-          <ActionIcon size="sm" variant="subtle" onClick={onClose}><IconX size={14} /></ActionIcon>
+          <ActionIcon aria-label="Close sensors" size="sm" variant="subtle" onClick={onClose}><IconX size={14} /></ActionIcon>
         </Group>
 
         <Group gap="xs">

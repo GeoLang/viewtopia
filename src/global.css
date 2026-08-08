@@ -129,6 +129,45 @@
   }
 }
 
+/* Panel cards slide in as they mount (docked and floating share the class).
+   Exit animation would need delayed unmount, so closing is instant. */
+@keyframes panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.panel-card-enter {
+  animation: panel-enter 120ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-card-enter {
+    animation: none;
+  }
+}
+
+/* Keyboard focus on the non-Mantine map controls (Mantine draws its own) */
+.maplibregl-ctrl button:focus-visible,
+.leaflet-bar a:focus-visible {
+  outline: 2px solid var(--mantine-color-violet-4);
+  outline-offset: -2px;
+}
+
+/* Active draw/measure mode: crosshair over every renderer's canvas.
+   !important beats maplibre's .maplibregl-interactive grab and leaflet's
+   .leaflet-grab class cursors. */
+.tool-crosshair canvas,
+.tool-crosshair .maplibregl-canvas-container,
+.tool-crosshair .leaflet-container {
+  cursor: crosshair !important;
+}
+
 /* Accessibility toggles (AccessibilityPanel) */
 .a11y-high-contrast {
   filter: contrast(1.35) saturate(1.25);
