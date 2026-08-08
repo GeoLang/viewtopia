@@ -16,6 +16,7 @@ import { useAuthStore } from '../features/auth/store';
 import {
   AgoraRequestError,
   createShareLink,
+  embedSnippet,
   fetchLiveDocument,
   removeLiveMember,
   setLiveMember,
@@ -175,6 +176,25 @@ export function LiveShareDialog({
               {({ copied, copy }) => (
                 <Button size="xs" variant="light" onClick={copy}>
                   {copied ? 'Copied' : 'Copy'}
+                </Button>
+              )}
+            </CopyButton>
+          </Group>
+        )}
+        {link && role === 'view' && (
+          <Group gap="xs" wrap="nowrap">
+            <TextInput
+              size="xs"
+              flex={1}
+              readOnly
+              value={embedSnippet(link)}
+              aria-label="Embed snippet"
+              data-testid="embed-snippet"
+            />
+            <CopyButton value={embedSnippet(link)}>
+              {({ copied, copy }) => (
+                <Button size="xs" variant="light" onClick={copy} data-testid="copy-embed-snippet">
+                  {copied ? 'Copied' : 'Embed'}
                 </Button>
               )}
             </CopyButton>

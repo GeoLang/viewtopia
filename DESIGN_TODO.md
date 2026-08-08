@@ -59,10 +59,6 @@ collaborative workflow, so they are in-thesis rather than parity chasing.
 Felt has no versioning, no routing, no 3D and self-hosts only on
 enterprise contracts, so those fronts need no response.
 
-- [ ] **embed mode** — a read-only iframe embed of a live document or
-      shared map for posts and dashboards. View-role share links already
-      carry the auth story; this is a chrome-less viewer route plus an
-      embed snippet in the share dialog.
 - [ ] **georeferenced image + PDF overlays** — drop a site plan or scanned
       map, place it by world file or manual corner pinning, keep it as a
       layer. Common field workflow, nothing in the stack does it, and it
@@ -479,8 +475,9 @@ High value, product-level:
       rule-based renderers plus the legend panel shipped 2026-08-02):
       expression renderers, scale-dependent visibility, and SLD/QML/Mapbox
       style import/export (fenestra already parses SLD server-side).
-- [ ] **embedding support**: URL params for chrome-less/compact layouts and a
-      postMessage API for host pages. Cheap, widens adoption.
+- [ ] **embed postMessage API for host pages** (the chrome-less layout itself
+      shipped 2026-08-08 as `?embed=1`): camera set/get, layer toggles and
+      click events over postMessage, so a dashboard can drive its embed.
 - [ ] **runtime plugin install**: plugins are build-time only
       (`import.meta.glob`). GeoLibre ships a marketplace with
       install/update/remove.

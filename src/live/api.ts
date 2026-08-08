@@ -126,6 +126,13 @@ export function shareLinkUrl(token: string): string {
   return `${location.origin}/?${SHARE_LINK_PARAM}=${encodeURIComponent(token)}`;
 }
 
+/** An iframe snippet for a view role share link, for posts and dashboards. */
+export function embedSnippet(shareUrl: string): string {
+  const url = new URL(shareUrl);
+  url.searchParams.set('embed', '1');
+  return `<iframe src="${url.toString()}" width="800" height="450" style="border:0" allowfullscreen></iframe>`;
+}
+
 export const COMMENT_LINK_PARAM = 'comment';
 export const LIVE_DOCUMENT_PARAM = 'doc';
 

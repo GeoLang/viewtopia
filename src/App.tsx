@@ -34,6 +34,8 @@ import { initSync } from './offline/sync';
 import { startDocumentBridge } from './live/documentBridge';
 import { useJoinLiveFromLink } from './live/joinFromLink';
 import { MapPresence } from './live/MapPresence';
+import { EmbedBadge } from './components/EmbedBadge';
+import { isEmbedRequested } from './lib/embedMode';
 
 const MOBILE_SHEET_HEIGHT = '45vh';
 
@@ -70,22 +72,26 @@ export function App() {
 
   // a view-role share link renders view-only chrome: no chat, no draw
   const viewOnly = useViewOnlyLive();
+  // an iframe embed renders no chrome at all, just the map and a badge
+  const embed = isEmbedRequested();
 
   useBackendDiscovery();
   useKeyboardShortcuts(
-    viewOnly
-      ? {
-          't': toggleSpaceTime,
-          'ctrl+.': toggleUiHidden,
-          ...MEASURE_SHORTCUTS,
-        }
-      : {
-          'ctrl+b': toggleChat,
-          'b': toggleChat,
-          't': toggleSpaceTime,
-          'ctrl+.': toggleUiHidden,
-          ...TOOL_SHORTCUTS,
-        },
+    embed
+      ? {}
+      : viewOnly
+        ? {
+            't': toggleSpaceTime,
+            'ctrl+.': toggleUiHidden,
+            ...MEASURE_SHORTCUTS,
+          }
+        : {
+            'ctrl+b': toggleChat,
+            'b': toggleChat,
+            't': toggleSpaceTime,
+            'ctrl+.': toggleUiHidden,
+            ...TOOL_SHORTCUTS,
+          },
   );
 
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
@@ -118,16 +124,16 @@ export function App() {
   return (
     <MantineProvider theme={theme} defaultColorScheme="dark">
       <Notifications position="top-right" />
-      <CommandPalette />
+      {!embed && <CommandPalette />}
       <ModalsProvider>
         <AppShell
-          header={{ height: 48, collapsed: uiHidden }}
+          header={{ height: 48, collapsed: uiHidden || embed }}
           aside={{
             width: isMobile ? '100vw' : asideWidth,
             breakpoint: 'sm',
             collapsed: {
-              mobile: !mobileChatOpen || uiHidden || viewOnly,
-              desktop: !navOpened || uiHidden || viewOnly,
+              mobile: !mobileChatOpen || uiHidden || viewOnly || embed,
+              desktop: !navOpened || uiHidden || viewOnly || embed,
             },
           }}
           padding={0}
@@ -175,7 +181,7 @@ export function App() {
           </AppShell.Aside>
 
           {/* Floating chat toggle: phones only, desktop has the header icon */}
-          {isMobile && !uiHidden && !viewOnly && (
+          {isMobile && !uiHidden && !viewOnly && !embed && (
             <Tooltip label={chatOpen ? 'Hide chat (Ctrl+B)' : 'Show chat (Ctrl+B)'} position="left">
               <ActionIcon
                 aria-label={chatOpen ? 'Hide chat' : 'Show chat'}
@@ -202,11 +208,11 @@ export function App() {
               background: 'var(--mantine-color-dark-8)',
               display: 'flex',
               flexDirection: 'column',
-              height: uiHidden ? '100vh' : 'calc(100vh - 48px)',
+              height: uiHidden || embed ? '100vh' : 'calc(100vh - 48px)',
               position: 'relative',
             }}
           >
-            {isMobile && !uiHidden && (
+            {isMobile && !uiHidden && !embed && (
               <Group
                 px="sm"
                 py={4}
@@ -219,16 +225,17 @@ export function App() {
             <ErrorBoundary fallbackMessage="Map viewer encountered an error">
               <ViewerArea />
             </ErrorBoundary>
-            {!uiHidden && (
+            {!uiHidden && !embed && (
               <ErrorBoundary fallbackMessage="SpaceTime panel error">
                 <SpaceTimePanel />
               </ErrorBoundary>
             )}
-            {!uiHidden && <ToolPanels />}
+            {!uiHidden && !embed && <ToolPanels />}
             <MapPresence />
-            <WindowDropZone />
-            {!uiHidden && <WelcomeCard />}
-            {!uiHidden && <TourOverlay />}
+            {!embed && <WindowDropZone />}
+            {!uiHidden && !embed && <WelcomeCard />}
+            {!uiHidden && !embed && <TourOverlay />}
+            {embed && <EmbedBadge />}
           </AppShell.Main>
         </AppShell>
       </ModalsProvider>

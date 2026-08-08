@@ -324,4 +324,52 @@ test.describe('Live multiplayer — live platform stack', () => {
 
     await memberContext.close();
   });
+
+  test('a view link embed renders the map with no chrome', async ({ page, browser }) => {
+    test.setTimeout(120_000);
+
+    const authorToken = mintToken({ role: 'editor', sub: BROWSER_USER });
+    expect(authorToken, 'PLATFORM_JWT_SECRET is not set, so no live session can be opened').toBeTruthy();
+
+    const documentName = `embed-e2e-${Date.now()}`;
+    await page.addInitScript((seed) => {
+      localStorage.setItem('viewtopia-tour-done', '1');
+      localStorage.setItem('viewtopia_auth', JSON.stringify(seed));
+    }, { user: { name: BROWSER_USER }, token: authorToken });
+    await page.goto('/');
+
+    await page.getByRole('button', { name: 'Live', exact: true }).click();
+    await page.getByPlaceholder('New live map name…').fill(documentName);
+    await page.getByTestId('start-live-session').click();
+    await expect(page.getByTestId('live-document-name')).toHaveText(documentName);
+
+    const origin = new URL(page.url()).origin;
+    const documents = await fetch(`${origin}/agora/documents`, {
+      headers: { Authorization: `Bearer ${authorToken}` },
+    }).then((response) => response.json());
+    const documentId = documents.find((entry) => entry.name === documentName)?.id;
+    const minted = await fetch(`${origin}/agora/documents/${documentId}/links`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authorToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'view' }),
+    }).then((response) => response.json());
+
+    // an anonymous visitor inside the iframe: no sign in, no chrome, live map
+    const visitorContext = await browser.newContext();
+    const visitor = await visitorContext.newPage();
+    await visitor.goto(`${origin}/?live=${encodeURIComponent(minted.token)}&embed=1`);
+
+    const badge = visitor.getByTestId('embed-badge');
+    await expect(badge).toBeVisible();
+    await expect(badge).toContainText(documentName);
+    const exitHref = await badge.getByRole('link', { name: 'Open in ViewTopia' }).getAttribute('href');
+    expect(exitHref).toContain(`live=${encodeURIComponent(minted.token)}`);
+    expect(exitHref).not.toContain('embed=');
+
+    await expect(visitor.getByRole('button', { name: 'Live', exact: true })).toBeHidden();
+    await expect(visitor.getByRole('button', { name: 'Analysis' })).toBeHidden();
+    await expect(visitor.locator('canvas').first()).toBeVisible();
+
+    await visitorContext.close();
+  });
 });
