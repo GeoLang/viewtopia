@@ -13,7 +13,12 @@ import { test as base, expect } from '@playwright/test';
  * Keep this empty unless a third party leaves no choice — a real error belongs
  * in a bug report, not here.
  */
-const ALLOWED = [];
+const ALLOWED = [
+  // backend discovery probes these on boot; with no platform stack running
+  // (this suite starts none) the dev proxy answers 500, and running without a
+  // backend is a supported state, not an app error
+  /Failed to load resource.*\/(tiles\/v1|agent)\/health/,
+];
 
 /** Per-page allowances, for a test that drives a failure on purpose. */
 const perTest = new WeakMap();
@@ -37,13 +42,17 @@ export const test = base.extend({
     page.on('pageerror', (e) => seen.push(`pageerror: ${e.message}`));
     page.on('console', (msg) => {
       if (msg.type() !== 'error') return;
-      const slot = seen.push(`console.error: ${msg.text()}`) - 1;
+      // resource failures ("Failed to load resource") carry the URL only in
+      // location(), and the allow list needs it to match precisely
+      const url = msg.location()?.url;
+      const suffix = url ? ` (${url})` : '';
+      const slot = seen.push(`console.error: ${msg.text()}${suffix}`) - 1;
       // console.error(someError) renders as a useless preview ("An"), so read the
       // arguments back out of the page for a message that names the failure
       resolving.push(
         Promise.all(msg.args().map((a) => a.evaluate(describeArg)))
           .then((parts) => {
-            if (parts.length) seen[slot] = `console.error: ${parts.join(' ')}`;
+            if (parts.length) seen[slot] = `console.error: ${parts.join(' ')}${suffix}`;
           })
           .catch(() => {}),
       );
