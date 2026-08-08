@@ -16,12 +16,13 @@ export function BasemapRendererControl() {
   if (uiHidden) return null;
 
   // the 2d map is leaflet: the renderer choice doesn't apply, and vector
-  // styles can't render there (leaflet shows their raster approximation)
+  // styles render as their raster approximation, so they stay choosable
+  // under a label that says what 2d shows
   const onMapTab = activeTab === 'map';
   const availableGroups = onMapTab
     ? BASEMAP_SELECT_GROUPS.map((g) =>
         g.group.startsWith('Vector')
-          ? { ...g, items: g.items.map((i) => ({ ...i, disabled: true })) }
+          ? { ...g, group: 'Vector (raster approximation on 2D)' }
           : g,
       )
     : BASEMAP_SELECT_GROUPS;
