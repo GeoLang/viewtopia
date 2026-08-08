@@ -252,61 +252,60 @@ test.describe('More menu panels', () => {
     expect(restored.height).toBeCloseTo(MONACO.height, -2);
   });
 
-  test('tour: stepping moves the highlight onto the next target', async ({ page }) => {
+  test('tour: each step drives the tool it describes', async ({ page }) => {
     await openApp(page);
 
-    // the tour retitles itself per step, so match on the step badge instead
-    const panel = await openPanel(page, 'Tour', /[1-5]\/5/);
-    await expect(panel).toContainText('Welcome to ViewTopia');
-    await expect(panel).toContainText('1/5');
+    // starting from the More menu frees the panel slot for the driven steps
+    await page.getByRole('button', { name: 'More' }).click();
+    await page.getByRole('menuitem', { name: 'Tour' }).click();
+    const card = page.getByTestId('tour-card');
+    await expect(card).toContainText('Welcome to ViewTopia');
+    await expect(card).toContainText('1/7');
 
     const outline = (selector) =>
       page.evaluate((s) => document.querySelector(s)?.style.outline ?? null, selector);
-
-    /** The violet highlight is on this element. */
-    const highlighted = async (selector) => {
-      const value = await outline(selector);
-      return value.includes('2px') && value.includes('rgb(167, 139, 250)');
-    };
-
-    const globe = '#cesium-container';
-    const chat = '.mantine-AppShell-aside';
     const header = '.mantine-AppShell-header';
-    const tabs = '.mantine-Tabs-list';
+    await expect.poll(() => outline(header)).toContain('2px');
 
-    // every step aims at an element this build renders, starting with the header
-    await expect.poll(() => highlighted(header)).toBe(true);
+    // step 2 opens the command palette
+    await card.getByRole('button', { name: 'Next' }).click();
+    await expect(card).toContainText('Command Palette');
+    await expect(page.getByPlaceholder('Search tools, panels, plugins…')).toBeVisible();
 
-    await panel.getByRole('button', { name: 'Next' }).click();
-    await expect(panel).toContainText('Viewer Tabs');
-    await expect(panel).toContainText('2/5');
-    await expect.poll(() => highlighted(tabs)).toBe(true);
-    expect(await outline(header)).toBe('');
+    // step 3 opens the draw panel with the line tool armed
+    await card.getByRole('button', { name: 'Next' }).click();
+    await expect(card).toContainText('3/7');
+    await expect(page.getByPlaceholder('Search tools, panels, plugins…')).not.toBeVisible();
+    const dock = page.locator('.panel-dock');
+    await expect(dock.getByText('Draw').first()).toBeVisible();
+    // the line tool is armed, so its segment reads as the selected radio
+    await expect(dock.getByRole('radio', { name: 'Line' })).toBeChecked();
 
-    await panel.getByRole('button', { name: 'Next' }).click();
-    await expect(panel).toContainText('3D Globe');
-    await expect(panel).toContainText('3/5');
-    await expect.poll(() => outline(globe)).toContain('2px');
-    expect(await outline(globe)).toContain('rgb(167, 139, 250)');
-    // one target at a time
-    expect(await highlighted(chat)).toBe(false);
-    expect(await outline(tabs)).toBe('');
+    // step 4 swaps to measuring with distance armed
+    await card.getByRole('button', { name: 'Next' }).click();
+    await expect(card).toContainText('Measure');
+    await expect(dock.getByText('Measurement').first()).toBeVisible();
 
-    // step 4 targets the chat panel: it gains the outline as the globe loses it
-    await panel.getByRole('button', { name: 'Next' }).click();
-    await expect(panel).toContainText('Chat Panel');
-    await expect(panel).toContainText('4/5');
-    await expect.poll(() => highlighted(chat)).toBe(true);
-    expect(await outline(globe)).toBe('');
+    // step 5 opens the layers panel
+    await card.getByRole('button', { name: 'Next' }).click();
+    await expect(card).toContainText('Layers');
 
-    // Back walks the highlight the same way in reverse
-    await panel.getByRole('button', { name: 'Back' }).click();
-    await expect(panel).toContainText('3/5');
-    await expect.poll(() => highlighted(globe)).toBe(true);
-    expect(await outline(chat)).toBe('');
+    // Back returns to measuring
+    await card.getByRole('button', { name: 'Back' }).click();
+    await expect(dock.getByText('Measurement').first()).toBeVisible();
+    await card.getByRole('button', { name: 'Next' }).click();
 
-    // closing drops the highlight the live step had put on the globe
-    await closePanel(page, panel);
-    await expect.poll(() => outline(globe)).toBe('');
+    // step 6 opens the basemap & renderer popover for real
+    await card.getByRole('button', { name: 'Next' }).click();
+    await expect(card).toContainText('Basemap & Renderer');
+    await expect(page.locator('input[aria-label="Renderer"]')).toBeVisible();
+
+    // last step clears the chrome and Finish removes the card
+    await card.getByRole('button', { name: 'Next' }).click();
+    await expect(card).toContainText('7/7');
+    await expect(page.locator('input[aria-label="Renderer"]')).not.toBeVisible();
+    await card.getByRole('button', { name: 'Finish' }).click();
+    await expect(card).not.toBeVisible();
+    await expect.poll(() => outline(header)).toBe('');
   });
 });

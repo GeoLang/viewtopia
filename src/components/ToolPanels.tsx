@@ -53,7 +53,7 @@ import { StoriesPanel } from './tools/StoriesPanel';
 import { CollaborationPanel } from './tools/CollaborationPanel';
 import { TimelinePanel } from './tools/TimelinePanel';
 import { DataTablePanel } from './tools/DataTablePanel';
-import { TourPanel } from './tools/TourPanel';
+import { TourLauncher } from './TourOverlay';
 import { ShareLinkPanel } from './tools/ShareLinkPanel';
 import { SettingsPanel } from './tools/SettingsPanel';
 import { AssetsPanel } from './tools/AssetsPanel';
@@ -259,7 +259,7 @@ export function ToolPanels() {
     case 'dataTable':
       return <DataTablePanel onClose={close} />;
     case 'tour':
-      return <TourPanel onClose={close} />;
+      return <TourLauncher onClose={close} />;
     case 'shareLink':
       return <ShareLinkPanel onClose={close} />;
     case 'settings':

@@ -6,6 +6,16 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-08: **the tour drives the app**. The static five-step TourPanel
+  (statements over screen regions, two of them aiming at elements that
+  did not exist) is replaced by a driven tour in its own overlay + store,
+  so it survives the panels it opens: seven steps that open the command
+  palette, arm the draw line tool, arm distance measuring, open Layers,
+  open the basemap/renderer popover, and point at Live — each step's
+  action undone when stepped back or closed. Started from the welcome
+  card or More → Tour (the 'tour' panel slot now just launches it). The
+  panels-suite tour e2e asserts the driven behavior per step.
+
 - 2026-08-08: **first run and share (UI polish phase 4)**. A clean profile
   gets a bottom-center welcome card offering a demo dataset and the tour:
   accepting fetches the bundled SF-landmarks GeoJSON (public/demo/), adds

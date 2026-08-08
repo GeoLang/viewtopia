@@ -18,6 +18,7 @@ import { ViewerToolbar } from './components/ViewerToolbar';
 import { CommandPalette } from './components/CommandPalette';
 import { WindowDropZone } from './components/WindowDropZone';
 import { WelcomeCard } from './components/WelcomeCard';
+import { TourOverlay } from './components/TourOverlay';
 import { ViewerArea } from './components/ViewerArea';
 import { SpaceTimePanel } from './features/spacetime/SpaceTimePanel';
 import { ToolPanels } from './components/ToolPanels';
@@ -227,6 +228,7 @@ export function App() {
             <MapPresence />
             <WindowDropZone />
             {!uiHidden && <WelcomeCard />}
+            {!uiHidden && <TourOverlay />}
           </AppShell.Main>
         </AppShell>
       </ModalsProvider>

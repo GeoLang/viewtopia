@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Button, Group, Paper, Text } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { useAppStore } from '../store/app';
 import { useAgentLayerStore } from '../store/agentLayers';
+import { useTourStore } from '../store/tour';
 
 const WELCOME_SEEN_KEY = 'viewtopia-welcome';
 const DEMO_DATASET_URL = '/demo/sf-landmarks.geojson';
@@ -15,7 +15,7 @@ const returningVisitor =
 /** First-visit offer: load the demo dataset and hand over to the tour. */
 export function WelcomeCard() {
   const [visible, setVisible] = useState(!returningVisitor);
-  const setActivePanel = useAppStore((s) => s.setActivePanel);
+  const startTour = useTourStore((s) => s.start);
 
   if (!visible) return null;
 
@@ -36,7 +36,7 @@ export function WelcomeCard() {
         color: '#a78bfa',
         geojson,
       });
-      setActivePanel('tour');
+      startTour();
     } catch (err) {
       notifications.show({
         title: 'Demo failed to load',
