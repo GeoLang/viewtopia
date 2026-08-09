@@ -1,3 +1,4 @@
+import { GridsUnavailableError, registerMissingGrids } from './grids';
 import init, { transform_coordinates } from './wasm/projicio_wasm';
 import type { Corners } from './worldFile';
 
@@ -13,6 +14,24 @@ let ready: Promise<unknown> | null = null;
 async function projicioReady(): Promise<void> {
   ready ??= init({ module_or_path: new URL('./wasm/projicio_wasm_bg.wasm', import.meta.url) });
   await ready;
+}
+
+async function toLonLat(projectionWkt: string, flat: Float64Array): Promise<Float64Array> {
+  try {
+    return transform_coordinates(projectionWkt, 'EPSG:4326', flat);
+  } catch (err) {
+    try {
+      await registerMissingGrids(projectionWkt, err);
+      return transform_coordinates(projectionWkt, 'EPSG:4326', flat);
+    } catch (afterGrids) {
+      if (afterGrids instanceof GridsUnavailableError) {
+        throw afterGrids;
+      }
+      throw new Error(
+        `could not read the .prj coordinate system: ${afterGrids instanceof Error ? afterGrids.message : String(afterGrids)}`,
+      );
+    }
+  }
 }
 
 /** Corners through the .prj's coordinate system into lon/lat. */
@@ -31,14 +50,7 @@ export async function cornersToLonLat(
     return corners;
   }
   await projicioReady();
-  let flat: Float64Array;
-  try {
-    flat = transform_coordinates(projectionWkt, 'EPSG:4326', new Float64Array(corners.flat()));
-  } catch (err) {
-    throw new Error(
-      `could not read the .prj coordinate system: ${err instanceof Error ? err.message : String(err)}`,
-    );
-  }
+  const flat = await toLonLat(projectionWkt, new Float64Array(corners.flat()));
   return [
     [flat[0], flat[1]],
     [flat[2], flat[3]],
