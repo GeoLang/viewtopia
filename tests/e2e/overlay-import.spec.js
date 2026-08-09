@@ -19,6 +19,22 @@ const HANDLE = '[data-testid="overlay-corner-handle"]';
 const PANEL =
   'main > [class*="mantine-Paper-root"], .panel-dock [class*="mantine-Paper-root"], [class*="mantine-Modal-content"]';
 
+const RASTER_TILE_HOSTS =
+  /https:\/\/(basemaps\.cartocdn\.com|tile\.openstreetmap\.org|tile\.opentopomap\.org|server\.arcgisonline\.com)\//;
+
+// the Cesium basemaps are raster tiles from CDNs this suite has no reason to
+// reach, and the console guard counts a failed tile as an error. These tests
+// read the overlay, never the map under it.
+test.beforeEach(async ({ page }) => {
+  await page.route(RASTER_TILE_HOSTS, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      body: Buffer.from(ONE_PIXEL_PNG, 'base64'),
+    }),
+  );
+});
+
 async function dropPng(page, name) {
   const dataTransfer = await page.evaluateHandle(
     ([base64, fileName]) => {
@@ -101,6 +117,67 @@ test('dragging a corner handle moves that corner alone', async ({ page }) => {
   expect(after.coordinates[0]).not.toEqual(before.coordinates[0]);
   // an image source takes any quad, so the other three stay where they were
   expect(after.coordinates.slice(1)).toEqual(before.coordinates.slice(1));
+});
+
+async function switchRenderer(page, label) {
+  await page.getByRole('button', { name: 'Basemap & renderer' }).click();
+  await page.locator('input[value="CesiumJS"], input[value="MapLibre"]').first().click();
+  await page.getByRole('option', { name: label, exact: true }).click();
+}
+
+/**
+ * How Cesium is drawing the overlay: as terrain-draped imagery, or as a quad.
+ * The overlay's imagery comes from its data URL, which is what tells it apart
+ * from the basemap's tiles.
+ */
+function cesiumOverlay(page) {
+  return page.evaluate(() => {
+    const viewer = window.__viewtopiaViewer;
+    if (!viewer || viewer.isDestroyed?.()) return null;
+    const entities = viewer.entities.values.filter((e) =>
+      String(e.id).startsWith('agent-raster-'),
+    );
+    let drapedImages = 0;
+    for (let i = 0; i < viewer.imageryLayers.length; i++) {
+      const url = viewer.imageryLayers.get(i).imageryProvider?.url;
+      if (String(url ?? '').startsWith('data:image')) drapedImages += 1;
+    }
+    return {
+      quadEntities: entities.length,
+      drapedImages,
+      height: entities[0]
+        ? entities[0].polygon.height.getValue(viewer.clock.currentTime)
+        : null,
+    };
+  });
+}
+
+test('cesium drapes a rectangle as imagery and warps a dragged quad', async ({ page }) => {
+  await waitForMap(page);
+  await dropPng(page, 'plan.png');
+  await expect(page.locator(HANDLE)).toHaveCount(4);
+
+  // a rectangle stays on the imagery path, which follows the terrain
+  await switchRenderer(page, 'CesiumJS');
+  await expect.poll(() => cesiumOverlay(page).then((o) => o?.drapedImages ?? -1)).toBe(1);
+  expect((await cesiumOverlay(page)).quadEntities).toBe(0);
+
+  await switchRenderer(page, 'MapLibre');
+  await expect(page.locator(HANDLE)).toHaveCount(4);
+  const handle = page.locator(HANDLE).first();
+  const box = await handle.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 - 90, box.y + box.height / 2 - 70, { steps: 8 });
+  await page.mouse.up();
+
+  await switchRenderer(page, 'CesiumJS');
+  await expect.poll(() => cesiumOverlay(page).then((o) => o?.quadEntities ?? -1)).toBe(1);
+  const warped = await cesiumOverlay(page);
+  // the quad left the imagery path entirely, and its polygon carries a height,
+  // without which Cesium would drape it and ignore the texture coordinates
+  expect(warped.drapedImages).toBe(0);
+  expect(warped.height).toBe(0);
 });
 
 test('an overlay comes back from IndexedDB when its project is reopened', async ({ page }) => {

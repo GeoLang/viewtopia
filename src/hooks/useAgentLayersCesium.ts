@@ -15,7 +15,8 @@ import {
 } from 'cesium';
 import { useAgentLayerStore, layerStyle } from '../store/agentLayers';
 import { useAppStore } from '../store/app';
-import { bboxOfCorners } from '../overlay/georeference';
+import { bboxOfCorners, cornersAxisAligned } from '../overlay/georeference';
+import { OVERLAY_ENTITY_PREFIX, quadOverlayEntity } from '../overlay/cesiumQuad';
 
 const PREFIX = 'agent-layer-';
 const MARKER_PREFIX = 'agent-marker-';
@@ -63,11 +64,15 @@ export function useAgentLayersCesium(viewerRef: MutableRefObject<Viewer | null>)
     let cancelled = false;
     const added: ImageryLayer[] = [];
 
+    // a rectangle goes on as imagery, which follows the terrain. a quad cannot
+    // be imagery at all, so it goes on as a textured polygon at ground level
+    const drawn = rasterLayers.filter((layer) => layer.visible);
+    for (const layer of drawn.filter((layer) => !cornersAxisAligned(layer.corners))) {
+      viewer.entities.add(quadOverlayEntity(layer));
+    }
+
     const apply = async () => {
-      // like Leaflet, Cesium drapes onto a rectangle, so a dragged quad shows
-      // as its envelope here
-      for (const layer of rasterLayers) {
-        if (!layer.visible) continue;
+      for (const layer of drawn.filter((layer) => cornersAxisAligned(layer.corners))) {
         const provider = await SingleTileImageryProvider.fromUrl(layer.url, {
           rectangle: Rectangle.fromDegrees(...bboxOfCorners(layer.corners)),
         });
@@ -84,6 +89,11 @@ export function useAgentLayersCesium(viewerRef: MutableRefObject<Viewer | null>)
       if (viewer.isDestroyed()) return;
       for (const imagery of added) {
         if (viewer.imageryLayers.contains(imagery)) viewer.imageryLayers.remove(imagery, true);
+      }
+      for (const entity of viewer.entities.values.filter((e) =>
+        e.id.startsWith(OVERLAY_ENTITY_PREFIX),
+      )) {
+        viewer.entities.remove(entity);
       }
     };
   }, [rasterLayers, viewerRef, renderer, activeTab]);
