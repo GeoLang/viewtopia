@@ -292,6 +292,8 @@ services:
         required: false
     environment:
       SIBYL_URL: http://sibyl:8090
+      # geolang refuses to start without named origins once the auth gate is on
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5174}
       TOOL_EXEC_DIR: "/app/geolang"
       PTOLEMY_URL: http://ptolemy:3000
       TILETOPIA_URL: http://tiletopia:3000
