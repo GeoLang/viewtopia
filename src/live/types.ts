@@ -203,8 +203,8 @@ export interface AppliedOperation extends LiveOperation {
 }
 
 /**
- * A batch as the server relays it. The ops decompose into exactly the `op`
- * frames a reconnect would replay, so a batch only groups them.
+ * A batch as the server relays it, live or replayed from a reconnect's `since`.
+ * Each op carries its own seq, so a batch only groups them.
  */
 export interface ServerBatchMessage {
   type: 'batch';
