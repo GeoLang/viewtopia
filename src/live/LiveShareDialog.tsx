@@ -12,7 +12,6 @@ import {
   TextInput,
 } from '@mantine/core';
 import { IconTrash } from '@tabler/icons-react';
-import { useAuthStore } from '../features/auth/store';
 import { cameraHashFragment } from '../hooks/useShareLinkHash';
 import { useAppStore } from '../store/app';
 import {
@@ -56,13 +55,13 @@ export function LiveShareDialog({
   const [adding, setAdding] = useState(false);
 
   // a share link guest holds a session token these routes reject, so they get
-  // no members section at all. the role only describes the document the store is
-  // connected to, so it answers for nothing else.
-  const platformSignedIn = useAuthStore((state) => state.token) !== null;
+  // no members section at all, signed in to the platform or not. the role only
+  // describes the document the store is connected to, so it answers for nothing
+  // else.
+  const guest = useLiveStore((state) => state.guest);
   const liveDocumentId = useLiveStore((state) => state.documentId);
   const liveRole = useLiveStore((state) => state.role);
-  const canManageMembers =
-    platformSignedIn && liveDocumentId === documentId && liveRole === 'edit';
+  const canManageMembers = !guest && liveDocumentId === documentId && liveRole === 'edit';
 
   const renderer = useAppStore((state) => state.renderer);
 

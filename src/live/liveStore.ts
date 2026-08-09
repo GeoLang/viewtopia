@@ -25,12 +25,18 @@ export interface ConnectOptions {
   documentId: string;
   token?: string;
   role?: LiveRole;
+  guest?: boolean;
 }
 
 interface LiveState {
   connection: LiveConnectionState;
   documentId: string | null;
   role: LiveRole;
+  /**
+   * true when this session joined through a share link, so it holds a session
+   * token rather than a platform one and the member routes would refuse it
+   */
+  guest: boolean;
   /** our own id in this session, learnt from the snapshot frame */
   actor: string | null;
   seq: number;
@@ -93,6 +99,7 @@ export const useLiveStore = create<LiveState>((set, get) => ({
   connection: 'idle',
   documentId: null,
   role: 'edit',
+  guest: false,
   actor: null,
   seq: 0,
   document: emptyLiveDocument(),
@@ -104,12 +111,13 @@ export const useLiveStore = create<LiveState>((set, get) => ({
   commentsOpen: false,
   focusedCommentId: null,
 
-  connect: ({ documentId, token, role = 'edit' }) => {
+  connect: ({ documentId, token, role = 'edit', guest = false }) => {
     if (get().documentId !== null) get().disconnect();
     clientSeqCounter = 0;
     set({
       documentId,
       role,
+      guest,
       actor: null,
       connection: 'connecting',
       seq: 0,
@@ -149,6 +157,7 @@ export const useLiveStore = create<LiveState>((set, get) => ({
     set({
       connection: 'idle',
       documentId: null,
+      guest: false,
       actor: null,
       seq: 0,
       document: emptyLiveDocument(),

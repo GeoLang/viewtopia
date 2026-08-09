@@ -22,7 +22,6 @@ import {
   IconTrash,
 } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../components/PanelCard';
-import { useAuthStore } from '../features/auth/store';
 import { downloadFile } from '../features/spacetime/analysis/export';
 import { commentLinkUrl, fetchLiveDocument } from './api';
 import { commentExportFilename, commentsAsCsv, commentsAsGeoJson } from './commentExport';
@@ -50,11 +49,11 @@ function useMentionCandidates(canWrite: boolean): LiveCommentMention[] {
   const documentId = useLiveStore((s) => s.documentId);
   const ownActor = useLiveStore((s) => s.actor);
   const peers = useLiveStore((s) => s.peers);
-  const signedIn = useAuthStore((s) => s.token) !== null;
+  const guest = useLiveStore((s) => s.guest);
   const [memberIds, setMemberIds] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!canWrite || !signedIn || !documentId) return;
+    if (!canWrite || guest || !documentId) return;
     let stale = false;
     fetchLiveDocument(documentId)
       .then((detail) => {
@@ -66,7 +65,7 @@ function useMentionCandidates(canWrite: boolean): LiveCommentMention[] {
     return () => {
       stale = true;
     };
-  }, [canWrite, signedIn, documentId]);
+  }, [canWrite, guest, documentId]);
 
   return memberIds
     .filter((userId) => userId !== ownActor)

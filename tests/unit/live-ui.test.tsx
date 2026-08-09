@@ -266,7 +266,17 @@ describe('live session ui', () => {
 
   it('shows no members section to a share link guest', async () => {
     useAuthStore.setState({ token: null });
-    useLiveStore.setState({ documentId: 'doc-1', role: 'view' });
+    useLiveStore.setState({ documentId: 'doc-1', role: 'view', guest: true });
+    draw(<LiveShareDialog documentId="doc-1" opened onClose={() => {}} />);
+
+    await waitFor(() => expect(screen.getByTestId('create-share-link')).toBeInTheDocument());
+    expect(screen.queryByTestId('live-members')).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('shows no members section to a signed in user who joined by edit link', async () => {
+    useAuthStore.setState({ token: 'jwt-token' });
+    useLiveStore.setState({ documentId: 'doc-1', role: 'edit', guest: true });
     draw(<LiveShareDialog documentId="doc-1" opened onClose={() => {}} />);
 
     await waitFor(() => expect(screen.getByTestId('create-share-link')).toBeInTheDocument());
@@ -283,6 +293,7 @@ describe('live session ui', () => {
     expect(server.connection.documentParameter).toBe('doc-7');
     expect(server.connection.offeredToken).toBe('session-jwt');
     expect(useLiveStore.getState().role).toBe('view');
+    expect(useLiveStore.getState().guest).toBe(true);
   });
 
   it('broadcasts presence only on the maplibre renderer', () => {

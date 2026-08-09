@@ -12,7 +12,7 @@ import { useLiveStore } from './liveStore';
 
 export async function joinLiveFromToken(token: string): Promise<void> {
   const { doc, role, sessionToken } = await resolveShareLink(token);
-  useLiveStore.getState().connect({ documentId: doc, token: sessionToken, role });
+  useLiveStore.getState().connect({ documentId: doc, token: sessionToken, role, guest: true });
 }
 
 function reportJoinFailure(failure: unknown): void {
