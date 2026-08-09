@@ -62,6 +62,33 @@ async function agoraRequest<Result>(path: string, init?: RequestInit): Promise<R
   return (await response.json()) as Result;
 }
 
+/** What agora stored a blob as. `url` is relative to the agora base. */
+export interface LiveAttachment {
+  token: string;
+  url: string;
+}
+
+/**
+ * Store one bitmap against the document. Only a platform member with the edit
+ * role may: a share link session token is refused with a 401.
+ */
+export function uploadAttachment(
+  documentId: string,
+  contentType: string,
+  bytes: Uint8Array<ArrayBuffer>,
+): Promise<LiveAttachment> {
+  return agoraRequest(`/documents/${encodeURIComponent(documentId)}/attachments`, {
+    method: 'POST',
+    headers: { 'Content-Type': contentType },
+    body: new Blob([bytes], { type: contentType }),
+  });
+}
+
+/** Where a browser reads an attachment the document points at. */
+export function attachmentSourceUrl(path: string): string {
+  return `${AGORA_BASE}${path}`;
+}
+
 export function createLiveDocument(name: string): Promise<LiveDocumentSummary> {
   return agoraRequest('/documents', { method: 'POST', body: JSON.stringify({ name }) });
 }

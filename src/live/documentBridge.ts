@@ -1,4 +1,10 @@
-import { toFeatureCollection, useAgentLayerStore, type AgentLayer } from '../store/agentLayers';
+import { notifications } from '@mantine/notifications';
+import {
+  toFeatureCollection,
+  useAgentLayerStore,
+  type AgentLayer,
+  type AgentRasterLayer,
+} from '../store/agentLayers';
 import { loadStoredAnnotations, useAnnotationStore, type Annotation } from '../store/annotations';
 import {
   holdLocalBookmarks,
@@ -7,6 +13,8 @@ import {
   type Bookmark,
   type LayerItem,
 } from '../store/app';
+import { agoraErrorText, attachmentSourceUrl, uploadAttachment } from './api';
+import { decodeDataUrl, MAXIMUM_ATTACHMENT_BYTES } from './attachments';
 import { compareFractionalIndex, generateIndexBetween } from './fractionalIndex';
 import { isLiveDocumentActive, useLiveStore } from './liveStore';
 import {
@@ -16,6 +24,7 @@ import {
   type LiveBookmark,
   type LiveDocument,
   type LiveLayerEntry,
+  type LiveLayerImageSource,
   type LiveLayerSource,
   type LiveLayerStyleOverrides,
   type LiveLayerUrlSource,
@@ -25,18 +34,28 @@ import {
 interface LocalState {
   layers: LayerItem[];
   agentLayers: AgentLayer[];
+  overlays: AgentRasterLayer[];
   annotations: Annotation[];
   bookmarks: Bookmark[];
 }
 
 const MATERIALIZED_LAYER_COLOR = '#38bdf8';
 const MATERIALIZED_LAYER_TYPE: LayerItem['type'] = 'geojson';
+const OVERLAY_LAYER_TYPE: LayerItem['type'] = 'raster';
+
+/**
+ * How far an overlay's bitmap has got towards the document. `unavailable` is
+ * where a session that may not upload ends up, and it stays there, so a member
+ * who cannot publish an overlay is told once rather than on every corner drag.
+ */
+type OverlayBitmap = { url: string } | 'uploading' | 'unavailable';
 
 let applyingFromDocument = false;
 let stateForNewDocument: LocalState | null = null;
 /** the source each layer id carries in the document, as far as this bridge knows */
 const documentSources = new Map<string, LiveLayerSource>();
 const oversizedLayerIds = new Set<string>();
+const overlayBitmaps = new Map<string, OverlayBitmap>();
 
 function applyFromDocument(apply: () => void): void {
   applyingFromDocument = true;
@@ -262,6 +281,104 @@ function syncAgentLayerSourcesToDocument(layers: AgentLayer[]): void {
   sendOperations(operations);
 }
 
+function overlayStaysLocal(overlay: AgentRasterLayer, message: string): void {
+  overlayBitmaps.set(overlay.id, 'unavailable');
+  notifications.show({
+    title: `"${overlay.name}" stays on your screen`,
+    message,
+    color: 'gray',
+  });
+}
+
+/**
+ * Put an overlay's bitmap where peers can read it. A share link session may not
+ * upload, which agora decides and the guest flag says in advance, so that
+ * session keeps the overlay to itself instead of retrying a refusal.
+ */
+async function publishOverlayBitmap(overlay: AgentRasterLayer): Promise<void> {
+  const { documentId, guest } = useLiveStore.getState();
+  if (documentId === null) return;
+  if (guest) {
+    overlayStaysLocal(overlay, 'Joining by share link cannot upload images.');
+    return;
+  }
+  overlayBitmaps.set(overlay.id, 'uploading');
+  try {
+    const decoded = decodeDataUrl(overlay.url);
+    if (!decoded) throw new Error('the overlay carries no bitmap to upload');
+    if (decoded.bytes.length > MAXIMUM_ATTACHMENT_BYTES) {
+      overlayStaysLocal(overlay, 'The image is too large to share.');
+      return;
+    }
+    const stored = await uploadAttachment(documentId, decoded.contentType, decoded.bytes);
+    // the session may have moved on while the bytes were in flight
+    if (useLiveStore.getState().documentId !== documentId) return;
+    overlayBitmaps.set(overlay.id, { url: stored.url });
+    syncOverlaysToDocument(useAgentLayerStore.getState().rasterLayers);
+  } catch (failure) {
+    overlayStaysLocal(overlay, agoraErrorText(failure, 'The image could not be shared.'));
+  }
+}
+
+function overlayEntry(
+  overlay: AgentRasterLayer,
+  order: string,
+  source: LiveLayerImageSource,
+): LiveLayerEntry {
+  return {
+    layerId: overlay.id,
+    name: overlay.name,
+    type: OVERLAY_LAYER_TYPE,
+    visible: overlay.visible,
+    opacity: overlay.opacity,
+    order,
+    source,
+  };
+}
+
+/**
+ * Overlays travel as their attachment url and their four corners. The bitmap
+ * goes up once and never again: an attachment cannot change, so a different
+ * image is a different overlay.
+ */
+function syncOverlaysToDocument(overlays: AgentRasterLayer[]): void {
+  const entries = useLiveStore.getState().document.layers;
+  const present = new Set(overlays.map((overlay) => overlay.id));
+  const operations: LiveOperation[] = [];
+
+  for (const [id, entry] of Object.entries(entries)) {
+    if (entry.source?.kind !== 'image') continue;
+    if (present.has(id) || !documentSources.has(id)) continue;
+    documentSources.delete(id);
+    overlayBitmaps.delete(id);
+    operations.push({ key: documentKey('layers', id), value: null });
+  }
+
+  let previousOrder = lastOrder(entries);
+  for (const overlay of overlays) {
+    const bitmap = overlayBitmaps.get(overlay.id);
+    if (bitmap === undefined) {
+      void publishOverlayBitmap(overlay);
+      continue;
+    }
+    if (bitmap === 'uploading' || bitmap === 'unavailable') continue;
+    const source: LiveLayerImageSource = {
+      kind: 'image',
+      url: bitmap.url,
+      corners: overlay.corners,
+    };
+    const current = entries[overlay.id];
+    const order = current?.order ?? generateIndexBetween(previousOrder, null);
+    const entry = overlayEntry(overlay, order, source);
+    if (current && sameLayerEntry(current, entry)) continue;
+    if (!current) previousOrder = order;
+    documentSources.set(overlay.id, source);
+    operations.push({ key: documentKey('layers', overlay.id), value: entry });
+  }
+
+  sendOperations(operations);
+}
+
 function syncAnnotationsToDocument(annotations: Annotation[]): void {
   const entries = useLiveStore.getState().document.annotations;
   const listed = new Set(annotations.map((annotation) => annotation.id));
@@ -342,6 +459,39 @@ function materializeLayer(entry: LiveLayerEntry, geojson: GeoJSON.FeatureCollect
   );
 }
 
+/** Whether the overlay on screen already says what the entry says. */
+function overlayMatchesEntry(entry: LiveLayerEntry, source: LiveLayerImageSource): boolean {
+  const overlay = useAgentLayerStore
+    .getState()
+    .rasterLayers.find((candidate) => candidate.id === entry.layerId);
+  return (
+    overlay !== undefined &&
+    overlay.name === entry.name &&
+    overlay.visible === entry.visible &&
+    overlay.opacity === entry.opacity &&
+    overlay.url === attachmentSourceUrl(source.url) &&
+    sameJson(overlay.corners, source.corners)
+  );
+}
+
+/**
+ * A peer's overlay, drawn from the attachment rather than a bitmap of our own.
+ * Adding under the document's id replaces the overlay, so a corner drag moves
+ * the one that is there.
+ */
+function materializeOverlay(entry: LiveLayerEntry, source: LiveLayerImageSource): void {
+  applyFromDocument(() =>
+    useAgentLayerStore.getState().addRasterLayer({
+      id: entry.layerId,
+      name: entry.name,
+      url: attachmentSourceUrl(source.url),
+      corners: source.corners,
+      opacity: entry.opacity,
+      visible: entry.visible,
+    }),
+  );
+}
+
 async function fetchFeatureCollection(url: string): Promise<GeoJSON.FeatureCollection | null> {
   try {
     const response = await fetch(url);
@@ -373,16 +523,28 @@ async function materializeUrlLayer(
  * a second one.
  */
 function applySourcesFromDocument(document: LiveDocument): void {
-  for (const id of [...documentSources.keys()]) {
+  for (const [id, known] of [...documentSources.entries()]) {
     const entry = document.layers[id];
     if (entry?.source) continue;
     documentSources.delete(id);
-    if (!entry) applyFromDocument(() => useAgentLayerStore.getState().removeLayer(id));
+    if (entry) continue;
+    const store = useAgentLayerStore.getState();
+    overlayBitmaps.delete(id);
+    applyFromDocument(() =>
+      known.kind === 'image' ? store.removeRasterLayer(id) : store.removeLayer(id),
+    );
   }
 
   for (const entry of Object.values(document.layers)) {
     const source = entry.source;
     if (!source) continue;
+    if (source.kind === 'image') {
+      documentSources.set(entry.layerId, source);
+      // our own overlay is already on screen, from the bitmap we still hold
+      if (overlayBitmaps.has(entry.layerId)) continue;
+      if (!overlayMatchesEntry(entry, source)) materializeOverlay(entry, source);
+      continue;
+    }
     if (sameJson(documentSources.get(entry.layerId), source)) continue;
     documentSources.set(entry.layerId, source);
     if (source.kind === 'url') {
@@ -430,6 +592,7 @@ function publishLocalState(local: LocalState): void {
   if (!isEmptyDocument(useLiveStore.getState().document)) return;
   syncLayersToDocument(local.layers);
   syncAgentLayerSourcesToDocument(local.agentLayers);
+  syncOverlaysToDocument(local.overlays);
   syncStyleOverridesToDocument();
   syncAnnotationsToDocument(local.annotations);
   syncBookmarksToDocument(local.bookmarks);
@@ -444,10 +607,12 @@ function publishLocalState(local: LocalState): void {
  */
 export function captureStateForNewDocument(): void {
   const { layers, bookmarks } = useAppStore.getState();
+  const agent = useAgentLayerStore.getState();
   stateForNewDocument = {
     layers,
     bookmarks,
-    agentLayers: useAgentLayerStore.getState().layers,
+    agentLayers: agent.layers,
+    overlays: agent.rasterLayers,
     annotations: useAnnotationStore.getState().annotations,
   };
 }
@@ -471,6 +636,9 @@ export function startDocumentBridge(): () => void {
   });
 
   const unsubscribeAgentLayers = useAgentLayerStore.subscribe((state, previous) => {
+    if (state.rasterLayers !== previous.rasterLayers) {
+      outbound(() => syncOverlaysToDocument(state.rasterLayers));
+    }
     if (state.layers === previous.layers) return;
     outbound(() => {
       syncAgentLayerSourcesToDocument(state.layers);
@@ -484,6 +652,7 @@ export function startDocumentBridge(): () => void {
         stateForNewDocument = null;
         documentSources.clear();
         oversizedLayerIds.clear();
+        overlayBitmaps.clear();
         applyFromDocument(() => {
           useAnnotationStore.getState().setAnnotations(loadStoredAnnotations());
           restoreLocalBookmarks();

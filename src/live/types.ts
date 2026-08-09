@@ -1,3 +1,4 @@
+import type { Corners } from '../overlay/georeference';
 import type { Symbology } from '../features/symbology/symbology';
 import type { AgentLayerStyle } from '../store/agentLayers';
 import type { LayerItem } from '../store/app';
@@ -28,7 +29,22 @@ export interface LiveLayerUrlSource {
   format: 'geojson';
 }
 
-export type LiveLayerSource = LiveLayerInlineSource | LiveLayerUrlSource;
+/**
+ * An image draped over four corners. The bitmap is an agora attachment, which
+ * never changes, so the url stands for one bitmap for good and a replacement
+ * image is a new attachment.
+ */
+export interface LiveLayerImageSource {
+  kind: 'image';
+  /** the attachment path, under the agora base every client already talks to */
+  url: string;
+  corners: Corners;
+}
+
+export type LiveLayerSource =
+  | LiveLayerInlineSource
+  | LiveLayerUrlSource
+  | LiveLayerImageSource;
 
 /**
  * Headroom under agora's 64KiB per-operation cap, measured over the whole

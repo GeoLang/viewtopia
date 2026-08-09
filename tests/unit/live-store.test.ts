@@ -235,6 +235,27 @@ describe('live store', () => {
     expect(state.seq).toBe(2);
   });
 
+  it('replays a batch as the one frame it was applied in', () => {
+    connectAndAccept();
+    server.applyFromPeer('ada', 'layers/layer-a', layerEntry());
+    server.connection.dropConnection();
+    vi.advanceTimersByTime(500);
+    server.applyBatchFromPeer('ada', [
+      { key: 'layers/layer-b', value: layerEntry({ layerId: 'layer-b', order: 'W' }) },
+      { key: 'layers/layer-c', value: layerEntry({ layerId: 'layer-c', order: 'X' }) },
+    ]);
+    server.accept({ replay: true });
+
+    expect(server.log.map((frame) => frame.type)).toEqual(['op', 'batch']);
+    const state = useLiveStore.getState();
+    expect(Object.keys(state.document.layers).sort()).toEqual([
+      'layer-a',
+      'layer-b',
+      'layer-c',
+    ]);
+    expect(state.seq).toBe(3);
+  });
+
   it('falls back to the snapshot when the server cannot replay', () => {
     connectAndAccept();
     server.connection.dropConnection();

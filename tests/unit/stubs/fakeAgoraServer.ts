@@ -11,7 +11,6 @@ import {
   type LivePeer,
   type LiveRole,
   type ServerMessage,
-  type ServerOperationMessage,
 } from '../../../src/live/types';
 
 let installedServer: FakeAgoraServer | null = null;
@@ -115,16 +114,35 @@ export class FakeSocket {
   }
 }
 
+/** The highest seq a relayed frame carries, which is where it leaves a client. */
+function lastSeqOf(frame: ServerMessage): number {
+  if (frame.type === 'op') return frame.seq;
+  if (frame.type === 'batch') return Math.max(...frame.ops.map((operation) => operation.seq));
+  return 0;
+}
+
 /**
  * The pinned agora protocol, server side: monotonic seq per document,
  * last writer wins per key, ack to the sender and the op to everyone else.
  */
+/** One upload agora stored, as the client sent it. */
+export interface FakeAttachmentUpload {
+  documentId: string;
+  contentType: string;
+  bytes: Uint8Array;
+}
+
 export class FakeAgoraServer {
   readonly connections: FakeSocket[] = [];
-  readonly log: ServerOperationMessage[] = [];
+  /** the relayed frames, in order, which is what a replay hands back */
+  readonly log: ServerMessage[] = [];
+  readonly attachmentUploads: FakeAttachmentUpload[] = [];
   document: LiveDocument = emptyLiveDocument('shared map');
   seq = 0;
   autoAck = true;
+  /** what the attachment route answers, so a test can be a guest agora refuses */
+  attachmentStatus = 201;
+  private attachmentCount = 0;
   private previousWebSocket: typeof WebSocket | undefined;
 
   install(): void {
@@ -149,8 +167,10 @@ export class FakeAgoraServer {
     const connection = this.connection;
     connection.acceptHandshake();
     if (options.replay) {
-      for (const entry of this.log.filter((entry) => entry.seq > connection.sinceParameter)) {
-        connection.deliver(entry);
+      for (const frame of this.log.filter(
+        (frame) => lastSeqOf(frame) > connection.sinceParameter,
+      )) {
+        connection.deliver(frame);
       }
       return connection;
     }
@@ -165,6 +185,37 @@ export class FakeAgoraServer {
     });
     return connection;
   }
+
+  /**
+   * The attachment routes, for a test that stubs fetch with them:
+   * `vi.stubGlobal('fetch', server.handleRequest)`. Anything else 404s, so a
+   * call this stub does not model shows up as one.
+   */
+  handleRequest = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const url = typeof input === 'string' ? input : String(input);
+    const upload = /^\/agora\/documents\/([^/]+)\/attachments$/.exec(url);
+    if (!upload || init?.method !== 'POST') {
+      return new Response(JSON.stringify({ error: 'no such route' }), { status: 404 });
+    }
+    if (this.attachmentStatus !== 201) {
+      return new Response(JSON.stringify({ error: 'attachment refused' }), {
+        status: this.attachmentStatus,
+      });
+    }
+    const contentType = new Headers(init.headers).get('Content-Type') ?? '';
+    const body = init.body as Blob;
+    this.attachmentUploads.push({
+      documentId: decodeURIComponent(upload[1]),
+      contentType,
+      bytes: new Uint8Array(await body.arrayBuffer()),
+    });
+    this.attachmentCount += 1;
+    const token = `attachment-${this.attachmentCount}`;
+    return new Response(JSON.stringify({ token, url: `/attachments/${token}` }), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  };
 
   sendPeers(peers: LivePeer[]): void {
     for (const connection of this.openConnections) connection.deliver({ type: 'peers', peers });
@@ -205,7 +256,8 @@ export class FakeAgoraServer {
 
   /**
    * Order the operations, one seq each, and relay them as a single frame. The
-   * log keeps them apart, because a reconnect replays a batch op by op.
+   * log keeps the frame whole, because a reconnect replays a batch as the one
+   * frame it was applied in.
    */
   private commit(
     actor: string,
@@ -217,7 +269,6 @@ export class FakeAgoraServer {
       this.seq += 1;
       this.document = applyDocumentKey(this.document, operation.key, operation.value);
       applied.push({ seq: this.seq, key: operation.key, value: operation.value });
-      this.log.push({ type: 'op', seq: this.seq, actor, ...operation });
     }
 
     const [single] = applied;
@@ -225,6 +276,7 @@ export class FakeAgoraServer {
       applied.length === 1
         ? { type: 'op', seq: single.seq, actor, key: single.key, value: single.value }
         : { type: 'batch', actor, ops: applied };
+    this.log.push(frame);
     for (const connection of this.openConnections) {
       if (connection !== origin) connection.deliver(frame);
     }
