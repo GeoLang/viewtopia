@@ -50,6 +50,12 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-08-08: **live errors read like the app wrote them**. The Live dialog,
+  share dialog and link-join banner rendered `AgoraRequestError.message` raw
+  ("agora GET /documents failed with 500"). One helper (`agoraErrorText` in
+  live/api.ts) now shows a plain sentence, plus agora's own refusal reason
+  when the response carried one.
+
 - 2026-08-08: **unit suite teardown flake**. A component tree left mounted
   when a test file ends keeps a React scheduler task queued, and the task
   reads `window` after vitest tears down jsdom (`ReferenceError: window is

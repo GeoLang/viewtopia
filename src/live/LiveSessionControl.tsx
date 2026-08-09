@@ -13,7 +13,7 @@ import {
 } from '@mantine/core';
 import { IconBroadcast, IconLogout, IconShare } from '@tabler/icons-react';
 import { useAuthStore } from '../features/auth/store';
-import { createLiveDocument, listLiveDocuments } from './api';
+import { agoraErrorText, createLiveDocument, listLiveDocuments } from './api';
 import { captureStateForNewDocument } from './documentBridge';
 import { LiveComments } from './LiveComments';
 import { LivePeers } from './LivePeers';
@@ -44,7 +44,7 @@ export function LiveSessionControl() {
     listLiveDocuments()
       .then(setDocuments)
       .catch((failure: unknown) => {
-        setError(failure instanceof Error ? failure.message : 'could not list live maps');
+        setError(agoraErrorText(failure, 'Could not load your live maps.'));
       })
       .finally(() => setBusy(false));
   };
@@ -60,7 +60,7 @@ export function LiveSessionControl() {
       setPickerOpen(false);
       setName('');
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'could not start the session');
+      setError(agoraErrorText(failure, 'Could not start the session.'));
     } finally {
       setBusy(false);
     }

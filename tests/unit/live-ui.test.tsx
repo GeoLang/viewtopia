@@ -188,11 +188,13 @@ describe('live session ui', () => {
     );
   });
 
-  it('reports a share link the service refused', async () => {
+  it('reports a share link the service refused, without the raw failure', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ reason: 'no' }, 403));
     draw(<LiveShareDialog documentId="doc-1" opened onClose={() => {}} />);
     fireEvent.click(screen.getByTestId('create-share-link'));
-    expect(await screen.findByTestId('share-error')).toHaveTextContent('403');
+    const shown = await screen.findByTestId('share-error');
+    expect(shown).toHaveTextContent('Could not create the link.');
+    expect(shown).not.toHaveTextContent('403');
   });
 
   it('lists the members the document reports, with their roles', async () => {

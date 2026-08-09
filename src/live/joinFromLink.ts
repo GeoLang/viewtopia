@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { notifications } from '@mantine/notifications';
 import { getAuthToken } from '../features/auth/store';
 import {
+  agoraErrorText,
   COMMENT_LINK_PARAM,
   LIVE_DOCUMENT_PARAM,
   resolveShareLink,
@@ -17,7 +18,7 @@ export async function joinLiveFromToken(token: string): Promise<void> {
 function reportJoinFailure(failure: unknown): void {
   notifications.show({
     title: 'Live link failed',
-    message: failure instanceof Error ? failure.message : 'could not open that link',
+    message: agoraErrorText(failure, 'Could not open that link.'),
     color: 'red',
   });
 }

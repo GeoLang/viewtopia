@@ -16,7 +16,7 @@ import { useAuthStore } from '../features/auth/store';
 import { cameraHashFragment } from '../hooks/useShareLinkHash';
 import { useAppStore } from '../store/app';
 import {
-  AgoraRequestError,
+  agoraErrorText,
   createShareLink,
   embedSnippet,
   fetchLiveDocument,
@@ -32,12 +32,6 @@ const MEMBER_ROLE_CHOICES = [
   { value: 'view', label: 'View' },
   { value: 'edit', label: 'Edit' },
 ];
-
-function refusalText(failure: unknown, fallback: string): string {
-  if (failure instanceof AgoraRequestError && failure.reason) return failure.reason;
-  if (failure instanceof Error) return failure.message;
-  return fallback;
-}
 
 export function LiveShareDialog({
   documentId,
@@ -81,7 +75,7 @@ export function LiveShareDialog({
       // link carries the sharer's current view as the landing point
       setLink(`${shareLinkUrl(token)}#${cameraHashFragment(renderer)}`);
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'could not create the link');
+      setError(agoraErrorText(failure, 'Could not create the link.'));
     } finally {
       setCreating(false);
     }
@@ -94,7 +88,7 @@ export function LiveShareDialog({
       setMemberError('');
     } catch (failure) {
       setMembers([]);
-      setMemberError(refusalText(failure, 'could not load the members'));
+      setMemberError(agoraErrorText(failure, 'Could not load the members.'));
     }
   }, [documentId]);
 
@@ -110,7 +104,7 @@ export function LiveShareDialog({
       await setLiveMember(documentId, userId, next);
       await refreshMembers();
     } catch (failure) {
-      setMemberError(refusalText(failure, 'could not change that role'));
+      setMemberError(agoraErrorText(failure, 'Could not change that role.'));
     } finally {
       setBusyMember('');
     }
@@ -123,7 +117,7 @@ export function LiveShareDialog({
       await removeLiveMember(documentId, userId);
       await refreshMembers();
     } catch (failure) {
-      setMemberError(refusalText(failure, 'could not remove that member'));
+      setMemberError(agoraErrorText(failure, 'Could not remove that member.'));
     } finally {
       setBusyMember('');
     }
@@ -139,7 +133,7 @@ export function LiveShareDialog({
       setNewMemberId('');
       await refreshMembers();
     } catch (failure) {
-      setAddError(refusalText(failure, 'could not add that member'));
+      setAddError(agoraErrorText(failure, 'Could not add that member.'));
     } finally {
       setAdding(false);
     }

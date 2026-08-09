@@ -27,6 +27,14 @@ export class AgoraRequestError extends Error {
   }
 }
 
+/** What the UI shows for a failed call: the fallback, plus agora's own reason when it gave one. */
+export function agoraErrorText(failure: unknown, fallback: string): string {
+  if (failure instanceof AgoraRequestError && failure.reason) {
+    return `${fallback}: ${failure.reason}`;
+  }
+  return fallback;
+}
+
 async function refusalReason(response: Response): Promise<string> {
   const body: unknown = await response.json().catch(() => null);
   if (typeof body !== 'object' || body === null) return '';
