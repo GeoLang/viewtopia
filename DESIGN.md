@@ -75,7 +75,10 @@ agora is the live multiplayer service behind `/agora/`: a Rust axum websocket
 service owning composition documents in its own Postgres database on the shared
 instance. A document is the map composition, not the feature data: the layer
 list (order as base62 fractional indexes, visibility, opacity, style overrides,
-layers referenced by id, never embedded), annotations, camera bookmarks,
+layers referenced by id, with a `source` for data that must travel: inline
+GeoJSON under the op cap, a URL peers fetch, or for an image overlay its four
+corners plus an agora attachment url holding the bitmap), annotations, camera
+bookmarks,
 metadata and members. Concurrency is server-ordered ops with last-writer-wins
 per key, no CRDT: the server assigns a monotonic sequence per document,
 persists every op, folds them into a checkpoint every 256 ops and keeps a

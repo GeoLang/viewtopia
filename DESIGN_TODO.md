@@ -36,10 +36,20 @@ current state in DESIGN.md). Open work from it:
       live import falls out because `applyProject` already syncs outbound.
       Project files (`.viewtopia.json`) already travel, except OGC layers,
       which have no document representation.
-- [ ] **overlay follow-ups** — image overlay corner dragging is MapLibre only,
-      Cesium and Leaflet drape onto a rectangle and show the envelope. Image
-      overlays do not sync into live documents, which still inline small
-      GeoJSON only.
+- [ ] **overlay follow-ups** — Leaflet shows a dragged overlay's envelope, it
+      has no native quad warp and a plugin dependency is not worth it (MapLibre
+      and Cesium both render the true quad). Tiling progress shows only for an
+      asset uploaded in this session: job_id comes back on the upload response
+      and the asset list does not carry it. Toggling an overlay's visibility in
+      the layer manager writes the document entry but not the overlay store,
+      the same split agent layers have always had, so only one of the two
+      switches redraws locally.
+- [ ] **agora attachment cleanup** — an overlay removed from a document leaves
+      its attachment row behind. Attachments die with the document, but there
+      is no per-attachment removal or unreferenced sweep, so long-lived
+      documents accumulate orphan blobs 16 MiB at a time. Needs a server-side
+      design (access-driven expiry like geolang's sidecar sweep, or a
+      reference walk agora currently has no business doing).
 - [ ] **hosted flagship instance + share links** — Figma's zero-install magic
       is a link that opens the document. Self-host is free with open source,
       but the "click a link, you're in the map" experience needs a hosted

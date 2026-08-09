@@ -6,6 +6,23 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-09: **image overlays sync into live documents**. The bitmap uploads
+  once as an agora attachment and the overlay travels as its url plus four
+  corners, so corner drags and opacity changes reach peers without resending
+  the image, and per-user undo takes an overlay frame back like any other. A
+  share link session keeps its overlays local with one quiet notice, since
+  only platform members may upload.
+
+- 2026-08-09: **quad overlays warp on Cesium**. An image overlay dragged out
+  of square renders warped onto its four corners instead of showing the
+  rectangle around it. An axis-aligned overlay still drapes as imagery so it
+  follows the terrain.
+
+- 2026-08-09: **tiling progress on the asset row**. The assets panel reads the
+  job the upload queued and shows its progress, stopping when the asset goes
+  terminal. Only an asset uploaded in this session shows progress, since the
+  asset list does not carry job ids.
+
 - 2026-08-09: **per-user undo in live sessions**. cmd/ctrl+z takes back your
   own last applied frame as inverse ops and shift adds redo, with buttons
   beside the session controls. A batch comes back as one step, a key someone
