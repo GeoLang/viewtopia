@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import type { ReactNode } from 'react';
 import { useAuthStore } from '../../src/features/auth/store';
@@ -148,6 +148,49 @@ describe('live session ui', () => {
 
     fireEvent.click(screen.getByLabelText('Leave the live map'));
     expect(useLiveStore.getState().documentId).toBeNull();
+  });
+
+  it('undoes on ctrl+z and leaves a focused text field its own undo', () => {
+    server.document.meta.name = 'Coastline';
+    useLiveStore.getState().connect({ documentId: 'doc-1', token: 'jwt-token' });
+    server.accept();
+    draw(<LiveSessionControl />);
+    act(() => useLiveStore.getState().sendOperation('meta/name', 'Renamed'));
+    expect(screen.getByTestId('live-document-name')).toHaveTextContent('Renamed');
+
+    const field = document.createElement('input');
+    document.body.append(field);
+    fireEvent.keyDown(field, { key: 'z', ctrlKey: true });
+    expect(screen.getByTestId('live-document-name')).toHaveTextContent('Renamed');
+    field.remove();
+
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true });
+    expect(screen.getByTestId('live-document-name')).toHaveTextContent('Coastline');
+
+    fireEvent.keyDown(window, { key: 'Z', ctrlKey: true, shiftKey: true });
+    expect(screen.getByTestId('live-document-name')).toHaveTextContent('Renamed');
+  });
+
+  it('enables the undo and redo buttons only when there is something to take back', () => {
+    useLiveStore.getState().connect({ documentId: 'doc-1', token: 'jwt-token' });
+    server.accept();
+    draw(<LiveSessionControl />);
+    expect(screen.getByTestId('live-undo')).toBeDisabled();
+    expect(screen.getByTestId('live-redo')).toBeDisabled();
+
+    act(() => useLiveStore.getState().sendOperation('meta/name', 'Renamed'));
+    expect(screen.getByTestId('live-undo')).toBeEnabled();
+
+    fireEvent.click(screen.getByTestId('live-undo'));
+    expect(screen.getByTestId('live-undo')).toBeDisabled();
+    expect(screen.getByTestId('live-redo')).toBeEnabled();
+  });
+
+  it('shows no undo affordance on a view role session', () => {
+    useLiveStore.getState().connect({ documentId: 'doc-1', token: 'jwt-token', role: 'view' });
+    server.accept({ role: 'view' });
+    draw(<LiveSessionControl />);
+    expect(screen.queryByTestId('live-undo')).not.toBeInTheDocument();
   });
 
   it('creates a role scoped share link carrying the current camera', async () => {

@@ -18,6 +18,7 @@ import { captureStateForNewDocument } from './documentBridge';
 import { LiveComments } from './LiveComments';
 import { LivePeers } from './LivePeers';
 import { LiveShareDialog } from './LiveShareDialog';
+import { LiveUndo } from './LiveUndo';
 import { useLiveStore } from './liveStore';
 import type { LiveDocumentSummary } from './types';
 
@@ -84,6 +85,7 @@ export function LiveSessionControl() {
         )}
         <LivePeers />
         <LiveComments />
+        <LiveUndo />
         <Tooltip label="Share this live map">
           <ActionIcon
             size="sm"

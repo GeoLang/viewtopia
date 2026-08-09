@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getAuthToken } from '../features/auth/store';
+import { nextReversal, operationsFor, stepFor, type HistoryStep } from './history';
 import { LiveSocket, type LiveConnectionState } from './socket';
 import {
   applyDocumentKey,
@@ -46,6 +47,10 @@ interface LiveState {
   /** the peer whose presence viewport the local camera tracks, null when not following */
   followedActor: string | null;
   pending: Record<number, PendingFrame>;
+  /** our own applied frames, newest last, each one undo press */
+  undoSteps: HistoryStep[];
+  /** what we have undone since the last edit of our own, newest last */
+  redoSteps: HistoryStep[];
   error: string | null;
   /** lifted here so a mention notification can open the panel from outside it */
   commentsOpen: boolean;
@@ -59,6 +64,8 @@ interface LiveState {
   clearFocusedComment: () => void;
   sendOperation: (key: string, value: unknown) => void;
   sendOperations: (operations: LiveOperation[]) => void;
+  undo: () => void;
+  redo: () => void;
   sendPresence: (presence: LivePresence) => void;
   setFollowedActor: (actor: string | null) => void;
   receive: (message: ServerMessage) => void;
@@ -86,6 +93,14 @@ function applyOperations(document: LiveDocument, operations: LiveOperation[]): L
   );
 }
 
+/**
+ * Whether the server has ordered everything we sent. Taking back an op it has
+ * not applied yet races that ordering, so undo waits for this.
+ */
+function settled(state: LiveState): boolean {
+  return Object.keys(state.pending).length === 0;
+}
+
 /** One operation goes out as an op and several as a batch. */
 function frameFor(frame: PendingFrame): ClientMessage {
   const [single] = frame.operations;
@@ -93,6 +108,23 @@ function frameFor(frame: PendingFrame): ClientMessage {
     return { type: 'op', clientSeq: frame.clientSeq, key: single.key, value: single.value };
   }
   return { type: 'batch', clientSeq: frame.clientSeq, ops: frame.operations };
+}
+
+/** Where a frame leaves the history stacks, read off the document it applied to. */
+type HistoryUpdate = (state: LiveState) => Pick<LiveState, 'undoSteps' | 'redoSteps'>;
+
+/** Apply a frame of our own, send it, and move the history stacks with it. */
+function applyLocalFrame(operations: LiveOperation[], history: HistoryUpdate): void {
+  const { documentId, role } = useLiveStore.getState();
+  if (documentId === null || role !== 'edit' || operations.length === 0) return;
+  clientSeqCounter += 1;
+  const frame: PendingFrame = { clientSeq: clientSeqCounter, operations };
+  useLiveStore.setState((state) => ({
+    document: applyOperations(state.document, operations),
+    pending: { ...state.pending, [frame.clientSeq]: frame },
+    ...history(state),
+  }));
+  socket?.send(frameFor(frame));
 }
 
 export const useLiveStore = create<LiveState>((set, get) => ({
@@ -107,6 +139,8 @@ export const useLiveStore = create<LiveState>((set, get) => ({
   presence: {},
   followedActor: null,
   pending: {},
+  undoSteps: [],
+  redoSteps: [],
   error: null,
   commentsOpen: false,
   focusedCommentId: null,
@@ -126,6 +160,8 @@ export const useLiveStore = create<LiveState>((set, get) => ({
       presence: {},
       followedActor: null,
       pending: {},
+      undoSteps: [],
+      redoSteps: [],
       error: null,
     });
     socket = new LiveSocket({
@@ -165,6 +201,8 @@ export const useLiveStore = create<LiveState>((set, get) => ({
       presence: {},
       followedActor: null,
       pending: {},
+      undoSteps: [],
+      redoSteps: [],
       commentsOpen: false,
       focusedCommentId: null,
     });
@@ -181,15 +219,39 @@ export const useLiveStore = create<LiveState>((set, get) => ({
   },
 
   sendOperations: (operations) => {
-    const { documentId, role } = get();
-    if (documentId === null || role !== 'edit' || operations.length === 0) return;
-    clientSeqCounter += 1;
-    const frame: PendingFrame = { clientSeq: clientSeqCounter, operations };
-    set((state) => ({
-      document: applyOperations(state.document, operations),
-      pending: { ...state.pending, [frame.clientSeq]: frame },
+    applyLocalFrame(operations, (state) => ({
+      undoSteps: [...state.undoSteps, stepFor(state.document, operations)],
+      redoSteps: [],
     }));
-    socket?.send(frameFor(frame));
+  },
+
+  undo: () => {
+    const state = get();
+    if (!settled(state)) return;
+    const taken = nextReversal(state.undoSteps, state.document);
+    // every step left was written over whole, so there is nothing to take back
+    if (!taken) {
+      set({ undoSteps: [] });
+      return;
+    }
+    applyLocalFrame(operationsFor(taken.reversal), () => ({
+      undoSteps: taken.remaining,
+      redoSteps: [...state.redoSteps, taken.reversal],
+    }));
+  },
+
+  redo: () => {
+    const state = get();
+    if (!settled(state)) return;
+    const taken = nextReversal(state.redoSteps, state.document);
+    if (!taken) {
+      set({ redoSteps: [] });
+      return;
+    }
+    applyLocalFrame(operationsFor(taken.reversal), () => ({
+      undoSteps: [...state.undoSteps, taken.reversal],
+      redoSteps: taken.remaining,
+    }));
   },
 
   sendPresence: (presence) => {
@@ -287,6 +349,12 @@ export function isLiveDocumentActive(): boolean {
 /** true when this session joined a live document through a view-role link */
 export const useViewOnlyLive = () =>
   useLiveStore((s) => s.documentId !== null && s.role === 'view');
+
+export const useCanUndoLive = () =>
+  useLiveStore((s) => s.role === 'edit' && s.undoSteps.length > 0 && settled(s));
+
+export const useCanRedoLive = () =>
+  useLiveStore((s) => s.role === 'edit' && s.redoSteps.length > 0 && settled(s));
 
 export function canEditLiveDocument(): boolean {
   const { documentId, role } = useLiveStore.getState();

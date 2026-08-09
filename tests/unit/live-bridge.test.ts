@@ -515,6 +515,16 @@ describe('live document bridge', () => {
     expect(storedBookmarkIds()).toEqual(['mine']);
   });
 
+  it('takes a layer back out of the local stores when its frame is undone', () => {
+    goLive();
+    useAppStore.getState().addLayer(appLayer('roads'));
+    expect(server.document.layers.roads).toBeDefined();
+
+    useLiveStore.getState().undo();
+    expect(server.document.layers.roads).toBeUndefined();
+    expect(useAppStore.getState().layers).toHaveLength(0);
+  });
+
   it('keeps a bookmark added during a session out of local storage', () => {
     useAppStore.setState({ bookmarks: [bookmark('mine')] });
     goLive();

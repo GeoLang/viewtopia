@@ -286,6 +286,24 @@ function withEntry<Entry>(
   return next;
 }
 
+/** What the document holds at one key, null when nothing is there. */
+export function readDocumentKey(document: LiveDocument, key: string): unknown {
+  const parsed = parseDocumentKey(key);
+  if (!parsed) return null;
+  switch (parsed.namespace) {
+    case 'meta':
+      return document.meta[parsed.id as keyof LiveDocumentMeta] ?? null;
+    case 'layers':
+      return document.layers[parsed.id] ?? null;
+    case 'annotations':
+      return document.annotations[parsed.id] ?? null;
+    case 'bookmarks':
+      return document.bookmarks[parsed.id] ?? null;
+    case 'comments':
+      return document.comments[parsed.id] ?? null;
+  }
+}
+
 /** Writes one key into a copy of the document, treating null as a delete. */
 export function applyDocumentKey(
   document: LiveDocument,
