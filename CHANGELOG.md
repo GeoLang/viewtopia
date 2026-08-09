@@ -6,6 +6,19 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-09: **datum shift grids in the browser**. When a `.prj` names a
+  coordinate system that needs an NTv2 grid (NAD27 and friends), the overlay
+  fetches candidates from `/grids/<name>` and retries the transform; no grids
+  ship with the app, deployments drop `.gsb` files there. A `.gsb` dropped into
+  the overlay panel alongside the `.prj` registers under its filename and
+  satisfies the transform with no fetch. Vendored projicio wasm regenerated
+  with `register_grid`, `registered_grids` and `missing_grids`.
+- 2026-08-09: **nightly panels suite runs serial in CI**, after five timing
+  failures at two workers on the shared runner. The overlay panel also no
+  longer flashes a false not-lon/lat error while a `.prj` transform is still
+  loading, and the first wasm assert in the overlay spec gets the same 30s
+  budget the raster suite uses.
+
 - 2026-08-09: **live layers carry their publisher's colour**. A layer entry's
   `styleOverrides` may hold a CSS `color`, which the GeoLang agent and peers
   write alongside the layer. A materialized layer takes that colour instead of
