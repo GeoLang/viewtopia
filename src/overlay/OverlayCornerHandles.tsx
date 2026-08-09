@@ -67,7 +67,9 @@ export function OverlayCornerHandles() {
       if (dragging) return;
       const layer = state.rasterLayers.find((l) => l.id === editingRasterId);
       if (!layer) return;
-      layer.corners.forEach(([lng, lat], index) => markers[index]?.setLngLat([lng, lat]));
+      layer.corners.forEach(([lng, lat], index) => {
+        markers[index]?.setLngLat([lng, lat]);
+      });
     });
 
     return () => {

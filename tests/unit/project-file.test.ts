@@ -10,6 +10,7 @@ import { useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers
 import { useOgcLayerStore } from '../../src/store/ogcLayers';
 import { useSplitViewStore } from '../../src/store/splitView';
 import { setSharedCamera } from '../../src/hooks/sharedCamera';
+import { cornersOfBbox } from '../../src/overlay/georeference';
 
 const venice: AgentLayer = {
   id: 'venice',
@@ -31,7 +32,13 @@ const venice: AgentLayer = {
 
 function resetStores() {
   useAppStore.setState({ renderer: 'cesium', basemap: 'liberty', customBasemap: null });
-  useAgentLayerStore.setState({ layers: [], markers: [], generation: 0 });
+  useAgentLayerStore.setState({
+    layers: [],
+    rasterLayers: [],
+    editingRasterId: null,
+    markers: [],
+    generation: 0,
+  });
   useOgcLayerStore.setState({ layers: [] });
   useSplitViewStore.setState({ active: false, paneRenderer: 'maplibre' });
 }
@@ -97,6 +104,36 @@ describe('project round trip', () => {
     const split = useSplitViewStore.getState();
     expect(split.active).toBe(true);
     expect(split.paneRenderer).toBe('cesium');
+  });
+
+  it('names an image overlay and its placement, without the bitmap', () => {
+    useAgentLayerStore.getState().addRasterLayer({
+      id: 'plan',
+      name: 'site plan.png',
+      url: 'data:image/png;base64,AAA',
+      corners: cornersOfBbox([12, 45, 13, 46]),
+      opacity: 0.5,
+      visible: false,
+    });
+
+    const saved = parseProject(JSON.stringify(serializeProject('site')));
+
+    expect(saved.imageOverlays).toEqual([
+      {
+        id: 'plan',
+        name: 'site plan.png',
+        corners: cornersOfBbox([12, 45, 13, 46]),
+        opacity: 0.5,
+        visible: false,
+      },
+    ]);
+    // megabytes of data URL have no business in a shared JSON file
+    expect(JSON.stringify(saved)).not.toContain('base64');
+  });
+
+  it('reads a project file written before image overlays existed', () => {
+    const { imageOverlays: _dropped, ...older } = serializeProject('older');
+    expect(parseProject(JSON.stringify(older)).imageOverlays).toEqual([]);
   });
 
   it('replaces the ogc layers already present', () => {

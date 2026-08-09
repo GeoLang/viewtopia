@@ -149,6 +149,51 @@ describe('useAgentLayersMapLibre', () => {
     expect(map.layer('agent-raster-hs-raster')?.paint['raster-opacity']).toBe(0.8);
   });
 
+  it('drapes a dragged overlay on its quad, without squaring it off', () => {
+    const map = fakeMap();
+    const quad = cornersOfBbox([12, 45, 13, 46]);
+    quad[1] = [13.4, 46.3];
+    act(() => {
+      useAgentLayerStore.getState().addRasterLayer({
+        id: 'plan',
+        name: 'site plan',
+        url: 'data:image/png;base64,AAA',
+        corners: quad,
+        visible: true,
+        opacity: 0.8,
+      });
+    });
+    mount(map);
+
+    const src = map.source('agent-raster-plan') as unknown as {
+      coordinates: [number, number][];
+    };
+    expect(src.coordinates[1]).toEqual([13.4, 46.3]);
+  });
+
+  it('leaves a hidden overlay off the map', () => {
+    const map = fakeMap();
+    act(() => {
+      useAgentLayerStore.getState().addRasterLayer({
+        id: 'plan',
+        name: 'site plan',
+        url: 'data:image/png;base64,AAA',
+        corners: cornersOfBbox([12, 45, 13, 46]),
+        visible: true,
+        opacity: 0.8,
+      });
+    });
+    mount(map);
+    expect(map.source('agent-raster-plan')).toBeDefined();
+
+    act(() => {
+      useAgentLayerStore.getState().toggleRasterVisibility('plan');
+    });
+
+    expect(map.source('agent-raster-plan')).toBeUndefined();
+    expect(map.layer('agent-raster-plan-raster')).toBeUndefined();
+  });
+
   it('removing a raster layer takes its source and layer off the map', () => {
     const map = fakeMap();
     act(() => {

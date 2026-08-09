@@ -103,10 +103,14 @@ export async function importFiles(
   for (const file of pmtilesFiles) await handlePmtilesFile(file, onStatus);
   let rest = files.filter((f) => !pmtilesFiles.includes(f));
 
-  // a .prj also rides with a shapefile, so it only counts as an overlay sidecar
-  // when an image or PDF came with it
+  // a .prj also rides with a shapefile, so the sidecars only count as overlay
+  // ones when an image or PDF came with them
   const overlayFiles = rest.filter((f) => overlayFileKind(f.name) !== null);
-  if (overlayFiles.some((f) => ['image', 'pdf'].includes(overlayFileKind(f.name) as string))) {
+  const hasPicture = overlayFiles.some((f) => {
+    const kind = overlayFileKind(f.name);
+    return kind === 'image' || kind === 'pdf';
+  });
+  if (hasPicture) {
     await handleOverlayFiles(overlayFiles, onStatus);
     rest = rest.filter((f) => !overlayFiles.includes(f));
   }

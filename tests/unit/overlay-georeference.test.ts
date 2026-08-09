@@ -9,7 +9,9 @@ import {
   bboxFromTwoClicks,
   bboxOfCorners,
   cameraForBbox,
+  cornersAtCenter,
   cornersAxisAligned,
+  cornersOfBbox,
 } from '../../src/overlay/georeference';
 import { cornersToLonLat } from '../../src/overlay/projicio';
 import { imageCorners, overlayFileKind, parseWorldFile } from '../../src/overlay/worldFile';
@@ -161,6 +163,48 @@ describe('bboxFromTwoClicks', () => {
 
   it('refuses a second click west of the first', () => {
     expect(bboxFromTwoClicks({ lng: -74, lat: 41 }, { lng: -75, lat: 40 }, 100, 100)).toBeNull();
+  });
+});
+
+describe('cornersAtCenter', () => {
+  it('centres a wide image and fits it to the view width', () => {
+    const corners = cornersAtCenter([-1, -1, 1, 1], 200, 100);
+    expect(corners).toEqual([
+      [-0.6, 0.3],
+      [0.6, 0.3],
+      [0.6, -0.3],
+      [-0.6, -0.3],
+    ]);
+  });
+
+  it('fits a tall image to the view height instead', () => {
+    const [topLeft, , bottomRight] = cornersAtCenter([-1, -1, 1, 1], 100, 200);
+    expect(topLeft[1] - bottomRight[1]).toBeCloseTo(1.2, 6);
+    expect(bottomRight[0] - topLeft[0]).toBeCloseTo(0.6, 6);
+  });
+
+  it('keeps ground proportions where meridians converge', () => {
+    const corners = cornersAtCenter([-1, 59, 1, 61], 200, 100);
+    const [west, south, east, north] = bboxOfCorners(corners);
+    const groundWidth = (east - west) * Math.cos((60 * Math.PI) / 180);
+    expect(groundWidth / (north - south)).toBeCloseTo(2, 6);
+  });
+
+  it('lands in the middle of the view', () => {
+    const [west, south, east, north] = bboxOfCorners(cornersAtCenter([4, 50, 6, 52], 200, 100));
+    expect((west + east) / 2).toBeCloseTo(5, 6);
+    expect((south + north) / 2).toBeCloseTo(51, 6);
+  });
+});
+
+describe('cornersOfBbox', () => {
+  it('runs clockwise from the top left, matching an image source', () => {
+    expect(cornersOfBbox([12, 45, 13, 46])).toEqual([
+      [12, 46],
+      [13, 46],
+      [13, 45],
+      [12, 45],
+    ]);
   });
 });
 

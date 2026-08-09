@@ -15,6 +15,7 @@ export default defineConfig({
     'tools-across-renderers.spec.js',
     'default-boot.spec.js',
     'embed-messaging.spec.js',
+    'overlay-import.spec.js',
   ],
   timeout: 60000,
   // one worker on CI: two concurrent Cesium tabs on swiftshader starve the
