@@ -172,26 +172,32 @@ export function ImageOverlayPanel({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setError(null);
     try {
-      let nextWorldFile = worldFileText;
+      let nextSource: OverlaySource | undefined;
+      let nextWorldFile: string | undefined;
+      let nextProjection: string | undefined;
       for (const file of files) {
         switch (overlayFileKind(file.name)) {
           case 'image':
-            setSource(await loadImageSource(file));
+            nextSource = await loadImageSource(file);
             break;
           case 'pdf':
-            setSource(await loadPdfSource(file, 1));
+            nextSource = await loadPdfSource(file, 1);
             break;
           case 'worldFile':
             nextWorldFile = await file.text();
-            setWorldFileText(nextWorldFile);
             break;
           case 'projection':
-            setProjectionText(await file.text());
+            nextProjection = await file.text();
             break;
           default:
             setError(`${file.name}: not an image, PDF, world file or .prj`);
         }
       }
+      // set together, so the placement effect never runs on a world file whose
+      // .prj is still in this batch and shows a false not-lon/lat error
+      if (nextSource) setSource(nextSource);
+      if (nextWorldFile !== undefined) setWorldFileText(nextWorldFile);
+      if (nextProjection !== undefined) setProjectionText(nextProjection);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'import failed');
     } finally {

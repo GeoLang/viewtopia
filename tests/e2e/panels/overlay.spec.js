@@ -77,8 +77,9 @@ test('a utm world file with a .prj georeferences through projicio wasm', async (
   ]);
   await expect(panel.getByTestId('overlay-source')).toContainText('.prj');
 
-  // 585000E 4510000N in UTM 18N is near -73.993, 40.737
-  await expect(panel.getByTestId('overlay-west')).toHaveValue(/-73\.99/);
+  // 585000E 4510000N in UTM 18N is near -73.993, 40.737. the first assert
+  // covers the initial projicio wasm fetch and compile, like raster's first op
+  await expect(panel.getByTestId('overlay-west')).toHaveValue(/-73\.99/, { timeout: 30000 });
   await expect(panel.getByTestId('overlay-north')).toHaveValue(/40\.73/);
 });
 
