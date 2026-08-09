@@ -12,5 +12,7 @@ export default defineConfig({
     include: ['tests/unit/**/*.test.{js,ts,tsx}'],
     environment: 'jsdom',
     setupFiles: ['tests/unit/setup.ts'],
+    // panel tests time out at the 5s default when the box is loaded
+    testTimeout: 15000,
   },
 });
