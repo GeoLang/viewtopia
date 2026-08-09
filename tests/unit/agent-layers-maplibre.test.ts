@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act, renderHook, cleanup } from '@testing-library/react';
-import { useAgentLayersMapLibre } from '../../src/hooks/useAgentLayersMapLibre';
+import { markerElement, useAgentLayersMapLibre } from '../../src/hooks/useAgentLayersMapLibre';
 import { useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers';
 import { buildGraduated } from '../../src/features/symbology/symbology';
 import { useAppStore } from '../../src/store/app';
@@ -243,5 +243,34 @@ describe('useAgentLayersMapLibre', () => {
     expect(useAgentLayerStore.getState().rasterLayers).toHaveLength(2);
     expect(map.source('agent-raster-a')).toBeDefined();
     expect(map.source('agent-raster-b')).toBeDefined();
+  });
+});
+
+describe('markerElement', () => {
+  it('renders a label carrying markup as inert text', () => {
+    const label = '<img src=x onerror="window.__owned = true">pin';
+
+    const el = markerElement({ lon: 5, lat: 45, color: '#00ff00', label });
+
+    expect(el.querySelector('img')).toBeNull();
+    expect(el.textContent).toBe(label);
+  });
+
+  it('drops a colour that carries more than a colour', () => {
+    const el = markerElement({
+      lon: 5,
+      lat: 45,
+      color: 'red;background-image:url(https://attacker.example/leak)',
+    });
+    const dot = el.lastElementChild as HTMLElement;
+
+    expect(dot.style.backgroundImage).toBe('');
+  });
+
+  it('still paints a plain colour', () => {
+    const el = markerElement({ lon: 5, lat: 45, color: '#00ff00' });
+    const dot = el.lastElementChild as HTMLElement;
+
+    expect(dot.style.background).toContain('rgb(0, 255, 0)');
   });
 });

@@ -18,7 +18,7 @@ export function featureColor(key: string, fallback: string): ExpressionSpecifica
 }
 
 /** Colored dot + optional label, matching the Cesium marker look. */
-function markerElement(m: AgentMarker): HTMLElement {
+export function markerElement(m: AgentMarker): HTMLElement {
   const el = document.createElement('div');
   el.style.cssText = 'display:flex;flex-direction:column;align-items:center;';
   if (m.label) {
@@ -29,7 +29,10 @@ function markerElement(m: AgentMarker): HTMLElement {
     el.appendChild(text);
   }
   const dot = document.createElement('div');
-  dot.style.cssText = `width:12px;height:12px;border-radius:50%;border:2px solid #fff;background:${m.color};`;
+  dot.style.cssText = 'width:12px;height:12px;border-radius:50%;border:2px solid #fff;';
+  // assigned rather than interpolated into the css above: the colour is the
+  // agent's, and a property assignment drops a value that carries more than one
+  dot.style.background = m.color;
   el.appendChild(dot);
   return el;
 }

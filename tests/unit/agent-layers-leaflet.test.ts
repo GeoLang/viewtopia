@@ -198,12 +198,33 @@ describe('useAgentLayersLeaflet', () => {
     });
     expect(marker!.getLatLng()).toMatchObject({ lat: 45, lng: 5 });
     expect(marker!.options.fillColor).toBe('#00ff00');
-    expect(marker!.getTooltip()?.getContent()).toBe('site');
+    expect((marker!.getTooltip()!.getContent() as HTMLElement).textContent).toBe('site');
 
     act(() => {
       useAgentLayerStore.getState().clearMarkers();
     });
     expect(countOn(map, L.CircleMarker)).toBe(0);
+  });
+
+  it('renders a label carrying markup as inert text', () => {
+    // the agent writes the label, so it must reach the map as characters
+    const { result } = renderHook(() => useMapWithAgentLayers());
+    const map = result.current.current!;
+    const label = '<img src=x onerror="window.__owned = true">pin';
+
+    act(() => {
+      useAgentLayerStore.getState().addMarker({ lon: 5, lat: 45, color: '#00ff00', label });
+    });
+
+    let marker: L.CircleMarker | undefined;
+    map.eachLayer((l) => {
+      if (l instanceof L.CircleMarker) marker = l;
+    });
+    const shown = marker!.getTooltip()!.getElement()!;
+
+    expect(shown.querySelector('img')).toBeNull();
+    expect(shown.textContent).toBe(label);
+    expect((window as unknown as { __owned?: boolean }).__owned).toBeUndefined();
   });
 
   it('leaves nothing behind when the hook unmounts', () => {

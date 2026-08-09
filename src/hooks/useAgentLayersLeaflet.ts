@@ -32,7 +32,13 @@ export function useAgentLayersLeaflet(mapRef: MutableRefObject<L.Map | null>) {
         fillColor: m.color,
         fillOpacity: 1,
       }).addTo(map);
-      if (m.label) dot.bindTooltip(m.label, { permanent: true, direction: 'top' });
+      // a string tooltip is parsed as html, and the label is written by the
+      // agent, so it goes in as a text node the way the other renderers do it
+      if (m.label) {
+        const text = document.createElement('span');
+        text.textContent = m.label;
+        dot.bindTooltip(text, { permanent: true, direction: 'top' });
+      }
       return dot;
     });
     return () => {
