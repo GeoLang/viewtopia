@@ -9,7 +9,7 @@ import { test, expect } from './console-guard';
  */
 
 const EMBED_URL =
-  'http://localhost:5175/?embed=1#cam=7.42207,43.72750,20000.00000,0.00000,-90.00000&renderer=maplibre';
+  '/?embed=1#cam=7.42207,43.72750,20000.00000,0.00000,-90.00000&renderer=maplibre';
 
 const messagesOfType = (page, type) =>
   page.evaluate(
