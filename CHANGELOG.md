@@ -6,6 +6,28 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-09: **per-user undo in live sessions**. cmd/ctrl+z takes back your
+  own last applied frame as inverse ops and shift adds redo, with buttons
+  beside the session controls. A batch comes back as one step, a key someone
+  else wrote since is skipped rather than clobbered, undo waits until every
+  sent op is acked, and a view-role session gets no affordance.
+
+- 2026-08-09: **live sessions know they are guests**. The live store records
+  whether the session joined through a share link, so the share dialog and the
+  mention list stop asking agora for members a session token cannot read.
+
+- 2026-08-09: **bookmarks restore on leaving a live session**. The browser's
+  own bookmarks are held aside while a live document is showing and put back
+  on the same leave path annotations use. A mid-session reload keeps them.
+
+- 2026-08-09: **image overlays place by their four corners**. Drag handles on
+  the MapLibre map move each corner (Cesium and Leaflet drape the bounding
+  rectangle), and images and PDFs dropped anywhere on the window land at the
+  viewport centre ready to place. Overlays save and reload with a project, the
+  placement in the project file and the bitmap in IndexedDB, so a project
+  opened in another browser comes back without its pictures and says so. The
+  layer panel gives overlays a visibility switch and stacking order.
+
 - 2026-08-09: **datum shift grids in the browser**. When a `.prj` names a
   coordinate system that needs an NTv2 grid (NAD27 and friends), the overlay
   fetches candidates from `/grids/<name>` and retries the transform; no grids

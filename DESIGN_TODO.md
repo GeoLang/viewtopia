@@ -28,25 +28,18 @@ mobile capture, auth and multi-tenancy, one-click deploy.
 Live multiplayer shipped 2026-08-07 (agora service + viewtopia client,
 current state in DESIGN.md). Open work from it:
 
-- [ ] **live store guest flag** — the store does not record whether the
-      session came from a share link, so the share dialog infers member vs
-      guest from platform sign-in. A signed-in platform user who joins a
-      document by edit link without being a member sees the members section
-      try to load and show agora's 404 text. Harmless, but the store knowing
-      "this session is a guest" is the clean fix.
-- [ ] **bookmarks leave-restore** — annotations restore local state when a
-      live session ends, bookmarks do not (app-store persist middleware
-      makes gating messy).
-- [ ] **local project import** — IndexedDB projects do not import into a
-      live document (TODO at captureStateForNewDocument).
-- [ ] **batch-aware reconnect replay** — a batch applies and relays as one
-      frame, but `ops_between` replays it as N separate op frames, so a
-      client resuming with `since` still sees it torn. The end state is
-      correct. Fixing it needs a batch identity column on `ops`.
-- [ ] **per-user undo** — does not exist yet, despite the earlier backlog
-      entry that assumed it did. When it is built it must disable while any
-      local op is unacked, since undoing an unacked op races the server's
-      ordering, and it should group a batch as one step.
+- [ ] **project switcher map state** — the IndexedDB projects feature stores
+      no map state: `Project.layerIds` is only ever written as `[]` and the
+      offline `layers` store is never written, so "import a local project
+      into a live document" had nothing to import. The real gap is the
+      project switcher saving and restoring map state at all; once it does,
+      live import falls out because `applyProject` already syncs outbound.
+      Project files (`.viewtopia.json`) already travel, except OGC layers,
+      which have no document representation.
+- [ ] **overlay follow-ups** — image overlay corner dragging is MapLibre only,
+      Cesium and Leaflet drape onto a rectangle and show the envelope. Image
+      overlays do not sync into live documents, which still inline small
+      GeoJSON only.
 - [ ] **hosted flagship instance + share links** — Figma's zero-install magic
       is a link that opens the document. Self-host is free with open source,
       but the "click a link, you're in the map" experience needs a hosted
@@ -195,10 +188,6 @@ validated end to end against pgRouting 3.8) and removed the never-worked
 `branches/{id}/reproject` route. What is left needs a decision rather than a
 fix.
 
-- [ ] two standing defects of the kind the sweep reports:
-      `POST /datasets/{id}/routes` inserts geometry without an M dimension into
-      an M-typed column, and `POST /rasters/{id}/tiles` casts bytea to `raster`,
-      which needs postgis_raster and a real raster blob.
 - [ ] the sweep only covers the SQL branches its fixtures reach, which is what
       query variants are for, and a handler that swallows its error is invisible
       to it. Add a variant when a route grows a second branch.
@@ -529,9 +518,6 @@ Known limits:
 - [ ] **in-region deployment**: cold pulls are bound by the residential
       link to us-west-2. Serving next to the data is the remaining latency
       lever; blocked on an AWS account decision (2026-08-05).
-- [ ] **per-interval state never evicts**: searched-block and matched-href
-      sets grow per distinct pull interval for the source's lifetime, so a
-      driver minting fresh intervals per request grows them without bound.
 - [ ] **breadth**: GEE ships a huge operator library and charting/reduction
       over regions; geoplumb has hillshade, slope, aspect, map algebra, band
       math (arithmetic, comparisons, where, log/exp), reclassify, convolution,
@@ -552,12 +538,9 @@ Known limits:
 - [ ] **viewtopia FleetPanel** — currently an honest "no live feed" state; nothing serves
       vehicle positions. Decide whether real-time fleet tracking is in scope before building
       a WS/ingest path for it.
-- [ ] tiletopia upload response returns the Asset struct without the job id
-      minted by job_queue.submit, and the only job-by-asset lookup is the
-      admin-gated /api/v1/admin/jobs, so the viewer cannot show tiling
-      progress and the assets panel polls asset status instead. Return the
-      job id from the upload or add a job-by-asset route if progress is
-      wanted.
+- [ ] viewer tiling progress UI: tiletopia upload now returns the tiling
+      job_id and GET /api/v1/jobs/{id} carries a progress float, but the
+      assets panel still polls asset status instead of the job.
 
 ## OPEN — deferred design decisions (not bugs)
 
