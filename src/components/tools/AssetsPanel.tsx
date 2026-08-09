@@ -37,6 +37,8 @@ interface Asset {
   assetType: string;
   status: AssetStatus;
   sizeBytes: number;
+  /** How far its tiling job has got, 0..1. Unset until the job reports. */
+  tilingProgress?: number;
 }
 
 function authHeaders(base: Record<string, string> = {}): Record<string, string> {
@@ -62,6 +64,22 @@ function parseAsset(raw: unknown): Asset | null {
         : 'error',
     sizeBytes: typeof a.size_bytes === 'number' ? a.size_bytes : 0,
   };
+}
+
+/**
+ * Only an upload response names the job it queued, and only for the asset types
+ * that tile on upload, so an asset listed from an earlier session has no job to
+ * read progress from and shows its status alone.
+ */
+function jobIdOf(raw: unknown): string | null {
+  const id = (raw as Record<string, unknown> | null)?.job_id;
+  return typeof id === 'string' ? id : null;
+}
+
+/** A tiling job's progress, 0..1, or null when the server sent no number. */
+function parseJobProgress(raw: unknown): number | null {
+  const progress = (raw as Record<string, unknown> | null)?.progress;
+  return typeof progress === 'number' && Number.isFinite(progress) ? progress : null;
 }
 
 function formatSize(bytes: number): string {
@@ -104,12 +122,23 @@ export function AssetsPanel({ onClose }: { onClose: () => void }) {
     return () => clearInterval(timer);
   }, [renderer]);
 
-  const poll = useCallback((id: string) => {
+  const poll = useCallback((id: string, jobId: string | null = null) => {
     if (timers.current.has(id)) return;
     const stop = () => {
       const t = timers.current.get(id);
       if (t) clearInterval(t);
       timers.current.delete(id);
+    };
+    const readProgress = async () => {
+      const res = await fetch(`${API}/jobs/${jobId}`, { headers: authHeaders() }).catch(
+        () => null,
+      );
+      if (!res?.ok) return;
+      const progress = parseJobProgress(await res.json().catch(() => null));
+      if (progress === null) return;
+      setAssets((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, tilingProgress: progress } : a)),
+      );
     };
     const tick = async () => {
       const res = await fetch(`${API}/assets/${id}`, { headers: authHeaders() }).catch(() => null);
@@ -122,8 +151,14 @@ export function AssetsPanel({ onClose }: { onClose: () => void }) {
         stop();
         return;
       }
-      setAssets((prev) => prev.map((a) => (a.id === asset.id ? asset : a)));
-      if (asset.status === 'ready' || asset.status === 'error') stop();
+      // spread over the previous row: the asset endpoint knows nothing of the
+      // job, so a plain replace would drop the progress read from it
+      setAssets((prev) => prev.map((a) => (a.id === asset.id ? { ...a, ...asset } : a)));
+      if (asset.status === 'ready' || asset.status === 'error') {
+        stop();
+        return;
+      }
+      if (jobId) await readProgress();
     };
     timers.current.set(
       id,
@@ -204,8 +239,11 @@ export function AssetsPanel({ onClose }: { onClose: () => void }) {
         return;
       }
       let asset: Asset | null = null;
+      let jobId: string | null = null;
       try {
-        asset = parseAsset(JSON.parse(xhr.responseText));
+        const body: unknown = JSON.parse(xhr.responseText);
+        asset = parseAsset(body);
+        jobId = jobIdOf(body);
       } catch {
         asset = null;
       }
@@ -215,7 +253,7 @@ export function AssetsPanel({ onClose }: { onClose: () => void }) {
       }
       const created = asset;
       setAssets((prev) => [...prev.filter((a) => a.id !== created.id), created]);
-      if (created.status !== 'ready' && created.status !== 'error') poll(created.id);
+      if (created.status !== 'ready' && created.status !== 'error') poll(created.id, jobId);
     };
     xhr.onerror = () => {
       setUploadPct(null);
@@ -350,6 +388,15 @@ export function AssetsPanel({ onClose }: { onClose: () => void }) {
                           {formatSize(asset.sizeBytes)}
                         </Text>
                       </Group>
+                      {asset.tilingProgress !== undefined && asset.status === 'tiling' && (
+                        <Progress
+                          size="xs"
+                          color="violet"
+                          value={Math.round(asset.tilingProgress * 100)}
+                          aria-label={`Tiling ${asset.name}`}
+                          data-testid={`assets-tiling-${asset.id}`}
+                        />
+                      )}
                     </Stack>
                     {confirmId === asset.id ? (
                       <Group gap={4} wrap="nowrap">

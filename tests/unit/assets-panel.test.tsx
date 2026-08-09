@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
-import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, act, within } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 
 // only the asset API plumbing is under test, so the WebGL bundle stays out
@@ -102,6 +102,12 @@ const renderPanel = async () => {
   return utils;
 };
 
+/** Mantine puts the progressbar role on a section inside the bar, not its root. */
+function tilingPercent() {
+  const bar = within(screen.getByTestId('assets-tiling-a1b2')).getByRole('progressbar');
+  return bar.getAttribute('aria-valuenow');
+}
+
 function selectFile(name: string) {
   const input = document.querySelector('input[type="file"]');
   if (!(input instanceof HTMLInputElement)) throw new Error('no file input rendered');
@@ -199,6 +205,81 @@ describe('AssetsPanel', () => {
       await vi.advanceTimersByTimeAsync(POLL_MS * 3);
     });
     expect(fetchMock.mock.calls.length).toBe(afterDone);
+  });
+
+  it('shows tiling progress from the job the upload named, and stops when it is ready', async () => {
+    await renderPanel();
+    selectFile('cloud.las');
+    const xhr = FakeXHR.last;
+    if (!xhr) throw new Error('no upload started');
+
+    const tiling = { ...READY, name: 'cloud.las', status: 'tiling' };
+    respond((url) => {
+      if (url === '/api/v1/assets/a1b2') return jsonOk(tiling);
+      if (url === '/api/v1/jobs/job-7') return jsonOk({ status: 'running', progress: 0.42 });
+      return jsonOk([]);
+    });
+    await act(async () => {
+      xhr.status = 201;
+      xhr.responseText = JSON.stringify({ ...tiling, job_id: 'job-7' });
+      xhr.onload?.();
+    });
+    // nothing to show before the first poll: the upload response has no progress
+    expect(screen.queryByTestId('assets-tiling-a1b2')).not.toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(POLL_MS);
+    });
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/jobs/job-7', {
+      headers: { Authorization: 'Bearer jwt-token' },
+    });
+    expect(tilingPercent()).toBe('42');
+
+    // the asset endpoint knows nothing of the job, so its next answer must not
+    // wipe the progress already read
+    respond((url) => {
+      if (url === '/api/v1/assets/a1b2') return jsonOk(tiling);
+      if (url === '/api/v1/jobs/job-7') return jsonOk({ status: 'running', progress: 0.8 });
+      return jsonOk([]);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(POLL_MS);
+    });
+    expect(tilingPercent()).toBe('80');
+
+    respond(() => jsonOk({ ...READY, name: 'cloud.las' }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(POLL_MS);
+    });
+    expect(screen.getByTestId('assets-row-a1b2')).toHaveTextContent('ready');
+    expect(screen.queryByTestId('assets-tiling-a1b2')).not.toBeInTheDocument();
+
+    const afterDone = fetchMock.mock.calls.length;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(POLL_MS * 3);
+    });
+    expect(fetchMock.mock.calls.length).toBe(afterDone);
+  });
+
+  it('polls an upload with no tiling job for status alone', async () => {
+    await renderPanel();
+    selectFile('city.glb');
+    const xhr = FakeXHR.last;
+    if (!xhr) throw new Error('no upload started');
+
+    const tiling = { ...READY, name: 'city.glb', status: 'tiling' };
+    respond((url) => (url === '/api/v1/assets/a1b2' ? jsonOk(tiling) : jsonOk([])));
+    await act(async () => {
+      xhr.status = 201;
+      xhr.responseText = JSON.stringify(tiling);
+      xhr.onload?.();
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(POLL_MS);
+    });
+    expect(screen.queryByTestId('assets-tiling-a1b2')).not.toBeInTheDocument();
+    expect(fetchMock.mock.calls.map((c) => c[0])).not.toContain('/api/v1/jobs/null');
   });
 
   it('loads a tiled asset into the globe from its tileset url', async () => {
