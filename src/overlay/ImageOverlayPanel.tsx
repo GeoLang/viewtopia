@@ -14,30 +14,24 @@ import { IconMapPin, IconPhotoPlus, IconX } from '@tabler/icons-react';
 import { useAgentLayerStore } from '../store/agentLayers';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { clickCoordinates } from '../lib/mapClickCoordinates';
-import { OVERLAY_ACCEPT, imageCorners, overlayFileKind, parseWorldFile } from './worldFile';
+import { OVERLAY_ACCEPT, overlayFileKind } from './worldFile';
 import {
   bboxFromTwoClicks,
   bboxOfCorners,
   cameraForBbox,
-  cornersAxisAligned,
   cornersOfBbox,
-  type Corners,
   type LonLatBbox,
 } from './georeference';
-import { cornersToLonLat, registerDroppedGrid } from './projicio';
-import { resampleNorthUp } from './rasterize';
+import { registerDroppedGrid } from './projicio';
 import {
   DEFAULT_OVERLAY_OPACITY,
   centerCorners,
+  georeferenceOverlay,
   loadOverlaySource,
   loadPdfSource,
+  type OverlayPlacement,
   type OverlaySource,
 } from './importOverlay';
-
-interface OverlayPlacement {
-  url: string;
-  corners: Corners;
-}
 
 type CornerPicking = 'off' | 'first' | 'second';
 
@@ -96,25 +90,8 @@ export function ImageOverlayPanel({ onClose }: { onClose: () => void }) {
     if (!source || !worldFileText) return;
     let stale = false;
     const apply = async () => {
-      const transform = parseWorldFile(worldFileText);
-      const corners = await cornersToLonLat(
-        imageCorners(transform, source.width, source.height),
-        projectionText,
-      );
+      const next = await georeferenceOverlay(source, worldFileText, projectionText);
       if (stale) return;
-      // a rotated world file is resampled north-up so Cesium and Leaflet, which
-      // drape onto a rectangle, show it in the right place too
-      const next: OverlayPlacement = cornersAxisAligned(corners)
-        ? { url: source.dataUrl, corners }
-        : (() => {
-            const flat = resampleNorthUp(
-              source.element,
-              source.width,
-              source.height,
-              corners,
-            );
-            return { url: flat.url, corners: cornersOfBbox(flat.bbox) };
-          })();
       showPlacement(next, source.name, true);
     };
     apply().catch((err) => {

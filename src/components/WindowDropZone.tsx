@@ -93,7 +93,8 @@ export function WindowDropZone() {
             Drop files to import
           </Text>
           <Text size="xs" c="dimmed">
-            GeoJSON, KML, GPX, CSV, GeoPackage, Shapefile, FlatGeobuf, Parquet, PMTiles
+            GeoJSON, KML, GPX, CSV, GeoPackage, Shapefile, FlatGeobuf, Parquet, PMTiles,
+            images and PDFs
           </Text>
         </>
       )}

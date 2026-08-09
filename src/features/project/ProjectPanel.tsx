@@ -39,7 +39,8 @@ export function ProjectPanel({ onClose }: { onClose: () => void }) {
       <Stack gap="xs">
         <Text size="xs" c="dimmed">
           A project holds the renderer, basemap, camera, split view, agent layers,
-          markers and OGC services.
+          markers, OGC services and image overlays. Overlay pictures stay in this
+          browser, so a project opened elsewhere comes back without them.
         </Text>
 
         <TextInput
@@ -56,7 +57,7 @@ export function ProjectPanel({ onClose }: { onClose: () => void }) {
             variant="filled"
             color="violet"
             leftSection={<IconDeviceFloppy size={14} />}
-            onClick={() => saveProjectFile(name)}
+            onClick={() => void saveProjectFile(name)}
           >
             Save
           </Button>

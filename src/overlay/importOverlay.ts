@@ -1,9 +1,16 @@
 import { useAgentLayerStore } from '../store/agentLayers';
 import { getActiveMapLibre } from '../viewer/registry';
 import { getSharedCamera } from '../hooks/sharedCamera';
-import { cornersAtCenter, type Corners, type LonLatBbox } from './georeference';
-import { renderPdfPage } from './pdf';
-import { overlayFileKind } from './worldFile';
+import {
+  cornersAtCenter,
+  cornersAxisAligned,
+  cornersOfBbox,
+  type Corners,
+  type LonLatBbox,
+} from './georeference';
+import { cornersToLonLat, registerDroppedGrid } from './projicio';
+import { resampleNorthUp } from './rasterize';
+import { imageCorners, overlayFileKind, parseWorldFile } from './worldFile';
 
 /** An image or PDF page decoded and ready to drape. */
 export interface OverlaySource {
@@ -46,6 +53,9 @@ async function loadImageSource(file: File): Promise<OverlaySource> {
 }
 
 export async function loadPdfSource(file: File, page: number): Promise<OverlaySource> {
+  // loaded here rather than up top: pdfjs is large, and it wants browser APIs
+  // at import time that nothing else in the import path needs
+  const { renderPdfPage } = await import('./pdf');
   // a fresh buffer per render: pdfjs transfers the one it is given to its worker
   const { canvas, pageCount } = await renderPdfPage(await file.arrayBuffer(), page);
   return {
@@ -109,4 +119,73 @@ export function addOverlayAtCenter(source: OverlaySource, id = crypto.randomUUID
   });
   store.setEditingRaster(id);
   return id;
+}
+
+export interface OverlayPlacement {
+  url: string;
+  corners: Corners;
+}
+
+/**
+ * Where a world file puts the image, through the .prj's coordinate system when
+ * the numbers are not already lon/lat. A rotated result is resampled north-up
+ * so Cesium and Leaflet, which drape onto a rectangle, place it right too.
+ */
+export async function georeferenceOverlay(
+  source: OverlaySource,
+  worldFileText: string,
+  projectionText: string | null,
+): Promise<OverlayPlacement> {
+  const transform = parseWorldFile(worldFileText);
+  const corners = await cornersToLonLat(
+    imageCorners(transform, source.width, source.height),
+    projectionText,
+  );
+  if (cornersAxisAligned(corners)) return { url: source.dataUrl, corners };
+  const flat = resampleNorthUp(source.element, source.width, source.height, corners);
+  return { url: flat.url, corners: cornersOfBbox(flat.bbox) };
+}
+
+/**
+ * One dropped batch: an image or PDF, with its world file, .prj and datum grid
+ * if they came along. Georeferenced when the sidecars allow it, dropped on the
+ * middle of the view when they do not.
+ */
+export async function importOverlayFiles(files: File[]): Promise<string> {
+  let source: OverlaySource | null = null;
+  let worldFileText: string | null = null;
+  let projectionText: string | null = null;
+  for (const file of files) {
+    switch (overlayFileKind(file.name)) {
+      case 'image':
+      case 'pdf':
+        source = await loadOverlaySource(file);
+        break;
+      case 'worldFile':
+        worldFileText = await file.text();
+        break;
+      case 'projection':
+        projectionText = await file.text();
+        break;
+      case 'grid':
+        await registerDroppedGrid(file.name, new Uint8Array(await file.arrayBuffer()));
+        break;
+    }
+  }
+  if (!source) throw new Error('no image or PDF in the dropped files');
+
+  const id = addOverlayAtCenter(source);
+  if (!worldFileText) return `${source.name}: drag its corners to place it`;
+
+  const placement = await georeferenceOverlay(source, worldFileText, projectionText);
+  const store = useAgentLayerStore.getState();
+  store.addRasterLayer({
+    id,
+    name: source.name,
+    url: placement.url,
+    corners: placement.corners,
+    opacity: DEFAULT_OVERLAY_OPACITY,
+    visible: true,
+  });
+  return `${source.name}: placed by its world file`;
 }

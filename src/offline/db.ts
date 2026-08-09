@@ -6,7 +6,7 @@
  */
 
 const DB_NAME = 'viewtopia-offline';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 export interface OfflineLayer {
   id: string;
@@ -125,6 +125,11 @@ function openDb(): Promise<IDBDatabase> {
       // Workspaces
       if (!db.objectStoreNames.contains('workspaces')) {
         db.createObjectStore('workspaces', { keyPath: 'id' });
+      }
+
+      // Bitmaps behind the image overlays a project file names
+      if (!db.objectStoreNames.contains('overlayImages')) {
+        db.createObjectStore('overlayImages', { keyPath: 'id' });
       }
 
       // Share invites
@@ -324,6 +329,25 @@ export const tileCache = {
     const all = await getAll<CachedTile>('tileCache');
     return all.reduce((sum, t) => sum + t.blob.byteLength, 0);
   },
+};
+
+// ─── Overlay Images ──────────────────────────────────────────────────
+
+/**
+ * The bitmap behind one image overlay. Kept out of the project file, whose
+ * JSON would otherwise carry megabytes per plan; the file names the id and
+ * the placement, and the picture is looked up here when it is opened again.
+ */
+export interface OverlayImage {
+  id: string;
+  dataUrl: string;
+}
+
+export const overlayImages = {
+  get: (id: string) => getById<OverlayImage>('overlayImages', id),
+  put: (image: OverlayImage) => put('overlayImages', image),
+  remove: (id: string) => remove('overlayImages', id),
+  clear: () => clear('overlayImages'),
 };
 
 // ─── Cached Regions ──────────────────────────────────────────────────

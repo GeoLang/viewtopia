@@ -9,11 +9,14 @@ import { timedImport, loadTimedImport } from './importTime';
 import { applyProject, asProject } from '../features/project/projectFile';
 import { addLocalPmtiles } from '../features/pmtiles/source';
 import { useOgcLayerStore } from '../store/ogcLayers';
+import { importOverlayFiles } from '../overlay/importOverlay';
+import { OVERLAY_ACCEPT, overlayFileKind } from '../overlay/worldFile';
 
 const extOf = (name: string) => '.' + name.split('.').pop()?.toLowerCase();
 
-// .pmtiles stays out of ALL_IMPORT_FORMATS: it becomes a tile layer, not GeoJSON
-export const ACCEPT_FORMATS = [...ALL_IMPORT_FORMATS, '.pmtiles'];
+// .pmtiles and the overlay formats stay out of ALL_IMPORT_FORMATS: they become
+// a tile layer and a draped image, neither of which is GeoJSON
+export const ACCEPT_FORMATS = [...ALL_IMPORT_FORMATS, '.pmtiles', ...OVERLAY_ACCEPT];
 
 export interface ImportStatus {
   text: string;
@@ -72,6 +75,24 @@ async function handlePmtilesFile(file: File, onStatus: StatusHandler) {
   }
 }
 
+// one batch, so an image and its world file dropped together stay together
+async function handleOverlayFiles(files: File[], onStatus: StatusHandler) {
+  const names = files.map((f) => f.name).join(', ');
+  try {
+    const summary = await importOverlayFiles(files);
+    onStatus({ text: summary, failed: false });
+    notifications.show({ title: 'Overlay added', message: summary, color: 'green' });
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : 'overlay import failed';
+    onStatus({ text: `${names}: ${reason}`, failed: true });
+    notifications.show({
+      title: 'Overlay import failed',
+      message: `${names} — ${reason}`,
+      color: 'red',
+    });
+  }
+}
+
 /** Route dropped or browsed files through every import path the app has. */
 export async function importFiles(
   files: File[],
@@ -80,7 +101,15 @@ export async function importFiles(
 ) {
   const pmtilesFiles = files.filter((f) => extOf(f.name) === '.pmtiles');
   for (const file of pmtilesFiles) await handlePmtilesFile(file, onStatus);
-  const rest = files.filter((f) => !pmtilesFiles.includes(f));
+  let rest = files.filter((f) => !pmtilesFiles.includes(f));
+
+  // a .prj also rides with a shapefile, so it only counts as an overlay sidecar
+  // when an image or PDF came with it
+  const overlayFiles = rest.filter((f) => overlayFileKind(f.name) !== null);
+  if (overlayFiles.some((f) => ['image', 'pdf'].includes(overlayFileKind(f.name) as string))) {
+    await handleOverlayFiles(overlayFiles, onStatus);
+    rest = rest.filter((f) => !overlayFiles.includes(f));
+  }
 
   const vectorFiles = rest.filter((f) => VECTOR_IMPORT_FORMATS.includes(extOf(f.name)));
   if (vectorFiles.length) await handleVectorFiles(vectorFiles, onImport, onStatus);

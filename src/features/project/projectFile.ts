@@ -1,6 +1,12 @@
 import { useAppStore, asRenderer, type Renderer, type Basemap, type CustomBasemap } from '../../store/app';
 import { BASEMAP_OPTIONS } from '../../hooks/basemapTiles';
-import { useAgentLayerStore, type AgentLayer, type AgentMarker } from '../../store/agentLayers';
+import {
+  useAgentLayerStore,
+  type AgentLayer,
+  type AgentMarker,
+  type AgentRasterLayer,
+} from '../../store/agentLayers';
+import { overlayImages } from '../../offline/db';
 import { migrateLegacyChoropleth } from '../symbology/symbology';
 import { useOgcLayerStore, type OGCLayer } from '../../store/ogcLayers';
 import { useSplitViewStore, type PaneRenderer } from '../../store/splitView';
@@ -26,7 +32,11 @@ export interface ViewtopiaProject {
   agentLayers: AgentLayer[];
   markers: AgentMarker[];
   ogcLayers: OGCLayer[];
+  /** Draped images, without their bitmaps: those live in IndexedDB. */
+  imageOverlays: ImageOverlayEntry[];
 }
+
+export type ImageOverlayEntry = Omit<AgentRasterLayer, 'url'>;
 
 /** MapLibre zoom and Cesium height, the conversion the share link already uses. */
 function heightFromZoom(zoom: number): number {
@@ -90,6 +100,7 @@ export function serializeProject(name: string): ViewtopiaProject {
     splitView: { active: split.active, paneRenderer: split.paneRenderer },
     agentLayers: agent.layers,
     markers: agent.markers,
+    imageOverlays: agent.rasterLayers.map(({ url: _url, ...entry }) => entry),
     // a dropped .pmtiles is a browser File the protocol resolves in this
     // session only, so saving its entry would only produce a dead layer
     ogcLayers: useOgcLayerStore.getState().layers.filter((l) => !l.pmtiles?.local),
@@ -153,7 +164,31 @@ export function parseProject(text: string): ViewtopiaProject {
     ),
     markers: requireArray(p.markers, 'markers') as AgentMarker[],
     ogcLayers: requireArray(p.ogcLayers, 'ogcLayers') as OGCLayer[],
+    imageOverlays: requireArray(p.imageOverlays, 'imageOverlays') as ImageOverlayEntry[],
   };
+}
+
+/** Keep the bitmaps the saved file will ask for by id when it is opened. */
+export async function storeOverlayImages(): Promise<void> {
+  for (const layer of useAgentLayerStore.getState().rasterLayers) {
+    await overlayImages.put({ id: layer.id, dataUrl: layer.url });
+  }
+}
+
+/**
+ * Put back the overlays whose bitmaps this browser still holds. A project saved
+ * on another machine has no picture here, so those are dropped rather than
+ * drawn blank.
+ */
+export async function restoreImageOverlays(entries: ImageOverlayEntry[]): Promise<void> {
+  for (const entry of entries) {
+    const image = await overlayImages.get(entry.id);
+    if (!image) {
+      console.warn(`image overlay "${entry.name}" skipped: its picture is not in this browser`);
+      continue;
+    }
+    useAgentLayerStore.getState().addRasterLayer({ ...entry, url: image.dataUrl });
+  }
 }
 
 /** Seed the shared camera, then fly the Cesium viewer once it exists. */
@@ -195,6 +230,8 @@ export function applyProject(project: ViewtopiaProject): void {
   useAgentLayerStore.getState().setLayers(project.agentLayers);
   // no bulk marker action, and addMarker would mint new ids
   useAgentLayerStore.setState({ markers: project.markers });
+  useAgentLayerStore.setState({ rasterLayers: [], editingRasterId: null });
+  void restoreImageOverlays(project.imageOverlays);
 
   const ogc = useOgcLayerStore.getState();
   for (const layer of [...ogc.layers]) ogc.removeLayer(layer.id);
@@ -222,7 +259,8 @@ function slug(name: string): string {
   return s || 'workspace';
 }
 
-export function saveProjectFile(name: string): void {
+export async function saveProjectFile(name: string): Promise<void> {
+  await storeOverlayImages();
   const blob = new Blob([JSON.stringify(serializeProject(name), null, 2)], {
     type: 'application/json',
   });
