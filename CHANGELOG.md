@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-09: **agent strings render as data, never markup**. A marker label
+  went to Leaflet's `bindTooltip` as a string, which Leaflet assigns via
+  `innerHTML`, so markup in an agent-authored label became live DOM. Labels
+  now travel as elements with `textContent`. MapLibre marker colours are
+  assigned as a style property rather than interpolated into `cssText`,
+  closing a CSS injection that could fire an outbound request.
+
 - 2026-08-09: **image overlays sync into live documents**. The bitmap uploads
   once as an agora attachment and the overlay travels as its url plus four
   corners, so corner drags and opacity changes reach peers without resending

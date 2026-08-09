@@ -385,7 +385,11 @@ client-side, and the agent side is geolang's `viewer_control` tool. Chat replay 
 work on all three renderers. The plan panel shows one line per step with its operation,
 parameters, input and outcome, the failing step's reason in a tooltip rather than inline, and
 written outputs as download links (the serving route is not a `:path` route, so links use the
-basename).
+basename). Agent-supplied strings reach the renderers as data, never markup: Leaflet
+tooltips take an element with `textContent` because a string tooltip is parsed as HTML,
+MapLibre marker colours are assigned to `style.background` rather than interpolated into
+`cssText` so a value carrying a second declaration is dropped, and Cesium labels are WebGL
+glyphs that never touch the DOM.
 
 **Tool panels.** 48 registry panels, 30 on by default, plus 22 plugin panels (measure, feature-picker, geojson/style editors,
 geocoding, routing via itinera, terrain profile, cross-section, heatmap, spatial stats,

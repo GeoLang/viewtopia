@@ -44,6 +44,10 @@ current state in DESIGN.md). Open work from it:
       the layer manager writes the document entry but not the overlay store,
       the same split agent layers have always had, so only one of the two
       switches redraws locally.
+- [ ] **colour values are safe by construction, not validated** —
+      agent-supplied colours reach Leaflet as SVG attribute values and MapLibre
+      as paint properties, both inert, but nothing validates them as colours. A
+      shared parse-or-drop helper would make the guarantee explicit.
 - [ ] **agora attachment cleanup** — an overlay removed from a document leaves
       its attachment row behind. Attachments die with the document, but there
       is no per-attachment removal or unreferenced sweep, so long-lived
