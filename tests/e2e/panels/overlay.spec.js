@@ -1,5 +1,6 @@
 import { test, expect } from '../console-guard';
 import { MENU_ITEM, PANEL, openApp } from '../panel-helpers';
+import { syntheticNtv2 } from '../../unit/stubs/syntheticNtv2';
 
 /**
  * The image overlay panel georeferences a dropped image by world file + .prj
@@ -81,6 +82,34 @@ test('a utm world file with a .prj georeferences through projicio wasm', async (
   // covers the initial projicio wasm fetch and compile, like raster's first op
   await expect(panel.getByTestId('overlay-west')).toHaveValue(/-73\.99/, { timeout: 30000 });
   await expect(panel.getByTestId('overlay-north')).toHaveValue(/40\.73/);
+});
+
+const NAD27_PRJ =
+  'GEOGCS["NAD27",DATUM["North_American_Datum_1927",SPHEROID["Clarke 1866",6378206.4,294.9786982138982,AUTHORITY["EPSG","7008"]],AUTHORITY["EPSG","6267"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4267"]]';
+
+test('a dropped .gsb datum grid georeferences a nad27 plan', async ({ page }) => {
+  const panel = await openOverlayPanel(page);
+  // the sidecar must satisfy the transform on its own: any fetch here 404s and
+  // the console guard turns that into a failure
+  await page.route('**/grids/**', (route) => route.fulfill({ status: 404 }));
+
+  await panel.locator('input[type="file"]').setInputFiles([
+    { name: 'site.png', mimeType: 'image/png', buffer: ONE_PIXEL_PNG },
+    { name: 'site.pgw', mimeType: 'text/plain', buffer: Buffer.from('0.001\n0\n0\n-0.001\n-100\n35\n') },
+    { name: 'site.prj', mimeType: 'text/plain', buffer: Buffer.from(NAD27_PRJ) },
+    // the filename is how a definition's grid list finds it, so it carries a
+    // name nad27 actually asks for
+    {
+      name: 'ntv2_0.gsb',
+      mimeType: 'application/octet-stream',
+      buffer: Buffer.from(syntheticNtv2(30, 40, 90, 110, 1, 1, 2)),
+    },
+  ]);
+  await expect(panel.getByTestId('overlay-source')).toContainText('datum grid');
+
+  // the synthetic grid shifts 2 arc seconds west and 1 north off the nad27 corners
+  await expect(panel.getByTestId('overlay-west')).toHaveValue(/-100\.00105/, { timeout: 30000 });
+  await expect(panel.getByTestId('overlay-north')).toHaveValue(/35\.00077/);
 });
 
 test('a projected world file without a .prj reports the missing sidecar', async ({ page }) => {

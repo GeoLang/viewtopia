@@ -1,5 +1,5 @@
 import { GridsUnavailableError, registerMissingGrids } from './grids';
-import init, { transform_coordinates } from './wasm/projicio_wasm';
+import init, { register_grid, transform_coordinates } from './wasm/projicio_wasm';
 import type { Corners } from './worldFile';
 
 /**
@@ -14,6 +14,13 @@ let ready: Promise<unknown> | null = null;
 async function projicioReady(): Promise<void> {
   ready ??= init({ module_or_path: new URL('./wasm/projicio_wasm_bg.wasm', import.meta.url) });
   await ready;
+}
+
+/** Register a user supplied datum grid under its filename, which is the name a
+ * definition's +nadgrids list matches against. */
+export async function registerDroppedGrid(name: string, bytes: Uint8Array): Promise<void> {
+  await projicioReady();
+  register_grid(name, bytes);
 }
 
 async function toLonLat(projectionWkt: string, flat: Float64Array): Promise<Float64Array> {

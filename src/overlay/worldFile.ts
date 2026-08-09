@@ -15,7 +15,7 @@ export interface WorldFileTransform {
 /** two letters + w (.jgw, .pgw, .tfw, ...), or the generic .wld */
 const WORLD_FILE_EXTENSION = /^([a-z]{2}w|wld)$/i;
 
-export type OverlaySidecarKind = 'image' | 'pdf' | 'worldFile' | 'projection' | null;
+export type OverlaySidecarKind = 'image' | 'pdf' | 'worldFile' | 'projection' | 'grid' | null;
 
 const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'];
 
@@ -26,6 +26,7 @@ export function overlayFileKind(name: string): OverlaySidecarKind {
   if (extension === 'pdf') return 'pdf';
   if (WORLD_FILE_EXTENSION.test(extension)) return 'worldFile';
   if (extension === 'prj') return 'projection';
+  if (extension === 'gsb') return 'grid';
   return null;
 }
 
@@ -40,6 +41,7 @@ export const OVERLAY_ACCEPT = [
   '.bpw',
   '.gfw',
   '.prj',
+  '.gsb',
 ];
 
 export function parseWorldFile(text: string): WorldFileTransform {

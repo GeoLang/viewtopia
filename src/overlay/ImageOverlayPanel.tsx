@@ -27,7 +27,7 @@ import {
   cornersAxisAligned,
   type LonLatBbox,
 } from './georeference';
-import { cornersToLonLat } from './projicio';
+import { cornersToLonLat, registerDroppedGrid } from './projicio';
 import { resampleNorthUp } from './rasterize';
 import { renderPdfPage } from './pdf';
 
@@ -94,6 +94,7 @@ export function ImageOverlayPanel({ onClose }: { onClose: () => void }) {
   const [source, setSource] = useState<OverlaySource | null>(null);
   const [worldFileText, setWorldFileText] = useState<string | null>(null);
   const [projectionText, setProjectionText] = useState<string | null>(null);
+  const [gridNames, setGridNames] = useState<string[]>([]);
   const [placement, setPlacement] = useState<OverlayPlacement | null>(null);
   const [opacity, setOpacity] = useState(DEFAULT_OVERLAY_OPACITY);
   const [picking, setPicking] = useState<CornerPicking>('off');
@@ -146,7 +147,7 @@ export function ImageOverlayPanel({ onClose }: { onClose: () => void }) {
     return () => {
       stale = true;
     };
-  }, [source, worldFileText, projectionText]);
+  }, [source, worldFileText, projectionText, gridNames]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: showPlacement reads only current state
   useEffect(() => {
@@ -175,6 +176,7 @@ export function ImageOverlayPanel({ onClose }: { onClose: () => void }) {
       let nextSource: OverlaySource | undefined;
       let nextWorldFile: string | undefined;
       let nextProjection: string | undefined;
+      const nextGrids: string[] = [];
       for (const file of files) {
         switch (overlayFileKind(file.name)) {
           case 'image':
@@ -189,8 +191,12 @@ export function ImageOverlayPanel({ onClose }: { onClose: () => void }) {
           case 'projection':
             nextProjection = await file.text();
             break;
+          case 'grid':
+            await registerDroppedGrid(file.name, new Uint8Array(await file.arrayBuffer()));
+            nextGrids.push(file.name);
+            break;
           default:
-            setError(`${file.name}: not an image, PDF, world file or .prj`);
+            setError(`${file.name}: not an image, PDF, world file, .prj or .gsb`);
         }
       }
       // set together, so the placement effect never runs on a world file whose
@@ -198,6 +204,7 @@ export function ImageOverlayPanel({ onClose }: { onClose: () => void }) {
       if (nextSource) setSource(nextSource);
       if (nextWorldFile !== undefined) setWorldFileText(nextWorldFile);
       if (nextProjection !== undefined) setProjectionText(nextProjection);
+      if (nextGrids.length > 0) setGridNames((registered) => [...registered, ...nextGrids]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'import failed');
     } finally {
@@ -292,7 +299,8 @@ export function ImageOverlayPanel({ onClose }: { onClose: () => void }) {
           }}
         >
           <Text size="xs" c="dimmed" ta="center">
-            Drop a plan image or PDF here, with its world file and .prj if you have them
+            Drop a plan image or PDF here, with its world file, .prj and .gsb datum grid if you
+            have them
           </Text>
           <FileButton onChange={(files) => files && void handleFiles(files)} accept={OVERLAY_ACCEPT.join(',')} multiple>
             {(props) => (
@@ -308,6 +316,7 @@ export function ImageOverlayPanel({ onClose }: { onClose: () => void }) {
             {source.name} · {source.width}×{source.height}
             {worldFileText ? ' · world file' : ''}
             {projectionText ? ' · .prj' : ''}
+            {gridNames.length > 0 ? ' · datum grid' : ''}
           </Text>
         )}
 
