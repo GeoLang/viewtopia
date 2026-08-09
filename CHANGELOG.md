@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-08: **compact phone toolbar**. The phone row used to mount the
+  full desktop toolbar behind a horizontal scroll. `ViewerToolbar compact`
+  now keeps the renderer tabs, fly-to search and one-tap Layers/Inspect,
+  and folds the five labeled menus plus Measure, Legend, More, Plugins and
+  Settings into a single scrollable "All tools" menu with section labels.
+  View-only sessions keep their icon row and badge.
+
 - 2026-08-08: **embed mode**. `?embed=1` renders the viewer with no chrome:
   header, toolbar, chat, panels, palette, shortcuts, welcome and tour all
   gone, just the map plus a pill badge naming the live document and linking

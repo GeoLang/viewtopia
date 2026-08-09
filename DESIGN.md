@@ -341,8 +341,10 @@ backend status dot, chat toggle and theme toggle right. The chat sidebar starts 
 chat panel owns session management. The renderer and basemap selects live in a popover behind a
 map-corner button, not in the toolbar. The minimap is opt-in via Settings. Ctrl+. (metaKey maps
 to the same combo, so Cmd+. on mac) collapses header, aside, panels and map widgets for a
-map-only view. On phones the toolbar is its own scrollable row under the header and chat is a
-bottom sheet with a floating toggle.
+map-only view. On phones the toolbar is its own compact row under the header (tabs, fly-to,
+Layers and Inspect one tap away, everything else folded into one "All tools" menu) and chat is
+a bottom sheet with a floating toggle. Not chased from the Felt audit: their canvas annotation
+renderer and per-frame cursor rotation, still below the visible waterline.
 
 **Renderers.** Two globe renderers, not three: CesiumJS (3D globe) and MapLibre GL (vector
 globe) with the deck.gl data-viz layers interleaved into MapLibre through `MapboxOverlay`

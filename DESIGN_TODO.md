@@ -4,7 +4,7 @@
 > Status keys: `[ ]` todo · `[~]` in progress · `[!]` blocked.
 > **Open work only** — a completed item is deleted; durable design knowledge folds
 > into DESIGN.md's current-state sections, dated history goes in per-repo changelogs.
-> Last brought current: **2026-08-04**.
+> Last brought current: **2026-08-08**.
 
 ---
 
@@ -78,19 +78,6 @@ enterprise contracts, so those fronts need no response.
 Scope discipline that follows from the thesis: Figma did not beat Photoshop
 on features, it won one workflow. Win "a team makes and analyzes a map
 together in the browser" and refuse feature-parity fights with ArcGIS.
-
-## OPEN: viewtopia UI polish to Felt level (audited 2026-08-07)
-
-From a running-app audit, a code audit of all ~76 panels, and Felt's
-published design writing. Felt's bar is three commitments: the map is the
-whole screen, one design system with no raw edges, desktop-grade
-micro-interaction. Phases 1 to 4 shipped 2026-08-08, see the changelog
-and DESIGN.md's shell layout paragraph. Where viewtopia still misses: raw
-errors sit in the chrome ("agora GET /documents failed with 500" in the
-Live dialog), and the toolbar at phone widths only scrolls.
-
-Not chased: Felt's canvas annotation renderer and per-frame cursor
-rotation, still below the visible waterline.
 
 ## OPEN — platform hygiene
 

@@ -46,7 +46,8 @@ const TAB_DATA: {
   { value: 'map', label: '2D', ariaLabel: '2D Map', icon: <IconMap size={14} /> },
 ];
 
-export function ViewerToolbar() {
+/** `compact` is the phone layout: the labeled menus fold into one "All tools" menu. */
+export function ViewerToolbar({ compact = false }: { compact?: boolean }) {
   const { activeTab, setActiveTab, togglePanel } = useAppStore();
   const toggleSpaceTime = useSpaceTimeStore((s) => s.togglePanel);
   const showPreviewTools = useAppStore((s) => s.settings.showPreviewTools);
@@ -71,47 +72,141 @@ export function ViewerToolbar() {
       </Menu.Item>
     ));
 
+  const rendererTabs = (
+    <Tabs
+      value={activeTab}
+      onChange={(v) => v && setActiveTab(v as ViewerTab)}
+      variant="pills"
+      radius="sm"
+      style={{ flexShrink: 0 }}
+    >
+      <Tabs.List style={{ flexWrap: 'nowrap' }}>
+        {TAB_DATA.map((tab) => (
+          <Tabs.Tab
+            key={tab.value}
+            value={tab.value}
+            leftSection={tab.icon}
+            size="xs"
+            aria-label={tab.ariaLabel}
+          >
+            {tab.label}
+          </Tabs.Tab>
+        ))}
+      </Tabs.List>
+    </Tabs>
+  );
+
+  const measureIcon = (
+    <Tooltip label="Measure (M)"><ActionIcon aria-label="Measure" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('measure')}><IconRuler size={14} /></ActionIcon></Tooltip>
+  );
+  const layersIcon = (
+    <Tooltip label="Layers"><ActionIcon aria-label="Layers" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('layers')}><IconStack2 size={14} /></ActionIcon></Tooltip>
+  );
+  const legendIcon = (
+    <Tooltip label="Legend"><ActionIcon aria-label="Legend" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('legend')}><IconListDetails size={14} /></ActionIcon></Tooltip>
+  );
+  const inspectIcon = (
+    <Tooltip label="Inspect"><ActionIcon aria-label="Inspect" size="sm" variant="subtle" color="gray" onClick={toggleInspectPanel}><IconClick size={14} /></ActionIcon></Tooltip>
+  );
+  const viewOnlyBadge = (
+    <Badge size="sm" variant="light" color="gray">
+      View only
+    </Badge>
+  );
+
+  if (compact) {
+    return (
+      <Group gap={6} style={{ flex: 1, minWidth: 0, overflowX: 'auto' }} wrap="nowrap">
+        {rendererTabs}
+        <FlyToSearch />
+        {viewOnly ? (
+          <>
+            {measureIcon}
+            {layersIcon}
+            {legendIcon}
+            {inspectIcon}
+            {viewOnlyBadge}
+          </>
+        ) : (
+          <>
+            {layersIcon}
+            {inspectIcon}
+            <Menu shadow="md" width={210}>
+              <Menu.Target>
+                <Tooltip label="All tools">
+                  <ActionIcon aria-label="All tools" size="sm" variant="subtle" color="gray">
+                    <IconTool size={14} />
+                  </ActionIcon>
+                </Tooltip>
+              </Menu.Target>
+              <Menu.Dropdown mah="70vh" style={{ overflowY: 'auto' }}>
+                <Menu.Item leftSection={<IconRuler size={14} />} onClick={() => togglePanel('measure')}>
+                  Measure
+                </Menu.Item>
+                <Menu.Item leftSection={<IconListDetails size={14} />} onClick={() => togglePanel('legend')}>
+                  Legend
+                </Menu.Item>
+                <Menu.Label>Actions</Menu.Label>
+                {renderMenuItems(ACTIONS_MENU[0])}
+                <Menu.Item leftSection={<IconDownload size={14} />} onClick={exportMapPng}>
+                  Export PNG
+                </Menu.Item>
+                <Menu.Label>Analysis</Menu.Label>
+                {renderMenuItems(ANALYSIS_MENU[0])}
+                <Menu.Item leftSection={<IconClockHour4 size={14} />} onClick={toggleSpaceTime}>
+                  Space-Time
+                </Menu.Item>
+                {renderMenuItems(ANALYSIS_MENU[1])}
+                <Menu.Label>Simulate</Menu.Label>
+                {renderMenuItems(SIMULATE_MENU[0])}
+                <Menu.Label>Tools</Menu.Label>
+                {renderMenuItems(TOOLS_MENU[0])}
+                {renderMenuItems(TOOLS_MENU[1])}
+                <Menu.Label>Data</Menu.Label>
+                {renderMenuItems(DATA_MENU[0])}
+                {renderMenuItems(DATA_MENU[1])}
+                {renderMenuItems(DATA_MENU[2])}
+                <Menu.Label>More</Menu.Label>
+                {renderMenuItems(MORE_MENU[0])}
+                {plugins.length > 0 && <Menu.Label>Plugins</Menu.Label>}
+                {plugins.map((p) => (
+                  <Menu.Item
+                    key={p.id}
+                    leftSection={p.icon ?? <IconPlug size={14} />}
+                    onClick={() => togglePanel(p.id as ToolPanel)}
+                  >
+                    {p.name}
+                  </Menu.Item>
+                ))}
+                <Menu.Divider />
+                <Menu.Item leftSection={<IconSettings size={14} />} onClick={() => togglePanel('settings')}>
+                  Settings
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          </>
+        )}
+      </Group>
+    );
+  }
+
   return (
     <Group
       gap={6}
       style={{ flex: 1, minWidth: 0, overflowX: 'auto' }}
       wrap="nowrap"
     >
-      <Tabs
-        value={activeTab}
-        onChange={(v) => v && setActiveTab(v as ViewerTab)}
-        variant="pills"
-        radius="sm"
-        style={{ flexShrink: 0 }}
-      >
-        <Tabs.List style={{ flexWrap: 'nowrap' }}>
-          {TAB_DATA.map((tab) => (
-            <Tabs.Tab
-              key={tab.value}
-              value={tab.value}
-              leftSection={tab.icon}
-              size="xs"
-              aria-label={tab.ariaLabel}
-            >
-              {tab.label}
-            </Tabs.Tab>
-          ))}
-        </Tabs.List>
-      </Tabs>
+      {rendererTabs}
 
       <Group gap={6} wrap="nowrap">
         <FlyToSearch />
 
-        <Tooltip label="Measure (M)"><ActionIcon aria-label="Measure" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('measure')}><IconRuler size={14} /></ActionIcon></Tooltip>
-        <Tooltip label="Layers"><ActionIcon aria-label="Layers" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('layers')}><IconStack2 size={14} /></ActionIcon></Tooltip>
-        <Tooltip label="Legend"><ActionIcon aria-label="Legend" size="sm" variant="subtle" color="gray" onClick={() => togglePanel('legend')}><IconListDetails size={14} /></ActionIcon></Tooltip>
-        <Tooltip label="Inspect"><ActionIcon aria-label="Inspect" size="sm" variant="subtle" color="gray" onClick={toggleInspectPanel}><IconClick size={14} /></ActionIcon></Tooltip>
+        {measureIcon}
+        {layersIcon}
+        {legendIcon}
+        {inspectIcon}
 
-        {viewOnly && (
-          <Badge size="sm" variant="light" color="gray">
-            View only
-          </Badge>
-        )}
+        {viewOnly && viewOnlyBadge}
 
         {!viewOnly && (
         <>

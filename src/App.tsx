@@ -219,7 +219,7 @@ export function App() {
                 style={{ borderBottom: '1px solid var(--mantine-color-dark-5)', background: 'var(--mantine-color-dark-7)', overflowX: 'auto' }}
                 wrap="nowrap"
               >
-                <ViewerToolbar />
+                <ViewerToolbar compact />
               </Group>
             )}
             <ErrorBoundary fallbackMessage="Map viewer encountered an error">
