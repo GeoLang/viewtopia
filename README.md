@@ -604,6 +604,27 @@ Minimal host page:
 
 ---
 
+## Datum Shift Grids
+
+A `.prj` naming a datum like NAD27 needs an NTv2 grid before its coordinates can be
+projected, and no grid data ships with the app. When a transform turns out to need one,
+the viewer fetches `/grids/<name>` for each name projicio reports, using the name
+exactly as reported (`conus`, `ntv2_0.gsb`). Those names are alternatives, so the first
+one that loads is enough, and it stays registered for the life of the page.
+
+Put the files where that path resolves:
+
+```bash
+public/grids/conus            # local dev, served by vite
+```
+
+For a deployment, mount a grids directory at `/grids/` or bake it into the image.
+
+When no grid is served, the image overlay panel takes a `.gsb` dropped alongside the
+image and its `.prj`.
+
+---
+
 ## Plugin Development
 
 ViewTopia uses a file-based plugin system — drop a folder in `src/plugins/` and it's automatically discovered.
