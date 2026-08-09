@@ -1,6 +1,12 @@
 import { toFeatureCollection, useAgentLayerStore, type AgentLayer } from '../store/agentLayers';
 import { loadStoredAnnotations, useAnnotationStore, type Annotation } from '../store/annotations';
-import { useAppStore, type Bookmark, type LayerItem } from '../store/app';
+import {
+  holdLocalBookmarks,
+  restoreLocalBookmarks,
+  useAppStore,
+  type Bookmark,
+  type LayerItem,
+} from '../store/app';
 import { compareFractionalIndex, generateIndexBetween } from './fractionalIndex';
 import { isLiveDocumentActive, useLiveStore } from './liveStore';
 import {
@@ -478,12 +484,14 @@ export function startDocumentBridge(): () => void {
         stateForNewDocument = null;
         documentSources.clear();
         oversizedLayerIds.clear();
-        applyFromDocument(() =>
-          useAnnotationStore.getState().setAnnotations(loadStoredAnnotations()),
-        );
+        applyFromDocument(() => {
+          useAnnotationStore.getState().setAnnotations(loadStoredAnnotations());
+          restoreLocalBookmarks();
+        });
       }
       return;
     }
+    if (previous.documentId === null) holdLocalBookmarks();
     // joining resets the document to an empty one, and local state stays put
     // until the server says what the document holds
     if (state.documentId !== previous.documentId) return;

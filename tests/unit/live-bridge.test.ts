@@ -16,6 +16,13 @@ import { useAppStore, type Bookmark, type LayerItem } from '../../src/store/app'
 import { FakeAgoraServer } from './stubs/fakeAgoraServer';
 
 const ANNOTATION_STORAGE_KEY = 'viewtopia-annotations';
+const APP_STORAGE_KEY = 'viewtopia-app';
+
+function storedBookmarkIds(): string[] {
+  const stored = JSON.parse(localStorage.getItem(APP_STORAGE_KEY) ?? '{}');
+  const bookmarks: Bookmark[] = stored.state?.bookmarks ?? [];
+  return bookmarks.map((entry) => entry.id);
+}
 
 function appLayer(id: string, overrides: Partial<LayerItem> = {}): LayerItem {
   return { id, name: id.toUpperCase(), type: 'vector', visible: true, opacity: 1, ...overrides };
@@ -494,5 +501,25 @@ describe('live document bridge', () => {
     useLiveStore.getState().disconnect();
     expect(useAnnotationStore.getState().annotations.map((entry) => entry.id)).toEqual(['mine']);
     expect(JSON.parse(localStorage.getItem(ANNOTATION_STORAGE_KEY) ?? '[]')).toHaveLength(1);
+  });
+
+  it('restores the local bookmarks when the session ends', () => {
+    useAppStore.setState({ bookmarks: [bookmark('mine')] });
+    goLive();
+    server.applyFromPeer('ada', 'bookmarks/theirs', bookmark('theirs'));
+    expect(useAppStore.getState().bookmarks.map((entry) => entry.id)).toEqual(['theirs']);
+    expect(storedBookmarkIds()).toEqual(['mine']);
+
+    useLiveStore.getState().disconnect();
+    expect(useAppStore.getState().bookmarks.map((entry) => entry.id)).toEqual(['mine']);
+    expect(storedBookmarkIds()).toEqual(['mine']);
+  });
+
+  it('keeps a bookmark added during a session out of local storage', () => {
+    useAppStore.setState({ bookmarks: [bookmark('mine')] });
+    goLive();
+    useAppStore.getState().addBookmark(bookmark('shared'));
+    expect(server.document.bookmarks.shared).toMatchObject({ id: 'shared' });
+    expect(storedBookmarkIds()).toEqual(['mine']);
   });
 });

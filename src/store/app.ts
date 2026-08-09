@@ -194,6 +194,24 @@ const DEFAULT_SETTINGS: Settings = {
   googleMapsApiKey: '',
 };
 
+/**
+ * The bookmarks this browser owns, held aside while a live document's bookmarks
+ * are the ones on screen. Null when no live document is showing.
+ */
+let localBookmarks: Bookmark[] | null = null;
+
+/** Called when a live document takes over the bookmark list. */
+export function holdLocalBookmarks(): void {
+  localBookmarks = useAppStore.getState().bookmarks;
+}
+
+/** Called when the live session ends, putting this browser's own list back. */
+export function restoreLocalBookmarks(): void {
+  const held = localBookmarks;
+  localBookmarks = null;
+  if (held) useAppStore.setState({ bookmarks: held });
+}
+
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
@@ -273,7 +291,9 @@ export const useAppStore = create<AppState>()(
         // persisted with the basemap so a reload of 'custom' still has its tiles
         customBasemap: state.customBasemap,
         renderer: state.renderer,
-        bookmarks: state.bookmarks,
+        // a live document's bookmarks belong to the document, so they never
+        // overwrite the ones this browser owns
+        bookmarks: localBookmarks ?? state.bookmarks,
         settings: state.settings,
         asideWidth: state.asideWidth,
       }),
