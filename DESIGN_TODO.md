@@ -59,11 +59,6 @@ collaborative workflow, so they are in-thesis rather than parity chasing.
 Felt has no versioning, no routing, no 3D and self-hosts only on
 enterprise contracts, so those fronts need no response.
 
-- [ ] **agent MCP server** — expose the geolang tool surface over MCP
-      (streamable HTTP) so Claude, Cursor and the rest can drive a map
-      session. Felt ships this enterprise-gated and cloud-only; an open
-      self-hosted one is exactly the counter-position, and the tool
-      manifest + executor already exist in geolang-api.
 - [ ] **read-only warehouse sources** (weigh before building) — Felt reads
       Snowflake/BigQuery/Databricks live, enterprise-only. Ptolemy already
       does external read-only PostGIS tables; the same model could take a

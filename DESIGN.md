@@ -264,7 +264,16 @@ pgvector for the four similarity routes.
 summarize-on-overflow history. `geolang-api` serves a `/tools` manifest plus an executor,
 where tools run in-process with no sandbox and no source shipping, and proxies runs as NDJSON
 behind the `agent_event_stream` seam, so the viewer's AG-UI contract is untouched. **AG-UI is
-the only agent channel.**
+the viewer's agent channel.**
+
+**External agents come in over MCP.** geolang-api serves the same 39 tools as stateless
+streamable HTTP at `/agent/mcp`, behind the same platform JWT gate. A request carrying an
+`X-Agora-Document` header (document id or share link token) lands its map effects in that
+live document: `__UI_SPEC__` layers become `layers/` ops (inline under 48KiB, published to
+an open-read URL otherwise), camera commands become presence, and the agent joins as
+`agent:<caller sub>` granted edit through the caller's own token. Live layer entries carry
+the publisher's colour in `styleOverrides.color`. Contract details in geolang's
+`docs/api_reference.md`.
 
 **Plans are geodukt manifests.** The agent composes a geodukt TOML manifest as its execution
 plan: `plan_workflow` validates it, the viewer renders the steps with a validated badge, and
