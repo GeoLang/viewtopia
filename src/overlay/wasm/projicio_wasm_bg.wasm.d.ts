@@ -1,0 +1,31 @@
+/* tslint:disable */
+/* eslint-disable */
+export const memory: WebAssembly.Memory;
+export const transform_coordinates: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+export const main: () => void;
+export const toProjstring: (a: number, b: number) => [number, number, number, number];
+export const __wbg_get_point_x: (a: number) => number;
+export const __wbg_get_point_y: (a: number) => number;
+export const __wbg_get_point_z: (a: number) => number;
+export const __wbg_point_free: (a: number, b: number) => void;
+export const __wbg_projection_free: (a: number, b: number) => void;
+export const __wbg_set_point_x: (a: number, b: number) => void;
+export const __wbg_set_point_y: (a: number, b: number) => void;
+export const __wbg_set_point_z: (a: number, b: number) => void;
+export const point_new: (a: number, b: number, c: number) => number;
+export const projection_axis: (a: number) => [number, number];
+export const projection_isGeocentric: (a: number) => number;
+export const projection_isLatlon: (a: number) => number;
+export const projection_isNormalizedAxis: (a: number) => number;
+export const projection_new: (a: number, b: number) => [number, number, number];
+export const projection_projName: (a: number) => [number, number];
+export const projection_to_meter: (a: number) => number;
+export const projection_units: (a: number) => [number, number];
+export const transform: (a: number, b: number, c: number) => [number, number];
+export const add_nadgrid: (a: number, b: number, c: any) => [number, number];
+export const __wbindgen_malloc: (a: number, b: number) => number;
+export const __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
+export const __wbindgen_externrefs: WebAssembly.Table;
+export const __externref_table_dealloc: (a: number) => void;
+export const __wbindgen_free: (a: number, b: number, c: number) => void;
+export const __wbindgen_start: () => void;

@@ -59,11 +59,6 @@ collaborative workflow, so they are in-thesis rather than parity chasing.
 Felt has no versioning, no routing, no 3D and self-hosts only on
 enterprise contracts, so those fronts need no response.
 
-- [ ] **georeferenced image + PDF overlays** — drop a site plan or scanned
-      map, place it by world file or manual corner pinning, keep it as a
-      layer. Common field workflow, nothing in the stack does it, and it
-      fits "a team makes a map together" (the team's source material is
-      often a PDF).
 - [ ] **agent MCP server** — expose the geolang tool surface over MCP
       (streamable HTTP) so Claude, Cursor and the rest can drive a map
       session. Felt ships this enterprise-gated and cloud-only; an open

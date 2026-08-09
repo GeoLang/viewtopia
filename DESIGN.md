@@ -43,7 +43,7 @@ Maturity (test-fn counts via `grep -rE '#\[(test|tokio::test|sqlx::test)'`):
 | geokode / geogit / itinera | geocode / geo VCS / routing | 72 / 70 / 62 | ✅ |
 | interiora | indoor | 49 | ✅ |
 | panoptes | imagery ML | 45 | ONNX path real, **no published weights** ⚠️ |
-| viewtopia | flagship viewer | 347 vitest + 18 platform E2E | 47 registry panels (18 preview-gated) + 23 plugin panels |
+| viewtopia | flagship viewer | 347 vitest + 18 platform E2E | 48 registry panels (18 preview-gated) + 22 plugin panels |
 | geolang | NL→GIS agent | 172 (py) | 39 tools, wired to ptolemy/itinera/geokode/geodukt |
 
 **Current headline risks:**
@@ -375,7 +375,7 @@ parameters, input and outcome, the failing step's reason in a tooltip rather tha
 written outputs as download links (the serving route is not a `:path` route, so links use the
 basename).
 
-**Tool panels.** 47 registry panels, 29 on by default, plus 23 plugin panels (measure, feature-picker, geojson/style editors,
+**Tool panels.** 48 registry panels, 30 on by default, plus 22 plugin panels (measure, feature-picker, geojson/style editors,
 geocoding, routing via itinera, terrain profile, cross-section, heatmap, spatial stats,
 weather/wind, shadows/lighting, raster/COG, space-time, notebooks, the industry verticals
 wired via plugins to ptolemy `/api/v1/*`). **18 experimental panels are gated** behind a "Show Preview

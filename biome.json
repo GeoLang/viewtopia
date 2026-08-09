@@ -9,7 +9,8 @@
 			"*.js",
 			"*.mjs",
 			"!src/raster/wasm",
-			"!src/toolbox/wasm"
+			"!src/toolbox/wasm",
+			"!src/overlay/wasm"
 		]
 	},
 	"formatter": {

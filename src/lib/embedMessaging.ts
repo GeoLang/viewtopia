@@ -1,9 +1,8 @@
 import { useEffect } from 'react';
-import { Cartesian2, Cartographic, Math as CesiumMath } from 'cesium';
 import { useAppStore } from '../store/app';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { getSharedCamera, subscribeSharedCamera } from '../hooks/sharedCamera';
-import { getActiveCesiumViewer, getActiveMapLibre } from '../viewer/registry';
+import { clickCoordinates } from './mapClickCoordinates';
 
 /**
  * The postMessage surface an `?embed=1` iframe offers its host page, so a
@@ -36,33 +35,6 @@ function setLayerVisibility(layerId: string, visible: boolean): void {
   const { layers, toggleLayerVisibility } = useAppStore.getState();
   const layer = layers.find((candidate) => candidate.id === layerId);
   if (layer && layer.visible !== visible) toggleLayerVisibility(layerId);
-}
-
-/** The clicked map coordinates, or null when the click was not on the map. */
-function clickCoordinates(event: MouseEvent): { lng: number; lat: number } | null {
-  const target = event.target;
-  if (!(target instanceof HTMLCanvasElement)) return null;
-
-  const map = getActiveMapLibre();
-  if (map && map.getCanvas() === target) {
-    const rect = target.getBoundingClientRect();
-    const point = map.unproject([event.clientX - rect.left, event.clientY - rect.top]);
-    return { lng: point.lng, lat: point.lat };
-  }
-
-  const viewer = getActiveCesiumViewer();
-  if (viewer && viewer.scene.canvas === target) {
-    const rect = target.getBoundingClientRect();
-    const position = new Cartesian2(event.clientX - rect.left, event.clientY - rect.top);
-    const cartesian = viewer.camera.pickEllipsoid(position, viewer.scene.globe.ellipsoid);
-    if (!cartesian) return null;
-    const cartographic = Cartographic.fromCartesian(cartesian);
-    return {
-      lng: CesiumMath.toDegrees(cartographic.longitude),
-      lat: CesiumMath.toDegrees(cartographic.latitude),
-    };
-  }
-  return null;
 }
 
 function handleHostMessage(event: MessageEvent): void {

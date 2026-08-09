@@ -72,6 +72,7 @@ export type ToolPanel =
   | 'globalTerrain'
   | 'vectorTiles'
   | 'rasterViewer'
+  | 'imageOverlay'
   | 'toolbox'
   | 'convert'
   | 'featurePicker'

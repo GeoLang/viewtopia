@@ -66,6 +66,7 @@ import { GlobalTerrainPanel } from './tools/GlobalTerrainPanel';
 import { VectorTilesPanel } from './tools/VectorTilesPanel';
 import { RasterPanel } from '../raster/RasterPanel';
 import { ToolboxPanel } from '../toolbox/ToolboxPanel';
+import { ImageOverlayPanel } from '../overlay/ImageOverlayPanel';
 import { ConvertPanel } from '../features/convert/ConvertPanel';
 import { PrintExportPanel } from './tools/PrintExportPanel';
 
@@ -284,6 +285,8 @@ export function ToolPanels() {
       return <RasterPanel onClose={close} />;
     case 'toolbox':
       return <ToolboxPanel onClose={close} />;
+    case 'imageOverlay':
+      return <ImageOverlayPanel onClose={close} />;
     case 'convert':
       return <ConvertPanel onClose={close} />;
     case 'printExport':

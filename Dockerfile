@@ -26,6 +26,12 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
     }
 
+    # vite emits module workers (pdfjs) as .mjs, which mime.types does not map,
+    # and a module script served as octet-stream is refused by the browser
+    location ~ \.mjs$ {
+        types { text/javascript mjs; }
+    }
+
     location / {
         try_files $uri $uri/ /index.html;
     }

@@ -119,7 +119,6 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 | **KML Tools** | KML Tools | 771K | Import KML/KMZ/GPX, export KML |
 | **Shape Tools** | Shape Tools | 669K | Geodesic circles, ellipses, sectors, arcs |
 | **Point Sampling** | Point Sampling Tool | 662K | Multi-layer sampling + CSV export |
-| **Georeferencer** | Freehand Georeferencer | 664K | Control points + affine transform |
 | **Advanced Sketching** | Sketching Tools | 669K | Split, merge, offset, smooth, densify, snap |
 
 ### Data & Layers
@@ -128,6 +127,7 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 | **Asset Catalogue** | Browse TileTopia tilesets and load with one click |
 | **Cesium Ion** | Connect your Ion account and load assets |
 | **OGC Layers** | Import WMS, WMTS, WFS, and XYZ tile services |
+| **Image Overlay** | Drop a site plan image or PDF, place it by world file + `.prj` (projicio wasm) or two clicks, keep it as a layer |
 | **Drag & Drop** | Drop GeoJSON, GPX, KML, CSV, GeoPackage, Shapefile (loose or zipped), FlatGeobuf and GeoParquet files to import |
 | **GPX/KML Import** | Track and waypoint rendering |
 | **SQL** | Run DuckDB SQL over imported and attached data, draw the result on the map, export CSV or Parquet |

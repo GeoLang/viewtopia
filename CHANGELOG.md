@@ -6,6 +6,16 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-08: **georeferenced image + PDF overlays**. A Data menu "Image
+  Overlay" panel drapes a site plan image or a PDF page over the map. A world
+  file sidecar places it exactly, a `.prj` names its coordinate system
+  (transformed by projicio compiled to wasm, the platform's own CRS engine,
+  vendored in src/overlay/wasm), and rotated or reprojected images resample
+  north-up onto their bbox. Without sidecars, two clicks pin the corners with
+  the image aspect held at that latitude. Placement stays editable (bbox
+  fields, opacity) until "Keep layer" hands it to the raster layer store all
+  three renderers draw. Supersedes the georeferencer preview plugin, deleted.
+
 - 2026-08-08: **embed postMessage API**. An `?embed=1` iframe now offers its
   host page a message surface (lib/embedMessaging.ts, active only inside an
   iframe): host → embed `viewtopia:flyTo` {lng, lat, zoom?},

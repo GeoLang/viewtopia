@@ -81,6 +81,7 @@
     "livekit-client": "^2.19.0",
     "mapillary-js": "^4.1.2",
     "maplibre-gl": "^5.24.0",
+    "pdfjs-dist": "^6.2.108",
     "pmtiles": "^4.4.1",
     "rbush": "^4.0.1",
     "react": "^19.2.6",
