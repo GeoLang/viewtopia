@@ -36,6 +36,7 @@ import { useJoinLiveFromLink } from './live/joinFromLink';
 import { MapPresence } from './live/MapPresence';
 import { EmbedBadge } from './components/EmbedBadge';
 import { isEmbedRequested } from './lib/embedMode';
+import { useEmbedMessaging } from './lib/embedMessaging';
 
 const MOBILE_SHEET_HEIGHT = '45vh';
 
@@ -74,6 +75,7 @@ export function App() {
   const viewOnly = useViewOnlyLive();
   // an iframe embed renders no chrome at all, just the map and a badge
   const embed = isEmbedRequested();
+  useEmbedMessaging(embed);
 
   useBackendDiscovery();
   useKeyboardShortcuts(

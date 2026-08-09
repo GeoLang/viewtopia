@@ -14,6 +14,7 @@ export default defineConfig({
     'agent-layers.spec.js',
     'tools-across-renderers.spec.js',
     'default-boot.spec.js',
+    'embed-messaging.spec.js',
   ],
   timeout: 60000,
   // one worker on CI: two concurrent Cesium tabs on swiftshader starve the

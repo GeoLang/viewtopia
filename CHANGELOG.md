@@ -6,6 +6,17 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-08: **embed postMessage API**. An `?embed=1` iframe now offers its
+  host page a message surface (lib/embedMessaging.ts, active only inside an
+  iframe): host → embed `viewtopia:flyTo` {lng, lat, zoom?},
+  `viewtopia:getCamera`, `viewtopia:listLayers`,
+  `viewtopia:setLayerVisibility` {layerId, visible}; embed → host
+  `viewtopia:ready` on boot, `viewtopia:camera` (as the getCamera reply and
+  throttled on every move), `viewtopia:layers`, `viewtopia:click` {lng, lat}.
+  Only messages from the parent window are honoured. Unit tests cover the
+  handlers, and a react e2e drives a real iframe from a host page (fly,
+  camera stream, click).
+
 - 2026-08-08: **compact phone toolbar**. The phone row used to mount the
   full desktop toolbar behind a horizontal scroll. `ViewerToolbar compact`
   now keeps the renderer tabs, fly-to search and one-tap Layers/Inspect,

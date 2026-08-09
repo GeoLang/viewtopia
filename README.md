@@ -561,6 +561,49 @@ the JWT `sub` on every frame it relays. The frames this client sends and reads:
 
 ---
 
+## Embedding
+
+`?embed=1` renders the viewer with no app chrome, just the map and a badge
+linking back to the full app. Pair it with a view-role share link (live map)
+or a `#cam=` hash (static view). The share dialog copies a ready iframe
+snippet for view links.
+
+The iframe offers its host page a postMessage API. Messages the embed accepts
+(parent window only):
+
+```jsonc
+{ "type": "viewtopia:flyTo", "lng": 7.42, "lat": 43.73, "zoom": 12 }   // zoom optional
+{ "type": "viewtopia:getCamera", "requestId": "r1" }                   // requestId echoed back
+{ "type": "viewtopia:listLayers", "requestId": "r2" }
+{ "type": "viewtopia:setLayerVisibility", "layerId": "roads", "visible": false }
+```
+
+Messages the embed posts to its parent:
+
+```jsonc
+{ "type": "viewtopia:ready" }                                          // once, on boot
+{ "type": "viewtopia:camera", "camera": { "longitude": 7.42, "latitude": 43.73, "zoom": 12, "bearing": 0, "pitch": 0 }, "requestId": "r1" }
+// ^ as the getCamera reply, and throttled on every camera move (no requestId then)
+{ "type": "viewtopia:layers", "layers": [{ "id": "roads", "name": "Roads", "type": "geojson", "visible": true }], "requestId": "r2" }
+{ "type": "viewtopia:click", "lng": 7.43, "lat": 43.74 }
+```
+
+Minimal host page:
+
+```html
+<iframe id="map" src="https://viewer.example.com/?live=TOKEN&embed=1" width="800" height="450"></iframe>
+<script>
+  window.addEventListener('message', (e) => {
+    if (e.data?.type === 'viewtopia:ready') {
+      document.getElementById('map').contentWindow.postMessage(
+        { type: 'viewtopia:flyTo', lng: 7.42, lat: 43.73, zoom: 12 }, '*');
+    }
+  });
+</script>
+```
+
+---
+
 ## Plugin Development
 
 ViewTopia uses a file-based plugin system — drop a folder in `src/plugins/` and it's automatically discovered.

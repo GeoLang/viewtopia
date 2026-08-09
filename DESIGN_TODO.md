@@ -462,9 +462,6 @@ High value, product-level:
       rule-based renderers plus the legend panel shipped 2026-08-02):
       expression renderers, scale-dependent visibility, and SLD/QML/Mapbox
       style import/export (fenestra already parses SLD server-side).
-- [ ] **embed postMessage API for host pages** (the chrome-less layout itself
-      shipped 2026-08-08 as `?embed=1`): camera set/get, layer toggles and
-      click events over postMessage, so a dashboard can drive its embed.
 - [ ] **runtime plugin install**: plugins are build-time only
       (`import.meta.glob`). GeoLibre ships a marketplace with
       install/update/remove.
