@@ -32,6 +32,27 @@ export function add_nadgrid(key: string, view: DataView): void;
 
 export function main(): void;
 
+/**
+ * The grid names a CRS needs registering before it can transform, sorted.
+ *
+ * Empty means registration is not what stands in the way. The spec is what
+ * `transform_coordinates` takes on either side.
+ */
+export function missing_grids(spec: string): string[];
+
+/**
+ * Register an NTv2 grid, under the name definitions refer to it by.
+ *
+ * The bytes are the contents of a `.gsb` file, parsed here so a bad one is reported
+ * now rather than at the first transform. A name can be registered once.
+ */
+export function register_grid(name: string, bytes: Uint8Array): void;
+
+/**
+ * The names of every grid registered so far, sorted.
+ */
+export function registered_grids(): string[];
+
 export function toProjstring(src: string): string;
 
 export function transform(src: Projection, dst: Projection, point: Point): void;
@@ -42,6 +63,9 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly missing_grids: (a: number, b: number) => [number, number];
+    readonly register_grid: (a: number, b: number, c: number, d: number) => [number, number];
+    readonly registered_grids: () => [number, number];
     readonly transform_coordinates: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly main: () => void;
     readonly toProjstring: (a: number, b: number) => [number, number, number, number];
@@ -64,10 +88,11 @@ export interface InitOutput {
     readonly projection_units: (a: number) => [number, number];
     readonly transform: (a: number, b: number, c: number) => [number, number];
     readonly add_nadgrid: (a: number, b: number, c: any) => [number, number];
+    readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
-    readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __externref_table_dealloc: (a: number) => void;
+    readonly __externref_drop_slice: (a: number, b: number) => void;
     readonly __wbindgen_free: (a: number, b: number, c: number) => void;
     readonly __wbindgen_start: () => void;
 }

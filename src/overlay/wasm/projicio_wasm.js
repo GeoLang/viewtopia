@@ -186,6 +186,53 @@ export function main() {
 }
 
 /**
+ * The grid names a CRS needs registering before it can transform, sorted.
+ *
+ * Empty means registration is not what stands in the way. The spec is what
+ * `transform_coordinates` takes on either side.
+ * @param {string} spec
+ * @returns {string[]}
+ */
+export function missing_grids(spec) {
+    const ptr0 = passStringToWasm0(spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.missing_grids(ptr0, len0);
+    var v2 = getArrayJsValueFromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    return v2;
+}
+
+/**
+ * Register an NTv2 grid, under the name definitions refer to it by.
+ *
+ * The bytes are the contents of a `.gsb` file, parsed here so a bad one is reported
+ * now rather than at the first transform. A name can be registered once.
+ * @param {string} name
+ * @param {Uint8Array} bytes
+ */
+export function register_grid(name, bytes) {
+    const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.register_grid(ptr0, len0, ptr1, len1);
+    if (ret[1]) {
+        throw takeFromExternrefTable0(ret[0]);
+    }
+}
+
+/**
+ * The names of every grid registered so far, sorted.
+ * @returns {string[]}
+ */
+export function registered_grids() {
+    const ret = wasm.registered_grids();
+    var v1 = getArrayJsValueFromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    return v1;
+}
+
+/**
  * @param {string} src
  * @returns {string}
  */
@@ -253,14 +300,6 @@ function __wbg_get_imports() {
             const ret = Error(getStringFromWasm0(arg0, arg1));
             return ret;
         },
-        __wbg___wbindgen_string_get_72bdf95d3ae505b1: function(arg0, arg1) {
-            const obj = arg1;
-            const ret = typeof(obj) === 'string' ? obj : undefined;
-            var ptr1 = isLikeNone(ret) ? 0 : passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-            var len1 = WASM_VECTOR_LEN;
-            getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
-            getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
-        },
         __wbg___wbindgen_throw_1506f2235d1bdba0: function(arg0, arg1) {
             throw new Error(getStringFromWasm0(arg0, arg1));
         },
@@ -268,20 +307,20 @@ function __wbg_get_imports() {
             const ret = arg0.buffer;
             return ret;
         },
-        __wbg_getFloat32_05898646a7e289a2: function(arg0, arg1, arg2) {
-            const ret = arg0.getFloat32(arg1 >>> 0, arg2 !== 0);
+        __wbg_byteLength_a11ecb8fecf41dbd: function(arg0) {
+            const ret = arg0.byteLength;
             return ret;
         },
-        __wbg_getFloat64_7bda219e7cfaea62: function(arg0, arg1, arg2) {
-            const ret = arg0.getFloat64(arg1 >>> 0, arg2 !== 0);
+        __wbg_byteOffset_820bb0f42a39b97d: function(arg0) {
+            const ret = arg0.byteOffset;
             return ret;
         },
-        __wbg_getInt32_92b3fd2b3b217b5f: function(arg0, arg1, arg2) {
-            const ret = arg0.getInt32(arg1 >>> 0, arg2 !== 0);
+        __wbg_length_4a591ecaa01354d9: function(arg0) {
+            const ret = arg0.length;
             return ret;
         },
-        __wbg_getUint32_a97257996264f19e: function(arg0, arg1, arg2) {
-            const ret = arg0.getUint32(arg1 >>> 0, arg2 !== 0);
+        __wbg_new_with_byte_offset_and_length_d836f26d916dd9ad: function(arg0, arg1, arg2) {
+            const ret = new Uint8Array(arg0, arg1 >>> 0, arg2 >>> 0);
             return ret;
         },
         __wbg_parseFloat_daa3e29bcf9b82dd: function(arg0, arg1) {
@@ -292,8 +331,12 @@ function __wbg_get_imports() {
             const ret = parseInt(getStringFromWasm0(arg0, arg1), arg2);
             return ret;
         },
-        __wbg_slice_262c269372d7dfb5: function(arg0, arg1, arg2) {
-            const ret = arg0.slice(arg1 >>> 0, arg2 >>> 0);
+        __wbg_prototypesetcall_3249fc62a0fafa30: function(arg0, arg1, arg2) {
+            Uint8Array.prototype.set.call(getArrayU8FromWasm0(arg0, arg1), arg2);
+        },
+        __wbindgen_cast_0000000000000001: function(arg0, arg1) {
+            // Cast intrinsic for `Ref(String) -> Externref`.
+            const ret = getStringFromWasm0(arg0, arg1);
             return ret;
         },
         __wbindgen_init_externref_table: function() {
@@ -330,6 +373,22 @@ function getArrayF64FromWasm0(ptr, len) {
     return getFloat64ArrayMemory0().subarray(ptr / 8, ptr / 8 + len);
 }
 
+function getArrayJsValueFromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    const mem = getDataViewMemory0();
+    const result = [];
+    for (let i = ptr; i < ptr + 4 * len; i += 4) {
+        result.push(wasm.__wbindgen_externrefs.get(mem.getUint32(i, true)));
+    }
+    wasm.__externref_drop_slice(ptr, len);
+    return result;
+}
+
+function getArrayU8FromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return getUint8ArrayMemory0().subarray(ptr / 1, ptr / 1 + len);
+}
+
 let cachedDataViewMemory0 = null;
 function getDataViewMemory0() {
     if (cachedDataViewMemory0 === null || cachedDataViewMemory0.buffer.detached === true || (cachedDataViewMemory0.buffer.detached === undefined && cachedDataViewMemory0.buffer !== wasm.memory.buffer)) {
@@ -358,8 +417,11 @@ function getUint8ArrayMemory0() {
     return cachedUint8ArrayMemory0;
 }
 
-function isLikeNone(x) {
-    return x === undefined || x === null;
+function passArray8ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+    getUint8ArrayMemory0().set(arg, ptr / 1);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
 }
 
 function passArrayF64ToWasm0(arg, malloc) {
