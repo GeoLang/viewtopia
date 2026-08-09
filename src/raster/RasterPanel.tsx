@@ -43,6 +43,7 @@ import { equalIntervals, ReclassEditor, type ReclassClass } from './ReclassEdito
 import { ZonalTable } from './ZonalTable';
 import { useAgentLayerStore } from '../store/agentLayers';
 import { renderToDataUrl } from './renderer';
+import { cornersOfBbox } from '../overlay/georeference';
 import type { RasterResult, ColorRamp, FocalStat, Neighborhood, ZonalResult } from './types';
 
 /** a run that produced features rather than a grid: contours, polygonize */
@@ -322,8 +323,9 @@ export function RasterPanel({ onClose }: { onClose: () => void }) {
         id: crypto.randomUUID(),
         name: result.operation,
         url: resultImage,
-        bbox: result.bbox,
+        corners: cornersOfBbox(result.bbox),
         opacity: 0.8,
+        visible: true,
       });
     } else if (vector) {
       addVectorLayer({

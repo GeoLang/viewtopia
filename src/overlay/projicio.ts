@@ -1,6 +1,6 @@
 import { GridsUnavailableError, registerMissingGrids } from './grids';
 import init, { register_grid, transform_coordinates } from './wasm/projicio_wasm';
-import type { Corners } from './worldFile';
+import type { Corners } from './georeference';
 
 /**
  * Projections backed by projicio compiled to WASM (src/overlay/wasm/), the

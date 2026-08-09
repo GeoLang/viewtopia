@@ -5,6 +5,7 @@ import { useAgentLayerStore, layerStyle } from '../store/agentLayers';
 import { simplestyleColor } from '../features/symbology/symbology';
 import { useAppStore } from '../store/app';
 import { agentLayersBounds } from './agentLayerBounds';
+import { bboxOfCorners } from '../overlay/georeference';
 
 /**
  * Draws the agent's ui_spec layers and markers on the 2D Leaflet map, so the
@@ -42,8 +43,10 @@ export function useAgentLayersLeaflet(mapRef: MutableRefObject<L.Map | null>) {
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    const overlays = rasterLayers.map((layer) => {
-      const [west, south, east, north] = layer.bbox;
+    // leaflet drapes onto a rectangle only, so a dragged quad shows as its
+    // envelope here; corner dragging is a MapLibre feature
+    const overlays = rasterLayers.filter((l) => l.visible).map((layer) => {
+      const [west, south, east, north] = bboxOfCorners(layer.corners);
       return L.imageOverlay(
         layer.url,
         [

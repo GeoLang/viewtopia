@@ -12,7 +12,13 @@ import {
   Button,
   Box,
 } from '@mantine/core';
-import { IconChevronRight, IconDownload, IconStack2 } from '@tabler/icons-react';
+import {
+  IconArrowDown,
+  IconArrowUp,
+  IconChevronRight,
+  IconDownload,
+  IconStack2,
+} from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { downloadOutput } from '../../features/workflow/plan';
@@ -180,20 +186,29 @@ function AgentLayerRow({
 }
 
 /**
- * An analysis result draped over its bbox. No symbology or export: it is an
- * image, so opacity and remove are the whole surface.
+ * An image draped over the map: an uploaded plan, a PDF page or an analysis
+ * result. No symbology or export, but it can be moved by its corner handles.
  */
 function RasterLayerRow({
   layer,
+  index,
+  count,
   expanded,
   onExpand,
 }: {
   layer: AgentRasterLayer;
+  index: number;
+  count: number;
   expanded: boolean;
   onExpand: () => void;
 }) {
   const setOpacity = useAgentLayerStore((s) => s.setRasterOpacity);
   const removeLayer = useAgentLayerStore((s) => s.removeRasterLayer);
+  const toggleVisibility = useAgentLayerStore((s) => s.toggleRasterVisibility);
+  const reorder = useAgentLayerStore((s) => s.reorderRasterLayers);
+  const editingRasterId = useAgentLayerStore((s) => s.editingRasterId);
+  const setEditingRaster = useAgentLayerStore((s) => s.setEditingRaster);
+  const editing = editingRasterId === layer.id;
 
   return (
     <Paper
@@ -216,6 +231,13 @@ function RasterLayerRow({
               flexShrink: 0,
               transform: expanded ? 'rotate(90deg)' : undefined,
             }}
+          />
+          <Switch
+            size="xs"
+            checked={layer.visible}
+            aria-label={`Show ${layer.name}`}
+            onClick={(e) => e.stopPropagation()}
+            onChange={() => toggleVisibility(layer.id)}
           />
           <Text size="xs" c="white" lineClamp={1}>
             {layer.name}
@@ -244,6 +266,46 @@ function RasterLayerRow({
             <Text size="xs" c="dimmed" w={30}>
               {Math.round(layer.opacity * 100)}%
             </Text>
+          </Group>
+          <Group gap="xs">
+            <ActionIcon
+              size="sm"
+              variant="subtle"
+              color="gray"
+              aria-label={`Move ${layer.name} down`}
+              disabled={index === 0}
+              onClick={(e) => {
+                e.stopPropagation();
+                reorder(index, index - 1);
+              }}
+            >
+              <IconArrowDown size={14} />
+            </ActionIcon>
+            <ActionIcon
+              size="sm"
+              variant="subtle"
+              color="gray"
+              aria-label={`Move ${layer.name} up`}
+              disabled={index === count - 1}
+              onClick={(e) => {
+                e.stopPropagation();
+                reorder(index, index + 1);
+              }}
+            >
+              <IconArrowUp size={14} />
+            </ActionIcon>
+            <Button
+              size="xs"
+              variant={editing ? 'filled' : 'subtle'}
+              color="violet"
+              data-testid="raster-edit-corners"
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditingRaster(editing ? null : layer.id);
+              }}
+            >
+              {editing ? 'Done' : 'Move corners'}
+            </Button>
           </Group>
           <Button
             size="xs"
@@ -377,10 +439,12 @@ export function LayerManager({
               onExpand={() => setExpandedId(expandedId === layer.id ? null : layer.id)}
             />
           ))}
-          {rasterLayers.map((layer) => (
+          {rasterLayers.map((layer, index) => (
             <RasterLayerRow
               key={layer.id}
               layer={layer}
+              index={index}
+              count={rasterLayers.length}
               expanded={expandedId === layer.id}
               onExpand={() => setExpandedId(expandedId === layer.id ? null : layer.id)}
             />

@@ -4,6 +4,7 @@ import { useAgentLayersMapLibre } from '../../src/hooks/useAgentLayersMapLibre';
 import { useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers';
 import { buildGraduated } from '../../src/features/symbology/symbology';
 import { useAppStore } from '../../src/store/app';
+import { cornersOfBbox } from '../../src/overlay/georeference';
 
 /** Enough of a maplibre style surface for the paint the hook writes. */
 function fakeMap() {
@@ -117,14 +118,15 @@ describe('useAgentLayersMapLibre', () => {
     expect(plain.features.map((f) => f.properties?.fill)).toEqual([undefined, undefined]);
   });
 
-  it('drapes a raster layer as an image source cornered on its bbox', () => {
+  it('drapes a raster layer as an image source on its corners', () => {
     const map = fakeMap();
     act(() => {
       useAgentLayerStore.getState().addRasterLayer({
         id: 'hs',
         name: 'hillshade',
         url: 'data:image/png;base64,AAA',
-        bbox: [12, 45, 13, 46],
+        corners: cornersOfBbox([12, 45, 13, 46]),
+        visible: true,
         opacity: 0.8,
       });
     });
@@ -154,7 +156,8 @@ describe('useAgentLayersMapLibre', () => {
         id: 'hs',
         name: 'hillshade',
         url: 'data:image/png;base64,AAA',
-        bbox: [12, 45, 13, 46],
+        corners: cornersOfBbox([12, 45, 13, 46]),
+        visible: true,
         opacity: 0.8,
       });
     });
@@ -177,14 +180,16 @@ describe('useAgentLayersMapLibre', () => {
         id: 'a',
         name: 'slope',
         url: 'data:image/png;base64,AAA',
-        bbox: [12, 45, 13, 46],
+        corners: cornersOfBbox([12, 45, 13, 46]),
+        visible: true,
         opacity: 0.8,
       });
       store.addRasterLayer({
         id: 'b',
         name: 'aspect',
         url: 'data:image/png;base64,BBB',
-        bbox: [12, 45, 13, 46],
+        corners: cornersOfBbox([12, 45, 13, 46]),
+        visible: true,
         opacity: 0.5,
       });
     });

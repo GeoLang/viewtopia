@@ -74,18 +74,13 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
 
       // rasters first, so features draw over the image they describe
       for (const layer of rasterLayers) {
+        if (!layer.visible) continue;
         const src = `${RASTER_PREFIX}${layer.id}`;
-        const [west, south, east, north] = layer.bbox;
+        // an image source takes any quad, so a dragged corner needs no resampling
         map.addSource(src, {
           type: 'image',
           url: layer.url,
-          // image source corners run clockwise from the top left
-          coordinates: [
-            [west, north],
-            [east, north],
-            [east, south],
-            [west, south],
-          ],
+          coordinates: layer.corners,
         });
         map.addLayer({
           id: `${src}-raster`,
@@ -154,7 +149,9 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
       const sources = Object.keys(map.getStyle()?.sources ?? {});
       const missing =
         layers.some((layer) => !sources.includes(`${PREFIX}${layer.id}`)) ||
-        rasterLayers.some((layer) => !sources.includes(`${RASTER_PREFIX}${layer.id}`));
+        rasterLayers.some(
+          (layer) => layer.visible && !sources.includes(`${RASTER_PREFIX}${layer.id}`),
+        );
       if (missing) apply();
     };
 

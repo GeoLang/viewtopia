@@ -1,5 +1,3 @@
-import type { Corners } from './worldFile';
-
 /**
  * Pure placement math for image overlays. The projection call sits in
  * projicio.ts and the canvas work in rasterize.ts, so this file stays
@@ -8,10 +6,28 @@ import type { Corners } from './worldFile';
 
 export type LonLatBbox = [number, number, number, number];
 
+/** Lon/lat of an image's four corners, clockwise from the top left. */
+export type Corners = [
+  [number, number],
+  [number, number],
+  [number, number],
+  [number, number],
+];
+
 export function bboxOfCorners(corners: Corners): LonLatBbox {
   const xs = corners.map(([x]) => x);
   const ys = corners.map(([, y]) => y);
   return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+}
+
+export function cornersOfBbox(bbox: LonLatBbox): Corners {
+  const [west, south, east, north] = bbox;
+  return [
+    [west, north],
+    [east, north],
+    [east, south],
+    [west, south],
+  ];
 }
 
 /**
@@ -51,6 +67,37 @@ export function bboxFromTwoClicks(
   const south = north - (east - west) * latitudeShrink * metersAspect;
   if (south <= -90) return null;
   return [west, south, east, north];
+}
+
+/** How much of the visible map a freshly dropped overlay covers. */
+const CENTER_PLACEMENT_FRACTION = 0.6;
+
+/**
+ * Corners for an overlay dropped with no georeferencing: centred on the view
+ * and scaled to a fraction of it, keeping ground proportions at that latitude
+ * so the image is not stretched before the user drags a corner.
+ */
+export function cornersAtCenter(
+  view: LonLatBbox,
+  imageWidth: number,
+  imageHeight: number,
+): Corners {
+  const [west, south, east, north] = view;
+  const centerLng = (west + east) / 2;
+  const centerLat = (south + north) / 2;
+  const latitudeShrink = Math.max(Math.cos((centerLat * Math.PI) / 180), 1e-6);
+  const latPerLon = (imageHeight / imageWidth) * latitudeShrink;
+  const lonSpan = Math.min(
+    (east - west) * CENTER_PLACEMENT_FRACTION,
+    ((north - south) * CENTER_PLACEMENT_FRACTION) / latPerLon,
+  );
+  const latSpan = lonSpan * latPerLon;
+  return cornersOfBbox([
+    centerLng - lonSpan / 2,
+    centerLat - latSpan / 2,
+    centerLng + lonSpan / 2,
+    centerLat + latSpan / 2,
+  ]);
 }
 
 const MIN_OVERLAY_ZOOM = 2;

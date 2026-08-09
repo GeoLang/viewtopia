@@ -14,81 +14,32 @@ import { IconMapPin, IconPhotoPlus, IconX } from '@tabler/icons-react';
 import { useAgentLayerStore } from '../store/agentLayers';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { clickCoordinates } from '../lib/mapClickCoordinates';
-import {
-  OVERLAY_ACCEPT,
-  imageCorners,
-  overlayFileKind,
-  parseWorldFile,
-} from './worldFile';
+import { OVERLAY_ACCEPT, imageCorners, overlayFileKind, parseWorldFile } from './worldFile';
 import {
   bboxFromTwoClicks,
   bboxOfCorners,
   cameraForBbox,
   cornersAxisAligned,
+  cornersOfBbox,
+  type Corners,
   type LonLatBbox,
 } from './georeference';
 import { cornersToLonLat, registerDroppedGrid } from './projicio';
 import { resampleNorthUp } from './rasterize';
-import { renderPdfPage } from './pdf';
-
-interface OverlaySource {
-  name: string;
-  dataUrl: string;
-  element: CanvasImageSource;
-  width: number;
-  height: number;
-  pdfFile?: File;
-  pageCount?: number;
-  page?: number;
-}
+import {
+  DEFAULT_OVERLAY_OPACITY,
+  centerCorners,
+  loadOverlaySource,
+  loadPdfSource,
+  type OverlaySource,
+} from './importOverlay';
 
 interface OverlayPlacement {
   url: string;
-  bbox: LonLatBbox;
-  kind: 'worldFile' | 'manual';
+  corners: Corners;
 }
 
 type CornerPicking = 'off' | 'first' | 'second';
-
-const DEFAULT_OVERLAY_OPACITY = 0.8;
-
-function readAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(new Error(`could not read ${file.name}`));
-    reader.readAsDataURL(file);
-  });
-}
-
-async function loadImageSource(file: File): Promise<OverlaySource> {
-  const dataUrl = await readAsDataUrl(file);
-  const element = new Image();
-  element.src = dataUrl;
-  await element.decode();
-  return {
-    name: file.name,
-    dataUrl,
-    element,
-    width: element.naturalWidth,
-    height: element.naturalHeight,
-  };
-}
-
-async function loadPdfSource(file: File, page: number): Promise<OverlaySource> {
-  // a fresh buffer per render: pdfjs transfers the one it is given to its worker
-  const { canvas, pageCount } = await renderPdfPage(await file.arrayBuffer(), page);
-  return {
-    name: file.name,
-    dataUrl: canvas.toDataURL('image/png'),
-    element: canvas,
-    width: canvas.width,
-    height: canvas.height,
-    pdfFile: file,
-    pageCount,
-    page,
-  };
-}
 
 export function ImageOverlayPanel({ onClose }: { onClose: () => void }) {
   const [source, setSource] = useState<OverlaySource | null>(null);
@@ -105,20 +56,35 @@ export function ImageOverlayPanel({ onClose }: { onClose: () => void }) {
   const layerId = useRef(crypto.randomUUID());
   const kept = useRef(false);
   const addRasterLayer = useAgentLayerStore((s) => s.addRasterLayer);
+  const setEditingRaster = useAgentLayerStore((s) => s.setEditingRaster);
+  const editedCorners = useAgentLayerStore(
+    (s) => s.rasterLayers.find((l) => l.id === layerId.current)?.corners,
+  );
   const flyTo = useSpaceTimeStore((s) => s.flyTo);
 
   useEffect(() => {
     return () => {
-      if (!kept.current) useAgentLayerStore.getState().removeRasterLayer(layerId.current);
+      if (!kept.current) {
+        useAgentLayerStore.getState().removeRasterLayer(layerId.current);
+      }
+      useAgentLayerStore.getState().setEditingRaster(null);
     };
   }, []);
 
   const showPlacement = (next: OverlayPlacement, name: string, fly: boolean) => {
     setPlacement(next);
     setError(null);
-    addRasterLayer({ id: layerId.current, name, url: next.url, bbox: next.bbox, opacity });
+    addRasterLayer({
+      id: layerId.current,
+      name,
+      url: next.url,
+      corners: next.corners,
+      opacity,
+      visible: true,
+    });
+    setEditingRaster(layerId.current);
     if (fly) {
-      const camera = cameraForBbox(next.bbox);
+      const camera = cameraForBbox(bboxOfCorners(next.corners));
       flyTo(camera.lng, camera.lat, camera.zoom);
     }
   };
@@ -136,9 +102,19 @@ export function ImageOverlayPanel({ onClose }: { onClose: () => void }) {
         projectionText,
       );
       if (stale) return;
+      // a rotated world file is resampled north-up so Cesium and Leaflet, which
+      // drape onto a rectangle, show it in the right place too
       const next: OverlayPlacement = cornersAxisAligned(corners)
-        ? { url: source.dataUrl, bbox: bboxOfCorners(corners), kind: 'worldFile' }
-        : { ...resampleNorthUp(source.element, source.width, source.height, corners), kind: 'worldFile' };
+        ? { url: source.dataUrl, corners }
+        : (() => {
+            const flat = resampleNorthUp(
+              source.element,
+              source.width,
+              source.height,
+              corners,
+            );
+            return { url: flat.url, corners: cornersOfBbox(flat.bbox) };
+          })();
       showPlacement(next, source.name, true);
     };
     apply().catch((err) => {
@@ -163,7 +139,7 @@ export function ImageOverlayPanel({ onClose }: { onClose: () => void }) {
       const bbox = bboxFromTwoClicks(firstCorner, coordinates, source.width, source.height);
       if (!bbox) return;
       setPicking('off');
-      showPlacement({ url: source.dataUrl, bbox, kind: 'manual' }, source.name, false);
+      showPlacement({ url: source.dataUrl, corners: cornersOfBbox(bbox) }, source.name, false);
     };
     window.addEventListener('click', onClick);
     return () => window.removeEventListener('click', onClick);
@@ -180,10 +156,8 @@ export function ImageOverlayPanel({ onClose }: { onClose: () => void }) {
       for (const file of files) {
         switch (overlayFileKind(file.name)) {
           case 'image':
-            nextSource = await loadImageSource(file);
-            break;
           case 'pdf':
-            nextSource = await loadPdfSource(file, 1);
+            nextSource = (await loadOverlaySource(file)) ?? undefined;
             break;
           case 'worldFile':
             nextWorldFile = await file.text();
@@ -205,6 +179,17 @@ export function ImageOverlayPanel({ onClose }: { onClose: () => void }) {
       if (nextWorldFile !== undefined) setWorldFileText(nextWorldFile);
       if (nextProjection !== undefined) setProjectionText(nextProjection);
       if (nextGrids.length > 0) setGridNames((registered) => [...registered, ...nextGrids]);
+
+      // an image with no world file means nothing until it is on the map, so
+      // drop it in the middle of the view and let the corner handles do the rest
+      const georeferenced = nextWorldFile !== undefined || worldFileText !== null;
+      if (nextSource && !georeferenced) {
+        showPlacement(
+          { url: nextSource.dataUrl, corners: centerCorners(nextSource) },
+          nextSource.name,
+          false,
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'import failed');
     } finally {
@@ -218,7 +203,7 @@ export function ImageOverlayPanel({ onClose }: { onClose: () => void }) {
     try {
       const next = await loadPdfSource(source.pdfFile, page);
       setSource(next);
-      if (placement?.kind === 'manual') {
+      if (placement && !worldFileText) {
         showPlacement({ ...placement, url: next.dataUrl }, next.name, false);
       }
     } catch (err) {
@@ -228,12 +213,20 @@ export function ImageOverlayPanel({ onClose }: { onClose: () => void }) {
     }
   };
 
+  // the fields hold the envelope, so editing one re-squares a quad the user
+  // dragged out of shape, which is the only way back from a bad drag
+  const shownBbox = editedCorners ? bboxOfCorners(editedCorners) : null;
+
   const editBbox = (index: number, value: number | string) => {
-    if (!placement || typeof value !== 'number' || !Number.isFinite(value)) return;
-    const bbox = [...placement.bbox] as LonLatBbox;
+    if (!placement || !shownBbox || typeof value !== 'number' || !Number.isFinite(value)) return;
+    const bbox = [...shownBbox] as LonLatBbox;
     bbox[index] = value;
     if (bbox[0] >= bbox[2] || bbox[1] >= bbox[3]) return;
-    showPlacement({ ...placement, bbox }, source?.name ?? 'overlay', false);
+    showPlacement(
+      { ...placement, corners: cornersOfBbox(bbox) },
+      source?.name ?? 'overlay',
+      false,
+    );
   };
 
   const changeOpacity = (value: number) => {
@@ -355,8 +348,11 @@ export function ImageOverlayPanel({ onClose }: { onClose: () => void }) {
           </Button>
         )}
 
-        {placement && (
+        {placement && shownBbox && (
           <>
+            <Text size="xs" c="dimmed">
+              Drag the corner handles on the map to line the image up.
+            </Text>
             <Group gap="xs" grow>
               {bboxFields.map((field) => (
                 <NumberInput
@@ -365,7 +361,7 @@ export function ImageOverlayPanel({ onClose }: { onClose: () => void }) {
                   size="xs"
                   hideControls
                   decimalScale={6}
-                  value={placement.bbox[field.index]}
+                  value={shownBbox[field.index]}
                   onChange={(value) => editBbox(field.index, value)}
                   data-testid={`overlay-${field.label.toLowerCase()}`}
                 />

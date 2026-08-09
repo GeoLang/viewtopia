@@ -1,5 +1,4 @@
-import type { Corners } from './worldFile';
-import { bboxOfCorners, type LonLatBbox } from './georeference';
+import { bboxOfCorners, type Corners, type LonLatBbox } from './georeference';
 
 /**
  * A rotated or reprojected image resampled north-up, because every renderer

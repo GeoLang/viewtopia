@@ -15,6 +15,7 @@ import {
 } from 'cesium';
 import { useAgentLayerStore, layerStyle } from '../store/agentLayers';
 import { useAppStore } from '../store/app';
+import { bboxOfCorners } from '../overlay/georeference';
 
 const PREFIX = 'agent-layer-';
 const MARKER_PREFIX = 'agent-marker-';
@@ -63,9 +64,12 @@ export function useAgentLayersCesium(viewerRef: MutableRefObject<Viewer | null>)
     const added: ImageryLayer[] = [];
 
     const apply = async () => {
+      // like Leaflet, Cesium drapes onto a rectangle, so a dragged quad shows
+      // as its envelope here
       for (const layer of rasterLayers) {
+        if (!layer.visible) continue;
         const provider = await SingleTileImageryProvider.fromUrl(layer.url, {
-          rectangle: Rectangle.fromDegrees(...layer.bbox),
+          rectangle: Rectangle.fromDegrees(...bboxOfCorners(layer.corners)),
         });
         if (cancelled || viewer.isDestroyed()) return;
         const imagery = viewer.imageryLayers.addImageryProvider(provider);

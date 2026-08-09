@@ -5,6 +5,7 @@ import { MantineProvider } from '@mantine/core';
 import { LayerManager } from '../../src/components/layers/LayerManager';
 import { layerStyle, useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers';
 import { buildGraduated } from '../../src/features/symbology/symbology';
+import { cornersOfBbox } from '../../src/overlay/georeference';
 
 /**
  * The agent's layers live in the store the renderers draw from, so the panel has
@@ -231,7 +232,8 @@ describe('LayerManager agent layers', () => {
         id: 'hs',
         name: 'hillshade',
         url: 'data:image/png;base64,AAA',
-        bbox: [12, 45, 13, 46],
+        corners: cornersOfBbox([12, 45, 13, 46]),
+        visible: true,
         opacity: 0.8,
       });
     });
@@ -243,7 +245,7 @@ describe('LayerManager agent layers', () => {
     expect(screen.getByText('raster')).toBeInTheDocument();
 
     await act(async () => fireEvent.click(screen.getByTestId('raster-layer-row')));
-    // an image has no data to shade by, so the expanded row is opacity and remove
+    // an image has no data to shade by, so there is no symbology to offer
     expect(screen.getByText('80%')).toBeInTheDocument();
     expect(screen.queryByTestId('agent-layer-export-pmtiles')).not.toBeInTheDocument();
 
@@ -258,7 +260,8 @@ describe('LayerManager agent layers', () => {
         id: 'hs',
         name: 'hillshade',
         url: 'data:image/png;base64,AAA',
-        bbox: [12, 45, 13, 46],
+        corners: cornersOfBbox([12, 45, 13, 46]),
+        visible: true,
         opacity: 0.5,
       });
     });

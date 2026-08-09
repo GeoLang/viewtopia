@@ -34,6 +34,7 @@ import { initSync } from './offline/sync';
 import { startDocumentBridge } from './live/documentBridge';
 import { useJoinLiveFromLink } from './live/joinFromLink';
 import { MapPresence } from './live/MapPresence';
+import { OverlayCornerHandles } from './overlay/OverlayCornerHandles';
 import { EmbedBadge } from './components/EmbedBadge';
 import { isEmbedRequested } from './lib/embedMode';
 import { useEmbedMessaging } from './lib/embedMessaging';
@@ -233,6 +234,7 @@ export function App() {
               </ErrorBoundary>
             )}
             {!uiHidden && !embed && <ToolPanels />}
+            {!uiHidden && !embed && <OverlayCornerHandles />}
             <MapPresence />
             {!embed && <WindowDropZone />}
             {!uiHidden && !embed && <WelcomeCard />}

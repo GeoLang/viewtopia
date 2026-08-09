@@ -1,3 +1,5 @@
+import type { Corners } from './georeference';
+
 /**
  * World file sidecar (.wld/.jgw/.pgw/...): six numbers mapping pixel space to
  * the image's coordinate system. Line order is fixed by the format:
@@ -59,13 +61,6 @@ export function parseWorldFile(text: string): WorldFileTransform {
 
 /** A world file positions pixel centers, so the image edge sits half a pixel out. */
 const PIXEL_CENTER_OFFSET = 0.5;
-
-export type Corners = [
-  [number, number],
-  [number, number],
-  [number, number],
-  [number, number],
-];
 
 /** Image corners in the world file's coordinate system: TL, TR, BR, BL. */
 export function imageCorners(

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { applySymbology, clearSymbology, type Symbology } from '../features/symbology/symbology';
+import type { Corners } from '../overlay/georeference';
 
 /**
  * Layers the agent asked us to draw (from a ui_spec). Held here rather than
@@ -44,19 +45,20 @@ export function layerStyle(layer: AgentLayer): Required<AgentLayerStyle> {
 }
 
 /**
- * An image draped over a bbox: a raster analysis result, not features. Kept
- * apart from the vector layers because it shares none of their machinery
- * (symbology, PMTiles export, feature bounds) and because its data URL runs to
- * megabytes, which a saved project file has no business carrying.
+ * An image draped over the map: an uploaded plan or PDF page, or a raster
+ * analysis result. Kept apart from the vector layers because it shares none of
+ * their machinery (symbology, PMTiles export, feature bounds) and because its
+ * data URL runs to megabytes, which a saved project file has no business
+ * carrying: the bitmap goes to IndexedDB instead, see overlay/overlayImages.
  */
 export interface AgentRasterLayer {
   id: string;
   name: string;
-  /** data URL of the rendered image */
+  /** data URL of the image */
   url: string;
-  /** [west, south, east, north] in lon/lat */
-  bbox: [number, number, number, number];
+  corners: Corners;
   opacity: number;
+  visible: boolean;
 }
 
 /** A point the agent dropped via add_marker. Accumulates until clear_entities. */
@@ -71,6 +73,7 @@ export interface AgentMarker {
 interface AgentLayerState {
   layers: AgentLayer[];
   rasterLayers: AgentRasterLayer[];
+  editingRasterId: string | null;
   markers: AgentMarker[];
   /** Bumped each time a new spec lands, so renderers know to reframe. */
   generation: number;
@@ -85,10 +88,17 @@ interface AgentLayerState {
   setLayerColor: (id: string, color: string) => void;
   /** Style one layer by its data, or null to go back to one colour. */
   setSymbology: (id: string, symbology: Symbology | null) => void;
-  /** Drape an image over a bbox; a known id replaces that layer. */
+  /** Drape an image over the map; a known id replaces that layer. */
   addRasterLayer: (layer: AgentRasterLayer) => void;
   removeRasterLayer: (id: string) => void;
   setRasterOpacity: (id: string, opacity: number) => void;
+  /** Move one image's corners, which is what dragging a corner handle does. */
+  setRasterCorners: (id: string, corners: Corners) => void;
+  toggleRasterVisibility: (id: string) => void;
+  /** Later in the list draws on top, so this is the stacking order. */
+  reorderRasterLayers: (from: number, to: number) => void;
+  /** The image whose corner handles are on the map, or null for none. */
+  setEditingRaster: (id: string | null) => void;
   addMarker: (marker: Omit<AgentMarker, 'id'>) => void;
   clearMarkers: () => void;
   clear: () => void;
@@ -143,6 +153,7 @@ function sanitizeLayers(layers: AgentLayer[]): AgentLayer[] {
 export const useAgentLayerStore = create<AgentLayerState>((set) => ({
   layers: [],
   rasterLayers: [],
+  editingRasterId: null,
   markers: [],
   generation: 0,
   setLayers: (layers) => set((s) => ({ layers: sanitizeLayers(layers), generation: s.generation + 1 })),
@@ -182,11 +193,34 @@ export const useAgentLayerStore = create<AgentLayerState>((set) => ({
         : [...s.rasterLayers, layer],
     })),
   removeRasterLayer: (id) =>
-    set((s) => ({ rasterLayers: s.rasterLayers.filter((l) => l.id !== id) })),
+    set((s) => ({
+      rasterLayers: s.rasterLayers.filter((l) => l.id !== id),
+      editingRasterId: s.editingRasterId === id ? null : s.editingRasterId,
+    })),
   setRasterOpacity: (id, opacity) =>
     set((s) => ({
       rasterLayers: s.rasterLayers.map((l) => (l.id === id ? { ...l, opacity } : l)),
     })),
+  setRasterCorners: (id, corners) =>
+    set((s) => ({
+      rasterLayers: s.rasterLayers.map((l) => (l.id === id ? { ...l, corners } : l)),
+    })),
+  toggleRasterVisibility: (id) =>
+    set((s) => ({
+      rasterLayers: s.rasterLayers.map((l) =>
+        l.id === id ? { ...l, visible: !l.visible } : l,
+      ),
+    })),
+  reorderRasterLayers: (from, to) =>
+    set((s) => {
+      if (from === to || from < 0 || to < 0) return s;
+      if (from >= s.rasterLayers.length || to >= s.rasterLayers.length) return s;
+      const rasterLayers = [...s.rasterLayers];
+      const [moved] = rasterLayers.splice(from, 1);
+      rasterLayers.splice(to, 0, moved);
+      return { rasterLayers };
+    }),
+  setEditingRaster: (id) => set({ editingRasterId: id }),
   addMarker: (marker) =>
     set((s) => {
       if (Math.abs(marker.lon) > 180 || Math.abs(marker.lat) > 90) {
@@ -196,5 +230,5 @@ export const useAgentLayerStore = create<AgentLayerState>((set) => ({
       return { markers: [...s.markers, { ...marker, id: crypto.randomUUID() }] };
     }),
   clearMarkers: () => set({ markers: [] }),
-  clear: () => set({ layers: [], rasterLayers: [], markers: [] }),
+  clear: () => set({ layers: [], rasterLayers: [], editingRasterId: null, markers: [] }),
 }));
