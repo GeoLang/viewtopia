@@ -50,6 +50,14 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-08-08: **unit suite teardown flake**. A component tree left mounted
+  when a test file ends keeps a React scheduler task queued, and the task
+  reads `window` after vitest tears down jsdom (`ReferenceError: window is
+  not defined` out of performWorkOnRootViaSchedulerTask, twice on macOS CI).
+  A vitest setup file now runs testing-library `cleanup` after every test;
+  most files only cleaned up in `beforeEach`, leaving their last render
+  mounted.
+
 - 2026-08-08: **`#cam=` hashes now restore MapLibre views**. The share hash
   hook seeded the shared camera and then flew only a Cesium viewer, but
   viewers mount before the hook's effect runs, so a maplibre link (every
