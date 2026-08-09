@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-09: **live layers carry their publisher's colour**. A layer entry's
+  `styleOverrides` may hold a CSS `color`, which the GeoLang agent and peers
+  write alongside the layer. A materialized layer takes that colour instead of
+  the default blue, and a later colour change from the publisher restyles the
+  layer in place. A member who restyles the layer themselves keeps their own
+  overrides.
+
 - 2026-08-08: **live documents carry layer data**. A layer entry may hold a
   `source`: inline GeoJSON when the op stays under 48KiB (agora caps op values
   at 64KiB), or a URL each member fetches. Local agent layers publish inline

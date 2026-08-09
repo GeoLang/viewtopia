@@ -149,6 +149,7 @@ function syncLayersToDocument(layers: LayerItem[]): void {
 
 function overridesFor(layer: AgentLayer): LiveLayerStyleOverrides | undefined {
   const overrides: LiveLayerStyleOverrides = {};
+  if (layer.color) overrides.color = layer.color;
   if (layer.style) overrides.style = layer.style;
   if (layer.symbology) overrides.symbology = layer.symbology;
   return Object.keys(overrides).length > 0 ? overrides : undefined;
@@ -298,9 +299,13 @@ function applyLayersFromDocument(document: LiveDocument): void {
 function applyEntryStyleOverrides(entry: LiveLayerEntry): void {
   const overrides = entry.styleOverrides;
   if (!overrides) return;
-  const { layers, setLayerOpacity, setSymbology } = useAgentLayerStore.getState();
+  const { layers, setLayerColor, setLayerOpacity, setSymbology } = useAgentLayerStore.getState();
   const layer = layers.find((candidate) => candidate.id === entry.layerId);
   if (!layer) return;
+  const color = overrides.color;
+  if (color !== undefined && color !== layer.color) {
+    applyFromDocument(() => setLayerColor(layer.id, color));
+  }
   const opacity = overrides.style?.opacity;
   if (opacity !== undefined && opacity !== layer.style?.opacity) {
     applyFromDocument(() => setLayerOpacity(layer.id, opacity));
@@ -323,7 +328,7 @@ function materializeLayer(entry: LiveLayerEntry, geojson: GeoJSON.FeatureCollect
       {
         id: entry.layerId,
         name: entry.name,
-        color: known?.color ?? MATERIALIZED_LAYER_COLOR,
+        color: entry.styleOverrides?.color ?? known?.color ?? MATERIALIZED_LAYER_COLOR,
         geojson,
       },
       false,

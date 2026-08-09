@@ -234,8 +234,43 @@ describe('live document bridge', () => {
     useAgentLayerStore.getState().addLayer(agentLayer('plugin-layer'), false);
     useAgentLayerStore.getState().setLayerOpacity('plugin-layer', 0.8);
     expect(server.document.layers['plugin-layer'].styleOverrides).toEqual({
+      color: '#ff0000',
       style: { opacity: 0.8 },
     });
+  });
+
+  it('carries the colour of a published agent layer on its entry', () => {
+    goLive();
+    useAgentLayerStore.getState().addLayer(agentLayer('parks'), false);
+    expect(server.document.layers.parks.styleOverrides).toEqual({ color: '#ff0000' });
+  });
+
+  it('draws a peer layer in the colour the publisher gave it', () => {
+    goLive();
+    server.applyFromPeer(
+      'ada',
+      'layers/rivers',
+      sourceEntry(
+        'rivers',
+        { kind: 'geojson', geojson: featureCollection(1) },
+        { styleOverrides: { color: '#00ff00' } },
+      ),
+    );
+    expect(useAgentLayerStore.getState().layers[0].color).toBe('#00ff00');
+  });
+
+  it('recolours an existing layer when a peer changes its colour, without echoing back', () => {
+    goLive();
+    useAgentLayerStore.getState().addLayer(agentLayer('parks'), false);
+    const sent = server.connection.editsSent.length;
+    const entry = server.document.layers.parks;
+    server.applyFromPeer('ada', 'layers/parks', {
+      ...entry,
+      styleOverrides: { ...entry.styleOverrides, color: '#123456' },
+    });
+
+    expect(useAgentLayerStore.getState().layers[0].color).toBe('#123456');
+    expect(server.connection.editsSent).toHaveLength(sent);
   });
 
   it('applies a peer style override to the agent layer', () => {

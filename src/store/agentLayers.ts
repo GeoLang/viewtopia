@@ -81,6 +81,8 @@ interface AgentLayerState {
   removeLayer: (id: string) => void;
   /** Fill opacity of one layer, which every renderer reads through layerStyle. */
   setLayerOpacity: (id: string, opacity: number) => void;
+  /** Single colour of one layer, which any symbology class overrides per feature. */
+  setLayerColor: (id: string, color: string) => void;
   /** Style one layer by its data, or null to go back to one colour. */
   setSymbology: (id: string, symbology: Symbology | null) => void;
   /** Drape an image over a bbox; a known id replaces that layer. */
@@ -162,6 +164,10 @@ export const useAgentLayerStore = create<AgentLayerState>((set) => ({
       layers: s.layers.map((l) =>
         l.id === id ? { ...l, style: { ...l.style, opacity } } : l,
       ),
+    })),
+  setLayerColor: (id, color) =>
+    set((s) => ({
+      layers: s.layers.map((l) => (l.id === id ? { ...l, color } : l)),
     })),
   setSymbology: (id, symbology) =>
     set((s) => ({

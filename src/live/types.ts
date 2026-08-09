@@ -6,6 +6,8 @@ import type { CameraState } from '../store/cameraViews';
 export type LiveRole = 'view' | 'edit';
 
 export interface LiveLayerStyleOverrides {
+  /** the publisher's colour for the layer, as CSS */
+  color?: string;
   style?: AgentLayerStyle;
   symbology?: Symbology | null;
 }
