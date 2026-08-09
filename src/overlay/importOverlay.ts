@@ -146,38 +146,61 @@ export async function georeferenceOverlay(
   return { url: flat.url, corners: cornersOfBbox(flat.bbox) };
 }
 
+/** What one dropped batch turned out to hold. Absent fields were not in it. */
+export interface OverlayBatch {
+  source?: OverlaySource;
+  worldFile?: string;
+  projection?: string;
+  /** Datum grids, already registered with projicio, named for the caller to show. */
+  grids: string[];
+  /** Names of files that play no part in an overlay. */
+  unsupported: string[];
+}
+
+/**
+ * Sort a dropped batch by what each file is for. Kept apart from placing the
+ * result so the panel, which shows the pieces as they arrive and remembers
+ * sidecars across drops, reads the same batch as the plain drop path.
+ */
+export async function sortOverlayBatch(files: File[]): Promise<OverlayBatch> {
+  const batch: OverlayBatch = { grids: [], unsupported: [] };
+  for (const file of files) {
+    switch (overlayFileKind(file.name)) {
+      case 'image':
+      case 'pdf':
+        batch.source = (await loadOverlaySource(file)) ?? undefined;
+        break;
+      case 'worldFile':
+        batch.worldFile = await file.text();
+        break;
+      case 'projection':
+        batch.projection = await file.text();
+        break;
+      case 'grid':
+        await registerDroppedGrid(file.name, new Uint8Array(await file.arrayBuffer()));
+        batch.grids.push(file.name);
+        break;
+      default:
+        batch.unsupported.push(file.name);
+    }
+  }
+  return batch;
+}
+
 /**
  * One dropped batch: an image or PDF, with its world file, .prj and datum grid
  * if they came along. Georeferenced when the sidecars allow it, dropped on the
  * middle of the view when they do not.
  */
 export async function importOverlayFiles(files: File[]): Promise<string> {
-  let source: OverlaySource | null = null;
-  let worldFileText: string | null = null;
-  let projectionText: string | null = null;
-  for (const file of files) {
-    switch (overlayFileKind(file.name)) {
-      case 'image':
-      case 'pdf':
-        source = await loadOverlaySource(file);
-        break;
-      case 'worldFile':
-        worldFileText = await file.text();
-        break;
-      case 'projection':
-        projectionText = await file.text();
-        break;
-      case 'grid':
-        await registerDroppedGrid(file.name, new Uint8Array(await file.arrayBuffer()));
-        break;
-    }
-  }
+  const { source, worldFile: worldFileText, projection: projectionText } =
+    await sortOverlayBatch(files);
   if (!source) throw new Error('no image or PDF in the dropped files');
 
   const id = addOverlayAtCenter(source);
   if (!worldFileText) return `${source.name}: drag its corners to place it`;
 
-  const placement = await georeferenceOverlay(source, worldFileText, projectionText);
+  const placement = await georeferenceOverlay(source, worldFileText, projectionText ?? null);
   const store = useAgentLayerStore.getState();
   store.addRasterLayer({
     id,

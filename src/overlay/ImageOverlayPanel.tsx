@@ -14,7 +14,7 @@ import { IconMapPin, IconPhotoPlus, IconX } from '@tabler/icons-react';
 import { useAgentLayerStore } from '../store/agentLayers';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { clickCoordinates } from '../lib/mapClickCoordinates';
-import { OVERLAY_ACCEPT, overlayFileKind } from './worldFile';
+import { OVERLAY_ACCEPT } from './worldFile';
 import {
   bboxFromTwoClicks,
   bboxOfCorners,
@@ -22,13 +22,12 @@ import {
   cornersOfBbox,
   type LonLatBbox,
 } from './georeference';
-import { registerDroppedGrid } from './projicio';
 import {
   DEFAULT_OVERLAY_OPACITY,
   centerCorners,
   georeferenceOverlay,
-  loadOverlaySource,
   loadPdfSource,
+  sortOverlayBatch,
   type OverlayPlacement,
   type OverlaySource,
 } from './importOverlay';
@@ -126,44 +125,24 @@ export function ImageOverlayPanel({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setError(null);
     try {
-      let nextSource: OverlaySource | undefined;
-      let nextWorldFile: string | undefined;
-      let nextProjection: string | undefined;
-      const nextGrids: string[] = [];
-      for (const file of files) {
-        switch (overlayFileKind(file.name)) {
-          case 'image':
-          case 'pdf':
-            nextSource = (await loadOverlaySource(file)) ?? undefined;
-            break;
-          case 'worldFile':
-            nextWorldFile = await file.text();
-            break;
-          case 'projection':
-            nextProjection = await file.text();
-            break;
-          case 'grid':
-            await registerDroppedGrid(file.name, new Uint8Array(await file.arrayBuffer()));
-            nextGrids.push(file.name);
-            break;
-          default:
-            setError(`${file.name}: not an image, PDF, world file, .prj or .gsb`);
-        }
+      const batch = await sortOverlayBatch(files);
+      for (const name of batch.unsupported) {
+        setError(`${name}: not an image, PDF, world file, .prj or .gsb`);
       }
       // set together, so the placement effect never runs on a world file whose
       // .prj is still in this batch and shows a false not-lon/lat error
-      if (nextSource) setSource(nextSource);
-      if (nextWorldFile !== undefined) setWorldFileText(nextWorldFile);
-      if (nextProjection !== undefined) setProjectionText(nextProjection);
-      if (nextGrids.length > 0) setGridNames((registered) => [...registered, ...nextGrids]);
+      if (batch.source) setSource(batch.source);
+      if (batch.worldFile !== undefined) setWorldFileText(batch.worldFile);
+      if (batch.projection !== undefined) setProjectionText(batch.projection);
+      if (batch.grids.length > 0) setGridNames((known) => [...known, ...batch.grids]);
 
       // an image with no world file means nothing until it is on the map, so
       // drop it in the middle of the view and let the corner handles do the rest
-      const georeferenced = nextWorldFile !== undefined || worldFileText !== null;
-      if (nextSource && !georeferenced) {
+      const georeferenced = batch.worldFile !== undefined || worldFileText !== null;
+      if (batch.source && !georeferenced) {
         showPlacement(
-          { url: nextSource.dataUrl, corners: centerCorners(nextSource) },
-          nextSource.name,
+          { url: batch.source.dataUrl, corners: centerCorners(batch.source) },
+          batch.source.name,
           false,
         );
       }
