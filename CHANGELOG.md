@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-08: **live documents carry layer data**. A layer entry may hold a
+  `source`: inline GeoJSON when the op stays under 48KiB (agora caps op values
+  at 64KiB), or a URL each member fetches. Local agent layers publish inline
+  automatically and materialize on peers under the document's layer id, so an
+  external agent writing layer ops reaches every open viewer. Oversized layers
+  stay local for now, and creating a document snapshots agent layers too.
+
 - 2026-08-08: **georeferenced image + PDF overlays**. A Data menu "Image
   Overlay" panel drapes a site plan image or a PDF page over the map. A world
   file sidecar places it exactly, a `.prj` names its coordinate system

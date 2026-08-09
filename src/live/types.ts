@@ -10,7 +10,34 @@ export interface LiveLayerStyleOverrides {
   symbology?: Symbology | null;
 }
 
-/** A reference to a platform layer, never the layer data itself. */
+/**
+ * Features carried in the document itself. Agora never reads an op value, so
+ * the size cap below is the only thing keeping an inline source postable.
+ */
+export interface LiveLayerInlineSource {
+  kind: 'geojson';
+  geojson: GeoJSON.FeatureCollection;
+}
+
+/** Features hosted elsewhere, which every member fetches for themselves. */
+export interface LiveLayerUrlSource {
+  kind: 'url';
+  url: string;
+  format: 'geojson';
+}
+
+export type LiveLayerSource = LiveLayerInlineSource | LiveLayerUrlSource;
+
+/**
+ * Headroom under agora's 64KiB per-operation cap, measured over the whole
+ * serialized entry rather than the features alone.
+ */
+export const MAXIMUM_INLINE_SOURCE_BYTES = 48 * 1024;
+
+/**
+ * A layer in the document. Without `source` it is a reference to a layer the
+ * member already has, with one it also carries the data to draw.
+ */
 export interface LiveLayerEntry {
   layerId: string;
   name: string;
@@ -19,6 +46,7 @@ export interface LiveLayerEntry {
   opacity: number;
   order: string;
   styleOverrides?: LiveLayerStyleOverrides;
+  source?: LiveLayerSource;
 }
 
 export interface LiveAnnotation {

@@ -1,26 +1,36 @@
-import { useAgentLayerStore } from '../store/agentLayers';
+import { toFeatureCollection, useAgentLayerStore, type AgentLayer } from '../store/agentLayers';
 import { loadStoredAnnotations, useAnnotationStore, type Annotation } from '../store/annotations';
 import { useAppStore, type Bookmark, type LayerItem } from '../store/app';
 import { compareFractionalIndex, generateIndexBetween } from './fractionalIndex';
 import { isLiveDocumentActive, useLiveStore } from './liveStore';
 import {
   documentKey,
+  MAXIMUM_INLINE_SOURCE_BYTES,
   type LiveAnnotation,
   type LiveBookmark,
   type LiveDocument,
   type LiveLayerEntry,
+  type LiveLayerSource,
   type LiveLayerStyleOverrides,
+  type LiveLayerUrlSource,
   type LiveOperation,
 } from './types';
 
 interface LocalState {
   layers: LayerItem[];
+  agentLayers: AgentLayer[];
   annotations: Annotation[];
   bookmarks: Bookmark[];
 }
 
+const MATERIALIZED_LAYER_COLOR = '#38bdf8';
+const MATERIALIZED_LAYER_TYPE: LayerItem['type'] = 'geojson';
+
 let applyingFromDocument = false;
 let stateForNewDocument: LocalState | null = null;
+/** the source each layer id carries in the document, as far as this bridge knows */
+const documentSources = new Map<string, LiveLayerSource>();
+const oversizedLayerIds = new Set<string>();
 
 function applyFromDocument(apply: () => void): void {
   applyingFromDocument = true;
@@ -104,7 +114,8 @@ function sameLayerEntry(left: LiveLayerEntry, right: LiveLayerEntry): boolean {
     left.visible === right.visible &&
     left.opacity === right.opacity &&
     left.order === right.order &&
-    sameJson(left.styleOverrides, right.styleOverrides)
+    sameJson(left.styleOverrides, right.styleOverrides) &&
+    sameJson(left.source, right.source)
   );
 }
 
@@ -127,6 +138,7 @@ function syncLayersToDocument(layers: LayerItem[]): void {
       opacity: layer.opacity,
       order: orders[index],
       ...(current?.styleOverrides ? { styleOverrides: current.styleOverrides } : {}),
+      ...(current?.source ? { source: current.source } : {}),
     };
     if (!current || !sameLayerEntry(current, entry)) {
       operations.push({ key: documentKey('layers', layer.id), value: entry });
@@ -135,26 +147,111 @@ function syncLayersToDocument(layers: LayerItem[]): void {
   sendOperations(operations);
 }
 
-/**
- * Style and symbology for layers the document already references. Agent layers
- * carry their features in the browser, so only their overrides can travel.
- */
+function overridesFor(layer: AgentLayer): LiveLayerStyleOverrides | undefined {
+  const overrides: LiveLayerStyleOverrides = {};
+  if (layer.style) overrides.style = layer.style;
+  if (layer.symbology) overrides.symbology = layer.symbology;
+  return Object.keys(overrides).length > 0 ? overrides : undefined;
+}
+
+/** Style and symbology for layers the document already references. */
 function syncStyleOverridesToDocument(): void {
   const entries = useLiveStore.getState().document.layers;
   const operations: LiveOperation[] = [];
   for (const layer of useAgentLayerStore.getState().layers) {
     const entry = entries[layer.id];
     if (!entry) continue;
-    const overrides: LiveLayerStyleOverrides = {};
-    if (layer.style) overrides.style = layer.style;
-    if (layer.symbology) overrides.symbology = layer.symbology;
-    const next = Object.keys(overrides).length > 0 ? overrides : undefined;
+    const next = overridesFor(layer);
     if (sameJson(entry.styleOverrides, next)) continue;
     operations.push({
       key: documentKey('layers', layer.id),
       value: { ...entry, styleOverrides: next },
     });
   }
+  sendOperations(operations);
+}
+
+function withinInlineLimit(entry: LiveLayerEntry): boolean {
+  return new TextEncoder().encode(JSON.stringify(entry)).length < MAXIMUM_INLINE_SOURCE_BYTES;
+}
+
+function lastOrder(entries: Record<string, LiveLayerEntry>): string | null {
+  const orders = Object.values(entries)
+    .map((entry) => entry.order)
+    .sort(compareFractionalIndex);
+  return orders.at(-1) ?? null;
+}
+
+// symbology bakes colours into the features and travels as an override, so the
+// features before styling are what peers should read
+function inlineSourceOf(layer: AgentLayer): LiveLayerSource {
+  return { kind: 'geojson', geojson: layer.sourceGeojson ?? layer.geojson };
+}
+
+function agentLayerEntry(
+  layer: AgentLayer,
+  current: LiveLayerEntry | undefined,
+  order: string,
+  source: LiveLayerSource,
+): LiveLayerEntry {
+  const overrides = overridesFor(layer);
+  return {
+    layerId: layer.id,
+    name: current?.name ?? layer.name,
+    type: current?.type ?? MATERIALIZED_LAYER_TYPE,
+    visible: current?.visible ?? true,
+    opacity: current?.opacity ?? 1,
+    order,
+    ...(overrides ? { styleOverrides: overrides } : {}),
+    source,
+  };
+}
+
+function warnOversized(layer: AgentLayer): void {
+  if (oversizedLayerIds.has(layer.id)) return;
+  oversizedLayerIds.add(layer.id);
+  console.warn(
+    `live layer "${layer.name}" is over ${MAXIMUM_INLINE_SOURCE_BYTES} bytes and stays local`,
+  );
+}
+
+/**
+ * Agent layers hold their own features, so they travel as inline sources. A
+ * layer too large to inline is left out whole rather than sent as metadata
+ * peers could not draw.
+ */
+function syncAgentLayerSourcesToDocument(layers: AgentLayer[]): void {
+  const entries = useLiveStore.getState().document.layers;
+  const present = new Set(layers.map((layer) => layer.id));
+  const operations: LiveOperation[] = [];
+
+  for (const [id, entry] of Object.entries(entries)) {
+    // a url source we could not fetch is missing locally too, so only an
+    // inline source disappearing means the member deleted the layer
+    if (entry.source?.kind !== 'geojson') continue;
+    if (present.has(id) || !documentSources.has(id)) continue;
+    documentSources.delete(id);
+    operations.push({ key: documentKey('layers', id), value: null });
+  }
+
+  let previousOrder = lastOrder(entries);
+  for (const layer of layers) {
+    const known = documentSources.get(layer.id);
+    if (known?.kind === 'url') continue;
+    const source = inlineSourceOf(layer);
+    if (sameJson(known, source)) continue;
+    const current = entries[layer.id];
+    const order = current?.order ?? generateIndexBetween(previousOrder, null);
+    const entry = agentLayerEntry(layer, current, order, source);
+    if (!withinInlineLimit(entry)) {
+      warnOversized(layer);
+      continue;
+    }
+    if (!current) previousOrder = order;
+    documentSources.set(layer.id, source);
+    operations.push({ key: documentKey('layers', layer.id), value: entry });
+  }
+
   sendOperations(operations);
 }
 
@@ -198,20 +295,91 @@ function applyLayersFromDocument(document: LiveDocument): void {
   applyFromDocument(() => useAppStore.setState({ layers }));
 }
 
-function applyStyleOverridesFromDocument(document: LiveDocument): void {
+function applyEntryStyleOverrides(entry: LiveLayerEntry): void {
+  const overrides = entry.styleOverrides;
+  if (!overrides) return;
   const { layers, setLayerOpacity, setSymbology } = useAgentLayerStore.getState();
+  const layer = layers.find((candidate) => candidate.id === entry.layerId);
+  if (!layer) return;
+  const opacity = overrides.style?.opacity;
+  if (opacity !== undefined && opacity !== layer.style?.opacity) {
+    applyFromDocument(() => setLayerOpacity(layer.id, opacity));
+  }
+  if (!sameJson(overrides.symbology, layer.symbology)) {
+    applyFromDocument(() => setSymbology(layer.id, overrides.symbology ?? null));
+  }
+}
+
+function applyStyleOverridesFromDocument(document: LiveDocument): void {
+  for (const entry of Object.values(document.layers)) applyEntryStyleOverrides(entry);
+}
+
+function materializeLayer(entry: LiveLayerEntry, geojson: GeoJSON.FeatureCollection): void {
+  const known = useAgentLayerStore
+    .getState()
+    .layers.find((candidate) => candidate.id === entry.layerId);
+  applyFromDocument(() =>
+    useAgentLayerStore.getState().addLayer(
+      {
+        id: entry.layerId,
+        name: entry.name,
+        color: known?.color ?? MATERIALIZED_LAYER_COLOR,
+        geojson,
+      },
+      false,
+    ),
+  );
+}
+
+async function fetchFeatureCollection(url: string): Promise<GeoJSON.FeatureCollection | null> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`status ${response.status}`);
+    const collection = toFeatureCollection(await response.json());
+    if (!collection) throw new Error('not geojson');
+    return collection;
+  } catch (error) {
+    console.warn(`live layer source ${url} could not be read`, error);
+    return null;
+  }
+}
+
+async function materializeUrlLayer(
+  entry: LiveLayerEntry,
+  source: LiveLayerUrlSource,
+): Promise<void> {
+  const geojson = await fetchFeatureCollection(source.url);
+  if (!geojson) return;
+  const current = useLiveStore.getState().document.layers[entry.layerId];
+  if (!current || !sameJson(current.source, source)) return;
+  materializeLayer(current, geojson);
+  applyEntryStyleOverrides(current);
+}
+
+/**
+ * Entries that carry data become agent layers under the document's own layer
+ * id, so a later write to the same key replaces the layer rather than adding
+ * a second one.
+ */
+function applySourcesFromDocument(document: LiveDocument): void {
+  for (const id of [...documentSources.keys()]) {
+    const entry = document.layers[id];
+    if (entry?.source) continue;
+    documentSources.delete(id);
+    if (!entry) applyFromDocument(() => useAgentLayerStore.getState().removeLayer(id));
+  }
+
   for (const entry of Object.values(document.layers)) {
-    const overrides = entry.styleOverrides;
-    if (!overrides) continue;
-    const layer = layers.find((candidate) => candidate.id === entry.layerId);
-    if (!layer) continue;
-    const opacity = overrides.style?.opacity;
-    if (opacity !== undefined && opacity !== layer.style?.opacity) {
-      applyFromDocument(() => setLayerOpacity(layer.id, opacity));
+    const source = entry.source;
+    if (!source) continue;
+    if (sameJson(documentSources.get(entry.layerId), source)) continue;
+    documentSources.set(entry.layerId, source);
+    if (source.kind === 'url') {
+      void materializeUrlLayer(entry, source);
+      continue;
     }
-    if (!sameJson(overrides.symbology, layer.symbology)) {
-      applyFromDocument(() => setSymbology(layer.id, overrides.symbology ?? null));
-    }
+    const geojson = toFeatureCollection(source.geojson);
+    if (geojson) materializeLayer(entry, geojson);
   }
 }
 
@@ -233,6 +401,7 @@ function applyBookmarksFromDocument(document: LiveDocument): void {
 
 function applyDocument(document: LiveDocument): void {
   applyLayersFromDocument(document);
+  applySourcesFromDocument(document);
   applyStyleOverridesFromDocument(document);
   applyAnnotationsFromDocument(document);
   applyBookmarksFromDocument(document);
@@ -249,6 +418,7 @@ function isEmptyDocument(document: LiveDocument): boolean {
 function publishLocalState(local: LocalState): void {
   if (!isEmptyDocument(useLiveStore.getState().document)) return;
   syncLayersToDocument(local.layers);
+  syncAgentLayerSourcesToDocument(local.agentLayers);
   syncStyleOverridesToDocument();
   syncAnnotationsToDocument(local.annotations);
   syncBookmarksToDocument(local.bookmarks);
@@ -258,14 +428,15 @@ function publishLocalState(local: LocalState): void {
  * Hold what this browser has on screen so the first snapshot of a document we
  * just created starts from it instead of wiping it.
  *
- * TODO: importing a stored project out of IndexedDB into a live document is not
- * built, only what the running session holds travels.
+ * TODO: a stored project in IndexedDB, and any layer too large to inline, stay
+ * behind. Only what the running session holds and what fits travels.
  */
 export function captureStateForNewDocument(): void {
   const { layers, bookmarks } = useAppStore.getState();
   stateForNewDocument = {
     layers,
     bookmarks,
+    agentLayers: useAgentLayerStore.getState().layers,
     annotations: useAnnotationStore.getState().annotations,
   };
 }
@@ -290,13 +461,18 @@ export function startDocumentBridge(): () => void {
 
   const unsubscribeAgentLayers = useAgentLayerStore.subscribe((state, previous) => {
     if (state.layers === previous.layers) return;
-    outbound(syncStyleOverridesToDocument);
+    outbound(() => {
+      syncAgentLayerSourcesToDocument(state.layers);
+      syncStyleOverridesToDocument();
+    });
   });
 
   const unsubscribeLive = useLiveStore.subscribe((state, previous) => {
     if (state.documentId === null) {
       if (previous.documentId !== null) {
         stateForNewDocument = null;
+        documentSources.clear();
+        oversizedLayerIds.clear();
         applyFromDocument(() =>
           useAnnotationStore.getState().setAnnotations(loadStoredAnnotations()),
         );

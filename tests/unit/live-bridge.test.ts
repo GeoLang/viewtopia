@@ -4,7 +4,12 @@ import {
   startDocumentBridge,
 } from '../../src/live/documentBridge';
 import { useLiveStore } from '../../src/live/liveStore';
-import { emptyLiveDocument, type LiveLayerEntry } from '../../src/live/types';
+import {
+  emptyLiveDocument,
+  MAXIMUM_INLINE_SOURCE_BYTES,
+  type LiveLayerEntry,
+  type LiveLayerSource,
+} from '../../src/live/types';
 import { useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers';
 import { useAnnotationStore, type Annotation } from '../../src/store/annotations';
 import { useAppStore, type Bookmark, type LayerItem } from '../../src/store/app';
@@ -27,6 +32,40 @@ function agentLayer(id: string): AgentLayer {
         { type: 'Feature', geometry: { type: 'Point', coordinates: [1, 2] }, properties: { x: 1 } },
       ],
     },
+  };
+}
+
+function featureCollection(count: number, note = ''): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: Array.from({ length: count }, (_, index) => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [index / 10, 2] },
+      properties: { x: index, note },
+    })),
+  };
+}
+
+function oversizedAgentLayer(id: string): AgentLayer {
+  const note = 'x'.repeat(256);
+  const features = Math.ceil(MAXIMUM_INLINE_SOURCE_BYTES / note.length) + 1;
+  return { id, name: id, color: '#ff0000', geojson: featureCollection(features, note) };
+}
+
+function sourceEntry(
+  id: string,
+  source: LiveLayerSource,
+  overrides: Partial<LiveLayerEntry> = {},
+): LiveLayerEntry {
+  return {
+    layerId: id,
+    name: id,
+    type: 'geojson',
+    visible: true,
+    opacity: 1,
+    order: 'V',
+    source,
+    ...overrides,
   };
 }
 
@@ -73,6 +112,8 @@ describe('live document bridge', () => {
     useLiveStore.getState().disconnect();
     stopBridge();
     server.restore();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
     vi.useRealTimers();
   });
 
@@ -277,6 +318,135 @@ describe('live document bridge', () => {
     goLive();
     expect(Object.keys(server.document.layers)).toEqual(['theirs']);
     expect(useAppStore.getState().layers.map((layer) => layer.id)).toEqual(['theirs']);
+  });
+
+  it('publishes the features of a local agent layer', () => {
+    goLive();
+    useAgentLayerStore.getState().addLayer(agentLayer('parks'), false);
+
+    const entry = server.document.layers.parks;
+    expect(entry.source).toEqual({ kind: 'geojson', geojson: agentLayer('parks').geojson });
+    expect(entry.order.length).toBeGreaterThan(0);
+    expect(useAppStore.getState().layers.map((layer) => layer.id)).toEqual(['parks']);
+  });
+
+  it('deletes the entry when a published agent layer is removed locally', () => {
+    goLive();
+    useAgentLayerStore.getState().addLayer(agentLayer('parks'), false);
+    useAgentLayerStore.getState().removeLayer('parks');
+    expect(server.document.layers.parks).toBeUndefined();
+  });
+
+  it('draws a peer layer that carries its features, without echoing it back', () => {
+    goLive();
+    const sent = server.connection.editsSent.length;
+    server.applyFromPeer(
+      'ada',
+      'layers/rivers',
+      sourceEntry('rivers', { kind: 'geojson', geojson: featureCollection(2) }),
+    );
+
+    const layer = useAgentLayerStore.getState().layers[0];
+    expect(layer.id).toBe('rivers');
+    expect(layer.geojson.features).toHaveLength(2);
+    expect(useAppStore.getState().layers.map((item) => item.id)).toEqual(['rivers']);
+    expect(server.connection.editsSent).toHaveLength(sent);
+  });
+
+  it('replaces the layer when the peer rewrites the same entry', () => {
+    goLive();
+    const geojson = featureCollection(1);
+    server.applyFromPeer('ada', 'layers/rivers', sourceEntry('rivers', { kind: 'geojson', geojson }));
+    server.applyFromPeer(
+      'ada',
+      'layers/rivers',
+      sourceEntry('rivers', { kind: 'geojson', geojson: featureCollection(3) }),
+    );
+
+    const layers = useAgentLayerStore.getState().layers;
+    expect(layers).toHaveLength(1);
+    expect(layers[0].geojson.features).toHaveLength(3);
+  });
+
+  it('removes the layer when the peer deletes the entry', () => {
+    goLive();
+    server.applyFromPeer(
+      'ada',
+      'layers/rivers',
+      sourceEntry('rivers', { kind: 'geojson', geojson: featureCollection(1) }),
+    );
+    expect(useAgentLayerStore.getState().layers).toHaveLength(1);
+
+    server.applyFromPeer('ada', 'layers/rivers', null);
+    expect(useAgentLayerStore.getState().layers).toEqual([]);
+  });
+
+  it('fetches a url source and applies the style overrides that came with it', async () => {
+    const geojson = featureCollection(2);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => geojson }),
+    );
+    goLive();
+    server.applyFromPeer(
+      'ada',
+      'layers/hosted',
+      sourceEntry(
+        'hosted',
+        { kind: 'url', url: 'https://share.example/hosted.geojson', format: 'geojson' },
+        { styleOverrides: { style: { opacity: 0.4 } } },
+      ),
+    );
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(fetch).toHaveBeenCalledWith('https://share.example/hosted.geojson');
+    const layer = useAgentLayerStore.getState().layers[0];
+    expect(layer.id).toBe('hosted');
+    expect(layer.geojson.features).toHaveLength(2);
+    expect(layer.style?.opacity).toBe(0.4);
+  });
+
+  it('leaves the layer absent and warns once when the source url fails', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+    goLive();
+    server.applyFromPeer(
+      'ada',
+      'layers/hosted',
+      sourceEntry('hosted', {
+        kind: 'url',
+        url: 'https://share.example/hosted.geojson',
+        format: 'geojson',
+      }),
+    );
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(useAgentLayerStore.getState().layers).toEqual([]);
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a layer too large to inline local and writes nothing for it', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    goLive();
+    const sent = server.connection.editsSent.length;
+    useAgentLayerStore.getState().addLayer(oversizedAgentLayer('census'), false);
+
+    expect(server.document.layers.census).toBeUndefined();
+    expect(server.connection.editsSent).toHaveLength(sent);
+    expect(useAgentLayerStore.getState().layers.map((layer) => layer.id)).toEqual(['census']);
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('seeds a new document with the agent layers that fit inline', () => {
+    useAgentLayerStore.getState().addLayer(agentLayer('parks'), false);
+    useAgentLayerStore.getState().addLayer(oversizedAgentLayer('census'), false);
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    captureStateForNewDocument();
+    goLive();
+
+    expect(Object.keys(server.document.layers)).toEqual(['parks']);
+    expect(server.document.layers.parks.source).toMatchObject({ kind: 'geojson' });
   });
 
   it('restores the stored annotations when the session ends', () => {
