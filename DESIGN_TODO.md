@@ -48,12 +48,6 @@ current state in DESIGN.md). Open work from it:
       agent-supplied colours reach Leaflet as SVG attribute values and MapLibre
       as paint properties, both inert, but nothing validates them as colours. A
       shared parse-or-drop helper would make the guarantee explicit.
-- [ ] **agora attachment cleanup** — an overlay removed from a document leaves
-      its attachment row behind. Attachments die with the document, but there
-      is no per-attachment removal or unreferenced sweep, so long-lived
-      documents accumulate orphan blobs 16 MiB at a time. Needs a server-side
-      design (access-driven expiry like geolang's sidecar sweep, or a
-      reference walk agora currently has no business doing).
 - [ ] **hosted flagship instance + share links** — Figma's zero-install magic
       is a link that opens the document. Self-host is free with open source,
       but the "click a link, you're in the map" experience needs a hosted
