@@ -261,6 +261,32 @@ describe('AssetsPanel', () => {
     expect(fetchMock.mock.calls.length).toBe(afterDone);
   });
 
+  it('finds the job of an asset it only listed, and shows its progress', async () => {
+    const tiling = { ...READY, status: 'tiling' };
+    respond((url) => {
+      if (url === '/api/v1/assets') return jsonOk([tiling]);
+      if (url === '/api/v1/assets/a1b2') return jsonOk(tiling);
+      if (url === '/api/v1/assets/a1b2/jobs') return jsonOk([{ id: 'job-9', progress: 0.25 }]);
+      if (url === '/api/v1/jobs/job-9') return jsonOk({ status: 'running', progress: 0.25 });
+      return jsonOk([]);
+    });
+    await renderPanel();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(POLL_MS);
+    });
+    expect(tilingPercent()).toBe('25');
+
+    // the job is looked up once, not on every tick
+    const lookups = () =>
+      fetchMock.mock.calls.filter((call) => call[0] === '/api/v1/assets/a1b2/jobs').length;
+    expect(lookups()).toBe(1);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(POLL_MS * 2);
+    });
+    expect(lookups()).toBe(1);
+  });
+
   it('polls an upload with no tiling job for status alone', async () => {
     await renderPanel();
     selectFile('city.glb');

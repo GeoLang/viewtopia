@@ -28,26 +28,9 @@ mobile capture, auth and multi-tenancy, one-click deploy.
 Live multiplayer shipped 2026-08-07 (agora service + viewtopia client,
 current state in DESIGN.md). Open work from it:
 
-- [ ] **project switcher map state** — the IndexedDB projects feature stores
-      no map state: `Project.layerIds` is only ever written as `[]` and the
-      offline `layers` store is never written, so "import a local project
-      into a live document" had nothing to import. The real gap is the
-      project switcher saving and restoring map state at all; once it does,
-      live import falls out because `applyProject` already syncs outbound.
-      Project files (`.viewtopia.json`) already travel, except OGC layers,
-      which have no document representation.
-- [ ] **overlay follow-ups** — Leaflet shows a dragged overlay's envelope, it
-      has no native quad warp and a plugin dependency is not worth it (MapLibre
-      and Cesium both render the true quad). Tiling progress shows only for an
-      asset uploaded in this session: job_id comes back on the upload response
-      and the asset list does not carry it. Toggling an overlay's visibility in
-      the layer manager writes the document entry but not the overlay store,
-      the same split agent layers have always had, so only one of the two
-      switches redraws locally.
-- [ ] **colour values are safe by construction, not validated** —
-      agent-supplied colours reach Leaflet as SVG attribute values and MapLibre
-      as paint properties, both inert, but nothing validates them as colours. A
-      shared parse-or-drop helper would make the guarantee explicit.
+- [ ] **OGC layers have no live-document representation**, so a project
+      carrying one loses it on the way into a live session. Project files and
+      the per-project stored map both keep them; only the document does not.
 - [ ] **hosted flagship instance + share links** — Figma's zero-install magic
       is a link that opens the document. Self-host is free with open source,
       but the "click a link, you're in the map" experience needs a hosted
@@ -551,9 +534,6 @@ Known limits:
 - [ ] **viewtopia FleetPanel** — currently an honest "no live feed" state; nothing serves
       vehicle positions. Decide whether real-time fleet tracking is in scope before building
       a WS/ingest path for it.
-- [ ] viewer tiling progress UI: tiletopia upload now returns the tiling
-      job_id and GET /api/v1/jobs/{id} carries a progress float, but the
-      assets panel still polls asset status instead of the job.
 
 ## OPEN — deferred design decisions (not bugs)
 

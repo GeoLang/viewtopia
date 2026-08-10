@@ -225,7 +225,7 @@ function agentLayerEntry(
     layerId: layer.id,
     name: current?.name ?? layer.name,
     type: current?.type ?? MATERIALIZED_LAYER_TYPE,
-    visible: current?.visible ?? true,
+    visible: current?.visible ?? layer.visible ?? true,
     opacity: current?.opacity ?? 1,
     order,
     ...(overrides ? { styleOverrides: overrides } : {}),
@@ -453,6 +453,7 @@ function materializeLayer(entry: LiveLayerEntry, geojson: GeoJSON.FeatureCollect
         name: entry.name,
         color: entry.styleOverrides?.color ?? known?.color ?? MATERIALIZED_LAYER_COLOR,
         geojson,
+        visible: entry.visible,
       },
       false,
     ),
@@ -556,6 +557,21 @@ function applySourcesFromDocument(document: LiveDocument): void {
   }
 }
 
+/**
+ * Materializing does not always reach a layer already on screen: our own
+ * overlay keeps the bitmap we hold, and a vector layer waits for a new source.
+ */
+function applyVisibilityFromDocument(document: LiveDocument): void {
+  const { layers, rasterLayers, setLayerVisible } = useAgentLayerStore.getState();
+  for (const entry of Object.values(document.layers)) {
+    const drawn =
+      layers.find((layer) => layer.id === entry.layerId) ??
+      rasterLayers.find((overlay) => overlay.id === entry.layerId);
+    if (!drawn || (drawn.visible ?? true) === entry.visible) continue;
+    applyFromDocument(() => setLayerVisible(entry.layerId, entry.visible));
+  }
+}
+
 function byCreation<Entry extends { createdAt: number }>(entries: Record<string, Entry>): Entry[] {
   return Object.values(entries).sort((left, right) => left.createdAt - right.createdAt);
 }
@@ -575,6 +591,7 @@ function applyBookmarksFromDocument(document: LiveDocument): void {
 function applyDocument(document: LiveDocument): void {
   applyLayersFromDocument(document);
   applySourcesFromDocument(document);
+  applyVisibilityFromDocument(document);
   applyStyleOverridesFromDocument(document);
   applyAnnotationsFromDocument(document);
   applyBookmarksFromDocument(document);

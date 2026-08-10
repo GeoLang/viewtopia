@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import L from 'leaflet';
-import { useAgentLayerStore, layerStyle } from '../store/agentLayers';
+import { useAgentLayerStore, layerStyle, visibleLayers } from '../store/agentLayers';
 import { simplestyleColor } from '../features/symbology/symbology';
 import { useAppStore } from '../store/app';
 import { agentLayersBounds } from './agentLayerBounds';
@@ -71,7 +71,7 @@ export function useAgentLayersLeaflet(mapRef: MutableRefObject<L.Map | null>) {
     const map = mapRef.current;
     if (!map) return;
 
-    const objs = layers.map((layer) => {
+    const objs = visibleLayers(layers).map((layer) => {
       const style = layerStyle(layer);
       return L.geoJSON(layer.geojson, {
         // a callback, not an object, so a classified layer's per-feature colour
@@ -96,7 +96,7 @@ export function useAgentLayersLeaflet(mapRef: MutableRefObject<L.Map | null>) {
     });
 
     // Frame only when a new spec arrives, never on a plain tab switch.
-    const bounds = agentLayersBounds(layers);
+    const bounds = agentLayersBounds(visibleLayers(layers));
     if (bounds && framedRef.current !== generation) {
       framedRef.current = generation;
       map.fitBounds(

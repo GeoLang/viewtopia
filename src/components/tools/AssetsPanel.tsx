@@ -66,13 +66,23 @@ function parseAsset(raw: unknown): Asset | null {
   };
 }
 
-/**
- * Only an upload response names the job it queued, and only for the asset types
- * that tile on upload, so an asset listed from an earlier session has no job to
- * read progress from and shows its status alone.
- */
+/** The tiling job an upload queued, absent for a type that tiles on demand. */
 function jobIdOf(raw: unknown): string | null {
   const id = (raw as Record<string, unknown> | null)?.job_id;
+  return typeof id === 'string' ? id : null;
+}
+
+/**
+ * The job behind an asset this session did not upload, so a tiling row survives
+ * a reload. No job is the normal answer for a type that tiles on demand.
+ */
+async function newestJobId(assetId: string): Promise<string | null> {
+  const res = await fetch(`${API}/assets/${assetId}/jobs`, { headers: authHeaders() }).catch(
+    () => null,
+  );
+  if (!res?.ok) return null;
+  const jobs = await res.json().catch(() => null);
+  const id = (Array.isArray(jobs) ? jobs[0] : null)?.id;
   return typeof id === 'string' ? id : null;
 }
 
@@ -122,8 +132,10 @@ export function AssetsPanel({ onClose }: { onClose: () => void }) {
     return () => clearInterval(timer);
   }, [renderer]);
 
-  const poll = useCallback((id: string, jobId: string | null = null) => {
+  const poll = useCallback((id: string, uploadJobId: string | null = null) => {
     if (timers.current.has(id)) return;
+    let jobId = uploadJobId;
+    let jobLookedUp = uploadJobId !== null;
     const stop = () => {
       const t = timers.current.get(id);
       if (t) clearInterval(t);
@@ -157,6 +169,10 @@ export function AssetsPanel({ onClose }: { onClose: () => void }) {
       if (asset.status === 'ready' || asset.status === 'error') {
         stop();
         return;
+      }
+      if (!jobLookedUp) {
+        jobLookedUp = true;
+        jobId = await newestJobId(id);
       }
       if (jobId) await readProgress();
     };

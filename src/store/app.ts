@@ -156,7 +156,7 @@ interface AppState {
   layers: LayerItem[];
   addLayer: (layer: LayerItem) => void;
   removeLayer: (id: string) => void;
-  toggleLayerVisibility: (id: string) => void;
+  setLayerVisible: (id: string, visible: boolean) => void;
   setLayerOpacity: (id: string, opacity: number) => void;
   reorderLayers: (from: number, to: number) => void;
 
@@ -249,9 +249,9 @@ export const useAppStore = create<AppState>()(
             : [...s.layers, layer],
         })),
       removeLayer: (id) => set((s) => ({ layers: s.layers.filter((l) => l.id !== id) })),
-      toggleLayerVisibility: (id) =>
+      setLayerVisible: (id, visible) =>
         set((s) => ({
-          layers: s.layers.map((l) => (l.id === id ? { ...l, visible: !l.visible } : l)),
+          layers: s.layers.map((l) => (l.id === id ? { ...l, visible } : l)),
         })),
       setLayerOpacity: (id, opacity) =>
         set((s) => ({

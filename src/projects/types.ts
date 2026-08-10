@@ -45,10 +45,6 @@ export interface Project {
   icon?: string;
   color?: string;
   settings: ProjectSettings;
-  /** Layer IDs that belong to this project */
-  layerIds: string[];
-  /** Bookmark IDs saved in this project */
-  bookmarkIds: string[];
   createdAt: number;
   updatedAt: number;
   createdBy: string;

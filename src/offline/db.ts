@@ -6,7 +6,7 @@
  */
 
 const DB_NAME = 'viewtopia-offline';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 export interface OfflineLayer {
   id: string;
@@ -130,6 +130,11 @@ function openDb(): Promise<IDBDatabase> {
       // Bitmaps behind the image overlays a project file names
       if (!db.objectStoreNames.contains('overlayImages')) {
         db.createObjectStore('overlayImages', { keyPath: 'id' });
+      }
+
+      // The map each project was left showing
+      if (!db.objectStoreNames.contains('projectMaps')) {
+        db.createObjectStore('projectMaps', { keyPath: 'id' });
       }
 
       // Share invites
@@ -374,6 +379,22 @@ export const cachedRegions = {
 // ─── Projects ────────────────────────────────────────────────────────
 
 import type { Project, Workspace, ShareInvite } from '../projects/types';
+import type { ViewtopiaProject } from '../features/project/projectFile';
+
+/**
+ * What a project was showing when it was last left, shaped like a saved project
+ * file. Off the Project record, which syncs: this belongs to this browser.
+ */
+export interface ProjectMap {
+  id: string;
+  map: ViewtopiaProject;
+}
+
+export const projectMaps = {
+  get: (id: string) => getById<ProjectMap>('projectMaps', id),
+  put: (entry: ProjectMap) => put('projectMaps', entry),
+  remove: (id: string) => remove('projectMaps', id),
+};
 
 export const projects = {
   getAll: () => getAll<Project>('projects'),

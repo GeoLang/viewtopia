@@ -6,6 +6,23 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-09: **a project remembers its map**. Switching projects saves what
+  the outgoing one was showing and puts back what the incoming one was left
+  with, held per project in IndexedDB in the same shape as a saved project
+  file. A project nobody has left a map in keeps what is on screen, so a new
+  project starts from the map you made it from rather than a blank globe.
+  Switching inside a live document imports the project into it, since the
+  outbound sync watches the same stores. `Project.layerIds` and
+  `bookmarkIds`, only ever written empty, are gone.
+
+- 2026-08-09: **one visibility switch per layer**. A layer sits in the layer
+  list and in the store the renderers draw from, and the list's switch reached
+  only the list, so an overlay or a live document's layer had two switches and
+  one of them did nothing to the map. Every switch now writes both, agent
+  layers honour it in all three renderers, a peer switching a layer off is
+  followed locally, and the layer manager shows one row per layer: the row
+  whose opacity, shading and remove reach what is drawn.
+
 - 2026-08-09: **agent strings render as data, never markup**. A marker label
   went to Leaflet's `bindTooltip` as a string, which Leaflet assigns via
   `innerHTML`, so markup in an agent-authored label became live DOM. Labels
@@ -27,8 +44,15 @@ All notable changes to this project will be documented in this file.
 
 - 2026-08-09: **tiling progress on the asset row**. The assets panel reads the
   job the upload queued and shows its progress, stopping when the asset goes
-  terminal. Only an asset uploaded in this session shows progress, since the
-  asset list does not carry job ids.
+  terminal. An asset this session did not upload finds its job through
+  tiletopia's new `GET /assets/{id}/jobs`, looked up once per polled asset, so
+  progress survives a page reload.
+
+- 2026-08-09: **colours are parsed or dropped**. A layer or marker colour from
+  the agent or a file reached three renderers unchecked. Anything the browser
+  does not read as a css colour now falls back to the default, which keeps
+  Cesium from answering undefined to its own parser and taking down the draw
+  of every layer behind it.
 
 - 2026-08-09: **per-user undo in live sessions**. cmd/ctrl+z takes back your
   own last applied frame as inverse ops and shift adds redo, with buttons

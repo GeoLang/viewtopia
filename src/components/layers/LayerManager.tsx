@@ -28,6 +28,7 @@ import {
   type AgentLayer,
   type AgentRasterLayer,
 } from '../../store/agentLayers';
+import { setLayerVisible } from '../../store/layerVisibility';
 import { SymbologyEditor } from '../../features/symbology/SymbologyEditor';
 import { geojsonToPmtiles } from '../../features/pmtiles/writer';
 
@@ -61,22 +62,22 @@ export interface LayerItem {
 
 /**
  * A layer the agent drew, from the store the renderers read. Its controls act on
- * that store, so opacity and remove reach the drawn layer. There is no
- * visibility switch because no renderer honours one. The download sits on the
- * header, for a layer that came from a file; opacity, shading and remove are
- * secondary and stay behind the expand.
+ * that store, so they reach the drawn layer. The download sits on the header,
+ * for a layer that came from a file; opacity, shading and remove are secondary
+ * and stay behind the expand.
  */
 function AgentLayerRow({
   layer,
   expanded,
   onExpand,
+  onRemove,
 }: {
   layer: AgentLayer;
   expanded: boolean;
   onExpand: () => void;
+  onRemove: () => void;
 }) {
   const setOpacity = useAgentLayerStore((s) => s.setLayerOpacity);
-  const removeLayer = useAgentLayerStore((s) => s.removeLayer);
   const opacity = layerStyle(layer).opacity;
 
   return (
@@ -102,6 +103,13 @@ function AgentLayerRow({
               flexShrink: 0,
               transform: expanded ? 'rotate(90deg)' : undefined,
             }}
+          />
+          <Switch
+            size="xs"
+            checked={layer.visible !== false}
+            aria-label={`Show ${layer.name}`}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => setLayerVisible(layer.id, e.currentTarget.checked)}
           />
           <Text size="xs" c="white" lineClamp={1}>
             {layer.name}
@@ -173,7 +181,7 @@ function AgentLayerRow({
               color="red"
               onClick={(e) => {
                 e.stopPropagation();
-                removeLayer(layer.id);
+                onRemove();
               }}
             >
               Remove
@@ -195,16 +203,16 @@ function RasterLayerRow({
   count,
   expanded,
   onExpand,
+  onRemove,
 }: {
   layer: AgentRasterLayer;
   index: number;
   count: number;
   expanded: boolean;
   onExpand: () => void;
+  onRemove: () => void;
 }) {
   const setOpacity = useAgentLayerStore((s) => s.setRasterOpacity);
-  const removeLayer = useAgentLayerStore((s) => s.removeRasterLayer);
-  const toggleVisibility = useAgentLayerStore((s) => s.toggleRasterVisibility);
   const reorder = useAgentLayerStore((s) => s.reorderRasterLayers);
   const editingRasterId = useAgentLayerStore((s) => s.editingRasterId);
   const setEditingRaster = useAgentLayerStore((s) => s.setEditingRaster);
@@ -237,7 +245,7 @@ function RasterLayerRow({
             checked={layer.visible}
             aria-label={`Show ${layer.name}`}
             onClick={(e) => e.stopPropagation()}
-            onChange={() => toggleVisibility(layer.id)}
+            onChange={(e) => setLayerVisible(layer.id, e.currentTarget.checked)}
           />
           <Text size="xs" c="white" lineClamp={1}>
             {layer.name}
@@ -313,7 +321,7 @@ function RasterLayerRow({
             color="red"
             onClick={(e) => {
               e.stopPropagation();
-              removeLayer(layer.id);
+              onRemove();
             }}
           >
             Remove
@@ -326,28 +334,24 @@ function RasterLayerRow({
 
 interface LayerManagerProps {
   layers: LayerItem[];
-  onToggle: (id: string) => void;
   onOpacity: (id: string, opacity: number) => void;
   onRemove: (id: string) => void;
   onReorder: (from: number, to: number) => void;
   onClose: () => void;
 }
 
-export function LayerManager({
-  layers,
-  onToggle,
-  onOpacity,
-  onRemove,
-  onClose,
-}: LayerManagerProps) {
+export function LayerManager({ layers, onOpacity, onRemove, onClose }: LayerManagerProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  // the agent's own layers live in the store the renderers draw from, not in the
-  // app-store list this panel is given. a plugin registers its layer in both, so
-  // anything already listed above is skipped rather than shown twice
-  const listed = new Set(layers.map((l) => l.id));
-  const agentLayers = useAgentLayerStore((s) => s.layers).filter((l) => !listed.has(l.id));
+  const agentLayers = useAgentLayerStore((s) => s.layers);
   const rasterLayers = useAgentLayerStore((s) => s.rasterLayers);
-  const total = layers.length + agentLayers.length + rasterLayers.length;
+  const removeAgentLayer = useAgentLayerStore((s) => s.removeLayer);
+  const removeRasterLayer = useAgentLayerStore((s) => s.removeRasterLayer);
+  // one row per layer: a plugin or live-document layer sits in both this list
+  // and the store the renderers draw from, and only that store's row reaches
+  // the map
+  const drawn = new Set([...agentLayers, ...rasterLayers].map((l) => l.id));
+  const listedLayers = layers.filter((l) => !drawn.has(l.id));
+  const total = listedLayers.length + agentLayers.length + rasterLayers.length;
 
   return (
     <PanelCard width={300} maxHeight="60vh">
@@ -364,7 +368,7 @@ export function LayerManager({
               No layers loaded
             </Text>
           )}
-          {layers.map((layer) => (
+          {listedLayers.map((layer) => (
             <Paper
               key={layer.id}
               p="xs"
@@ -383,9 +387,10 @@ export function LayerManager({
                   <Switch
                     size="xs"
                     checked={layer.visible}
+                    aria-label={`Show ${layer.name}`}
                     onChange={(e) => {
                       e.stopPropagation();
-                      onToggle(layer.id);
+                      setLayerVisible(layer.id, e.currentTarget.checked);
                     }}
                   />
                   <Text size="xs" c="white" lineClamp={1}>
@@ -437,6 +442,10 @@ export function LayerManager({
               layer={layer}
               expanded={expandedId === layer.id}
               onExpand={() => setExpandedId(expandedId === layer.id ? null : layer.id)}
+              onRemove={() => {
+                removeAgentLayer(layer.id);
+                onRemove(layer.id);
+              }}
             />
           ))}
           {rasterLayers.map((layer, index) => (
@@ -447,6 +456,10 @@ export function LayerManager({
               count={rasterLayers.length}
               expanded={expandedId === layer.id}
               onExpand={() => setExpandedId(expandedId === layer.id ? null : layer.id)}
+              onRemove={() => {
+                removeRasterLayer(layer.id);
+                onRemove(layer.id);
+              }}
             />
           ))}
         </Stack>

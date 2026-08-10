@@ -21,10 +21,10 @@ describe('image overlay layers', () => {
   it('hides and shows one without dropping it', () => {
     const store = useAgentLayerStore.getState();
     store.addRasterLayer(overlay('plan'));
-    store.toggleRasterVisibility('plan');
+    store.setLayerVisible('plan', false);
     expect(useAgentLayerStore.getState().rasterLayers[0].visible).toBe(false);
 
-    useAgentLayerStore.getState().toggleRasterVisibility('plan');
+    useAgentLayerStore.getState().setLayerVisible('plan', true);
     expect(useAgentLayerStore.getState().rasterLayers[0].visible).toBe(true);
   });
 

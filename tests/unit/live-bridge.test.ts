@@ -13,6 +13,7 @@ import {
 import { useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers';
 import { useAnnotationStore, type Annotation } from '../../src/store/annotations';
 import { useAppStore, type Bookmark, type LayerItem } from '../../src/store/app';
+import { setLayerVisible } from '../../src/store/layerVisibility';
 import { FakeAgoraServer } from './stubs/fakeAgoraServer';
 
 const ANNOTATION_STORAGE_KEY = 'viewtopia-annotations';
@@ -180,7 +181,7 @@ describe('live document bridge', () => {
   it('writes visibility and opacity changes to the document', () => {
     goLive();
     useAppStore.getState().addLayer(appLayer('roads'));
-    useAppStore.getState().toggleLayerVisibility('roads');
+    useAppStore.getState().setLayerVisible('roads', false);
     useAppStore.getState().setLayerOpacity('roads', 0.35);
     expect(server.document.layers.roads).toMatchObject({ visible: false, opacity: 0.35 });
   });
@@ -393,6 +394,39 @@ describe('live document bridge', () => {
     expect(layer.geojson.features).toHaveLength(2);
     expect(useAppStore.getState().layers.map((item) => item.id)).toEqual(['rivers']);
     expect(server.connection.editsSent).toHaveLength(sent);
+  });
+
+  it('hides a drawn layer the peer switched off, and shows it again', () => {
+    goLive();
+    const geojson = featureCollection(2);
+    server.applyFromPeer('ada', 'layers/rivers', sourceEntry('rivers', { kind: 'geojson', geojson }));
+
+    server.applyFromPeer(
+      'ada',
+      'layers/rivers',
+      sourceEntry('rivers', { kind: 'geojson', geojson }, { visible: false }),
+    );
+    expect(useAgentLayerStore.getState().layers[0].visible).toBe(false);
+
+    server.applyFromPeer('ada', 'layers/rivers', sourceEntry('rivers', { kind: 'geojson', geojson }));
+    expect(useAgentLayerStore.getState().layers[0].visible).toBe(true);
+  });
+
+  it('sends a layer switched off locally without dropping its features', () => {
+    goLive();
+    server.applyFromPeer(
+      'ada',
+      'layers/rivers',
+      sourceEntry('rivers', { kind: 'geojson', geojson: featureCollection(2) }),
+    );
+
+    setLayerVisible('rivers', false);
+
+    expect(server.document.layers.rivers).toMatchObject({
+      visible: false,
+      source: { kind: 'geojson' },
+    });
+    expect(useAgentLayerStore.getState().layers[0].visible).toBe(false);
   });
 
   it('replaces the layer when the peer rewrites the same entry', () => {

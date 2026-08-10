@@ -4,6 +4,7 @@ import { render, screen, cleanup, fireEvent, act } from '@testing-library/react'
 import { MantineProvider } from '@mantine/core';
 import { LayerManager } from '../../src/components/layers/LayerManager';
 import { layerStyle, useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers';
+import { useAppStore } from '../../src/store/app';
 import { buildGraduated } from '../../src/features/symbology/symbology';
 import { cornersOfBbox } from '../../src/overlay/georeference';
 
@@ -56,7 +57,6 @@ const renderPanel = () =>
     <MantineProvider>
       <LayerManager
         layers={[]}
-        onToggle={vi.fn()}
         onOpacity={vi.fn()}
         onRemove={vi.fn()}
         onReorder={vi.fn()}
@@ -68,6 +68,7 @@ const renderPanel = () =>
 describe('LayerManager agent layers', () => {
   beforeEach(() => {
     useAgentLayerStore.setState({ layers: [], rasterLayers: [], markers: [], generation: 0 });
+    useAppStore.setState({ layers: [] });
   });
 
   afterEach(cleanup);
@@ -205,7 +206,7 @@ describe('LayerManager agent layers', () => {
     );
   });
 
-  it('a plugin layer keeps its own row instead of appearing twice', () => {
+  it('shows a plugin layer once, as the row whose switch reaches the map', () => {
     // the plugin host registers the same id in both stores
     useAgentLayerStore.getState().setLayers([layer('plugin-1')]);
 
@@ -213,7 +214,6 @@ describe('LayerManager agent layers', () => {
       <MantineProvider>
         <LayerManager
           layers={[{ id: 'plugin-1', name: 'plugin-1', type: 'geojson', visible: true, opacity: 1 }]}
-          onToggle={vi.fn()}
           onOpacity={vi.fn()}
           onRemove={vi.fn()}
           onReorder={vi.fn()}
@@ -223,7 +223,7 @@ describe('LayerManager agent layers', () => {
     );
 
     expect(screen.getByText('Layers (1)')).toBeInTheDocument();
-    expect(screen.queryByTestId('agent-layer-row')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('agent-layer-row')).toHaveLength(1);
   });
 
   it('lists a raster result and acts on the store, with no symbology to offer', async () => {
@@ -251,6 +251,34 @@ describe('LayerManager agent layers', () => {
 
     await act(async () => fireEvent.click(screen.getByText('Remove')));
     expect(useAgentLayerStore.getState().rasterLayers).toHaveLength(0);
+  });
+
+  it('switches a layer off in the store the renderers draw from', () => {
+    useAgentLayerStore.getState().setLayers([layer('plugin-1')]);
+    useAppStore.getState().addLayer({
+      id: 'plugin-1',
+      name: 'plugin-1',
+      type: 'geojson',
+      visible: true,
+      opacity: 1,
+    });
+
+    render(
+      <MantineProvider>
+        <LayerManager
+          layers={useAppStore.getState().layers}
+          onOpacity={vi.fn()}
+          onRemove={vi.fn()}
+          onReorder={vi.fn()}
+          onClose={vi.fn()}
+        />
+      </MantineProvider>,
+    );
+
+    fireEvent.click(screen.getByLabelText('Show plugin-1'));
+
+    expect(useAgentLayerStore.getState().layers[0].visible).toBe(false);
+    expect(useAppStore.getState().layers[0].visible).toBe(false);
   });
 
   it('counts vector and raster layers together', () => {

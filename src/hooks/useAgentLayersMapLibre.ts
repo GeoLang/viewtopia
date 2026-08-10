@@ -2,7 +2,12 @@ import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import maplibregl from 'maplibre-gl';
 import type { ExpressionSpecification } from 'maplibre-gl';
-import { useAgentLayerStore, layerStyle, type AgentMarker } from '../store/agentLayers';
+import {
+  useAgentLayerStore,
+  layerStyle,
+  visibleLayers,
+  type AgentMarker,
+} from '../store/agentLayers';
 import { useAppStore } from '../store/app';
 import { agentLayersBounds } from './agentLayerBounds';
 
@@ -93,7 +98,7 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
         });
       }
 
-      for (const layer of layers) {
+      for (const layer of visibleLayers(layers)) {
         const src = `${PREFIX}${layer.id}`;
         const style = layerStyle(layer);
         map.addSource(src, { type: 'geojson', data: layer.geojson });
@@ -136,7 +141,7 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
         });
       }
 
-      const bounds = agentLayersBounds(layers);
+      const bounds = agentLayersBounds(visibleLayers(layers));
       if (bounds && framedRef.current !== generation) {
         framedRef.current = generation;
         map.fitBounds(bounds, { padding: 60, maxZoom: 17, duration: 0 });
@@ -151,7 +156,7 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
       if (!map.isStyleLoaded()) return;
       const sources = Object.keys(map.getStyle()?.sources ?? {});
       const missing =
-        layers.some((layer) => !sources.includes(`${PREFIX}${layer.id}`)) ||
+        visibleLayers(layers).some((layer) => !sources.includes(`${PREFIX}${layer.id}`)) ||
         rasterLayers.some(
           (layer) => layer.visible && !sources.includes(`${RASTER_PREFIX}${layer.id}`),
         );

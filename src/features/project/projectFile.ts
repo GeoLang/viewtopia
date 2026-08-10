@@ -228,8 +228,7 @@ export function applyProject(project: ViewtopiaProject): void {
   }
 
   useAgentLayerStore.getState().setLayers(project.agentLayers);
-  // no bulk marker action, and addMarker would mint new ids
-  useAgentLayerStore.setState({ markers: project.markers });
+  useAgentLayerStore.getState().setMarkers(project.markers);
   useAgentLayerStore.setState({ rasterLayers: [], editingRasterId: null });
   void restoreImageOverlays(project.imageOverlays);
 

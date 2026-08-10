@@ -95,7 +95,6 @@ export function ToolPanels() {
     activePanel,
     setActivePanel,
     layers,
-    toggleLayerVisibility,
     setLayerOpacity,
     removeLayer,
     reorderLayers,
@@ -169,7 +168,6 @@ export function ToolPanels() {
       return (
         <LayerManager
           layers={layers}
-          onToggle={toggleLayerVisibility}
           onOpacity={setLayerOpacity}
           onRemove={removeLayer}
           onReorder={reorderLayers}

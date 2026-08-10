@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useAppStore } from '../store/app';
+import { setLayerVisible } from '../store/layerVisibility';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { getSharedCamera, subscribeSharedCamera } from '../hooks/sharedCamera';
 import { clickCoordinates } from './mapClickCoordinates';
@@ -31,10 +32,9 @@ function layerSummaries() {
     .layers.map(({ id, name, type, visible }) => ({ id, name, type, visible }));
 }
 
-function setLayerVisibility(layerId: string, visible: boolean): void {
-  const { layers, toggleLayerVisibility } = useAppStore.getState();
-  const layer = layers.find((candidate) => candidate.id === layerId);
-  if (layer && layer.visible !== visible) toggleLayerVisibility(layerId);
+function showLayer(layerId: string, visible: boolean): void {
+  if (!useAppStore.getState().layers.some((layer) => layer.id === layerId)) return;
+  setLayerVisible(layerId, visible);
 }
 
 function handleHostMessage(event: MessageEvent): void {
@@ -57,7 +57,7 @@ function handleHostMessage(event: MessageEvent): void {
       postToHost({ type: 'viewtopia:layers', layers: layerSummaries(), requestId });
       return;
     case 'viewtopia:setLayerVisibility':
-      if (typeof data.layerId === 'string') setLayerVisibility(data.layerId, data.visible === true);
+      if (typeof data.layerId === 'string') showLayer(data.layerId, data.visible === true);
       return;
   }
 }

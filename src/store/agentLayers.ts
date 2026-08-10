@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import { applySymbology, clearSymbology, type Symbology } from '../features/symbology/symbology';
+import { asColor } from '../lib/color';
 import type { Corners } from '../overlay/georeference';
+
+/** Fallback for a layer or marker colour the browser cannot read. */
+export const DEFAULT_LAYER_COLOR = '#38bdf8';
 
 /**
  * Layers the agent asked us to draw (from a ui_spec). Held here rather than
@@ -32,6 +36,13 @@ export interface AgentLayer {
   symbology?: Symbology;
   /** The features before styling, so clearing it restores the single colour. */
   sourceGeojson?: GeoJSON.FeatureCollection;
+  /** Unset counts as visible. */
+  visible?: boolean;
+}
+
+/** What the renderers draw: everything the layer switch has not turned off. */
+export function visibleLayers(layers: AgentLayer[]): AgentLayer[] {
+  return layers.filter((layer) => layer.visible !== false);
 }
 
 /** Fills in what a layer left unset, so the three renderers draw it the same. */
@@ -94,12 +105,15 @@ interface AgentLayerState {
   setRasterOpacity: (id: string, opacity: number) => void;
   /** Move one image's corners, which is what dragging a corner handle does. */
   setRasterCorners: (id: string, corners: Corners) => void;
-  toggleRasterVisibility: (id: string) => void;
+  /** Show or hide one layer, vector or image, in whichever list holds the id. */
+  setLayerVisible: (id: string, visible: boolean) => void;
   /** Later in the list draws on top, so this is the stacking order. */
   reorderRasterLayers: (from: number, to: number) => void;
   /** The image whose corner handles are on the map, or null for none. */
   setEditingRaster: (id: string | null) => void;
   addMarker: (marker: Omit<AgentMarker, 'id'>) => void;
+  /** Put back a saved set, ids and all, where addMarker would mint new ones. */
+  setMarkers: (markers: AgentMarker[]) => void;
   clearMarkers: () => void;
   clear: () => void;
 }
@@ -145,9 +159,19 @@ function sanitizeLayers(layers: AgentLayer[]): AgentLayer[] {
     if (features.length < layer.geojson.features.length) {
       console.warn(`agent layer "${layer.name}": dropped ${layer.geojson.features.length - features.length} out-of-range features`);
     }
-    out.push({ ...layer, geojson: { ...layer.geojson, features } });
+    out.push({
+      ...layer,
+      color: asColor(layer.color, DEFAULT_LAYER_COLOR),
+      geojson: { ...layer.geojson, features },
+    });
   }
   return out;
+}
+
+function sanitizeMarkers(markers: AgentMarker[]): AgentMarker[] {
+  return markers
+    .filter((marker) => Math.abs(marker.lon) <= 180 && Math.abs(marker.lat) <= 90)
+    .map((marker) => ({ ...marker, color: asColor(marker.color, DEFAULT_LAYER_COLOR) }));
 }
 
 export const useAgentLayerStore = create<AgentLayerState>((set) => ({
@@ -178,7 +202,9 @@ export const useAgentLayerStore = create<AgentLayerState>((set) => ({
     })),
   setLayerColor: (id, color) =>
     set((s) => ({
-      layers: s.layers.map((l) => (l.id === id ? { ...l, color } : l)),
+      layers: s.layers.map((l) =>
+        l.id === id ? { ...l, color: asColor(color, DEFAULT_LAYER_COLOR) } : l,
+      ),
     })),
   setSymbology: (id, symbology) =>
     set((s) => ({
@@ -205,11 +231,10 @@ export const useAgentLayerStore = create<AgentLayerState>((set) => ({
     set((s) => ({
       rasterLayers: s.rasterLayers.map((l) => (l.id === id ? { ...l, corners } : l)),
     })),
-  toggleRasterVisibility: (id) =>
+  setLayerVisible: (id, visible) =>
     set((s) => ({
-      rasterLayers: s.rasterLayers.map((l) =>
-        l.id === id ? { ...l, visible: !l.visible } : l,
-      ),
+      layers: s.layers.map((l) => (l.id === id ? { ...l, visible } : l)),
+      rasterLayers: s.rasterLayers.map((l) => (l.id === id ? { ...l, visible } : l)),
     })),
   reorderRasterLayers: (from, to) =>
     set((s) => {
@@ -227,8 +252,14 @@ export const useAgentLayerStore = create<AgentLayerState>((set) => ({
         console.warn(`agent marker "${marker.label ?? ''}" dropped: out-of-range coordinates`);
         return s;
       }
-      return { markers: [...s.markers, { ...marker, id: crypto.randomUUID() }] };
+      return {
+        markers: [
+          ...s.markers,
+          { ...marker, color: asColor(marker.color, DEFAULT_LAYER_COLOR), id: crypto.randomUUID() },
+        ],
+      };
     }),
+  setMarkers: (markers) => set({ markers: sanitizeMarkers(markers) }),
   clearMarkers: () => set({ markers: [] }),
   clear: () => set({ layers: [], rasterLayers: [], editingRasterId: null, markers: [] }),
 }));

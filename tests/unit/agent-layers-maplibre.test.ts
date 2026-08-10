@@ -187,11 +187,31 @@ describe('useAgentLayersMapLibre', () => {
     expect(map.source('agent-raster-plan')).toBeDefined();
 
     act(() => {
-      useAgentLayerStore.getState().toggleRasterVisibility('plan');
+      useAgentLayerStore.getState().setLayerVisible('plan', false);
     });
 
     expect(map.source('agent-raster-plan')).toBeUndefined();
     expect(map.layer('agent-raster-plan-raster')).toBeUndefined();
+  });
+
+  it('leaves a hidden vector layer off the map and puts it back', () => {
+    const map = fakeMap();
+    act(() => {
+      useAgentLayerStore.getState().addLayer(layer());
+    });
+    mount(map);
+    expect(map.source('agent-layer-risk')).toBeDefined();
+
+    act(() => {
+      useAgentLayerStore.getState().setLayerVisible('risk', false);
+    });
+    expect(map.source('agent-layer-risk')).toBeUndefined();
+    expect(map.layer('agent-layer-risk-fill')).toBeUndefined();
+
+    act(() => {
+      useAgentLayerStore.getState().setLayerVisible('risk', true);
+    });
+    expect(map.source('agent-layer-risk')).toBeDefined();
   });
 
   it('removing a raster layer takes its source and layer off the map', () => {

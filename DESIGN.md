@@ -408,10 +408,25 @@ Tools" setting with a Preview badge, so there are no dead buttons in the default
   serves quantized mesh for Cesium and a terrain-RGB endpoint (mercator XYZ, mapbox encoding,
   anonymous) for MapLibre relief.
 - The layer panel lists agent-drawn layers as well as plugin-host layers, with working opacity,
-  remove and download.
+  remove and download. One id can sit in the layer list and in the store the renderers draw
+  from, so the panel shows one row per layer, the row whose controls reach what is drawn, and
+  visibility is written to both stores through `store/layerVisibility.ts`.
+- A layer or marker colour from the agent or a file is parsed or dropped (`lib/color.ts`).
+  Beyond injection, Cesium's `Color.fromCssColorString` answers undefined where its typing
+  promises a `Color`, so one unreadable colour would stop the draw of every layer behind it.
+- An image overlay dragged out of square renders warped on MapLibre and Cesium. Leaflet drapes
+  onto a rectangle only and shows the envelope, which stands: it has no native quad warp and a
+  plugin dependency is not worth one renderer's edge case.
 - Choropleth bakes the class colour into each feature as simplestyle properties, which Cesium
   already honours per feature, so MapLibre and Leaflet need only a few lines each. It is offered
   only for a numeric field with more than one distinct value.
+- A project carries its map. Switching saves what the outgoing project was showing and applies
+  what the incoming one was left with, held per project in the `projectMaps` IndexedDB store in
+  the same shape as a `.viewtopia.json` file (bitmaps stay in `overlayImages`). A project with
+  no stored map keeps what is on screen, so creating one forks the current map rather than
+  clearing it. Switching inside a live document imports the project into it, because the
+  outbound sync watches the stores `applyProject` writes. OGC layers are the one thing a
+  document cannot hold, see DESIGN_TODO.
 - Imports carrying timestamps (CSV/GeoJSON properties, GPX `coordTimes`) become playable CZML
   with availability, so Timeline Fit-to-Data works through the UI.
 - SQL exports go through `COPY (...) TO '<temp>'` and `copyFileToBuffer`, then drop the temp file.

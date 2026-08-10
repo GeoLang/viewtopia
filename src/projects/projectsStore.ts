@@ -2,8 +2,13 @@
  * Projects store — manages the active project and CRUD operations.
  */
 import { create } from 'zustand';
-import { projects as projectsDb } from '../offline/db';
+import { projects as projectsDb, projectMaps } from '../offline/db';
 import { queueOperation } from '../offline/sync';
+import {
+  applyProject,
+  serializeProject,
+  storeOverlayImages,
+} from '../features/project/projectFile';
 import type { Project, ProjectSettings } from './types';
 
 export interface ProjectsState {
@@ -20,8 +25,10 @@ export interface ProjectsActions {
   load: () => Promise<void>;
   /** Load projects for a specific workspace */
   loadByWorkspace: (workspaceId: string) => Promise<void>;
-  /** Set the active project */
+  /** Set the active project, leaving the map alone */
   setActive: (projectId: string | null) => void;
+  /** Put the map the project was left showing back on screen. */
+  switchTo: (projectId: string) => Promise<void>;
   /** Create a new project */
   create: (params: {
     workspaceId: string;
@@ -63,6 +70,23 @@ export const useProjectsStore = create<ProjectsState & ProjectsActions>((set, ge
     }
   },
 
+  async switchTo(projectId: string) {
+    const { activeProjectId, items } = get();
+    if (activeProjectId === projectId) return;
+
+    const leaving = items.find((project) => project.id === activeProjectId);
+    if (leaving) {
+      await storeOverlayImages();
+      await projectMaps.put({ id: leaving.id, map: serializeProject(leaving.name) });
+    }
+
+    get().setActive(projectId);
+    // a project nobody has left a map in keeps what is on screen, so switching
+    // into a fresh one never throws work away
+    const stored = await projectMaps.get(projectId);
+    if (stored) applyProject(stored.map);
+  },
+
   async create(params) {
     const now = Date.now();
     const project: Project = {
@@ -73,8 +97,6 @@ export const useProjectsStore = create<ProjectsState & ProjectsActions>((set, ge
       settings: {
         ...params.settings,
       },
-      layerIds: [],
-      bookmarkIds: [],
       createdAt: now,
       updatedAt: now,
       createdBy: 'local-user',
@@ -100,6 +122,7 @@ export const useProjectsStore = create<ProjectsState & ProjectsActions>((set, ge
 
   async remove(id) {
     await projectsDb.remove(id);
+    await projectMaps.remove(id);
     await queueOperation('delete', 'session', id, { id });
     set((s) => ({
       items: s.items.filter((p) => p.id !== id),

@@ -35,7 +35,7 @@ import { inviteByEmail, generateShareLink } from './sharing';
 import type { Role } from './types';
 
 export function ProjectSwitcher() {
-  const { items: projects, activeProjectId, setActive, load: loadProjects, create: createProject, remove: removeProject } = useProjectsStore();
+  const { items: projects, activeProjectId, switchTo, load: loadProjects, create: createProject, remove: removeProject } = useProjectsStore();
   const { items: workspaces, activeWorkspaceId, load: loadWorkspaces, setActive: setActiveWorkspace, create: createWorkspace } = useWorkspacesStore();
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -63,7 +63,9 @@ export function ProjectSwitcher() {
     } else {
       if (!activeWorkspaceId) return;
       const proj = await createProject({ workspaceId: activeWorkspaceId, name: newName, description: newDesc || undefined });
-      setActive(proj.id);
+      // a new project starts from what is on screen, and the one being left
+      // keeps its own copy of it
+      await switchTo(proj.id);
     }
     setNewName('');
     setNewDesc('');
@@ -139,7 +141,7 @@ export function ProjectSwitcher() {
             {workspaceProjects.map((proj) => (
               <Menu.Item
                 key={proj.id}
-                onClick={() => setActive(proj.id)}
+                onClick={() => void switchTo(proj.id)}
                 rightSection={
                   <Group gap={4}>
                     {proj.offlineEnabled && <Badge size="xs" variant="dot" color="green">offline</Badge>}
