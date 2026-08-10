@@ -8,7 +8,7 @@ import {
 } from '../../store/agentLayers';
 import { overlayImages } from '../../offline/db';
 import { migrateLegacyChoropleth } from '../symbology/symbology';
-import { useOgcLayerStore, type OGCLayer } from '../../store/ogcLayers';
+import { useOgcLayerStore, loadPmtilesLayer, type OGCLayer } from '../../store/ogcLayers';
 import { useSplitViewStore, type PaneRenderer } from '../../store/splitView';
 import { captureCameraState, flyToCameraState, type CameraState } from '../../store/cameraViews';
 import { getActiveCesiumViewer, getActiveMapLibre } from '../../viewer/registry';
@@ -212,6 +212,20 @@ function applyCamera(cam: CameraState): void {
   }, 100);
 }
 
+/**
+ * A saved service back under its own id, which a WFS layer's features are filed
+ * against. The saved archive info is dropped and read again: the pmtiles
+ * protocol only resolves a url it was given a source for in this session.
+ */
+function restoreOgcLayer(saved: OGCLayer): void {
+  const { pmtiles: _stale, ...layer } = saved;
+  useOgcLayerStore.getState().putLayer(layer);
+  if (layer.type !== 'pmtiles') return;
+  void loadPmtilesLayer(layer).catch((failure) => {
+    console.warn(`layer "${layer.name}" could not read its pmtiles archive`, failure);
+  });
+}
+
 export function applyProject(project: ViewtopiaProject): void {
   const app = useAppStore.getState();
   app.setRenderer(project.renderer);
@@ -234,7 +248,7 @@ export function applyProject(project: ViewtopiaProject): void {
 
   const ogc = useOgcLayerStore.getState();
   for (const layer of [...ogc.layers]) ogc.removeLayer(layer.id);
-  for (const layer of project.ogcLayers) ogc.addLayer(layer.name, layer.url, layer.type);
+  for (const saved of project.ogcLayers) restoreOgcLayer(saved);
 
   applyCamera(project.camera);
 }

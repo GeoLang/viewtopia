@@ -7,10 +7,22 @@ import {
 } from '../../src/features/project/projectFile';
 import { useAppStore } from '../../src/store/app';
 import { useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers';
-import { useOgcLayerStore } from '../../src/store/ogcLayers';
+import { useOgcLayerStore, wfsAgentLayerId } from '../../src/store/ogcLayers';
 import { useSplitViewStore } from '../../src/store/splitView';
 import { setSharedCamera } from '../../src/hooks/sharedCamera';
 import { cornersOfBbox } from '../../src/overlay/georeference';
+
+const ARCHIVE_URL = 'https://archives.example/parcels.pmtiles';
+const ARCHIVE_INFO = { kind: 'vector' as const, vectorLayers: ['parcels'], minZoom: 0, maxZoom: 12 };
+
+// reading a pmtiles header is a range request over the network
+vi.mock('../../src/features/pmtiles/source', () => ({
+  addRemotePmtiles: vi.fn(async () => ARCHIVE_INFO),
+  addLocalPmtiles: vi.fn(),
+  registerPmtilesProtocol: vi.fn(),
+}));
+
+const { addRemotePmtiles } = await import('../../src/features/pmtiles/source');
 
 const venice: AgentLayer = {
   id: 'venice',
@@ -57,8 +69,24 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.clearAllMocks();
   resetStores();
 });
+
+/** A parsed project holding nothing but the given services. */
+function projectWithOgcLayers(layers: unknown[]) {
+  return parseProject(JSON.stringify({ ...serializeProject('p'), ogcLayers: layers }));
+}
+
+const savedArchive = {
+  id: 'parcels',
+  name: 'Parcels',
+  type: 'pmtiles',
+  url: ARCHIVE_URL,
+  opacity: 0.4,
+  // written by the session that saved the project, unusable in this one
+  pmtiles: { kind: 'vector', vectorLayers: ['stale'], minZoom: 0, maxZoom: 4 },
+};
 
 describe('project round trip', () => {
   it('restores renderer, basemap, layers, markers, ogc services and split view', () => {
@@ -149,6 +177,61 @@ describe('project round trip', () => {
     flushCameraPoll();
 
     expect(useOgcLayerStore.getState().layers.map((l) => l.name)).toEqual(['fresh']);
+  });
+
+  it('restores a saved archive under its own id and reads its header again', async () => {
+    applyProject(projectWithOgcLayers([savedArchive]));
+    await vi.advanceTimersByTimeAsync(4200);
+
+    expect(addRemotePmtiles).toHaveBeenCalledWith(ARCHIVE_URL);
+    expect(useOgcLayerStore.getState().layers).toEqual([
+      {
+        id: 'parcels',
+        name: 'Parcels',
+        type: 'pmtiles',
+        url: ARCHIVE_URL,
+        opacity: 0.4,
+        pmtiles: ARCHIVE_INFO,
+      },
+    ]);
+  });
+
+  it('restores the rest when one archive cannot be read', async () => {
+    vi.mocked(addRemotePmtiles).mockRejectedValueOnce(new Error('404'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    applyProject(
+      projectWithOgcLayers([
+        savedArchive,
+        { id: 'roads', name: 'Roads', url: 'https://example.org/wms', type: 'wms' },
+      ]),
+    );
+    await vi.advanceTimersByTimeAsync(4200);
+
+    const layers = useOgcLayerStore.getState().layers;
+    expect(layers.map((l) => l.id)).toEqual(['parcels', 'roads']);
+    expect(layers[0].pmtiles).toBeUndefined();
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('keeps a saved WFS layer able to drop its features again', () => {
+    const wfs = useOgcLayerStore
+      .getState()
+      .addLayer('Buildings', 'https://example.org/wfs', 'wfs');
+    useAgentLayerStore.getState().setLayers([{ ...venice, id: wfsAgentLayerId(wfs) }]);
+
+    const saved = JSON.stringify(serializeProject('city'));
+    resetStores();
+    applyProject(parseProject(saved));
+    flushCameraPoll();
+
+    const restored = useOgcLayerStore.getState().layers[0];
+    expect(restored.id).toBe(wfs.id);
+    expect(useAgentLayerStore.getState().layers).toHaveLength(1);
+
+    useOgcLayerStore.getState().removeLayer(restored.id);
+    expect(useAgentLayerStore.getState().layers).toEqual([]);
   });
 
   it('restores a custom basemap', () => {

@@ -185,6 +185,15 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-08-09: **a saved OGC layer comes back as itself**. Opening a project
+  file minted a new id for every OGC layer, which lost a WFS layer's features
+  (they are filed in the agent layers under the old id, so removing the layer
+  left them on the map) and left a remote PMTiles layer in the list with no
+  archive behind it, drawing nothing. Each layer is now put back under its
+  saved id, and an archive's header is read again, since the pmtiles protocol
+  only resolves a url it was given a source for in this session. One archive
+  failing to load no longer stops the rest of the project from opening.
+
 - 2026-08-09: **a peer's layer keeps the colour its publisher chose, or none**.
   A layer arriving from a live document with no colour of its own was given
   blue on the way in, and the next local edit to that layer, a visibility
