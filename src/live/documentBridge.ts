@@ -13,6 +13,13 @@ import {
   type Bookmark,
   type LayerItem,
 } from '../store/app';
+import {
+  loadPmtilesLayer,
+  ogcLayerOpacity,
+  ogcLayerVisible,
+  useOgcLayerStore,
+  type OGCLayer,
+} from '../store/ogcLayers';
 import { agoraErrorText, attachmentSourceUrl, uploadAttachment } from './api';
 import { decodeDataUrl, MAXIMUM_ATTACHMENT_BYTES } from './attachments';
 import { compareFractionalIndex, generateIndexBetween } from './fractionalIndex';
@@ -25,6 +32,7 @@ import {
   type LiveDocument,
   type LiveLayerEntry,
   type LiveLayerImageSource,
+  type LiveLayerServiceSource,
   type LiveLayerSource,
   type LiveLayerStyleOverrides,
   type LiveLayerUrlSource,
@@ -35,12 +43,15 @@ interface LocalState {
   layers: LayerItem[];
   agentLayers: AgentLayer[];
   overlays: AgentRasterLayer[];
+  ogcLayers: OGCLayer[];
   annotations: Annotation[];
   bookmarks: Bookmark[];
 }
 
 const MATERIALIZED_LAYER_TYPE: LayerItem['type'] = 'geojson';
 const OVERLAY_LAYER_TYPE: LayerItem['type'] = 'raster';
+/** what a service draws as, until a PMTiles archive says it is vector */
+const SERVICE_LAYER_TYPE: LayerItem['type'] = 'raster';
 
 /**
  * How far an overlay's bitmap has got towards the document. `unavailable` is
@@ -378,6 +389,72 @@ function syncOverlaysToDocument(overlays: AgentRasterLayer[]): void {
   sendOperations(operations);
 }
 
+/**
+ * The handle a peer can request for themselves, or null for a layer that cannot
+ * travel: a WFS layer's features are already published from the agent layers,
+ * and a dropped archive is a browser File nobody else can read.
+ */
+function serviceSourceOf(layer: OGCLayer): LiveLayerServiceSource | null {
+  if (layer.type === 'wfs' || layer.pmtiles?.local) return null;
+  return { kind: 'service', service: layer.type, url: layer.url };
+}
+
+function ogcLayerEntry(
+  layer: OGCLayer,
+  order: string,
+  source: LiveLayerServiceSource,
+): LiveLayerEntry {
+  return {
+    layerId: layer.id,
+    name: layer.name,
+    type: layer.pmtiles?.kind ?? SERVICE_LAYER_TYPE,
+    visible: ogcLayerVisible(layer),
+    opacity: ogcLayerOpacity(layer),
+    order,
+    source,
+  };
+}
+
+/**
+ * OGC layers travel as the service handle alone, so every member fetches the
+ * same tiles for themselves. Only what this browser published is ever deleted,
+ * so a layer that has to stay local leaves a peer's entries alone.
+ */
+function syncOgcLayersToDocument(layers: OGCLayer[]): void {
+  const entries = useLiveStore.getState().document.layers;
+  const present = new Set(layers.map((layer) => layer.id));
+  const operations: LiveOperation[] = [];
+
+  for (const [id, entry] of Object.entries(entries)) {
+    if (entry.source?.kind !== 'service') continue;
+    if (present.has(id) || !documentSources.has(id)) continue;
+    documentSources.delete(id);
+    operations.push({ key: documentKey('layers', id), value: null });
+  }
+
+  let previousOrder = lastOrder(entries);
+  for (const layer of layers) {
+    const source = serviceSourceOf(layer);
+    if (!source) {
+      // a dropped archive is listed before it says it is one, so it can already
+      // have gone, and the peers cannot read it
+      if (documentSources.delete(layer.id)) {
+        operations.push({ key: documentKey('layers', layer.id), value: null });
+      }
+      continue;
+    }
+    const current = entries[layer.id];
+    const order = current?.order ?? generateIndexBetween(previousOrder, null);
+    const entry = ogcLayerEntry(layer, order, source);
+    if (current && sameLayerEntry(current, entry)) continue;
+    if (!current) previousOrder = order;
+    documentSources.set(layer.id, source);
+    operations.push({ key: documentKey('layers', layer.id), value: entry });
+  }
+
+  sendOperations(operations);
+}
+
 function syncAnnotationsToDocument(annotations: Annotation[]): void {
   const entries = useLiveStore.getState().document.annotations;
   const listed = new Set(annotations.map((annotation) => annotation.id));
@@ -492,6 +569,46 @@ function materializeOverlay(entry: LiveLayerEntry, source: LiveLayerImageSource)
   );
 }
 
+/** Whether the OGC layer on screen already says what the entry says. */
+function ogcLayerMatchesEntry(entry: LiveLayerEntry, source: LiveLayerServiceSource): boolean {
+  const layer = useOgcLayerStore
+    .getState()
+    .layers.find((candidate) => candidate.id === entry.layerId);
+  return (
+    layer !== undefined &&
+    layer.name === entry.name &&
+    layer.type === source.service &&
+    layer.url === source.url &&
+    ogcLayerVisible(layer) === entry.visible &&
+    ogcLayerOpacity(layer) === entry.opacity
+  );
+}
+
+/**
+ * A peer's service, kept under the document's id so a later write to the same
+ * key replaces it. A PMTiles archive draws only once its header has been read,
+ * which is a request of our own.
+ */
+function materializeOgcLayer(entry: LiveLayerEntry, source: LiveLayerServiceSource): void {
+  const known = useOgcLayerStore
+    .getState()
+    .layers.find((candidate) => candidate.id === entry.layerId);
+  const layer: OGCLayer = {
+    id: entry.layerId,
+    name: entry.name,
+    type: source.service,
+    url: source.url,
+    visible: entry.visible,
+    opacity: entry.opacity,
+    ...(known?.pmtiles ? { pmtiles: known.pmtiles } : {}),
+  };
+  applyFromDocument(() => useOgcLayerStore.getState().putLayer(layer));
+  if (layer.type !== 'pmtiles' || layer.pmtiles) return;
+  void loadPmtilesLayer(layer).catch((failure) => {
+    console.warn(`live layer "${layer.name}" could not read its pmtiles archive`, failure);
+  });
+}
+
 async function fetchFeatureCollection(url: string): Promise<GeoJSON.FeatureCollection | null> {
   try {
     const response = await fetch(url);
@@ -530,9 +647,11 @@ function applySourcesFromDocument(document: LiveDocument): void {
     if (entry) continue;
     const store = useAgentLayerStore.getState();
     overlayBitmaps.delete(id);
-    applyFromDocument(() =>
-      known.kind === 'image' ? store.removeRasterLayer(id) : store.removeLayer(id),
-    );
+    applyFromDocument(() => {
+      if (known.kind === 'image') store.removeRasterLayer(id);
+      else if (known.kind === 'service') useOgcLayerStore.getState().removeLayer(id);
+      else store.removeLayer(id);
+    });
   }
 
   for (const entry of Object.values(document.layers)) {
@@ -543,6 +662,11 @@ function applySourcesFromDocument(document: LiveDocument): void {
       // our own overlay is already on screen, from the bitmap we still hold
       if (overlayBitmaps.has(entry.layerId)) continue;
       if (!overlayMatchesEntry(entry, source)) materializeOverlay(entry, source);
+      continue;
+    }
+    if (source.kind === 'service') {
+      documentSources.set(entry.layerId, source);
+      if (!ogcLayerMatchesEntry(entry, source)) materializeOgcLayer(entry, source);
       continue;
     }
     if (sameJson(documentSources.get(entry.layerId), source)) continue;
@@ -609,6 +733,7 @@ function publishLocalState(local: LocalState): void {
   syncLayersToDocument(local.layers);
   syncAgentLayerSourcesToDocument(local.agentLayers);
   syncOverlaysToDocument(local.overlays);
+  syncOgcLayersToDocument(local.ogcLayers);
   syncStyleOverridesToDocument();
   syncAnnotationsToDocument(local.annotations);
   syncBookmarksToDocument(local.bookmarks);
@@ -629,6 +754,7 @@ export function captureStateForNewDocument(): void {
     bookmarks,
     agentLayers: agent.layers,
     overlays: agent.rasterLayers,
+    ogcLayers: useOgcLayerStore.getState().layers,
     annotations: useAnnotationStore.getState().annotations,
   };
 }
@@ -662,6 +788,11 @@ export function startDocumentBridge(): () => void {
     });
   });
 
+  const unsubscribeOgcLayers = useOgcLayerStore.subscribe((state, previous) => {
+    if (state.layers === previous.layers) return;
+    outbound(() => syncOgcLayersToDocument(state.layers));
+  });
+
   const unsubscribeLive = useLiveStore.subscribe((state, previous) => {
     if (state.documentId === null) {
       if (previous.documentId !== null) {
@@ -693,6 +824,7 @@ export function startDocumentBridge(): () => void {
     unsubscribeApp();
     unsubscribeAnnotations();
     unsubscribeAgentLayers();
+    unsubscribeOgcLayers();
     unsubscribeLive();
   };
 }

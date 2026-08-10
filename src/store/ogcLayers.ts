@@ -18,6 +18,10 @@ export interface OGCLayer {
   url: string;
   /** Set once the archive's header has been read; unset means not drawable yet. */
   pmtiles?: PmtilesInfo;
+  /** Unset counts as visible. */
+  visible?: boolean;
+  /** Unset counts as fully opaque. */
+  opacity?: number;
 }
 
 interface OGCLayerState {
@@ -25,8 +29,22 @@ interface OGCLayerState {
   addLayer: (name: string, url: string, type: OGCType) => OGCLayer;
   /** Add an XYZ layer, or return the one already drawing the same tile URL. */
   addXyzLayer: (name: string, url: string) => OGCLayer;
+  /** Put a layer in under its own id; a known id replaces that layer. */
+  putLayer: (layer: OGCLayer) => void;
   removeLayer: (id: string) => void;
   setPmtilesInfo: (id: string, info: PmtilesInfo) => void;
+  setLayerVisible: (id: string, visible: boolean) => void;
+  setLayerOpacity: (id: string, opacity: number) => void;
+}
+
+/** Whether a layer is on screen, which both renderers have to agree on. */
+export function ogcLayerVisible(layer: OGCLayer): boolean {
+  return layer.visible !== false;
+}
+
+/** How opaque to draw a layer, whether or not anyone chose. */
+export function ogcLayerOpacity(layer: OGCLayer): number {
+  return layer.opacity ?? 1;
 }
 
 /** Root-relative service URLs need an origin before a worker can request them. */
@@ -168,6 +186,12 @@ export const useOgcLayerStore = create<OGCLayerState>((set, get) => ({
     const existing = get().layers.find((l) => rasterTileTemplate(l) === template);
     return existing ?? get().addLayer(name, url, 'xyz');
   },
+  putLayer: (layer) =>
+    set((s) => ({
+      layers: s.layers.some((l) => l.id === layer.id)
+        ? s.layers.map((l) => (l.id === layer.id ? layer : l))
+        : [...s.layers, layer],
+    })),
   removeLayer: (id) => {
     const layer = get().layers.find((l) => l.id === id);
     // a WFS layer's geometry lives in the agent layers, so it goes with it
@@ -179,5 +203,13 @@ export const useOgcLayerStore = create<OGCLayerState>((set, get) => ({
   setPmtilesInfo: (id, info) =>
     set((s) => ({
       layers: s.layers.map((l) => (l.id === id ? { ...l, pmtiles: info } : l)),
+    })),
+  setLayerVisible: (id, visible) =>
+    set((s) => ({
+      layers: s.layers.map((l) => (l.id === id ? { ...l, visible } : l)),
+    })),
+  setLayerOpacity: (id, opacity) =>
+    set((s) => ({
+      layers: s.layers.map((l) => (l.id === id ? { ...l, opacity } : l)),
     })),
 }));

@@ -1,7 +1,14 @@
 import { useEffect } from 'react';
 import type { MutableRefObject } from 'react';
 import type maplibregl from 'maplibre-gl';
-import { useOgcLayerStore, rasterTileTemplate, pmtilesStyleUrl, type OGCLayer } from '../store/ogcLayers';
+import {
+  useOgcLayerStore,
+  rasterTileTemplate,
+  pmtilesStyleUrl,
+  ogcLayerOpacity,
+  ogcLayerVisible,
+  type OGCLayer,
+} from '../store/ogcLayers';
 import { useAppStore } from '../store/app';
 import { CATEGORY_PALETTE } from '../features/symbology/symbology';
 
@@ -14,9 +21,17 @@ const PREFIX = 'ogc-layer-';
 function addPmtilesLayers(map: maplibregl.Map, layer: OGCLayer, id: string): void {
   const info = layer.pmtiles;
   if (!info) return;
+  const visibility = ogcLayerVisible(layer) ? 'visible' : 'none';
+  const opacity = ogcLayerOpacity(layer);
   if (info.kind === 'raster') {
     map.addSource(id, { type: 'raster', url: pmtilesStyleUrl(layer) });
-    map.addLayer({ id: `${id}-raster`, type: 'raster', source: id });
+    map.addLayer({
+      id: `${id}-raster`,
+      type: 'raster',
+      source: id,
+      layout: { visibility },
+      paint: { 'raster-opacity': opacity },
+    });
     return;
   }
   map.addSource(id, { type: 'vector', url: pmtilesStyleUrl(layer) });
@@ -28,14 +43,16 @@ function addPmtilesLayers(map: maplibregl.Map, layer: OGCLayer, id: string): voi
       source: id,
       'source-layer': sourceLayer,
       filter: ['==', '$type', 'Polygon'],
-      paint: { 'fill-color': color, 'fill-opacity': 0.3 },
+      layout: { visibility },
+      paint: { 'fill-color': color, 'fill-opacity': 0.3 * opacity },
     });
     map.addLayer({
       id: `${id}-${sourceLayer}-line`,
       type: 'line',
       source: id,
       'source-layer': sourceLayer,
-      paint: { 'line-color': color, 'line-width': 1.5 },
+      layout: { visibility },
+      paint: { 'line-color': color, 'line-width': 1.5, 'line-opacity': opacity },
     });
     map.addLayer({
       id: `${id}-${sourceLayer}-circle`,
@@ -43,7 +60,8 @@ function addPmtilesLayers(map: maplibregl.Map, layer: OGCLayer, id: string): voi
       source: id,
       'source-layer': sourceLayer,
       filter: ['==', '$type', 'Point'],
-      paint: { 'circle-color': color, 'circle-radius': 4 },
+      layout: { visibility },
+      paint: { 'circle-color': color, 'circle-radius': 4, 'circle-opacity': opacity },
     });
   });
 }
@@ -81,7 +99,13 @@ export function useOgcLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map | n
           tiles: [rasterTileTemplate(layer)],
           tileSize: 256,
         });
-        map.addLayer({ id: `${id}-raster`, type: 'raster', source: id });
+        map.addLayer({
+          id: `${id}-raster`,
+          type: 'raster',
+          source: id,
+          layout: { visibility: ogcLayerVisible(layer) ? 'visible' : 'none' },
+          paint: { 'raster-opacity': ogcLayerOpacity(layer) },
+        });
       }
     };
 

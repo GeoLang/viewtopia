@@ -76,8 +76,9 @@ service owning composition documents in its own Postgres database on the shared
 instance. A document is the map composition, not the feature data: the layer
 list (order as base62 fractional indexes, visibility, opacity, style overrides,
 layers referenced by id, with a `source` for data that must travel: inline
-GeoJSON under the op cap, a URL peers fetch, or for an image overlay its four
-corners plus an agora attachment url holding the bitmap), annotations, camera
+GeoJSON under the op cap, a URL peers fetch, for an image overlay its four
+corners plus an agora attachment url holding the bitmap, or for an OGC service
+the handle every member requests for themselves), annotations, camera
 bookmarks,
 metadata and members. Concurrency is server-ordered ops with last-writer-wins
 per key, no CRDT: the server assigns a monotonic sequence per document,
@@ -94,9 +95,12 @@ the next connect, and the websocket handshake offers the token as the
 out of access logs. Everything from the wire is capped by named constants and
 rate limited without dropping the connection. The viewtopia client
 (`src/live/`) applies ops optimistically, reconciles on ack, bridges the
-`useAppStore` layer registry, the annotation store and camera bookmarks both
-ways, draws peer cursors on MapLibre, and re-offers unacked ops after a
-reconnect. Clicking a peer avatar in the header follows that peer, putting the
+`useAppStore` layer registry, the annotation store, the OGC layers and camera
+bookmarks both ways, draws peer cursors on MapLibre, and re-offers unacked ops
+after a reconnect. WMS, WMTS, XYZ and remote PMTiles travel as the service
+handle alone; a WFS layer does not, because its features are already published
+from the agent layers, and neither does a dropped archive, which is a browser
+File nobody else can read. Clicking a peer avatar in the header follows that peer, putting the
 local camera on each presence viewport it reports until a local camera gesture
 takes it back, told apart from the client's own `jumpTo` by MapLibre only
 setting `originalEvent` on a real gesture. Undo is per-user inverse ops. Feature co-editing is phase two: new

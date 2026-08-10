@@ -95,7 +95,6 @@ export function ToolPanels() {
     activePanel,
     setActivePanel,
     layers,
-    setLayerOpacity,
     removeLayer,
     reorderLayers,
   } = useAppStore();
@@ -168,7 +167,6 @@ export function ToolPanels() {
       return (
         <LayerManager
           layers={layers}
-          onOpacity={setLayerOpacity}
           onRemove={removeLayer}
           onReorder={reorderLayers}
           onClose={close}

@@ -6,6 +6,16 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-09: **OGC layers reach a live document**. A WMS, WMTS, XYZ or remote
+  PMTiles layer travels as the service handle, so every member requests the
+  same tiles for themselves and the layer keeps its id, which is what a later
+  delete needs. A WFS layer stays out, since its features already travel from
+  the agent layers, and so does a dropped `.pmtiles`, which is a browser File
+  nobody else can read. The layers gained a visibility and an opacity both
+  renderers honour, and the layer manager row a live document gives them drives
+  both. `layerVisibility.ts` is now `layerControls.ts` and carries the opacity
+  switchboard as well.
+
 - 2026-08-09: **a project remembers its map**. Switching projects saves what
   the outgoing one was showing and puts back what the incoming one was left
   with, held per project in IndexedDB in the same shape as a saved project

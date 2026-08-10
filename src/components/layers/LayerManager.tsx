@@ -28,7 +28,7 @@ import {
   type AgentLayer,
   type AgentRasterLayer,
 } from '../../store/agentLayers';
-import { setLayerVisible } from '../../store/layerVisibility';
+import { setLayerOpacity, setLayerVisible } from '../../store/layerControls';
 import { SymbologyEditor } from '../../features/symbology/SymbologyEditor';
 import { geojsonToPmtiles } from '../../features/pmtiles/writer';
 
@@ -334,13 +334,12 @@ function RasterLayerRow({
 
 interface LayerManagerProps {
   layers: LayerItem[];
-  onOpacity: (id: string, opacity: number) => void;
   onRemove: (id: string) => void;
   onReorder: (from: number, to: number) => void;
   onClose: () => void;
 }
 
-export function LayerManager({ layers, onOpacity, onRemove, onClose }: LayerManagerProps) {
+export function LayerManager({ layers, onRemove, onClose }: LayerManagerProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const agentLayers = useAgentLayerStore((s) => s.layers);
   const rasterLayers = useAgentLayerStore((s) => s.rasterLayers);
@@ -415,7 +414,7 @@ export function LayerManager({ layers, onOpacity, onRemove, onClose }: LayerMana
                       max={1}
                       step={0.05}
                       value={layer.opacity}
-                      onChange={(v) => onOpacity(layer.id, v)}
+                      onChange={(v) => setLayerOpacity(layer.id, v)}
                     />
                     <Text size="xs" c="dimmed" w={30}>
                       {Math.round(layer.opacity * 100)}%

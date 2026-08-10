@@ -10,6 +10,8 @@ import {
   useOgcLayerStore,
   rasterTileTemplate,
   wmsLayerNames,
+  ogcLayerOpacity,
+  ogcLayerVisible,
   type OGCLayer,
 } from '../store/ogcLayers';
 import { useAppStore } from '../store/app';
@@ -47,7 +49,12 @@ export function useOgcLayersCesium(viewerRef: MutableRefObject<Viewer | null>) {
     // protocol Cesium has no provider for, so neither is draped here
     const added = layers
       .filter((layer) => layer.type !== 'wfs' && layer.type !== 'pmtiles')
-      .map((layer) => viewer.imageryLayers.addImageryProvider(imageryProvider(layer)));
+      .map((layer) => {
+        const imagery = viewer.imageryLayers.addImageryProvider(imageryProvider(layer));
+        imagery.alpha = ogcLayerOpacity(layer);
+        imagery.show = ogcLayerVisible(layer);
+        return imagery;
+      });
     return () => {
       if (viewer.isDestroyed()) return;
       for (const imagery of added) {

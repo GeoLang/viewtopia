@@ -28,9 +28,6 @@ mobile capture, auth and multi-tenancy, one-click deploy.
 Live multiplayer shipped 2026-08-07 (agora service + viewtopia client,
 current state in DESIGN.md). Open work from it:
 
-- [ ] **OGC layers have no live-document representation**, so a project
-      carrying one loses it on the way into a live session. Project files and
-      the per-project stored map both keep them; only the document does not.
 - [ ] **hosted flagship instance + share links** — Figma's zero-install magic
       is a link that opens the document. Self-host is free with open source,
       but the "click a link, you're in the map" experience needs a hosted

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useAppStore } from '../store/app';
-import { setLayerVisible } from '../store/layerVisibility';
+import { setLayerVisible } from '../store/layerControls';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { getSharedCamera, subscribeSharedCamera } from '../hooks/sharedCamera';
 import { clickCoordinates } from './mapClickCoordinates';

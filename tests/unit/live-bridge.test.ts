@@ -13,7 +13,7 @@ import {
 import { useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers';
 import { useAnnotationStore, type Annotation } from '../../src/store/annotations';
 import { useAppStore, type Bookmark, type LayerItem } from '../../src/store/app';
-import { setLayerVisible } from '../../src/store/layerVisibility';
+import { setLayerVisible } from '../../src/store/layerControls';
 import { FakeAgoraServer } from './stubs/fakeAgoraServer';
 
 const ANNOTATION_STORAGE_KEY = 'viewtopia-annotations';

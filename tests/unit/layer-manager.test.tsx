@@ -5,6 +5,7 @@ import { MantineProvider } from '@mantine/core';
 import { LayerManager } from '../../src/components/layers/LayerManager';
 import { layerStyle, useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers';
 import { useAppStore } from '../../src/store/app';
+import { useOgcLayerStore } from '../../src/store/ogcLayers';
 import { buildGraduated } from '../../src/features/symbology/symbology';
 import { cornersOfBbox } from '../../src/overlay/georeference';
 
@@ -57,7 +58,6 @@ const renderPanel = () =>
     <MantineProvider>
       <LayerManager
         layers={[]}
-        onOpacity={vi.fn()}
         onRemove={vi.fn()}
         onReorder={vi.fn()}
         onClose={vi.fn()}
@@ -69,6 +69,7 @@ describe('LayerManager agent layers', () => {
   beforeEach(() => {
     useAgentLayerStore.setState({ layers: [], rasterLayers: [], markers: [], generation: 0 });
     useAppStore.setState({ layers: [] });
+    useOgcLayerStore.setState({ layers: [] });
   });
 
   afterEach(cleanup);
@@ -214,7 +215,6 @@ describe('LayerManager agent layers', () => {
       <MantineProvider>
         <LayerManager
           layers={[{ id: 'plugin-1', name: 'plugin-1', type: 'geojson', visible: true, opacity: 1 }]}
-          onOpacity={vi.fn()}
           onRemove={vi.fn()}
           onReorder={vi.fn()}
           onClose={vi.fn()}
@@ -267,7 +267,6 @@ describe('LayerManager agent layers', () => {
       <MantineProvider>
         <LayerManager
           layers={useAppStore.getState().layers}
-          onOpacity={vi.fn()}
           onRemove={vi.fn()}
           onReorder={vi.fn()}
           onClose={vi.fn()}
@@ -278,6 +277,39 @@ describe('LayerManager agent layers', () => {
     fireEvent.click(screen.getByLabelText('Show plugin-1'));
 
     expect(useAgentLayerStore.getState().layers[0].visible).toBe(false);
+    expect(useAppStore.getState().layers[0].visible).toBe(false);
+  });
+
+  it('switches and fades an OGC layer in the store the renderers read', async () => {
+    // in a live session the document lists the service, and this row is the
+    // only one it gets
+    const ogc = useOgcLayerStore.getState().addLayer('roads', 'https://maps.example/wms', 'wms');
+    useAppStore.getState().addLayer({
+      id: ogc.id,
+      name: 'roads',
+      type: 'raster',
+      visible: true,
+      opacity: 1,
+    });
+
+    render(
+      <MantineProvider>
+        <LayerManager
+          layers={useAppStore.getState().layers}
+          onRemove={vi.fn()}
+          onReorder={vi.fn()}
+          onClose={vi.fn()}
+        />
+      </MantineProvider>,
+    );
+
+    await act(async () => fireEvent.click(screen.getByText('roads')));
+    fireEvent.keyDown(screen.getByRole('slider'), { key: 'ArrowLeft' });
+    expect(useOgcLayerStore.getState().layers[0].opacity).toBeCloseTo(0.95);
+    expect(useAppStore.getState().layers[0].opacity).toBeCloseTo(0.95);
+
+    fireEvent.click(screen.getByLabelText('Show roads'));
+    expect(useOgcLayerStore.getState().layers[0].visible).toBe(false);
     expect(useAppStore.getState().layers[0].visible).toBe(false);
   });
 

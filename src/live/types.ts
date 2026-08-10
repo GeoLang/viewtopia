@@ -2,6 +2,7 @@ import type { Corners } from '../overlay/georeference';
 import type { Symbology } from '../features/symbology/symbology';
 import type { AgentLayerStyle } from '../store/agentLayers';
 import type { LayerItem } from '../store/app';
+import type { OGCType } from '../store/ogcLayers';
 import type { CameraState } from '../store/cameraViews';
 
 export type LiveRole = 'view' | 'edit';
@@ -41,10 +42,22 @@ export interface LiveLayerImageSource {
   corners: Corners;
 }
 
+/**
+ * A tile or map service each member requests for themselves, so the handle
+ * travels and the tiles never do. WFS is left out: its features are already in
+ * the agent layers, and travel from there as an inline source.
+ */
+export interface LiveLayerServiceSource {
+  kind: 'service';
+  service: Exclude<OGCType, 'wfs'>;
+  url: string;
+}
+
 export type LiveLayerSource =
   | LiveLayerInlineSource
   | LiveLayerUrlSource
-  | LiveLayerImageSource;
+  | LiveLayerImageSource
+  | LiveLayerServiceSource;
 
 /**
  * Headroom under agora's 64KiB per-operation cap, measured over the whole
