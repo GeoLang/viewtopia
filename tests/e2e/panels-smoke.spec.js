@@ -1,4 +1,4 @@
-import { test, expect } from './console-guard';
+import { allowConsoleError, test, expect } from './console-guard';
 import { MENU_ITEM } from './panel-helpers';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -250,6 +250,37 @@ test.describe('tool panels', () => {
     const lowest = Math.min(...served);
     const span = Math.max(...served) - lowest;
     expect(drawn).toEqual(served.map((e) => ((e - lowest) / span).toFixed(4)));
+  });
+
+  test('cross section: a failed elevation lookup is shown and plots nothing', async ({ page }) => {
+    // open-elevation is a free public service that answers 5xx when it is loaded
+    let answer = 'unavailable';
+    await page.route('https://api.open-elevation.com/**', (route) =>
+      answer === 'unavailable'
+        ? route.fulfill({ status: 503, contentType: 'text/plain', body: 'Service Unavailable' })
+        : route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) }),
+    );
+    allowConsoleError(page, /Failed to load resource.*503.*api\.open-elevation\.com/);
+
+    await page.goto(REACT_URL);
+    await page.getByRole('button', { name: 'Analysis' }).click();
+    await page.getByRole('menuitem', { name: 'Section' }).click();
+    await expect(page.getByText('Cross Section')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Generate Profile' }).click();
+
+    await expect(page.getByText('elevation lookup failed: 503')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('svg[aria-label="elevation profile"]')).toHaveCount(0);
+    await expect(page.getByTestId('crosssection-stats')).toHaveCount(0);
+
+    // a 200 carrying nothing usable is the lookup's other failure, and it has to
+    // reach the same surface rather than plot whatever the response parsed to
+    answer = 'nonsense';
+    await page.getByRole('button', { name: 'Generate Profile' }).click();
+
+    await expect(page.getByText('elevation lookup returned no usable data')).toBeVisible();
+    await expect(page.locator('svg[aria-label="elevation profile"]')).toHaveCount(0);
+    await expect(page.getByTestId('crosssection-stats')).toHaveCount(0);
   });
 });
 

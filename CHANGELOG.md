@@ -6,6 +6,15 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-10: **the cross section panel's failure is tested**. A DEM lookup that
+  answers 503, the way a loaded free service does, has to put the error on the
+  panel and plot nothing, and a 200 carrying no usable results has to reach the
+  same surface instead of plotting whatever parsed. Both are now asserted in the
+  react e2e suite, along with the chart and the stats block being absent. The
+  panel has thrown rather than invented terrain since the synthetic fallback was
+  removed, and nothing checked it, which is how a stale comment claiming the
+  fallback still existed survived for months.
+
 - 2026-08-09: **OGC layers reach a live document**. A WMS, WMTS, XYZ or remote
   PMTiles layer travels as the service handle, so every member requests the
   same tiles for themselves and the layer keeps its id, which is what a later
