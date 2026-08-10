@@ -185,6 +185,19 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-08-10: **the react e2e suite stops failing on a busy machine**. Three
+  unrelated causes, none of them the app. The share link and stories panels
+  were asserted with a bare `getByText`, which matches both the panel title
+  and the menu item that opened it, so the assertion raced the menu's close
+  transition and hit a strict-mode violation; both now scope to `.panel-dock`
+  the way the neighbouring panel tests already do, which the menu's portal
+  sits outside of. The config's 60s test timeout was under the 40-44s the
+  heaviest Cesium tests really take on swiftshader under load, and it fired
+  before any of the specs' own 30-60s waits could report what was slow, so it
+  now matches the 120s the other two swiftshader configs use. The vector-tiles
+  and traffic tests waited 15s for a MapLibre style that comes from a public
+  CDN, against the 60s every other MapLibre spec allows.
+
 - 2026-08-09: **a saved OGC layer comes back as itself**. Opening a project
   file minted a new id for every OGC layer, which lost a WFS layer's features
   (they are filed in the agent layers under the old id, so removing the layer

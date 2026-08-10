@@ -21,6 +21,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const REACT_URL = '/';
 
+// the vector style is a public CDN fetch, so this wait rides on the network and
+// not just the renderer. the maplibre specs budget the same.
+const STYLE_LOAD_TIMEOUT = 60000;
+
 // the Cesium panels here read the live Cesium scene; the shipped default
 // renderer is MapLibre, so seed the persisted one
 test.beforeEach(async ({ page }) => {
@@ -248,7 +252,7 @@ test.describe('local tool panels (batch 2)', () => {
     await page.goto(REACT_URL);
     await page.getByRole('button', { name: 'More' }).click();
     await page.getByRole('menuitem', { name: 'Share Link' }).click();
-    await expect(page.getByText('Share Link', { exact: true })).toBeVisible();
+    await expect(page.locator('.panel-dock').getByText('Share Link', { exact: true })).toBeVisible();
 
     await page.getByRole('button', { name: 'Generate Share Link' }).click();
     const url = await page.getByTestId('sharelink-url').inputValue();
@@ -272,7 +276,7 @@ test.describe('local tool panels (batch 2)', () => {
     await page.goto(REACT_URL);
     await page.getByRole('button', { name: 'Tools' }).click();
     await page.getByRole('menuitem', { name: 'Stories' }).click();
-    await expect(page.getByText('Stories', { exact: true })).toBeVisible();
+    await expect(page.locator('.panel-dock').getByText('Stories', { exact: true })).toBeVisible();
 
     await page.getByPlaceholder('Step title…').fill('Intro');
     await page.getByRole('button', { name: 'Add step at view' }).click();
@@ -353,7 +357,7 @@ test.describe('local tool panels (batch 2)', () => {
     await page.getByRole('textbox', { name: 'Renderer' }).click();
     await page.getByRole('option', { name: 'MapLibre' }).click();
     await expect(page.locator('#maplibre-container canvas').first()).toBeVisible({ timeout: 15000 });
-    await page.waitForFunction(() => window.__viewtopiaMap && window.__viewtopiaMap.isStyleLoaded(), null, { timeout: 15000 });
+    await page.waitForFunction(() => window.__viewtopiaMap && window.__viewtopiaMap.isStyleLoaded(), null, { timeout: STYLE_LOAD_TIMEOUT });
 
     await page.getByRole('button', { name: 'Data' }).click();
     await page.getByRole('menuitem', { name: 'Vector Tiles' }).click();
@@ -474,7 +478,7 @@ test.describe('weather/wind/traffic panels', () => {
     await page.getByRole('option', { name: 'MapLibre' }).click();
     await expect(page.locator('#maplibre-container canvas').first()).toBeVisible({ timeout: 15000 });
     await page.waitForFunction(() => window.__viewtopiaMap && window.__viewtopiaMap.isStyleLoaded(), null, {
-      timeout: 15000,
+      timeout: STYLE_LOAD_TIMEOUT,
     });
 
     await page.getByRole('button', { name: 'Simulate' }).click();

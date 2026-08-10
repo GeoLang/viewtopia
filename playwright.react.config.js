@@ -17,7 +17,10 @@ export default defineConfig({
     'embed-messaging.spec.js',
     'overlay-import.spec.js',
   ],
-  timeout: 60000,
+  // cesium on swiftshader runs the heaviest tests here at 40-44s on a loaded
+  // box, and the specs' own 30-60s waits only report anything under a larger
+  // total. same budget as the other two swiftshader configs.
+  timeout: 120000,
   // one worker on CI: two concurrent Cesium tabs on swiftshader starve the
   // runner's cores until clicks and evaluate never dispatch
   workers: process.env.CI ? 1 : undefined,
