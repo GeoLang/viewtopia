@@ -58,6 +58,24 @@ const LAYER_JSON = {
   available: [],
 };
 
+/**
+ * Cross Section reads its DEM from the public Open-Elevation API, so serve one
+ * instead: a 7 m climb per sample with one deep notch in the middle. Nothing
+ * about those numbers resembles the Thames valley the line actually crosses, so
+ * a profile carrying them can only have come from this response.
+ */
+const CROSS_SECTION_SAMPLES = 50;
+const NOTCH_SAMPLE = 25;
+const sampleElevation = (index) => (index === NOTCH_SAMPLE ? 500 : 1000 + index * 7);
+
+async function mockOpenElevation(page) {
+  await page.route('https://api.open-elevation.com/**', (route) => {
+    const locations = new URL(route.request().url()).searchParams.get('locations') ?? '';
+    const results = locations.split('|').map((_, i) => ({ elevation: sampleElevation(i) }));
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ results }) });
+  });
+}
+
 /** Read the live Cesium viewer handle exposed by the renderer registry, if any. */
 async function readViewer(page, expr) {
   return page.evaluate((e) => {
@@ -199,16 +217,39 @@ test.describe('tool panels', () => {
   });
 
   test('cross section: samples a two-point line into an elevation profile', async ({ page }) => {
+    await mockOpenElevation(page);
     await page.goto(REACT_URL);
     await page.getByRole('button', { name: 'Analysis' }).click();
     await page.getByRole('menuitem', { name: 'Section' }).click();
     await expect(page.getByText('Cross Section')).toBeVisible();
 
+    await page.getByLabel('Sample Points').fill(String(CROSS_SECTION_SAMPLES));
     await page.getByRole('button', { name: 'Generate Profile' }).click();
-    // The DEM fetch falls back to synthetic data, so a chart + stats always render.
-    await expect(page.locator('svg[aria-label="elevation profile"]')).toBeVisible({ timeout: 15000 });
-    await expect(page.getByTestId('crosssection-stats')).toBeVisible();
-    await expect(page.getByTestId('crosssection-stats')).toContainText('Distance:');
+
+    // 51 samples off the DEM above: 1000 m climbing by 7, dropping to 500 at the
+    // notch and climbing back. Distance is the real line from 51.5,-0.1.
+    const stats = page.getByTestId('crosssection-stats');
+    await expect(stats).toContainText(/Min Elev:\s+500 m/, { timeout: 15000 });
+    await expect(stats).toContainText(/Max Elev:\s+1350 m/);
+    await expect(stats).toContainText(/Gain:\s+\+1018 m/);
+    await expect(stats).toContainText(/Loss:\s+-668 m/);
+    await expect(stats).toContainText(/Distance:\s+11\.64 km/);
+
+    // and the chart plots those same numbers. The chart normalises y against the
+    // profile's own min and max, so rescaling the drawn ys back to 0..1 has to
+    // reproduce the served DEM rescaled the same way, whatever size it drew at.
+    const line = page.locator('svg[aria-label="elevation profile"] path[fill="none"]');
+    await expect(line).toBeVisible();
+    const ys = (await line.getAttribute('d')).split(' ').map((cmd) => Number(cmd.split(',')[1]));
+    expect(ys).toHaveLength(CROSS_SECTION_SAMPLES + 1);
+
+    const bottom = Math.max(...ys);
+    const top = Math.min(...ys);
+    const drawn = ys.map((y) => ((bottom - y) / (bottom - top)).toFixed(4));
+    const served = Array.from({ length: CROSS_SECTION_SAMPLES + 1 }, (_, i) => sampleElevation(i));
+    const lowest = Math.min(...served);
+    const span = Math.max(...served) - lowest;
+    expect(drawn).toEqual(served.map((e) => ((e - lowest) / span).toFixed(4)));
   });
 });
 

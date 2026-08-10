@@ -185,6 +185,23 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-08-10: **the react e2e suite reaches no third-party host at all**. Two
+  were left. The agent-layer basemap-change test picked Satellite, which is
+  Esri World Imagery, so around 24 tile requests a run went to
+  `server.arcgisonline.com` carrying the same intermittent
+  `ERR_NAME_NOT_RESOLVED` the other basemap hosts were fixed for; the page
+  fixture now answers it with the one-pixel raster it already serves
+  `basemaps.cartocdn.com`. The Cross Section test fetched a real DEM from
+  `api.open-elevation.com`, and the panel throws rather than inventing terrain
+  when that lookup fails, so a slow or unresolvable API failed the test. That
+  lookup is now stubbed with a climb of 7 m per sample and one deep notch, and
+  the test asserts the profile carries those numbers: the stats line, and the
+  drawn chart's own path rescaled back to the elevations it was built from. It
+  used to assert only that a chart appeared, under a comment claiming the panel
+  falls back to synthetic terrain, which it has not done since the DEM errors
+  were surfaced. Both hosts joined the react config's resolver rules, so
+  anything past a stub fails outright.
+
 - 2026-08-10: **the react e2e suite draws its basemap from disk**. Every page
   load fetched a style from `tiles.openfreemap.org`, and chromium fails to
   resolve that host every few runs on a loaded box while the shell resolves it

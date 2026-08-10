@@ -33,10 +33,11 @@ export default defineConfig({
       args: [
         '--use-gl=swiftshader',
         '--enable-unsafe-swiftshader',
-        // the basemap hosts are served from disk (see local-basemap.js), and
-        // chromium resolves them unreliably here. Anything that slips past the
-        // fixture fails outright instead of flaking.
-        '--host-resolver-rules=MAP tiles.openfreemap.org ~NOTFOUND, MAP basemaps.cartocdn.com ~NOTFOUND',
+        // the basemap hosts are served from disk (see local-basemap.js) and the
+        // DEM lookup is stubbed in panels-smoke, and chromium resolves them
+        // unreliably here. Anything that slips past a stub fails outright
+        // instead of flaking or quietly reaching the real service.
+        '--host-resolver-rules=MAP tiles.openfreemap.org ~NOTFOUND, MAP basemaps.cartocdn.com ~NOTFOUND, MAP server.arcgisonline.com ~NOTFOUND, MAP api.open-elevation.com ~NOTFOUND',
       ],
     },
   },

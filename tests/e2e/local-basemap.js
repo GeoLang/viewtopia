@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs';
 
 /**
- * The basemap assets every page load fetches, answered from disk.
+ * The basemap assets the app fetches, answered from disk.
  *
- * Chromium intermittently fails to resolve tiles.openfreemap.org and
- * basemaps.cartocdn.com while the shell resolves them fine, and a style that
- * never arrives leaves MapLibre with no layers for a test to assert on.
+ * Chromium intermittently fails to resolve the basemap hosts while the shell
+ * resolves them fine, and a style that never arrives leaves MapLibre with no
+ * layers for a test to assert on.
  *
  * The style and its TileJSON are the files OpenFreeMap really serves, saved
  * under fixtures/. Tiles answer empty, so the basemap draws no features: no
@@ -55,4 +55,8 @@ export async function serveBasemapsLocally(page) {
 
   // the raster basemaps Cesium and deck.gl substitute for a vector selection
   await page.route('https://basemaps.cartocdn.com/**', png);
+
+  // Esri World Imagery, behind the Satellite raster basemap. Every path under
+  // this host is an XYZ tile, and no test reads what the imagery shows.
+  await page.route('https://server.arcgisonline.com/**', png);
 }
