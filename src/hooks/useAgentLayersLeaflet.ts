@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import L from 'leaflet';
-import { useAgentLayerStore, layerStyle, visibleLayers } from '../store/agentLayers';
+import { useAgentLayerStore, layerColor, layerStyle, visibleLayers } from '../store/agentLayers';
 import { simplestyleColor } from '../features/symbology/symbology';
 import { useAppStore } from '../store/app';
 import { agentLayersBounds } from './agentLayerBounds';
@@ -73,13 +73,14 @@ export function useAgentLayersLeaflet(mapRef: MutableRefObject<L.Map | null>) {
 
     const objs = visibleLayers(layers).map((layer) => {
       const style = layerStyle(layer);
+      const color = layerColor(layer);
       return L.geoJSON(layer.geojson, {
         // a callback, not an object, so a classified layer's per-feature colour
         // is read off the feature's simplestyle properties
         style: (feature) => ({
-          color: simplestyleColor(feature, 'stroke', layer.color),
+          color: simplestyleColor(feature, 'stroke', color),
           weight: style.lineWidth,
-          fillColor: simplestyleColor(feature, 'fill', layer.color),
+          fillColor: simplestyleColor(feature, 'fill', color),
           fillOpacity: style.opacity,
           fill: style.filled,
           stroke: style.stroked,
@@ -89,7 +90,7 @@ export function useAgentLayersLeaflet(mapRef: MutableRefObject<L.Map | null>) {
             radius: 5,
             color: '#ffffff',
             weight: 1,
-            fillColor: simplestyleColor(feature, 'marker-color', layer.color),
+            fillColor: simplestyleColor(feature, 'marker-color', color),
             fillOpacity: 1,
           }),
       }).addTo(map);

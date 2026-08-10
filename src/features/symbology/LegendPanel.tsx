@@ -1,7 +1,7 @@
 import { Group, ScrollArea, Stack, Text } from '@mantine/core';
 import { IconListDetails } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../../components/PanelCard';
-import { useAgentLayerStore } from '../../store/agentLayers';
+import { layerColor, useAgentLayerStore } from '../../store/agentLayers';
 import { legendEntries, symbologyField } from './symbology';
 
 /**
@@ -61,7 +61,7 @@ export function LegendPanel({ onClose }: { onClose: () => void }) {
                   <Group gap={6} wrap="nowrap" data-testid="legend-entry">
                     <div
                       style={{
-                        background: layer.color,
+                        background: layerColor(layer),
                         width: 14,
                         height: 14,
                         borderRadius: 3,

@@ -39,7 +39,6 @@ interface LocalState {
   bookmarks: Bookmark[];
 }
 
-const MATERIALIZED_LAYER_COLOR = '#38bdf8';
 const MATERIALIZED_LAYER_TYPE: LayerItem['type'] = 'geojson';
 const OVERLAY_LAYER_TYPE: LayerItem['type'] = 'raster';
 
@@ -451,7 +450,7 @@ function materializeLayer(entry: LiveLayerEntry, geojson: GeoJSON.FeatureCollect
       {
         id: entry.layerId,
         name: entry.name,
-        color: entry.styleOverrides?.color ?? known?.color ?? MATERIALIZED_LAYER_COLOR,
+        color: entry.styleOverrides?.color ?? known?.color,
         geojson,
         visible: entry.visible,
       },

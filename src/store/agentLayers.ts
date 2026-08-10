@@ -23,7 +23,8 @@ export interface AgentLayerStyle {
 export interface AgentLayer {
   id: string;
   name: string;
-  color: string;
+  /** Unset means nobody chose a colour, and the renderers fall back. */
+  color?: string;
   geojson: GeoJSON.FeatureCollection;
   style?: AgentLayerStyle;
   /**
@@ -43,6 +44,11 @@ export interface AgentLayer {
 /** What the renderers draw: everything the layer switch has not turned off. */
 export function visibleLayers(layers: AgentLayer[]): AgentLayer[] {
   return layers.filter((layer) => layer.visible !== false);
+}
+
+/** The colour to draw a layer in, whether or not anyone chose one. */
+export function layerColor(layer: AgentLayer): string {
+  return layer.color ?? DEFAULT_LAYER_COLOR;
 }
 
 /** Fills in what a layer left unset, so the three renderers draw it the same. */
@@ -161,7 +167,8 @@ function sanitizeLayers(layers: AgentLayer[]): AgentLayer[] {
     }
     out.push({
       ...layer,
-      color: asColor(layer.color, DEFAULT_LAYER_COLOR),
+      // a colour nobody chose stays unchosen, or it would be published to peers
+      ...(layer.color === undefined ? {} : { color: asColor(layer.color, DEFAULT_LAYER_COLOR) }),
       geojson: { ...layer.geojson, features },
     });
   }

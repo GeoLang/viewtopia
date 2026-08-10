@@ -85,6 +85,17 @@ function bookmark(id: string): Bookmark {
   return { id, name: id, lat: 1, lng: 2, zoom: 5, createdAt: 1 };
 }
 
+/** Every entry written to one layer key since a mark, whichever frame carried it. */
+function layerEntriesSent(id: string, since: number): LiveLayerEntry[] {
+  return server.connection.editsSent
+    .slice(since)
+    .flatMap((message) =>
+      message.type === 'op' ? [{ key: message.key, value: message.value }] : message.ops,
+    )
+    .filter((operation) => operation.key === `layers/${id}`)
+    .map((operation) => operation.value as LiveLayerEntry);
+}
+
 function documentLayers(): Record<string, LiveLayerEntry> {
   return useLiveStore.getState().document.layers;
 }
@@ -279,6 +290,41 @@ describe('live document bridge', () => {
 
     expect(useAgentLayerStore.getState().layers[0].color).toBe('#123456');
     expect(server.connection.editsSent).toHaveLength(sent);
+  });
+
+  it('sends no colour for a peer layer the publisher left uncoloured', () => {
+    goLive();
+    server.applyFromPeer(
+      'ada',
+      'layers/rivers',
+      sourceEntry('rivers', { kind: 'geojson', geojson: featureCollection(2) }),
+    );
+
+    const before = server.connection.editsSent.length;
+    setLayerVisible('rivers', false);
+
+    const sent = layerEntriesSent('rivers', before);
+    expect(sent).not.toHaveLength(0);
+    for (const entry of sent) expect(entry.styleOverrides?.color).toBeUndefined();
+    expect(server.document.layers.rivers.styleOverrides?.color).toBeUndefined();
+  });
+
+  it('keeps the publisher colour on a peer layer a local edit touches', () => {
+    goLive();
+    server.applyFromPeer(
+      'ada',
+      'layers/rivers',
+      sourceEntry(
+        'rivers',
+        { kind: 'geojson', geojson: featureCollection(2) },
+        { styleOverrides: { color: '#00ff00' } },
+      ),
+    );
+
+    setLayerVisible('rivers', false);
+
+    expect(useAgentLayerStore.getState().layers[0].color).toBe('#00ff00');
+    expect(server.document.layers.rivers.styleOverrides).toEqual({ color: '#00ff00' });
   });
 
   it('applies a peer style override to the agent layer', () => {

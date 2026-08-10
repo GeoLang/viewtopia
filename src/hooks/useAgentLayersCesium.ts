@@ -13,7 +13,7 @@ import {
   VerticalOrigin,
   type Viewer,
 } from 'cesium';
-import { useAgentLayerStore, layerStyle, visibleLayers } from '../store/agentLayers';
+import { useAgentLayerStore, layerColor, layerStyle, visibleLayers } from '../store/agentLayers';
 import { useAppStore } from '../store/app';
 import { bboxOfCorners, cornersAxisAligned } from '../overlay/georeference';
 import { OVERLAY_ENTITY_PREFIX, quadOverlayEntity } from '../overlay/cesiumQuad';
@@ -112,7 +112,7 @@ export function useAgentLayersCesium(viewerRef: MutableRefObject<Viewer | null>)
       let last: GeoJsonDataSource | undefined;
       for (const layer of visibleLayers(layers)) {
         const style = layerStyle(layer);
-        const color = Color.fromCssColorString(layer.color);
+        const color = Color.fromCssColorString(layerColor(layer));
         const ds = await GeoJsonDataSource.load(layer.geojson, {
           stroke: style.stroked ? color : color.withAlpha(0),
           fill: color.withAlpha(style.filled ? style.opacity : 0),

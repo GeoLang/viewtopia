@@ -152,10 +152,7 @@ export async function loadWfsLayer(layer: OGCLayer): Promise<number> {
   }
   useAgentLayerStore
     .getState()
-    .addLayer(
-      { id: wfsAgentLayerId(layer), name: layer.name, color: '#38bdf8', geojson: collection },
-      true,
-    );
+    .addLayer({ id: wfsAgentLayerId(layer), name: layer.name, geojson: collection }, true);
   return collection.features.length;
 }
 

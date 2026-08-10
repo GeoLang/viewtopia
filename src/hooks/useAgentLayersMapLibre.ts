@@ -4,6 +4,7 @@ import maplibregl from 'maplibre-gl';
 import type { ExpressionSpecification } from 'maplibre-gl';
 import {
   useAgentLayerStore,
+  layerColor,
   layerStyle,
   visibleLayers,
   type AgentMarker,
@@ -101,6 +102,7 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
       for (const layer of visibleLayers(layers)) {
         const src = `${PREFIX}${layer.id}`;
         const style = layerStyle(layer);
+        const color = layerColor(layer);
         map.addSource(src, { type: 'geojson', data: layer.geojson });
         // One source can hold mixed geometry, so add a layer per kind.
         if (style.filled) {
@@ -110,7 +112,7 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
             source: src,
             filter: ['==', ['geometry-type'], 'Polygon'],
             paint: {
-              'fill-color': featureColor('fill', layer.color),
+              'fill-color': featureColor('fill', color),
               'fill-opacity': style.opacity,
             },
           });
@@ -122,7 +124,7 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
             source: src,
             filter: ['in', ['geometry-type'], ['literal', ['LineString', 'Polygon']]],
             paint: {
-              'line-color': featureColor('stroke', layer.color),
+              'line-color': featureColor('stroke', color),
               'line-width': style.lineWidth,
             },
           });
@@ -133,7 +135,7 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
           source: src,
           filter: ['==', ['geometry-type'], 'Point'],
           paint: {
-            'circle-color': featureColor('marker-color', layer.color),
+            'circle-color': featureColor('marker-color', color),
             'circle-radius': 5,
             'circle-stroke-color': '#ffffff',
             'circle-stroke-width': 1,

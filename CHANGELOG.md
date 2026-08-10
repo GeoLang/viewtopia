@@ -175,6 +175,13 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-08-09: **a peer's layer keeps the colour its publisher chose, or none**.
+  A layer arriving from a live document with no colour of its own was given
+  blue on the way in, and the next local edit to that layer, a visibility
+  toggle was enough, published that blue back to everyone as a chosen colour.
+  A layer may now carry no colour at all, and the renderers, the legend and
+  the map all fall back to the same default at draw time.
+
 - 2026-08-08: **live errors read like the app wrote them**. The Live dialog,
   share dialog and link-join banner rendered `AgoraRequestError.message` raw
   ("agora GET /documents failed with 500"). One helper (`agoraErrorText` in
