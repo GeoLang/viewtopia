@@ -30,7 +30,14 @@ export default defineConfig({
     // Software GL so Cesium gets a real WebGL context headless — without it the
     // viewer is absent and renderer tests can only assert a no-viewer branch.
     launchOptions: {
-      args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'],
+      args: [
+        '--use-gl=swiftshader',
+        '--enable-unsafe-swiftshader',
+        // the basemap hosts are served from disk (see local-basemap.js), and
+        // chromium resolves them unreliably here. Anything that slips past the
+        // fixture fails outright instead of flaking.
+        '--host-resolver-rules=MAP tiles.openfreemap.org ~NOTFOUND, MAP basemaps.cartocdn.com ~NOTFOUND',
+      ],
     },
   },
   webServer: {

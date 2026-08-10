@@ -1,8 +1,10 @@
 import { test as base, expect } from '@playwright/test';
+import { serveBasemapsLocally } from './local-basemap';
 
 /**
  * Shared e2e fixture: any pageerror or console.error fails the test that caused
- * it. Import `test`/`expect` from here instead of @playwright/test.
+ * it, and the page's basemap assets come from disk (see local-basemap.js).
+ * Import `test`/`expect` from here instead of @playwright/test.
  *
  * Level `error` only — the map stacks emit warnings constantly (missing tiles,
  * deprecated GL extensions) and those are not failures.
@@ -38,6 +40,8 @@ export const test = base.extend({
     const seen = [];
     const resolving = [];
     perTest.set(page, []);
+
+    await serveBasemapsLocally(page);
 
     page.on('pageerror', (e) => seen.push(`pageerror: ${e.message}`));
     page.on('console', (msg) => {

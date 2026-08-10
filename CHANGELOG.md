@@ -185,6 +185,18 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-08-10: **the react e2e suite draws its basemap from disk**. Every page
+  load fetched a style from `tiles.openfreemap.org`, and chromium fails to
+  resolve that host every few runs on a loaded box while the shell resolves it
+  fine. A style that never arrives leaves MapLibre with no layers, which failed
+  whichever test was reading the map. The shared page fixture now answers that
+  host and `basemaps.cartocdn.com` itself, with the OpenFreeMap dark style and
+  its TileJSON exactly as they are served, saved under `tests/e2e/fixtures/`,
+  plus empty vector tiles and a one-pixel raster. The react config also tells
+  chromium neither host resolves, so anything that slips past the fixture fails
+  outright instead of intermittently. Nothing in the suite watches whether the
+  hosted style is reachable any more, which is the point.
+
 - 2026-08-10: **the react e2e suite stops failing on a busy machine**. Three
   unrelated causes, none of them the app. The share link and stories panels
   were asserted with a bare `getByText`, which matches both the panel title
