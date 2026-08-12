@@ -2,6 +2,7 @@ import { Group, ScrollArea, Stack, Text } from '@mantine/core';
 import { IconListDetails } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../../components/PanelCard';
 import { layerColor, useAgentLayerStore } from '../../store/agentLayers';
+import { useColumnLabels } from '../../store/datasetSchemas';
 import { legendEntries, symbologyField } from './symbology';
 
 /**
@@ -10,6 +11,7 @@ import { legendEntries, symbologyField } from './symbology';
  */
 export function LegendPanel({ onClose }: { onClose: () => void }) {
   const layers = useAgentLayerStore((s) => s.layers);
+  const { columnLabel } = useColumnLabels();
 
   return (
     <PanelCard width={260} maxHeight="60vh" testId="legend-panel">
@@ -28,7 +30,8 @@ export function LegendPanel({ onClose }: { onClose: () => void }) {
           )}
           {layers.map((layer) => {
             const sym = layer.symbology;
-            const field = sym && symbologyField(sym);
+            const symField = sym && symbologyField(sym);
+            const field = symField && columnLabel(symField);
             return (
               <Stack key={layer.id} gap={4} data-testid="legend-layer">
                 <Text size="xs" fw={600} c="white" lineClamp={1}>

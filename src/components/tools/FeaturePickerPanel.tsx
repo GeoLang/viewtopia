@@ -9,11 +9,13 @@ import {
 import { IconClick } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { useFeaturePickerStore } from '../../store/featurePicker';
+import { useColumnLabels } from '../../store/datasetSchemas';
 
 export function FeaturePickerPanel({ onClose }: { onClose: () => void }) {
   const enabled = useFeaturePickerStore((s) => s.enabled);
   const toggle = useFeaturePickerStore((s) => s.toggle);
   const selected = useFeaturePickerStore((s) => s.selected);
+  const { columnLabel } = useColumnLabels();
 
   return (
     <PanelCard width={300}>
@@ -58,7 +60,7 @@ export function FeaturePickerPanel({ onClose }: { onClose: () => void }) {
                 {selected.map((row) => (
                   <Table.Tr key={row.id}>
                     <Table.Td style={{ color: 'var(--mantine-color-violet-4)', verticalAlign: 'top' }}>
-                      {row.id}
+                      {columnLabel(row.id)}
                     </Table.Td>
                     <Table.Td style={{ color: 'var(--mantine-color-dark-0)', wordBreak: 'break-word' }}>
                       {row.value}

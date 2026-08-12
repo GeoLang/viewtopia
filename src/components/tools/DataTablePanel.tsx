@@ -45,6 +45,7 @@ import {
   StatsSection,
 } from '../../features/attributes/AttributeTools';
 import { useAgentLayerStore } from '../../store/agentLayers';
+import { useColumnLabels } from '../../store/datasetSchemas';
 import { useGeoJsonSources } from '../../lib/geojsonSources';
 
 const MAX_ROWS = 500;
@@ -69,6 +70,7 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
   const allVirtualFields = useVirtualFieldStore((s) => s.fields);
   const addVirtualField = useVirtualFieldStore((s) => s.addField);
   const removeVirtualField = useVirtualFieldStore((s) => s.removeField);
+  const { columnLabel } = useColumnLabels();
 
   const [filter, setFilter] = useState('');
   const [selectedLayer, setSelectedLayer] = useState<string | null>(null);
@@ -295,7 +297,7 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
                   >
                     <Group gap={4} wrap="nowrap">
                       <Text size="xs" c={isVirtual(col) ? 'violet.3' : 'white'}>
-                        {col}
+                        {columnLabel(col)}
                       </Text>
                       {sort?.column === col &&
                         (sort.dir === 'asc' ? (

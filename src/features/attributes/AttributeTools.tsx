@@ -20,6 +20,7 @@ import { ChartView } from '../dashboards/ChartWidget';
 import type { ChartType } from '../dashboards/types';
 import { buildChartData } from '../../components/tools/ChartsPanel';
 import { propertyKeys, type GeoJsonSource } from '../../lib/geojsonSources';
+import { useColumnLabels } from '../../store/datasetSchemas';
 import { columnStats } from './attributes';
 import type { VirtualField } from './expressions';
 
@@ -188,6 +189,7 @@ export function JoinSection({
   const [leftKey, setLeftKey] = useState<string | null>(null);
   const [rightKey, setRightKey] = useState<string | null>(null);
   const { running, status, error, run } = useAction();
+  const { columnOptions } = useColumnLabels();
 
   const source = sources.find((s) => s.id === sourceId);
   const ready = !!(source && leftKey && rightKey && joinable);
@@ -212,7 +214,7 @@ export function JoinSection({
           w={150}
           label="Table field"
           placeholder="pick a field"
-          data={columns}
+          data={columnOptions(columns)}
           value={leftKey}
           onChange={setLeftKey}
         />
@@ -221,7 +223,7 @@ export function JoinSection({
           w={150}
           label="Join field"
           placeholder="pick a field"
-          data={propertyKeys(source)}
+          data={columnOptions(propertyKeys(source))}
           value={rightKey}
           onChange={setRightKey}
         />
@@ -270,6 +272,7 @@ export function StatsSection({
 }) {
   const [column, setColumn] = useState<string | null>(null);
   const [chartType, setChartType] = useState<string | null>('bar');
+  const { columnOptions } = useColumnLabels();
 
   const values = column ? rows.map((r) => r[column]) : [];
   const stats = columnStats(values);
@@ -283,7 +286,7 @@ export function StatsSection({
           w={180}
           label="Column"
           placeholder="pick a column"
-          data={columns}
+          data={columnOptions(columns)}
           value={column}
           onChange={setColumn}
         />

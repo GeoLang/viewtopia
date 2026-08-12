@@ -13,6 +13,8 @@ import { PanelCard, PanelHeader } from '../PanelCard';
 import type { LayerSpecification } from 'maplibre-gl';
 import { getActiveMapLibre } from '../../viewer/registry';
 import { fetchDatasetStyle, PTOLEMY_SOURCE_LAYER } from '../../lib/datasetStyle';
+import { fetchDatasetFields } from '../../lib/datasetSchema';
+import { useDatasetSchemaStore } from '../../store/datasetSchemas';
 import { decodeStyleImage, decodeStyleImages } from '../../lib/styleImages';
 
 interface VTSource {
@@ -20,6 +22,7 @@ interface VTSource {
   name: string;
   url: string;
   sourceLayer: string;
+  datasetId: string;
   layerIds: string[];
   imageIds: string[];
 }
@@ -72,6 +75,7 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
     // ptolemy hardcodes its MVT layer name, so a dataset id settles the source layer
     const layer = dataset ? PTOLEMY_SOURCE_LAYER : sourceLayer.trim() || 'default';
     const style = dataset ? await fetchDatasetStyle(dataset, id, layer) : null;
+    const fields = dataset ? await fetchDatasetFields(dataset) : [];
     // decode the sprites before touching the map, so all the waiting happens here
     const images = style ? await decodeStyleImages(style.images, decodeStyleImage) : [];
     // re-read the map: the style request gave the user time to switch renderer
@@ -90,6 +94,7 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
     for (const { name: imageId, image } of images) map.addImage(imageId, image);
     const layers = style?.layers ?? defaultLayers(id, layer);
     for (const spec of layers) map.addLayer(spec);
+    if (dataset) useDatasetSchemaStore.getState().setDatasetFields(dataset, fields);
     setSources((prev) => [
       ...prev,
       {
@@ -97,6 +102,7 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
         name: name.trim(),
         url: tileUrl,
         sourceLayer: layer,
+        datasetId: dataset,
         layerIds: layers.map((l) => l.id),
         imageIds: images.map((i) => i.name),
       },
@@ -113,9 +119,9 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
   };
 
   const handleRemove = (id: string) => {
+    const source = sources.find((x) => x.id === id);
     const map = getActiveMapLibre();
     if (map) {
-      const source = sources.find((x) => x.id === id);
       for (const layerId of source?.layerIds ?? []) {
         if (map.getLayer(layerId)) map.removeLayer(layerId);
       }
@@ -124,7 +130,11 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
       }
       if (map.getSource(id)) map.removeSource(id);
     }
-    setSources((prev) => prev.filter((x) => x.id !== id));
+    const remaining = sources.filter((x) => x.id !== id);
+    if (source?.datasetId && !remaining.some((x) => x.datasetId === source.datasetId)) {
+      useDatasetSchemaStore.getState().forgetDataset(source.datasetId);
+    }
+    setSources(remaining);
   };
 
   return (

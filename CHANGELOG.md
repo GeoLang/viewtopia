@@ -6,6 +6,15 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-11: **a field alias is displayed**. A ptolemy dataset's schema is read
+  at `/api/v1/datasets/{id}/schema` when the vector-tiles panel loads the dataset,
+  and its aliases label the attribute table headers, the feature-info rows, the
+  legend, and the join, stats, symbology, charts, spatial-stats and toolbox field
+  selects. A field with no alias still shows its column name, and the alias is a
+  label only: sorting, property lookups and every select's value stay the column
+  name. `lib/datasetSchema.ts` is the one place ptolemy's `FieldDef` JSON is
+  written down, since ptolemy and verne both write that shape.
+
 - 2026-08-10: **the cross section panel's failure is tested**. A DEM lookup that
   answers 503, the way a loaded free service does, has to put the error on the
   panel and plot nothing, and a 200 carrying no usable results has to reach the

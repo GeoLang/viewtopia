@@ -10,6 +10,7 @@ import { PanelCard, PanelHeader } from '../PanelCard';
 import { ChartView } from '../../features/dashboards/ChartWidget';
 import type { ChartDatum, ChartType } from '../../features/dashboards/types';
 import { useEntityLayers, getEntityLayer, entityAttributes } from '../../lib/entityLayers';
+import { useColumnLabels } from '../../store/datasetSchemas';
 
 const MAX_FEATURES = 1000;
 const HISTOGRAM_BINS = 8;
@@ -59,6 +60,8 @@ export function ChartsPanel({ onClose }: { onClose: () => void }) {
   const [chartType, setChartType] = useState<string | null>('bar');
   const [dataSource, setDataSource] = useState<string | null>(null);
   const [attribute, setAttribute] = useState<string | null>(null);
+
+  const { columnOptions } = useColumnLabels();
 
   const attrRows = useMemo(() => {
     if (dataSource == null) return [];
@@ -113,7 +116,7 @@ export function ChartsPanel({ onClose }: { onClose: () => void }) {
                 ? 'Select attribute...'
                 : 'Layer has no attributes'
           }
-          data={attributeNames}
+          data={columnOptions(attributeNames)}
           value={attribute}
           onChange={setAttribute}
         />
