@@ -7,7 +7,7 @@
  * - Stale-while-revalidate: return cached immediately, refresh in background
  */
 
-import { apiCache, tileCache } from './db';
+import { apiCache, cachedRegions, tileCache } from './db';
 import { isOnline } from './network';
 
 /** Default TTL for cached API responses (1 hour) */
@@ -189,6 +189,7 @@ export async function loadTile(
         // a store that is full or blocked must not blank the tile it just fetched
         await tileCache
           .put({ key, blob: bytes, contentType, cachedAt: Date.now() })
+          .then(() => noteTileWritten(bytes.byteLength))
           .catch(() => {});
         return { bytes, contentType };
       }
@@ -216,31 +217,52 @@ export async function cacheTilesForArea(
   let cached = 0;
   let bytes = 0;
 
-  for (let i = 0; i < tiles.length; i++) {
-    const { z, x, y } = tiles[i];
-    const url = tileUrlFromTemplate(tileUrlTemplate, z, x, y);
+  // the region record only exists once the download finishes, so until then
+  // these keys are what keeps the budget from eating what it is downloading
+  const arrivingKeys = tiles.map(({ z, x, y }) => tileCacheKey(tileUrlTemplate, z, x, y));
+  for (const key of arrivingKeys) downloadingTileKeys.add(key);
 
-    try {
-      const resp = await fetch(url);
-      if (resp.ok) {
-        const blob = await resp.arrayBuffer();
-        await tileCache.put({
-          key: tileCacheKey(tileUrlTemplate, z, x, y),
-          blob,
-          contentType: resp.headers.get('content-type') || 'image/png',
-          cachedAt: Date.now(),
-        });
-        cached++;
-        bytes += blob.byteLength;
+  try {
+    for (let i = 0; i < tiles.length; i++) {
+      const { z, x, y } = tiles[i];
+      const url = tileUrlFromTemplate(tileUrlTemplate, z, x, y);
+
+      try {
+        const resp = await fetch(url);
+        if (resp.ok) {
+          const blob = await resp.arrayBuffer();
+          await tileCache.put({
+            key: arrivingKeys[i],
+            blob,
+            contentType: resp.headers.get('content-type') || 'image/png',
+            cachedAt: Date.now(),
+          });
+          await noteTileWritten(blob.byteLength);
+          cached++;
+          bytes += blob.byteLength;
+        }
+      } catch {
+        // Skip failed tiles
       }
-    } catch {
-      // Skip failed tiles
-    }
 
-    onProgress?.(i + 1, tiles.length);
+      onProgress?.(i + 1, tiles.length);
+    }
+  } finally {
+    for (const key of arrivingKeys) downloadingTileKeys.delete(key);
   }
 
   return { cached, total: tiles.length, bytes };
+}
+
+/** The cache key of every tile an area covers. */
+export function tileKeysForArea(
+  tileUrlTemplate: string,
+  bounds: TileBounds,
+  zoomRange: ZoomRange,
+): string[] {
+  return getTilesInBounds(bounds, zoomRange).map(({ z, x, y }) =>
+    tileCacheKey(tileUrlTemplate, z, x, y),
+  );
 }
 
 /** Drop the tiles an earlier cacheTilesForArea call stored for the same area. */
@@ -249,9 +271,117 @@ export async function evictTilesForArea(
   bounds: TileBounds,
   zoomRange: ZoomRange,
 ): Promise<void> {
-  for (const { z, x, y } of getTilesInBounds(bounds, zoomRange)) {
-    await tileCache.remove(tileCacheKey(tileUrlTemplate, z, x, y));
+  for (const key of tileKeysForArea(tileUrlTemplate, bounds, zoomRange)) {
+    await tileCache.remove(key);
   }
+  forgetTrackedTileBytes();
+}
+
+/**
+ * How many bytes of tiles the cache may hold. Only tiles outside a saved region
+ * are dropped to get back under it, so a region's badge never overstates what
+ * is still on disk.
+ */
+const TILE_CACHE_BUDGET_BYTES = 200 * 1024 * 1024;
+
+/**
+ * Running total of the stored tile bytes, so a tile write never scans the whole
+ * store. Chained rather than a plain number so concurrent writes queue instead
+ * of overwriting each other's sum.
+ */
+let trackedTileBytes: Promise<number> | null = null;
+
+/** keys a cacheTilesForArea call is downloading, before its region record exists */
+const downloadingTileKeys = new Set<string>();
+
+let evictionPass: Promise<void> | null = null;
+
+function addTileBytes(delta: number): Promise<number> {
+  const next = (trackedTileBytes ?? tileCache.size()).then((total) => total + delta);
+  trackedTileBytes = next;
+  return next;
+}
+
+function forgetTrackedTileBytes(): void {
+  trackedTileBytes = null;
+}
+
+async function noteTileWritten(bytes: number): Promise<void> {
+  // the seeding scan already counts the tile just written, so only a total that
+  // was already running gets the delta
+  const total = trackedTileBytes ? await addTileBytes(bytes) : await seedTrackedTileBytes();
+  if (total > TILE_CACHE_BUDGET_BYTES) await enforceTileBudget();
+}
+
+function seedTrackedTileBytes(): Promise<number> {
+  const seeded = tileCache.size();
+  trackedTileBytes = seeded;
+  return seeded;
+}
+
+function enforceTileBudget(): Promise<void> {
+  if (!evictionPass) {
+    evictionPass = evictOldestBrowsingTiles().finally(() => {
+      evictionPass = null;
+    });
+  }
+  return evictionPass;
+}
+
+async function evictOldestBrowsingTiles(): Promise<void> {
+  const pinned = await pinnedTileKeys();
+  const stored = await tileCache.summaries();
+  // the scan is the truth, so a total another tab has drifted comes back in line
+  let total = stored.reduce((sum, tile) => sum + tile.bytes, 0);
+  trackedTileBytes = Promise.resolve(total);
+  if (total <= TILE_CACHE_BUDGET_BYTES) return;
+
+  const oldestFirst = stored
+    .filter((tile) => !pinned.has(tile.key))
+    .sort((a, b) => a.cachedAt - b.cachedAt);
+
+  for (const tile of oldestFirst) {
+    if (total <= TILE_CACHE_BUDGET_BYTES) break;
+    await tileCache.remove(tile.key);
+    total = await addTileBytes(-tile.bytes);
+  }
+}
+
+/** Tiles the user asked for by name, which only a region delete removes. */
+async function pinnedTileKeys(): Promise<Set<string>> {
+  const pinned = new Set<string>(downloadingTileKeys);
+  for (const region of await cachedRegions.getAll()) {
+    const keys = tileKeysForArea(region.tileUrlTemplate, region.bounds, {
+      min: region.minZoom,
+      max: region.maxZoom,
+    });
+    for (const key of keys) pinned.add(key);
+  }
+  return pinned;
+}
+
+/** Bytes held by tiles that panning the map cached, outside every saved region. */
+export async function browsingCacheBytes(): Promise<number> {
+  const pinned = await pinnedTileKeys();
+  const stored = await tileCache.summaries();
+  return stored
+    .filter((tile) => !pinned.has(tile.key))
+    .reduce((sum, tile) => sum + tile.bytes, 0);
+}
+
+/** Drop every tile outside a saved region. Returns the bytes freed. */
+export async function clearBrowsingCache(): Promise<number> {
+  const pinned = await pinnedTileKeys();
+  const stored = await tileCache.summaries();
+  trackedTileBytes = Promise.resolve(stored.reduce((sum, tile) => sum + tile.bytes, 0));
+  let freed = 0;
+  for (const tile of stored) {
+    if (pinned.has(tile.key)) continue;
+    await tileCache.remove(tile.key);
+    freed += tile.bytes;
+  }
+  await addTileBytes(-freed);
+  return freed;
 }
 
 /** Calculate tile coordinates for a bounding box at given zoom levels */

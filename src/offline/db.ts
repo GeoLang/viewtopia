@@ -321,6 +321,37 @@ export interface CachedTile {
   cachedAt: number;
 }
 
+/** Everything about a stored tile except the blob itself. */
+export interface CachedTileSummary {
+  key: string;
+  bytes: number;
+  cachedAt: number;
+}
+
+/**
+ * Key, byte length and age of every tile. Walks a cursor so only one tile's
+ * blob is in memory at a time, where getAll would hold the whole cache.
+ */
+async function tileSummaries(): Promise<CachedTileSummary[]> {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('tileCache', 'readonly');
+    const req = tx.objectStore('tileCache').openCursor();
+    const found: CachedTileSummary[] = [];
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (!cursor) {
+        resolve(found);
+        return;
+      }
+      const tile = cursor.value as CachedTile;
+      found.push({ key: tile.key, bytes: tile.blob.byteLength, cachedAt: tile.cachedAt });
+      cursor.continue();
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
 export const tileCache = {
   async get(key: string): Promise<CachedTile | undefined> {
     return getById<CachedTile>('tileCache', key);
@@ -328,11 +359,12 @@ export const tileCache = {
   put: (tile: CachedTile) => put('tileCache', tile),
   remove: (key: string) => remove('tileCache', key),
   clear: () => clear('tileCache'),
+  summaries: () => tileSummaries(),
 
   /** Get total cache size in bytes */
   async size(): Promise<number> {
-    const all = await getAll<CachedTile>('tileCache');
-    return all.reduce((sum, t) => sum + t.blob.byteLength, 0);
+    const all = await tileSummaries();
+    return all.reduce((sum, t) => sum + t.bytes, 0);
   },
 };
 

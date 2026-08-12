@@ -8,7 +8,13 @@ const get = vi.fn();
 const put = vi.fn(async () => {});
 vi.mock('../../src/offline/db', () => ({
   apiCache: { get: vi.fn(), put: vi.fn() },
-  tileCache: { get: (key: string) => get(key), put: (tile: unknown) => put(tile) },
+  cachedRegions: { getAll: async () => [] },
+  tileCache: {
+    get: (key: string) => get(key),
+    put: (tile: unknown) => put(tile),
+    summaries: async () => [],
+    size: async () => 0,
+  },
 }));
 
 import maplibregl from 'maplibre-gl';
