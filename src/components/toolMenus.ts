@@ -52,6 +52,7 @@ import {
   IconUsers,
   IconVectorTriangle,
   IconWind,
+  IconWorldSearch,
   IconWorldWww,
 } from '@tabler/icons-react';
 import type { ToolPanel } from '../store/app';
@@ -132,7 +133,10 @@ export const TOOLS_MENU: ToolMenuItem[][] = [
 ];
 
 export const DATA_MENU: ToolMenuItem[][] = [
-  [{ panel: 'portal', label: 'Catalog', icon: IconFolders }],
+  [
+    { panel: 'portal', label: 'Catalog', icon: IconFolders },
+    { panel: 'stacBrowser', label: 'STAC Browser', icon: IconWorldSearch },
+  ],
   [
     { panel: 'assets', label: 'Assets', icon: IconPackage },
     { panel: 'ogc', label: 'OGC Layers', icon: IconWorldWww },

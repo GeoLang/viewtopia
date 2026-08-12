@@ -79,6 +79,7 @@ export type ToolPanel =
   | 'geojsonEditor'
   | 'styleEditor'
   | 'portal'
+  | 'stacBrowser'
   | 'dashboards'
   | 'printExport';
 
