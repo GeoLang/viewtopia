@@ -7,6 +7,7 @@
  * (which converts to GeoJSON) and render it on the Cesium globe.
  */
 import { notifications } from '@mantine/notifications';
+import { applySymbology, suggestSymbology } from '../features/symbology/symbology';
 import { authHeaders, noticeRefusal } from '../lib/apiAuth';
 import { useAppStore } from '../store/app';
 import { useAgentLayerStore, type AgentLayer } from '../store/agentLayers';
@@ -18,6 +19,12 @@ export interface UiSpecLayer {
   file?: string;
   path?: string;
   color?: string;
+  /**
+   * Column the tool that wrote the file says is worth colouring by. The layer
+   * is shaded by it on arrival, and the symbology editor can change or drop it
+   * like any other.
+   */
+  shade_by?: string;
 }
 
 export interface UiSpec {
@@ -64,7 +71,15 @@ export async function renderUISpec(spec: UiSpec): Promise<void> {
         continue;
       }
       const geojson = (await res.json()) as GeoJSON.FeatureCollection;
-      loaded.push({ id: `${i}-${file}`, name: layer.name || file, color, geojson, path: source });
+      const agentLayer: AgentLayer = {
+        id: `${i}-${file}`,
+        name: layer.name || file,
+        color,
+        geojson,
+        path: source,
+      };
+      const suggested = layer.shade_by ? suggestSymbology(agentLayer, layer.shade_by) : null;
+      loaded.push(suggested ? applySymbology(agentLayer, suggested) : agentLayer);
     } catch (e) {
       failed++;
       console.error('renderUISpec: failed to load layer', layer, e);

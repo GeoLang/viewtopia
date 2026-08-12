@@ -9,6 +9,7 @@ import {
   legendEntries,
   migrateLegacyChoropleth,
   numericFields,
+  suggestSymbology,
   CATEGORY_CAP,
   type RuleSymbology,
 } from '../../src/features/symbology/symbology';
@@ -199,6 +200,32 @@ describe('categorized symbology', () => {
       Array.from({ length: CATEGORY_CAP + 1 }, (_, i) => polygon(i, `n${i}`)),
     );
     expect(categoricalFields(many)).toEqual([]);
+  });
+});
+
+describe('a column the agent named', () => {
+  it('shades a numeric column with an ordered ramp', () => {
+    const sym = suggestSymbology(scored(), 'risk');
+    expect(sym).toMatchObject({ kind: 'graduated', field: 'risk' });
+  });
+
+  it('gives a text column one colour per value', () => {
+    const layer = layerOf([polygon(1, 'a'), polygon(2, 'b'), polygon(3, 'a')]);
+    const sym = suggestSymbology(layer, 'name');
+    expect(sym).toMatchObject({ kind: 'categorized', field: 'name' });
+  });
+
+  it('suggests nothing for a column the file does not carry', () => {
+    expect(suggestSymbology(scored(), 'gap_score')).toBeNull();
+  });
+
+  it('suggests nothing for a column that never varies', () => {
+    expect(suggestSymbology(scored(), 'label')).toBeNull();
+  });
+
+  it('suggests nothing for text with more values than there are colours', () => {
+    const many = layerOf(Array.from({ length: CATEGORY_CAP + 1 }, (_, i) => polygon(i, `n${i}`)));
+    expect(suggestSymbology(many, 'name')).toBeNull();
   });
 });
 

@@ -175,6 +175,15 @@ export function buildCategorized(layer: AgentLayer, field: string): CategorizedS
   };
 }
 
+/**
+ * The renderer a column the agent named wants: an ordered ramp for numbers,
+ * one colour per value for text. Null when the file has no such column, or too
+ * little in it to separate, and the layer keeps its single colour.
+ */
+export function suggestSymbology(layer: AgentLayer, field: string): Symbology | null {
+  return buildGraduated(layer, field) ?? buildCategorized(layer, field);
+}
+
 function matchesRule(props: GeoJSON.GeoJsonProperties, rule: SymbologyRule): boolean {
   const v = props?.[rule.field];
   if (v == null) return false;
