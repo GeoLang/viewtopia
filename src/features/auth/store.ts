@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { jwtExpired } from '../../lib/jwt';
 
 /**
  * Authentication state (ported from vanilla auth.js). JWT auth against the
@@ -34,12 +35,17 @@ function persist(user: AuthUser | null, token: string | null): void {
   }
 }
 
+// A stored token outlives the tab, so a session left overnight comes back dead.
+// Restoring it anyway shows the user as signed in and lets every gated call fail
+// with whichever service refuses first, which reads as a broken feature rather
+// than a finished session.
 function restore(): { user: AuthUser | null; token: string | null } {
   try {
     const saved = localStorage.getItem(KEY);
     if (saved) {
       const d = JSON.parse(saved);
-      if (d.token && d.user) return { user: d.user, token: d.token };
+      if (d.token && d.user && !jwtExpired(d.token)) return { user: d.user, token: d.token };
+      localStorage.removeItem(KEY);
     }
   } catch {
     /* ignore corrupt storage */

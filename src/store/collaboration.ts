@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { useAppStore } from './app';
 import { getAuthToken } from '../features/auth/store';
 import { BEARER_SUBPROTOCOL } from '../lib/apiAuth';
+import { jwtClaims } from '../lib/jwt';
 
 /**
  * Chat client for tiletopia's /api/v1/realtime/{room} socket. Cursors and
@@ -92,14 +93,8 @@ function send(msg: Record<string, unknown>) {
 
 /** `sub` out of a JWT, which is the id the server will stamp on our frames. */
 function jwtSubject(token: string): string | null {
-  const payload = token.split('.')[1];
-  if (!payload) return null;
-  try {
-    const claims = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
-    return typeof claims.sub === 'string' && claims.sub ? claims.sub : null;
-  } catch {
-    return null;
-  }
+  const sub = jwtClaims(token)?.sub;
+  return typeof sub === 'string' && sub ? sub : null;
 }
 
 export const useCollabStore = create<CollabState>()((set, get) => ({
