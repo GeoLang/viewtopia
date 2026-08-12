@@ -19,6 +19,11 @@ export interface PlanStep {
   format?: string | null;
   path?: string | null;
   params?: Record<string, unknown>;
+  /**
+   * True when approving this step runs code the agent wrote rather than a
+   * geodukt operation. Absent from a plan built before geolang emitted it.
+   */
+  runs_caller_code?: boolean;
 }
 
 export interface WorkflowPlan {

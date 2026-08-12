@@ -6,6 +6,15 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-12: **the plan panel marks a step that runs the agent's own code**.
+  geolang sets `runs_caller_code` on every plan step from the tool's own
+  declaration, and a true one means approving that step hands over something the
+  model wrote rather than a fixed geodukt operation. The step row now carries a
+  "runs agent code" badge beside its kind, and the plan gains a line above the
+  steps saying what approving it does, alongside the existing "not validated"
+  one. A plan from a geolang older than the field is read as ordinary: the panel
+  labels, it does not gate, so approve and run are unchanged.
+
 - 2026-08-11: **a dead session ends instead of erroring**. Platform sessions
   last 24 hours, and one that expired while a tab stayed open surfaced whichever
   service refused first, so agora's "invalid or expired token" reached a live
