@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { PortalItem, PortalItemType, PortalSharing } from './types';
 import { getAuthToken } from '../auth/store';
+import { noticeRefusal } from '../../lib/apiAuth';
 
 /**
  * Portal content catalog (ported from vanilla portal.js). Reads/writes items
@@ -81,6 +82,7 @@ export const usePortalStore = create<PortalState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const resp = await fetch(`${API}/items`, { headers: authHeaders() });
+      noticeRefusal(resp.status);
       if (resp.ok) {
         set({ items: await resp.json(), loading: false, error: null, needsSignIn: false });
         return;
@@ -103,6 +105,7 @@ export const usePortalStore = create<PortalState>((set, get) => ({
         headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(item),
       });
+      noticeRefusal(resp.status);
       if (resp.ok) {
         const saved = (await resp.json()) as PortalItem;
         set((s) => ({ items: [...s.items, saved], error: null }));
@@ -126,6 +129,7 @@ export const usePortalStore = create<PortalState>((set, get) => ({
     set({ error: null });
     try {
       const resp = await fetch(`${API}/items/${id}`, { method: 'DELETE', headers: authHeaders() });
+      noticeRefusal(resp.status);
       if (resp.ok) {
         set((s) => ({ items: s.items.filter((i) => i.id !== id) }));
         return;

@@ -4,7 +4,7 @@
 // role reads, editor or admin uploads. Failures carry the server's own message
 // so the panel can show "no graph node on floor 2" rather than "HTTP 422".
 
-import { apiHeaders } from './apiAuth';
+import { apiHeaders, noticeRefusal } from './apiAuth';
 import { toFeatureCollection } from '../store/agentLayers';
 
 const API = '/api/indoor';
@@ -109,7 +109,10 @@ async function failure(res: Response): Promise<IndoorError> {
 async function request(path: string, init?: RequestInit): Promise<Response> {
   const res = await fetch(path, { ...init, headers: apiHeaders(init?.headers) }).catch(() => null);
   if (!res) throw new IndoorError(0, 'The indoor map service is unreachable.');
-  if (!res.ok) throw await failure(res);
+  if (!res.ok) {
+    noticeRefusal(res.status);
+    throw await failure(res);
+  }
   return res;
 }
 

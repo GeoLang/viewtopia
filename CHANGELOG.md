@@ -6,6 +6,17 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-11: **a dead session ends instead of erroring**. Platform sessions
+  last 24 hours, and one that expired while a tab stayed open surfaced whichever
+  service refused first, so agora's "invalid or expired token" reached a live
+  dialog as if the feature were broken. A token past its `exp` now ends the
+  session in `getAuthToken` before it reaches the wire, which is the only thing
+  that covers the websockets, since a browser cannot read the status behind a
+  refused upgrade. A 401 on a request that carried the bearer ends it too,
+  catching what a slow client clock hides. Both sign the user out with one
+  "Session expired" notice. An API key holder is untouched, since a wrong or
+  revoked key is not a finished session, and an anonymous read has none to lose.
+
 - 2026-08-11: **Scale-dependent visibility**. A layer can be limited to a zoom
   range, min inclusive and max exclusive, the way QGIS scale ranges and
   MapLibre's minzoom/maxzoom work. The range sits on the layer rather than on

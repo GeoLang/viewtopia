@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { jwtExpired } from '../../lib/jwt';
+import { notifications } from '@mantine/notifications';
+import { isSessionToken, jwtExpired } from '../../lib/jwt';
 
 /**
  * Authentication state (ported from vanilla auth.js). JWT auth against the
@@ -128,9 +129,46 @@ export const useAuthStore = create<AuthState>((set) => ({
   setError: (error) => set({ error }),
 }));
 
-/** Current auth token for API requests (mirrors vanilla getAuthToken). */
+const EXPIRED_NOTIFICATION_ID = 'auth-session-expired';
+
+/**
+ * Both ways a session can end land here, so the user is signed out and told
+ * once however many calls were in flight. The id is what makes a second call
+ * replace the toast instead of stacking another one.
+ */
+function endSession(): void {
+  useAuthStore.getState().logout();
+  notifications.show({
+    id: EXPIRED_NOTIFICATION_ID,
+    title: 'Session expired',
+    message: 'Sign in again to continue.',
+    color: 'yellow',
+  });
+}
+
+/**
+ * Current auth token for API requests (mirrors vanilla getAuthToken). A session
+ * past its `exp` ends here rather than going out on the wire, which is what
+ * covers the websockets: a browser cannot read the status behind a refused
+ * upgrade, so a dead token there only ever shows up as a reconnect loop.
+ */
 export function getAuthToken(): string | null {
-  return useAuthStore.getState().token;
+  const { token } = useAuthStore.getState();
+  if (token === null || !jwtExpired(token)) return token;
+  endSession();
+  return null;
+}
+
+/**
+ * A platform service refused a call the viewer had signed. Anything the client
+ * clock hid from `getAuthToken` shows up here instead, so the session ends the
+ * same way. Only a session token can end: an API key that is wrong or revoked
+ * is a different failure, and an anonymous read has no session to lose.
+ */
+export function endRefusedSession(): void {
+  const { token } = useAuthStore.getState();
+  if (token === null || !isSessionToken(token)) return;
+  endSession();
 }
 
 /** Whether a user is authenticated (mirrors vanilla isAuthenticated). */

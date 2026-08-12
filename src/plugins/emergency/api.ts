@@ -4,7 +4,7 @@
 // session bearer token when their JWT secret is set, so these go through apiHeaders
 // rather than ctx.api.fetch, which sends no token and pins the /api/v1 prefix.
 
-import { apiHeaders } from '../../lib/apiAuth';
+import { apiHeaders, noticeRefusal } from '../../lib/apiAuth';
 
 export interface AssemblyPointInput {
   id: string;
@@ -50,7 +50,10 @@ export async function evacuationPlan(input: {
       assembly_points: input.assemblyPoints,
     }),
   });
-  if (!res.ok) throw await failure(res, 'incidents/evacuate');
+  if (!res.ok) {
+    noticeRefusal(res.status);
+    throw await failure(res, 'incidents/evacuate');
+  }
   return res.json() as Promise<EvacuationPlan>;
 }
 
@@ -65,7 +68,10 @@ export async function walkingRoute(
     profile: 'pedestrian',
   });
   const res = await fetch(`/api/route?${params}`, { headers: apiHeaders() });
-  if (!res.ok) throw await failure(res, 'route');
+  if (!res.ok) {
+    noticeRefusal(res.status);
+    throw await failure(res, 'route');
+  }
   const data = (await res.json()) as { geometry: [number, number][] };
   // itinera returns [lat, lon] pairs
   return data.geometry.map(([lat, lng]) => [lng, lat]);

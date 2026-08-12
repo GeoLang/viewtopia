@@ -11,7 +11,7 @@
  * errors that matter.
  */
 
-import { apiHeaders } from './apiAuth';
+import { apiHeaders, noticeRefusal } from './apiAuth';
 
 const BASE = '/agent/sessions';
 
@@ -29,6 +29,7 @@ async function call(path: string, method: string, body?: unknown): Promise<Respo
     headers: apiHeaders(),
     body: body === undefined ? undefined : JSON.stringify(body),
   }).catch(() => null);
+  if (res) noticeRefusal(res.status);
   if (!res?.ok) console.warn(`[agent-session] ${method} ${path} failed: ${res?.status ?? 'no reply'}`);
   return res;
 }

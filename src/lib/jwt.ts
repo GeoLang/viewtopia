@@ -17,6 +17,20 @@ export function jwtClaims(token: string): Record<string, unknown> | null {
 
 /** Whether a token says it has already expired. An API key is not a JWT and never has. */
 export function jwtExpired(token: string): boolean {
+  const exp = sessionExpiry(token);
+  return exp !== null && exp * 1000 <= Date.now();
+}
+
+/**
+ * Whether this is a session token rather than an API key, which is what decides
+ * whether a refusal can mean the session ended. Every platform session carries
+ * an `exp`; an API key is an opaque string with no claims to read.
+ */
+export function isSessionToken(token: string): boolean {
+  return sessionExpiry(token) !== null;
+}
+
+function sessionExpiry(token: string): number | null {
   const exp = jwtClaims(token)?.exp;
-  return typeof exp === 'number' && exp * 1000 <= Date.now();
+  return typeof exp === 'number' ? exp : null;
 }

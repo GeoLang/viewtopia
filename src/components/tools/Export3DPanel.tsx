@@ -12,6 +12,7 @@ import {
 import { IconDownload, IconPrinter } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { getAuthToken } from '../../features/auth/store';
+import { noticeRefusal } from '../../lib/apiAuth';
 
 const API = '/api/v1';
 const POLL_MS = 3000;
@@ -86,6 +87,7 @@ export function Export3DPanel({ onClose }: { onClose: () => void }) {
     };
     const tick = async () => {
       const res = await fetch(`${API}/exports/${id}`, { headers: authHeaders() }).catch(() => null);
+      if (res) noticeRefusal(res.status);
       if (!res?.ok) {
         stop();
         return;
@@ -122,6 +124,8 @@ export function Export3DPanel({ onClose }: { onClose: () => void }) {
       setError('The export service is unreachable.');
       return;
     }
+    noticeRefusal(assetRes.status);
+    noticeRefusal(formatRes.status);
     if (assetRes.status === 401 || formatRes.status === 401) {
       setNeedsSignIn(true);
       return;
@@ -181,6 +185,7 @@ export function Export3DPanel({ onClose }: { onClose: () => void }) {
       setError('The export service is unreachable.');
       return;
     }
+    noticeRefusal(res.status);
     if (res.status === 401) {
       setNeedsSignIn(true);
       return;
@@ -207,6 +212,7 @@ export function Export3DPanel({ onClose }: { onClose: () => void }) {
   const download = async (jobId: string) => {
     setError(null);
     const res = await fetch(downloadUrl(jobId), { headers: authHeaders() }).catch(() => null);
+    if (res) noticeRefusal(res.status);
     if (!res?.ok) {
       setError(
         res ? `Download failed with HTTP ${res.status}` : 'The export service is unreachable.',

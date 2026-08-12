@@ -13,7 +13,7 @@ import { IconSettings } from '@tabler/icons-react';
 import { PanelHeader } from '../PanelCard';
 import { useAppStore, type Renderer, type Basemap } from '../../store/app';
 import { BASEMAP_SELECT_GROUPS, isPmtilesUrl } from '../../hooks/basemapTiles';
-import { apiHeaders } from '../../lib/apiAuth';
+import { apiHeaders, noticeRefusal } from '../../lib/apiAuth';
 import { PluginSettingsPanel } from '../../plugins/PluginSettings';
 
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
@@ -186,6 +186,7 @@ function AiModelSelect() {
     let live = true;
     (async () => {
       const res = await fetch('/agent/models', { headers: apiHeaders() }).catch(() => null);
+      if (res) noticeRefusal(res.status);
       const body: ModelsResponse | null = res?.ok ? await res.json().catch(() => null) : null;
       if (!live) return;
       setProfiles(body?.profiles ?? []);
@@ -208,6 +209,7 @@ function AiModelSelect() {
       body: JSON.stringify({ id }),
     }).catch(() => null);
     setBusy(false);
+    if (res) noticeRefusal(res.status);
     if (res?.ok) return;
     setActive(previous);
     setError(

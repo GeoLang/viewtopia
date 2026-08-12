@@ -6,13 +6,24 @@
 // Reads stay anonymous, so a missing token is not an error here; the write
 // endpoints answer 401 and the caller surfaces that.
 
-import { getAuthToken } from '../features/auth/store';
+import { endRefusedSession, getAuthToken } from '../features/auth/store';
+
+const UNAUTHORIZED = 401;
 
 export function apiHeaders(base?: HeadersInit): Headers {
   const headers = new Headers(base);
   if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
   for (const [name, value] of Object.entries(authHeaders())) headers.set(name, value);
   return headers;
+}
+
+/**
+ * What a platform response says about the session, to be called on every reply
+ * to a request that carried the bearer. A 401 means the credential itself was
+ * refused, and for a session token that means it is over.
+ */
+export function noticeRefusal(status: number): void {
+  if (status === UNAUTHORIZED) endRefusedSession();
 }
 
 /**

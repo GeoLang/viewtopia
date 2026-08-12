@@ -14,7 +14,7 @@ import {
 } from 'cesium';
 import type { Map as MapLibreMap } from 'maplibre-gl';
 import { getActiveCesiumViewer, getActiveMapLibre } from '../viewer/registry';
-import { apiHeaders } from './apiAuth';
+import { apiHeaders, noticeRefusal } from './apiAuth';
 import { getViewBounds } from './viewBounds';
 
 const BASE = '/tiles/v1/analysis';
@@ -34,7 +34,10 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
     headers: apiHeaders(),
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`${path} failed: ${res.status}`);
+  if (!res.ok) {
+    noticeRefusal(res.status);
+    throw new Error(`${path} failed: ${res.status}`);
+  }
   return res.json() as Promise<T>;
 }
 
@@ -44,7 +47,10 @@ async function postBlobUrl(path: string, body: unknown): Promise<string> {
     headers: apiHeaders(),
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`${path} failed: ${res.status}`);
+  if (!res.ok) {
+    noticeRefusal(res.status);
+    throw new Error(`${path} failed: ${res.status}`);
+  }
   const blob = await res.blob();
   return URL.createObjectURL(blob);
 }
@@ -130,6 +136,7 @@ export async function exportCog(
 ): Promise<void> {
   const res = await fetch(exportUrl(op, bbox, resolution, sun), { headers: apiHeaders() });
   if (!res.ok) {
+    noticeRefusal(res.status);
     const reason = await res.text();
     throw new Error(reason || `export failed: ${res.status}`);
   }

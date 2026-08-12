@@ -22,6 +22,7 @@ import type { Viewer } from 'cesium';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { getAuthToken } from '../../features/auth/store';
+import { noticeRefusal } from '../../lib/apiAuth';
 import { useAppStore } from '../../store/app';
 
 const API = '/api/v1';
@@ -80,6 +81,7 @@ async function newestJobId(assetId: string): Promise<string | null> {
   const res = await fetch(`${API}/assets/${assetId}/jobs`, { headers: authHeaders() }).catch(
     () => null,
   );
+  if (res) noticeRefusal(res.status);
   if (!res?.ok) return null;
   const jobs = await res.json().catch(() => null);
   const id = (Array.isArray(jobs) ? jobs[0] : null)?.id;
@@ -145,6 +147,7 @@ export function AssetsPanel({ onClose }: { onClose: () => void }) {
       const res = await fetch(`${API}/jobs/${jobId}`, { headers: authHeaders() }).catch(
         () => null,
       );
+      if (res) noticeRefusal(res.status);
       if (!res?.ok) return;
       const progress = parseJobProgress(await res.json().catch(() => null));
       if (progress === null) return;
@@ -154,6 +157,7 @@ export function AssetsPanel({ onClose }: { onClose: () => void }) {
     };
     const tick = async () => {
       const res = await fetch(`${API}/assets/${id}`, { headers: authHeaders() }).catch(() => null);
+      if (res) noticeRefusal(res.status);
       if (!res?.ok) {
         stop();
         return;
@@ -194,6 +198,7 @@ export function AssetsPanel({ onClose }: { onClose: () => void }) {
     setError(null);
     const res = await fetch(`${API}/assets`, { headers: authHeaders() }).catch(() => null);
     setLoading(false);
+    if (res) noticeRefusal(res.status);
     if (!res) {
       setError('The asset service is unreachable.');
       return;
@@ -246,6 +251,7 @@ export function AssetsPanel({ onClose }: { onClose: () => void }) {
     };
     xhr.onload = () => {
       setUploadPct(null);
+      noticeRefusal(xhr.status);
       if (xhr.status === 401) {
         setNeedsSignIn(true);
         return;
@@ -285,6 +291,7 @@ export function AssetsPanel({ onClose }: { onClose: () => void }) {
       method: 'DELETE',
       headers: authHeaders(),
     }).catch(() => null);
+    if (res) noticeRefusal(res.status);
     if (!res?.ok) {
       setError(res ? `Delete failed with HTTP ${res.status}` : 'The asset service is unreachable.');
       return;
