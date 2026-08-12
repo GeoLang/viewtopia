@@ -32,12 +32,14 @@ current state in DESIGN.md). Open work from it:
       is a link that opens the document. Self-host is free with open source,
       but the "click a link, you're in the map" experience needs a hosted
       deployment. Ops and money, parked on the same AWS account decision as
-      geoplumb in-region serving (2026-08-05). Hard precondition (decided
-      2026-08-09): the geolang tool executor moves into an isolated process
-      (container or separate uid, resource limits, no service env tokens
-      inside) before any multi-tenant deployment. A geolang token is code
-      execution on its host, and tenant isolation cannot be promised while
-      tools run in the API process.
+      geoplumb in-region serving (2026-08-05). The executor precondition
+      (decided 2026-08-09) is closed: tool code runs in `geolang-executor`,
+      a container holding no platform signing secret, no service account and
+      no model key, with capabilities dropped and resource limits, and the
+      platform compose wires it (see geolang's DESIGN.md and README). What
+      the split does not close, and what a multi-tenant deployment still
+      needs decided: a tool holds the caller's own bearer while it runs, and
+      geolang's `outputs/` is one directory every user reads and writes.
 
 From the Felt comparison (2026-08-07, sourced from their docs): the gaps
 below are where their product is ahead in ways that serve the same

@@ -21,7 +21,8 @@
 #   - agora:      Live shared map documents over websockets (:5174/agora/, internal port 3000)
 #   - sibyl:      Rust agent loop service (internal port 8090)
 #   - geodukt:    Declarative pipeline runner for agent plans (internal port 8100)
-#   - geolang-api: AI/NLP geospatial agent API + tool executor (port 8080)
+#   - geolang-api: AI/NLP geospatial agent API (port 8080)
+#   - geolang-executor: runs the tool code, holds no platform secret (internal)
 #   - viewtopia:  Frontend viewer + A2UI (port 5174)
 #
 # Prerequisites:
@@ -272,9 +273,58 @@ services:
       - --bind
       - "0.0.0.0:8100"
 
+  # Tool code runs here rather than in geolang-api, which holds
+  # PLATFORM_JWT_SECRET: a tool hands caller-written arguments to geopandas,
+  # QGIS and DuckDB, and that secret signs a token for any user on any service.
+  # So no signing secret, no service account, no model key (hence no env_file)
+  # and no published port. It shares geolang-api's bind mount because a tool
+  # writes the output files the API then serves.
+  geolang-executor:
+    build:
+      context: ../geolang
+      dockerfile: Dockerfile
+    image: geolang-platform:latest
+    # the bind-mounted outputs/ is owned by the host user, and root-written
+    # files there would be undeletable from outside the container
+    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
+    volumes:
+      - ../geolang:/app/geolang:z
+    environment:
+      TOOL_EXEC_DIR: "/app/geolang"
+      GEOLANG_EXECUTOR_SECRET: ${GEOLANG_EXECUTOR_SECRET:-}
+      PTOLEMY_URL: http://ptolemy:3000
+      TILETOPIA_URL: http://tiletopia:3000
+      GEOKODE_URL: http://geokode:3000
+      ITINERA_URL: http://itinera:3000
+      GEODUKT_URL: http://geodukt:8100
+      QT_QPA_PLATFORM: offscreen
+      QGIS_PREFIX_PATH: /usr
+      # the run-as uid has no passwd entry, so HOME would be an unwritable /
+      HOME: /tmp
+    command:
+      - uvicorn
+      - src.api.executor:app
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8081"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 4g
+    pids_limit: 512
+    cpus: 2.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
   # geolang's public FastAPI app (src/api/server.py — the /chat/agui SSE API the
-  # viewer talks to) plus the tool manifest/executor endpoints sibyl calls.
-  # Tools run in-process here; nginx routes /agent/ here.
+  # viewer talks to) plus the tool manifest endpoints sibyl calls. Tool code runs
+  # in geolang-executor, not here; nginx routes /agent/ here.
   geolang-api:
     build:
       context: ../geolang
@@ -301,9 +351,12 @@ services:
       ITINERA_URL: http://itinera:3000
       GEODUKT_URL: http://geodukt:8100
       PLATFORM_JWT_SECRET: ${PLATFORM_JWT_SECRET:-}
+      GEOLANG_EXECUTOR_URL: http://geolang-executor:8081
+      GEOLANG_EXECUTOR_SECRET: ${GEOLANG_EXECUTOR_SECRET:-}
     depends_on:
       - sibyl
       - geodukt
+      - geolang-executor
     # nginx routes /agent/ here, and the viewer probes /agent/health on every page
     # load, so a stack without this container answers that probe with a 502. The
     # check gives callers (CI wait loops, compose ps) a way to wait for it.
