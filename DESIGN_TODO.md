@@ -37,9 +37,32 @@ current state in DESIGN.md). Open work from it:
       a container holding no platform signing secret, no service account and
       no model key, with capabilities dropped and resource limits, and the
       platform compose wires it (see geolang's DESIGN.md and README). What
-      the split does not close, and what a multi-tenant deployment still
-      needs decided: a tool holds the caller's own bearer while it runs, and
-      geolang's `outputs/` is one directory every user reads and writes.
+      the split does not close is the bearer question below.
+
+- [ ] **a tool holds the caller's own bearer while it runs**, so tool code
+      that misbehaves can spend the caller's full identity anywhere on the
+      platform. The forwarding itself is deliberate and documented in
+      geolang's `src/core/user_token.py`: the viewer's platform JWT rides the
+      whole chain, opaque and never re-signed, so a tool acts as the person
+      who asked. Two ways out, and the choice is a platform decision rather
+      than a geolang one:
+
+      Keep forwarding, and treat the executor container as the boundary. Costs
+      nothing, and is honest as long as the blast radius of a rogue tool is
+      understood to be the caller's whole account.
+
+      Or exchange the caller's token for a narrow short-lived one per tool
+      call. The minting half already exists and is proven: `sign_mcp_token` in
+      geolang's `src/core/auth.py` signs a token carrying a private claim
+      marker, because every service decodes with an audience of None and so
+      rejects any token carrying `aud`. What does not exist is anyone
+      enforcing the marker. Both that function's docstring and
+      `mcp_token_error`'s say it plainly: away from geolang's own door the
+      minted token is an ordinary token with an ordinary token's reach. So the
+      work is not minting, it is teaching ptolemy, geodukt, tiletopia and
+      agora to read a scope claim and refuse what it does not cover, plus
+      deciding what the scopes are. That is a platform-wide claim contract and
+      a migration, not a geolang change.
 
 From the Felt comparison (2026-08-07, sourced from their docs): the gaps
 below are where their product is ahead in ways that serve the same
@@ -84,6 +107,76 @@ together in the browser" and refuse feature-parity fights with ArcGIS.
       Fargate until a secrets path (SSM/Secrets Manager → task env) exists.
       geoplumb also needs its layers TOML baked into the deployed image, since
       the ecs module mounts no volumes.
+
+## OPEN — dependencies and supply chain (2026-08-12)
+
+Renovate grouped four breaking cargo bumps into one "non-major" PR, because it
+classifies major/minor/patch positionally and a `0.x` minor bump is still a
+minor to it. The shared config now guards both the cargo and npm groups with
+`isBreaking != true`, so breaking updates arrive as separate PRs. What that
+left open:
+
+- [ ] **advisories nobody can upgrade out of (2026-08-12).** `cargo deny check
+      advisories` reports findings in all four Rust repos. CI stays green
+      anyway: every repo runs that step with `continue-on-error: true`, so it
+      reports without gating, which is the policy already in place and is the
+      right one while the fixes are not ours to make. The point of this entry
+      is that the findings are real even though nothing goes red.
+
+      Cleared 2026-08-12: `crossbeam-epoch` to 0.9.20 in all four
+      (RUSTSEC-2026-0204) and `anyhow` to 1.0.104 in ptolemy
+      (RUSTSEC-2026-0190). Both were lockfile-only.
+
+      Outstanding, none fixable from here. Two of them print a "try
+      `cargo update -p ...`" hint that does not work, because the version they
+      want is a major ahead of what a transitive dependency requires, so cargo
+      locks nothing. Verify with `--dry-run` before believing that hint again.
+      - ptolemy: `rsa` 0.9.10, the Marvin timing sidechannel
+        (RUSTSEC-2023-0071), through sqlx-postgres. No upgrade published.
+      - geodukt: `quick-xml` 0.37.5, two denial-of-service advisories
+        (RUSTSEC-2026-0194, -0195). Wants >= 0.41 but `object_store` 0.11.2
+        pins `^0.37`. Also `rustls-pemfile` through the same `object_store`
+        (RUSTSEC-2025-0134, unmaintained, no safe upgrade).
+      - geokode: `protobuf` 2.28.0 uncontrolled-recursion crash
+        (RUSTSEC-2024-0437). Wants >= 3.7.2 but `osmpbfreader` 0.16.1 pins
+        `^2.28`. Also `bincode` 1.3.3 and `smartstring` 1.0.1, both
+        unmaintained with no successor version (RUSTSEC-2025-0141, -2026-0249).
+      - itinera: `bincode` 1.3.3, same as geokode's.
+- [ ] **toml is on 0.9 in geodukt, but 1.1 is current.** The three bumps the
+      closed Renovate PR bundled are taken (rusqlite 0.40, petgraph 0.8, toml
+      0.9), each its own commit. None needed a source change: the surfaces
+      geodukt uses kept their signatures. Two things worth knowing before the
+      next one. rusqlite 0.40 puts the `u64`/`usize` `ToSql`/`FromSql` impls
+      behind a new `fallible_uint` feature that is off by default, which is
+      harmless here only because the run store converts through `i64` at both
+      ends; binding a `usize` directly would now fail to compile. And toml 0.9
+      swapped its parser from `toml_edit` to `toml_parser`, so the error text
+      `/validate` hands back verbatim comes from a different parser now, still
+      carrying line, column and a source snippet. Going on to toml 1.1 is a
+      fresh breaking bump nobody has taken.
+- [ ] **geodukt's cdc feature hash depends on `Debug` formatting** of topoi's
+      `FeatureGeometry` and `Value`, both git dependencies on master. A `Debug`
+      impl changing upstream silently changes geodukt's content hashes, and now
+      breaks a golden test for a reason unrelated to whatever bump triggered
+      it. The golden made the fragility visible rather than causing it.
+- [ ] **geodukt and ptolemy each carry digest 0.10 and 0.11 at once.** In
+      geodukt it is `md-5` 0.10 reaching the graph through `object_store`. In
+      ptolemy it is sqlx 0.8, mongodb 3.7 and openidconnect 4.0, all still on
+      sha2 0.10, so the 0.11 bump added a second copy rather than replacing
+      one. `deny.toml` warns on duplicates rather than failing in both, so CI
+      is green. Each resolves itself when those upstreams move. geokode and
+      itinera took the same bump with no duplicate, so this is not inherent to
+      sha2 0.11.
+- [ ] **viewtopia's two `image-size` advisories have no fix published.** Both
+      are denial of service through infinite loops in the JXL, HEIF and ICNS
+      parsers, reached through deck.gl's texture-compressor. Nothing to upgrade
+      to yet. The `dompurify` advisory alongside them was investigated and is
+      NOT reachable here: it needs `IN_PLACE` sanitizing with hook removal,
+      viewtopia disables the Cesium InfoBox, and cesium 26.1.0 calls DOMPurify
+      in one place only, `Credit.js`, in the string-returning mode. Recorded so
+      nobody investigates it twice.
+- [ ] **docs/index.html claims 15 QGIS ports against 11 cards.** The plugin
+      count beside it was wrong too and is now correct. This one was left.
 
 ## OPEN — post-MVP: tiletopia tile edge caching (decided 2026-07-28)
 
@@ -139,11 +232,6 @@ anything multi-user ships, local packaging last.
       download, context config, inference-server setup. Wrap llama.cpp/ollama
       tooling rather than build. The differentiation lives in the eval harness
       proving which local model suffices, not in the installer.
-- [ ] **geodukt run history belongs to one process's database file**: records
-      persist to sqlite and carry start and finish times now, but an id comes
-      from `MAX(id)+1` under a mutex, so two processes sharing one file collide
-      on the primary key and the loser answers 500. Right for one instance,
-      wrong for replicas.
 
 ## OPEN — ptolemy: what the write guard still leaves open (2026-07-30)
 
@@ -314,13 +402,6 @@ PROJ, which vendors through cmake and is why that image takes minutes to build:
       emergency-services file would hit them. Public sources with attachments are
       hard to find, since attachments rarely survive open-data publishing, so this
       may need a customer file.
-- [ ] **the loader is not covered by verne's CI.** The one place verne's
-      assumptions meet ptolemy's real API is gated on an env var naming a live
-      server, so CI never runs it, and today's drift bugs are the argument for
-      closing it. Automating it needs ptolemy to publish a container image (it
-      publishes none) or an OpenAPI spec (it has none); a mocked test would assert
-      only verne's own assumptions and is worse than the honest gap. Cheapest real
-      fix is probably a ptolemy image, which helps more than verne.
 - [ ] **what the Esri report cannot land, by category** (from the GDAL feasibility
       pass and v0.2's own verdicts):
       - domains lose their field binding (ptolemy binds a domain to a field only
@@ -446,6 +527,12 @@ Medium value:
       collections, items, assets and saved favourites, and filters items by
       free text, current view and cloud cover. Services, databases and files
       are still one panel each (OGC Layers, SQL, Import), not one place.
+      Two known limits of the filters: a filtered search shows one page of 20
+      and offers no "Load more", because a STAC server pages a POST search with
+      a next link carrying its own method and body, which this client does not
+      replay; and free text goes out as `q`, the STAC free-text extension,
+      which no real catalog has been tested against, so a catalog lacking the
+      extension either ignores it or 400s into the panel's error line.
 - [ ] **isochrones/service areas and OD matrices**, served by itinera.
 - [ ] **print layout with atlas/map-series generation**: current export is a
       canvas screenshot.
@@ -466,6 +553,13 @@ survives reloads and syncs back, and a service worker precaches the built app
 shell, so a reload with no network still boots the viewer. Everything below is
 what does not work.
 
+- [ ] **the tile budget bounds the whole store, not the browsing half.** Tiles
+      inside a saved region are pinned and only a region delete removes them,
+      and everything else falls under a 200 MB budget, oldest evicted first.
+      So saved regions alone exceeding 200 MB drain the browsing tiles and then
+      stop, leaving the store over budget rather than eating a region. That is
+      the right trade, since a region's size badge would otherwise start lying,
+      but nothing tells the user their regions are the reason nothing caches.
 - [ ] **DuckDB's spatial extension still loads from extensions.duckdb.org.**
       The wasm bundle and the basemap glyphs are served from the app origin
       now, so plain SQL works with no network, but `getConnection()` runs
