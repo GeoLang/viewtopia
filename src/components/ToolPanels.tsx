@@ -16,6 +16,7 @@ import { ProjectPanel } from '../features/project/ProjectPanel';
 import { SqlWorkspacePanel } from '../features/sql/SqlWorkspacePanel';
 import { GeocodingPanel } from './tools/GeocodingPanel';
 import { RoutingPanel } from './tools/RoutingPanel';
+import { TravelTimePanel } from './tools/TravelTimePanel';
 import { DrawPanel } from './tools/DrawPanel';
 import { AnnotatePanel } from './tools/AnnotatePanel';
 import { GeofencePanel } from './tools/GeofencePanel';
@@ -155,6 +156,8 @@ export function ToolPanels() {
       );
     case 'routing':
       return <RoutingPanel onClose={close} />;
+    case 'travelTime':
+      return <TravelTimePanel onClose={close} />;
     case 'draw':
       return <DrawPanel onClose={close} />;
     case 'annotate':

@@ -22,6 +22,7 @@ export type ToolPanel =
   | 'geocoding'
   | 'bookmark'
   | 'routing'
+  | 'travelTime'
   | 'draw'
   | 'annotate'
   | 'geofence'

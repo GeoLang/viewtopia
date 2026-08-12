@@ -12,6 +12,7 @@ import {
   IconChartBar,
   IconChartHistogram,
   IconClock,
+  IconClockHour4,
   IconCloud,
   IconCube,
   IconDatabase,
@@ -83,6 +84,7 @@ export const ACTIONS_MENU: ToolMenuItem[][] = [
 
 export const ANALYSIS_MENU: ToolMenuItem[][] = [
   [
+    { panel: 'travelTime', label: 'Travel Time', icon: IconClockHour4 },
     { panel: 'clipping', label: 'Clip', icon: IconScissors },
     { panel: 'crossSection', label: 'Section', icon: IconRuler2 },
     { panel: 'heatmap', label: 'Heatmap', icon: IconFlame },
