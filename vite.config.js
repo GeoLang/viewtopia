@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
 import cesium from 'vite-plugin-cesium';
 import react from '@vitejs/plugin-react';
 
@@ -9,6 +10,23 @@ import react from '@vitejs/plugin-react';
 // mirror per-service ports, which drift.
 const PLATFORM_STACK = 'http://localhost:5174';
 const BACKEND_PREFIXES = ['/agent', '/agora', '/api', '/plumb', '/tiles', '/jupyter', '/ws'];
+
+// everything index.html pulls at boot: entry chunks, styles, fonts, and the
+// cesium runtime the bundle binds to as a global. cesium's Assets and Workers
+// load later, only when a 3D viewer is built, so they stay on the network.
+const APP_SHELL_GLOBS = [
+  'index.html',
+  'assets/*.{js,css,woff,woff2}',
+  'cesium/Cesium.js',
+  'cesium/Widgets/widgets.css',
+];
+
+// manifest.json: offline/network.ts pings it to tell online from offline, and a
+// precached answer would always say online. duckdb workers: dead without wasm.
+const PRECACHE_IGNORED_GLOBS = ['manifest.json', 'assets/duckdb-browser-*.worker-*.js'];
+
+// the entry chunk and Cesium.js are 5-6 MB each, past workbox's 2 MB default
+const MAX_PRECACHED_FILE_BYTES = 8 * 1024 * 1024;
 
 // @panoramax/web-viewer uses css module scripts (import x from "a.css" with
 // { type: "css" }), which rollup can't bundle. Rewrite them to constructable
@@ -32,7 +50,29 @@ function cssModuleScripts() {
 }
 
 export default defineConfig({
-  plugins: [cssModuleScripts(), react(), cesium()],
+  plugins: [
+    cssModuleScripts(),
+    react(),
+    cesium(),
+    // precaches the app shell only. api responses and map tiles are already
+    // cached in IndexedDB by offlineFetch and the cached:// tile protocol, so
+    // this worker registers no runtime routes and lets those requests through.
+    VitePWA({
+      registerType: 'prompt',
+      injectRegister: null,
+      manifest: false,
+      workbox: {
+        globPatterns: APP_SHELL_GLOBS,
+        globIgnores: PRECACHE_IGNORED_GLOBS,
+        maximumFileSizeToCacheInBytes: MAX_PRECACHED_FILE_BYTES,
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: BACKEND_PREFIXES.map(
+          (prefix) => new RegExp(`^${prefix}(/|$)`),
+        ),
+        cleanupOutdatedCaches: true,
+      },
+    }),
+  ],
   optimizeDeps: {
     exclude: ['@panoramax/web-viewer'],
   },

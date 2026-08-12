@@ -6,6 +6,27 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-12: **the app shell survives a reload with no network**. Offline used
+  to mean "the tab was already open": `public/manifest.json` advertised a PWA
+  but nothing registered a worker, and a stale hand-written `public/sw.js` sat
+  unregistered in the repo caching tiles and API JSON, which would have fought
+  the IndexedDB layer had anyone ever turned it on. It is deleted. vite-plugin-pwa
+  now generates `sw.js` at build time, precaching the 24 files `index.html`
+  pulls at boot (entry chunks, styles, fonts, and the Cesium runtime the bundle
+  binds to as a global), 13.6 MiB. It precaches and nothing else: no runtime
+  caching strategies, and the navigation fallback denies every backend prefix,
+  so API responses and map tiles stay with `offlineFetch` and the tile cache
+  rather than landing in a second cache that disagrees. The duckdb wasm, the
+  basemap assets and Cesium's lazily-loaded Assets and Workers stay on the
+  network. `manifest.json` is deliberately not precached, because
+  `offline/network.ts` pings it to tell online from offline and a cached answer
+  would always say online. A new build does not take over silently: the tab
+  polls hourly and whenever it comes back into view, then offers a Reload
+  notice, and only skips the waiting worker when that is clicked, so a
+  lazily-imported chunk cannot vanish under a session in progress. Dev
+  unregisters any worker instead of installing one, so a production build on
+  the same host cannot serve stale chunks over the dev server.
+
 - 2026-08-11: **a dead session ends instead of erroring**. Platform sessions
   last 24 hours, and one that expired while a tab stayed open surfaced whichever
   service refused first, so agora's "invalid or expired token" reached a live
