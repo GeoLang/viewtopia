@@ -4,9 +4,6 @@
  * an agent session, the CLI, another user's browser. Which of them come back is
  * the server's decision, made from the bearer this sends: a caller sees its own
  * runs, an instance admin sees all of them.
- *
- * A record carries no time, only the id geodukt hands out in order, so the list
- * is ordered by that and says nothing about when a run happened.
  */
 
 import { apiHeaders, noticeRefusal } from '../../lib/apiAuth';
@@ -30,6 +27,9 @@ export interface PipelineRun {
   steps: RunStep[];
   /** the manifest TOML as submitted, which is the plan that executed */
   manifest: string;
+  /** RFC 3339, both absent from a geodukt older than run timestamps */
+  startedAt?: string;
+  finishedAt?: string;
 }
 
 /** serde's external tagging: a unit variant is its name, `Failed` an object. */
@@ -41,6 +41,8 @@ interface RunRecordJson {
   manifest_name: string;
   manifest: string;
   steps: { name: string; feature_count: number; status?: TaggedStatus }[];
+  started_at?: string;
+  finished_at?: string;
   sub?: string;
 }
 
@@ -77,10 +79,29 @@ function toRun(record: RunRecordJson): PipelineRun {
       message: failureMessage(step.status),
     })),
     manifest: record.manifest,
+    startedAt: record.started_at,
+    finishedAt: record.finished_at,
   };
 }
 
-/** Newest first, since a record's id is the order geodukt ran them in. */
+/** epoch millis for every run, or null when any record has no finish time */
+function finishTimes(runs: PipelineRun[]): number[] | null {
+  const times: number[] = [];
+  for (const run of runs) {
+    const parsed = run.finishedAt === undefined ? Number.NaN : Date.parse(run.finishedAt);
+    if (Number.isNaN(parsed)) return null;
+    times.push(parsed);
+  }
+  return times;
+}
+
+function newestFirst(runs: PipelineRun[]): PipelineRun[] {
+  const times = finishTimes(runs);
+  const order = runs.map((_, index) => index);
+  order.sort((a, b) => (times ? times[b] - times[a] : runs[b].id - runs[a].id));
+  return order.map((index) => runs[index]);
+}
+
 export async function fetchRunHistory(): Promise<PipelineRun[]> {
   const response = await fetch(RUNS_URL, { headers: apiHeaders() }).catch(() => null);
   if (!response) throw new Error('The pipeline runner is unreachable.');
@@ -88,5 +109,5 @@ export async function fetchRunHistory(): Promise<PipelineRun[]> {
   if (response.status === UNAUTHORIZED) throw new Error('Sign in to read run history.');
   if (!response.ok) throw new Error(`The pipeline runner answered HTTP ${response.status}.`);
   const records = (await response.json()) as RunRecordJson[];
-  return records.map(toRun).sort((a, b) => b.id - a.id);
+  return newestFirst(records.map(toRun));
 }

@@ -49,6 +49,8 @@ const RUNS = [
       { name: 'clip', feature_count: 0, status: { Failed: 'parcels.gpkg not found' } },
       { name: 'write', feature_count: 0, status: 'NotRun' },
     ],
+    started_at: '2026-08-12T09:00:00.000Z',
+    finished_at: '2026-08-12T09:00:01.400Z',
     sub: 'ada',
   },
   {
@@ -57,9 +59,24 @@ const RUNS = [
     manifest_name: 'bus stops',
     manifest: '[project]\nname = "bus stops"\n',
     steps: [{ name: 'stops', feature_count: 40, status: 'Completed' }],
+    started_at: '2026-08-12T09:05:00.000Z',
+    finished_at: '2026-08-12T09:07:03.000Z',
     sub: 'grace',
   },
 ];
+
+/** run 0 finished after run 1, so finish time and id order disagree */
+const CLOCK_BEATS_ID = [
+  { ...RUNS[0], started_at: '2026-08-12T11:00:00.000Z', finished_at: '2026-08-12T11:00:02.000Z' },
+  { ...RUNS[1], started_at: '2026-08-12T09:00:00.000Z', finished_at: '2026-08-12T09:00:02.000Z' },
+];
+
+const withoutTimes = (run: (typeof CLOCK_BEATS_ID)[number]) => {
+  const stripped: Record<string, unknown> = { ...run };
+  delete stripped.started_at;
+  delete stripped.finished_at;
+  return stripped;
+};
 
 const fetchMock = vi.fn();
 
@@ -121,6 +138,34 @@ describe('RunHistoryPanel', () => {
     expect(failed).toHaveTextContent('flood risk');
     expect(failed).toHaveTextContent('ran by ada');
     expect(screen.getByTestId('run-0-message')).toHaveTextContent('parcels.gpkg not found');
+  });
+
+  it('shows when each run started and how long it took', async () => {
+    await renderPanel();
+
+    const quick = screen.getByTestId('run-0-timing');
+    expect(quick).toHaveTextContent(new Date('2026-08-12T09:00:00.000Z').toLocaleString());
+    expect(quick).toHaveTextContent('took 1.4 s');
+
+    expect(screen.getByTestId('run-1-timing')).toHaveTextContent('took 2 min 3 s');
+  });
+
+  it('orders by finish time even when that disagrees with the id order', async () => {
+    answerWith(CLOCK_BEATS_ID);
+    await renderPanel();
+
+    const rows = screen.getAllByTestId(/^run-\d+$/);
+    expect(rows.map((row) => row.dataset.testid)).toEqual(['run-0', 'run-1']);
+  });
+
+  it('falls back to the id order, and shows no timing, when a record carries no times', async () => {
+    answerWith([CLOCK_BEATS_ID[0], withoutTimes(CLOCK_BEATS_ID[1])]);
+    await renderPanel();
+
+    const rows = screen.getAllByTestId(/^run-\d+$/);
+    expect(rows.map((row) => row.dataset.testid)).toEqual(['run-1', 'run-0']);
+    expect(screen.queryByTestId('run-1-timing')).toBeNull();
+    expect(screen.getByTestId('run-0-timing')).toHaveTextContent('took 2.0 s');
   });
 
   it('shows the executed plan and each step outcome only once the run is opened', async () => {

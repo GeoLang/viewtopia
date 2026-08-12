@@ -472,6 +472,17 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-12: **run history says when a run happened**. geodukt records now
+  carry a start and a finish time, so the Run History panel no longer has to
+  present the id it hands out as the only thing it knows about ordering. Each
+  run shows when it started, in the reader's own locale, and how long it took,
+  down to milliseconds for the quick ones and minutes and seconds for the slow
+  ones. The list is ordered newest first by finish time. Both times are optional
+  on the client, because the viewer can be pointed at a geodukt too old to send
+  them: a listing where any record is missing them falls back to the id order,
+  which is the order that geodukt ran them in, and a run missing them shows no
+  timing line rather than an empty one.
+
 - 2026-08-12: **the offline tile cache has a ceiling**. Every tile ever viewed
   was kept forever, and the only deletion was a saved region's own delete. The
   tiles a saved region covers are still exactly that, pinned, and nothing but

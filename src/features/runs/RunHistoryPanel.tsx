@@ -34,6 +34,24 @@ const STEP_COLORS: Record<StepOutcome, string> = {
   unknown: 'gray',
 };
 
+const SECOND_MS = 1000;
+const MINUTE_MS = 60 * SECOND_MS;
+
+function startedAtLabel(run: PipelineRun): string | null {
+  if (run.startedAt === undefined) return null;
+  const started = new Date(run.startedAt);
+  return Number.isNaN(started.getTime()) ? null : started.toLocaleString();
+}
+
+function durationLabel(run: PipelineRun): string | null {
+  if (run.startedAt === undefined || run.finishedAt === undefined) return null;
+  const elapsed = Date.parse(run.finishedAt) - Date.parse(run.startedAt);
+  if (Number.isNaN(elapsed)) return null;
+  if (elapsed < SECOND_MS) return `${elapsed} ms`;
+  if (elapsed < MINUTE_MS) return `${(elapsed / SECOND_MS).toFixed(1)} s`;
+  return `${Math.floor(elapsed / MINUTE_MS)} min ${Math.round((elapsed % MINUTE_MS) / SECOND_MS)} s`;
+}
+
 /** the count when the step ran, else how it ended */
 function stepLabel(step: RunStep): string {
   if (step.outcome === 'completed') {
@@ -44,6 +62,11 @@ function stepLabel(step: RunStep): string {
 }
 
 function RunRow({ run, open, onToggle }: { run: PipelineRun; open: boolean; onToggle: () => void }) {
+  const duration = durationLabel(run);
+  const timing = [startedAtLabel(run), duration === null ? null : `took ${duration}`]
+    .filter((part) => part !== null)
+    .join(' · ');
+
   return (
     <Stack
       gap={4}
@@ -80,6 +103,12 @@ function RunRow({ run, open, onToggle }: { run: PipelineRun; open: boolean; onTo
           {run.steps.length} steps
         </Badge>
       </Group>
+
+      {timing && (
+        <Text size="xs" c="dimmed" truncate data-testid={`run-${run.id}-timing`}>
+          {timing}
+        </Text>
+      )}
 
       {run.message && (
         <Text size="xs" c="red.4" data-testid={`run-${run.id}-message`}>
@@ -201,7 +230,7 @@ export function RunHistoryPanel({ onClose }: { onClose: () => void }) {
 
         {runs.length > 0 && (
           <Text size="xs" c="dimmed">
-            Newest first. geodukt records no run time, only the order it ran them in.
+            Newest first.
           </Text>
         )}
       </Stack>
