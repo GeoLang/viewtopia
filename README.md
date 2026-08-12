@@ -443,6 +443,7 @@ The nginx proxy fronts everything on 5174, so the app talks same-origin:
 `/api/` → Ptolemy, `/api/v1/auth` + `/api/v1/portal` → TileTopia, `/tiles/` →
 TileTopia (including `/tiles/v1/analysis`, backed by terrano), `/api/route` +
 `/api/isochrone` + `/api/network/` → Itinera, `/api/geocode/` → Geokode, `/agent/` → GeoLang,
+`/api/pipeline/runs` → geodukt's run history (its `/run` is not proxied),
 `/jupyter/` → Jupyter, `/ogc/` → Fenestra (so WMS is `/ogc/wms` and OGC API
 Features is `/ogc/ogc/collections`, since fenestra namespaces that API itself).
 Fenestra's WMTS and OGC API responses carry absolute URLs, so serving the stack on

@@ -71,6 +71,7 @@ import { RasterPanel } from '../raster/RasterPanel';
 import { ToolboxPanel } from '../toolbox/ToolboxPanel';
 import { ImageOverlayPanel } from '../overlay/ImageOverlayPanel';
 import { ConvertPanel } from '../features/convert/ConvertPanel';
+import { RunHistoryPanel } from '../features/runs/RunHistoryPanel';
 import { PrintExportPanel } from './tools/PrintExportPanel';
 
 /** floating marker over unfinished tools so they never pass as shipped features */
@@ -289,6 +290,8 @@ export function ToolPanels() {
       return <RasterPanel onClose={close} initialUrl={stacRasterUrl} />;
     case 'toolbox':
       return <ToolboxPanel onClose={close} />;
+    case 'runHistory':
+      return <RunHistoryPanel onClose={close} />;
     case 'imageOverlay':
       return <ImageOverlayPanel onClose={close} />;
     case 'convert':

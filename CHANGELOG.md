@@ -19,6 +19,19 @@ All notable changes to this project will be documented in this file.
   page nobody else can load. Layers and drawn features are not included, and
   there is no presenter view.
 
+- 2026-08-12: **Run history across sessions**. geodukt has kept every pipeline
+  run it executed, with the manifest, the steps and the caller, and nothing
+  outside the session that started it could see them. It is internal to the
+  platform stack, so nginx now proxies its runs subtree at `/api/pipeline/runs`
+  in both deploy configs, and a Run History panel under Data lists what comes
+  back: the project, how the run ended, who ran it, and, per run, each step with
+  its outcome and the manifest that executed. Only the runs subtree is exposed;
+  `/run` stays inside the network. geodukt itself decides whose runs a token
+  sees, so the panel shows a caller its own runs and an admin everyone's, and a
+  refused token ends the session like every other platform call. A record
+  carries no time, only the order geodukt ran them in, so the list says newest
+  first and claims nothing more.
+
 - 2026-08-11: **Travel time panel: service areas and OD matrices**. itinera
   already served both, but nothing in the viewer called them. Picking a centre
   on the map and a list of minutes draws one polygon per band, widest under

@@ -22,6 +22,7 @@ import {
   IconEye,
   IconFlame,
   IconFolders,
+  IconHistory,
   IconLayoutColumns,
   IconLayoutDashboard,
   IconLink,
@@ -151,6 +152,7 @@ export const DATA_MENU: ToolMenuItem[][] = [
     { panel: 'rasterViewer', label: 'Raster Analysis', icon: IconPhoto },
     { panel: 'imageOverlay', label: 'Image Overlay', icon: IconPhotoPlus },
     { panel: 'toolbox', label: 'Geoprocessing', icon: IconTools },
+    { panel: 'runHistory', label: 'Run History', icon: IconHistory },
     { panel: 'convert', label: 'Convert', icon: IconTransform },
   ],
   [
