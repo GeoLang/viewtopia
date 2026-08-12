@@ -6,6 +6,20 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-12: **STAC item filters, and the data-catalog plugin is gone**. The
+  STAC Browser panel listed a collection's items and could cut them to the
+  current view, and nothing else. Free text and a maximum cloud cover now sit
+  next to that checkbox: with either one set the panel leaves the collection's
+  item listing and posts to the catalog's search endpoint instead, carrying the
+  collection, the text as the free-text extension's `q`, `eo:cloud_cover` under
+  the query extension, and the view as `bbox`. With neither set the plain
+  listing stays in use, so an ordinary browse still pages through the catalog's
+  own next links. A search whose next link is a POST offers no Load more,
+  because that link carries a body this client does not replay. The
+  data-catalog plugin searched the same catalogs from a shallower panel and is
+  deleted, with its README row, its docs card and the plugin counts those
+  pages quote.
+
 - 2026-08-12: **a story exports as a scroll-driven page**. The Stories panel
   writes a `story.html` you can open off disk: one card per step down the left,
   a full-bleed MapLibre map behind them, and an IntersectionObserver flying the

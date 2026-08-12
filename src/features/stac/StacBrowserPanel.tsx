@@ -5,6 +5,7 @@ import {
   Button,
   Checkbox,
   Group,
+  NumberInput,
   ScrollArea,
   Select,
   Stack,
@@ -32,12 +33,15 @@ import {
   collectionsUrl,
   fetchStac,
   itemFootprints,
-  itemsPageUrl,
+  itemRequest,
+  itemSearchUrl,
   parseCollections,
   parseItems,
   parseLinks,
   STAC_CATALOGS,
   type AssetAction,
+  type ItemFilters,
+  type ItemRequest,
   type StacAsset,
   type StacCatalog,
   type StacCollection,
@@ -63,6 +67,8 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
   const [nextUrl, setNextUrl] = useState<string | null>(null);
   const [openItemId, setOpenItemId] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
+  const [itemQuery, setItemQuery] = useState('');
+  const [maxCloudCover, setMaxCloudCover] = useState<string | number>('');
   const [inViewOnly, setInViewOnly] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -97,11 +103,13 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
     setOpenItemId(null);
     try {
       const root = await fetchStac(catalogUrl);
-      const listUrl = collectionsUrl(parseLinks(root, catalogUrl), catalogUrl);
+      const links = parseLinks(root, catalogUrl);
+      const listUrl = collectionsUrl(links, catalogUrl);
       const body = await fetchStac(listUrl);
       const loaded: StacCatalog = {
         url: catalogUrl,
         title: catalogTitle(root, catalogUrl),
+        searchUrl: itemSearchUrl(links, catalogUrl),
         collections: parseCollections(body, listUrl),
       };
       setCatalog(loaded);
@@ -115,11 +123,12 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
     }
   }
 
-  async function loadItems(pageUrl: string, append: boolean) {
+  async function loadItems(request: ItemRequest, append: boolean) {
     setBusy(true);
     setError(null);
     try {
-      const page = parseItems(await fetchStac(pageUrl), pageUrl);
+      const body = await fetchStac(request.url, request.searchBody ?? undefined);
+      const page = parseItems(body, request.url);
       setItems((previous) => (append ? [...previous, ...page.items] : page.items));
       setNextUrl(page.nextUrl);
     } catch (e) {
@@ -129,18 +138,21 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
     }
   }
 
-  function viewBbox(): number[] | null {
-    if (!inViewOnly) return null;
-    const bounds = getViewBounds();
-    return [bounds.west, bounds.south, bounds.east, bounds.north];
+  function filters(inView: boolean): ItemFilters {
+    const bounds = inView ? getViewBounds() : null;
+    return {
+      text: itemQuery.trim(),
+      bbox: bounds ? [bounds.west, bounds.south, bounds.east, bounds.north] : null,
+      maxCloudCover: maxCloudCover === '' ? null : Number(maxCloudCover),
+    };
   }
 
-  async function openCollection(picked: StacCollection) {
+  async function openCollection(picked: StacCollection, from: StacCatalog) {
     setCollection(picked);
     setOpenItemId(null);
     setItems([]);
     setStatus('');
-    await loadItems(itemsPageUrl(picked, viewBbox()), false);
+    await loadItems(itemRequest(from.searchUrl, picked, filters(inViewOnly)), false);
   }
 
   async function openFavorite(favorite: StacFavorite) {
@@ -148,15 +160,17 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
     const loaded = await loadCatalog(favorite.catalogUrl);
     if (!loaded || !favorite.collectionId) return;
     const picked = loaded.collections.find((c) => c.id === favorite.collectionId);
-    if (picked) await openCollection(picked);
+    if (picked) await openCollection(picked, loaded);
+  }
+
+  function applyFilters(inView: boolean) {
+    if (!catalog || !collection) return;
+    void loadItems(itemRequest(catalog.searchUrl, collection, filters(inView)), false);
   }
 
   function toggleInView(checked: boolean) {
     setInViewOnly(checked);
-    if (!collection) return;
-    const bounds = getViewBounds();
-    const bbox = checked ? [bounds.west, bounds.south, bounds.east, bounds.north] : null;
-    void loadItems(itemsPageUrl(collection, bbox), false);
+    applyFilters(checked);
   }
 
   function addFootprints() {
@@ -351,6 +365,36 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
 
       {collection && (
         <Stack gap="xs" mb="xs">
+          <Group gap="xs" wrap="nowrap">
+            <TextInput
+              size="xs"
+              flex={1}
+              aria-label="Search items"
+              placeholder="Search items"
+              value={itemQuery}
+              onChange={(e) => setItemQuery(e.currentTarget.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') applyFilters(inViewOnly);
+              }}
+            />
+            <Button
+              size="xs"
+              color="violet"
+              loading={busy}
+              onClick={() => applyFilters(inViewOnly)}
+            >
+              Search
+            </Button>
+          </Group>
+          <NumberInput
+            size="xs"
+            aria-label="Maximum cloud cover"
+            placeholder="Maximum cloud cover %"
+            min={0}
+            max={100}
+            value={maxCloudCover}
+            onChange={setMaxCloudCover}
+          />
           <Checkbox
             size="xs"
             label="Only items in the current view"
@@ -430,7 +474,7 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
                   variant="subtle"
                   color="violet"
                   aria-label={`Browse ${c.id}`}
-                  onClick={() => void openCollection(c)}
+                  onClick={() => void openCollection(c, catalog)}
                 >
                   <IconChevronRight size={12} />
                 </ActionIcon>
@@ -508,7 +552,7 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
                 variant="subtle"
                 color="violet"
                 loading={busy}
-                onClick={() => void loadItems(nextUrl, true)}
+                onClick={() => void loadItems({ url: nextUrl, searchBody: null }, true)}
               >
                 Load more
               </Button>

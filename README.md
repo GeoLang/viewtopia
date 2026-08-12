@@ -78,7 +78,7 @@
 | **Auto-discovery** | Drop a folder in `src/plugins/` — automatically loaded |
 | **Plugin SDK** | Full context: map control, store access, API proxy, settings |
 | **Settings UI** | Each plugin declares settings schema, rendered in Settings panel |
-| **23 built-in plugins** | Industry verticals + QGIS-equivalent tools (see below) |
+| **20 built-in plugins** | Industry verticals + QGIS-equivalent tools (see below) |
 | **Hot reload** | Vite HMR — edit a plugin, see changes instantly |
 
 ### Portal & Content Management
@@ -115,7 +115,6 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 | **Export Map** | qgis2web | 1.6M | PNG/JPEG/HTML + embed codes |
 | **3D Viewer** | Qgis2threejs | 1.4M | deck.gl terrain + buildings |
 | **Street View** | Street View | 901K | Google + Mapillary integration |
-| **Data Catalog** | MetaSearch | 856K | STAC API (Earth Search, Planetary Computer) |
 | **KML Tools** | KML Tools | 771K | Import KML/KMZ/GPX, export KML |
 | **Shape Tools** | Shape Tools | 669K | Geodesic circles, ellipses, sectors, arcs |
 | **Point Sampling** | Point Sampling Tool | 662K | Multi-layer sampling + CSV export |

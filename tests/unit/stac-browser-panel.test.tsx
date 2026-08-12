@@ -35,6 +35,7 @@ globalThis.ResizeObserver = class {
 const CATALOG = 'https://example.org/stac/v1';
 const COLLECTIONS = `${CATALOG}/collections`;
 const ITEMS = `${COLLECTIONS}/sentinel-2-l2a/items`;
+const SEARCH = `${CATALOG}/search`;
 
 const ROOT_DOC = {
   id: 'example-stac',
@@ -86,6 +87,11 @@ const ITEMS_DOC = {
     },
   ],
   links: [{ rel: 'next', href: `${ITEMS}?page=2` }],
+};
+
+const SEARCH_DOC = {
+  ...ITEMS_DOC,
+  links: [{ rel: 'next', href: SEARCH, method: 'POST', body: {} }],
 };
 
 const OUTLINE_DOC = {
@@ -300,6 +306,70 @@ describe('StacBrowserPanel', () => {
     // no live renderer, so the bounds come from the shared camera fallback
     const [requested] = fetchMock.mock.calls[fetchMock.mock.calls.length - 1];
     expect(String(requested)).toMatch(/bbox=-?\d/);
+  });
+
+  it('searches with the filters the plain item listing cannot express', async () => {
+    respond((url) => {
+      if (url === CATALOG) return jsonOk(ROOT_DOC);
+      if (url === COLLECTIONS) return jsonOk(COLLECTIONS_DOC);
+      if (url === SEARCH) return jsonOk(SEARCH_DOC);
+      if (url.startsWith(ITEMS)) return jsonOk(ITEMS_DOC);
+      return jsonOk({}, 404);
+    });
+    await renderPanel();
+    await openCatalog();
+    await openCollection();
+
+    fireEvent.change(screen.getByLabelText('Search items'), { target: { value: 'reflectance' } });
+    fireEvent.change(screen.getByLabelText('Maximum cloud cover'), { target: { value: '20' } });
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText('Only items in the current view'));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+    });
+
+    const [requested, init] = fetchMock.mock.calls[fetchMock.mock.calls.length - 1];
+    expect(requested).toBe(SEARCH);
+    const sent = init as RequestInit;
+    expect(sent.method).toBe('POST');
+    const body = JSON.parse(String(sent.body));
+    expect(body).toMatchObject({
+      collections: ['sentinel-2-l2a'],
+      limit: 20,
+      q: 'reflectance',
+      query: { 'eo:cloud_cover': { lte: 20 } },
+    });
+    expect(body.bbox).toHaveLength(4);
+    expect(screen.getByTestId('stac-item-S2A_TILE_20240601')).toBeInTheDocument();
+    // the search pages through a POST link this client cannot replay
+    expect(screen.queryByRole('button', { name: 'Load more' })).toBeNull();
+  });
+
+  it('returns to the plain item listing once the filters are cleared', async () => {
+    respond((url) => {
+      if (url === CATALOG) return jsonOk(ROOT_DOC);
+      if (url === COLLECTIONS) return jsonOk(COLLECTIONS_DOC);
+      if (url === SEARCH) return jsonOk(SEARCH_DOC);
+      if (url.startsWith(ITEMS)) return jsonOk(ITEMS_DOC);
+      return jsonOk({}, 404);
+    });
+    await renderPanel();
+    await openCatalog();
+    await openCollection();
+
+    fireEvent.change(screen.getByLabelText('Search items'), { target: { value: 'reflectance' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+    });
+    expect(fetchMock.mock.calls[fetchMock.mock.calls.length - 1][0]).toBe(SEARCH);
+
+    fireEvent.change(screen.getByLabelText('Search items'), { target: { value: '' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+    });
+
+    expect(fetchMock).toHaveBeenLastCalledWith(`${ITEMS}?limit=20`, expect.anything());
   });
 
   it('saves a collection to the favourites and reopens it from there', async () => {
