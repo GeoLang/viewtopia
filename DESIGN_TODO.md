@@ -434,8 +434,10 @@ High value, product-level:
 
 Medium value:
 
-- [ ] **story map export**: standalone HTML, scroll-driven layout, presenter
-      view. Current stories are localStorage camera steps.
+- [ ] **story presenter view**: the Stories panel exports a scroll-driven
+      standalone page (2026-08-12), but there is no second window with speaker
+      notes, the next step and a synced position. Steps have no notes field to
+      show either.
 - [ ] **STAC catalog browser + data source manager panel**: browse services,
       databases, files and favorites in one place.
 

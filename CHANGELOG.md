@@ -6,6 +6,19 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-12: **a story exports as a scroll-driven page**. The Stories panel
+  writes a `story.html` you can open off disk: one card per step down the left,
+  a full-bleed MapLibre map behind them, and an IntersectionObserver flying the
+  map to a step's camera as that card reaches the middle of the screen. The
+  steps, their cameras, the layout and the page's own script are in the file;
+  the basemap tiles and the MapLibre bundle come off the network, so a reader
+  with no connection gets the cards and no map. Cesium camera heights and
+  pitches convert to MapLibre zoom and pitch on the way out, and a reader who
+  asked for reduced motion gets jumps instead of flights. As with the standalone
+  map export, a local .pmtiles basemap is refused rather than written into a
+  page nobody else can load. Layers and drawn features are not included, and
+  there is no presenter view.
+
 - 2026-08-11: **Travel time panel: service areas and OD matrices**. itinera
   already served both, but nothing in the viewer called them. Picking a centre
   on the map and a list of minutes draws one polygon per band, widest under
@@ -344,6 +357,12 @@ All notable changes to this project will be documented in this file.
   posting, segment rendering and the bell.
 
 ### Fixed
+
+- 2026-08-12: **the standalone map export drew no basemap**. Its raster style
+  carried the app's `cached://` tile URLs, which resolve only through the
+  offline cache protocol the app registers at startup, so the exported page had
+  nothing to load tiles from. Both standalone exports now write the plain XYZ
+  URL.
 
 - 2026-08-10: **the react e2e suite reaches no third-party host at all**. Two
   were left. The agent-layer basemap-change test picked Satellite, which is

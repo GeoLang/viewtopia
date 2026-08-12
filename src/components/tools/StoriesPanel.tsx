@@ -11,19 +11,22 @@ import {
   ScrollArea,
   Badge,
 } from '@mantine/core';
-import { IconBook, IconPlus, IconPlayerPlay, IconPlayerStop, IconTrash } from '@tabler/icons-react';
+import {
+  IconBook,
+  IconPlus,
+  IconPlayerPlay,
+  IconPlayerStop,
+  IconTrash,
+  IconFileDownload,
+} from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { getSharedCamera } from '../../hooks/sharedCamera';
 import { captureCameraState, flyToCameraState, type CameraState } from '../../store/cameraViews';
 import { useAccessibilityStore } from '../../store/accessibility';
-
-interface StoryStep {
-  id: string;
-  title: string;
-  description: string;
-  camera: CameraState;
-}
+import { useAppStore } from '../../store/app';
+import { rasterTiles, LOCAL_BASEMAP_REFUSAL } from '../../hooks/basemapTiles';
+import { buildStoryHtml, type StoryStep } from '../../lib/storyExport';
 
 const STORAGE_KEY = 'viewtopia-stories';
 
@@ -55,7 +58,10 @@ export function StoriesPanel({ onClose }: { onClose: () => void }) {
   const [dwellSec, setDwellSec] = useState(3);
   const [playing, setPlaying] = useState(false);
   const [current, setCurrent] = useState(-1);
+  const [status, setStatus] = useState<string | null>(null);
   const reduceMotion = useAccessibilityStore((s) => s.reduceMotion);
+  const basemap = useAppStore((s) => s.basemap);
+  const customBasemap = useAppStore((s) => s.customBasemap);
   const playRef = useRef(false);
 
   useEffect(() => {
@@ -98,6 +104,22 @@ export function StoriesPanel({ onClose }: { onClose: () => void }) {
     playRef.current = false;
     setPlaying(false);
     setCurrent(-1);
+  };
+
+  const exportHtml = () => {
+    const tile = rasterTiles(basemap, customBasemap);
+    if (!tile) {
+      setStatus(LOCAL_BASEMAP_REFUSAL);
+      return;
+    }
+    const html = buildStoryHtml({ title: steps[0]?.title ?? '', steps, basemap: tile });
+    const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'story.html';
+    link.click();
+    URL.revokeObjectURL(url);
+    setStatus('Exported story.html.');
   };
 
   return (
@@ -186,18 +208,35 @@ export function StoriesPanel({ onClose }: { onClose: () => void }) {
       </ScrollArea>
 
       {steps.length > 0 && (
-        <Button
-          size="xs"
-          variant="filled"
-          color={playing ? 'red' : 'violet'}
-          leftSection={playing ? <IconPlayerStop size={14} /> : <IconPlayerPlay size={14} />}
-          onClick={playing ? stop : play}
-          mt="xs"
-          fullWidth
-          data-testid="stories-play"
-        >
-          {playing ? 'Stop Story' : 'Play Story'}
-        </Button>
+        <Stack gap="xs" mt="xs">
+          <Button
+            size="xs"
+            variant="filled"
+            color={playing ? 'red' : 'violet'}
+            leftSection={playing ? <IconPlayerStop size={14} /> : <IconPlayerPlay size={14} />}
+            onClick={playing ? stop : play}
+            fullWidth
+            data-testid="stories-play"
+          >
+            {playing ? 'Stop Story' : 'Play Story'}
+          </Button>
+          <Button
+            size="xs"
+            variant="light"
+            color="violet"
+            leftSection={<IconFileDownload size={14} />}
+            onClick={exportHtml}
+            fullWidth
+            data-testid="stories-export"
+          >
+            Export scroll page
+          </Button>
+          {status && (
+            <Text size="xs" c="dimmed">
+              {status}
+            </Text>
+          )}
+        </Stack>
       )}
     </PanelCard>
   );
