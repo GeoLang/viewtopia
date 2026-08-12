@@ -136,11 +136,9 @@ anything multi-user ships, local packaging last.
       download, context config, inference-server setup. Wrap llama.cpp/ollama
       tooling rather than build. The differentiation lives in the eval harness
       proving which local model suffices, not in the installer.
-- [ ] **cross-session run history**: geodukt keeps every run with its manifest,
-      steps and caller, at `GET /runs`, and nothing exposes it. The executed plan
-      is visible only in the session that ran it. Needs a proxied route plus a
-      list view, and an access decision first: records name users, and geodukt
-      gates only `/run`, not `/runs`.
+- [ ] **runs carry no time**: a geodukt run record has an id, a manifest, steps
+      and a caller, but nothing saying when it ran. The run history panel can
+      only order by id and say so. Needs a timestamp on the record in geodukt.
 
 ## OPEN — ptolemy: what the write guard still leaves open (2026-07-30)
 

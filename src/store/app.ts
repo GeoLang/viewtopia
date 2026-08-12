@@ -75,6 +75,7 @@ export type ToolPanel =
   | 'rasterViewer'
   | 'imageOverlay'
   | 'toolbox'
+  | 'runHistory'
   | 'convert'
   | 'featurePicker'
   | 'geojsonEditor'
