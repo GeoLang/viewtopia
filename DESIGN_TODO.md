@@ -175,6 +175,17 @@ left open:
       viewtopia disables the Cesium InfoBox, and cesium 26.1.0 calls DOMPurify
       in one place only, `Credit.js`, in the string-returning mode. Recorded so
       nobody investigates it twice.
+
+      The fourth alert, `postcss` (CVE-2026-69153, an attacker-chosen
+      `sourceMappingURL` reading arbitrary `.map` files when `from` is unset),
+      was dismissed as stale: it named `package-lock.json`, which the pnpm
+      migration deleted, and the root lockfile is on 8.5.25, past the 8.5.23
+      fix. What it did not report is real: `dashboard/pnpm-lock.yaml` carries
+      8.4.31 as well, from `next@15.5.22`, whose package.json requires that
+      exact version with no range, so no update moves it and only a pnpm
+      override would. Left alone because it is build-time and
+      development-scope, and the dashboard compiles only its own stylesheets,
+      so no CSS anyone else chose reaches postcss.
 - [ ] **docs/index.html claims 15 QGIS ports against 11 cards.** The plugin
       count beside it was wrong too and is now correct. This one was left.
 
