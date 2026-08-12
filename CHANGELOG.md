@@ -6,6 +6,15 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-11: **Scale-dependent visibility**. A layer can be limited to a zoom
+  range, min inclusive and max exclusive, the way QGIS scale ranges and
+  MapLibre's minzoom/maxzoom work. The range sits on the layer rather than on
+  the symbology, so a single-colour layer can carry one too, and the symbology
+  editor offers it whether or not a field is worth shading by. MapLibre takes it
+  natively; Leaflet and Cesium have no scale range of their own, so they follow
+  the camera and take the layer off or put it back. It saves to the project file
+  and travels to live peers as a style override.
+
 - 2026-08-11: **SQL and vector basemap labels stop reaching a CDN**. DuckDB-WASM
   fetched its bundle from jsDelivr on the first query, and a pmtiles basemap
   pulled glyphs and sprites from protomaps.github.io, so even a locally served

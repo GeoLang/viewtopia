@@ -350,6 +350,26 @@ describe('live document bridge', () => {
     expect(layer.symbology?.kind).toBe('rules');
   });
 
+  it('publishes a layer zoom range and takes a peer range back', () => {
+    goLive();
+    useAgentLayerStore.getState().addLayer(agentLayer('rivers'), false);
+    useAgentLayerStore.getState().setZoomRange('rivers', { min: 8, max: 12 });
+
+    expect(documentLayers().rivers.styleOverrides?.zoomRange).toEqual({ min: 8, max: 12 });
+
+    server.applyFromPeer('ada', 'layers/rivers', {
+      ...documentLayers().rivers,
+      styleOverrides: { zoomRange: { min: 3, max: 6 } },
+    });
+    expect(useAgentLayerStore.getState().layers[0].zoomRange).toEqual({ min: 3, max: 6 });
+
+    server.applyFromPeer('ada', 'layers/rivers', {
+      ...documentLayers().rivers,
+      styleOverrides: {},
+    });
+    expect(useAgentLayerStore.getState().layers[0].zoomRange).toBeUndefined();
+  });
+
   it('writes annotations to the document and takes peer annotations back', () => {
     goLive();
     useAnnotationStore.getState().addAnnotation(annotation('note-1'));

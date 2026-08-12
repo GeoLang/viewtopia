@@ -8,7 +8,12 @@ import { cornersOfBbox } from '../../src/overlay/georeference';
 
 /** Enough of a maplibre style surface for the paint the hook writes. */
 function fakeMap() {
-  const layers: { id: string; paint: Record<string, unknown> }[] = [];
+  const layers: {
+    id: string;
+    paint: Record<string, unknown>;
+    minzoom?: number;
+    maxzoom?: number;
+  }[] = [];
   const sources: Record<string, { data?: unknown }> = {};
   return {
     isStyleLoaded: () => true,
@@ -21,7 +26,12 @@ function fakeMap() {
     removeSource: (id: string) => {
       delete sources[id];
     },
-    addLayer: (layer: { id: string; paint: Record<string, unknown> }) => {
+    addLayer: (layer: {
+      id: string;
+      paint: Record<string, unknown>;
+      minzoom?: number;
+      maxzoom?: number;
+    }) => {
       layers.push(layer);
     },
     removeLayer: (id: string) => {
@@ -116,6 +126,24 @@ describe('useAgentLayersMapLibre', () => {
     });
     const plain = map.source('agent-layer-risk')?.data as GeoJSON.FeatureCollection;
     expect(plain.features.map((f) => f.properties?.fill)).toEqual([undefined, undefined]);
+  });
+
+  it('hands the zoom range to maplibre, which hides the layer outside it', () => {
+    const map = fakeMap();
+    act(() => {
+      useAgentLayerStore.getState().addLayer({ ...layer(), zoomRange: { min: 8, max: 12 } });
+    });
+    mount(map);
+
+    for (const kind of ['fill', 'line', 'circle']) {
+      expect(map.layer(`agent-layer-risk-${kind}`)).toMatchObject({ minzoom: 8, maxzoom: 12 });
+    }
+
+    // no range means maplibre's own full span, so nothing is hidden
+    act(() => {
+      useAgentLayerStore.getState().setZoomRange('risk', null);
+    });
+    expect(map.layer('agent-layer-risk-fill')).toMatchObject({ minzoom: 0, maxzoom: 24 });
   });
 
   it('drapes a raster layer as an image source on its corners', () => {

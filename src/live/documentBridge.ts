@@ -187,6 +187,7 @@ function overridesFor(layer: AgentLayer): LiveLayerStyleOverrides | undefined {
   if (layer.color) overrides.color = layer.color;
   if (layer.style) overrides.style = layer.style;
   if (layer.symbology) overrides.symbology = layer.symbology;
+  if (layer.zoomRange) overrides.zoomRange = layer.zoomRange;
   return Object.keys(overrides).length > 0 ? overrides : undefined;
 }
 
@@ -498,7 +499,8 @@ function applyLayersFromDocument(document: LiveDocument): void {
 function applyEntryStyleOverrides(entry: LiveLayerEntry): void {
   const overrides = entry.styleOverrides;
   if (!overrides) return;
-  const { layers, setLayerColor, setLayerOpacity, setSymbology } = useAgentLayerStore.getState();
+  const { layers, setLayerColor, setLayerOpacity, setSymbology, setZoomRange } =
+    useAgentLayerStore.getState();
   const layer = layers.find((candidate) => candidate.id === entry.layerId);
   if (!layer) return;
   const color = overrides.color;
@@ -511,6 +513,9 @@ function applyEntryStyleOverrides(entry: LiveLayerEntry): void {
   }
   if (!sameJson(overrides.symbology, layer.symbology)) {
     applyFromDocument(() => setSymbology(layer.id, overrides.symbology ?? null));
+  }
+  if (!sameJson(overrides.zoomRange, layer.zoomRange)) {
+    applyFromDocument(() => setZoomRange(layer.id, overrides.zoomRange ?? null));
   }
 }
 

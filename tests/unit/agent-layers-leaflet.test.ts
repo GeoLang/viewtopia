@@ -240,6 +240,51 @@ describe('useAgentLayersLeaflet', () => {
     expect(countOn(map, L.CircleMarker)).toBe(0);
   });
 
+  it('draws a layer only while the map is inside its zoom range', () => {
+    const { result } = renderHook(() => useMapWithAgentLayers());
+    const map = result.current.current!;
+
+    act(() => {
+      useAgentLayerStore.getState().addLayer({
+        ...polygon('flood', 10, 50),
+        zoomRange: { min: 8, max: 12 },
+      });
+    });
+    // the fit lands well inside the range
+    expect(countOn(map, L.GeoJSON)).toBe(1);
+
+    act(() => {
+      map.setZoom(4, { animate: false });
+    });
+    expect(countOn(map, L.GeoJSON)).toBe(0);
+
+    act(() => {
+      map.setZoom(9, { animate: false });
+    });
+    expect(countOn(map, L.GeoJSON)).toBe(1);
+
+    // max is exclusive, matching MapLibre's maxzoom
+    act(() => {
+      map.setZoom(12, { animate: false });
+    });
+    expect(countOn(map, L.GeoJSON)).toBe(0);
+  });
+
+  it('draws a layer with no zoom range at every zoom', () => {
+    const { result } = renderHook(() => useMapWithAgentLayers());
+    const map = result.current.current!;
+
+    act(() => {
+      useAgentLayerStore.getState().addLayer(polygon('flood', 10, 50));
+    });
+    expect(countOn(map, L.GeoJSON)).toBe(1);
+
+    act(() => {
+      map.setZoom(1, { animate: false });
+    });
+    expect(countOn(map, L.GeoJSON)).toBe(1);
+  });
+
   it('shades each feature by its own colour once the layer is classified', () => {
     const { result } = renderHook(() => useMapWithAgentLayers());
     const scored: AgentLayer = {

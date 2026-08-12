@@ -20,6 +20,18 @@ export interface AgentLayerStyle {
   stroked?: boolean;
 }
 
+/**
+ * Zoom levels a layer draws over: min inclusive, max exclusive, the way
+ * MapLibre reads minzoom/maxzoom. 0 to 24 is the whole span, which is what a
+ * layer with no range set draws over.
+ */
+export interface ZoomRange {
+  min: number;
+  max: number;
+}
+
+export const ZOOM_LIMITS: ZoomRange = { min: 0, max: 24 };
+
 export interface AgentLayer {
   id: string;
   name: string;
@@ -39,11 +51,42 @@ export interface AgentLayer {
   sourceGeojson?: GeoJSON.FeatureCollection;
   /** Unset counts as visible. */
   visible?: boolean;
+  /** Unset means the layer draws at every zoom. */
+  zoomRange?: ZoomRange;
 }
 
 /** What the renderers draw: everything the layer switch has not turned off. */
 export function visibleLayers(layers: AgentLayer[]): AgentLayer[] {
   return layers.filter((layer) => layer.visible !== false);
+}
+
+/** Whether a layer's scale range lets it draw at this zoom. */
+export function drawnAtZoom(layer: AgentLayer, zoom: number): boolean {
+  const range = layer.zoomRange;
+  if (!range) return true;
+  return zoom >= range.min && zoom < range.max;
+}
+
+/**
+ * A range every renderer can take: whole zoom levels inside the limits, with
+ * room for at least one level, since MapLibre rejects a maxzoom at or under its
+ * minzoom. The whole span is no restriction at all, so it comes back as null.
+ */
+export function normalizeZoomRange(range: ZoomRange | null | undefined): ZoomRange | null {
+  if (!range || !Number.isFinite(range.min) || !Number.isFinite(range.max)) return null;
+  const min = Math.min(Math.max(Math.round(range.min), ZOOM_LIMITS.min), ZOOM_LIMITS.max - 1);
+  const max = Math.min(Math.max(Math.round(range.max), min + 1), ZOOM_LIMITS.max);
+  if (min === ZOOM_LIMITS.min && max === ZOOM_LIMITS.max) return null;
+  return { min, max };
+}
+
+function withZoomRange(layer: AgentLayer, range: ZoomRange | null | undefined): AgentLayer {
+  const normalized = normalizeZoomRange(range);
+  if (!normalized) {
+    const { zoomRange: _cleared, ...rest } = layer;
+    return rest;
+  }
+  return { ...layer, zoomRange: normalized };
 }
 
 /** The colour to draw a layer in, whether or not anyone chose one. */
@@ -105,6 +148,8 @@ interface AgentLayerState {
   setLayerColor: (id: string, color: string) => void;
   /** Style one layer by its data, or null to go back to one colour. */
   setSymbology: (id: string, symbology: Symbology | null) => void;
+  /** Limit one layer to a zoom range, or null to draw it at every zoom. */
+  setZoomRange: (id: string, range: ZoomRange | null) => void;
   /** Drape an image over the map; a known id replaces that layer. */
   addRasterLayer: (layer: AgentRasterLayer) => void;
   removeRasterLayer: (id: string) => void;
@@ -165,12 +210,17 @@ function sanitizeLayers(layers: AgentLayer[]): AgentLayer[] {
     if (features.length < layer.geojson.features.length) {
       console.warn(`agent layer "${layer.name}": dropped ${layer.geojson.features.length - features.length} out-of-range features`);
     }
-    out.push({
-      ...layer,
-      // a colour nobody chose stays unchosen, or it would be published to peers
-      ...(layer.color === undefined ? {} : { color: asColor(layer.color, DEFAULT_LAYER_COLOR) }),
-      geojson: { ...layer.geojson, features },
-    });
+    out.push(
+      withZoomRange(
+        {
+          ...layer,
+          // a colour nobody chose stays unchosen, or it would be published to peers
+          ...(layer.color === undefined ? {} : { color: asColor(layer.color, DEFAULT_LAYER_COLOR) }),
+          geojson: { ...layer.geojson, features },
+        },
+        layer.zoomRange,
+      ),
+    );
   }
   return out;
 }
@@ -218,6 +268,10 @@ export const useAgentLayerStore = create<AgentLayerState>((set) => ({
       layers: s.layers.map((l) =>
         l.id !== id ? l : symbology ? applySymbology(l, symbology) : clearSymbology(l),
       ),
+    })),
+  setZoomRange: (id, range) =>
+    set((s) => ({
+      layers: s.layers.map((l) => (l.id === id ? withZoomRange(l, range) : l)),
     })),
   addRasterLayer: (layer) =>
     set((s) => ({

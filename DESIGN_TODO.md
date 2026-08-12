@@ -427,9 +427,10 @@ High value, existing GeoLang crates supply the engine:
 High value, product-level:
 
 - [ ] **symbology, what the first cut left open** (categorized, graduated and
-      rule-based renderers plus the legend panel shipped 2026-08-02):
-      expression renderers, scale-dependent visibility, and SLD/QML/Mapbox
-      style import/export (fenestra already parses SLD server-side).
+      rule-based renderers plus the legend panel shipped 2026-08-02,
+      scale-dependent visibility 2026-08-11): expression renderers and
+      SLD/QML/Mapbox style import/export (fenestra already parses SLD
+      server-side).
 - [ ] **runtime plugin install**: plugins are build-time only
       (`import.meta.glob`). GeoLibre ships a marketplace with
       install/update/remove.

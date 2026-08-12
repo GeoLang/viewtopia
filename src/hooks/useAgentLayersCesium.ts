@@ -13,8 +13,16 @@ import {
   VerticalOrigin,
   type Viewer,
 } from 'cesium';
-import { useAgentLayerStore, layerColor, layerStyle, visibleLayers } from '../store/agentLayers';
+import {
+  useAgentLayerStore,
+  drawnAtZoom,
+  layerColor,
+  layerStyle,
+  visibleLayers,
+  type AgentLayer,
+} from '../store/agentLayers';
 import { useAppStore } from '../store/app';
+import { cameraZoom } from './cameraSync';
 import { bboxOfCorners, cornersAxisAligned } from '../overlay/georeference';
 import { OVERLAY_ENTITY_PREFIX, quadOverlayEntity } from '../overlay/cesiumQuad';
 
@@ -102,6 +110,18 @@ export function useAgentLayersCesium(viewerRef: MutableRefObject<Viewer | null>)
     const viewer = viewerRef.current;
     if (!viewer || viewer.isDestroyed()) return;
     let cancelled = false;
+    const drawn: { layer: AgentLayer; source: GeoJsonDataSource }[] = [];
+
+    // Cesium has no scale range, so the camera height stands in for a zoom the
+    // same way the shared camera reads it, and a layer outside its range is
+    // simply not shown.
+    const showForZoom = () => {
+      if (viewer.isDestroyed()) return;
+      const height = viewer.camera.positionCartographic?.height;
+      if (height === undefined) return;
+      const zoom = cameraZoom(height);
+      for (const { layer, source } of drawn) source.show = drawnAtZoom(layer, zoom);
+    };
 
     const apply = async () => {
       for (let i = viewer.dataSources.length - 1; i >= 0; i--) {
@@ -122,8 +142,10 @@ export function useAgentLayersCesium(viewerRef: MutableRefObject<Viewer | null>)
         if (cancelled || viewer.isDestroyed()) return;
         ds.name = `${PREFIX}${layer.id}`;
         await viewer.dataSources.add(ds);
+        drawn.push({ layer, source: ds });
         last = ds;
       }
+      showForZoom();
 
       // Frame only when a new spec arrives, never on a plain renderer switch.
       // Top-down, matching MapLibre's fitBounds: the shared camera stores the
@@ -137,9 +159,15 @@ export function useAgentLayersCesium(viewerRef: MutableRefObject<Viewer | null>)
       }
     };
 
+    viewer.camera.changed.addEventListener(showForZoom);
+    viewer.camera.moveEnd.addEventListener(showForZoom);
+
     void apply();
     return () => {
       cancelled = true;
+      if (viewer.isDestroyed()) return;
+      viewer.camera.changed.removeEventListener(showForZoom);
+      viewer.camera.moveEnd.removeEventListener(showForZoom);
     };
   }, [layers, generation, viewerRef, renderer, activeTab]);
 }

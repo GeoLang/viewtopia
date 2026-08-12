@@ -7,6 +7,7 @@ import {
   layerColor,
   layerStyle,
   visibleLayers,
+  ZOOM_LIMITS,
   type AgentMarker,
 } from '../store/agentLayers';
 import { useAppStore } from '../store/app';
@@ -103,6 +104,9 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
         const src = `${PREFIX}${layer.id}`;
         const style = layerStyle(layer);
         const color = layerColor(layer);
+        // the store's zoom range is already MapLibre's own, and the limits it
+        // falls back to are MapLibre's defaults, so this can go on unconditionally
+        const { min: minzoom, max: maxzoom } = layer.zoomRange ?? ZOOM_LIMITS;
         map.addSource(src, { type: 'geojson', data: layer.geojson });
         // One source can hold mixed geometry, so add a layer per kind.
         if (style.filled) {
@@ -110,6 +114,8 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
             id: `${src}-fill`,
             type: 'fill',
             source: src,
+            minzoom,
+            maxzoom,
             filter: ['==', ['geometry-type'], 'Polygon'],
             paint: {
               'fill-color': featureColor('fill', color),
@@ -122,6 +128,8 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
             id: `${src}-line`,
             type: 'line',
             source: src,
+            minzoom,
+            maxzoom,
             filter: ['in', ['geometry-type'], ['literal', ['LineString', 'Polygon']]],
             paint: {
               'line-color': featureColor('stroke', color),
@@ -133,6 +141,8 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
           id: `${src}-circle`,
           type: 'circle',
           source: src,
+          minzoom,
+          maxzoom,
           filter: ['==', ['geometry-type'], 'Point'],
           paint: {
             'circle-color': featureColor('marker-color', color),

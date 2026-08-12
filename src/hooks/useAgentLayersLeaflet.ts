@@ -1,7 +1,13 @@
 import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import L from 'leaflet';
-import { useAgentLayerStore, layerColor, layerStyle, visibleLayers } from '../store/agentLayers';
+import {
+  useAgentLayerStore,
+  drawnAtZoom,
+  layerColor,
+  layerStyle,
+  visibleLayers,
+} from '../store/agentLayers';
 import { simplestyleColor } from '../features/symbology/symbology';
 import { useAppStore } from '../store/app';
 import { agentLayersBounds } from './agentLayerBounds';
@@ -71,10 +77,10 @@ export function useAgentLayersLeaflet(mapRef: MutableRefObject<L.Map | null>) {
     const map = mapRef.current;
     if (!map) return;
 
-    const objs = visibleLayers(layers).map((layer) => {
+    const drawn = visibleLayers(layers).map((layer) => {
       const style = layerStyle(layer);
       const color = layerColor(layer);
-      return L.geoJSON(layer.geojson, {
+      const object = L.geoJSON(layer.geojson, {
         // a callback, not an object, so a classified layer's per-feature colour
         // is read off the feature's simplestyle properties
         style: (feature) => ({
@@ -93,8 +99,21 @@ export function useAgentLayersLeaflet(mapRef: MutableRefObject<L.Map | null>) {
             fillColor: simplestyleColor(feature, 'marker-color', color),
             fillOpacity: 1,
           }),
-      }).addTo(map);
+      });
+      return { layer, object };
     });
+
+    // Leaflet has no scale range of its own, so a layer outside its zoom range
+    // comes off the map and goes back on when the zoom returns.
+    const showForZoom = () => {
+      const zoom = map.getZoom();
+      for (const { layer, object } of drawn) {
+        if (drawnAtZoom(layer, zoom)) object.addTo(map);
+        else object.remove();
+      }
+    };
+    showForZoom();
+    map.on('zoomend', showForZoom);
 
     // Frame only when a new spec arrives, never on a plain tab switch.
     const bounds = agentLayersBounds(visibleLayers(layers));
@@ -110,9 +129,10 @@ export function useAgentLayersLeaflet(mapRef: MutableRefObject<L.Map | null>) {
     }
 
     return () => {
+      map.off('zoomend', showForZoom);
       // the map may already be gone (tab switch removes it), and Leaflet's
       // remove() is a no-op once the layer is detached
-      for (const o of objs) o.remove();
+      for (const { object } of drawn) object.remove();
     };
   }, [layers, generation, mapRef, activeTab]);
 }

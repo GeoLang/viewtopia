@@ -2,7 +2,12 @@ import { ActionIcon, Button, Group, NumberInput, Select, Stack, Text } from '@ma
 import { IconPlus, IconX } from '@tabler/icons-react';
 import type { ColorRamp } from '../../raster/types';
 import { propertyKeys } from '../../lib/geojsonSources';
-import { useAgentLayerStore, type AgentLayer } from '../../store/agentLayers';
+import {
+  useAgentLayerStore,
+  ZOOM_LIMITS,
+  type AgentLayer,
+  type ZoomRange,
+} from '../../store/agentLayers';
 import { useColumnLabels } from '../../store/datasetSchemas';
 import {
   CATEGORY_PALETTE,
@@ -31,6 +36,41 @@ function swatch(color: string, onChange: (c: string) => void) {
       data-testid="symbology-color"
       style={{ width: 22, height: 22, padding: 0, border: 'none', background: 'none', cursor: 'pointer', flexShrink: 0 }}
     />
+  );
+}
+
+/**
+ * The zoom levels the layer draws over. The whole span is stored as no range at
+ * all, so a layer nobody limited stays unlimited.
+ */
+function ZoomRangeControl({ layer }: { layer: AgentLayer }) {
+  const setZoomRange = useAgentLayerStore((s) => s.setZoomRange);
+  const range = layer.zoomRange ?? ZOOM_LIMITS;
+  const patch = (p: Partial<ZoomRange>) => setZoomRange(layer.id, { ...range, ...p });
+  const bound = (edge: 'min' | 'max', onChange: (value: number) => void) => (
+    <NumberInput
+      size="xs"
+      flex={1}
+      min={ZOOM_LIMITS.min}
+      max={ZOOM_LIMITS.max}
+      value={range[edge]}
+      onChange={(value) => {
+        if (value !== '') onChange(Number(value));
+      }}
+      data-testid={`agent-layer-${edge}-zoom`}
+    />
+  );
+  return (
+    <Group gap={4} wrap="nowrap" data-testid="agent-layer-zoom-range">
+      <Text size="xs" c="dimmed">
+        Zoom
+      </Text>
+      {bound('min', (min) => patch({ min }))}
+      <Text size="xs" c="dimmed">
+        to
+      </Text>
+      {bound('max', (max) => patch({ max }))}
+    </Group>
   );
 }
 
@@ -80,9 +120,12 @@ export function SymbologyEditor({ layer }: { layer: AgentLayer }) {
 
   if (kinds.length === 1) {
     return (
-      <Text size="xs" c="dimmed" data-testid="agent-layer-no-shading">
-        Nothing to style by: no field varies across these features.
-      </Text>
+      <Stack gap={6}>
+        <Text size="xs" c="dimmed" data-testid="agent-layer-no-shading">
+          Nothing to style by: no field varies across these features.
+        </Text>
+        <ZoomRangeControl layer={layer} />
+      </Stack>
     );
   }
 
@@ -268,6 +311,8 @@ export function SymbologyEditor({ layer }: { layer: AgentLayer }) {
       )}
 
       {sym && <SymbologyLegend sym={sym} />}
+
+      <ZoomRangeControl layer={layer} />
     </Stack>
   );
 }

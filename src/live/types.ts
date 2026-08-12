@@ -1,6 +1,6 @@
 import type { Corners } from '../overlay/georeference';
 import type { Symbology } from '../features/symbology/symbology';
-import type { AgentLayerStyle } from '../store/agentLayers';
+import type { AgentLayerStyle, ZoomRange } from '../store/agentLayers';
 import type { LayerItem } from '../store/app';
 import type { OGCType } from '../store/ogcLayers';
 import type { CameraState } from '../store/cameraViews';
@@ -12,6 +12,8 @@ export interface LiveLayerStyleOverrides {
   color?: string;
   style?: AgentLayerStyle;
   symbology?: Symbology | null;
+  /** the zoom levels the publisher limited the layer to */
+  zoomRange?: ZoomRange | null;
 }
 
 /**
