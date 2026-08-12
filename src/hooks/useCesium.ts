@@ -27,14 +27,19 @@ interface UseCesiumOptions {
   slot?: 'active' | 'pane';
 }
 
-/** Cesium is raster-only, so a vector basemap resolves to its raster fallback. */
-function cesiumImageryProvider(basemap: string, custom?: CustomBasemap | null) {
+/**
+ * Cesium is raster-only, so a vector basemap resolves to its raster fallback.
+ * Null for a local .pmtiles archive, which Cesium cannot read at all: the globe
+ * shows no imagery rather than some other basemap.
+ */
+export function cesiumImageryProvider(basemap: string, custom?: CustomBasemap | null) {
   if (basemap === 'osm') {
     return new OpenStreetMapImageryProvider({
       url: 'https://tile.openstreetmap.org/',
     });
   }
   const tile = rasterTiles(basemap, custom);
+  if (!tile) return null;
   return new UrlTemplateImageryProvider({
     url: tile.url,
     maximumLevel: basemap === 'topo' ? 17 : 19,
@@ -110,9 +115,8 @@ export function useCesium(opts: UseCesiumOptions = {}) {
     }
 
     // Add basemap imagery
-    viewer.imageryLayers.addImageryProvider(
-      cesiumImageryProvider(basemap, customBasemap),
-    );
+    const imagery = cesiumImageryProvider(basemap, customBasemap);
+    if (imagery) viewer.imageryLayers.addImageryProvider(imagery);
 
     // Restore shared camera
     applyCesiumCamera(viewer, getSharedCamera());
@@ -142,7 +146,8 @@ export function useCesium(opts: UseCesiumOptions = {}) {
     const viewer = viewerRef.current;
     if (!viewer || viewer.isDestroyed() || !isActive) return;
     viewer.imageryLayers.removeAll();
-    viewer.imageryLayers.addImageryProvider(cesiumImageryProvider(basemap, customBasemap));
+    const imagery = cesiumImageryProvider(basemap, customBasemap);
+    if (imagery) viewer.imageryLayers.addImageryProvider(imagery);
   }, [basemap, customBasemap, isActive]);
 
   // In split view both panes move together

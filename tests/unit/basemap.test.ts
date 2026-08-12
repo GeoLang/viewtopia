@@ -71,7 +71,7 @@ describe('raster basemaps', () => {
   });
 
   it('keeps maplibreRasterStyle usable on its own', () => {
-    const style = maplibreRasterStyle('satellite');
+    const style = maplibreRasterStyle(BASEMAP_TILES.satellite);
     expect(style.sources.basemap).toMatchObject({
       tiles: [cachedTileUrl(BASEMAP_TILES.satellite.url)],
     });

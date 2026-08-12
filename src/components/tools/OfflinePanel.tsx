@@ -51,7 +51,10 @@ export function OfflinePanel({ onClose }: { onClose: () => void }) {
     void load();
   }, [load]);
 
+  const tile = rasterTiles(basemap, customBasemap);
+
   const handleCache = async () => {
+    if (!tile) return;
     const view = getViewBounds();
     const bounds = { west: view.west, south: view.south, east: view.east, north: view.north };
     const min = Math.max(0, Math.min(MAX_ZOOM, Math.round(getSharedCamera().zoom)));
@@ -64,7 +67,6 @@ export function OfflinePanel({ onClose }: { onClose: () => void }) {
       return;
     }
 
-    const tile = rasterTiles(basemap, customBasemap);
     setCaching(true);
     setDone(0);
     setTotal(tiles);
@@ -142,13 +144,19 @@ export function OfflinePanel({ onClose }: { onClose: () => void }) {
           color="violet"
           leftSection={<IconDownload size={14} />}
           onClick={handleCache}
-          disabled={caching}
+          disabled={caching || !tile}
           fullWidth
         >
           {caching ? `Caching... ${done}/${total}` : 'Cache Current View'}
         </Button>
 
-        {isVectorBasemap(basemap) && (
+        {!tile && (
+          <Text size="xs" c="dimmed" data-testid="offline-local-notice">
+            A local archive is already on disk, so there is nothing to download.
+          </Text>
+        )}
+
+        {tile && isVectorBasemap(basemap) && (
           <Text size="xs" c="dimmed" data-testid="offline-raster-notice">
             Vector basemap, so the closest raster tiles are cached instead.
           </Text>

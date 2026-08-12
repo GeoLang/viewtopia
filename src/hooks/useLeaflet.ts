@@ -33,13 +33,12 @@ export function useLeaflet(opts: UseLeafletOptions = {}) {
     });
 
     const state = useAppStore.getState();
+    // a local .pmtiles archive has no tile URL leaflet could fetch, so the map
+    // stays empty rather than showing some other basemap
     const tile = rasterTiles(state.basemap, state.customBasemap);
-    const layer = L.tileLayer(tile.url, {
-      attribution: tile.attr,
-      maxZoom: 19,
-    }).addTo(map);
-
-    tileRef.current = layer;
+    tileRef.current = tile
+      ? L.tileLayer(tile.url, { attribution: tile.attr, maxZoom: 19 }).addTo(map)
+      : null;
 
     // Write shared camera on move
     map.on('moveend', () => {
@@ -69,11 +68,9 @@ export function useLeaflet(opts: UseLeafletOptions = {}) {
       if (layer instanceof L.TileLayer) map.removeLayer(layer);
     });
     const tile = rasterTiles(basemap, customBasemap);
-    const layer = L.tileLayer(tile.url, {
-      attribution: tile.attr,
-      maxZoom: 19,
-    }).addTo(map);
-    tileRef.current = layer;
+    tileRef.current = tile
+      ? L.tileLayer(tile.url, { attribution: tile.attr, maxZoom: 19 }).addTo(map)
+      : null;
     // customBasemap is a dependency too: another catalog entry keeps
     // basemap === 'custom' and changes only the tiles
   }, [basemap, customBasemap]);

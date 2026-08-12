@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { CameraState } from './cameraViews';
-import type { Basemap, CustomBasemap } from '../hooks/basemapTiles';
+import type { Basemap, CustomBasemap, LocalBasemap } from '../hooks/basemapTiles';
 
 export type ViewerTab = 'globe' | 'map';
 export type Renderer = 'cesium' | 'maplibre';
-export type { Basemap, CustomBasemap };
+export type { Basemap, CustomBasemap, LocalBasemap };
 
 /**
  * Read a renderer from persisted state, a share link or an agent command.
@@ -142,6 +142,9 @@ interface AppState {
   /** tiles behind basemap 'custom', set by the basemap catalog plugin */
   customBasemap: CustomBasemap | null;
   setCustomBasemap: (bm: CustomBasemap) => void;
+  /** archive behind basemap 'local', picked off disk in the basemap picker */
+  localBasemap: LocalBasemap | null;
+  setLocalBasemap: (local: LocalBasemap) => void;
 
   // Tool panels
   activePanel: ToolPanel;
@@ -231,6 +234,8 @@ export const useAppStore = create<AppState>()(
       setBasemap: (basemap) => set({ basemap }),
       customBasemap: null,
       setCustomBasemap: (customBasemap) => set({ customBasemap, basemap: 'custom' }),
+      localBasemap: null,
+      setLocalBasemap: (localBasemap) => set({ localBasemap, basemap: 'local' }),
 
       activePanel: null,
       setActivePanel: (activePanel) => set({ activePanel }),
@@ -291,6 +296,11 @@ export const useAppStore = create<AppState>()(
         basemap: state.basemap,
         // persisted with the basemap so a reload of 'custom' still has its tiles
         customBasemap: state.customBasemap,
+        // the archive is a File this tab holds, so a reload comes back knowing
+        // which one to ask for and nothing more
+        localBasemap: state.localBasemap
+          ? { name: state.localBasemap.name, status: 'needs-file' as const }
+          : null,
         renderer: state.renderer,
         // a live document's bookmarks belong to the document, so they never
         // overwrite the ones this browser owns

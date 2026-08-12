@@ -33,6 +33,7 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
   const basemap = useAppStore((s) => s.basemap);
   const selfHostedUrl = useAppStore((s) => s.settings.selfHostedBasemapUrl);
   const customBasemap = useAppStore((s) => s.customBasemap);
+  const localBasemap = useAppStore((s) => s.localBasemap);
   const renderer = useAppStore((s) => s.renderer);
   const activeTab = useAppStore((s) => s.activeTab);
   const splitActive = useSplitViewStore((s) => s.active);
@@ -45,7 +46,9 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
     (isPane ? splitActive && paneRenderer === 'maplibre' : renderer === 'maplibre');
   // the custom url is part of the key: picking another catalog entry keeps
   // basemap === 'custom' and only changes the tiles
-  const styleKey = `${basemap}|${selfHostedUrl}|${customBasemap?.url ?? ''}`;
+  const styleKey = `${basemap}|${selfHostedUrl}|${customBasemap?.url ?? ''}|${
+    localBasemap ? `${localBasemap.name}:${localBasemap.status}` : ''
+  }`;
 
   // Create/destroy map based on active state
   useEffect(() => {
@@ -73,7 +76,7 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
 
     const map = new maplibregl.Map({
       container,
-      style: maplibreStyle(basemap, selfHostedUrl, customBasemap),
+      style: maplibreStyle(basemap, selfHostedUrl, customBasemap, localBasemap),
       center: [cam.longitude, cam.latitude],
       zoom: cam.zoom,
       pitch: cam.pitch,
@@ -109,6 +112,7 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
     basemap,
     selfHostedUrl,
     customBasemap,
+    localBasemap,
     styleKey,
     isPane,
     register,
@@ -126,11 +130,11 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
     const z = map.getZoom();
     const p = map.getPitch();
     const b = map.getBearing();
-    map.setStyle(maplibreStyle(basemap, selfHostedUrl, customBasemap));
+    map.setStyle(maplibreStyle(basemap, selfHostedUrl, customBasemap, localBasemap));
     map.once('styledata', () => {
       map.jumpTo({ center: c, zoom: z, pitch: p, bearing: b });
     });
-  }, [basemap, selfHostedUrl, customBasemap, styleKey, isActive]);
+  }, [basemap, selfHostedUrl, customBasemap, localBasemap, styleKey, isActive]);
 
   // In split view both panes move together
   useFollowSharedCamera(

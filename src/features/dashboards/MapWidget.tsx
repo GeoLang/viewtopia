@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import { Stack, Group, NumberInput } from '@mantine/core';
-import { maplibreRasterStyle } from '../../hooks/basemapTiles';
+import { maplibreRasterStyle, VECTOR_APPROX_RASTER } from '../../hooks/basemapTiles';
 import { useDashboardsStore } from './store';
 import type { DashboardWidget } from './types';
 
@@ -14,7 +14,7 @@ export function MapView({ center, zoom }: { center: [number, number]; zoom: numb
     if (!containerRef.current || mapRef.current) return;
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: maplibreRasterStyle('dark'),
+      style: maplibreRasterStyle(VECTOR_APPROX_RASTER.dark),
       center,
       zoom,
       attributionControl: false,
