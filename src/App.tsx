@@ -30,6 +30,7 @@ import { useViewOnlyLive } from './live/liveStore';
 import { useSpaceTimeStore } from './features/spacetime/store';
 import { useCallback, useRef, useEffect, useState } from 'react';
 import { initNetworkMonitor } from './offline/network';
+import { registerAppShellWorker } from './offline/appShellWorker';
 import { initSync } from './offline/sync';
 import { startDocumentBridge } from './live/documentBridge';
 import { useJoinLiveFromLink } from './live/joinFromLink';
@@ -66,6 +67,7 @@ export function App() {
   useEffect(() => {
     initNetworkMonitor();
     initSync();
+    registerAppShellWorker();
   }, []);
 
   // mirrors layers, annotations and bookmarks while a live document is open

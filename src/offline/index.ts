@@ -7,6 +7,7 @@ export type { OfflineLayer, OfflineFeature, OfflineAnnotation, PendingOperation,
 export { initSync, syncNow, discardPending, queueOperation, onSyncStateChange, getSyncState, clearConflicts, ConflictError } from './sync';
 export { isOnline, useNetworkStore, initNetworkMonitor, onNetworkChange } from './network';
 export { offlineFetch, precacheUrls, cacheTilesForArea } from './cache';
+export { registerAppShellWorker } from './appShellWorker';
 export { useOnlineStatus, useSyncStatus } from './hooks';
 export { OfflineIndicator } from './OfflineIndicator';
 export { threeWayMerge, batchMerge, resolveAllConflicts, resolveConflictManually } from './conflicts';
