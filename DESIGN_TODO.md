@@ -4,7 +4,7 @@
 > Status keys: `[ ]` todo · `[~]` in progress · `[!]` blocked.
 > **Open work only** — a completed item is deleted; durable design knowledge folds
 > into DESIGN.md's current-state sections, dated history goes in per-repo changelogs.
-> Last brought current: **2026-08-08**.
+> Last brought current: **2026-08-12**.
 
 ---
 
@@ -121,10 +121,12 @@ anything multi-user ships, local packaging last.
 - [~] **geodukt as plan substrate**: plan-then-approve flow shipped (see the
       history log). Every plan step now carries `runs_caller_code`, set from the
       tool's own `TOOL_RUNS_CALLER_CODE` declaration, so the panel can mark an
-      escape-hatch step before approval, and PlanPanel marks it. Still open:
-      whether approving such a step should cost an extra click, and sql_query
-      called on its own still bypasses the plan surface entirely, so it stays
-      persona-discouraged there.
+      escape-hatch step before approval, and PlanPanel marks it. Marking it is
+      as far as it goes: the owner decided 2026-08-12 that approval costs no
+      extra click, because gating it means sql_query emitting a one-step plan
+      instead of a viewer command, which adds a click to every ad-hoc query.
+      Still open: sql_query called on its own bypasses the plan surface
+      entirely, so it stays persona-discouraged there.
 - [~] **permission-aware enforcement**: the far end is now enforced in every
       service (per-repo changelogs): tiletopia gates annotations, plugin
       mutations and the asset listing, collecta enforces roles and form
@@ -137,9 +139,11 @@ anything multi-user ships, local packaging last.
       download, context config, inference-server setup. Wrap llama.cpp/ollama
       tooling rather than build. The differentiation lives in the eval harness
       proving which local model suffices, not in the installer.
-- [ ] **runs carry no time**: a geodukt run record has an id, a manifest, steps
-      and a caller, but nothing saying when it ran. The run history panel can
-      only order by id and say so. Needs a timestamp on the record in geodukt.
+- [ ] **geodukt run history belongs to one process's database file**: records
+      persist to sqlite and carry start and finish times now, but an id comes
+      from `MAX(id)+1` under a mutex, so two processes sharing one file collide
+      on the primary key and the loser answers 500. Right for one instance,
+      wrong for replicas.
 
 ## OPEN — ptolemy: what the write guard still leaves open (2026-07-30)
 
@@ -427,8 +431,10 @@ High value, product-level:
       scale-dependent visibility 2026-08-11, SLD import 2026-08-12): expression
       renderers, SLD export, and QML/Mapbox style import/export.
 - [ ] **runtime plugin install**: plugins are build-time only
-      (`import.meta.glob`). GeoLibre ships a marketplace with
-      install/update/remove.
+      (`import.meta.glob` in `src/plugins/registry.ts`). GeoLibre ships a
+      marketplace with install/update/remove. Decided already: an install
+      pulls only from an owner-controlled registry, and a self-hoster may
+      point at their own.
 
 Medium value:
 
@@ -436,14 +442,10 @@ Medium value:
       standalone page (2026-08-12), but there is no second window with speaker
       notes, the next step and a synced position. Steps have no notes field to
       show either.
-- [ ] **STAC catalog browser + data source manager panel**: browse services,
-      databases, files and favorites in one place.
-
 - [ ] **data source manager panel**: the STAC Browser panel covers catalogs,
-      collections, items, assets and saved favourites. Services, databases and
-      files are still one panel each (OGC Layers, SQL, Import), not one place.
-      The data-catalog plugin is a shallower duplicate of the STAC half and
-      should go.
+      collections, items, assets and saved favourites, and filters items by
+      free text, current view and cloud cover. Services, databases and files
+      are still one panel each (OGC Layers, SQL, Import), not one place.
 - [ ] **isochrones/service areas and OD matrices**, served by itinera.
 - [ ] **print layout with atlas/map-series generation**: current export is a
       canvas screenshot.
@@ -451,8 +453,9 @@ Medium value:
       as the Timelapse panel over geoplumb).
 - [ ] **map-to-video recording and route animation with MP4 export**: the
       flythrough panel plays live but exports nothing.
-- [ ] **offline area download** with service-worker caching. See the offline
-      story section below for the audit.
+- [ ] **offline area download**: regions download and the app shell is
+      service-worker cached. What is left is in the offline story section
+      below.
 
 ## OPEN: viewtopia offline story (audited 2026-07-30)
 
@@ -463,19 +466,6 @@ survives reloads and syncs back, and a service worker precaches the built app
 shell, so a reload with no network still boots the viewer. Everything below is
 what does not work.
 
-- [ ] **cesium and leaflet still fetch raster tiles from the network.** The
-      cached:// protocol serves MapLibre from the offline tile cache, but the
-      other renderers build plain tile URLs, so offline basemaps are
-      MapLibre-only. Cesium would need an ImageryProvider over the cache. A
-      local .pmtiles basemap is MapLibre-only for the same reason, and those
-      renderers draw no basemap while one is selected.
-
-- [ ] **no service worker.** `public/manifest.json` exists but nothing
-      registers a worker and vite has no PWA plugin, so the app shell needs the
-      server on every load. Offline today only means "the tab was already
-      open".
-
-      MapLibre-only. Cesium would need an ImageryProvider over the cache.
 - [ ] **DuckDB's spatial extension still loads from extensions.duckdb.org.**
       The wasm bundle and the basemap glyphs are served from the app origin
       now, so plain SQL works with no network, but `getConnection()` runs
@@ -497,22 +487,11 @@ any interval as on-demand composite tiles (the Timelapse panel is the proof).
 What still separates it from GEE, engine details in geoplumb's DESIGN.md
 Known limits:
 
-- [ ] **item footprint under-coverage** (remainder of the mixed-CRS fix,
-      2026-08-07): cross-CRS items now warp onto the anchor grid at read,
-      but an item's lon/lat footprint converts to the anchor CRS through
-      two opposite corners, under-covering a rotated cross-zone quad by up
-      to ~2 km on its far side, so a chunk entirely inside that strip
-      still skips the item. Fix is converting the footprint through a
-      densified envelope, which also widens same-CRS footprints slightly.
-- [ ] **zonal endpoint edge protections**: /zonal and /zonal/series ship
-      with input validation and resource caps but no per-request timeout
-      or concurrency limit; that belongs at the edge (nginx or a tower
-      layer), not in the crate. Also document that overlapping zones
-      resolve by burn order (a contained zone reads empty, not an error).
-- [ ] **composite latency and memory on dense collections**: a reducing
-      composite reads every intersecting item with the whole stack resident
-      per window. Fine at a few items, not at hundreds. Streaming reductions
-      for mean/min/max would come cheap; median needs the stack.
+- [ ] **composite latency and memory on dense collections**: mean, min, max,
+      stddev and count now fold item by item, so their peak is one read wave
+      however deep the stack. Median and percentile still need every value at
+      a pixel at once and hold the whole stack. Latency is untouched either
+      way: every intersecting item is still read.
 - [ ] **in-region deployment**: cold pulls are bound by the residential
       link to us-west-2. Serving next to the data is the remaining latency
       lever; blocked on an AWS account decision (2026-08-05).
