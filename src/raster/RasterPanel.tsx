@@ -55,8 +55,14 @@ interface VectorResult {
   color: string;
 }
 
-export function RasterPanel({ onClose }: { onClose: () => void }) {
-  const [url, setUrl] = useState('');
+interface RasterPanelProps {
+  onClose: () => void;
+  /** an asset href the STAC browser sent here, prefilled rather than loaded */
+  initialUrl?: string;
+}
+
+export function RasterPanel({ onClose, initialUrl = '' }: RasterPanelProps) {
+  const [url, setUrl] = useState(initialUrl);
   const [raster, setRaster] = useState<LoadedRaster | null>(null);
   const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState<string | null>(null);

@@ -32,6 +32,19 @@ All notable changes to this project will be documented in this file.
   opens it for the file. A live document carries no basemap at all, so a peer
   keeps their own.
 
+- 2026-08-11: **a STAC catalog is browsable down to its assets**. The new STAC
+  Browser panel (Data menu) takes a catalog URL, follows its `data` link to the
+  collections, opens a collection to a page of items, and lists each item's
+  assets with what the viewer can do with them: a GeoJSON asset becomes a map
+  layer, a `.pmtiles` asset an OGC layer whose header is read on the spot, a
+  `{z}/{x}/{y}` template an XYZ layer, and a COG opens prefilled in Raster
+  Analysis, which is the panel that can actually do something with one. Items
+  can be cut to the current view, and their footprints go on the map as one
+  layer, which is how you see what a collection covers before opening anything.
+  A catalog or a single collection can be starred, and the stars persist. The
+  platform bearer only goes to a catalog on our own origin: the well-known
+  catalogs are third-party servers with no business seeing a session token.
+
 - 2026-08-11: **a dead session ends instead of erroring**. Platform sessions
   last 24 hours, and one that expired while a tab stayed open surfaced whichever
   service refused first, so agora's "invalid or expired token" reached a live

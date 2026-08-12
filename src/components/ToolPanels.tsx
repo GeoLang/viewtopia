@@ -11,6 +11,8 @@ import { FeaturePickerPanel } from './tools/FeaturePickerPanel';
 import { GeoJsonEditorPanel } from './tools/GeoJsonEditorPanel';
 import { StyleEditorPanel } from './tools/StyleEditorPanel';
 import { PortalPanel } from '../features/portal/PortalPanel';
+import { StacBrowserPanel } from '../features/stac/StacBrowserPanel';
+import { useStacStore } from '../features/stac/store';
 import { DashboardPanel } from '../features/dashboards/DashboardPanel';
 import { ProjectPanel } from '../features/project/ProjectPanel';
 import { SqlWorkspacePanel } from '../features/sql/SqlWorkspacePanel';
@@ -103,6 +105,7 @@ export function ToolPanels() {
   const addOgcLayer = useOgcLayerStore((s) => s.addLayer);
   const removeOgcLayer = useOgcLayerStore((s) => s.removeLayer);
   const addAgentLayer = useAgentLayerStore((s) => s.addLayer);
+  const stacRasterUrl = useStacStore((s) => s.rasterAnalysisUrl);
   const flyTo = useSpaceTimeStore((s) => s.flyTo);
   // Space-Time lives in its own store but is one of the panels users open from
   // the toolbar, so Escape closes it here too rather than in a second listener.
@@ -145,6 +148,8 @@ export function ToolPanels() {
       return <StyleEditorPanel onClose={close} />;
     case 'portal':
       return <PortalPanel onClose={close} />;
+    case 'stacBrowser':
+      return <StacBrowserPanel onClose={close} />;
     case 'dashboards':
       return <DashboardPanel onClose={close} />;
     case 'geocoding':
@@ -281,7 +286,7 @@ export function ToolPanels() {
     case 'vectorTiles':
       return <VectorTilesPanel onClose={close} />;
     case 'rasterViewer':
-      return <RasterPanel onClose={close} />;
+      return <RasterPanel onClose={close} initialUrl={stacRasterUrl} />;
     case 'toolbox':
       return <ToolboxPanel onClose={close} />;
     case 'imageOverlay':

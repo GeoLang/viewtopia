@@ -438,6 +438,13 @@ Medium value:
       view. Current stories are localStorage camera steps.
 - [ ] **STAC catalog browser + data source manager panel**: browse services,
       databases, files and favorites in one place.
+
+- [ ] **data source manager panel**: the STAC Browser panel covers catalogs,
+      collections, items, assets and saved favourites. Services, databases and
+      files are still one panel each (OGC Layers, SQL, Import), not one place.
+      The data-catalog plugin is a shallower duplicate of the STAC half and
+      should go.
+- [ ] **isochrones/service areas and OD matrices**, served by itinera.
 - [ ] **print layout with atlas/map-series generation**: current export is a
       canvas screenshot.
 - [ ] **time slider over PMTiles archives** (the STAC side shipped 2026-08-06
