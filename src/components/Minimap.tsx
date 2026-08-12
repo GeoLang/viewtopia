@@ -6,6 +6,7 @@ import { useAppStore } from '../store/app';
 import { MOBILE_QUERY } from '../theme';
 import { getSharedCamera } from '../hooks/sharedCamera';
 import { rasterTiles } from '../hooks/basemapTiles';
+import { CachedTileLayer } from '../offline/cachedTileLayer';
 
 /**
  * Minimap — Leaflet overview map synced to the active renderer's camera
@@ -42,7 +43,7 @@ export function Minimap() {
 
     // follows the selected basemap so the overview isn't stuck on one provider
     const tile = rasterTiles(basemap, customBasemap);
-    L.tileLayer(tile.url, { attribution: tile.attr, maxZoom: 18 }).addTo(map);
+    new CachedTileLayer(tile.url, { attribution: tile.attr, maxZoom: 18 }).addTo(map);
 
     const rect = L.rectangle(
       [

@@ -452,10 +452,6 @@ online/offline detection, mutation queue with retry, three-way column-level
 conflict merge, `offlineFetch()` API response cache. Data already loaded
 survives reloads and syncs back. Everything below is what does not work.
 
-- [ ] **cesium and leaflet still fetch raster tiles from the network.** The
-      cached:// protocol serves MapLibre from the offline tile cache, but the
-      other renderers build plain tile URLs, so offline basemaps are
-      MapLibre-only. Cesium would need an ImageryProvider over the cache.
 - [ ] **no service worker.** `public/manifest.json` exists but nothing
       registers a worker and vite has no PWA plugin, so the app shell needs the
       server on every load. Offline today only means "the tab was already

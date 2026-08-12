@@ -5,11 +5,14 @@ vi.mock('maplibre-gl', () => ({
 }));
 
 const get = vi.fn();
+const put = vi.fn(async () => {});
 vi.mock('../../src/offline/db', () => ({
-  tileCache: { get: (key: string) => get(key) },
+  apiCache: { get: vi.fn(), put: vi.fn() },
+  tileCache: { get: (key: string) => get(key), put: (tile: unknown) => put(tile) },
 }));
 
 import maplibregl from 'maplibre-gl';
+import { useNetworkStore } from '../../src/offline/network';
 import {
   cachedTileUrl,
   loadCachedTile,
@@ -25,13 +28,14 @@ function substituted(z: number, x: number, y: number): string {
     .replace('{y}', String(y));
 }
 
-function setOnline(value: boolean) {
-  Object.defineProperty(navigator, 'onLine', { value, configurable: true });
+function setOnline(online: boolean) {
+  useNetworkStore.setState({ online });
 }
 
 describe('cached tile protocol', () => {
   beforeEach(() => {
     get.mockReset();
+    put.mockClear();
     setOnline(true);
   });
 
@@ -46,9 +50,13 @@ describe('cached tile protocol', () => {
     expect(maplibregl.addProtocol).toHaveBeenCalledWith('cached', loadCachedTile);
   });
 
-  it('fetches from the network while online', async () => {
+  it('fetches from the network while online and keeps the tile', async () => {
     const bytes = new Uint8Array([1, 2, 3]).buffer;
-    const fetchMock = vi.fn(async () => ({ ok: true, arrayBuffer: async () => bytes }));
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      arrayBuffer: async () => bytes,
+      headers: { get: () => 'image/png' },
+    }));
     vi.stubGlobal('fetch', fetchMock);
 
     const result = await loadCachedTile({ url: substituted(10, 5, 7) }, new AbortController());
@@ -59,6 +67,9 @@ describe('cached tile protocol', () => {
     );
     expect(result.data).toBe(bytes);
     expect(get).not.toHaveBeenCalled();
+    expect(put).toHaveBeenCalledWith(
+      expect.objectContaining({ key: `10/5/7@${TEMPLATE}`, blob: bytes }),
+    );
   });
 
   it('falls back to the cache when the network fails', async () => {

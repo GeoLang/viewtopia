@@ -1,5 +1,5 @@
 import maplibregl from 'maplibre-gl';
-import { tileCache } from './db';
+import { loadTile } from './cache';
 
 /**
  * cached:// tile scheme: network first while online, IndexedDB tile cache as
@@ -29,23 +29,13 @@ export async function loadCachedTile(
   const match = params.url.match(/^cached:\/\/(\d+)\/(\d+)\/(\d+)\?t=(.+)$/);
   if (!match) throw new Error(`bad cached tile url: ${params.url}`);
   const [, z, x, y, encoded] = match;
-  const template = decodeURIComponent(encoded);
-  const key = `${z}/${x}/${y}@${template}`;
 
-  if (navigator.onLine) {
-    try {
-      const networkUrl = template
-        .replace('{z}', z)
-        .replace('{x}', x)
-        .replace('{y}', y);
-      const resp = await fetch(networkUrl, { signal: abortController.signal });
-      if (resp.ok) return { data: await resp.arrayBuffer() };
-    } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') throw err;
-    }
-  }
-
-  const hit = await tileCache.get(key);
-  if (hit) return { data: hit.blob };
-  throw new Error(`tile not cached: ${key}`);
+  const tile = await loadTile(
+    decodeURIComponent(encoded),
+    Number(z),
+    Number(x),
+    Number(y),
+    abortController.signal,
+  );
+  return { data: tile.bytes };
 }
