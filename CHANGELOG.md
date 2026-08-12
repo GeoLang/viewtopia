@@ -6,6 +6,18 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-11: **Travel time panel: service areas and OD matrices**. itinera
+  already served both, but nothing in the viewer called them. Picking a centre
+  on the map and a list of minutes draws one polygon per band, widest under
+  narrowest, from `/api/isochrone`. Picking two point layers builds an
+  origin-destination matrix from `/api/network/od-matrix`, which nginx did not
+  proxy until now, so it was reaching ptolemy instead of itinera. Both results
+  are ordinary layers, so all three renderers draw them, symbology shades them
+  by `minutes`, and they save with the project. The matrix also shows as a grid
+  in the panel and downloads as a CSV, one row per pair, matching the desire
+  lines the layer draws. A pair itinera cannot route is left blank rather than
+  filled in, and a band with nothing reachable is reported instead of drawn.
+
 - 2026-08-11: **a dead session ends instead of erroring**. Platform sessions
   last 24 hours, and one that expired while a tab stayed open surfaced whichever
   service refused first, so agora's "invalid or expired token" reached a live

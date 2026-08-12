@@ -34,7 +34,7 @@
 | **Shadow Analysis** | Time-of-day shadow simulation |
 | **Viewshed** | Line-of-sight visibility analysis |
 | **Routing** | itinera point-to-point directions (public OSRM demo fallback) |
-| **Isochrone** | Travel-time zones from any point |
+| **Travel Time** | itinera service-area bands from a point, and OD matrices between two point layers |
 | **Charts** | Histogram, scatter, and time series |
 
 ### Space-Time Intelligence
@@ -442,7 +442,7 @@ on Windows — it does not apply to native Docker on Linux.
 The nginx proxy fronts everything on 5174, so the app talks same-origin:
 `/api/` → Ptolemy, `/api/v1/auth` + `/api/v1/portal` → TileTopia, `/tiles/` →
 TileTopia (including `/tiles/v1/analysis`, backed by terrano), `/api/route` +
-`/api/isochrone` → Itinera, `/api/geocode/` → Geokode, `/agent/` → GeoLang,
+`/api/isochrone` + `/api/network/` → Itinera, `/api/geocode/` → Geokode, `/agent/` → GeoLang,
 `/jupyter/` → Jupyter, `/ogc/` → Fenestra (so WMS is `/ogc/wms` and OGC API
 Features is `/ogc/ogc/collections`, since fenestra namespaces that API itself).
 Fenestra's WMTS and OGC API responses carry absolute URLs, so serving the stack on

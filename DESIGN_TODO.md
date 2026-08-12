@@ -438,7 +438,6 @@ Medium value:
       view. Current stories are localStorage camera steps.
 - [ ] **STAC catalog browser + data source manager panel**: browse services,
       databases, files and favorites in one place.
-- [ ] **isochrones/service areas and OD matrices**, served by itinera.
 - [ ] **print layout with atlas/map-series generation**: current export is a
       canvas screenshot.
 - [ ] **time slider over PMTiles archives** (the STAC side shipped 2026-08-06
