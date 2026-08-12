@@ -23,7 +23,9 @@ export const useDatasetSchemaStore = create<DatasetSchemaState>((set) => ({
 /**
  * Aliases are looked up by column name across every loaded dataset, because the
  * table, the picker and the symbology selects all work off property keys and
- * none of them carries a dataset id.
+ * none of them carries a dataset id. Two loaded datasets can therefore disagree
+ * about one column name, and borrowing the wrong dataset's alias reads as a
+ * confident lie, so a disagreement falls back to the column name.
  */
 export function useColumnLabels(): {
   columnLabel: (column: string) => string;
@@ -32,11 +34,16 @@ export function useColumnLabels(): {
   const fieldsByDataset = useDatasetSchemaStore((s) => s.fieldsByDataset);
   return useMemo(() => {
     const labels = new Map<string, string>();
+    const disputed = new Set<string>();
     for (const fields of Object.values(fieldsByDataset)) {
       for (const field of fields) {
-        if (!labels.has(field.name)) labels.set(field.name, fieldLabel(field));
+        const label = fieldLabel(field);
+        const agreed = labels.get(field.name);
+        if (agreed === undefined) labels.set(field.name, label);
+        else if (agreed !== label) disputed.add(field.name);
       }
     }
+    for (const column of disputed) labels.delete(column);
     const columnLabel = (column: string) => labels.get(column) ?? column;
     return {
       columnLabel,

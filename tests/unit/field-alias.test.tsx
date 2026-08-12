@@ -146,6 +146,51 @@ describe('the attribute table header', () => {
   });
 });
 
+describe('two loaded datasets naming one column differently', () => {
+  const OTHER_ID = '0198a0f1-2a3b-7c4d-8e5f-6a7b8c9d0e20';
+
+  function loadSecond(alias?: string) {
+    useDatasetSchemaStore.getState().setDatasetFields(
+      OTHER_ID,
+      parseDatasetFields({
+        dataset_id: OTHER_ID,
+        fields: [
+          {
+            name: 'constructionmaterial',
+            field_type: 'string',
+            required: false,
+            ...(alias ? { alias } : {}),
+            allowed_values: [],
+            min: null,
+            max: null,
+          },
+        ],
+      }),
+    );
+  }
+
+  it('shows the column name when the two aliases disagree', () => {
+    loadSchema();
+    loadSecond('Wall Type');
+    renderTable();
+    expect(headers()).toEqual(['constructionmaterial', 'plain']);
+  });
+
+  it('shows the column name when only one of them aliases it', () => {
+    loadSchema();
+    loadSecond();
+    renderTable();
+    expect(headers()).toEqual(['constructionmaterial', 'plain']);
+  });
+
+  it('keeps the alias when both agree', () => {
+    loadSchema();
+    loadSecond('Construction Material');
+    renderTable();
+    expect(headers()).toEqual(['Construction Material', 'plain']);
+  });
+});
+
 describe('the feature info panel', () => {
   function renderPicker() {
     useFeaturePickerStore.setState({ selected: propsToRows(ROWS[0]) });
