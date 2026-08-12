@@ -6,6 +6,18 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-11: **SQL and vector basemap labels stop reaching a CDN**. DuckDB-WASM
+  fetched its bundle from jsDelivr on the first query, and a pmtiles basemap
+  pulled glyphs and sprites from protomaps.github.io, so even a locally served
+  vector style broke without internet. The mvp and eh bundles are now vite asset
+  imports emitted next to the app, and the protomaps assets are vendored under
+  `public/basemaps-assets` (11.2 MB, refreshed by
+  `scripts/fetch-basemap-assets.sh`). Only the three font stacks the en-language
+  style asks for ship, which a test enforces by reading the style's `text-font`
+  values, and the stacks left out are symlink farms that would not survive a
+  windows checkout. The duckdb spatial extension still loads from
+  extensions.duckdb.org.
+
 - 2026-08-10: **the cross section panel's failure is tested**. A DEM lookup that
   answers 503, the way a loaded free service does, has to put the error on the
   panel and plot nothing, and a 200 carrying no usable results has to reach the
