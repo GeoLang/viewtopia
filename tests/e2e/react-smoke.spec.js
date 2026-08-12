@@ -30,10 +30,10 @@ test.describe('React shell smoke', () => {
 
     await page.goto(REACT_URL);
 
-    // Core shell rendered: app title (in the header) + the Cesium renderer container.
+    // Core shell rendered: a header toolbar button + the Cesium renderer container.
     // (Don't assert `#react-root > *` first — Mantine injects a non-visible <style>
     // as the first child, which is never "visible".)
-    await expect(page.getByText('ViewTopia').first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Layers' })).toBeVisible();
     await expect(page.locator('#cesium-container')).toBeAttached();
 
     // No uncaught runtime errors (failed backend probes / Cesium WebGL warnings

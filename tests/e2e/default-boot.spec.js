@@ -32,7 +32,7 @@ test('dismissing the welcome card persists across reloads', async ({ page }) => 
   await expect(card).not.toBeVisible();
 
   await page.reload();
-  await expect(page.getByText('ViewTopia').first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Layers' })).toBeVisible();
   await expect(page.getByTestId('welcome-card')).not.toBeVisible();
 });
 
