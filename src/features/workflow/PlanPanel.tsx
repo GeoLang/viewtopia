@@ -71,6 +71,7 @@ export function PlanPanel({ messageId, plan }: { messageId: string; plan: Workfl
     ? report.status === 'failed'
     : Boolean(planRun && /^(ERROR|❌)/.test(planRun));
   const written = report?.status === 'completed' ? report.outputs.filter((o) => o.written) : [];
+  const runsAgentWrittenCode = plan.steps.some((s) => s.runs_caller_code);
   const manifestFile = `${(plan.project || plan.title || 'workflow')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
@@ -154,6 +155,13 @@ export function PlanPanel({ messageId, plan }: { messageId: string; plan: Workfl
           </Text>
         )}
 
+        {runsAgentWrittenCode && (
+          <Text size="xs" c="yellow.4" data-testid="plan-agent-code-notice">
+            Approving this runs code the agent wrote itself, not only geodukt's built-in
+            operations.
+          </Text>
+        )}
+
         <Stack gap={2}>
           {plan.steps.map((step) => {
             const outcome = report?.steps.find((s) => s.name === step.name);
@@ -172,6 +180,16 @@ export function PlanPanel({ messageId, plan }: { messageId: string; plan: Workfl
                 <Badge size="xs" variant="outline" color={KIND_COLORS[step.kind]}>
                   {step.index}. {step.kind}
                 </Badge>
+                {step.runs_caller_code && (
+                  <Badge
+                    size="xs"
+                    variant="filled"
+                    color="yellow"
+                    data-testid="plan-step-agent-code"
+                  >
+                    runs agent code
+                  </Badge>
+                )}
                 <Text size="xs" c="gray.3" truncate style={{ flex: 1, minWidth: 0 }}>
                   {stepText(step)}
                 </Text>

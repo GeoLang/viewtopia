@@ -9,7 +9,7 @@ vi.mock('../../src/viewer/commands', () => ({ executeViewerCommand: vi.fn() }));
 vi.mock('../../src/viewer/uiSpec', () => ({ renderUISpec: vi.fn(() => Promise.resolve()) }));
 
 import { PlanPanel } from '../../src/features/workflow/PlanPanel';
-import type { WorkflowPlan } from '../../src/features/workflow/plan';
+import type { PlanStep, WorkflowPlan } from '../../src/features/workflow/plan';
 import { buildAgUiSubscriber } from '../../src/hooks/useSSE';
 import { useChatStore } from '../../src/store/chat';
 import { useAuthStore } from '../../src/features/auth/store';
@@ -40,6 +40,7 @@ const PLAN: WorkflowPlan = {
       format: 'geojson',
       path: 'outputs/depots.geojson',
       params: {},
+      runs_caller_code: false,
     },
     {
       index: 2,
@@ -50,6 +51,7 @@ const PLAN: WorkflowPlan = {
       format: null,
       path: null,
       params: { distance: 500 },
+      runs_caller_code: false,
     },
     {
       index: 3,
@@ -60,6 +62,7 @@ const PLAN: WorkflowPlan = {
       format: 'gpkg',
       path: 'outputs/depot_catchment.gpkg',
       params: {},
+      runs_caller_code: false,
     },
   ],
   datasets: ['outputs/depots.geojson'],
@@ -67,6 +70,26 @@ const PLAN: WorkflowPlan = {
   formats: ['geojson', 'gpkg'],
   manifest:
     '[project]\nname = "depot-catchment"\n\n[[source]]\nname = "depots"\nformat = "geojson"\npath = "outputs/depots.geojson"\n',
+};
+
+/** The same plan whose transform is an escape-hatch tool, geolang's sql_query. */
+const ESCAPE_HATCH_PLAN: WorkflowPlan = {
+  ...PLAN,
+  steps: PLAN.steps.map((step) =>
+    step.name === 'catchment'
+      ? { ...step, operation: 'sql_query', runs_caller_code: true }
+      : step,
+  ),
+};
+
+/** A plan from a geolang predating the field, so no step declares one way or the other. */
+const OLDER_GEOLANG_PLAN: WorkflowPlan = {
+  ...PLAN,
+  steps: PLAN.steps.map((step) => {
+    const older: PlanStep = { ...step };
+    delete older.runs_caller_code;
+    return older;
+  }),
 };
 
 const RUN_REPORT =
@@ -210,6 +233,33 @@ describe('PlanPanel', () => {
     expect(
       screen.getByText('geodukt did not check this plan, only its TOML was parsed.'),
     ).toBeInTheDocument();
+  });
+
+  it('marks the step that runs agent-written code and says so above the steps', () => {
+    renderPanel(messageId, ESCAPE_HATCH_PLAN);
+
+    const marked = screen.getAllByTestId('plan-step-agent-code');
+    expect(marked).toHaveLength(1);
+    expect(marked[0]).toHaveTextContent('runs agent code');
+    // the marker sits on the escape-hatch step, not on the ordinary ones
+    expect(screen.getAllByTestId('plan-step')[1]).toContainElement(marked[0]);
+    expect(screen.getByTestId('plan-agent-code-notice')).toHaveTextContent(
+      "Approving this runs code the agent wrote itself, not only geodukt's built-in operations.",
+    );
+  });
+
+  it('leaves an ordinary plan unmarked', () => {
+    renderPanel(messageId);
+
+    expect(screen.queryAllByTestId('plan-step-agent-code')).toHaveLength(0);
+    expect(screen.queryByTestId('plan-agent-code-notice')).not.toBeInTheDocument();
+  });
+
+  it('leaves a plan from a geolang that never sent the field unmarked', () => {
+    renderPanel(messageId, OLDER_GEOLANG_PLAN);
+
+    expect(screen.queryAllByTestId('plan-step-agent-code')).toHaveLength(0);
+    expect(screen.queryByTestId('plan-agent-code-notice')).not.toBeInTheDocument();
   });
 
   it('shows the raw manifest once the collapsed view is opened', () => {

@@ -121,9 +121,10 @@ anything multi-user ships, local packaging last.
 - [~] **geodukt as plan substrate**: plan-then-approve flow shipped (see the
       history log). Every plan step now carries `runs_caller_code`, set from the
       tool's own `TOOL_RUNS_CALLER_CODE` declaration, so the panel can mark an
-      escape-hatch step before approval. Still open: PlanPanel does not render
-      it yet, and sql_query called on its own still bypasses the plan surface
-      entirely, so it stays persona-discouraged there.
+      escape-hatch step before approval, and PlanPanel marks it. Still open:
+      whether approving such a step should cost an extra click, and sql_query
+      called on its own still bypasses the plan surface entirely, so it stays
+      persona-discouraged there.
 - [~] **permission-aware enforcement**: the far end is now enforced in every
       service (per-repo changelogs): tiletopia gates annotations, plugin
       mutations and the asset listing, collecta enforces roles and form
