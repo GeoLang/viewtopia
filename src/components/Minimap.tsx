@@ -40,9 +40,10 @@ export function Minimap() {
       keyboard: false,
     } as L.MapOptions).setView([37.8, -122.4], 4);
 
-    // follows the selected basemap so the overview isn't stuck on one provider
+    // follows the selected basemap so the overview isn't stuck on one provider,
+    // and stays empty for a local archive it has no tile URL for
     const tile = rasterTiles(basemap, customBasemap);
-    L.tileLayer(tile.url, { attribution: tile.attr, maxZoom: 18 }).addTo(map);
+    if (tile) L.tileLayer(tile.url, { attribution: tile.attr, maxZoom: 18 }).addTo(map);
 
     const rect = L.rectangle(
       [

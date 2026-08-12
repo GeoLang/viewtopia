@@ -3,6 +3,8 @@
  *
  * Raster basemaps work everywhere. Vector styles are MapLibre-only, so the
  * other renderers substitute the closest raster (VECTOR_APPROX_RASTER) for them.
+ * A local .pmtiles archive has no stand-in at all: rasterTiles returns null and
+ * the renderers that cannot read it draw no basemap.
  */
 import type { StyleSpecification } from 'maplibre-gl';
 import { layers, namedFlavor } from '@protomaps/basemaps';
@@ -17,12 +19,28 @@ export type Basemap =
   | 'bright'
   | 'positron'
   | 'selfhosted'
-  | 'custom';
+  | 'custom'
+  | 'local';
+
+/** XYZ raster tiles and the attribution they have to show. */
+export interface BasemapTiles {
+  url: string;
+  attr: string;
+}
 
 /** Raster tiles picked outside the built-in list, e.g. by the basemap catalog plugin. */
-export type CustomBasemap = { url: string; attr: string };
+export type CustomBasemap = BasemapTiles;
 
-export const BASEMAP_TILES: Record<string, { url: string; attr: string }> = {
+/**
+ * A .pmtiles archive the user picked off their own disk. It is read through a
+ * browser File, which dies with the tab, so a reload keeps the name and asks
+ * for the file again instead of drawing something else.
+ */
+export type LocalBasemap =
+  | { name: string; status: 'loaded'; kind: 'vector' | 'raster' }
+  | { name: string; status: 'needs-file' };
+
+export const BASEMAP_TILES: Record<string, BasemapTiles> = {
   osm: {
     url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     attr: '© OpenStreetMap',
@@ -43,7 +61,7 @@ export const BASEMAP_TILES: Record<string, { url: string; attr: string }> = {
  * three renderers approximately the same. Carto voyager/light/dark are global,
  * key-free XYZ rasters. 'selfhosted' pmtiles renders with the dark flavor.
  */
-export const VECTOR_APPROX_RASTER: Record<string, { url: string; attr: string }> = {
+export const VECTOR_APPROX_RASTER: Record<string, BasemapTiles> = {
   liberty: {
     url: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
     attr: '© CARTO © OpenStreetMap',
@@ -117,15 +135,30 @@ export const BASEMAP_SELECT_GROUPS = [
   },
 ];
 
+/** Select group for the archive on disk, kept with the other group labels. */
+export function localBasemapSelectGroup(local: LocalBasemap | null) {
+  return {
+    group: 'Local file (MapLibre only)',
+    items: [{ value: 'local', label: local?.name ?? 'PMTiles archive' }],
+  };
+}
+
 export function isVectorBasemap(basemap: string): boolean {
   return basemap in VECTOR_BASEMAPS || basemap === 'selfhosted';
 }
 
-/** Raster tiles for a basemap; a vector selection resolves to its closest raster. */
+/**
+ * Raster tiles for a basemap, a vector selection resolving to its closest
+ * raster. Null for a local archive, which no hosted raster can stand in for.
+ */
 export function rasterTiles(
   basemap: string,
   custom?: CustomBasemap | null,
-): { url: string; attr: string } {
+): BasemapTiles | null {
+  return basemap === 'local' ? null : hostedRasterTiles(basemap, custom);
+}
+
+function hostedRasterTiles(basemap: string, custom?: CustomBasemap | null): BasemapTiles {
   if (basemap === 'custom' && custom) return custom;
   return BASEMAP_TILES[basemap] ?? VECTOR_APPROX_RASTER[basemap] ?? VECTOR_APPROX_RASTER.liberty;
 }
@@ -135,12 +168,8 @@ export function isPmtilesUrl(url: string): boolean {
   return path.toLowerCase().endsWith('.pmtiles');
 }
 
-/** MapLibre raster style for a basemap. */
-export function maplibreRasterStyle(
-  basemap: string,
-  custom?: CustomBasemap | null,
-): StyleSpecification {
-  const tile = rasterTiles(basemap, custom);
+/** MapLibre raster style over one XYZ tile template. */
+export function maplibreRasterStyle(tile: BasemapTiles): StyleSpecification {
   return {
     version: 8,
     sources: {
@@ -182,6 +211,27 @@ export function pmtilesStyle(url: string, flavor = 'dark'): StyleSpecification {
   };
 }
 
+/** Draws an empty map, so a basemap that cannot be shown shows as missing. */
+export const NO_BASEMAP_STYLE: StyleSpecification = { version: 8, sources: {}, layers: [] };
+
+/**
+ * Style over a .pmtiles archive picked off disk. The pmtiles protocol keys the
+ * archive by its file name, which is what `pmtiles://` resolves against. A
+ * vector archive is drawn with the Protomaps layer set, so it has to be on the
+ * v4 schema. Anything else belongs in an overlay layer instead.
+ */
+export function localBasemapStyle(local: LocalBasemap | null): StyleSpecification {
+  if (!local || local.status === 'needs-file') return NO_BASEMAP_STYLE;
+  if (local.kind === 'vector') return pmtilesStyle(local.name);
+  return {
+    version: 8,
+    sources: {
+      basemap: { type: 'raster', url: `pmtiles://${local.name}`, tileSize: 256 },
+    },
+    layers: [{ id: 'basemap', type: 'raster', source: 'basemap' }],
+  };
+}
+
 /**
  * MapLibre style for a basemap. Returns a style URL string for hosted vector
  * styles and a built style object for raster and pmtiles basemaps.
@@ -190,7 +240,9 @@ export function maplibreStyle(
   basemap: string,
   selfHostedUrl = '',
   custom?: CustomBasemap | null,
+  local?: LocalBasemap | null,
 ): StyleSpecification | string {
+  if (basemap === 'local') return localBasemapStyle(local ?? null);
   if (basemap === 'selfhosted') {
     const url = selfHostedUrl.trim();
     if (!url) return VECTOR_BASEMAPS[DEFAULT_VECTOR_BASEMAP].styleUrl;
@@ -198,5 +250,5 @@ export function maplibreStyle(
   }
   const vector = VECTOR_BASEMAPS[basemap];
   if (vector) return vector.styleUrl;
-  return maplibreRasterStyle(basemap, custom);
+  return maplibreRasterStyle(hostedRasterTiles(basemap, custom));
 }

@@ -455,7 +455,9 @@ survives reloads and syncs back. Everything below is what does not work.
 - [ ] **cesium and leaflet still fetch raster tiles from the network.** The
       cached:// protocol serves MapLibre from the offline tile cache, but the
       other renderers build plain tile URLs, so offline basemaps are
-      MapLibre-only. Cesium would need an ImageryProvider over the cache.
+      MapLibre-only. Cesium would need an ImageryProvider over the cache. A
+      local .pmtiles basemap is MapLibre-only for the same reason, and those
+      renderers draw no basemap while one is selected.
 - [ ] **no service worker.** `public/manifest.json` exists but nothing
       registers a worker and vite has no PWA plugin, so the app shell needs the
       server on every load. Offline today only means "the tab was already
@@ -467,10 +469,6 @@ survives reloads and syncs back. Everything below is what does not work.
       needs. It is wrapped so a failure degrades rather than throws. Vendoring
       it means pinning the extension to the exact DuckDB version and a script
       that refreshes both together on upgrade.
-- [ ] **no local basemap.** All eight basemaps are external hosts and
-      "selfhosted" needs the compose stack reachable. A local .pmtiles now
-      loads as an overlay layer (2026-08-02), but not as the basemap, which is
-      how GeoLibre solves offline basemaps.
 - [ ] **Cesium terrain needs an external provider** (ion token or terrain
       endpoint), no local/offline terrain source. Blank terrain is the graceful
       floor, a tiletopia-served terrain bundle would be the real fix.

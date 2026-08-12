@@ -8,7 +8,7 @@ import { Paper, Text, Stack, Button, Group, Badge, Select, NumberInput, TextInpu
 import { IconPhoto, IconShare } from '@tabler/icons-react';
 import type { PluginDefinition, PluginContext } from '../sdk';
 import { useAppStore } from '../../store/app';
-import { maplibreRasterStyle, rasterTiles } from '../../hooks/basemapTiles';
+import { maplibreRasterStyle, rasterTiles, type BasemapTiles } from '../../hooks/basemapTiles';
 import { getSharedCamera } from '../../hooks/sharedCamera';
 
 type ExportFormat = 'png' | 'jpeg' | 'html-embed' | 'html-full';
@@ -61,7 +61,12 @@ function ExportMapPanel(_props: { ctx: PluginContext }) {
     }
 
     if (format === 'html-full') {
-      downloadBlob(new Blob([generateFullHtml()], { type: 'text/html' }), 'map-export.html');
+      const tile = rasterTiles(basemap, customBasemap);
+      if (!tile) {
+        setStatus('A local .pmtiles basemap stays on this machine, so it cannot go in the page.');
+        return;
+      }
+      downloadBlob(new Blob([generateFullHtml(tile)], { type: 'text/html' }), 'map-export.html');
       return;
     }
 
@@ -94,8 +99,8 @@ function ExportMapPanel(_props: { ctx: PluginContext }) {
       }
 
       // Add attribution of the basemap actually on screen
-      if (includeAttribution) {
-        const attr = rasterTiles(basemap, customBasemap).attr;
+      const attr = rasterTiles(basemap, customBasemap)?.attr;
+      if (includeAttribution && attr) {
         exportCtx.font = '11px sans-serif';
         const boxWidth = exportCtx.measureText(attr).width + 20;
         exportCtx.fillStyle = 'rgba(255,255,255,0.7)';
@@ -163,9 +168,9 @@ function ExportMapPanel(_props: { ctx: PluginContext }) {
    * Standalone page on the current view and basemap. Vector basemaps export as
    * their closest raster, so the page needs no style host or key.
    */
-  const generateFullHtml = (): string => {
+  const generateFullHtml = (tile: BasemapTiles): string => {
     const camera = getSharedCamera();
-    const style = maplibreRasterStyle(basemap, customBasemap);
+    const style = maplibreRasterStyle(tile);
     return `<!DOCTYPE html>
 <html>
 <head>

@@ -27,6 +27,8 @@ export interface ViewtopiaProject {
   renderer: Renderer;
   basemap: Basemap;
   customBasemap?: CustomBasemap;
+  /** name of the .pmtiles behind basemap 'local'; the file itself never travels */
+  localBasemap?: { name: string };
   camera: CameraState;
   splitView?: { active: boolean; paneRenderer: PaneRenderer };
   agentLayers: AgentLayer[];
@@ -96,6 +98,9 @@ export function serializeProject(name: string): ViewtopiaProject {
     ...(app.basemap === 'custom' && app.customBasemap
       ? { customBasemap: app.customBasemap }
       : {}),
+    ...(app.basemap === 'local' && app.localBasemap
+      ? { localBasemap: { name: app.localBasemap.name } }
+      : {}),
     camera: liveCamera(app.renderer),
     splitView: { active: split.active, paneRenderer: split.paneRenderer },
     agentLayers: agent.layers,
@@ -144,7 +149,7 @@ export function parseProject(text: string): ViewtopiaProject {
   }
   const renderer = asRenderer(p.renderer);
   if (!renderer) throw new Error(`project file: unknown renderer ${String(p.renderer)}`);
-  const basemaps: string[] = [...BASEMAP_OPTIONS.map((o) => o.value), 'custom'];
+  const basemaps: string[] = [...BASEMAP_OPTIONS.map((o) => o.value), 'custom', 'local'];
   if (typeof p.basemap !== 'string' || !basemaps.includes(p.basemap)) {
     throw new Error(`project file: unknown basemap ${String(p.basemap)}`);
   }
@@ -157,6 +162,7 @@ export function parseProject(text: string): ViewtopiaProject {
     renderer,
     basemap: p.basemap,
     ...(p.customBasemap ? { customBasemap: p.customBasemap } : {}),
+    ...(p.localBasemap?.name ? { localBasemap: { name: p.localBasemap.name } } : {}),
     camera: readCamera(p.camera),
     ...(p.splitView ? { splitView: p.splitView } : {}),
     agentLayers: (requireArray(p.agentLayers, 'agentLayers') as AgentLayer[]).map(
@@ -231,6 +237,15 @@ export function applyProject(project: ViewtopiaProject): void {
   app.setRenderer(project.renderer);
   if (project.basemap === 'custom' && project.customBasemap) {
     app.setCustomBasemap(project.customBasemap);
+  } else if (project.basemap === 'local' && project.localBasemap) {
+    // the archive is a file on whoever saved this, so it is asked for by name
+    // unless this browser already has that one open
+    const open = app.localBasemap;
+    app.setLocalBasemap(
+      open?.name === project.localBasemap.name
+        ? open
+        : { name: project.localBasemap.name, status: 'needs-file' },
+    );
   } else {
     app.setBasemap(project.basemap);
   }

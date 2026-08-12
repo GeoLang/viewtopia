@@ -6,6 +6,20 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-11: **a .pmtiles file on disk can be the basemap, not just an
+  overlay**. The basemap popover takes a local archive through the same reader
+  a dropped one already used, so MapLibre styles a vector archive with the
+  Protomaps layer set and the app's own glyphs and sprites, and a raster one as
+  a single raster source. Nothing copies the archive into IndexedDB, since it
+  can be tens of gigabytes and the browser is free to evict it, so a reload
+  comes back knowing which file to ask for and shows an empty map until it gets
+  one rather than quietly falling back to a hosted basemap. Cesium, Leaflet and
+  the minimap cannot read pmtiles at all, so `rasterTiles` returns null for a
+  local archive, each of them draws no basemap, and the picker says only
+  MapLibre shows it. A project file carries the archive name and asks whoever
+  opens it for the file. A live document carries no basemap at all, so a peer
+  keeps their own.
+
 - 2026-08-11: **a dead session ends instead of erroring**. Platform sessions
   last 24 hours, and one that expired while a tab stayed open surfaced whichever
   service refused first, so agora's "invalid or expired token" reached a live

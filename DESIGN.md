@@ -382,6 +382,12 @@ map, plus a synced split view. Picking/draw/measure/agent-layers survive rendere
 - All navigation, bookmarks included, goes through the shared fly-to pipeline, which is what
   makes it work on the 2D renderers and for bookmarks that carry no camera.
 - The 2D map tab disables the renderer select and the vector basemap options.
+- A `.pmtiles` file picked from disk in the basemap popover becomes the basemap
+  itself: a vector archive through the Protomaps layer set with the app's own glyphs and
+  sprites, a raster one as a single raster source, both over `pmtiles://<file name>`. Only
+  MapLibre reads it, so Cesium, Leaflet and the minimap draw no basemap while one is
+  selected rather than substituting a hosted raster. The archive is a browser File, so a
+  reload and a project file both come back naming it and asking for the file again.
 
 **Agent UI.** Chat panel plus a registered viewer command protocol. The agent emits commands
 (flyTo, addLayer, measure, deck layers, style-by-*, ~20 tool commands) that execute
