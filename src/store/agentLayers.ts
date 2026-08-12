@@ -196,19 +196,23 @@ function geometryInRange(g: GeoJSON.Geometry | null | undefined): boolean {
   return coordsInRange((g as { coordinates?: unknown }).coordinates);
 }
 
+function inRangeFeatures(geojson: GeoJSON.FeatureCollection): GeoJSON.FeatureCollection {
+  return { ...geojson, features: geojson.features.filter((f) => geometryInRange(f.geometry)) };
+}
+
 // a degrees-vs-metres tool mistake yields coordinates far outside lon/lat
 // range, which throws inside maplibre's LngLat and takes down the viewer,
 // so drop bad features before any renderer sees them
 function sanitizeLayers(layers: AgentLayer[]): AgentLayer[] {
   const out: AgentLayer[] = [];
   for (const layer of layers) {
-    const features = layer.geojson.features.filter((f) => geometryInRange(f.geometry));
-    if (features.length === 0) {
+    const geojson = inRangeFeatures(layer.geojson);
+    if (geojson.features.length === 0) {
       console.warn(`agent layer "${layer.name}" dropped: coordinates outside lon/lat range`);
       continue;
     }
-    if (features.length < layer.geojson.features.length) {
-      console.warn(`agent layer "${layer.name}": dropped ${layer.geojson.features.length - features.length} out-of-range features`);
+    if (geojson.features.length < layer.geojson.features.length) {
+      console.warn(`agent layer "${layer.name}": dropped ${layer.geojson.features.length - geojson.features.length} out-of-range features`);
     }
     out.push(
       withZoomRange(
@@ -216,7 +220,11 @@ function sanitizeLayers(layers: AgentLayer[]): AgentLayer[] {
           ...layer,
           // a colour nobody chose stays unchosen, or it would be published to peers
           ...(layer.color === undefined ? {} : { color: asColor(layer.color, DEFAULT_LAYER_COLOR) }),
-          geojson: { ...layer.geojson, features },
+          geojson,
+          // clearing symbology puts these back, so they need the same filter
+          ...(layer.sourceGeojson === undefined
+            ? {}
+            : { sourceGeojson: inRangeFeatures(layer.sourceGeojson) }),
         },
         layer.zoomRange,
       ),

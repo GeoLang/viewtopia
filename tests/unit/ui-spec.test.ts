@@ -80,6 +80,86 @@ describe('renderUISpec', () => {
   });
 });
 
+describe('a ui_spec layer that names a column to shade by', () => {
+  const cell = (gap_score: number, lon: number): GeoJSON.Feature => ({
+    type: 'Feature',
+    properties: { gap_score, cell_id: `c${lon}` },
+    geometry: {
+      type: 'Polygon',
+      coordinates: [[[lon, 45], [lon + 1, 45], [lon + 1, 46], [lon, 46], [lon, 45]]],
+    },
+  });
+
+  const serveCells = () =>
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              type: 'FeatureCollection',
+              features: [cell(0, 10), cell(1, 11), cell(2, 12)],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        ),
+      ),
+    );
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    useAgentLayerStore.setState({ layers: [], markers: [], generation: 0 });
+  });
+
+  it('shades the layer by that column without the user picking it', async () => {
+    serveCells();
+
+    await renderUISpec({
+      type: 'map',
+      layers: [{ name: 'Service gaps', file: 'outputs/gaps.gpkg', shade_by: 'gap_score' }],
+    });
+
+    const [layer] = useAgentLayerStore.getState().layers;
+    expect(layer.symbology).toMatchObject({ kind: 'graduated', field: 'gap_score' });
+    const fills = layer.geojson.features.map((f) => f.properties?.fill);
+    expect(new Set(fills).size).toBe(3);
+  });
+
+  it('leaves the layer unshaded when the file has no such column', async () => {
+    serveCells();
+
+    await renderUISpec({
+      type: 'map',
+      layers: [{ name: 'Service gaps', file: 'outputs/gaps.gpkg', shade_by: 'overall_risk' }],
+    });
+
+    const [layer] = useAgentLayerStore.getState().layers;
+    expect(layer.symbology).toBeUndefined();
+    expect(layer.geojson.features).toHaveLength(3);
+    expect(layer.geojson.features[0].properties?.fill).toBeUndefined();
+  });
+
+  it('lets the user drop the suggestion again', async () => {
+    serveCells();
+
+    await renderUISpec({
+      type: 'map',
+      layers: [{ name: 'Service gaps', file: 'outputs/gaps.gpkg', shade_by: 'gap_score' }],
+    });
+
+    const [shaded] = useAgentLayerStore.getState().layers;
+    useAgentLayerStore.getState().setSymbology(shaded.id, null);
+
+    const [plain] = useAgentLayerStore.getState().layers;
+    expect(plain.symbology).toBeUndefined();
+    expect(plain.geojson.features.map((f) => f.properties?.fill)).toEqual([
+      undefined,
+      undefined,
+      undefined,
+    ]);
+  });
+});
+
 describe('agentLayersBounds', () => {
   it('pads a single-point layer to a visible extent instead of max zoom', async () => {
     const { agentLayersBounds } = await import('../../src/hooks/agentLayerBounds');

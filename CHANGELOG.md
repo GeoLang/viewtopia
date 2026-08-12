@@ -6,6 +6,18 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-11: **The tool that wrote a layer can say what to shade it by**. A
+  ui_spec layer entry takes an optional fourth part, `shade_by`, naming one
+  column in that file: `Gaps|outputs/gaps.gpkg|#ff6b35|gap_score`. The viewer
+  picks the renderer from the data rather than being told, so a numeric column
+  gets graduated classes and a text one gets a colour per value, and it reuses
+  the same builders the symbology editor calls. A column the file does not
+  carry, or one with nothing to separate, leaves the layer in its single
+  colour. The suggestion is ordinary symbology once applied, so the editor
+  changes or clears it like any other. geolang's `emit_ui_spec` rejects a
+  fourth part that is not a column name instead of dropping it silently, and
+  `service_gap` now tells the model to shade its cells by `gap_score`.
+
 - 2026-08-11: **Scale-dependent visibility**. A layer can be limited to a zoom
   range, min inclusive and max exclusive, the way QGIS scale ranges and
   MapLibre's minzoom/maxzoom work. The range sits on the layer rather than on

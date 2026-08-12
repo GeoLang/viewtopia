@@ -133,12 +133,6 @@ anything multi-user ships, local packaging last.
       download, context config, inference-server setup. Wrap llama.cpp/ollama
       tooling rather than build. The differentiation lives in the eval harness
       proving which local model suffices, not in the installer.
-- [ ] **agent-requested shading**: the user can shade a layer by a numeric field
-      now, but must pick it by hand every time, even though the tool that wrote
-      the layer knows which column matters (`gap_score`, `overall_risk`). Needs an
-      optional classification field in the ui_spec layer format, geolang's
-      emit_ui_spec schema and the persona. Do this before letting the tool prose
-      mention shading again.
 - [ ] **cross-session run history**: geodukt keeps every run with its manifest,
       steps and caller, at `GET /runs`, and nothing exposes it. The executed plan
       is visible only in the session that ran it. Needs a proxied route plus a
