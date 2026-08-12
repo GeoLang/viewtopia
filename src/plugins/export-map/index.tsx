@@ -8,7 +8,12 @@ import { Paper, Text, Stack, Button, Group, Badge, Select, NumberInput, TextInpu
 import { IconPhoto, IconShare } from '@tabler/icons-react';
 import type { PluginDefinition, PluginContext } from '../sdk';
 import { useAppStore } from '../../store/app';
-import { maplibreRasterStyle, rasterTiles, type BasemapTiles } from '../../hooks/basemapTiles';
+import {
+  standaloneRasterStyle,
+  rasterTiles,
+  LOCAL_BASEMAP_REFUSAL,
+  type BasemapTiles,
+} from '../../hooks/basemapTiles';
 import { getSharedCamera } from '../../hooks/sharedCamera';
 
 type ExportFormat = 'png' | 'jpeg' | 'html-embed' | 'html-full';
@@ -63,7 +68,7 @@ function ExportMapPanel(_props: { ctx: PluginContext }) {
     if (format === 'html-full') {
       const tile = rasterTiles(basemap, customBasemap);
       if (!tile) {
-        setStatus('A local .pmtiles basemap stays on this machine, so it cannot go in the page.');
+        setStatus(LOCAL_BASEMAP_REFUSAL);
         return;
       }
       downloadBlob(new Blob([generateFullHtml(tile)], { type: 'text/html' }), 'map-export.html');
@@ -170,7 +175,7 @@ function ExportMapPanel(_props: { ctx: PluginContext }) {
    */
   const generateFullHtml = (tile: BasemapTiles): string => {
     const camera = getSharedCamera();
-    const style = maplibreRasterStyle(tile);
+    const style = standaloneRasterStyle(tile);
     return `<!DOCTYPE html>
 <html>
 <head>

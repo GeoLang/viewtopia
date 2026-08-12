@@ -158,6 +158,10 @@ export function rasterTiles(
   return basemap === 'local' ? null : hostedRasterTiles(basemap, custom);
 }
 
+/** What every export that writes a page for another machine says about `local`. */
+export const LOCAL_BASEMAP_REFUSAL =
+  'A local .pmtiles basemap stays on this machine, so it cannot go in the page.';
+
 function hostedRasterTiles(basemap: string, custom?: CustomBasemap | null): BasemapTiles {
   if (basemap === 'custom' && custom) return custom;
   return BASEMAP_TILES[basemap] ?? VECTOR_APPROX_RASTER[basemap] ?? VECTOR_APPROX_RASTER.liberty;
@@ -168,21 +172,28 @@ export function isPmtilesUrl(url: string): boolean {
   return path.toLowerCase().endsWith('.pmtiles');
 }
 
-/** MapLibre raster style over one XYZ tile template. */
-export function maplibreRasterStyle(tile: BasemapTiles): StyleSpecification {
+function rasterStyle(tileUrl: string, attribution: string): StyleSpecification {
   return {
     version: 8,
     sources: {
-      basemap: {
-        type: 'raster',
-        // cached:// falls back to the offline tile cache when the network fails
-        tiles: [cachedTileUrl(tile.url)],
-        tileSize: 256,
-        attribution: tile.attr,
-      },
+      basemap: { type: 'raster', tiles: [tileUrl], tileSize: 256, attribution },
     },
     layers: [{ id: 'basemap', type: 'raster', source: 'basemap' }],
   };
+}
+
+/** MapLibre raster style over one XYZ tile template. */
+export function maplibreRasterStyle(tile: BasemapTiles): StyleSpecification {
+  // cached:// falls back to the offline tile cache when the network fails
+  return rasterStyle(cachedTileUrl(tile.url), tile.attr);
+}
+
+/**
+ * Same tiles for a page running outside the app, which has no cached://
+ * protocol registered and would draw no basemap at all with those URLs.
+ */
+export function standaloneRasterStyle(tile: BasemapTiles): StyleSpecification {
+  return rasterStyle(tile.url, tile.attr);
 }
 
 /** protomaps/basemaps-assets vendored into public/, see scripts/fetch-basemap-assets.sh */
