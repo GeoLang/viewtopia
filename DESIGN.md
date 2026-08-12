@@ -342,8 +342,8 @@ model scores 1.00 over the 10-task set.
   previous version's range, so a properties-only patch cannot silently erase it.
 - `FieldDef` carries `alias: Option<String>`, defaulted and omitted when absent so existing
   schemas are untouched. The API deserialises schemas into typed `FieldDef`, so a field the
-  type does not name is dropped even though the column is JSONB. Nothing in the platform
-  displays an alias yet.
+  type does not name is dropped even though the column is JSONB. ViewTopia mirrors that shape
+  in `src/lib/datasetSchema.ts` and displays the alias (§2.6).
 - Trajectories pick a JSONB fallback path per request so they work on the stock PostGIS that
   CI and the compose stack run. The five trajectory analytics routes stay MobilityDB-only.
 - External sources push predicates down (3-15x, and plain GiST indexing suffices).
@@ -440,6 +440,12 @@ Tools" setting with a Preview badge, so there are no dead buttons in the default
   fflate because `/vsizip/` cannot see a registered buffer, the geometry column and its CRS both
   come from `DESCRIBE` (`GEOMETRY('EPSG:3857')`), and `ST_Transform` needs `always_xy` or EPSG:4326
   comes back as lat/lon.
+- A ptolemy dataset's field aliases are displayed wherever a column name is. `lib/datasetSchema.ts`
+  is the one mirror of ptolemy's `FieldDef` JSON, and the vector-tiles panel loads a dataset's
+  fields into `store/datasetSchemas.ts` beside its style. Lookup is by column name across every
+  loaded dataset, because the attribute table, the feature-info panel and the symbology and
+  toolbox selects all work off property keys and none of them carries a dataset id. The alias is
+  a label only: every select's value, every sort and every property lookup stays the column name.
 - WMTS (REST template) and WFS (GeoJSON → agent layers) are verified against fenestra.
 - The building-data toggle self-disables on styles with native 3D buildings and re-enables on
   raster styles at `style.load`.
@@ -553,9 +559,7 @@ in, though an axis-aligned `LatLonBox` in EPSG:4326 maps exactly onto an origin 
 so nothing is resampled. A column type ptolemy's six field types cannot name is approximated to
 the nearest, with both the report and the log naming the column and the type it had. A KML
 `SimpleField` width collapses to a JSON number in `properties`. A null geometry records a
-deletion, so an attribute-only placemark needs its own convention. A field alias reaches ptolemy
-and is stored but nothing displays it, which is why the alias verdict stays *approximated* rather
-than faithful.
+deletion, so an attribute-only placemark needs its own convention.
 
 ### 2.8 Data prerequisites (runtime)
 

@@ -319,12 +319,6 @@ PROJ, which vendors through cmake and is why that image takes minutes to build:
       publishes none) or an OpenAPI spec (it has none); a mocked test would assert
       only verne's own assumptions and is worse than the honest gap. Cheapest real
       fix is probably a ptolemy image, which helps more than verne.
-- [ ] **display an alias.** A field alias now reaches ptolemy and is stored on the
-      dataset schema, and nothing shows it (history log), so the verdict stays
-      *approximated*. The work is viewtopia's: attribute table headers, feature
-      popups and field pickers reading `alias` with the column name as fallback.
-      Pin the field JSON shape in one place when doing it, because two writers and
-      no agreed schema is how the drift fixed this morning started.
 - [ ] **what the Esri report cannot land, by category** (from the GDAL feasibility
       pass and v0.2's own verdicts):
       - domains lose their field binding (ptolemy binds a domain to a field only

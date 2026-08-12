@@ -13,6 +13,7 @@ import { IconChartDots } from '@tabler/icons-react';
 import { GridLayer } from '@deck.gl/aggregation-layers';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { useDrawStore } from '../../store/draw';
+import { useColumnLabels } from '../../store/datasetSchemas';
 import {
   collectPoints,
   pointsFromDraw,
@@ -47,6 +48,7 @@ export function SpatialStatsPanel({ onClose }: { onClose: () => void }) {
   const [source, setSource] = useState<string>('pasted');
   const [pasted, setPasted] = useState('');
   const [result, setResult] = useState<string | null>(null);
+  const { columnOptions } = useColumnLabels();
 
   const sourceData = [
     { value: 'pasted', label: 'Pasted GeoJSON' },
@@ -153,7 +155,7 @@ export function SpatialStatsPanel({ onClose }: { onClose: () => void }) {
             size="xs"
             label="Numeric Property"
             placeholder="pick property"
-            data={propertyOptions}
+            data={columnOptions(propertyOptions)}
             value={property}
             onChange={setProperty}
           />

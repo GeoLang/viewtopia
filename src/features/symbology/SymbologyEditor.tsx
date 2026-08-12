@@ -3,6 +3,7 @@ import { IconPlus, IconX } from '@tabler/icons-react';
 import type { ColorRamp } from '../../raster/types';
 import { propertyKeys } from '../../lib/geojsonSources';
 import { useAgentLayerStore, type AgentLayer } from '../../store/agentLayers';
+import { useColumnLabels } from '../../store/datasetSchemas';
 import {
   CATEGORY_PALETTE,
   buildCategorized,
@@ -34,7 +35,9 @@ function swatch(color: string, onChange: (c: string) => void) {
 }
 
 export function SymbologyLegend({ sym }: { sym: Symbology }) {
-  const field = symbologyField(sym);
+  const { columnLabel } = useColumnLabels();
+  const symField = symbologyField(sym);
+  const field = symField && columnLabel(symField);
   return (
     <Group gap={2} wrap="nowrap" data-testid="agent-layer-legend">
       {legendEntries(sym).map((entry) => (
@@ -58,6 +61,7 @@ export function SymbologyLegend({ sym }: { sym: Symbology }) {
  */
 export function SymbologyEditor({ layer }: { layer: AgentLayer }) {
   const setSymbology = useAgentLayerStore((s) => s.setSymbology);
+  const { columnOptions } = useColumnLabels();
   const sym = layer.symbology;
   const numeric = numericFields(layer);
   const categorical = categoricalFields(layer);
@@ -117,7 +121,7 @@ export function SymbologyEditor({ layer }: { layer: AgentLayer }) {
         <>
           <Select
             size="xs"
-            data={numeric}
+            data={columnOptions(numeric)}
             value={sym.field}
             onChange={(field) => field && rebuildGraduated(sym, { field })}
             data-testid="agent-layer-field"
@@ -164,7 +168,7 @@ export function SymbologyEditor({ layer }: { layer: AgentLayer }) {
         <>
           <Select
             size="xs"
-            data={categorical}
+            data={columnOptions(categorical)}
             value={sym.field}
             onChange={(field) => field && apply(buildCategorized(layer, field))}
             data-testid="agent-layer-field"
@@ -201,7 +205,7 @@ export function SymbologyEditor({ layer }: { layer: AgentLayer }) {
                 <Select
                   size="xs"
                   flex={1}
-                  data={allFields}
+                  data={columnOptions(allFields)}
                   value={rule.field}
                   onChange={(field) => field && patch({ field })}
                   allowDeselect={false}

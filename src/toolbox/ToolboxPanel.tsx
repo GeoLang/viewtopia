@@ -31,6 +31,7 @@ import { bboxOf, frameFor, projectBbox, type Bbox } from './projection';
 import type { JoinPredicate } from './topoi';
 import { propertyKeys, useGeoJsonSources } from '../lib/geojsonSources';
 import { useAgentLayerStore } from '../store/agentLayers';
+import { useColumnLabels } from '../store/datasetSchemas';
 import { getViewBounds } from '../lib/viewBounds';
 
 type Fc = GeoJSON.FeatureCollection;
@@ -108,6 +109,7 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
 
   const sources = useGeoJsonSources();
   const addLayer = useAgentLayerStore((s) => s.addLayer);
+  const { columnOptions } = useColumnLabels();
 
   const spec = TOOLS[tool];
   const has = (key: ParamKey) => spec.params.includes(key);
@@ -378,7 +380,7 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
           <Select
             label="Field"
             size="xs"
-            data={propertyKeys(sources.find((s) => s.id === from[0]))}
+            data={columnOptions(propertyKeys(sources.find((s) => s.id === from[0])))}
             value={params.field || null}
             onChange={(v) => set({ field: v ?? '' })}
             placeholder="every feature into one"
