@@ -20,6 +20,9 @@ const violet: MantineColorsTuple = [
 // phone layout cutoff, matches AppShell's `breakpoint: 'sm'`
 export const MOBILE_QUERY = '(max-width: 48em)';
 
+// five labeled menus overflow the toolbar row at laptop widths
+export const TOOLBAR_ICONS_ONLY_QUERY = '(max-width: 90em)';
+
 export const theme = createTheme({
   primaryColor: 'violet',
   colors: {

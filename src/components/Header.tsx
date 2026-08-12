@@ -1,4 +1,4 @@
-import { Group, ActionIcon, Title, Tooltip } from '@mantine/core';
+import { Group, ActionIcon, Tooltip } from '@mantine/core';
 import {
   IconGlobe,
   IconMaximize,
@@ -39,9 +39,6 @@ export function Header() {
     >
       <Group gap="xs" wrap="nowrap">
         <IconGlobe size={20} style={{ color: 'var(--mantine-color-violet-4)' }} />
-        <Title order={4} c="white" fw={600} visibleFrom="md">
-          ViewTopia
-        </Title>
         <ProjectSwitcher />
         <LiveSessionControl />
         <NotificationsBell />

@@ -18,8 +18,10 @@ import {
   IconClockHour4,
   IconPlug,
 } from '@tabler/icons-react';
+import { useMediaQuery } from '@mantine/hooks';
 import { useAppStore, type ToolPanel, type ViewerTab } from '../store/app';
 import { toggleInspectPanel } from '../store/featurePicker';
+import { TOOLBAR_ICONS_ONLY_QUERY } from '../theme';
 import { useViewOnlyLive } from '../live/liveStore';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { getPlugins } from '../plugins/registry';
@@ -53,6 +55,9 @@ export function ViewerToolbar({ compact = false }: { compact?: boolean }) {
   const showPreviewTools = useAppStore((s) => s.settings.showPreviewTools);
   const viewOnly = useViewOnlyLive();
   const plugins = getPlugins();
+  const iconsOnly = useMediaQuery(TOOLBAR_ICONS_ONLY_QUERY, false, {
+    getInitialValueInEffect: false,
+  });
 
   const renderMenuItems = (items: ToolMenuItem[]) =>
     visibleToolItems(items, showPreviewTools).map((item) => (
@@ -113,6 +118,74 @@ export function ViewerToolbar({ compact = false }: { compact?: boolean }) {
       View only
     </Badge>
   );
+
+  const labeledMenus: {
+    label: string;
+    icon: React.ReactNode;
+    width: number;
+    items: React.ReactNode;
+  }[] = [
+    {
+      label: 'Actions',
+      icon: <IconWand size={14} />,
+      width: 180,
+      items: (
+        <>
+          {renderMenuItems(ACTIONS_MENU[0])}
+          <Menu.Item leftSection={<IconDownload size={14} />} onClick={exportMapPng}>
+            Export PNG
+          </Menu.Item>
+        </>
+      ),
+    },
+    {
+      label: 'Analysis',
+      icon: <IconInfoCircle size={14} />,
+      width: 180,
+      items: (
+        <>
+          {renderMenuItems(ANALYSIS_MENU[0])}
+          <Menu.Item leftSection={<IconClockHour4 size={14} />} onClick={toggleSpaceTime}>
+            Space-Time
+          </Menu.Item>
+          <Menu.Divider />
+          {renderMenuItems(ANALYSIS_MENU[1])}
+        </>
+      ),
+    },
+    {
+      label: 'Simulate',
+      icon: <IconWorld size={14} />,
+      width: 160,
+      items: renderMenuItems(SIMULATE_MENU[0]),
+    },
+    {
+      label: 'Tools',
+      icon: <IconTool size={14} />,
+      width: 180,
+      items: (
+        <>
+          {renderMenuItems(TOOLS_MENU[0])}
+          <Menu.Divider />
+          {renderMenuItems(TOOLS_MENU[1])}
+        </>
+      ),
+    },
+    {
+      label: 'Data',
+      icon: <IconPackage size={14} />,
+      width: 180,
+      items: (
+        <>
+          {renderMenuItems(DATA_MENU[0])}
+          <Menu.Divider />
+          {renderMenuItems(DATA_MENU[1])}
+          <Menu.Divider />
+          {renderMenuItems(DATA_MENU[2])}
+        </>
+      ),
+    },
+  ];
 
   if (compact) {
     return (
@@ -210,72 +283,30 @@ export function ViewerToolbar({ compact = false }: { compact?: boolean }) {
 
         {!viewOnly && (
         <>
-        <Menu shadow="md" width={180}>
-          <Menu.Target>
-            <Button size="xs" variant="subtle" leftSection={<IconWand size={14} />}>
-              Actions
-            </Button>
-          </Menu.Target>
-          <Menu.Dropdown>
-            {renderMenuItems(ACTIONS_MENU[0])}
-            <Menu.Item leftSection={<IconDownload size={14} />} onClick={exportMapPng}>
-              Export PNG
-            </Menu.Item>
-          </Menu.Dropdown>
-        </Menu>
-
-        <Menu shadow="md" width={180}>
-          <Menu.Target>
-            <Button size="xs" variant="subtle" leftSection={<IconInfoCircle size={14} />}>
-              Analysis
-            </Button>
-          </Menu.Target>
-          <Menu.Dropdown>
-            {renderMenuItems(ANALYSIS_MENU[0])}
-            <Menu.Item leftSection={<IconClockHour4 size={14} />} onClick={toggleSpaceTime}>
-              Space-Time
-            </Menu.Item>
-            <Menu.Divider />
-            {renderMenuItems(ANALYSIS_MENU[1])}
-          </Menu.Dropdown>
-        </Menu>
-
-        <Menu shadow="md" width={160}>
-          <Menu.Target>
-            <Button size="xs" variant="subtle" leftSection={<IconWorld size={14} />}>
-              Simulate
-            </Button>
-          </Menu.Target>
-          <Menu.Dropdown>{renderMenuItems(SIMULATE_MENU[0])}</Menu.Dropdown>
-        </Menu>
-
-        <Menu shadow="md" width={180}>
-          <Menu.Target>
-            <Button size="xs" variant="subtle" leftSection={<IconTool size={14} />}>
-              Tools
-            </Button>
-          </Menu.Target>
-          <Menu.Dropdown>
-            {renderMenuItems(TOOLS_MENU[0])}
-            <Menu.Divider />
-            {renderMenuItems(TOOLS_MENU[1])}
-          </Menu.Dropdown>
-        </Menu>
-
-        <Menu shadow="md" width={180}>
-          <Menu.Target>
-            <Button size="xs" variant="subtle" leftSection={<IconPackage size={14} />}>
-              Data
-            </Button>
-          </Menu.Target>
-          <Menu.Dropdown>
-            {renderMenuItems(DATA_MENU[0])}
-            <Menu.Divider />
-            {renderMenuItems(DATA_MENU[1])}
-            <Menu.Divider />
-            {renderMenuItems(DATA_MENU[2])}
-          </Menu.Dropdown>
-        </Menu>
+        {labeledMenus.map((menu) => (
+          <Menu key={menu.label} shadow="md" width={menu.width}>
+            <Menu.Target>
+              {/* the label stays the accessible name, so the menu is found by it either way */}
+              {iconsOnly ? (
+                <Tooltip label={menu.label}>
+                  <ActionIcon
+                    aria-label={menu.label}
+                    size="sm"
+                    variant="subtle"
+                    color="gray"
+                  >
+                    {menu.icon}
+                  </ActionIcon>
+                </Tooltip>
+              ) : (
+                <Button size="xs" variant="subtle" leftSection={menu.icon}>
+                  {menu.label}
+                </Button>
+              )}
+            </Menu.Target>
+            <Menu.Dropdown>{menu.items}</Menu.Dropdown>
+          </Menu>
+        ))}
 
         <Menu shadow="md" width={160}>
           <Menu.Target>
