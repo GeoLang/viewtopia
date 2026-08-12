@@ -422,9 +422,10 @@ High value, product-level:
 
 - [ ] **symbology, what the first cut left open** (categorized, graduated and
       rule-based renderers plus the legend panel shipped 2026-08-02,
-      scale-dependent visibility 2026-08-11): expression renderers and
-      SLD/QML/Mapbox style import/export (fenestra already parses SLD
-      server-side).
+      scale-dependent visibility 2026-08-11, SLD import 2026-08-12): expression
+      renderers, SLD export, and QML/Mapbox style import/export.
+      SLD import needs `/ogc` added to the vite dev proxy prefixes to work
+      outside the platform container.
 - [ ] **runtime plugin install**: plugins are build-time only
       (`import.meta.glob`). GeoLibre ships a marketplace with
       install/update/remove.

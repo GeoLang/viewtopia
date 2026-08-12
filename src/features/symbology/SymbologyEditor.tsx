@@ -9,8 +9,11 @@ import {
   type ZoomRange,
 } from '../../store/agentLayers';
 import { useColumnLabels } from '../../store/datasetSchemas';
+import { SldImport } from './SldImport';
 import {
   CATEGORY_PALETTE,
+  COLOR_RAMPS,
+  RULE_OPS,
   buildCategorized,
   buildGraduated,
   categoricalFields,
@@ -23,9 +26,6 @@ import {
   type Symbology,
   type SymbologyRule,
 } from './symbology';
-
-const RAMPS: ColorRamp[] = ['viridis', 'magma', 'inferno', 'plasma', 'terrain', 'rdylgn', 'spectral', 'greens', 'reds', 'blues', 'grays'];
-const OPS: RuleOp[] = ['==', '!=', '<', '<=', '>', '>='];
 
 function swatch(color: string, onChange: (c: string) => void) {
   return (
@@ -124,6 +124,7 @@ export function SymbologyEditor({ layer }: { layer: AgentLayer }) {
         <Text size="xs" c="dimmed" data-testid="agent-layer-no-shading">
           Nothing to style by: no field varies across these features.
         </Text>
+        <SldImport layer={layer} />
         <ZoomRangeControl layer={layer} />
       </Stack>
     );
@@ -198,7 +199,7 @@ export function SymbologyEditor({ layer }: { layer: AgentLayer }) {
           </Group>
           <Select
             size="xs"
-            data={RAMPS}
+            data={COLOR_RAMPS}
             value={sym.ramp}
             onChange={(ramp) => ramp && rebuildGraduated(sym, { ramp: ramp as ColorRamp })}
             data-testid="agent-layer-ramp"
@@ -256,7 +257,7 @@ export function SymbologyEditor({ layer }: { layer: AgentLayer }) {
                 <Select
                   size="xs"
                   w={64}
-                  data={OPS}
+                  data={RULE_OPS}
                   value={rule.op}
                   onChange={(op) => op && patch({ op: op as RuleOp })}
                   allowDeselect={false}
@@ -312,6 +313,7 @@ export function SymbologyEditor({ layer }: { layer: AgentLayer }) {
 
       {sym && <SymbologyLegend sym={sym} />}
 
+      <SldImport layer={layer} />
       <ZoomRangeControl layer={layer} />
     </Stack>
   );

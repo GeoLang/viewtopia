@@ -21,7 +21,13 @@ export const CATEGORY_PALETTE = [
   '#b07aa1', '#ff9da7', '#9c755f', '#bab0ac', '#86bcb6', '#d37295',
 ];
 
+export const COLOR_RAMPS: ColorRamp[] = [
+  'viridis', 'magma', 'inferno', 'plasma', 'terrain', 'rdylgn',
+  'spectral', 'greens', 'reds', 'blues', 'grays',
+];
+
 export type BreakMethod = 'equal' | 'quantile';
+export const BREAK_METHODS: BreakMethod[] = ['equal', 'quantile'];
 
 export interface GraduatedSymbology {
   kind: 'graduated';
@@ -41,6 +47,7 @@ export interface CategorizedSymbology {
 }
 
 export type RuleOp = '==' | '!=' | '<' | '<=' | '>' | '>=';
+export const RULE_OPS: RuleOp[] = ['==', '!=', '<', '<=', '>', '>='];
 
 export interface SymbologyRule {
   field: string;

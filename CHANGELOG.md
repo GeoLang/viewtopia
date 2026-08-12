@@ -6,6 +6,19 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-12: **SLD files import as symbology**. The symbology editor takes a
+  `.sld` or `.xml` file per layer, posts it to fenestra's `/sld/symbology`
+  (reached same-origin through the `/ogc/` proxy, with the platform bearer),
+  and applies the returned renderer through `setSymbology` like any other. A
+  symbology carries colour and nothing else, so the endpoint reports what it
+  could not carry, and the editor lists every entry under the button rather
+  than dropping it: labels, stroke width, scale ranges, filters no symbology
+  rule can express. A file whose rules classify nothing by a property is a
+  normal answer, not an error, and says so while the layer keeps its colour.
+  fenestra converts the first NamedLayer and UserStyle in the document and
+  reports the rest as unsupported, so the viewer needs no picker for them.
+  A rejected document shows fenestra's own reason.
+
 - 2026-08-11: **a dead session ends instead of erroring**. Platform sessions
   last 24 hours, and one that expired while a tab stayed open surfaced whichever
   service refused first, so agora's "invalid or expired token" reached a live
