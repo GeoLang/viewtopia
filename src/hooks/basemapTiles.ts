@@ -156,7 +156,8 @@ export function maplibreRasterStyle(
   };
 }
 
-const PROTOMAPS_ASSETS = 'https://protomaps.github.io/basemaps-assets';
+/** protomaps/basemaps-assets vendored into public/, see scripts/fetch-basemap-assets.sh */
+const BASEMAP_ASSETS = '/basemaps-assets';
 
 /**
  * Style for a basemap served from a static .pmtiles archive, using the
@@ -167,9 +168,8 @@ const PROTOMAPS_ASSETS = 'https://protomaps.github.io/basemaps-assets';
 export function pmtilesStyle(url: string, flavor = 'dark'): StyleSpecification {
   return {
     version: 8,
-    // sprite/glyph assets stay remote until the platform serves its own copies
-    glyphs: `${PROTOMAPS_ASSETS}/fonts/{fontstack}/{range}.pbf`,
-    sprite: `${PROTOMAPS_ASSETS}/sprites/v4/${flavor}`,
+    glyphs: `${BASEMAP_ASSETS}/fonts/{fontstack}/{range}.pbf`,
+    sprite: `${BASEMAP_ASSETS}/sprites/v4/${flavor}`,
     sources: {
       protomaps: {
         type: 'vector',

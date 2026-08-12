@@ -465,15 +465,17 @@ survives reloads and syncs back. Everything below is what does not work.
       registers a worker and vite has no PWA plugin, so the app shell needs the
       server on every load. Offline today only means "the tab was already
       open".
-- [ ] **DuckDB-WASM loads from jsDelivr** on first query
-      (`getJsDelivrBundles()` in the worker). Serve the bundle from the app
-      origin so SQL works without the CDN.
+- [ ] **DuckDB's spatial extension still loads from extensions.duckdb.org.**
+      The wasm bundle and the basemap glyphs are served from the app origin
+      now, so plain SQL works with no network, but `getConnection()` runs
+      `INSTALL spatial; LOAD spatial;` and that fetch is what spatial SQL
+      needs. It is wrapped so a failure degrades rather than throws. Vendoring
+      it means pinning the extension to the exact DuckDB version and a script
+      that refreshes both together on upgrade.
 - [ ] **no local basemap.** All eight basemaps are external hosts and
       "selfhosted" needs the compose stack reachable. A local .pmtiles now
       loads as an overlay layer (2026-08-02), but not as the basemap, which is
       how GeoLibre solves offline basemaps.
-- [ ] **vector basemap glyphs/sprites load from protomaps.github.io**, so even
-      a locally served vector style breaks offline. Bundle or proxy the assets.
 - [ ] **Cesium terrain needs an external provider** (ion token or terrain
       endpoint), no local/offline terrain source. Blank terrain is the graceful
       floor, a tiletopia-served terrain bundle would be the real fix.

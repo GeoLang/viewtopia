@@ -1,3 +1,6 @@
+import { existsSync, readdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
 import type { StyleSpecification } from 'maplibre-gl';
 import {
@@ -95,7 +98,7 @@ describe('pmtiles basemaps', () => {
       url: `pmtiles://${url}`,
     });
     expect(style.glyphs).toContain('{fontstack}');
-    expect(style.sprite).toBe('https://protomaps.github.io/basemaps-assets/sprites/v4/dark');
+    expect(style.sprite).toBe('/basemaps-assets/sprites/v4/dark');
     expect(style.layers.length).toBeGreaterThan(10);
     expect(style.layers.map((l) => l.id)).toContain('background');
   });
@@ -109,14 +112,55 @@ describe('pmtiles basemaps', () => {
   });
 
   it('matches the sprite to the flavor', () => {
-    expect(pmtilesStyle(url, 'light').sprite).toBe(
-      'https://protomaps.github.io/basemaps-assets/sprites/v4/light',
-    );
+    expect(pmtilesStyle(url, 'light').sprite).toBe('/basemaps-assets/sprites/v4/light');
   });
 
   it('trims whitespace out of the pmtiles:// URL', () => {
     const style = asStyle(maplibreStyle('selfhosted', `  ${url} `));
     expect(style.sources.protomaps).toMatchObject({ url: `pmtiles://${url}` });
+  });
+});
+
+describe('bundled Protomaps glyphs and sprites', () => {
+  const url = 'https://example.org/planet.pmtiles';
+  const publicDir = join(dirname(fileURLToPath(import.meta.url)), '../../public');
+  const publicPath = (path: string) => join(publicDir, path);
+
+  /** font names sit inside ["literal", [...]] once the style switches font by script */
+  const literalArrays = (node: unknown, found: string[][]): string[][] => {
+    if (!Array.isArray(node)) return found;
+    if (node[0] === 'literal' && Array.isArray(node[1])) {
+      found.push(node[1]);
+      return found;
+    }
+    for (const child of node) literalArrays(child, found);
+    return found;
+  };
+
+  const fontstacks = (textFont: unknown): string[] => {
+    if (!Array.isArray(textFont)) return [];
+    if (textFont.every((entry) => typeof entry === 'string')) return textFont;
+    return literalArrays(textFont, []).flat();
+  };
+
+  it('ships every font the style asks for', () => {
+    const fonts = new Set(
+      pmtilesStyle(url).layers.flatMap((layer) =>
+        'layout' in layer ? fontstacks(layer.layout?.['text-font']) : [],
+      ),
+    );
+    expect(fonts.size).toBeGreaterThan(0);
+    for (const font of fonts) {
+      expect(readdirSync(publicPath(`/basemaps-assets/fonts/${font}`)).length).toBeGreaterThan(0);
+    }
+  });
+
+  it('ships the sprite sheet each flavor points at', () => {
+    for (const flavor of ['dark', 'light']) {
+      const sprite = pmtilesStyle(url, flavor).sprite as string;
+      expect(existsSync(publicPath(`${sprite}.json`))).toBe(true);
+      expect(existsSync(publicPath(`${sprite}.png`))).toBe(true);
+    }
   });
 });
 
