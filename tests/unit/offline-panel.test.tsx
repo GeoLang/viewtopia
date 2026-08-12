@@ -27,17 +27,23 @@ vi.mock('../../src/viewer/registry', () => ({
 // itself is the seam: the tile fetching and key math under test stay real
 const db = vi.hoisted(() => ({
   regions: [] as unknown[],
-  tiles: new Map<string, unknown>(),
+  tiles: new Map<string, { key: string; bytes: number; cachedAt: number }>(),
 }));
 
 vi.mock('../../src/offline/db', () => ({
   tileCache: {
-    put: vi.fn(async (tile: { key: string }) => {
-      db.tiles.set(tile.key, tile);
+    put: vi.fn(async (tile: { key: string; blob: ArrayBuffer; cachedAt: number }) => {
+      db.tiles.set(tile.key, {
+        key: tile.key,
+        bytes: tile.blob.byteLength,
+        cachedAt: tile.cachedAt,
+      });
     }),
     remove: vi.fn(async (key: string) => {
       db.tiles.delete(key);
     }),
+    summaries: async () => [...db.tiles.values()],
+    size: async () => [...db.tiles.values()].reduce((sum, tile) => sum + tile.bytes, 0),
   },
   cachedRegions: {
     getAll: vi.fn(async () => db.regions),
@@ -51,6 +57,7 @@ vi.mock('../../src/offline/db', () => ({
 }));
 
 import { OfflinePanel } from '../../src/components/tools/OfflinePanel';
+import { tileKeysForArea } from '../../src/offline/cache';
 import { cachedRegions, tileCache, type CachedRegion } from '../../src/offline/db';
 import { useAppStore } from '../../src/store/app';
 import { setSharedCamera } from '../../src/hooks/sharedCamera';
@@ -179,5 +186,29 @@ describe('OfflinePanel', () => {
       expect(key).toMatch(/^10\/\d+\/\d+@https:\/\/tile\.openstreetmap\.org/);
     }
     expect(await screen.findByText('No cached regions')).toBeInTheDocument();
+  });
+
+  it('clears the browsing tiles and leaves the saved region alone', async () => {
+    const saved = region({ minZoom: 10, maxZoom: 10 });
+    const regionKeys = tileKeysForArea(saved.tileUrlTemplate, saved.bounds, {
+      min: saved.minZoom,
+      max: saved.maxZoom,
+    });
+    db.regions = [saved];
+    for (const key of regionKeys) db.tiles.set(key, { key, bytes: 1024, cachedAt: 1 });
+    db.tiles.set('browsed', { key: 'browsed', bytes: 2 * 1024 * 1024, cachedAt: 2 });
+
+    renderPanel();
+
+    expect(await screen.findByTestId('offline-browsing-size')).toHaveTextContent('2.0MB');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear browsing cache' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+
+    await waitFor(() => expect(db.tiles.has('browsed')).toBe(false));
+    for (const key of regionKeys) expect(db.tiles.has(key)).toBe(true);
+    expect(screen.getByText('12 tiles')).toBeInTheDocument();
+    expect(screen.getByText('3.0MB')).toBeInTheDocument();
+    expect(await screen.findByTestId('offline-browsing-size')).toHaveTextContent('0.0MB');
   });
 });

@@ -7,6 +7,7 @@ const get = vi.fn(async (key: string) => store.get(key));
 
 vi.mock('../../src/offline/db', () => ({
   apiCache: { get: vi.fn(), put: vi.fn() },
+  cachedRegions: { getAll: async () => [] },
   tileCache: {
     get: (key: string) => get(key),
     put: async (tile: CachedTile) => {
@@ -15,6 +16,13 @@ vi.mock('../../src/offline/db', () => ({
     remove: async (key: string) => {
       store.delete(key);
     },
+    summaries: async () =>
+      [...store.values()].map((t) => ({
+        key: t.key,
+        bytes: t.blob.byteLength,
+        cachedAt: t.cachedAt,
+      })),
+    size: async () => [...store.values()].reduce((sum, t) => sum + t.blob.byteLength, 0),
   },
 }));
 

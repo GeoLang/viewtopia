@@ -11,7 +11,13 @@ import {
 } from '@mantine/core';
 import { IconDeviceFloppy, IconDownload, IconTrash } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../PanelCard';
-import { cacheTilesForArea, countTilesForArea, evictTilesForArea } from '../../offline/cache';
+import {
+  browsingCacheBytes,
+  cacheTilesForArea,
+  clearBrowsingCache,
+  countTilesForArea,
+  evictTilesForArea,
+} from '../../offline/cache';
 import { cachedRegions, type CachedRegion } from '../../offline/db';
 import { getViewBounds } from '../../lib/viewBounds';
 import { getSharedCamera } from '../../hooks/sharedCamera';
@@ -34,6 +40,8 @@ export function OfflinePanel({ onClose }: { onClose: () => void }) {
   const [total, setTotal] = useState(0);
   const [name, setName] = useState('');
   const [regions, setRegions] = useState<CachedRegion[]>([]);
+  const [browsingBytes, setBrowsingBytes] = useState(0);
+  const [confirmingClear, setConfirmingClear] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const basemap = useAppStore((s) => s.basemap);
   const customBasemap = useAppStore((s) => s.customBasemap);
@@ -42,6 +50,7 @@ export function OfflinePanel({ onClose }: { onClose: () => void }) {
     try {
       const all = await cachedRegions.getAll();
       setRegions(all.sort((a, b) => b.createdAt - a.createdAt));
+      setBrowsingBytes(await browsingCacheBytes());
     } catch {
       setError('Cannot read the offline store');
     }
@@ -110,6 +119,16 @@ export function OfflinePanel({ onClose }: { onClose: () => void }) {
       await load();
     } catch {
       setError('Delete failed');
+    }
+  };
+
+  const handleClearBrowsing = async () => {
+    setConfirmingClear(false);
+    try {
+      await clearBrowsingCache();
+      await load();
+    } catch {
+      setError('Clearing the browsing cache failed');
     }
   };
 
@@ -192,6 +211,46 @@ export function OfflinePanel({ onClose }: { onClose: () => void }) {
         ) : (
           <Text size="xs" c="dimmed" ta="center" py="xs">
             No cached regions
+          </Text>
+        )}
+
+        <Group justify="space-between" wrap="nowrap">
+          <Text size="xs" c="dimmed">
+            Browsing cache
+          </Text>
+          <Group gap={4} wrap="nowrap">
+            <Badge size="xs" variant="light" data-testid="offline-browsing-size">
+              {megabytes(browsingBytes)}
+            </Badge>
+            {confirmingClear ? (
+              <>
+                <Button size="compact-xs" color="red" onClick={handleClearBrowsing}>
+                  Clear
+                </Button>
+                <Button
+                  size="compact-xs"
+                  variant="default"
+                  onClick={() => setConfirmingClear(false)}
+                >
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="compact-xs"
+                variant="default"
+                disabled={browsingBytes === 0}
+                onClick={() => setConfirmingClear(true)}
+              >
+                Clear browsing cache
+              </Button>
+            )}
+          </Group>
+        </Group>
+
+        {confirmingClear && (
+          <Text size="xs" c="dimmed">
+            Drops the tiles panning the map cached. Saved regions are kept.
           </Text>
         )}
       </Stack>

@@ -472,6 +472,21 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-12: **the offline tile cache has a ceiling**. Every tile ever viewed
+  was kept forever, and the only deletion was a saved region's own delete. The
+  tiles a saved region covers are still exactly that, pinned, and nothing but
+  deleting the region drops them. Everything panning the map left behind now
+  sits under a 200MB ceiling on the store: crossing it evicts unpinned tiles
+  oldest first until the total is back under, and stops there even if only
+  pinned tiles are left. Pinned-ness is derived from the saved regions store
+  rather than a flag per tile, so tiles already on disk are covered without a
+  schema migration, and the tile count and size a region's badges report cannot
+  start lying. The Offline panel reports how much of the cache is browsing tiles and
+  clears them behind an inline confirm, saved regions untouched. Writes carry a
+  running byte total instead of scanning the store, seeded from it on the first
+  write and re-read from the scan every eviction pass, so a total another tab
+  has drifted comes back in line at the next pass.
+
 - 2026-08-08: **the tour drives the app**. The static five-step TourPanel
   (statements over screen regions, two of them aiming at elements that
   did not exist) is replaced by a driven tour in its own overlay + store,
