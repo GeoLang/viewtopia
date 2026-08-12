@@ -3,7 +3,7 @@
 // module (PostGIS ST_Split / ST_Union) then commit the result back to the branch.
 
 import * as turf from '@turf/turf';
-import { apiHeaders } from './apiAuth';
+import { apiHeaders, noticeRefusal } from './apiAuth';
 import { geojsonToWkbHex, wkbHexToGeojson, geometryCentroid } from './wkb';
 
 export const PARCELS_DATASET = 'demo_parcels';
@@ -71,6 +71,7 @@ async function apiJson<T>(path: string, init?: RequestInit): Promise<T> {
     headers: apiHeaders(init?.headers),
   });
   if (!res.ok) {
+    noticeRefusal(res.status);
     throw new Error(`${path} failed: ${res.status} ${res.statusText}`);
   }
   return res.json() as Promise<T>;

@@ -146,6 +146,10 @@ export const useLiveStore = create<LiveState>((set, get) => ({
   focusedCommentId: null,
 
   connect: ({ documentId, token, role = 'edit', guest = false }) => {
+    // an empty subprotocol offer is not a legal one, so without a bearer there
+    // is no socket to open. getAuthToken has already said why it is gone.
+    const bearer = token ?? getAuthToken();
+    if (bearer === null) return;
     if (get().documentId !== null) get().disconnect();
     clientSeqCounter = 0;
     set({
@@ -166,7 +170,7 @@ export const useLiveStore = create<LiveState>((set, get) => ({
     });
     socket = new LiveSocket({
       documentId,
-      token: token ?? getAuthToken() ?? '',
+      token: bearer,
       // actor is only ever set by a snapshot, so null means this connection
       // epoch has no state yet and must not claim a since
       sinceForResume: () => (get().actor === null ? null : get().seq),

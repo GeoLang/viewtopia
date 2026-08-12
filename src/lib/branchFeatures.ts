@@ -3,7 +3,7 @@
 // and drop the geometry column, so a panel that wants to draw a row joins it back
 // from /branches/{id}/features on the same feature id.
 
-import { apiHeaders } from './apiAuth';
+import { apiHeaders, noticeRefusal } from './apiAuth';
 import { wkbHexToGeojson } from './wkb';
 
 interface RawFeature {
@@ -24,6 +24,7 @@ export async function fetchBranchGeometry(
     headers: apiHeaders(),
   });
   if (!res.ok) {
+    noticeRefusal(res.status);
     throw new Error(`branch features failed: ${res.status} ${res.statusText}`);
   }
   const page = (await res.json()) as { features: RawFeature[] };

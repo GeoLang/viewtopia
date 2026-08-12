@@ -3,7 +3,7 @@
 // by dataset name via discoverBranch, so a panel degrades to an empty state when the
 // vertical's dataset has not been created yet instead of hard-failing.
 
-import { apiHeaders } from './apiAuth';
+import { apiHeaders, noticeRefusal } from './apiAuth';
 import { discoverBranch } from './realEstate';
 
 export { discoverBranch };
@@ -24,6 +24,7 @@ async function apiJson<T>(path: string, init?: RequestInit): Promise<T> {
     headers: apiHeaders(init?.headers),
   });
   if (!res.ok) {
+    noticeRefusal(res.status);
     throw new Error(`${path} failed: ${res.status} ${res.statusText}`);
   }
   return res.json() as Promise<T>;

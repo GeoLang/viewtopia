@@ -5,7 +5,7 @@
 // styling" rather than an error worth surfacing.
 
 import type { LayerSpecification } from 'maplibre-gl';
-import { apiHeaders } from './apiAuth';
+import { apiHeaders, noticeRefusal } from './apiAuth';
 
 export interface StyleLoss {
   path: string;
@@ -146,6 +146,7 @@ export async function fetchDatasetStyle(
   try {
     const res = await fetch(url, { headers: apiHeaders() });
     if (!res.ok) {
+      noticeRefusal(res.status);
       console.debug(`dataset style ${datasetId}: ${res.status}, using default styling`);
       return null;
     }

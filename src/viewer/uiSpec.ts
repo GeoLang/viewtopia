@@ -7,7 +7,7 @@
  * (which converts to GeoJSON) and render it on the Cesium globe.
  */
 import { notifications } from '@mantine/notifications';
-import { authHeaders } from '../lib/apiAuth';
+import { authHeaders, noticeRefusal } from '../lib/apiAuth';
 import { useAppStore } from '../store/app';
 import { useAgentLayerStore, type AgentLayer } from '../store/agentLayers';
 
@@ -58,6 +58,7 @@ export async function renderUISpec(spec: UiSpec): Promise<void> {
     try {
       const res = await fetch(`/agent/geojson/${file}`, { headers: authHeaders() });
       if (!res.ok) {
+        noticeRefusal(res.status);
         if (res.status === 401) unauthorized++;
         else failed++;
         continue;

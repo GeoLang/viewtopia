@@ -8,7 +8,7 @@
  * only thing that executes it.
  */
 
-import { apiHeaders, authHeaders } from '../../lib/apiAuth';
+import { apiHeaders, authHeaders, noticeRefusal } from '../../lib/apiAuth';
 
 export interface PlanStep {
   index: number;
@@ -122,6 +122,7 @@ export function outputDownloadUrl(path: string): string {
  */
 export async function downloadOutput(path: string): Promise<boolean> {
   const res = await fetch(outputDownloadUrl(path), { headers: authHeaders() }).catch(() => null);
+  if (res) noticeRefusal(res.status);
   if (!res?.ok) return false;
   const url = URL.createObjectURL(await res.blob());
   const a = document.createElement('a');
@@ -149,7 +150,10 @@ export async function runWorkflow(manifest: string): Promise<WorkflowRun> {
       headers: apiHeaders(),
       body: JSON.stringify({ args: { manifest_toml: manifest }, notify: true }),
     });
-    if (!res.ok) return { ok: false, text: `run_workflow failed: HTTP ${res.status}` };
+    if (!res.ok) {
+      noticeRefusal(res.status);
+      return { ok: false, text: `run_workflow failed: HTTP ${res.status}` };
+    }
     body = (await res.json()) as { result?: string };
   } catch (e) {
     return { ok: false, text: `run_workflow could not be reached: ${(e as Error).message}` };

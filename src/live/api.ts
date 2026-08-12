@@ -1,4 +1,4 @@
-import { apiHeaders } from '../lib/apiAuth';
+import { apiHeaders, noticeRefusal } from '../lib/apiAuth';
 import type { LiveDocument, LiveDocumentSummary, LiveLinkResolution, LiveRole } from './types';
 
 const AGORA_BASE = '/agora';
@@ -48,6 +48,7 @@ async function agoraFetch(path: string, init?: RequestInit): Promise<Response> {
     headers: apiHeaders(init?.headers),
   });
   if (response.ok) return response;
+  noticeRefusal(response.status);
   const failure = `agora ${init?.method ?? 'GET'} ${path} failed with ${response.status}`;
   const reason = await refusalReason(response);
   throw new AgoraRequestError(

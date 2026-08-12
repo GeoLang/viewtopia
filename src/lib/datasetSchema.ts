@@ -3,7 +3,7 @@
 // file is the only place that wire shape is written down; `DatasetField` mirrors
 // ptolemy's FieldDef key for key.
 
-import { apiHeaders } from './apiAuth';
+import { apiHeaders, noticeRefusal } from './apiAuth';
 
 export type DatasetFieldType =
   | 'string'
@@ -72,6 +72,7 @@ export async function fetchDatasetFields(datasetId: string): Promise<DatasetFiel
   try {
     const res = await fetch(url, { headers: apiHeaders() });
     if (!res.ok) {
+      noticeRefusal(res.status);
       console.debug(`dataset schema ${datasetId}: ${res.status}, showing column names`);
       return [];
     }
