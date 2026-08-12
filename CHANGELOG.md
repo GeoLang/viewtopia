@@ -54,6 +54,22 @@ All notable changes to this project will be documented in this file.
   one. A plan from a geolang older than the field is read as ordinary: the panel
   labels, it does not gate, so approve and run are unchanged.
 
+- 2026-08-12: **offline basemaps in Cesium and Leaflet, not just MapLibre**.
+  All three renderers now read their raster tiles through one function over the
+  IndexedDB tile cache, so a region downloaded in the Offline panel draws in the
+  globe, the 2D map and the minimap once the network is gone. Cesium gets a
+  `UrlTemplateImageryProvider` subclass that only replaces `requestImage`, and
+  Leaflet a `TileLayer` subclass that only replaces `createTile`, so the tiling
+  scheme, zoom limits and attribution stay whatever the plain layer made of the
+  same options. The key is `z/x/y@template` in every renderer, built in one
+  place, with the coordinates in that order whatever order the template writes
+  them, so the satellite basemap's `{z}/{y}/{x}` lands on the same entry as the
+  rest. A tile fetched from the network is now stored on the way through, which
+  makes panning while online fill the cache for later; the Offline panel's
+  region download stays the way to pick an area on purpose. Cesium's OSM
+  basemap dropped `OpenStreetMapImageryProvider` for the same tile template the
+  other renderers use, which is what puts it on the shared cache entry.
+
 - 2026-08-11: **a dead session ends instead of erroring**. Platform sessions
   last 24 hours, and one that expired while a tab stayed open surfaced whichever
   service refused first, so agora's "invalid or expired token" reached a live

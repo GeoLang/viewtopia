@@ -7,7 +7,7 @@
  * - Stale-while-revalidate: return cached immediately, refresh in background
  */
 
-import { apiCache, } from './db';
+import { apiCache, tileCache } from './db';
 import { isOnline } from './network';
 
 /** Default TTL for cached API responses (1 hour) */
@@ -133,8 +133,73 @@ export function countTilesForArea(bounds: TileBounds, zoomRange: ZoomRange): num
   return getTilesInBounds(bounds, zoomRange).length;
 }
 
-function tileKey(tileUrlTemplate: string, z: number, x: number, y: number): string {
+/**
+ * The one cache key for a tile. Every renderer has to build it the same way or
+ * a tile MapLibre stored is a tile Cesium and Leaflet never find, so the
+ * coordinates stay in z/x/y order here whatever order the template writes them.
+ */
+export function tileCacheKey(
+  tileUrlTemplate: string,
+  z: number,
+  x: number,
+  y: number,
+): string {
   return `${z}/${x}/${y}@${tileUrlTemplate}`;
+}
+
+export function tileUrlFromTemplate(
+  tileUrlTemplate: string,
+  z: number,
+  x: number,
+  y: number,
+): string {
+  return tileUrlTemplate
+    .replace('{z}', String(z))
+    .replace('{x}', String(x))
+    .replace('{y}', String(y));
+}
+
+const DEFAULT_TILE_CONTENT_TYPE = 'image/png';
+
+export interface TileBytes {
+  bytes: ArrayBuffer;
+  contentType: string;
+}
+
+/**
+ * Read one raster tile: network while online, the offline tile cache when the
+ * network is gone or refuses. Every renderer goes through here, so a tile any
+ * of them fetched is a tile all of them can serve offline.
+ */
+export async function loadTile(
+  tileUrlTemplate: string,
+  z: number,
+  x: number,
+  y: number,
+  signal?: AbortSignal,
+): Promise<TileBytes> {
+  const key = tileCacheKey(tileUrlTemplate, z, x, y);
+
+  if (isOnline()) {
+    try {
+      const resp = await fetch(tileUrlFromTemplate(tileUrlTemplate, z, x, y), { signal });
+      if (resp.ok) {
+        const bytes = await resp.arrayBuffer();
+        const contentType = resp.headers.get('content-type') || DEFAULT_TILE_CONTENT_TYPE;
+        // a store that is full or blocked must not blank the tile it just fetched
+        await tileCache
+          .put({ key, blob: bytes, contentType, cachedAt: Date.now() })
+          .catch(() => {});
+        return { bytes, contentType };
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') throw err;
+    }
+  }
+
+  const hit = await tileCache.get(key);
+  if (hit) return { bytes: hit.blob, contentType: hit.contentType };
+  throw new Error(`tile not cached: ${key}`);
 }
 
 /**
@@ -147,24 +212,20 @@ export async function cacheTilesForArea(
   zoomRange: ZoomRange,
   onProgress?: (done: number, total: number) => void,
 ): Promise<{ cached: number; total: number; bytes: number }> {
-  const { tileCache } = await import('./db');
   const tiles = getTilesInBounds(bounds, zoomRange);
   let cached = 0;
   let bytes = 0;
 
   for (let i = 0; i < tiles.length; i++) {
     const { z, x, y } = tiles[i];
-    const url = tileUrlTemplate
-      .replace('{z}', String(z))
-      .replace('{x}', String(x))
-      .replace('{y}', String(y));
+    const url = tileUrlFromTemplate(tileUrlTemplate, z, x, y);
 
     try {
       const resp = await fetch(url);
       if (resp.ok) {
         const blob = await resp.arrayBuffer();
         await tileCache.put({
-          key: tileKey(tileUrlTemplate, z, x, y),
+          key: tileCacheKey(tileUrlTemplate, z, x, y),
           blob,
           contentType: resp.headers.get('content-type') || 'image/png',
           cachedAt: Date.now(),
@@ -188,9 +249,8 @@ export async function evictTilesForArea(
   bounds: TileBounds,
   zoomRange: ZoomRange,
 ): Promise<void> {
-  const { tileCache } = await import('./db');
   for (const { z, x, y } of getTilesInBounds(bounds, zoomRange)) {
-    await tileCache.remove(tileKey(tileUrlTemplate, z, x, y));
+    await tileCache.remove(tileCacheKey(tileUrlTemplate, z, x, y));
   }
 }
 

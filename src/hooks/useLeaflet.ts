@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import { useAppStore } from '../store/app';
 import { getSharedCamera, setSharedCamera } from './sharedCamera';
 import { rasterTiles } from './basemapTiles';
+import { CachedTileLayer } from '../offline/cachedTileLayer';
 
 interface UseLeafletOptions {
   containerId?: string;
@@ -37,7 +38,7 @@ export function useLeaflet(opts: UseLeafletOptions = {}) {
     // stays empty rather than showing some other basemap
     const tile = rasterTiles(state.basemap, state.customBasemap);
     tileRef.current = tile
-      ? L.tileLayer(tile.url, { attribution: tile.attr, maxZoom: 19 }).addTo(map)
+      ? new CachedTileLayer(tile.url, { attribution: tile.attr, maxZoom: 19 }).addTo(map)
       : null;
 
     // Write shared camera on move
@@ -69,7 +70,7 @@ export function useLeaflet(opts: UseLeafletOptions = {}) {
     });
     const tile = rasterTiles(basemap, customBasemap);
     tileRef.current = tile
-      ? L.tileLayer(tile.url, { attribution: tile.attr, maxZoom: 19 }).addTo(map)
+      ? new CachedTileLayer(tile.url, { attribution: tile.attr, maxZoom: 19 }).addTo(map)
       : null;
     // customBasemap is a dependency too: another catalog entry keeps
     // basemap === 'custom' and changes only the tiles

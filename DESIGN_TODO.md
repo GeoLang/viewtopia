@@ -468,6 +468,7 @@ survives reloads and syncs back. Everything below is what does not work.
       MapLibre-only. Cesium would need an ImageryProvider over the cache. A
       local .pmtiles basemap is MapLibre-only for the same reason, and those
       renderers draw no basemap while one is selected.
+
 - [ ] **no service worker.** `public/manifest.json` exists but nothing
       registers a worker and vite has no PWA plugin, so the app shell needs the
       server on every load. Offline today only means "the tab was already

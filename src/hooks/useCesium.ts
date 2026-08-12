@@ -1,10 +1,5 @@
 import { useEffect, useRef } from 'react';
-import {
-  Ion,
-  Viewer,
-  UrlTemplateImageryProvider,
-  OpenStreetMapImageryProvider,
-} from 'cesium';
+import { Ion, Viewer } from 'cesium';
 import { useAppStore } from '../store/app';
 import { useSplitViewStore } from '../store/splitView';
 import { getSharedCamera, setSharedCamera } from './sharedCamera';
@@ -14,6 +9,7 @@ import {
   useFollowSharedCamera,
 } from './cameraSync';
 import { rasterTiles, type CustomBasemap } from './basemapTiles';
+import { CachedImageryProvider } from '../offline/cachedImageryProvider';
 import { setActiveCesiumViewer, setPaneCesiumViewer } from '../viewer/registry';
 
 interface UseCesiumOptions {
@@ -33,14 +29,9 @@ interface UseCesiumOptions {
  * shows no imagery rather than some other basemap.
  */
 export function cesiumImageryProvider(basemap: string, custom?: CustomBasemap | null) {
-  if (basemap === 'osm') {
-    return new OpenStreetMapImageryProvider({
-      url: 'https://tile.openstreetmap.org/',
-    });
-  }
   const tile = rasterTiles(basemap, custom);
   if (!tile) return null;
-  return new UrlTemplateImageryProvider({
+  return new CachedImageryProvider({
     url: tile.url,
     maximumLevel: basemap === 'topo' ? 17 : 19,
     credit: tile.attr,
