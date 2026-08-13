@@ -25,6 +25,15 @@ export function isOnline(): boolean {
   return useNetworkStore.getState().online;
 }
 
+/**
+ * Refuse a request that only a live network can answer, so the panel says the
+ * user is offline instead of showing whatever the browser's failed fetch threw.
+ */
+export function requireOnline(what: string): void {
+  if (isOnline()) return;
+  throw new Error(`You are offline, and ${what} needs a network connection.`);
+}
+
 type NetworkListener = (online: boolean) => void;
 const networkListeners = new Set<NetworkListener>();
 

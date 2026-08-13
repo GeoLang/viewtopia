@@ -4,8 +4,12 @@
  * Primary: the platform's own **geokode** service (same-origin via the nginx
  * proxy `/api/geocode/forward?q=`). geokode ships a small address dataset, so we
  * fall back to Nominatim (public OSM) for global place coverage when geokode
- * returns nothing or is unavailable.
+ * returns nothing or is unavailable. geokode goes through the offline cache, so
+ * a query asked before still answers with no network. The Nominatim fallback
+ * never can, so offline it raises rather than reporting an empty result.
  */
+import { offlineFetch } from '../offline/cache';
+import { requireOnline } from '../offline/network';
 
 export interface GeoHit {
   lat: number;
@@ -40,7 +44,7 @@ function geokodeLabel(a: GeokodeAddress, fallback: string): string {
 }
 
 async function geokodeForward(q: string, limit: number): Promise<GeoHit[]> {
-  const res = await fetch(`/api/geocode/forward?q=${encodeURIComponent(q)}`);
+  const res = await offlineFetch(`/api/geocode/forward?q=${encodeURIComponent(q)}`);
   if (!res.ok) return [];
   const data = (await res.json()) as { results?: GeokodeResult[] };
   return (data.results ?? [])
@@ -82,8 +86,9 @@ export async function geocode(query: string, limit = 1): Promise<GeoHit[]> {
     const hits = await geokodeForward(q, limit);
     if (hits.length) return hits;
   } catch {
-    /* geokode unavailable — fall through to Nominatim */
+    /* geokode unavailable, fall through to Nominatim */
   }
+  requireOnline('place search');
   try {
     return await nominatimForward(q, limit);
   } catch {

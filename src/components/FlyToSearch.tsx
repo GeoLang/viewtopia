@@ -40,8 +40,12 @@ export function FlyToSearch() {
       } else {
         notifications.show({ title: 'Not found', message: `No place matching “${q}”`, color: 'yellow' });
       }
-    } catch {
-      notifications.show({ title: 'Geocoding failed', message: 'Could not reach the geocoder.', color: 'red' });
+    } catch (err) {
+      notifications.show({
+        title: 'Geocoding failed',
+        message: err instanceof Error ? err.message : 'Could not reach the geocoder.',
+        color: 'red',
+      });
     } finally {
       setLoading(false);
     }

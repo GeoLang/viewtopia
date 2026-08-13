@@ -1,5 +1,6 @@
-import { ActionIcon, Button, Group, NumberInput, Select, Stack, Text } from '@mantine/core';
+import { ActionIcon, Button, Checkbox, Group, NumberInput, Select, Stack, Text } from '@mantine/core';
 import { IconPlus, IconX } from '@tabler/icons-react';
+import { useState } from 'react';
 import type { ColorRamp } from '../../raster/types';
 import { propertyKeys } from '../../lib/geojsonSources';
 import {
@@ -9,25 +10,41 @@ import {
   type ZoomRange,
 } from '../../store/agentLayers';
 import { useColumnLabels } from '../../store/datasetSchemas';
+import { formatExpression, parseExpression } from './expression';
 import { MapboxStyleImport } from './MapboxStyleImport';
+import { QmlImport } from './QmlImport';
 import { SldImport } from './SldImport';
 import { SymbologyExport } from './SymbologyExport';
 import {
   CATEGORY_PALETTE,
   COLOR_RAMPS,
+  EXPRESSION_SIZES,
   RULE_OPS,
   buildCategorized,
+  buildExpression,
   buildGraduated,
   categoricalFields,
+  geometryKinds,
   legendEntries,
   numericFields,
   symbologyField,
   type BreakMethod,
+  type ExpressionSymbology,
   type GraduatedSymbology,
   type RuleOp,
   type Symbology,
   type SymbologyRule,
 } from './symbology';
+
+/** Mantine has no plain text input this small, so the two here are bare ones. */
+const TEXT_INPUT_STYLE = {
+  background: 'var(--mantine-color-dark-8)',
+  border: '1px solid var(--mantine-color-dark-5)',
+  borderRadius: 4,
+  color: 'white',
+  fontSize: 12,
+  padding: '2px 4px',
+} as const;
 
 function swatch(color: string, onChange: (c: string) => void) {
   return (
@@ -76,6 +93,94 @@ function ZoomRangeControl({ layer }: { layer: AgentLayer }) {
   );
 }
 
+const NOTHING_TO_SHADE =
+  'That expression gives every feature the same value, so there is nothing to shade by.';
+
+/**
+ * Colour, and optionally size, by arithmetic over the feature's columns. The
+ * typed text lives here rather than in the store, so a half-written expression
+ * neither clears the renderer nor loses what the user typed.
+ */
+function ExpressionControls({ layer, sym }: { layer: AgentLayer; sym: ExpressionSymbology }) {
+  const setSymbology = useAgentLayerStore((s) => s.setSymbology);
+  const [text, setText] = useState(sym.expression);
+  const [failure, setFailure] = useState<string | null>(null);
+  const hasPoints = geometryKinds(layer.sourceGeojson ?? layer.geojson).includes('point');
+
+  const apply = (expression: string, patch: Partial<ExpressionSymbology> = {}) => {
+    const next = { ...sym, ...patch };
+    const built = buildExpression(layer, expression, next.ramp, next.sizes);
+    setFailure(built ? null : (parseExpression(expression).error ?? NOTHING_TO_SHADE));
+    if (built) setSymbology(layer.id, built);
+  };
+
+  const sizeBound = (edge: 0 | 1) => (
+    <NumberInput
+      size="xs"
+      w={54}
+      min={1}
+      max={40}
+      value={sym.sizes?.[edge]}
+      onChange={(value) => {
+        const sizes: [number, number] = [...(sym.sizes ?? EXPRESSION_SIZES)];
+        sizes[edge] = Number(value);
+        if (sizes[edge] >= 1) apply(sym.expression, { sizes });
+      }}
+      data-testid={`agent-layer-expression-size-${edge}`}
+    />
+  );
+
+  return (
+    <>
+      <input
+        value={text}
+        onChange={(event) => {
+          setText(event.target.value);
+          apply(event.target.value);
+        }}
+        placeholder="population / area"
+        aria-label="Expression"
+        data-testid="agent-layer-expression"
+        style={{ ...TEXT_INPUT_STYLE, width: '100%' }}
+      />
+      {failure && (
+        <Text size="xs" c="red" data-testid="agent-layer-expression-error">
+          {failure}
+        </Text>
+      )}
+      <Select
+        size="xs"
+        data={COLOR_RAMPS}
+        value={sym.ramp}
+        onChange={(ramp) => ramp && apply(sym.expression, { ramp: ramp as ColorRamp })}
+        data-testid="agent-layer-ramp"
+        allowDeselect={false}
+      />
+      {hasPoints && (
+        <Group gap={6} wrap="nowrap">
+          <Checkbox
+            size="xs"
+            label="Size points"
+            checked={sym.sizes !== undefined}
+            onChange={(event) =>
+              apply(sym.expression, {
+                sizes: event.currentTarget.checked ? EXPRESSION_SIZES : undefined,
+              })
+            }
+            data-testid="agent-layer-expression-sized"
+          />
+          {sym.sizes && (
+            <>
+              {sizeBound(0)}
+              {sizeBound(1)}
+            </>
+          )}
+        </Group>
+      )}
+    </>
+  );
+}
+
 export function SymbologyLegend({ sym }: { sym: Symbology }) {
   const { columnLabel } = useColumnLabels();
   const symField = symbologyField(sym);
@@ -118,6 +223,7 @@ export function SymbologyEditor({ layer }: { layer: AgentLayer }) {
     ...(numeric.length ? [{ value: 'graduated', label: 'Graduated' }] : []),
     ...(categorical.length ? [{ value: 'categorized', label: 'Categorized' }] : []),
     ...(allFields.length ? [{ value: 'rules', label: 'Rules' }] : []),
+    ...(numeric.length ? [{ value: 'expression', label: 'Expression' }] : []),
   ];
 
   if (kinds.length === 1) {
@@ -128,6 +234,7 @@ export function SymbologyEditor({ layer }: { layer: AgentLayer }) {
         </Text>
         <SldImport layer={layer} />
         <MapboxStyleImport layer={layer} />
+        <QmlImport layer={layer} />
         <SymbologyExport layer={layer} />
         <ZoomRangeControl layer={layer} />
       </Stack>
@@ -140,6 +247,10 @@ export function SymbologyEditor({ layer }: { layer: AgentLayer }) {
     if (!kind || kind === 'none') return apply(null);
     if (kind === 'graduated') return apply(buildGraduated(layer, numeric[0]));
     if (kind === 'categorized') return apply(buildCategorized(layer, categorical[0]));
+    // seeded with a column, so the renderer draws before anything is typed
+    if (kind === 'expression') {
+      return apply(buildExpression(layer, formatExpression({ kind: 'field', name: numeric[0] })));
+    }
     apply({
       kind: 'rules',
       rules: [{ field: allFields[0], op: '==', value: '', color: CATEGORY_PALETTE[0] }],
@@ -240,6 +351,8 @@ export function SymbologyEditor({ layer }: { layer: AgentLayer }) {
         </>
       )}
 
+      {sym?.kind === 'expression' && <ExpressionControls layer={layer} sym={sym} />}
+
       {sym?.kind === 'rules' && (
         <Stack gap={4}>
           {sym.rules.map((rule, i) => {
@@ -271,15 +384,7 @@ export function SymbologyEditor({ layer }: { layer: AgentLayer }) {
                   onChange={(e) => patch({ value: e.target.value })}
                   placeholder="value"
                   data-testid="agent-layer-rule-value"
-                  style={{
-                    width: 54,
-                    background: 'var(--mantine-color-dark-8)',
-                    border: '1px solid var(--mantine-color-dark-5)',
-                    borderRadius: 4,
-                    color: 'white',
-                    fontSize: 12,
-                    padding: '2px 4px',
-                  }}
+                  style={{ ...TEXT_INPUT_STYLE, width: 54 }}
                 />
                 <ActionIcon aria-label="Remove rule"
                   size="xs"
@@ -319,6 +424,7 @@ export function SymbologyEditor({ layer }: { layer: AgentLayer }) {
 
       <SldImport layer={layer} />
       <MapboxStyleImport layer={layer} />
+      <QmlImport layer={layer} />
       <SymbologyExport layer={layer} />
       <ZoomRangeControl layer={layer} />
     </Stack>

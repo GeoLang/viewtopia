@@ -14,7 +14,9 @@ import type { FeatureCollection } from 'geojson';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveMapLibre } from '../../viewer/registry';
 import { getViewBounds } from '../../lib/weatherData';
+import { requireOnline } from '../../offline/network';
 
+// online only: the bbox follows the view, so no two queries ask the same thing
 const OVERPASS = 'https://overpass-api.de/api/interpreter';
 const TILE_KEY = 'viewtopia-traffic-tiles';
 const DEMO_SOURCE = 'traffic-demo';
@@ -41,6 +43,7 @@ function congestionColor(c: number): string {
 }
 
 async function fetchRoads(): Promise<FeatureCollection> {
+  requireOnline('the OSM road download');
   const b = getViewBounds();
   const query = `[out:json][timeout:20];way["highway"~"motorway|trunk|primary|secondary"](${b.south.toFixed(
     5,

@@ -30,6 +30,18 @@ export interface UnsupportedConstruct {
   detail: string;
 }
 
+/** One thing a conversion could not carry, in either direction. */
+export const unsupportedNote = (
+  construct: string,
+  detail: string,
+  ruleIndex: number | null = null,
+): UnsupportedConstruct => ({
+  construct,
+  rule_index: ruleIndex,
+  rule_name: null,
+  detail,
+});
+
 export interface SldConversion {
   layer: string;
   style: string | null;

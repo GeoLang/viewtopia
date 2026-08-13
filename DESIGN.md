@@ -385,6 +385,11 @@ map, plus a synced split view. Picking/draw/measure/agent-layers survive rendere
   tool bindings assume one. Clicking a pane makes it the active one, which is what the
   map-corner basemap and renderer pickers style, and only the UI keeps Cesium to one pane: the
   option is closed wherever another pane holds it.
+- Agent layers reach a pane by subscription, not by effect ordering: `useLeaflet`, `useMapLibre`
+  and `useCesium` publish the instance they build as state, and the three `useAgentLayers*`
+  hooks key every effect on that instance rather than on the app-level renderer and tab. A pane
+  switching renderer after mount builds a new map, and the hooks re-add against it because they
+  saw it appear.
 - All navigation, bookmarks included, goes through the shared fly-to pipeline, which is what
   makes it work on the 2D renderers and for bookmarks that carry no camera.
 - The 2D map tab disables the renderer select and the vector basemap options.
@@ -420,6 +425,15 @@ Tools" setting with a Preview badge, so there are no dead buttons in the default
   street-view needs a Google Maps API key for the embed. Neither keyed host is contacted
   before its key is set.
 - Analysis panels read the shown renderer's view and draw results on it (`viewBounds.ts`).
+- **External services.** Geocoding and routing prefer the platform's own geokode and itinera
+  over the proxy (`/api/geocode/forward`, `/api/route`), through the offline API cache, so a
+  query asked before still answers with no network. Nominatim and the public OSRM stay as the
+  fallback for a stack that has neither deployed, and offline they are not attempted at all:
+  `services/geocode.ts` and `services/route.ts` raise instead, so the panel says the user is
+  offline rather than reporting an empty result. Open-elevation, open-meteo and Overpass are
+  online only, because every one of them is keyed by a fresh line, view or camera bbox that no
+  second call repeats, and they refuse through `requireOnline()` with the same message rather
+  than through whatever the browser's failed fetch throws.
 - The terrain panel defaults to the platform service with a graceful no-source state. tiletopia
   serves quantized mesh for Cesium and a terrain-RGB endpoint (mercator XYZ, mapbox encoding,
   anonymous) for MapLibre relief.
@@ -458,6 +472,27 @@ Tools" setting with a Preview badge, so there are no dead buttons in the default
   loaded dataset, because the attribute table, the feature-info panel and the symbology and
   toolbox selects all work off property keys and none of them carries a dataset id. The alias is
   a label only: every select's value, every sort and every property lookup stays the column name.
+- An expression renderer colours, and optionally sizes points, by arithmetic over a feature's
+  own columns rather than by a class lookup. `features/symbology/expression.ts` holds the whole
+  language: column names, numbers, brackets and `+ - * /`, parsed to a three-node tree and
+  evaluated over one property bag. It is deliberately the intersection of QGIS expressions,
+  Mapbox expressions and OGC filter arithmetic, so it exports to all three with nothing to drop,
+  and it is total, so a malformed expression is a message under the input rather than a throw in
+  the render loop. The rule renderer's condition evaluator is not reused because it answers
+  true or false about one comparison where this has to produce a number. A ramp over the value
+  is the colour, so the legend samples the ramp rather than listing classes.
+- A layer's symbology exchanges with three foreign style formats, all per layer from the
+  symbology editor. SLD import posts the document to fenestra's `/sld/symbology`; SLD export,
+  Mapbox style JSON both ways and QGIS `.qml` both ways are client-side in
+  `features/symbology/`. QML is the only one of the three that carries the single colour, the
+  layer opacity and the zoom range, because it is the only one whose format has a place for
+  them: SLD export writes the classes alone and its button is disabled without symbology.
+  A symbology holds colour per class and nothing else, so every importer reports what it could
+  not carry in the same `unsupported` shape fenestra answers with, and the panel lists it.
+  Exports report the same way, because an expression renderer is continuous and only a Mapbox
+  style has an interpolate to hold that: SLD and QML take it as five classes and say so, and
+  the point sizes reach SLD as a per-class graphic size but reach QML not at all. Only SLD
+  import is blind to all this, since it is fenestra's conversion rather than this viewer's.
 - WMTS (REST template) and WFS (GeoJSON → agent layers) are verified against fenestra.
 - The building-data toggle self-disables on styles with native 3D buildings and re-enables on
   raster styles at `style.load`.

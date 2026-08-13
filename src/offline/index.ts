@@ -5,7 +5,7 @@
 export { layers, features, annotations, pendingOps, apiCache, tileCache } from './db';
 export type { OfflineLayer, OfflineFeature, OfflineAnnotation, PendingOperation, CachedResponse, CachedTile } from './db';
 export { initSync, syncNow, discardPending, queueOperation, onSyncStateChange, getSyncState, clearConflicts, ConflictError } from './sync';
-export { isOnline, useNetworkStore, initNetworkMonitor, onNetworkChange } from './network';
+export { isOnline, requireOnline, useNetworkStore, initNetworkMonitor, onNetworkChange } from './network';
 export { offlineFetch, precacheUrls, cacheTilesForArea } from './cache';
 export { registerAppShellWorker } from './appShellWorker';
 export { useOnlineStatus, useSyncStatus } from './hooks';

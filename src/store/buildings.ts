@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { LayerSpecification } from 'maplibre-gl';
+import { requireOnline } from '../offline/network';
 
 export interface BuildingFeature {
   coords: number[];
@@ -48,6 +49,7 @@ export const useBuildingStore = create<BuildingState>((set) => ({
   clearBuildings: () => set({ buildings: [], enabled: false }),
 }));
 
+// online only: the bbox follows the camera, so no two queries ask the same thing
 const OVERPASS_ENDPOINTS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
@@ -59,6 +61,7 @@ export async function fetchOsmBuildings(
   centerLon: number,
   cameraHeight: number,
 ): Promise<BuildingFeature[]> {
+  requireOnline('OSM buildings');
   const span = Math.min(Math.max(cameraHeight * 0.000005, 0.002), 0.02);
   const south = centerLat - span;
   const north = centerLat + span;

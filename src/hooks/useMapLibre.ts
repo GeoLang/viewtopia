@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 // markers and controls are DOM overlays that need maplibre's stylesheet
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -30,6 +30,9 @@ interface UseMapLibreOptions {
 
 export function useMapLibre(opts: UseMapLibreOptions = {}) {
   const mapRef = useRef<maplibregl.Map | null>(null);
+  // building the map only writes a ref, which nothing downstream can react to,
+  // so this renders the caller again with the new instance in the ref
+  const [, setLiveMap] = useState<maplibregl.Map | null>(null);
   /** Style key the live map was built from, so activation doesn't re-set it. */
   const styledKeyRef = useRef<string | null>(null);
   const viewerBasemap = useAppStore((s) => s.basemap);
@@ -65,6 +68,7 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
+        setLiveMap(null);
         styledKeyRef.current = null;
         register(null);
         // the buildings tool reads the active style, so a pane never speaks for it
@@ -113,6 +117,7 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
     map.on('move', () => setSharedCamera(readMapLibreCamera(map)));
 
     mapRef.current = map;
+    setLiveMap(map);
     styledKeyRef.current = styleKey;
     register(map);
   }, [
@@ -159,6 +164,7 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
     () => () => {
       mapRef.current?.remove();
       mapRef.current = null;
+      setLiveMap(null);
       styledKeyRef.current = null;
       register(null);
     },

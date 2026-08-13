@@ -48,8 +48,8 @@ export function RoutingPanel({ onClose }: { onClose: () => void }) {
       } else {
         routingFailed('No route found');
       }
-    } catch {
-      routingFailed('Routing request failed');
+    } catch (err) {
+      routingFailed(err instanceof Error ? err.message : 'Routing request failed');
     } finally {
       setLoading(false);
     }

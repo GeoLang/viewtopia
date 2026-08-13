@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Ion, Viewer } from 'cesium';
 import { useAppStore } from '../store/app';
 import { useSplitViewStore, COMPARE_PANE, type Pane } from '../store/splitView';
@@ -46,6 +46,9 @@ export function cesiumImageryProvider(basemap: string, custom?: CustomBasemap | 
 
 export function useCesium(opts: UseCesiumOptions = {}) {
   const viewerRef = useRef<Viewer | null>(null);
+  // building the viewer only writes a ref, which nothing downstream can react
+  // to, so this renders the caller again with the new instance in the ref
+  const [, setLiveViewer] = useState<Viewer | null>(null);
   const viewerBasemap = useAppStore((s) => s.basemap);
   const customBasemap = useAppStore((s) => s.customBasemap);
   const renderer = useAppStore((s) => s.renderer);
@@ -74,6 +77,7 @@ export function useCesium(opts: UseCesiumOptions = {}) {
         viewerRef.current.destroy();
       }
       viewerRef.current = null;
+      setLiveViewer(null);
       register(null);
       return;
     }
@@ -150,6 +154,7 @@ export function useCesium(opts: UseCesiumOptions = {}) {
     }, 300);
 
     viewerRef.current = viewer;
+    setLiveViewer(viewer);
     register(viewer);
   }, [isActive, opts.containerId, opts.ionToken, basemap, customBasemap, register]);
 
@@ -183,6 +188,7 @@ export function useCesium(opts: UseCesiumOptions = {}) {
         viewerRef.current.destroy();
       }
       viewerRef.current = null;
+      setLiveViewer(null);
       register(null);
     },
     [register],

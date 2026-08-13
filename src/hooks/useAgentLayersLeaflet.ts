@@ -8,7 +8,12 @@ import {
   layerStyle,
   visibleLayers,
 } from '../store/agentLayers';
-import { simplestyleColor } from '../features/symbology/symbology';
+import {
+  MARKER_RADIUS_KEY,
+  POINT_RADIUS,
+  simplestyleColor,
+  simplestyleNumber,
+} from '../features/symbology/symbology';
 import { agentLayersBounds } from './agentLayerBounds';
 import { bboxOfCorners } from '../overlay/georeference';
 
@@ -90,7 +95,7 @@ export function useAgentLayersLeaflet(mapRef: MutableRefObject<L.Map | null>) {
         }),
         pointToLayer: (feature, latlng) =>
           L.circleMarker(latlng, {
-            radius: 5,
+            radius: simplestyleNumber(feature, MARKER_RADIUS_KEY, POINT_RADIUS),
             color: '#ffffff',
             weight: 1,
             fillColor: simplestyleColor(feature, 'marker-color', color),

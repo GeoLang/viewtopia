@@ -1,17 +1,32 @@
 /**
  * Mapbox GL style JSON as an exchange format for symbology: the class colours
- * become a data-driven paint expression, and an imported style's match, step or
- * case expression comes back as the matching renderer. A style says nothing
- * about a break method or a colour ramp, and nothing it drops is silent: it
- * arrives in `unsupported` the way an SLD conversion reports its own.
+ * become a data-driven paint expression, and an imported style's match, step,
+ * case or interpolate expression comes back as the matching renderer. A style
+ * says nothing about a break method, and nothing it drops is silent: it arrives
+ * in `unsupported` the way an SLD conversion reports its own.
+ *
+ * This is the one exchange that carries an expression renderer whole: the
+ * arithmetic nests inside an interpolate, and the ramp is read back off the
+ * stop colours.
  */
 import type { ColorRamp } from '../../raster/types';
 import { DEFAULT_LAYER_COLOR, type AgentLayer } from '../../store/agentLayers';
-import type { UnsupportedConstruct } from './sldConversion';
 import {
+  formatExpression,
+  parseExpression,
+  type BinaryOperator,
+  type ExpressionNode,
+} from './expression';
+import { unsupportedNote, type UnsupportedConstruct } from './sldConversion';
+import {
+  EXPRESSION_STOPS,
   RULE_OPS,
   geometryKinds,
+  rampColor,
+  rampOfSamples,
+  spanAt,
   type BreakMethod,
+  type ExpressionSymbology,
   type GeometryKind,
   type RuleOp,
   type Symbology,
@@ -24,7 +39,7 @@ const PLACEHOLDER_DATA_URL = 'https://example.com/replace-with-your-data.geojson
 
 /** What a style states nowhere, so an imported graduated renderer assumes it. */
 const ASSUMED_BREAK_METHOD: BreakMethod = 'equal';
-const ASSUMED_RAMP: ColorRamp = 'viridis';
+export const ASSUMED_RAMP: ColorRamp = 'viridis';
 
 const LAYER_BY_KIND: Record<GeometryKind, { type: string; colorKey: string }> = {
   point: { type: 'circle', colorKey: 'circle-color' },
@@ -33,6 +48,9 @@ const LAYER_BY_KIND: Record<GeometryKind, { type: string; colorKey: string }> = 
 };
 
 const COLOR_PAINT_KEYS = ['fill-color', 'line-color', 'circle-color'];
+const RADIUS_PAINT_KEY = 'circle-radius';
+
+const BINARY_OPERATORS: BinaryOperator[] = ['+', '-', '*', '/'];
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -48,8 +66,36 @@ function literal(value: string): string | number {
   return value.trim() !== '' && Number.isFinite(asNumber) ? asNumber : value;
 }
 
-function paintColor(sym: Symbology, fallback: string): unknown[] {
+function toMapboxExpression(node: ExpressionNode): unknown {
+  switch (node.kind) {
+    case 'number':
+      return node.value;
+    case 'field':
+      return ['get', node.name];
+    case 'binary':
+      return [node.operator, toMapboxExpression(node.left), toMapboxExpression(node.right)];
+  }
+}
+
+const stopPositions = () =>
+  Array.from({ length: EXPRESSION_STOPS }, (_, index) => index / (EXPRESSION_STOPS - 1));
+
+/**
+ * The ramp or the size span as an interpolate over the expression. Null when
+ * the expression is malformed, which only a hand-edited project file holds.
+ */
+function interpolated(sym: ExpressionSymbology, at: (position: number) => unknown): unknown[] | null {
+  const { node } = parseExpression(sym.expression);
+  if (!node) return null;
+  const [low, high] = sym.domain;
+  const stops = stopPositions().flatMap((position) => [low + position * (high - low), at(position)]);
+  return ['interpolate', ['linear'], toMapboxExpression(node), ...stops];
+}
+
+function paintColor(sym: Symbology, fallback: string): unknown {
   switch (sym.kind) {
+    case 'expression':
+      return interpolated(sym, (position) => rampColor(sym.ramp, position)) ?? fallback;
     case 'categorized':
       return [
         'match',
@@ -81,13 +127,21 @@ export function symbologyToMapboxStyle(layer: AgentLayer): string | null {
   const sym = layer.symbology;
   if (!sym) return null;
   const color = paintColor(sym, layer.color ?? DEFAULT_LAYER_COLOR);
+  const sizes = sym.kind === 'expression' ? sym.sizes : undefined;
+  const radius =
+    sym.kind === 'expression' && sizes
+      ? interpolated(sym, (position) => spanAt(sizes, position))
+      : null;
   const layers = geometryKinds(layer.sourceGeojson ?? layer.geojson).map((kind) => {
     const spec = LAYER_BY_KIND[kind];
     return {
       id: `${layer.id}-${spec.type}`,
       type: spec.type,
       source: PLACEHOLDER_SOURCE,
-      paint: { [spec.colorKey]: color },
+      paint: {
+        [spec.colorKey]: color,
+        ...(kind === 'point' && radius ? { [RADIUS_PAINT_KEY]: radius } : {}),
+      },
     };
   });
 
@@ -116,17 +170,6 @@ interface Converted {
   symbology: Symbology;
   unsupported: UnsupportedConstruct[];
 }
-
-const note = (
-  construct: string,
-  detail: string,
-  ruleIndex: number | null = null,
-): UnsupportedConstruct => ({
-  construct,
-  rule_index: ruleIndex,
-  rule_name: null,
-  detail,
-});
 
 /** The property an expression reads, when that is all it does. */
 function propertyName(expression: unknown): string | null {
@@ -161,7 +204,7 @@ function fromMatch(expression: unknown[]): Converted | null {
   const unsupported =
     typeof fallback === 'string'
       ? [
-          note(
+          unsupportedNote(
             'match',
             `the fallback colour ${fallback} is dropped: a feature no category matches keeps the layer colour`,
           ),
@@ -188,14 +231,14 @@ function fromStep(expression: unknown[]): Converted | null {
   }
 
   const unsupported = [
-    note(
+    unsupportedNote(
       'step',
       `a style states no break method or colour ramp, so method ${ASSUMED_BREAK_METHOD} and ramp ${ASSUMED_RAMP} are placeholders; the listed colours are what render`,
     ),
   ];
   if (typeof base === 'string') {
     unsupported.push(
-      note(
+      unsupportedNote(
         'step',
         `the colour ${base} below ${breaks[0]} is dropped: a feature under the first break takes the first class colour`,
       ),
@@ -244,7 +287,7 @@ function fromCase(expression: unknown[]): Converted | null {
       continue;
     }
     unsupported.push(
-      note(
+      unsupportedNote(
         conditionName(body[index]),
         'rule dropped: a symbology rule tests one property against one literal',
         index / 2,
@@ -255,13 +298,89 @@ function fromCase(expression: unknown[]): Converted | null {
 
   if (typeof fallback === 'string') {
     unsupported.push(
-      note(
+      unsupportedNote(
         'case',
         `the fallback colour ${fallback} is dropped: a feature no rule matches keeps the layer colour`,
       ),
     );
   }
   return { symbology: { kind: 'rules', rules }, unsupported };
+}
+
+/** A style expression back as one of ours, where every part of it is arithmetic. */
+function fromMapboxExpression(value: unknown): ExpressionNode | null {
+  if (isFiniteNumber(value)) return { kind: 'number', value };
+  const field = propertyName(value);
+  if (field) return { kind: 'field', name: field };
+  if (!Array.isArray(value) || value.length !== 3) return null;
+  const operator = BINARY_OPERATORS.find((known) => known === value[0]);
+  if (!operator) return null;
+  const left = fromMapboxExpression(value[1]);
+  const right = fromMapboxExpression(value[2]);
+  return left && right ? { kind: 'binary', operator, left, right } : null;
+}
+
+/** An interpolate's stop inputs and outputs, where they are evenly spaced. */
+function interpolateStops(body: unknown[]): { inputs: number[]; outputs: unknown[] } | null {
+  if (body.length < 4 || body.length % 2 !== 0) return null;
+  const inputs: number[] = [];
+  const outputs: unknown[] = [];
+  for (let index = 0; index < body.length; index += 2) {
+    const input = body[index];
+    if (!isFiniteNumber(input)) return null;
+    inputs.push(input);
+    outputs.push(body[index + 1]);
+  }
+  return inputs[inputs.length - 1] > inputs[0] ? { inputs, outputs } : null;
+}
+
+function fromInterpolate(expression: unknown[]): Converted | null {
+  const interpolation = expression[1];
+  if (!Array.isArray(interpolation) || interpolation[0] !== 'linear') return null;
+  const node = fromMapboxExpression(expression[2]);
+  if (!node) return null;
+  const stops = interpolateStops(expression.slice(3));
+  if (!stops) return null;
+
+  const ramp = rampOfSamples(stops.outputs.filter((color) => typeof color === 'string'));
+  const domain: [number, number] = [stops.inputs[0], stops.inputs[stops.inputs.length - 1]];
+  const unsupported = ramp
+    ? []
+    : [
+        unsupportedNote(
+          'interpolate',
+          `those stop colours are no ramp this viewer holds, so ramp ${ASSUMED_RAMP} stands in and the layer draws in that instead`,
+        ),
+      ];
+  return {
+    symbology: { kind: 'expression', expression: formatExpression(node), ramp: ramp ?? ASSUMED_RAMP, domain },
+    unsupported,
+  };
+}
+
+/**
+ * A circle-radius anywhere in the style. The sizes ride on the point layer,
+ * which is not the layer the colour came from when the style holds both.
+ */
+function radiusPaint(layers: unknown[]): unknown {
+  for (const styleLayer of layers) {
+    if (!isRecord(styleLayer) || !isRecord(styleLayer.paint)) continue;
+    const radius = styleLayer.paint[RADIUS_PAINT_KEY];
+    if (radius !== undefined) return radius;
+  }
+  return undefined;
+}
+
+/** The same renderer sizing its points too, where a circle-radius says so. */
+function withSizes(sym: ExpressionSymbology, radius: unknown): ExpressionSymbology {
+  if (!Array.isArray(radius) || radius[0] !== 'interpolate') return sym;
+  const node = fromMapboxExpression(radius[2]);
+  if (!node || formatExpression(node) !== sym.expression) return sym;
+  const stops = interpolateStops(radius.slice(3));
+  const low = stops?.outputs[0];
+  const high = stops?.outputs[stops.outputs.length - 1];
+  if (!isFiniteNumber(low) || !isFiniteNumber(high)) return sym;
+  return { ...sym, sizes: [low, high] };
 }
 
 function fromPaintColor(value: unknown): Converted | null {
@@ -273,6 +392,8 @@ function fromPaintColor(value: unknown): Converted | null {
       return fromStep(value);
     case 'case':
       return fromCase(value);
+    case 'interpolate':
+      return fromInterpolate(value);
     default:
       return null;
   }
@@ -307,14 +428,18 @@ export function mapboxStyleToSymbology(text: string): MapboxStyleConversion {
       const unsupported = [...converted.unsupported];
       if (layers.length > 1) {
         unsupported.unshift(
-          note('layers', `the style holds ${layers.length} layers and only ${id} converted`),
+          unsupportedNote('layers', `the style holds ${layers.length} layers and only ${id} converted`),
         );
       }
-      return { layer: id, symbology: converted.symbology, unsupported };
+      const symbology =
+        converted.symbology.kind === 'expression'
+          ? withSizes(converted.symbology, radiusPaint(layers))
+          : converted.symbology;
+      return { layer: id, symbology, unsupported };
     }
   }
 
   throw new Error(
-    'No layer in that style colours features by a match, step or case expression, so there is nothing to convert.',
+    'No layer in that style colours features by a match, step, case or interpolate expression, so there is nothing to convert.',
   );
 }

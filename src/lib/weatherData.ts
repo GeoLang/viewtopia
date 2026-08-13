@@ -3,10 +3,12 @@
  * current/hourly weather at a point, and sample a grid of current values
  * across the view. The view bounds those panels import from here now come from
  * lib/viewBounds. open-meteo is a free no-key API (same precedent as
- * open-elevation).
+ * open-elevation). Online only: a forecast is a live reading, and a cached one
+ * would be worse than saying the network is gone.
  */
 export { getViewBounds, type ViewBounds } from './viewBounds';
 import type { ViewBounds } from './viewBounds';
+import { requireOnline } from '../offline/network';
 
 const OPEN_METEO = 'https://api.open-meteo.com/v1/forecast';
 
@@ -77,6 +79,7 @@ export async function fetchCurrentWeather(
   lat: number,
   lng: number,
 ): Promise<{ current: CurrentWeather; hourly: HourlyPoint[] }> {
+  requireOnline('the weather forecast');
   const params = new URLSearchParams({
     latitude: String(lat),
     longitude: String(lng),
@@ -111,6 +114,7 @@ export async function fetchCurrentWeather(
 
 /** Sample current weather across a grid in one batched open-meteo request. */
 export async function fetchWeatherGrid(bounds: ViewBounds, n: number): Promise<GridSample[]> {
+  requireOnline('the weather forecast');
   const centers = gridCenters(bounds, n);
   const params = new URLSearchParams({
     latitude: centers.map((c) => c[1].toFixed(4)).join(','),

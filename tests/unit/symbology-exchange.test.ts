@@ -1,10 +1,14 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
 import {
   mapboxStyleToSymbology,
   symbologyToMapboxStyle,
 } from '../../src/features/symbology/mapboxStyle';
-import { symbologyToSld } from '../../src/features/symbology/sldExport';
-import type { Symbology } from '../../src/features/symbology/symbology';
+import { qmlExportLosses, qmlToSymbology, symbologyToQml } from '../../src/features/symbology/qmlStyle';
+import { sldExportLosses, symbologyToSld } from '../../src/features/symbology/sldExport';
+import type { ExpressionSymbology, Symbology } from '../../src/features/symbology/symbology';
 import type { AgentLayer } from '../../src/store/agentLayers';
 
 const feature = (
@@ -300,10 +304,330 @@ describe('importing a Mapbox style', () => {
       mapboxStyleToSymbology(
         JSON.stringify({
           layers: [
-            { id: 'ramp', type: 'fill', paint: { 'fill-color': ['interpolate', ['linear'], ['get', 'risk'], 0, '#fff', 1, '#000'] } },
+            { id: 'literal', type: 'fill', paint: { 'fill-color': ['rgb', 255, 0, 0] } },
           ],
         }),
       ),
     ).toThrow('nothing to convert');
+    // an interpolate over something that is not arithmetic carries no expression
+    expect(() =>
+      mapboxStyleToSymbology(
+        JSON.stringify({
+          layers: [
+            { id: 'by-zoom', type: 'fill', paint: { 'fill-color': ['interpolate', ['linear'], ['zoom'], 0, '#fff', 1, '#000'] } },
+          ],
+        }),
+      ),
+    ).toThrow('nothing to convert');
+  });
+});
+
+const qmlFixtures = join(dirname(fileURLToPath(import.meta.url)), '../fixtures/qml');
+const qml = (name: string) => readFileSync(join(qmlFixtures, `${name}.qml`), 'utf8');
+
+const details = (conversion: { unsupported: { detail: string }[] }) =>
+  conversion.unsupported.map((entry) => entry.detail).join(' | ');
+
+describe('importing a QGIS layer style', () => {
+  it('reads a categorized renderer QGIS wrote, values and colours alike', () => {
+    const conversion = qmlToSymbology(qml('categorized'));
+
+    expect(conversion.symbology).toEqual(CATEGORIZED);
+    expect(conversion.source).toBe('QGIS 3.28.0-Firenze');
+    expect(conversion.color).toBeNull();
+    expect(conversion.zoomRange).toBeNull();
+    // the fill outline is real drawing this shape cannot hold, so it is reported
+    expect(details(conversion)).toContain('outline_color');
+  });
+
+  it('reads a graduated renderer as its breaks, colours and classification method', () => {
+    const conversion = qmlToSymbology(qml('graduated'));
+
+    expect(conversion.symbology).toEqual(GRADUATED);
+    expect(details(conversion)).toContain('placeholder');
+    expect(details(conversion)).toContain('top class ceiling');
+  });
+
+  it('reads a rule renderer as the rules it can test, and drops the else rule', () => {
+    const conversion = qmlToSymbology(qml('rules'));
+
+    expect(conversion.symbology).toEqual(RULES);
+    expect(details(conversion)).toContain('the else rule is dropped');
+    expect(details(conversion)).toContain('a scale range on one rule is dropped');
+  });
+
+  it('reads a single symbol as the layer colour, with its opacity and scale range', () => {
+    const conversion = qmlToSymbology(qml('single-symbol'));
+
+    expect(conversion.symbology).toBeNull();
+    expect(conversion.color).toBe('#3388ff');
+    expect(conversion.opacity).toBe(0.45);
+    expect(conversion.zoomRange).toEqual({ min: 8, max: 12 });
+  });
+
+  it('reads the older prop encoding and the older classification mode', () => {
+    const conversion = qmlToSymbology(qml('legacy-props'));
+
+    expect(conversion.symbology).toEqual({
+      kind: 'graduated',
+      field: 'risk',
+      method: 'quantile',
+      ramp: 'viridis',
+      breaks: [0, 50],
+      colors: ['#440154', '#fde725'],
+    });
+  });
+
+  it('types numeric categories, and drops the classes a symbology has no place for', () => {
+    const conversion = qmlToSymbology(qml('categorized-quirks'));
+
+    expect(conversion.symbology).toEqual({
+      kind: 'categorized',
+      field: 'zone',
+      // the QGIS 3.40 colour carries a lossless suffix after the four channels
+      categories: [{ value: 1, color: '#e15759' }],
+    });
+    expect(details(conversion)).toContain('the hidden class 2 is dropped');
+    expect(details(conversion)).toContain('the all-other-values class is dropped');
+    expect(details(conversion)).toContain('a symbol opacity of its own is dropped');
+    expect(details(conversion)).toContain('a class colour transparency is dropped');
+  });
+
+  it('refuses a renderer it cannot convert, naming the renderer', () => {
+    expect(() => qmlToSymbology(qml('heatmap'))).toThrow('heatmapRenderer');
+    expect(() => qmlToSymbology('<StyledLayerDescriptor version="1.0.0"/>')).toThrow(
+      '<StyledLayerDescriptor>, not <qgis>',
+    );
+    expect(() => qmlToSymbology('{"version":8}')).toThrow('valid XML');
+    expect(() => qmlToSymbology('<qgis version="3.34.0"/>')).toThrow('no vector renderer');
+  });
+});
+
+describe('exporting symbology as a QGIS layer style', () => {
+  it('writes one category per class, with the class colour as a QGIS colour', () => {
+    const written = symbologyToQml(scored(CATEGORIZED));
+
+    expect(written).toContain('type="categorizedSymbol" attr="type"');
+    expect(written).toContain('<category value="forest" symbol="0" label="forest" render="true"/>');
+    expect(written).toContain('value="water &amp; marsh"');
+    expect(written).toContain('<Option name="color" value="27,120,55,255" type="QString"/>');
+    expect(written).toContain('class="SimpleFill"');
+  });
+
+  it('writes graduated ranges that meet end to end, and the classification method', () => {
+    const written = symbologyToQml(scored(GRADUATED));
+
+    expect(written).toContain('<range lower="0" upper="25" symbol="0"');
+    expect(written).toContain('<range lower="25" upper="50" symbol="1"');
+    // the top class runs to the highest value in the data, as the SLD export closes it
+    expect(written).toContain('<range lower="50" upper="90" symbol="2"');
+    expect(written).toContain('<classificationMethod id="EqualInterval"/>');
+  });
+
+  it('writes each rule as the QGIS expression that tests it', () => {
+    const written = symbologyToQml(scored(RULES));
+
+    expect(written).toContain('filter="&quot;risk&quot; &gt;= 80"');
+    expect(written).toContain('filter="&quot;type&quot; = &apos;water&apos;"');
+    expect(written).toContain('type="RuleRenderer"');
+  });
+
+  it('writes a single symbol renderer for a layer that has one colour', () => {
+    const written = symbologyToQml(layerOf([polygon({ risk: 1 })]));
+
+    expect(written).toContain('type="singleSymbol"');
+    expect(written).toContain('<Option name="color" value="51,136,255,255" type="QString"/>');
+    expect(written).toContain('<layerOpacity>0.3</layerOpacity>');
+  });
+
+  it('symbolizes points and lines the way their geometry draws', () => {
+    expect(symbologyToQml(layerOf([point({ type: 'forest' })], CATEGORIZED))).toContain(
+      'class="SimpleMarker"',
+    );
+    expect(symbologyToQml(layerOf([line({ type: 'forest' })], CATEGORIZED))).toContain(
+      '<Option name="line_color" value="27,120,55,255" type="QString"/>',
+    );
+  });
+
+  it('writes the zoom range as the scale denominators QGIS limits by', () => {
+    const limited = { ...scored(CATEGORIZED), zoomRange: { min: 8, max: 12 } };
+    const written = symbologyToQml(limited);
+
+    expect(written).toContain('hasScaleBasedVisibilityFlag="1"');
+    // minScale is the zoomed-out limit, so it is the larger denominator
+    expect(written).toMatch(/minScale="2183915\.09/);
+    expect(written).toMatch(/maxScale="136494\.69/);
+    expect(symbologyToQml(scored(CATEGORIZED))).toContain('hasScaleBasedVisibilityFlag="0"');
+  });
+});
+
+/** What a layer's own QGIS style converts back to, class for class. */
+const qmlRoundTrip = (layer: AgentLayer) => qmlToSymbology(symbologyToQml(layer));
+
+describe('round-tripping symbology through a QGIS layer style', () => {
+  it('brings a categorized renderer back unchanged, text and numeric values alike', () => {
+    expect(qmlRoundTrip(scored(CATEGORIZED)).symbology).toEqual(CATEGORIZED);
+
+    const numeric: Symbology = {
+      kind: 'categorized',
+      field: 'risk',
+      categories: [
+        { value: 10, color: '#1b7837' },
+        { value: 90, color: '#2166ac' },
+      ],
+    };
+    expect(qmlRoundTrip(scored(numeric)).symbology).toEqual(numeric);
+  });
+
+  it('brings a graduated renderer back with its breaks, colours and method', () => {
+    expect(qmlRoundTrip(scored(GRADUATED)).symbology).toEqual(GRADUATED);
+
+    const quantile: Symbology = { ...GRADUATED, method: 'quantile' };
+    expect(qmlRoundTrip(scored(quantile)).symbology).toEqual(quantile);
+  });
+
+  it('brings rules back with their operators and literals', () => {
+    expect(qmlRoundTrip(scored(RULES)).symbology).toEqual(RULES);
+
+    const everyOp: Symbology = {
+      kind: 'rules',
+      rules: [
+        { field: 'risk', op: '<', value: '1', color: '#111111' },
+        { field: 'risk', op: '<=', value: '2', color: '#222222' },
+        { field: 'risk', op: '>', value: '3', color: '#333333' },
+        { field: 'risk', op: '!=', value: 'x', color: '#444444' },
+        { field: 'type', op: '==', value: "o'brien", color: '#555555' },
+      ],
+    };
+    expect(qmlRoundTrip(scored(everyOp)).symbology).toEqual(everyOp);
+  });
+
+  it('brings the single colour, the opacity and the zoom range back', () => {
+    const styled: AgentLayer = {
+      ...layerOf([polygon({ risk: 1 })]),
+      style: { opacity: 0.7 },
+      zoomRange: { min: 6, max: 14 },
+    };
+    const conversion = qmlRoundTrip(styled);
+
+    expect(conversion.symbology).toBeNull();
+    expect(conversion.color).toBe('#3388ff');
+    expect(conversion.opacity).toBe(0.7);
+    expect(conversion.zoomRange).toEqual({ min: 6, max: 14 });
+  });
+});
+
+const EXPRESSION: ExpressionSymbology = {
+  kind: 'expression',
+  expression: 'population / area',
+  ramp: 'magma',
+  domain: [100, 400],
+};
+
+const SIZED_EXPRESSION: ExpressionSymbology = { ...EXPRESSION, sizes: [3, 12] };
+
+const populated = (symbology: Symbology, geometry = polygon) =>
+  layerOf(
+    [
+      geometry({ population: 1000, area: 10 }),
+      geometry({ population: 2000, area: 5 }),
+    ],
+    symbology,
+  );
+
+describe('exchanging an expression renderer', () => {
+  it('writes the arithmetic as ogc filter maths in an SLD, class by class', () => {
+    const sld = symbologyToSld(populated(EXPRESSION)) ?? '';
+
+    expect(sld).toContain(
+      '<ogc:Div><ogc:PropertyName>population</ogc:PropertyName><ogc:PropertyName>area</ogc:PropertyName></ogc:Div>',
+    );
+    expect(sld.match(/<Rule>/g)).toHaveLength(5);
+    const lowers = [...sld.matchAll(/<ogc:LowerBoundary><ogc:Literal>([-\d.]+)</g)].map((m) =>
+      Number(m[1]),
+    );
+    expect(lowers).toEqual([100, 160, 220, 280, 340]);
+    expect(sldExportLosses(EXPRESSION)[0].detail).toContain('5 classes');
+  });
+
+  it('sizes an SLD point graphic per class, and says nothing was lost that was not', () => {
+    const sld = symbologyToSld(populated(SIZED_EXPRESSION, point)) ?? '';
+    expect(sld).toContain('<Size>6</Size>');
+    expect(sld).toContain('<Size>24</Size>');
+    expect(sldExportLosses(SIZED_EXPRESSION)).toHaveLength(1);
+  });
+
+  it('carries the arithmetic, the ramp and the sizes whole through a Mapbox style', () => {
+    const paint = paintOf(populated(SIZED_EXPRESSION, point));
+    expect(paint['circle-color'].slice(0, 3)).toEqual([
+      'interpolate',
+      ['linear'],
+      ['/', ['get', 'population'], ['get', 'area']],
+    ]);
+    expect(paint['circle-radius'].slice(3)).toEqual([100, 3, 175, 5.25, 250, 7.5, 325, 9.75, 400, 12]);
+
+    const conversion = mapboxStyleToSymbology(symbologyToMapboxStyle(populated(SIZED_EXPRESSION, point)) ?? '');
+    expect(conversion.symbology).toEqual(SIZED_EXPRESSION);
+    expect(conversion.unsupported).toEqual([]);
+  });
+
+  it('keeps the sizes when the style splits its polygons and points across layers', () => {
+    const mixed = layerOf(
+      [polygon({ population: 1000, area: 10 }), point({ population: 2000, area: 5 })],
+      SIZED_EXPRESSION,
+    );
+    const conversion = mapboxStyleToSymbology(symbologyToMapboxStyle(mixed) ?? '');
+    expect(conversion.symbology).toMatchObject({ sizes: [3, 12] });
+  });
+
+  it('reads a hand-written interpolate back, reporting a ramp it does not hold', () => {
+    const conversion = mapboxStyleToSymbology(
+      JSON.stringify({
+        layers: [
+          {
+            id: 'density',
+            type: 'fill',
+            paint: {
+              'fill-color': [
+                'interpolate',
+                ['linear'],
+                ['*', ['get', 'pop'], 2],
+                0, '#ffffff',
+                50, '#000000',
+              ],
+            },
+          },
+        ],
+      }),
+    );
+
+    expect(conversion.symbology).toEqual({
+      kind: 'expression',
+      expression: 'pop * 2',
+      ramp: 'viridis',
+      domain: [0, 50],
+    });
+    expect(conversion.unsupported[0].detail).toContain('no ramp this viewer holds');
+  });
+
+  it('round-trips the colour through a QGIS style, saying the ramp became classes', () => {
+    const qml = symbologyToQml(populated(EXPRESSION));
+    expect(qml).toContain('attr="population / area"');
+
+    const conversion = qmlToSymbology(qml);
+    expect(conversion.symbology).toEqual(EXPRESSION);
+    expect(conversion.unsupported.map((entry) => entry.detail).join(' ')).toContain(
+      'read back as one ramp',
+    );
+  });
+
+  it('tells the user a QGIS style drops the point sizes', () => {
+    const details = qmlExportLosses(SIZED_EXPRESSION).map((entry) => entry.detail);
+    expect(details.some((detail) => detail.includes('point sizes are dropped'))).toBe(true);
+    expect(qmlExportLosses(GRADUATED)).toEqual([]);
+  });
+
+  it('still reads a graduated renderer whose attr is a plain column', () => {
+    expect(qmlRoundTrip(scored(GRADUATED)).symbology).toMatchObject({ kind: 'graduated' });
   });
 });

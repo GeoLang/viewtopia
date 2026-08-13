@@ -8,6 +8,77 @@
 
 ---
 
+## IN FLIGHT — 2026-08-13 TODO burndown
+
+Nothing below is committed. Every change named here sits uncommitted in that
+repo's working tree, so `git status` in each repo is the source of truth if this
+session is lost. Per-repo CHANGELOG and DESIGN entries were written alongside
+each change.
+
+All eight agents finished. The repos holding uncommitted work are infrastructure,
+agora, ptolemy, viewtopia, tiletopia, collecta, panoptes and terrano. Each repo's
+own CHANGELOG entry is the account of what landed there. Nothing has been
+committed or pushed in any of them, so review and commit per repo.
+
+Landed in the working tree:
+
+- **infrastructure**: `rds.force_ssl` is 1, ECR repositories are IMMUTABLE with
+  deploys taking a new `image_tag` root variable instead of `:latest`, agora and
+  jupyter each hold their own security group, and ALB ingress is restricted to
+  the CloudFront origin-facing managed prefix list when a CDN is enabled. That
+  prefix list weighs 55 against a default 60-rule quota, so only one port can be
+  admitted from it, 443 when a certificate is configured. `terraform fmt` and
+  `validate` pass, no `plan` is possible without credentials. `image_tag`
+  defaults to `v0.1.0`, which nobody has pushed yet.
+- **infrastructure**: the platform-proxy Caddyfile is profile-aware. Each route
+  carries a named matcher gated on an `ENABLE_*` env var defaulting closed, fed
+  by a `proxy_route_gates` local in `main.tf` mapping to the existing
+  `var.enable_*` flags. The 16 routes the minimal profile could not serve now
+  return 501 instead of 502. Verified by running the real Caddyfile in
+  `caddy:2.11.4-alpine` against stub upstreams across four service sets, with the
+  full profile diffing clean against the original.
+- **agora**: sqlx built with `tls-rustls-ring`, and the Dockerfile fetches the
+  AWS RDS global CA bundle to `/etc/ssl/rds-global-bundle.pem`. No code change,
+  so local and CI plaintext still work. Verified against a scratch postgres with
+  `pg_hba` set to `hostssl` only.
+- **ptolemy**: `/branches/{id}/permissions/{user}/check` now answers what the
+  write ladder actually enforces, and both check routes reject an unknown
+  `required` level with a 400.
+
+Agents still running when this was written, one per repo:
+
+- **ptolemy**: done. `tls-rustls-ring` plus the RDS bundle in the Dockerfile,
+  same shape as agora's. Both TLS stacks were already in ptolemy's graph
+  (rustls via mongodb and reqwest, openssl via elasticsearch's hyper-tls), so
+  the whole lock delta is one re-export shim crate.
+- **viewtopia**: done. QML style import/export, expression renderers, the offline
+  external-API behaviour, and the pane agent-layer hooks for MapLibre and Cesium.
+  1293 tests passing across 130 files.
+- **tiletopia**: done. Prebuilt quantized-mesh bundles served from
+  `/api/v1/terrain/bundles/`, taking `ctb-tile` output verbatim. The bundle's
+  `tiles` template is rewritten to a relative one, so a bundle built against
+  another host cannot send Cesium off this server, which is what makes it
+  genuinely offline. tiletopia's own `terrain_bundle` export already writes this
+  exact layout, so export and serve now round-trip.
+- **collecta**: done. The attachments themselves turned out to be already
+  implemented (commits `ea8f66d` and `b4dfc7e`), so the TODO entry was stale.
+  What was genuinely missing was a content type policy, now in
+  `crates/collecta-server/src/attachment.rs`: a claimed type is narrowed to a
+  known capture format or to `application/octet-stream`, applied on ingest and
+  again on read so rows written before the policy are served under it too. Every
+  download is `Content-Disposition: attachment` with `nosniff`. 50 MB per part,
+  51 MB whole request, 413 in an OpenRosa envelope. A refusal on an attachment
+  read is 404 rather than 403, so an id cannot be confirmed by probing. Verified
+  against the OpenRosa spec on every point, and both new tests were
+  mutation-checked so the denial assertion is live rather than vacuous.
+- [~] **panoptes**: the honesty pass landed, README, CLI warnings, crate docs
+      and the workspace description all now say no weights are published. Now on
+      getting the onnx test into CI, see the item below.
+- **terrano**: done. The COG writer existed but produced a tiled multi-page TIFF
+  rather than a COG. Fixed and GDAL-validated, plus a `writeCog` wasm binding
+  that did not exist before. Remaining gaps are under the raster conversion item
+  below.
+
 
 ## OPEN — direction: the Figma of GIS, only open (stated 2026-08-06)
 
@@ -58,39 +129,120 @@ Scope discipline that follows from the thesis: Figma did not beat Photoshop
 on features, it won one workflow. Win "a team makes and analyzes a map
 together in the browser" and refuse feature-parity fights with ArcGIS.
 
+## OPEN — sensors and observations, answered 2026-08-13
+
+Asked: should the platform have an observation management and sensor monitoring
+feature. Answer: not as a product line. What follows is the reasoning and the
+two smaller things that do follow from it.
+
+The engine already exists and is real. fluvius does geofencing with per-entity
+state, complex event processing, tumbling/sliding/session windows, watermarks,
+temporal joins, an R-tree over millions of entities, and carries MQTT, Kafka and
+WebSocket connectors. 182 tests. Nothing about sensor ingest needs building.
+
+It is deployed nowhere. No reference to fluvius in the terraform, the platform
+compose, or the proxy Caddyfile. It is a library and a CLI the platform never
+starts.
+
+What is genuinely missing is the store, not the monitoring. fluvius processes a
+stream and emits. Nothing persists observations so you can ask what a sensor read
+last Tuesday. That is what "observation management" means, the OGC standard for
+it is SensorThings API, and nothing here implements it. Building it is an IoT
+platform, which competes with the thesis rather than serving it. The scope
+discipline above says win one workflow and refuse parity fights.
+
+- [ ] **verify what viewtopia and tiletopia already claim about sensors.** Same
+      class as the panoptes overselling, and wider. `viewtopia/README.md` line 99
+      sells "Live IoT sensor monitoring with threshold alerts" as an
+      Environmental vertical. `tiletopia/README.md` promises a WebSocket
+      real-time layer (line 35), live sensor injection into the 3D scene (45),
+      entity linking from building id to sensor readings (47), and a rules engine
+      for threshold alerts (51). Nobody has checked whether tiletopia's WS layer
+      is real. Check those five claims before a public deploy and correct
+      whichever do not hold.
+- [ ] **if any of this is wanted, the in-thesis version is a live layer, not a
+      sensor platform**: fluvius emitting over WebSocket into agora, which
+      already carries live multiplayer. One connector, reusing shipped
+      infrastructure. It also answers the FleetPanel question below, since
+      "nothing serves vehicle positions" is the same gap. A live layer is
+      Figma-shaped. A sensor historian is not.
+
+Note on `viewtopia/docs/verticals.md`: it is a planning doc for proposed
+verticals, not a description of what exists, which is why it credits panoptes
+with observation management and sensor monitoring that panoptes never did. Read
+it as a wishlist.
+
+## OPEN — stale entries keep turning up
+
+Three items in this file were closed already when someone went to work on them:
+ptolemy's `/check` org_members fallback (the org schema was dropped in migration
+028), collecta media attachments (implemented in `ea8f66d` and `b4dfc7e`), and
+collecta's "deferred" per-form grants table (it exists as `form_grants`). In each
+case the entry named a mechanism that no longer existed, and in the ptolemy case
+a real bug was still there for a different reason.
+
+- [ ] Verify an entry against the code before working it, and do not trust the
+      mechanism it names. Worth a sweep of the rest of this file on the same
+      suspicion.
+
 ## OPEN — platform hygiene
 
 - [ ] **CloudFront realtime WS untested live**: the realtime behavior forwards
       `Sec-WebSocket-Protocol` and has a zero TTL, but the distribution has never
       carried a real collaboration session. Test it on the deployed distribution.
 - [ ] **hosted stack decisions before a public deploy** (from the 2026-08-13
-      security review of the hosted terraform, out of scope for its fixes, each
-      needs an owner call):
+      security review of the hosted terraform). The mechanical half closed the
+      same day, see the in-flight section. What is left needs an owner call:
       - ptolemy classifies every GET/HEAD/OPTIONS as public, so the entire
         geodatabase read API is anonymous on a public domain.
-      - the ALB security group admits 0.0.0.0/0, so CloudFront can be bypassed
-        and its behaviors are advisory for a direct caller. The WAF sits on the
-        ALB and still applies.
-      - `rds.force_ssl` is 0, database traffic inside the VPC is plaintext.
-      - ECR tags are mutable and every service deploys `:latest`, so a deploy
-        is not reproducible and a pushed tag silently changes running services
-        on next restart.
       - the terraform plan CI job authenticates with long-lived AWS access
         keys rather than OIDC.
       - the S3 state backend is commented out, terraform state is local only.
-      - the executor's security group can reach port 3000, which it needs for
-        ptolemy, tiletopia, geokode and itinera, but agora listens on 3000 in
-        the same shared group, so unauthenticated agora calls from escaped tool
-        code are possible. Blocking that means agora in its own security group.
-      - jupyter shares the executor's security group, inheriting 3000 and 8100
-        egress it does not need. Splitting them is a second group.
+        Needs a bucket that does not exist yet.
       - the executor's inbound 8081 admits the whole VPC CIDR (a security group
         reference cycle prevents naming geolang-api's group), so
         `GEOLANG_EXECUTOR_SECRET` is the only guard on it.
-- [ ] **platform-proxy Caddyfile is not profile-aware**: it is one static file,
-      so the minimal profile advertises routes to services that profile does
-      not deploy and they 502. Fine while profiles stay close, generate or gate
-      the routes if they diverge.
+- [ ] **database TLS is opt-in per operator, not enforced in code.** With
+      `rds.force_ssl` now on, a service reaches its database only over TLS, but
+      whether that TLS is *verified* rests on the connection string an operator
+      pastes into Secrets Manager. sqlx makes this worse than it looks: under
+      `sslmode=require` it installs a verifier that returns Ok for any
+      certificate and ignores `sslrootcert` entirely, contradicting its own doc
+      comment, so `require` buys encryption with no authentication and anything
+      answering in the database's place can read and rewrite the session. Only
+      `verify-ca` and `verify-full` check the chain. The URLs must therefore end
+      in `?sslmode=verify-full&sslrootcert=/etc/ssl/rds-global-bundle.pem` and
+      must name the RDS endpoint directly, since a CNAME in front of it fails
+      hostname verification. Neither ptolemy nor agora enforces this in code,
+      because doing so would break local and CI postgres, which have no TLS.
+      Decide whether a hosted-only check is worth having. Also note the service
+      images now fetch the CA bundle unpinned at build time, so rebuilds pick up
+      CA rotations automatically and reproducibility rests on AWS.
+
+      Both agents reached the `require` finding independently and both reproduced
+      it live: `sslmode=require` connects happily to a cert signed by an untrusted
+      CA with a mismatched hostname. It also diverges from libpq, where a present
+      root CA file silently upgrades `require` to `verify-ca`. sqlx does no such
+      thing, so an operator pasting AWS's own `require` guidance plus an
+      `sslrootcert` gets zero verification and no warning.
+
+      Operator steps, since neither service can enforce this itself:
+      - `ptolemy_database_url` and `agora_database_url` must both end in
+        `?sslmode=verify-full&sslrootcert=/etc/ssl/rds-global-bundle.pem`.
+        Without the `sslmode`, ptolemy defaults to `prefer` and reaches RDS over
+        unverified TLS rather than failing.
+      - `PTOLEMY_EXTERNAL_DATABASE_URL`, if set, needs the same two parameters.
+      - assumes the deployment reaches RDS directly rather than through RDS
+        Proxy, which uses ACM certificates and would not need this bundle.
+- [ ] **ptolemy's helm chart has no external-database override.**
+      `deploy/helm/ptolemy/templates/deployment.yaml` line 42 builds an
+      in-cluster plaintext URL from chart values. Fine while it targets
+      in-cluster postgres, but a chart-based RDS deployment would connect
+      plaintext with no way to say otherwise.
+- [ ] **latent panic in ptolemy geoprocessing** (`geoprocessing.rs` line 767,
+      found incidentally): `row.get("geojson")` is non-`Option`, so an
+      `ST_Union` over a feature set that matches nothing returns NULL and panics
+      the handler. Pre-existing and unrelated to the TLS work.
 
 ## OPEN — dependencies and supply chain (2026-08-12)
 
@@ -225,11 +377,6 @@ left is the edges neither reaches.
       than a barrier. Revisit if the CLI ever grows a path that should be laddered.
 - [ ] None of the above holds when auth is off (an empty `PTOLEMY_JWT_SECRET`):
       the ladder and the visibility layer both no-op by design.
-- [ ] `/check` (dataset and branch) still falls back to `org_members`, which the
-      write ladder and `is_dataset_admin` both ignore, so it can answer allowed
-      for someone a write would refuse. Informational routes, nothing enforcing
-      calls them, but a client trusting them is misled. Same decision as the org
-      boundary item above.
 - [ ] Two operational consequences of dropping the zero-rows rule, for whoever
       deploys first: a deployment needs at least one instance-admin token holder,
       because that is the only actor who can grant on a dataset the backfill
@@ -250,9 +397,13 @@ fix.
 - [ ] the sweep only covers the SQL branches its fixtures reach, which is what
       query variants are for, and a handler that swallows its error is invisible
       to it. Add a variant when a route grows a second branch.
-- [ ] the throwaway script that generated the 130-entry request-body table by
-      parsing handler structs lives in no repo. Worth keeping as a small dev
-      script if the table needs regenerating.
+Decided against 2026-08-13: keeping the script that generated the request-body
+table. The table is `const BODY` in `route_sweep.rs` and holds 93 entries, not
+130, which was a rough count across three tables. Its values are domain-tuned
+rather than derivable from struct shapes: 34 carry fixture-id markers, 11 carry
+WKB or GeoJSON, and the sweep's whole point is that the handler reached SQL,
+which needs values that pass validation. It also self-maintains, since adding a
+route that refuses `{}` fails the sweep by name.
 
 ## OPEN — verne: get your data out (named 2026-07-29, v0.1 shipped same day)
 
@@ -450,11 +601,15 @@ decision rather than a bug. Per-repo changelogs hold what shipped.
 - [ ] **tiletopia annotation reads are open** to any valid token on any asset.
       Writes are owner-or-admin. Only worth closing if annotations count as
       private content.
-- [ ] **collecta viewers can read no submissions at all**, because a viewer
-      cannot create a form and submission access is creator-or-admin. A
-      read-only analyst over someone else's data needs the deferred per-form
-      grants table. Legacy forms with no creator are admin-only and are not
-      backfilled to anyone.
+- [ ] **collecta legacy forms with no creator are admin-only** and are not
+      backfilled to anyone. Decide whether to backfill or leave them.
+
+      The rest of this entry is closed and was stale when read on 2026-08-13:
+      the per-form grants table it called "deferred" exists as `form_grants`,
+      with `grant_form`, `revoke`, `has_grant` and `list_grants` in
+      `crates/collecta-server/src/store.rs`, and `require_read` admits the form
+      creator, an admin, or a grantee. A read-only analyst over someone else's
+      data is a supported case.
 - [ ] **collecta role strings outside admin/editor/viewer now fail closed.**
       Nothing in the repo creates others, but a live database predating this may
       hold them, and those accounts stop working on deploy.
@@ -470,19 +625,56 @@ desktop/mobile wrapper (competes with the terravista/collecta track).
 
 High value, existing GeoLang crates supply the engine:
 
-- [ ] **convert loaded rasters to COG**: waits on a browser-capable COG writer.
-      The duckdb-wasm build has no GDAL write path and nothing else in the tree
-      writes a tiled, overviewed TIFF; an upstream Rust writer is in progress.
+- [ ] **convert loaded rasters to COG**: the writer blocker is gone (terrano,
+      2026-08-13, working tree). What is left before wiring viewtopia to real
+      imagery:
+      - **the writer only emits Float64.** A browser converting 8-bit RGB or
+        16-bit gets a file 8x or 4x larger than it should be. The reader already
+        handles u8/u16/u32/i8/i16/i32/f32, so this is an asymmetry rather than a
+        design limit. A sample-format parameter is roughly 60 lines in
+        `bands_to_tiles` plus the bits/format IFD entries. Do this first.
+      - `writeCog` in terrano-wasm is single-band, there is no `writeCogBands`
+        binding yet.
+      - the vendored `crates/terrano-wasm/pkg/` needs rebuilding before viewtopia
+        can see `writeCog` at all.
+      - no BigTIFF, so files cap at 4 GiB. That is now a clear error rather than
+        silent truncation.
+
+      What the terrano pass found, worth keeping: terrano already had a 1857-line
+      hand-rolled COG writer with no TIFF dependency, and it did not produce a
+      cloud optimized GeoTIFF. It omitted `NewSubfileType` on the overview IFDs,
+      so GDAL read the pyramid as four unrelated pages, and the COG validator
+      passed *vacuously*, never seeing overviews so skipping every overview
+      check. A green validator run is not evidence unless the output names the
+      overviews. Tile data was also ordered largest-first, exactly backwards from
+      what the format wants so a zoomed-out reader can stop early. Now
+      GDAL 3.11.5 `--full-check=yes` validates clean across 10 files, and a
+      wasm32-unknown-unknown build produced a GDAL-validated COG with exact
+      pixels.
+- [ ] **terrano `write_geotiff` builds its output buffer three times**, throwing
+      the first two away, with leftover comments reading "Wait, IFD comes after
+      header" and "Let me redo this properly" (`geotiff.rs` around line 60). It
+      works, it is just dead work on every call. Found during the COG fix and
+      left alone to keep that diff scoped.
+
+      Ecosystem note, since the old entry said an upstream Rust writer was in
+      progress: that is stale. The `tiff` crate encoder is still strip-only with
+      no tile API (image-rs/image-tiff#205, open since June 2023, no PR).
+      `geotiff-writer` 0.8.1 shipped and documents correct COG layout plus wasm,
+      but it is five months old with 13 stars and its correctness is documented
+      rather than verified. Adopting it would trade a writer we control for an
+      unproven dependency.
       (Vector conversion shipped 2026-08-06: GeoParquet, FlatGeobuf, GeoJSON,
       PMTiles. PMTiles per-layer export shipped 2026-08-02.)
 
 High value, product-level:
 
-- [ ] **symbology, what the first cut left open** (categorized, graduated and
-      rule-based renderers plus the legend panel shipped 2026-08-02,
-      scale-dependent visibility 2026-08-11, SLD import 2026-08-12, SLD export
-      and Mapbox style import/export 2026-08-13): expression renderers and QML
-      style import/export.
+- [ ] **symbology, the one piece left**: a data-defined point size does not reach
+      QML. QGIS sizes a symbol in the symbol's own units and needs a
+      `<data_defined_properties>` block whose exact spelling nobody here has
+      verified against a real QGIS writer, so the export reports the loss rather
+      than guessing. Closing it needs a `.qml` written by an actual QGIS to read
+      the encoding off. Everything else in the first cut is done.
 Medium value:
 
 - [ ] **data source manager panel**: the STAC Browser panel covers catalogs,
@@ -508,12 +700,55 @@ survives reloads and syncs back, and a service worker precaches the built app
 shell, so a reload with no network still boots the viewer. Everything below is
 what does not work.
 
-- [ ] **Cesium terrain needs an external provider** (ion token or terrain
-      endpoint), no local/offline terrain source. Blank terrain is the graceful
-      floor, a tiletopia-served terrain bundle would be the real fix.
-- [ ] External API fallbacks that fail offline, decide per case whether a
-      cached or local answer is worth it: Nominatim geocoding, public OSRM
-      routing, open-elevation, open-meteo, Overpass.
+- [ ] **wire viewtopia to tiletopia's terrain bundles.** The serving half shipped
+      2026-08-13 (tiletopia working tree). This entry was wrong about the
+      starting point: tiletopia already served `/api/v1/terrain/layer.json` and
+      `/api/v1/terrain/{z}/{x}/{y}` as quantized mesh generated on demand, and
+      `GlobalTerrainPanel.tsx` was already wired to it. The real gap was that
+      those routes fall back to downloading SRTM from
+      `elevation-tiles-prod.s3.amazonaws.com`, so they were never offline. The
+      new bundle routes close that.
+
+      The wiring, in `src/components/tools/GlobalTerrainPanel.tsx`:
+      1. fetch `/tiles/v1/terrain/bundles` on mount, a JSON array of names,
+         needs no token
+      2. append one Select option per name, value `bundle:<name>`
+      3. in `enableTerrain`, before the `stack` branch:
+         `CesiumTerrainProvider.fromUrl('/tiles/v1/terrain/bundles/<name>/')`.
+         The trailing slash matters, `fromUrl` appends `layer.json` to it.
+      4. status text and the `NO_SOURCE` failure path need no change
+
+      The `Custom URL` field already works today if a user types the bundle URL
+      by hand, so this is a convenience, not a blocker.
+- [ ] **tiletopia's Ion-compat endpoint is wrong for terrain assets.**
+      `ion_compat.rs` maps `AssetType::Terrain` to `"TERRAIN"`, but
+      `GET /v1/assets/{id}/endpoint` returns a `tileset.json` URL for it, which
+      Cesium cannot use as terrain. Pointing it at a bundle needs an
+      asset-id-to-bundle mapping that does not exist, since bundles are named
+      directories rather than asset uuids.
+- [ ] **terrain bundle limits worth knowing** (each deliberate, none blocking):
+      bundles are filesystem only, not S3/GCS, because `LocalStore::list` is one
+      level deep while `S3Store::list` is recursive and capped at 1000 keys, so
+      discovery would differ per backend. The availability walk touches every
+      tile file, so a large bundle makes the layer.json request slow unless the
+      bundle ships its own `available` array. `list_bundles` returns an empty
+      array on any `read_dir` failure, not only a missing directory, so a
+      permissions error looks like an empty server.
+Closed 2026-08-13 (working tree). Geocoding and routing already preferred the
+platform, verified against geokode's and itinera's real response shapes. What was
+missing was offline behaviour: both now go through `offlineFetch()` so a repeat
+query answers from IndexedDB, and offline they raise a readable message instead
+of returning empty, which the panels had been rendering as "no place matching"
+and "no route found". Nominatim and public OSRM stay as fallbacks on purpose,
+since geokode ships a small address dataset with no bbox biasing and itinera
+routes only on the loaded extract, so a landmark or a cross-region route
+genuinely needs them.
+
+Open-elevation, open-meteo and Overpass are online only by decision, not
+oversight: each is keyed by a freshly sampled line, view-bounds grid centres, or
+a camera-derived bbox, so a cache entry would be written and never read. They now
+refuse up front through `requireOnline()` rather than surfacing a raw fetch
+failure.
 
 ## OPEN — geoplumb: gaps to Earth Engine parity (consolidated 2026-08-06)
 
@@ -544,11 +779,32 @@ Known limits:
 - [ ] **terravista v0.3** — Metal/Vulkan GPU rendering. Biggest advertised-vs-real gap; needs
       platform GPU toolchains.
 - [ ] **panoptes model weights** — train or source one usable segmentation model and publish
-      weights, or keep the repo clearly labeled experimental. Inference path itself is real.
-- [ ] **collecta media attachments** — photo/document capture + sync (deferred from Phase 2).
+      weights. The "keep it clearly labeled experimental" branch is done (2026-08-13, working
+      tree), so nothing oversells itself now, but no weights exist and segmentation still does
+      not work out of the box. The ONNX inference path is real and proven end to end from the
+      CLI against a synthetic sigmoid model.
+Closed 2026-08-13 (working tree): the onnx test now runs in CI. A separate `onnx`
+job downloads onnxruntime 1.20.1 from the microsoft/onnxruntime release, verifies
+its sha256, exports `ORT_DYLIB_PATH`, then runs clippy and tests under the
+feature. The default matrix is untouched, so the crate is still proven to build
+and test with no ONNX Runtime present. `ort` cannot supply the runtime itself:
+`load-dynamic` sets `ort-sys/disable-linking`, and that build script returns
+before any download logic, so `download-binaries` would be a no-op.
+- [ ] **panoptes descriptions in sibling repos are wrong**, found during the honesty pass.
+      Each is a one-line doc fix in a repo that was busy at the time:
+      - `viewtopia/docs/verticals.md` line 16 credits panoptes with "observation management,
+        time-series storage" and line 69 with "sensor monitoring (soil moisture, weather
+        stations)". Both describe a different product.
+      - `tiletopia/docs/ecosystem.html` line 130 repeats the old "Geospatial monitoring and
+        change detection" workspace description, which panoptes has since corrected at source.
+      - `viewtopia/DESIGN.md` line 45 says panoptes has 45 tests. It has 44.
+- [~] **collecta media attachments** — photo/document capture + sync (deferred from Phase 2).
+      In flight over the OpenRosa multipart submission path.
 - [ ] **viewtopia FleetPanel** — currently an honest "no live feed" state; nothing serves
       vehicle positions. Decide whether real-time fleet tracking is in scope before building
-      a WS/ingest path for it.
+      a WS/ingest path for it. Same gap as the sensors section above, and the same answer
+      applies: if it is in scope, the path is fluvius over WebSocket into agora rather than a
+      new ingest path.
 
 ## OPEN — deferred design decisions (not bugs)
 
@@ -558,10 +814,4 @@ Known limits:
 - [ ] ptolemy external-source pushdown non-goals (documented in README): near-global
       windows fall back to unfiltered scans; `or`/`not` CQL2 spatial ops are never pushed.
       Revisit only if a real workload hits them.
-- [ ] **pane agent-layer hooks, the latent cousins**: the leaflet-pane gap
-      closed 2026-08-13 by keying on the map instance, but
-      useAgentLayersMapLibre and useAgentLayersCesium still key on app-level
-      renderer state rather than the pane's map instance, so a pane switching
-      to those renderers after mount works by effect ordering rather than by
-      subscription. Same fix shape as the leaflet one when it bites.
 - [ ] Raise jung from its rendering-only coverage into the v1 path *(only if it enters it)*.

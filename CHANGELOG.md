@@ -6,6 +6,49 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-13: **external services say when they are offline instead of failing
+  obscurely**. Geocoding and routing already preferred the platform's own
+  geokode and itinera, and now go through the offline API cache, so a place or
+  a route asked for before still answers with no network. Nominatim and the
+  public OSRM remain the fallback for a stack with neither deployed, but
+  offline they are not attempted: the call raises, and the fly-to box and the
+  routing panel show that message rather than "no place matching" or "no route
+  found". Open-elevation, open-meteo and Overpass stay online only, because
+  each is keyed by a fresh line, view or camera bbox that no second call
+  repeats and a cache would never hit. All five now refuse up front with one
+  message naming the network, in the elevation, weather, wind, traffic,
+  buildings and OSM-download panels alike.
+
+- 2026-08-13: **a pane gets its agent layers by subscription on every
+  renderer**. `useMapLibre` and `useCesium` publish the instance they build as
+  state, the way `useLeaflet` already did, and `useAgentLayersMapLibre` and
+  `useAgentLayersCesium` key their effects on that instance rather than on the
+  app-level renderer and tab. A compare pane switched to MapLibre or Cesium
+  after mount now draws the layers that were already on, which before depended
+  on effect ordering and did not happen.
+
+- 2026-08-13: **expression renderers in the symbology editor**. A layer can now
+  be coloured by arithmetic over its own columns, `population / area` rather
+  than one column's classes, and points sized by the same value between a low
+  and a high radius. The language is column names, numbers, brackets and
+  `+ - * /` and nothing else, which is what QGIS, Mapbox and OGC filters all
+  write, so the renderer exports whole to a Mapbox style and comes back off one,
+  and reaches SLD and QGIS as five classes over the same arithmetic with the
+  loss listed under the export buttons. A half-written expression says what is
+  wrong with it and leaves the last working renderer on the map. The legend
+  samples the ramp across the value range and draws the point sizes with it.
+
+- 2026-08-13: **symbology imports and exports QGIS layer styles (.qml)**, next
+  to the SLD and Mapbox exchanges. Import reads a single symbol, categorized,
+  graduated or rule-based `renderer-v2` off SimpleFill, SimpleLine and
+  SimpleMarker symbols, in both the `<Option>` map QGIS writes now and the
+  older `<prop k v>` form, and carries the layer opacity and the scale-based
+  visibility across as the layer's zoom range. Export writes the same set back,
+  so a renderer round-trips. A file whose renderer this viewer cannot draw is
+  refused by name, and everything a symbology has no place for is listed under
+  the button rather than dropped quietly: symbol outlines and sizes, per-class
+  opacity, per-rule scale ranges, else rules and hidden classes.
+
 - 2026-08-13: **runtime plugin install from an owner-controlled registry**.
   More → Plugin Manager installs, updates and removes plugins listed by the
   registry named in `VITE_PLUGIN_REGISTRY_URL` or the panel's own setting, so

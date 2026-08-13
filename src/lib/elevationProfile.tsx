@@ -4,6 +4,7 @@
  * Used by the Terrain Profile plugin and the Cross Section tool panel.
  */
 import * as turf from '@turf/turf';
+import { requireOnline } from '../offline/network';
 
 export interface ProfilePoint {
   distance: number; // meters from start
@@ -40,8 +41,11 @@ async function lookupChunk(coords: [number, number][]): Promise<number[]> {
 /**
  * Fetch elevations from the free Open-Elevation API. Throws when the lookup
  * fails: callers must show the failure rather than plot invented terrain.
+ * Online only, since every profile samples its own line and no two lookups ask
+ * for the same coordinates.
  */
 export async function fetchElevations(coords: [number, number][]): Promise<number[]> {
+  requireOnline('the elevation lookup');
   const out: number[] = [];
   for (let i = 0; i < coords.length; i += LOOKUP_CHUNK) {
     out.push(...(await lookupChunk(coords.slice(i, i + LOOKUP_CHUNK))));

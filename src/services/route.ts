@@ -4,8 +4,12 @@
  * Primary: the platform's own **itinera** service (same-origin via the nginx
  * proxy `/api/route?from=lat,lon&to=lat,lon`). itinera routes on the loaded OSM
  * extract, so we fall back to the public OSRM demo server for coverage outside
- * it or when the platform backend is unavailable.
+ * it or when the platform backend is unavailable. itinera goes through the
+ * offline cache, so a route asked for before still answers with no network. The
+ * OSRM fallback never can, so offline it raises rather than reporting no route.
  */
+import { offlineFetch } from '../offline/cache';
+import { requireOnline } from '../offline/network';
 
 export interface RouteResult {
   distance: number; // meters
@@ -27,7 +31,7 @@ async function itineraRoute(
   to: { lat: number; lng: number },
   profile: string,
 ): Promise<RouteResult | null> {
-  const res = await fetch(
+  const res = await offlineFetch(
     `/api/route?from=${from.lat},${from.lng}&to=${to.lat},${to.lng}&profile=${profile}`,
   );
   if (!res.ok) return null;
@@ -76,8 +80,9 @@ export async function route(
     const r = await itineraRoute(from, to, profile);
     if (r) return r;
   } catch {
-    /* itinera unavailable — fall through to OSRM */
+    /* itinera unavailable, fall through to OSRM */
   }
+  requireOnline('routing');
   try {
     return await osrmRoute(from, to);
   } catch {

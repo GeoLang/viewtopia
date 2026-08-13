@@ -1,15 +1,17 @@
 /**
- * Data-driven symbology for agent layers: graduated, categorized and rule-based
- * renderers. The class colour is baked into each feature as simplestyle
- * properties (`fill`, `stroke`, `marker-color`), which Cesium's
+ * Data-driven symbology for agent layers: graduated, categorized, rule-based
+ * and expression renderers. The colour is baked into each feature as
+ * simplestyle properties (`fill`, `stroke`, `marker-color`), which Cesium's
  * GeoJsonDataSource already honours per feature, and which MapLibre and Leaflet
  * read through a paint expression and a style callback. So one computation here
- * serves all three renderers and none of them needs its own scale.
+ * serves all three renderers and none of them needs its own scale. A point
+ * radius rides along the same way, under `marker-radius`.
  */
-import { generateLegend } from '../../raster/renderer';
+import { generateLegend, sampleRamp } from '../../raster/renderer';
 import type { ColorRamp } from '../../raster/types';
 import { propertyKeys } from '../../lib/geojsonSources';
 import type { AgentLayer } from '../../store/agentLayers';
+import { evaluateExpression, parseExpression } from './expression';
 
 export const GRADUATED_CLASSES = 5;
 export const GRADUATED_RAMP: ColorRamp = 'viridis';
@@ -63,7 +65,37 @@ export interface RuleSymbology {
   rules: SymbologyRule[];
 }
 
-export type Symbology = GraduatedSymbology | CategorizedSymbology | RuleSymbology;
+/** Radius in pixels a point draws at, unless the symbology sizes it. */
+export const POINT_RADIUS = 5;
+
+/** Point radii an expression renderer spans by default, low value to high. */
+export const EXPRESSION_SIZES: [number, number] = [3, 12];
+
+/** How many places the ramp is sampled at, for the legend and for the class-only formats. */
+export const EXPRESSION_STOPS = 5;
+
+/** The per-feature radius, alongside the simplestyle colour keys. */
+export const MARKER_RADIUS_KEY = 'marker-radius';
+
+/** Cesium takes a marker size by name only, so a radius lands in one of these. */
+const MARKER_SIZE_NAMES = ['small', 'medium', 'large'];
+
+export interface ExpressionSymbology {
+  kind: 'expression';
+  /** Arithmetic over the feature's properties, in the syntax `expression.ts` reads. */
+  expression: string;
+  ramp: ColorRamp;
+  /** The expression's low and high value over the layer's own features. */
+  domain: [number, number];
+  /** Point radius at each end of the domain, where the renderer sizes points too. */
+  sizes?: [number, number];
+}
+
+export type Symbology =
+  | GraduatedSymbology
+  | CategorizedSymbology
+  | RuleSymbology
+  | ExpressionSymbology;
 
 /** Which simplestyle key carries the colour for a geometry. */
 const STYLE_KEYS: Record<GeoJSON.Geometry['type'], string[]> = {
@@ -164,6 +196,65 @@ export function simplestyleColor(
   return typeof value === 'string' ? value : fallback;
 }
 
+/** A simplestyle number off a feature, for a renderer that reads them itself. */
+export function simplestyleNumber(
+  feature: GeoJSON.Feature | undefined,
+  key: string,
+  fallback: number,
+): number {
+  const value = feature?.properties?.[key];
+  return isNumber(value) ? value : fallback;
+}
+
+/** A colour ramp sampled at 0..1, in the form the raster legend already writes. */
+export function rampColor(ramp: ColorRamp, position: number): string {
+  const [red, green, blue] = sampleRamp(ramp, position);
+  return `rgb(${red},${green},${blue})`;
+}
+
+const RGB_FORM = /^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/i;
+const HEX_FORM = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+/** A colour's channels, in either form an exchange format hands one back. */
+function colorChannels(color: string): [number, number, number] | null {
+  const rgb = RGB_FORM.exec(color.trim());
+  if (rgb) return [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])];
+  const digits = HEX_FORM.exec(color.trim())?.[1];
+  if (!digits) return null;
+  const wide = digits.length === 3 ? [...digits].map((d) => d + d).join('') : digits;
+  const [red, green, blue] = [0, 2, 4].map((at) => Number.parseInt(wide.slice(at, at + 2), 16));
+  return [red, green, blue];
+}
+
+function sameColor(left: string, right: string): boolean {
+  const one = colorChannels(left);
+  const other = colorChannels(right);
+  return one !== null && other !== null && String(one) === String(other);
+}
+
+/**
+ * The ramp these colours are even samples of, where one of ours is. It is how
+ * an exchange format that writes colours and no ramp name gets its ramp back.
+ */
+export function rampOfSamples(colors: string[]): ColorRamp | null {
+  if (colors.length < 2) return null;
+  return (
+    COLOR_RAMPS.find((ramp) =>
+      colors.every((color, index) => sameColor(rampColor(ramp, index / (colors.length - 1)), color)),
+    ) ?? null
+  );
+}
+
+/** Where a value sits across the domain, 0..1, clamped to its ends. */
+function domainPosition(value: number, [low, high]: [number, number]): number {
+  if (high <= low) return 0;
+  return Math.min(1, Math.max(0, (value - low) / (high - low)));
+}
+
+/** The value a fraction of the way across a low-to-high span. */
+export const spanAt = ([low, high]: [number, number], position: number) =>
+  low + position * (high - low);
+
 export function buildGraduated(
   layer: AgentLayer,
   field: string,
@@ -193,6 +284,27 @@ export function buildGraduated(
   // bin bounds, so the lower bounds are derived above
   const colors = generateLegend(ramp, min, max, breaks.length).map((entry) => entry.color);
   return { kind: 'graduated', field, method, ramp, breaks, colors };
+}
+
+/**
+ * An expression renderer over the layer, or null when the expression is
+ * malformed or gives every feature the same value, which has nothing to shade.
+ * `parseExpression` gives the reason a malformed one was refused.
+ */
+export function buildExpression(
+  layer: AgentLayer,
+  expression: string,
+  ramp: ColorRamp = GRADUATED_RAMP,
+  sizes?: [number, number],
+): ExpressionSymbology | null {
+  const { node } = parseExpression(expression);
+  if (!node) return null;
+  const values = baseGeojson(layer)
+    .features.map((feature) => evaluateExpression(node, feature.properties))
+    .filter(isNumber);
+  if (new Set(values).size < 2) return null;
+  const domain: [number, number] = [Math.min(...values), Math.max(...values)];
+  return { kind: 'expression', expression, ramp, domain, ...(sizes ? { sizes } : {}) };
 }
 
 export function buildCategorized(layer: AgentLayer, field: string): CategorizedSymbology | null {
@@ -238,8 +350,19 @@ function matchesRule(props: GeoJSON.GeoJsonProperties, rule: SymbologyRule): boo
   }
 }
 
-/** The symbology's colour for one feature, or null to keep its own. */
-export function symbologyColor(feature: GeoJSON.Feature, sym: Symbology): string | null {
+/** How the symbology draws one feature; a null keeps whatever the layer draws. */
+export interface FeatureStyle {
+  color: string | null;
+  /** Point radius in pixels, where the symbology sizes points. */
+  radius: number | null;
+}
+
+const NO_STYLE: FeatureStyle = { color: null, radius: null };
+
+function classColor(
+  feature: GeoJSON.Feature,
+  sym: GraduatedSymbology | CategorizedSymbology | RuleSymbology,
+): string | null {
   const props = feature.properties;
   switch (sym.kind) {
     case 'graduated': {
@@ -255,6 +378,34 @@ export function symbologyColor(feature: GeoJSON.Feature, sym: Symbology): string
   }
 }
 
+function expressionStyler(sym: ExpressionSymbology): (feature: GeoJSON.Feature) => FeatureStyle {
+  const { node } = parseExpression(sym.expression);
+  if (!node) return () => NO_STYLE;
+  return (feature) => {
+    const value = evaluateExpression(node, feature.properties);
+    if (value === null) return NO_STYLE;
+    const position = domainPosition(value, sym.domain);
+    return {
+      color: rampColor(sym.ramp, position),
+      radius: sym.sizes ? spanAt(sym.sizes, position) : null,
+    };
+  };
+}
+
+/**
+ * The symbology's style for one feature. Built once per layer, because an
+ * expression renderer parses its expression here rather than per feature.
+ */
+export function featureStyler(sym: Symbology): (feature: GeoJSON.Feature) => FeatureStyle {
+  if (sym.kind === 'expression') return expressionStyler(sym);
+  return (feature) => ({ color: classColor(feature, sym), radius: null });
+}
+
+function markerSizeName(radius: number, sizes: [number, number]): string {
+  const bucket = Math.floor(domainPosition(radius, sizes) * MARKER_SIZE_NAMES.length);
+  return MARKER_SIZE_NAMES[Math.min(MARKER_SIZE_NAMES.length - 1, bucket)];
+}
+
 /**
  * Restyle the layer. The features are copies with the colour added, and the
  * originals are kept on the layer so clearing restores them rather than having
@@ -262,12 +413,19 @@ export function symbologyColor(feature: GeoJSON.Feature, sym: Symbology): string
  */
 export function applySymbology(layer: AgentLayer, sym: Symbology): AgentLayer {
   const geojson = baseGeojson(layer);
+  const styler = featureStyler(sym);
+  const sizes = sym.kind === 'expression' ? sym.sizes : undefined;
   const features = geojson.features.map((feature) => {
-    const color = symbologyColor(feature, sym);
-    if (color === null) return feature;
-    const baked = Object.fromEntries(
-      (STYLE_KEYS[feature.geometry?.type] ?? []).map((key) => [key, color]),
-    );
+    const { color, radius } = styler(feature);
+    const baked: Record<string, string | number> = {};
+    if (color !== null) {
+      for (const key of STYLE_KEYS[feature.geometry?.type] ?? []) baked[key] = color;
+    }
+    if (radius !== null && sizes && GEOMETRY_KINDS[feature.geometry?.type] === 'point') {
+      baked[MARKER_RADIUS_KEY] = radius;
+      baked['marker-size'] = markerSizeName(radius, sizes);
+    }
+    if (Object.keys(baked).length === 0) return feature;
     return { ...feature, properties: { ...feature.properties, ...baked } };
   });
   return {
@@ -289,27 +447,80 @@ export function clearSymbology(layer: AgentLayer): AgentLayer {
   };
 }
 
-const short = (v: number) => String(Number(v.toPrecision(3)));
+/** A number short enough for a label. */
+export const shortNumber = (v: number) => String(Number(v.toPrecision(3)));
+
+/** The ramp cut into classes, for a legend or a format that writes classes only. */
+export interface ExpressionClass {
+  /** The values this class covers, low to high. */
+  bounds: [number, number];
+  color: string;
+  /** Point radius in pixels, where the symbology sizes points. */
+  radius?: number;
+}
+
+const stopPositions = () =>
+  Array.from({ length: EXPRESSION_STOPS }, (_, index) => index / (EXPRESSION_STOPS - 1));
+
+/**
+ * An expression renderer's continuous ramp cut into classes. A feature draws in
+ * the colour its own value samples, so these are an approximation, and every
+ * format that writes them says so.
+ */
+export function expressionClasses(sym: ExpressionSymbology): ExpressionClass[] {
+  const width = (sym.domain[1] - sym.domain[0]) / EXPRESSION_STOPS;
+  return stopPositions().map((position, index) => ({
+    bounds: [sym.domain[0] + index * width, sym.domain[0] + (index + 1) * width],
+    color: rampColor(sym.ramp, position),
+    ...(sym.sizes ? { radius: spanAt(sym.sizes, position) } : {}),
+  }));
+}
+
+export interface LegendEntry {
+  color: string;
+  label: string;
+  /** Point radius in pixels, where the symbology sizes points. */
+  radius?: number;
+}
 
 /** One swatch per class, for the legend. */
-export function legendEntries(sym: Symbology): { color: string; label: string }[] {
+export function legendEntries(sym: Symbology): LegendEntry[] {
   switch (sym.kind) {
     case 'graduated':
       return sym.breaks.map((lower, i) => {
         const upper = sym.breaks[i + 1];
-        const range = upper === undefined ? `${short(lower)}+` : `${short(lower)} to ${short(upper)}`;
+        const range =
+          upper === undefined
+            ? `${shortNumber(lower)}+`
+            : `${shortNumber(lower)} to ${shortNumber(upper)}`;
         return { color: sym.colors[i], label: range };
       });
     case 'categorized':
       return sym.categories.map((c) => ({ color: c.color, label: String(c.value) }));
     case 'rules':
       return sym.rules.map((r) => ({ color: r.color, label: `${r.field} ${r.op} ${r.value}` }));
+    case 'expression':
+      return stopPositions().map((position) => ({
+        color: rampColor(sym.ramp, position),
+        label: shortNumber(spanAt(sym.domain, position)),
+        ...(sym.sizes ? { radius: spanAt(sym.sizes, position) } : {}),
+      }));
   }
 }
 
-/** The field a symbology reads, for labelling; rules read several. */
+/**
+ * What a symbology classifies by, for labelling: a column name, an expression,
+ * or nothing at all where rules read several columns.
+ */
 export function symbologyField(sym: Symbology): string | null {
-  return sym.kind === 'rules' ? null : sym.field;
+  switch (sym.kind) {
+    case 'rules':
+      return null;
+    case 'expression':
+      return sym.expression;
+    default:
+      return sym.field;
+  }
 }
 
 /**

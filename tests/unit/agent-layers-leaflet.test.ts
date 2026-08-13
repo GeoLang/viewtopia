@@ -3,7 +3,11 @@ import { renderHook, act, cleanup } from '@testing-library/react';
 import L from 'leaflet';
 import { useLeaflet } from '../../src/hooks/useLeaflet';
 import { useAgentLayersLeaflet } from '../../src/hooks/useAgentLayersLeaflet';
-import { buildGraduated } from '../../src/features/symbology/symbology';
+import {
+  POINT_RADIUS,
+  buildExpression,
+  buildGraduated,
+} from '../../src/features/symbology/symbology';
 import { useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers';
 import { useAppStore } from '../../src/store/app';
 import { useSplitViewStore, COMPARE_PANE, type Pane } from '../../src/store/splitView';
@@ -90,6 +94,19 @@ const fillColors = (map: L.Map): (string | undefined)[] => {
   map.eachLayer((l) => {
     if (l instanceof L.GeoJSON) {
       for (const child of l.getLayers()) out.push((child as L.Path).options.fillColor);
+    }
+  });
+  return out;
+};
+
+/** The radius each drawn point ended up with, in order. */
+const pointRadii = (map: L.Map): number[] => {
+  const out: number[] = [];
+  map.eachLayer((l) => {
+    if (l instanceof L.GeoJSON) {
+      for (const child of l.getLayers()) {
+        if (child instanceof L.CircleMarker) out.push(child.options.radius);
+      }
     }
   });
   return out;
@@ -334,6 +351,37 @@ describe('useAgentLayersLeaflet', () => {
       useAgentLayerStore.getState().setSymbology('risk', null);
     });
     expect(fillColors(result.current.current!)).toEqual(['#ff0000', '#ff0000']);
+  });
+
+  it('draws each point at the radius an expression renderer sized it', () => {
+    const { result } = renderHook(() => useMapWithAgentLayers());
+    const towns: AgentLayer = {
+      ...polygon('towns', 10, 50),
+      geojson: {
+        type: 'FeatureCollection',
+        features: [1, 4].map((population) => ({
+          type: 'Feature',
+          properties: { population, area: 1 },
+          geometry: { type: 'Point', coordinates: [10, 50] },
+        })),
+      },
+    };
+    act(() => {
+      useAgentLayerStore.getState().addLayer(towns);
+    });
+    expect(pointRadii(result.current.current!)).toEqual([POINT_RADIUS, POINT_RADIUS]);
+
+    act(() => {
+      const l = useAgentLayerStore.getState().layers.find((x) => x.id === 'towns');
+      const sym = l && buildExpression(l, 'population / area', 'viridis', [3, 12]);
+      useAgentLayerStore.getState().setSymbology('towns', sym ?? null);
+    });
+    expect(pointRadii(result.current.current!)).toEqual([3, 12]);
+
+    act(() => {
+      useAgentLayerStore.getState().setSymbology('towns', null);
+    });
+    expect(pointRadii(result.current.current!)).toEqual([POINT_RADIUS, POINT_RADIUS]);
   });
 });
 

@@ -3,7 +3,21 @@ import { IconListDetails } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../../components/PanelCard';
 import { layerColor, useAgentLayerStore } from '../../store/agentLayers';
 import { useColumnLabels } from '../../store/datasetSchemas';
-import { legendEntries, symbologyField } from './symbology';
+import { legendEntries, symbologyField, type LegendEntry } from './symbology';
+
+const SWATCH = 14;
+
+/** A class that sizes its points shows the size, so the legend reads as the map does. */
+function swatchStyle(entry: LegendEntry) {
+  const side = entry.radius === undefined ? SWATCH : entry.radius * 2;
+  return {
+    background: entry.color,
+    width: side,
+    height: side,
+    borderRadius: entry.radius === undefined ? 3 : '50%',
+    flexShrink: 0,
+  };
+}
 
 /**
  * Auto-generated legend over every agent layer: one swatch per symbology class,
@@ -46,15 +60,7 @@ export function LegendPanel({ onClose }: { onClose: () => void }) {
                 {sym ? (
                   legendEntries(sym).map((entry) => (
                     <Group key={`${entry.color}-${entry.label}`} gap={6} wrap="nowrap" data-testid="legend-entry">
-                      <div
-                        style={{
-                          background: entry.color,
-                          width: 14,
-                          height: 14,
-                          borderRadius: 3,
-                          flexShrink: 0,
-                        }}
-                      />
+                      <div data-testid="legend-swatch" style={swatchStyle(entry)} />
                       <Text size="xs" c="dark.0" lineClamp={1}>
                         {entry.label}
                       </Text>
@@ -63,13 +69,8 @@ export function LegendPanel({ onClose }: { onClose: () => void }) {
                 ) : (
                   <Group gap={6} wrap="nowrap" data-testid="legend-entry">
                     <div
-                      style={{
-                        background: layerColor(layer),
-                        width: 14,
-                        height: 14,
-                        borderRadius: 3,
-                        flexShrink: 0,
-                      }}
+                      data-testid="legend-swatch"
+                      style={swatchStyle({ color: layerColor(layer), label: '' })}
                     />
                     <Text size="xs" c="dimmed">
                       single colour

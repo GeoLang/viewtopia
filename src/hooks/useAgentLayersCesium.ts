@@ -21,7 +21,6 @@ import {
   visibleLayers,
   type AgentLayer,
 } from '../store/agentLayers';
-import { useAppStore } from '../store/app';
 import { cameraZoom } from './cameraSync';
 import { bboxOfCorners, cornersAxisAligned } from '../overlay/georeference';
 import { OVERLAY_ENTITY_PREFIX, quadOverlayEntity } from '../overlay/cesiumQuad';
@@ -29,18 +28,21 @@ import { OVERLAY_ENTITY_PREFIX, quadOverlayEntity } from '../overlay/cesiumQuad'
 const PREFIX = 'agent-layer-';
 const MARKER_PREFIX = 'agent-marker-';
 
-/** Draws the agent's ui_spec layers and markers on Cesium, re-applying after a renderer switch. */
+/**
+ * Draws the agent's ui_spec layers and markers on a Cesium viewer, the viewer
+ * pane or a compare pane. useCesium swaps the instance whenever the tab or the
+ * pane's renderer changes, and renders again when it does, so every effect keys
+ * on the instance and re-applies against the fresh one.
+ */
 export function useAgentLayersCesium(viewerRef: MutableRefObject<Viewer | null>) {
   const layers = useAgentLayerStore((s) => s.layers);
   const rasterLayers = useAgentLayerStore((s) => s.rasterLayers);
   const markers = useAgentLayerStore((s) => s.markers);
   const generation = useAgentLayerStore((s) => s.generation);
-  const renderer = useAppStore((s) => s.renderer);
-  const activeTab = useAppStore((s) => s.activeTab);
+  const viewer = viewerRef.current;
   const framedRef = useRef(-1);
 
   useEffect(() => {
-    const viewer = viewerRef.current;
     if (!viewer || viewer.isDestroyed()) return;
 
     // drop our markers, then redraw from the store
@@ -62,12 +64,11 @@ export function useAgentLayersCesium(viewerRef: MutableRefObject<Viewer | null>)
           : undefined,
       });
     }
-  }, [markers, viewerRef, renderer, activeTab]);
+  }, [markers, viewer]);
 
   // imagery layers live outside the dataSources collection, so they are added
   // and taken off by hand rather than swept by name like the vector ones
   useEffect(() => {
-    const viewer = viewerRef.current;
     if (!viewer || viewer.isDestroyed()) return;
     let cancelled = false;
     const added: ImageryLayer[] = [];
@@ -104,10 +105,9 @@ export function useAgentLayersCesium(viewerRef: MutableRefObject<Viewer | null>)
         viewer.entities.remove(entity);
       }
     };
-  }, [rasterLayers, viewerRef, renderer, activeTab]);
+  }, [rasterLayers, viewer]);
 
   useEffect(() => {
-    const viewer = viewerRef.current;
     if (!viewer || viewer.isDestroyed()) return;
     let cancelled = false;
     const drawn: { layer: AgentLayer; source: GeoJsonDataSource }[] = [];
@@ -169,5 +169,5 @@ export function useAgentLayersCesium(viewerRef: MutableRefObject<Viewer | null>)
       viewer.camera.changed.removeEventListener(showForZoom);
       viewer.camera.moveEnd.removeEventListener(showForZoom);
     };
-  }, [layers, generation, viewerRef, renderer, activeTab]);
+  }, [layers, generation, viewer]);
 }

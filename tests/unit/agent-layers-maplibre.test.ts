@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { act, renderHook, cleanup } from '@testing-library/react';
 import { markerElement, useAgentLayersMapLibre } from '../../src/hooks/useAgentLayersMapLibre';
 import { useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers';
-import { buildGraduated } from '../../src/features/symbology/symbology';
+import {
+  POINT_RADIUS,
+  buildExpression,
+  buildGraduated,
+} from '../../src/features/symbology/symbology';
 import { useAppStore } from '../../src/store/app';
 import { cornersOfBbox } from '../../src/overlay/georeference';
 
@@ -101,6 +105,42 @@ describe('useAgentLayersMapLibre', () => {
       ['get', 'marker-color'],
       '#ff0000',
     ]);
+    expect(map.layer('agent-layer-risk-circle')?.paint['circle-radius']).toEqual([
+      'coalesce',
+      ['get', 'marker-radius'],
+      POINT_RADIUS,
+    ]);
+  });
+
+  it('bakes the radius an expression renderer sized each point at', () => {
+    const map = fakeMap();
+    const towns: AgentLayer = {
+      id: 'towns',
+      name: 'Towns',
+      color: '#ff0000',
+      geojson: {
+        type: 'FeatureCollection',
+        features: [1, 4].map((population) => ({
+          type: 'Feature',
+          properties: { population, area: 1 },
+          geometry: { type: 'Point', coordinates: [12, 45] },
+        })),
+      },
+    };
+    act(() => {
+      useAgentLayerStore.getState().addLayer(towns);
+    });
+    mount(map);
+
+    act(() => {
+      const l = useAgentLayerStore.getState().layers.find((x) => x.id === 'towns');
+      const sym = l && buildExpression(l, 'population / area', 'viridis', [3, 12]);
+      useAgentLayerStore.getState().setSymbology('towns', sym ?? null);
+    });
+
+    const data = map.source('agent-layer-towns')?.data as GeoJSON.FeatureCollection;
+    expect(data.features.map((f) => f.properties?.['marker-radius'])).toEqual([3, 12]);
+    expect(data.features.map((f) => f.properties?.['marker-size'])).toEqual(['small', 'large']);
   });
 
   it('serves the source the classified features, so the paint has a colour to read', () => {

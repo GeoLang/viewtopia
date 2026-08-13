@@ -4,7 +4,11 @@ import { render, screen, cleanup } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import { LegendPanel } from '../../src/features/symbology/LegendPanel';
 import { useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers';
-import { applySymbology, buildGraduated } from '../../src/features/symbology/symbology';
+import {
+  applySymbology,
+  buildExpression,
+  buildGraduated,
+} from '../../src/features/symbology/symbology';
 
 window.matchMedia = vi.fn().mockReturnValue({
   matches: false,
@@ -63,6 +67,23 @@ describe('LegendPanel', () => {
     expect(screen.getAllByTestId('legend-entry')).toHaveLength(5);
     expect(screen.getByText('0 to 20')).toBeInTheDocument();
     expect(screen.getByText('80+')).toBeInTheDocument();
+  });
+
+  it('names an expression layer by its expression and sizes the swatches', () => {
+    const layer = scored([0, 50, 100]);
+    const sym = buildExpression(layer, 'risk * 2', 'viridis', [4, 12]);
+    if (!sym) throw new Error('expected expression symbology');
+    useAgentLayerStore.getState().setLayers([applySymbology(layer, sym)]);
+
+    renderPanel();
+
+    expect(screen.getByText('by risk * 2')).toBeInTheDocument();
+    expect(screen.getAllByTestId('legend-entry')).toHaveLength(5);
+    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('200')).toBeInTheDocument();
+    const swatches = screen.getAllByTestId('legend-swatch');
+    expect(swatches[0]).toHaveStyle({ width: '8px' });
+    expect(swatches[4]).toHaveStyle({ width: '24px' });
   });
 
   it('shows an unstyled layer as its single colour', () => {

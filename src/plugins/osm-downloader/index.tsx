@@ -7,7 +7,9 @@ import { useState } from 'react';
 import { Paper, Text, Stack, TextInput, Button, Group, Badge, Select, Textarea, Loader, Code } from '@mantine/core';
 import { IconDownload, IconMapPin } from '@tabler/icons-react';
 import type { PluginDefinition, PluginContext } from '../sdk';
+import { requireOnline } from '../../offline/network';
 
+// online only: the query and bbox are the user's own, so nothing repeats
 const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 
 const PRESET_QUERIES: Record<string, string> = {
@@ -78,6 +80,7 @@ function OsmDownloaderPanel({ ctx }: { ctx: PluginContext }) {
     setResult(null);
 
     try {
+      requireOnline('the OSM download');
       const bboxStr = bbox || '-0.15,51.49,-0.09,51.53'; // Default: central London
       const [west, south, east, north] = bboxStr.split(',').map(Number);
       const bboxOverpass = `${south},${west},${north},${east}`;

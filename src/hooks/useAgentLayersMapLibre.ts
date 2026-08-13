@@ -10,17 +10,18 @@ import {
   ZOOM_LIMITS,
   type AgentMarker,
 } from '../store/agentLayers';
-import { useAppStore } from '../store/app';
+import { MARKER_RADIUS_KEY, POINT_RADIUS } from '../features/symbology/symbology';
 import { agentLayersBounds } from './agentLayerBounds';
 
 const PREFIX = 'agent-layer-';
 const RASTER_PREFIX = 'agent-raster-';
 
 /**
- * A classified layer carries its class colour on each feature as a simplestyle
- * property, so the paint reads that and falls back to the layer's one colour.
+ * A classified layer carries its colour, and its point radius where the
+ * symbology sizes points, on each feature as a simplestyle property, so the
+ * paint reads that and falls back to what the layer draws otherwise.
  */
-export function featureColor(key: string, fallback: string): ExpressionSpecification {
+export function featureValue(key: string, fallback: string | number): ExpressionSpecification {
   return ['coalesce', ['get', key], fallback];
 }
 
@@ -44,20 +45,24 @@ export function markerElement(m: AgentMarker): HTMLElement {
   return el;
 }
 
-/** Draws the agent's ui_spec layers and markers on MapLibre, so switching renderers keeps them. */
+/**
+ * Draws the agent's ui_spec layers and markers on a MapLibre map, the viewer or
+ * a compare pane, so switching renderers keeps them. useMapLibre swaps the
+ * instance whenever the tab or the pane's renderer changes, and renders again
+ * when it does, so every effect keys on the instance and re-adds everything
+ * against the fresh one.
+ */
 export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map | null>) {
   const layers = useAgentLayerStore((s) => s.layers);
   const rasterLayers = useAgentLayerStore((s) => s.rasterLayers);
   const markers = useAgentLayerStore((s) => s.markers);
   const generation = useAgentLayerStore((s) => s.generation);
-  const renderer = useAppStore((s) => s.renderer);
-  const activeTab = useAppStore((s) => s.activeTab);
+  const map = mapRef.current;
   const framedRef = useRef(-1);
 
   // Markers are DOM overlays, so they survive basemap setStyle; just rebuild
   // the small set whenever the store changes or the map remounts.
   useEffect(() => {
-    const map = mapRef.current;
     if (!map) return;
     const objs = markers.map((m) =>
       new maplibregl.Marker({ element: markerElement(m) }).setLngLat([m.lon, m.lat]).addTo(map),
@@ -65,10 +70,9 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
     return () => {
       for (const o of objs) o.remove();
     };
-  }, [markers, mapRef, renderer, activeTab]);
+  }, [markers, map]);
 
   useEffect(() => {
-    const map = mapRef.current;
     if (!map) return;
 
     const apply = () => {
@@ -118,7 +122,7 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
             maxzoom,
             filter: ['==', ['geometry-type'], 'Polygon'],
             paint: {
-              'fill-color': featureColor('fill', color),
+              'fill-color': featureValue('fill', color),
               'fill-opacity': style.opacity,
             },
           });
@@ -132,7 +136,7 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
             maxzoom,
             filter: ['in', ['geometry-type'], ['literal', ['LineString', 'Polygon']]],
             paint: {
-              'line-color': featureColor('stroke', color),
+              'line-color': featureValue('stroke', color),
               'line-width': style.lineWidth,
             },
           });
@@ -145,8 +149,8 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
           maxzoom,
           filter: ['==', ['geometry-type'], 'Point'],
           paint: {
-            'circle-color': featureColor('marker-color', color),
-            'circle-radius': 5,
+            'circle-color': featureValue('marker-color', color),
+            'circle-radius': featureValue(MARKER_RADIUS_KEY, POINT_RADIUS),
             'circle-stroke-color': '#ffffff',
             'circle-stroke-width': 1,
           },
@@ -185,5 +189,5 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
       map.off('styledata', reapplyIfDropped);
       map.off('idle', reapplyIfDropped);
     };
-  }, [layers, rasterLayers, generation, mapRef, renderer, activeTab]);
+  }, [layers, rasterLayers, generation, map]);
 }
