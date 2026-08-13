@@ -6,6 +6,14 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-13: **the terrain panel offers tiletopia's prebuilt terrain bundles**.
+  The panel asks `/tiles/v1/terrain/bundles` on mount, an anonymous list, and adds
+  a provider option per name under a "Terrain bundles" group. Picking one loads
+  `/tiles/v1/terrain/bundles/<name>/`, the trailing slash being what keeps Cesium's
+  `layer.json` lookup inside the bundle. A viewer deployed without tiletopia gets a
+  404 there and a tiletopia holding no bundles answers an empty list, so in both
+  cases the group is absent rather than empty and the other providers are untouched.
+
 - 2026-08-13: **external services say when they are offline instead of failing
   obscurely**. Geocoding and routing already preferred the platform's own
   geokode and itinera, and now go through the offline API cache, so a place or
@@ -528,6 +536,15 @@ All notable changes to this project will be documented in this file.
   posting, segment rendering and the bell.
 
 ### Fixed
+
+- 2026-08-13: **the verticals doc credited panoptes with work it does not do**.
+  It was named for observation management and time-series storage under
+  environmental monitoring, and for soil moisture and weather station monitoring
+  under agriculture. panoptes does neither: it extracts features from imagery
+  through tile IO, ONNX segmentation, polygonization and pixel-difference change
+  detection, and ships no trained weights. Both verticals now name it for that
+  and credit collecta for observation forms and storage, fluvius for the sensor
+  feeds. The status table's panoptes test count is 44, not 45.
 
 - 2026-08-13: **agent layers draw on leaflet compare panes**. The leaflet
   agent-layer hook keyed its effects on the 2D tab, a proxy for "the map was

@@ -15,10 +15,32 @@ repo's working tree, so `git status` in each repo is the source of truth if this
 session is lost. Per-repo CHANGELOG and DESIGN entries were written alongside
 each change.
 
-All eight agents finished. The repos holding uncommitted work are infrastructure,
-agora, ptolemy, viewtopia, tiletopia, collecta, panoptes and terrano. Each repo's
-own CHANGELOG entry is the account of what landed there. Nothing has been
-committed or pushed in any of them, so review and commit per repo.
+Round one finished and is committed and pushed across infrastructure, agora,
+ptolemy, viewtopia, tiletopia, collecta, panoptes and terrano.
+
+**Hosting deferred by owner decision 2026-08-13.** Everything under the hosted
+flagship plan, the hosted stack decisions, the database TLS operator steps, the
+CloudFront realtime test and geoplumb in-region serving is parked with it. Do not
+treat any of those as next.
+
+Round two, started 2026-08-13, all off the hosting path:
+
+- [~] **terrano**: sample formats beyond Float64 in the COG writer, and the
+      `write_geotiff` triple-build cleanup. Unblocks the viewtopia raster
+      conversion wiring, which waits on this landing first.
+- [~] **viewtopia**: wire the Cesium terrain bundle picker (four steps spelled
+      out under the offline story), correct the two panoptes descriptions in
+      `docs/verticals.md` and the test count in `DESIGN.md`, and investigate
+      dependabot alert 19, a moderate the dependency section does not account
+      for.
+- [~] **ptolemy**: the `geoprocessing.rs` NULL panic, and the helm chart's
+      missing external-database override.
+- [~] **tiletopia**: the Ion-compat endpoint returning a tileset.json URL for
+      terrain assets, and the stale panoptes description in
+      `docs/ecosystem.html`.
+- [~] **audit**: verify the remaining entries in this file against the code and
+      report which are stale. Four were found stale today, so the rest are
+      suspect. Reports only, changes nothing.
 
 Landed in the working tree:
 
@@ -324,8 +346,20 @@ case the entry named a mechanism that no longer existed, and in the ptolemy case
 a real bug was still there for a different reason.
 
 - [ ] Verify an entry against the code before working it, and do not trust the
-      mechanism it names. Worth a sweep of the rest of this file on the same
-      suspicion.
+      mechanism it names.
+
+      A sweep on 2026-08-13 found no further stale entries, but it only reached
+      part of the file. It confirmed as current, with evidence: the ptolemy
+      topology raw-writes gap (`ci/no-raw-writes.sh` itself documents that it
+      cannot see a mutating function called through `SELECT`, naming those three
+      by name), the geoprocessing NULL panic, collecta legacy-form access,
+      the terrain wiring, tiletopia's Ion-compat endpoint, terrano's Float64-only
+      writer, and ptolemy's feature-level merge.
+
+      Still unchecked, and checkable in code rather than needing a deployment:
+      the NL agent `sql_query` bypass, tiletopia asset metadata and annotation
+      reads, and whether the data source manager and print layout panels exist.
+      Worth a second pass.
 
 ## OPEN — platform hygiene
 
@@ -428,6 +462,24 @@ left open:
       is green. Each resolves itself when those upstreams move. geokode and
       itinera took the same bump with no duplicate, so this is not inherent to
       sha2 0.11.
+- [ ] **github's dependency graph for viewtopia reads a lockfile that no longer
+      exists.** All 22 alerts on the repo carry `manifest_path:
+      package-lock.json`, which commit `dcdbde7e` deleted on 2026-06-20 in the
+      pnpm migration. The remote returns 404 for that path and the SBOM endpoint
+      404s too, consistent with the graph never having picked up
+      `pnpm-lock.yaml`. So every npm advisory resolves against pinned versions
+      this repo stopped using seven weeks ago, which is why alerts keep firing on
+      ranges the tree has already left. This is the same cause as the postcss
+      alert dismissed as stale below, so it is a pattern rather than one bad
+      alert, and until it is fixed a real advisory is indistinguishable from a
+      ghost. Worth solving before trusting any alert on this repo.
+
+      Alert 19 was the case that exposed it: GHSA-55q2-fjhq-7xh7, a dompurify
+      advisory published 2026-08-09, patched in 3.4.13. `pnpm why` finds exactly
+      one dompurify in the tree and it is already 3.4.13, so there was nothing to
+      upgrade. It is also unreachable here for the same reason recorded below,
+      dompurify arrives only through `@cesium/engine` and nothing in this repo
+      imports it. The alert can be dismissed as already fixed.
 - [ ] **viewtopia's two `image-size` advisories have no fix published.** Both
       are denial of service through infinite loops in the JXL, HEIF and ICNS
       parsers, reached through deck.gl's texture-compressor. Nothing to upgrade
@@ -842,8 +894,13 @@ survives reloads and syncs back, and a service worker precaches the built app
 shell, so a reload with no network still boots the viewer. Everything below is
 what does not work.
 
-- [ ] **wire viewtopia to tiletopia's terrain bundles.** The serving half shipped
-      2026-08-13 (tiletopia working tree). This entry was wrong about the
+Closed 2026-08-13: viewtopia's terrain bundle picker. `GlobalTerrainPanel` fetches
+the bundle list on mount and adds one option per name, an empty or failed fetch
+leaves the panel otherwise unchanged, and the success status names the bundle
+rather than always claiming Cesium World Terrain, which the old nested ternary
+did. The rest of this entry is kept for the correction it records.
+
+      This entry was wrong about the
       starting point: tiletopia already served `/api/v1/terrain/layer.json` and
       `/api/v1/terrain/{z}/{x}/{y}` as quantized mesh generated on demand, and
       `GlobalTerrainPanel.tsx` was already wired to it. The real gap was that
@@ -934,12 +991,15 @@ and test with no ONNX Runtime present. `ort` cannot supply the runtime itself:
 before any download logic, so `download-binaries` would be a no-op.
 - [ ] **panoptes descriptions in sibling repos are wrong**, found during the honesty pass.
       Each is a one-line doc fix in a repo that was busy at the time:
-      - `viewtopia/docs/verticals.md` line 16 credits panoptes with "observation management,
-        time-series storage" and line 69 with "sensor monitoring (soil moisture, weather
-        stations)". Both describe a different product.
       - `tiletopia/docs/ecosystem.html` line 130 repeats the old "Geospatial monitoring and
         change detection" workspace description, which panoptes has since corrected at source.
-      - `viewtopia/DESIGN.md` line 45 says panoptes has 45 tests. It has 44.
+        In flight.
+
+      The viewtopia half closed 2026-08-13: `docs/verticals.md` now credits panoptes with
+      imagery feature extraction and says plainly that no weights ship, the sensor line moved
+      to fluvius, which has the MQTT and Kafka connectors, and collecta took the observation
+      forms line. `DESIGN.md` says 44 tests, and its viewtopia count was stale too, at 1,091
+      against a real 1,299.
 - [~] **collecta media attachments** — photo/document capture + sync (deferred from Phase 2).
       In flight over the OpenRosa multipart submission path.
 - [ ] **viewtopia FleetPanel** — currently an honest "no live feed" state; nothing serves

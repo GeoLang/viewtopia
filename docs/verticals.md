@@ -12,10 +12,11 @@ Each vertical leverages the same underlying platform with specialized panels.
 - **HeatmapPanel** (existing) — sensor density/intensity visualization
 - **TimelinePanel** (existing) — temporal playback of sensor history
 
-### Backend: panoptes + terrano + fluvius
-- panoptes: observation management, time-series storage
+### Backend: fluvius + collecta + terrano + panoptes
+- fluvius: automated data pipeline from IoT devices, windowing over the live sensor stream
+- collecta: field observation forms, submission ingestion and storage
 - terrano: terrain analysis, watershed delineation
-- fluvius: automated data pipeline from IoT devices
+- panoptes: imagery feature extraction, ONNX segmentation and pixel-difference change detection (weights are yours to supply, none ship)
 
 ### Configuration
 ```env
@@ -64,9 +65,10 @@ VITE_SENSOR_WS_URL=ws://localhost:3004/ws/sensors
 - **TimelapsePanel** (existing) — crop growth over time
 - **SpatialStatsPanel** (existing) — yield statistics by zone
 
-### Backend: terrano + panoptes + topoi
+### Backend: terrano + fluvius + panoptes + topoi
 - terrano: GeoTIFF raster processing (NDVI, thermal)
-- panoptes: sensor monitoring (soil moisture, weather stations)
+- fluvius: sensor monitoring (soil moisture, weather stations) over MQTT and Kafka
+- panoptes: field feature extraction from imagery, ONNX segmentation and pixel-difference change detection (weights are yours to supply, none ship)
 - topoi: field boundary management, zone operations
 
 ### Use Cases

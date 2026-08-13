@@ -25,6 +25,16 @@ import { addMapTerrain, TERRAIN_RGB_URL, type MapTerrain } from '../../lib/mapTe
  */
 const STACK_TERRAIN_URL = '/tiles/v1/terrain/';
 
+const BUNDLE_LIST_URL = '/tiles/v1/terrain/bundles';
+
+const BUNDLE_PREFIX = 'bundle:';
+
+// fromUrl appends layer.json, so the trailing slash is what keeps it inside the bundle
+const bundleUrl = (name: string) => `${BUNDLE_LIST_URL}/${name}/`;
+
+const bundleName = (value: string | null) =>
+  value?.startsWith(BUNDLE_PREFIX) ? value.slice(BUNDLE_PREFIX.length) : null;
+
 const NO_SOURCE =
   'No terrain source: the platform terrain service did not answer, terrain stays off';
 
@@ -43,7 +53,30 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
   const [failed, setFailed] = useState(false);
   // NO_SOURCE names no cause, so the rejection behind it is kept and shown
   const [detail, setDetail] = useState<string | null>(null);
+  const [bundles, setBundles] = useState<string[]>([]);
   const mapTerrainRef = useRef<MapTerrain | null>(null);
+  const selectedBundle = bundleName(provider);
+
+  // a viewtopia deployed without tiletopia answers 404 here, and a tiletopia with
+  // no bundles on disk answers [], so no bundles at all is the ordinary case
+  useEffect(() => {
+    let cancelled = false;
+    const loadBundles = async () => {
+      try {
+        const response = await fetch(BUNDLE_LIST_URL);
+        if (!response.ok) return;
+        const names: unknown = await response.json();
+        if (cancelled || !Array.isArray(names)) return;
+        setBundles(names.filter((name): name is string => typeof name === 'string'));
+      } catch {
+        // no terrain service reachable, the other providers still work
+      }
+    };
+    void loadBundles();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Vertical exaggeration is a scene setting: apply live, no provider needed.
   useEffect(() => {
@@ -63,6 +96,13 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
       mapTerrainRef.current = null;
     };
   }, [renderer]);
+
+  const enabledStatus = () => {
+    if (selectedBundle) return `Terrain bundle ${selectedBundle} enabled`;
+    if (provider === 'stack') return 'Platform terrain enabled';
+    if (provider === 'custom') return 'Custom terrain enabled';
+    return 'Cesium World Terrain enabled';
+  };
 
   const enableMapRelief = () => {
     mapTerrainRef.current?.remove();
@@ -95,18 +135,13 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
     setLoading(true);
     try {
       let tp: TerrainProvider;
-      if (provider === 'stack') tp = await CesiumTerrainProvider.fromUrl(STACK_TERRAIN_URL);
+      if (selectedBundle) tp = await CesiumTerrainProvider.fromUrl(bundleUrl(selectedBundle));
+      else if (provider === 'stack') tp = await CesiumTerrainProvider.fromUrl(STACK_TERRAIN_URL);
       else if (provider === 'custom') tp = await CesiumTerrainProvider.fromUrl(url);
       else tp = await createWorldTerrainAsync();
       viewer.terrainProvider = tp;
       setFailed(false);
-      setStatus(
-        provider === 'stack'
-          ? 'Platform terrain enabled'
-          : provider === 'custom'
-            ? 'Custom terrain enabled'
-            : 'Cesium World Terrain enabled',
-      );
+      setStatus(enabledStatus());
     } catch (e) {
       // the platform service may be unreachable or still require a token, a typed
       // URL may be wrong, and world terrain needs an Ion token: all land here
@@ -172,6 +207,17 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
                 { value: 'stack', label: 'Platform terrain' },
                 { value: 'cesium', label: 'Cesium World Terrain' },
                 { value: 'custom', label: 'Custom URL' },
+                ...(bundles.length
+                  ? [
+                      {
+                        group: 'Terrain bundles',
+                        items: bundles.map((name) => ({
+                          value: `${BUNDLE_PREFIX}${name}`,
+                          label: name,
+                        })),
+                      },
+                    ]
+                  : []),
               ]}
               value={provider}
               onChange={setProvider}
@@ -180,6 +226,12 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
             {provider === 'stack' && (
               <Text size="xs" c="dimmed">
                 {STACK_TERRAIN_URL}
+              </Text>
+            )}
+
+            {selectedBundle && (
+              <Text size="xs" c="dimmed">
+                {bundleUrl(selectedBundle)}
               </Text>
             )}
 

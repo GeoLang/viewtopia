@@ -42,8 +42,8 @@ Maturity from source-level test declarations:
 | terrano / fenestra | raster / OGC gateway (WMS/WFS/WMTS/WCS/OGC API) | 140 / 98 | ✅ |
 | geokode / geogit / itinera | geocode / geo VCS / routing | 75 / 73 / 84 | ✅ |
 | interiora | indoor | 82 | ✅ |
-| panoptes | imagery ML | 45 | ONNX path real, **no published weights** ⚠️ |
-| viewtopia | flagship viewer | 1,091 Vitest declarations + 22 platform E2E | 48 registry panels (18 preview-gated) + 22 plugin panels |
+| panoptes | imagery ML | 44 | ONNX path real, **no published weights** ⚠️ |
+| viewtopia | flagship viewer | 1,299 Vitest tests + 22 platform E2E | 48 registry panels (18 preview-gated) + 22 plugin panels |
 | geolang | NL→GIS agent | 404 pytest functions | 39 tools, wired to ptolemy/itinera/geokode/geodukt |
 
 **Current headline risks:**
@@ -436,7 +436,10 @@ Tools" setting with a Preview badge, so there are no dead buttons in the default
   than through whatever the browser's failed fetch throws.
 - The terrain panel defaults to the platform service with a graceful no-source state. tiletopia
   serves quantized mesh for Cesium and a terrain-RGB endpoint (mercator XYZ, mapbox encoding,
-  anonymous) for MapLibre relief.
+  anonymous) for MapLibre relief. It also serves prebuilt quantized-mesh bundles, listed
+  anonymously at `/tiles/v1/terrain/bundles`, and the panel offers one provider option per name
+  it finds there. A stack without tiletopia answers 404 and a tiletopia with nothing on disk
+  answers `[]`, so the panel shows the bundle group only when there is a bundle to pick.
 - The layer panel lists agent-drawn layers as well as plugin-host layers, with working opacity,
   remove and download. One id can sit in the layer list and in the store the renderers draw
   from, so the panel shows one row per layer, the row whose controls reach what is drawn, and
