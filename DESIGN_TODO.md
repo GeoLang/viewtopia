@@ -142,11 +142,6 @@ left open:
         `^2.28`. Also `bincode` 1.3.3 and `smartstring` 1.0.1, both
         unmaintained with no successor version (RUSTSEC-2025-0141, -2026-0249).
       - itinera: `bincode` 1.3.3, same as geokode's.
-- [ ] **geodukt's cdc feature hash depends on `Debug` formatting** of topoi's
-      `FeatureGeometry` and `Value`, both git dependencies on master. A `Debug`
-      impl changing upstream silently changes geodukt's content hashes, and now
-      breaks a golden test for a reason unrelated to whatever bump triggered
-      it. The golden made the fragility visible rather than causing it.
 - [ ] **geodukt and ptolemy each carry digest 0.10 and 0.11 at once.** In
       geodukt it is `md-5` 0.10 reaching the graph through `object_store`. In
       ptolemy it is sqlx 0.8, mongodb 3.7 and openidconnect 4.0, all still on
