@@ -560,11 +560,10 @@ any interval as on-demand composite tiles (the Timelapse panel is the proof).
 What still separates it from GEE, engine details in geoplumb's DESIGN.md
 Known limits:
 
-- [ ] **composite latency and memory on dense collections**: mean, min, max,
-      stddev and count now fold item by item, so their peak is one read wave
-      however deep the stack. Median and percentile still need every value at
-      a pixel at once and hold the whole stack. Latency is untouched either
-      way: every intersecting item is still read.
+- [ ] **composite latency on dense collections**: memory is bounded now (folds
+      peak at one wave, median and percentile reduce in strips under a fixed
+      value budget), but every intersecting item is still read, and a stack
+      deep enough to strip pays one read-latency pass per strip.
 - [ ] **in-region deployment**: cold pulls are bound by the residential
       link to us-west-2. Serving next to the data is the remaining latency
       lever; blocked on an AWS account decision (2026-08-05).
