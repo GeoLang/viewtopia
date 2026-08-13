@@ -2,15 +2,19 @@ import { useEffect, useRef } from 'react';
 import { Ion, Viewer } from 'cesium';
 import { useAppStore } from '../store/app';
 import { useSplitViewStore, type Pane } from '../store/splitView';
-import { getSharedCamera, setSharedCamera } from './sharedCamera';
+import { getSharedCamera, setSharedCamera, type SharedCamera } from './sharedCamera';
 import {
   applyCesiumCamera,
   readCesiumCamera,
+  sameCamera,
   useFollowSharedCamera,
 } from './cameraSync';
 import { rasterTiles, type CustomBasemap } from './basemapTiles';
 import { CachedImageryProvider } from '../offline/cachedImageryProvider';
 import { setActiveCesiumViewer, setPaneCesiumViewer } from '../viewer/registry';
+
+/** How often the live camera is read back for the shared camera state. */
+const CAMERA_PUBLISH_INTERVAL_MS = 100;
 
 interface UseCesiumOptions {
   containerId?: string;
@@ -113,13 +117,22 @@ export function useCesium(opts: UseCesiumOptions = {}) {
     applyCesiumCamera(viewer, getSharedCamera());
 
     // Write back to shared camera on move
+    let published: SharedCamera | null = null;
     const syncShared = () => {
       if (viewer.isDestroyed()) return;
       const cam = readCesiumCamera(viewer);
-      if (cam) setSharedCamera(cam);
+      if (!cam || (published && sameCamera(published, cam))) return;
+      published = cam;
+      setSharedCamera(cam);
     };
     viewer.camera.changed.addEventListener(syncShared);
     viewer.camera.moveEnd.addEventListener(syncShared);
+    // cesium raises those two only while drawing a frame, so a renderer that is
+    // seconds behind holds a move back that long. The poll publishes it on time.
+    const cameraPoll = window.setInterval(() => {
+      if (viewer.isDestroyed()) window.clearInterval(cameraPoll);
+      else syncShared();
+    }, CAMERA_PUBLISH_INTERVAL_MS);
 
     // Resize after layout
     viewer.resize();
