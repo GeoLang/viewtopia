@@ -599,12 +599,11 @@ Known limits:
 - [ ] ptolemy external-source pushdown non-goals (documented in README): near-global
       windows fall back to unfiltered scans; `or`/`not` CQL2 spatial ops are never pushed.
       Revisit only if a real workload hits them.
-- [ ] **Split view step 2: tiled compare views** (owner, 2026-07-26, post-MVP).
-      Step 1 shipped 2026-08-12: pane state is a list of `{renderer, basemap}`
-      with the viewer as pane 0, each pane has its own basemap picker, cameras
-      stay locked. The 2x2 view is layout work over the pane list plus pane
-      add/remove UI. Tiles are GL contexts: cap at 4, MapLibre by default, at
-      most one Cesium instance. Nothing enforces the one-Cesium rule yet, and
-      today's two panes can already both be Cesium, so enforcing it changes
-      existing behavior and belongs with this step.
+- [ ] **Split view leftovers** (the 2x2 grid shipped 2026-08-13 with
+      active-pane styling, a UI-enforced one-Cesium rule, and 2D leaflet
+      compare panes): agent layers do not draw on leaflet panes, because
+      useAgentLayersLeaflet re-adds layers only on a tab switch and never sees
+      a pane map appear. Also confirm panels run 31719658189 went green
+      (dispatched 2026-08-13 for the batch, two known analysis-2 flakes pass
+      on retry), then delete that half of this item.
 - [ ] Raise jung from its rendering-only coverage into the v1 path *(only if it enters it)*.
