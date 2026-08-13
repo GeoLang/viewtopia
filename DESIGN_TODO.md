@@ -560,10 +560,13 @@ Known limits:
       Revisit only if a real workload hits them.
 - [ ] **Split view leftovers** (the 2x2 grid shipped 2026-08-13; the
       leaflet-pane agent-layer gap closed 2026-08-13): confirm panels run
-      31719658189 went green (dispatched 2026-08-13 for the batch, two known
-      analysis-2 flakes pass on retry), then delete this item. Latent cousin
-      of the closed gap: useAgentLayersMapLibre and useAgentLayersCesium key
-      on app-level renderer state rather than the pane's map instance, so a
-      pane switching to those renderers after mount works by effect ordering
-      rather than by subscription.
+      31725234676 went green (run 31719658189 finished 60 passed, 4 flaky
+      passing on retry, 1 failed: the overlay .prj drop asserted its first
+      observable on the 5 s default while projicio wasm compiled on a loaded
+      box, given the 30 s first-op leash 2026-08-13 and the run redispatched),
+      then delete this item. Latent cousin of the closed gap:
+      useAgentLayersMapLibre and useAgentLayersCesium key on app-level
+      renderer state rather than the pane's map instance, so a pane switching
+      to those renderers after mount works by effect ordering rather than by
+      subscription.
 - [ ] Raise jung from its rendering-only coverage into the v1 path *(only if it enters it)*.
