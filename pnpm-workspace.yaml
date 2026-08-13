@@ -1,9 +1,3 @@
-# pnpm settings (pnpm 11 reads project settings from here, not package.json).
-#
-# Security: pnpm blocks dependency lifecycle/build scripts by default. Only the
-# packages listed here are allowed to run install scripts — keep this list small
-# and audited. esbuild downloads its platform binary (required by Vite);
-# protobufjs's postinstall is benign but flagged.
 allowBuilds:
   esbuild: true
   protobufjs: true
@@ -13,7 +7,7 @@ allowBuilds:
 # overrides just keep the audit clean.
 overrides:
   undici: "^7.29.0"
-  "@babel/core": "^7.29.1"
+  "@babel/core": "^8.0.0"
 
 # flatgeobuf ships an OpenLayers adapter we never import, and it drags in
 # openlayers, a geotiff beta and zarrita. only the geojson module is used.
