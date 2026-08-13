@@ -4,6 +4,7 @@ import { useMapLibre } from '../hooks/useMapLibre';
 import { useLeaflet } from '../hooks/useLeaflet';
 import { useAgentLayersCesium } from '../hooks/useAgentLayersCesium';
 import { useAgentLayersMapLibre } from '../hooks/useAgentLayersMapLibre';
+import { useAgentLayersLeaflet } from '../hooks/useAgentLayersLeaflet';
 import type { Pane, SplitLayout } from '../store/splitView';
 
 /**
@@ -11,11 +12,10 @@ import type { Pane, SplitLayout } from '../store/splitView';
  * unmounting is what tears the renderer down: the hooks destroy their instance
  * (and its WebGL context) on unmount.
  *
- * The pane draws its own basemap, and the agent's layers on the two globe
- * renderers: useAgentLayersLeaflet re-adds its layers on a tab switch, which is
- * when the 2D viewer is rebuilt, so it never sees a pane map appear.
- * Everything else a tool can add (Ion tilesets, terrain, OGC services, draw and
- * measure) acts on the one registered viewer, which stays the top left pane.
+ * The pane draws its own basemap and the agent's layers, whichever renderer it
+ * is set to. Everything else a tool can add (Ion tilesets, terrain, OGC
+ * services, draw and measure) acts on the one registered viewer, which stays
+ * the top left pane.
  */
 export function SplitPane({
   pane,
@@ -35,6 +35,7 @@ export function SplitPane({
 
   useAgentLayersCesium(cesiumRef);
   useAgentLayersMapLibre(maplibreRef);
+  useAgentLayersLeaflet(leafletRef);
 
   // the pane's own renderer switch reveals a container that was display:none,
   // and every layout change resizes the box this pane sits in

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useAppStore } from '../store/app';
@@ -37,6 +37,9 @@ interface UseLeafletOptions {
 
 export function useLeaflet(opts: UseLeafletOptions = {}) {
   const mapRef = useRef<L.Map | null>(null);
+  // building the map only writes a ref, which nothing downstream can react to,
+  // so this renders the caller again with the new instance in the ref
+  const [, setLiveMap] = useState<L.Map | null>(null);
   const tileRef = useRef<L.TileLayer | null>(null);
   const viewerBasemap = useAppStore((s) => s.basemap);
   const customBasemap = useAppStore((s) => s.customBasemap);
@@ -79,11 +82,13 @@ export function useLeaflet(opts: UseLeafletOptions = {}) {
     });
 
     mapRef.current = map;
+    setLiveMap(map);
     if (isPane) publishPaneMap(paneIndex, map);
 
     return () => {
       map.remove();
       mapRef.current = null;
+      setLiveMap(null);
       tileRef.current = null;
       if (isPane) publishPaneMap(paneIndex, null);
     };

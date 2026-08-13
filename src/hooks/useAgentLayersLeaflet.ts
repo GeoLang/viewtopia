@@ -9,26 +9,25 @@ import {
   visibleLayers,
 } from '../store/agentLayers';
 import { simplestyleColor } from '../features/symbology/symbology';
-import { useAppStore } from '../store/app';
 import { agentLayersBounds } from './agentLayerBounds';
 import { bboxOfCorners } from '../overlay/georeference';
 
 /**
- * Draws the agent's ui_spec layers and markers on the 2D Leaflet map, so the
- * set stays on screen when the user switches away from a globe renderer.
- * useLeaflet destroys the map on every tab switch, so both effects re-key on
- * activeTab and re-add everything against the fresh instance.
+ * Draws the agent's ui_spec layers and markers on a Leaflet map, the 2D Map tab
+ * or a compare pane, so the set stays on screen when the user switches away
+ * from a globe renderer. useLeaflet swaps the instance whenever the tab or the
+ * pane's renderer changes, and renders again when it does, so every effect
+ * keys on the instance and re-adds everything against the fresh one.
  */
 export function useAgentLayersLeaflet(mapRef: MutableRefObject<L.Map | null>) {
   const layers = useAgentLayerStore((s) => s.layers);
   const rasterLayers = useAgentLayerStore((s) => s.rasterLayers);
   const markers = useAgentLayerStore((s) => s.markers);
   const generation = useAgentLayerStore((s) => s.generation);
-  const activeTab = useAppStore((s) => s.activeTab);
+  const map = mapRef.current;
   const framedRef = useRef(-1);
 
   useEffect(() => {
-    const map = mapRef.current;
     if (!map) return;
     const objs = markers.map((m) => {
       const dot = L.circleMarker([m.lat, m.lon], {
@@ -50,10 +49,9 @@ export function useAgentLayersLeaflet(mapRef: MutableRefObject<L.Map | null>) {
     return () => {
       for (const o of objs) o.remove();
     };
-  }, [markers, mapRef, activeTab]);
+  }, [markers, map]);
 
   useEffect(() => {
-    const map = mapRef.current;
     if (!map) return;
     // leaflet drapes onto a rectangle only, so a dragged quad shows as its
     // envelope here; corner dragging is a MapLibre feature
@@ -71,10 +69,9 @@ export function useAgentLayersLeaflet(mapRef: MutableRefObject<L.Map | null>) {
     return () => {
       for (const o of overlays) o.remove();
     };
-  }, [rasterLayers, mapRef, activeTab]);
+  }, [rasterLayers, map]);
 
   useEffect(() => {
-    const map = mapRef.current;
     if (!map) return;
 
     const drawn = visibleLayers(layers).map((layer) => {
@@ -115,7 +112,7 @@ export function useAgentLayersLeaflet(mapRef: MutableRefObject<L.Map | null>) {
     showForZoom();
     map.on('zoomend', showForZoom);
 
-    // Frame only when a new spec arrives, never on a plain tab switch.
+    // Frame only when a new spec arrives, never on a plain map swap.
     const bounds = agentLayersBounds(visibleLayers(layers));
     if (bounds && framedRef.current !== generation) {
       framedRef.current = generation;
@@ -130,9 +127,9 @@ export function useAgentLayersLeaflet(mapRef: MutableRefObject<L.Map | null>) {
 
     return () => {
       map.off('zoomend', showForZoom);
-      // the map may already be gone (tab switch removes it), and Leaflet's
+      // the map may already be gone (leaving the tab removes it), and Leaflet's
       // remove() is a no-op once the layer is detached
       for (const { object } of drawn) object.remove();
     };
-  }, [layers, generation, mapRef, activeTab]);
+  }, [layers, generation, map]);
 }

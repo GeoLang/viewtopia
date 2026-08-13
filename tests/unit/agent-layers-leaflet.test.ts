@@ -6,14 +6,17 @@ import { useAgentLayersLeaflet } from '../../src/hooks/useAgentLayersLeaflet';
 import { buildGraduated } from '../../src/features/symbology/symbology';
 import { useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers';
 import { useAppStore } from '../../src/store/app';
+import { useSplitViewStore, COMPARE_PANE, type Pane } from '../../src/store/splitView';
+import { DEFAULT_BASEMAP } from '../../src/hooks/basemapTiles';
 import { setSharedCamera } from '../../src/hooks/sharedCamera';
 
 const CONTAINER_ID = 'leaflet-container';
+const PANE_CONTAINER_ID = `leaflet-pane-${COMPARE_PANE}`;
 
 /** jsdom does no layout, and a 0x0 map makes fitBounds compute a NaN zoom */
-function makeContainer() {
+function makeContainer(id: string = CONTAINER_ID) {
   const div = document.createElement('div');
-  div.id = CONTAINER_ID;
+  div.id = id;
   for (const [prop, value] of [
     ['clientWidth', 800],
     ['clientHeight', 600],
@@ -59,6 +62,19 @@ function useMapWithAgentLayers() {
   useAgentLayersLeaflet(mapRef);
   return mapRef;
 }
+
+/** Same hook order as SplitPane, for one compare pane. */
+function usePaneWithAgentLayers(pane: Pane) {
+  const mapRef = useLeaflet({
+    containerId: PANE_CONTAINER_ID,
+    pane,
+    paneIndex: COMPARE_PANE,
+  });
+  useAgentLayersLeaflet(mapRef);
+  return mapRef;
+}
+
+const pane = (renderer: Pane['renderer']): Pane => ({ renderer, basemap: DEFAULT_BASEMAP });
 
 const countOn = (map: L.Map, kind: new (...args: never[]) => L.Layer) => {
   let n = 0;
@@ -318,5 +334,68 @@ describe('useAgentLayersLeaflet', () => {
       useAgentLayerStore.getState().setSymbology('risk', null);
     });
     expect(fillColors(result.current.current!)).toEqual(['#ff0000', '#ff0000']);
+  });
+});
+
+describe('useAgentLayersLeaflet on a split-view compare pane', () => {
+  let container: HTMLDivElement;
+
+  beforeEach(() => {
+    cleanup();
+    container = makeContainer(PANE_CONTAINER_ID);
+    useAgentLayerStore.setState({ layers: [], rasterLayers: [], markers: [], generation: 0 });
+    useAppStore.setState({ activeTab: 'globe' });
+    useSplitViewStore.setState({ active: true });
+    setSharedCamera({ longitude: 0, latitude: 20, zoom: 2 });
+  });
+
+  afterEach(() => {
+    cleanup();
+    container.remove();
+    useSplitViewStore.setState({ active: false });
+  });
+
+  it('draws the layers already on when the pane switches to leaflet', () => {
+    act(() => {
+      useAgentLayerStore.getState().addLayer(polygon('flood', 10, 50));
+      useAgentLayerStore.getState().addMarker({ lon: 5, lat: 45, color: '#00ff00' });
+    });
+
+    const { result, rerender } = renderHook(usePaneWithAgentLayers, {
+      initialProps: pane('maplibre'),
+    });
+    expect(result.current.current).toBeNull();
+
+    rerender(pane('leaflet'));
+    const map = result.current.current!;
+    expect(map).toBeTruthy();
+    expect(countOn(map, L.GeoJSON)).toBe(1);
+    expect(countOn(map, L.CircleMarker)).toBe(1);
+  });
+
+  it('follows the store while the pane draws, and empties the map when it stops', () => {
+    const { result, rerender } = renderHook(usePaneWithAgentLayers, {
+      initialProps: pane('leaflet'),
+    });
+    const map = result.current.current!;
+
+    act(() => {
+      useAgentLayerStore.getState().addLayer(polygon('flood', 10, 50));
+    });
+    expect(countOn(map, L.GeoJSON)).toBe(1);
+
+    act(() => {
+      useAgentLayerStore.getState().setLayerVisible('flood', false);
+    });
+    expect(countOn(map, L.GeoJSON)).toBe(0);
+
+    act(() => {
+      useAgentLayerStore.getState().setLayerVisible('flood', true);
+    });
+    expect(countOn(map, L.GeoJSON)).toBe(1);
+
+    rerender(pane('cesium'));
+    expect(result.current.current).toBeNull();
+    expect(countOn(map, L.GeoJSON)).toBe(0);
   });
 });
