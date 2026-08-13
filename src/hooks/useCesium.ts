@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Ion, Viewer } from 'cesium';
 import { useAppStore } from '../store/app';
-import { useSplitViewStore, type Pane } from '../store/splitView';
+import { useSplitViewStore, COMPARE_PANE, type Pane } from '../store/splitView';
 import { getSharedCamera, setSharedCamera, type SharedCamera } from './sharedCamera';
 import {
   applyCesiumCamera,
@@ -25,6 +25,8 @@ interface UseCesiumOptions {
    * the pane unmounts. Unset, it is the viewer pane the app store drives.
    */
   pane?: Pane;
+  /** Which pane this is, so the registry files the viewer under that index. */
+  paneIndex?: number;
 }
 
 /**
@@ -52,7 +54,14 @@ export function useCesium(opts: UseCesiumOptions = {}) {
 
   const isPane = !!opts.pane;
   const basemap = opts.pane?.basemap ?? viewerBasemap;
-  const register = isPane ? setPaneCesiumViewer : setActiveCesiumViewer;
+  const paneIndex = opts.paneIndex ?? COMPARE_PANE;
+  const register = useCallback(
+    (viewer: Viewer | null) => {
+      if (isPane) setPaneCesiumViewer(paneIndex, viewer);
+      else setActiveCesiumViewer(viewer);
+    },
+    [isPane, paneIndex],
+  );
   const isActive =
     activeTab === 'globe' &&
     (opts.pane ? splitActive && opts.pane.renderer === 'cesium' : renderer === 'cesium');

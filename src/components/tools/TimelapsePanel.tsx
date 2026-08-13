@@ -222,6 +222,8 @@ export function TimelapsePanel({ onClose }: { onClose: () => void }) {
       split.setActive(restore.current.active);
       return;
     }
+    // a compare is A against B, so a 2x2 split goes back to two panes across
+    split.setLayout('twoAcross');
     split.setPaneRenderer(COMPARE_PANE, 'maplibre');
     split.setActive(true);
   }, [hasMap, comparing, mode]);

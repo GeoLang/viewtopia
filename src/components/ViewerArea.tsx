@@ -1,10 +1,10 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, type CSSProperties } from 'react';
 import { Box } from '@mantine/core';
 import { Cartesian2, Cartesian3, Cartographic, Math as CesiumMath } from 'cesium';
 import { useAppStore } from '../store/app';
 import { useDrawStore } from '../store/draw';
 import { useMeasureStore } from '../store/measure';
-import { useSplitViewStore, usePanes } from '../store/splitView';
+import { useSplitViewStore, paneLayout, VIEWER_PANE } from '../store/splitView';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { useCesium } from '../hooks/useCesium';
 import { useMapLibre } from '../hooks/useMapLibre';
@@ -38,16 +38,44 @@ import { ContextMenu } from './ContextMenu';
 import { BasemapRendererControl } from './BasemapRendererControl';
 import { SplitPane } from './SplitPane';
 
+const PANE_BORDER = '2px solid var(--mantine-color-dark-5)';
+
+/** What each pane is addressed by, in pane index order. */
+const PANE_TEST_IDS = [
+  'viewer-pane-left',
+  'viewer-pane-right',
+  'viewer-pane-bottom-left',
+  'viewer-pane-bottom-right',
+];
+
+/** Where a pane sits in a columns by rows tiling of the viewer area. */
+function paneBox(index: number, columns: number, rows: number): CSSProperties {
+  const column = index % columns;
+  const row = Math.floor(index / columns);
+  return {
+    position: 'absolute',
+    left: `${(column * 100) / columns}%`,
+    top: `${(row * 100) / rows}%`,
+    width: `${100 / columns}%`,
+    height: `${100 / rows}%`,
+    borderLeft: column > 0 ? PANE_BORDER : undefined,
+    borderTop: row > 0 ? PANE_BORDER : undefined,
+  };
+}
+
 export function ViewerArea() {
   const { activeTab, renderer } = useAppStore();
   const splitActive = useSplitViewStore((s) => s.active);
   const swipeAt = useSplitViewStore((s) => s.swipeAt);
-  // the viewer is the first pane, and today's layout puts one pane beside it
-  const [, comparePane] = usePanes();
-  // the second pane is a globe renderer, so the 2D map tab stays single
+  const comparePanes = useSplitViewStore((s) => s.comparePanes);
+  const layout = paneLayout(comparePanes.length + 1);
+  // the panes beside the viewer are globe renderers, so the 2D map tab stays single
   const split = splitActive && activeTab === 'globe';
-  // a swipe overlays the panes instead of halving them
-  const swipe = split && swipeAt !== null;
+  // a swipe overlays two panes instead of tiling them, so it needs exactly two
+  const swipe = split && swipeAt !== null && comparePanes.length === 1;
+  const tiled = split && !swipe;
+  const columns = tiled ? 2 : 1;
+  const rows = tiled && layout === 'grid' ? 2 : 1;
   const setCursorCoords = useAppStore((s) => s.setCursorCoords);
   const showContextMenu = useAppStore((s) => s.showContextMenu);
   const hideContextMenu = useAppStore((s) => s.hideContextMenu);
@@ -219,7 +247,7 @@ export function ViewerArea() {
       }
     }, 150);
     return () => clearTimeout(timer);
-  }, [activeTab, renderer, split, swipe, cesiumRef, maplibreRef, leafletRef]);
+  }, [activeTab, renderer, split, swipe, layout, cesiumRef, maplibreRef, leafletRef]);
 
   return (
     <Box
@@ -234,16 +262,10 @@ export function ViewerArea() {
       onContextMenu={handleContextMenu}
       onClick={handleClick}
     >
-      {/* Left pane: the app's active renderer, and the whole view when unsplit */}
+      {/* The viewer pane: the app's active renderer, and the whole view when unsplit */}
       <Box
-        data-testid="viewer-pane-left"
-        style={{
-          position: 'absolute',
-          top: 0,
-          bottom: 0,
-          left: 0,
-          width: split && !swipe ? '50%' : '100%',
-        }}
+        data-testid={PANE_TEST_IDS[VIEWER_PANE]}
+        style={paneBox(VIEWER_PANE, columns, rows)}
       >
         {/* CesiumJS 3D Globe */}
         <div
@@ -283,23 +305,24 @@ export function ViewerArea() {
         />
       </Box>
 
-      {/* Right pane: a second renderer instance, synced to the left one */}
-      {split && comparePane && (
-        <Box
-          data-testid="viewer-pane-right"
-          style={{
-            position: 'absolute',
-            top: 0,
-            bottom: 0,
-            right: 0,
-            width: swipe ? '100%' : '50%',
-            borderLeft: swipe ? undefined : '2px solid var(--mantine-color-dark-5)',
-            clipPath: swipe ? `inset(0 0 0 ${swipeAt}%)` : undefined,
-          }}
-        >
-          <SplitPane pane={comparePane} />
-        </Box>
-      )}
+      {/* The panes beside it: their own renderer instances, synced to the viewer */}
+      {split &&
+        comparePanes.map((pane, i) => {
+          const index = i + 1;
+          return (
+            <Box
+              key={index}
+              data-testid={PANE_TEST_IDS[index] ?? `viewer-pane-${index}`}
+              style={
+                swipe
+                  ? { position: 'absolute', inset: 0, clipPath: `inset(0 0 0 ${swipeAt}%)` }
+                  : paneBox(index, columns, rows)
+              }
+            >
+              <SplitPane pane={pane} index={index} layout={layout} />
+            </Box>
+          );
+        })}
 
       {/* Overlay widgets */}
       <BasemapRendererControl />

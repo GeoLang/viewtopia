@@ -6,6 +6,7 @@ import type { Map as MapLibreMap } from 'maplibre-gl';
 import { TimelapsePanel } from '../../src/components/tools/TimelapsePanel';
 import { useAppStore } from '../../src/store/app';
 import { setActiveMapLibre, setPaneMapLibre } from '../../src/viewer/registry';
+import { COMPARE_PANE } from '../../src/store/splitView';
 
 window.matchMedia = vi.fn().mockReturnValue({
   matches: false,
@@ -102,14 +103,14 @@ beforeEach(() => {
   active = fakeMap();
   pane = fakeMap();
   setActiveMapLibre(asMapLibre(active));
-  setPaneMapLibre(asMapLibre(pane));
+  setPaneMapLibre(COMPARE_PANE, asMapLibre(pane));
   useAppStore.setState({ renderer: 'maplibre', activeTab: 'globe' });
 });
 
 afterEach(() => {
   cleanup();
   setActiveMapLibre(null);
-  setPaneMapLibre(null);
+  setPaneMapLibre(COMPARE_PANE, null);
 });
 
 describe('TimelapsePanel tile loading', () => {

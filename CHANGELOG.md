@@ -6,6 +6,16 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-13: **the split view tiles four panes**. The Split View panel now
+  picks between two panes across and a 2x2 grid, naming the grid's panes by
+  quadrant. The layout is the pane count rather than a field of its own, so a
+  saved project carries it already: growing the split appends MapLibre panes
+  and shrinking it drops the extra ones, keeping the pane beside the viewer.
+  Every pane still picks its own renderer and basemap and follows the one
+  shared camera, and tools and agent commands still act on the viewer, which is
+  the top left pane. A swipe compare overlays two panes, so it stays two panes
+  only and a timelapse takes the split back to two across while it runs.
+
 - 2026-08-12: **each split-view pane picks its own basemap**. Pane state is a
   list of renderer-plus-basemap entries rather than a single right-pane
   renderer, the viewer itself is pane 0 and keeps its state in the app store

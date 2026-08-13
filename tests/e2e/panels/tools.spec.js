@@ -56,6 +56,14 @@ const SYDNEY = { lon: 151.2, lat: -33.86, height: 12000 };
 const ICELAND_VIEW = { lon: ICELAND.lon, lat: ICELAND.lat, zoom: 6 };
 const SYDNEY_VIEW = { lon: SYDNEY.lon, lat: SYDNEY.lat, zoom: 4 };
 
+/** The split view's boxes, in pane index order. */
+const PANE_TEST_IDS = [
+  'viewer-pane-left',
+  'viewer-pane-right',
+  'viewer-pane-bottom-left',
+  'viewer-pane-bottom-right',
+];
+
 /** The zoom↔height conversion the renderers share, so a Cesium height sets a zoom. */
 const cameraHeight = (zoom) => 4e7 / 2 ** zoom;
 
@@ -135,6 +143,21 @@ const jumpMap = (page, key, view) =>
   page.evaluate(
     ({ k, v }) => window[k].jumpTo({ center: [v.lon, v.lat], zoom: v.zoom }),
     { k: key, v: view },
+  );
+
+/** The same two, for a split pane past the first, which window has by index. */
+const paneMapCamera = (page, index) =>
+  page.evaluate((i) => {
+    const map = window.__viewtopiaPaneMaps?.[i];
+    if (!map) return null;
+    const c = map.getCenter();
+    return { lon: c.lng, lat: c.lat, zoom: map.getZoom() };
+  }, index);
+
+const jumpPaneMap = (page, index, view) =>
+  page.evaluate(
+    ({ i, v }) => window.__viewtopiaPaneMaps[i].jumpTo({ center: [v.lon, v.lat], zoom: v.zoom }),
+    { i: index, v: view },
   );
 
 /** A map camera match that tolerates the float noise of a renderer round trip. */
@@ -524,6 +547,88 @@ test.describe('Tools panels', () => {
 
     await panel.getByText('Enable Split View').click();
     await expect(page.getByTestId('viewer-pane-right')).toHaveCount(0);
+    await closePanel(page, panel);
+  });
+
+  test('split view: a 2x2 grid of MapLibre panes shares one camera', async ({ page }) => {
+    await openApp(page);
+    const panel = await openPanel(page, 'Split View', 'Split View');
+
+    // MapLibre in all four: four swiftshader Cesium contexts starve each other
+    await selectOption(page, panel, 'Left pane', 'MapLibre', { exact: true });
+    await page.waitForFunction(() => !!window.__viewtopiaMap);
+
+    await selectOption(page, panel, 'Layout', '2x2 grid');
+    await expect(
+      panel.getByRole('textbox', { name: 'Top left pane', exact: true })
+    ).toHaveValue('MapLibre');
+    await expect(
+      panel.getByRole('textbox', { name: 'Bottom right pane', exact: true })
+    ).toHaveValue('MapLibre');
+
+    await panel.getByText('Enable Split View').click();
+    await page.waitForFunction(() => Object.keys(window.__viewtopiaPaneMaps ?? {}).length === 3);
+    await expect(page.locator('canvas')).toHaveCount(4);
+
+    const boxes = [];
+    for (const id of PANE_TEST_IDS) {
+      const pane = page.getByTestId(id);
+      await expect(pane.locator('canvas')).toHaveCount(1);
+      boxes.push(await pane.boundingBox());
+    }
+    const [topLeft, topRight, bottomLeft, bottomRight] = boxes;
+
+    // quadrants: the right column starts where the left one ends, the bottom
+    // row where the top one ends, and the two rows are the same height
+    expect(topRight.x).toBeGreaterThanOrEqual(topLeft.x + topLeft.width - 2);
+    expect(bottomRight.x).toBeGreaterThanOrEqual(bottomLeft.x + bottomLeft.width - 2);
+    expect(bottomLeft.y).toBeGreaterThanOrEqual(topLeft.y + topLeft.height - 2);
+    expect(bottomRight.y).toBeGreaterThanOrEqual(topRight.y + topRight.height - 2);
+    expect(Math.abs(bottomLeft.height - topLeft.height)).toBeLessThanOrEqual(2);
+
+    // a move on the viewer arrives in the bottom right pane
+    await jumpMap(page, '__viewtopiaMap', ICELAND_VIEW);
+    await expect.poll(() => paneMapCamera(page, 3)).toEqual(nearView(ICELAND_VIEW));
+
+    // and back the other way
+    await jumpPaneMap(page, 3, SYDNEY_VIEW);
+    await expect.poll(() => mapCamera(page, '__viewtopiaMap')).toEqual(nearView(SYDNEY_VIEW));
+
+    // closing the split tears all three extra renderers down
+    await panel.getByText('Enable Split View').click();
+    await expect(page.getByTestId('viewer-pane-bottom-right')).toHaveCount(0);
+    await expect(page.locator('canvas')).toHaveCount(1);
+    expect(await page.evaluate(() => Object.keys(window.__viewtopiaPaneMaps))).toEqual([]);
+
+    await closePanel(page, panel);
+  });
+
+  test('split view: a Cesium viewer and three MapLibre panes fill the grid', async ({
+    page,
+  }) => {
+    await openApp(page);
+    const panel = await openPanel(page, 'Split View', 'Split View');
+    await expect(panel.getByRole('textbox', { name: 'Left pane', exact: true })).toHaveValue(
+      'CesiumJS (3D)'
+    );
+
+    await selectOption(page, panel, 'Layout', '2x2 grid');
+    await expect(
+      panel.getByRole('textbox', { name: 'Top left pane', exact: true })
+    ).toHaveValue('CesiumJS (3D)');
+
+    await panel.getByText('Enable Split View').click();
+    await page.waitForFunction(() => Object.keys(window.__viewtopiaPaneMaps ?? {}).length === 3);
+
+    // renderers mixed across the grid, with no camera assertion: a Cesium
+    // context beside three maps under software GL is seconds behind
+    for (const id of PANE_TEST_IDS) {
+      await expect(page.getByTestId(id).locator('canvas')).toHaveCount(1);
+    }
+    await expect(page.locator('canvas')).toHaveCount(4);
+
+    await panel.getByText('Enable Split View').click();
+    await expect(page.getByTestId('viewer-pane-bottom-right')).toHaveCount(0);
     await closePanel(page, panel);
   });
 

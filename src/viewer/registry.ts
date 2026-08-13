@@ -7,6 +7,7 @@
 import type { Viewer } from 'cesium';
 import type { Map as MapLibreMap } from 'maplibre-gl';
 import type { Deck } from '@deck.gl/core';
+import { COMPARE_PANE } from '../store/splitView';
 
 declare global {
   interface Window {
@@ -14,16 +15,21 @@ declare global {
     __viewtopiaViewer?: Viewer | null;
     __viewtopiaMap?: MapLibreMap | null;
     __viewtopiaDeck?: Deck | null;
-    // the split view's second pane, which no tool acts on
+    // the pane beside the viewer, which no tool acts on
     __viewtopiaPaneViewer?: Viewer | null;
     __viewtopiaPaneMap?: MapLibreMap | null;
+    // every split pane, keyed by its pane index
+    __viewtopiaPaneViewers?: Record<number, Viewer>;
+    __viewtopiaPaneMaps?: Record<number, MapLibreMap>;
   }
 }
 
 let cesiumViewer: Viewer | null = null;
 let maplibreMap: MapLibreMap | null = null;
-let paneMap: MapLibreMap | null = null;
 let deckInstance: Deck | null = null;
+
+const paneViewers = new Map<number, Viewer>();
+const paneMaps = new Map<number, MapLibreMap>();
 
 export function setActiveCesiumViewer(v: Viewer | null): void {
   cesiumViewer = v;
@@ -45,24 +51,30 @@ export function getActiveMapLibre(): MapLibreMap | null {
 }
 
 /**
- * The split view's second pane. Kept apart from the active slots on purpose:
- * tools and agent commands drive one viewer, and that stays the left pane.
+ * The split view's panes, by pane index. Kept apart from the active slots on
+ * purpose: tools and agent commands drive one viewer, and that stays pane 0.
  */
-export function setPaneCesiumViewer(v: Viewer | null): void {
-  window.__viewtopiaPaneViewer = v;
+export function setPaneCesiumViewer(index: number, v: Viewer | null): void {
+  if (v) paneViewers.set(index, v);
+  else paneViewers.delete(index);
+  window.__viewtopiaPaneViewers = Object.fromEntries(paneViewers);
+  window.__viewtopiaPaneViewer = paneViewers.get(COMPARE_PANE) ?? null;
 }
 
-export function setPaneMapLibre(m: MapLibreMap | null): void {
-  paneMap = m;
-  window.__viewtopiaPaneMap = m;
+export function setPaneMapLibre(index: number, m: MapLibreMap | null): void {
+  if (m) paneMaps.set(index, m);
+  else paneMaps.delete(index);
+  window.__viewtopiaPaneMaps = Object.fromEntries(paneMaps);
+  window.__viewtopiaPaneMap = paneMaps.get(COMPARE_PANE) ?? null;
 }
 
 /**
- * The pane's map, for the one tool that compares two of them: timelapse draws
- * its B step here, which is what its swipe and side-by-side modes compare.
+ * The map of the pane beside the viewer, for the one tool that compares two of
+ * them: timelapse draws its B step here, which is what its swipe and
+ * side-by-side modes compare.
  */
 export function getPaneMapLibre(): MapLibreMap | null {
-  return paneMap;
+  return paneMaps.get(COMPARE_PANE) ?? null;
 }
 
 /**

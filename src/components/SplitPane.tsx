@@ -3,7 +3,7 @@ import { useCesium } from '../hooks/useCesium';
 import { useMapLibre } from '../hooks/useMapLibre';
 import { useAgentLayersCesium } from '../hooks/useAgentLayersCesium';
 import { useAgentLayersMapLibre } from '../hooks/useAgentLayersMapLibre';
-import type { Pane } from '../store/splitView';
+import type { Pane, SplitLayout } from '../store/splitView';
 
 /**
  * A split view pane beside the viewer. Mounted only while the split is on, so
@@ -12,16 +12,27 @@ import type { Pane } from '../store/splitView';
  *
  * The pane draws its own basemap and the agent's layers. Everything else a tool
  * can add (Ion tilesets, terrain, OGC services, draw and measure) acts on the
- * one registered viewer, which stays the left pane.
+ * one registered viewer, which stays the top left pane.
  */
-export function SplitPane({ pane }: { pane: Pane }) {
-  const cesiumRef = useCesium({ containerId: 'cesium-pane', pane });
-  const maplibreRef = useMapLibre({ containerId: 'maplibre-pane', pane });
+export function SplitPane({
+  pane,
+  index,
+  layout,
+}: {
+  pane: Pane;
+  index: number;
+  layout: SplitLayout;
+}) {
+  const cesiumId = `cesium-pane-${index}`;
+  const maplibreId = `maplibre-pane-${index}`;
+  const cesiumRef = useCesium({ containerId: cesiumId, pane, paneIndex: index });
+  const maplibreRef = useMapLibre({ containerId: maplibreId, pane, paneIndex: index });
 
   useAgentLayersCesium(cesiumRef);
   useAgentLayersMapLibre(maplibreRef);
 
-  // the pane's own renderer switch reveals a container that was display:none
+  // the pane's own renderer switch reveals a container that was display:none,
+  // and every layout change resizes the box this pane sits in
   useEffect(() => {
     const timer = setTimeout(() => {
       const viewer = cesiumRef.current;
@@ -29,12 +40,12 @@ export function SplitPane({ pane }: { pane: Pane }) {
       maplibreRef.current?.resize();
     }, 150);
     return () => clearTimeout(timer);
-  }, [pane.renderer, cesiumRef, maplibreRef]);
+  }, [pane.renderer, layout, cesiumRef, maplibreRef]);
 
   return (
     <>
       <div
-        id="cesium-pane"
+        id={cesiumId}
         style={{
           position: 'absolute',
           inset: 0,
@@ -42,7 +53,7 @@ export function SplitPane({ pane }: { pane: Pane }) {
         }}
       />
       <div
-        id="maplibre-pane"
+        id={maplibreId}
         style={{
           position: 'absolute',
           inset: 0,

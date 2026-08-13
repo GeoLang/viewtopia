@@ -1,11 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 // markers and controls are DOM overlays that need maplibre's stylesheet
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { registerPmtilesProtocol } from '../features/pmtiles/source';
 import { registerCachedTileProtocol } from '../offline/tileProtocol';
 import { useAppStore } from '../store/app';
-import { useSplitViewStore, type Pane } from '../store/splitView';
+import { useSplitViewStore, COMPARE_PANE, type Pane } from '../store/splitView';
 import { getSharedCamera, setSharedCamera } from './sharedCamera';
 import {
   applyMapLibreCamera,
@@ -24,6 +24,8 @@ interface UseMapLibreOptions {
    * unmounts. Unset, the map is the viewer pane the app store drives.
    */
   pane?: Pane;
+  /** Which pane this is, so the registry files the map under that index. */
+  paneIndex?: number;
 }
 
 export function useMapLibre(opts: UseMapLibreOptions = {}) {
@@ -40,7 +42,14 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
 
   const isPane = !!opts.pane;
   const basemap = opts.pane?.basemap ?? viewerBasemap;
-  const register = isPane ? setPaneMapLibre : setActiveMapLibre;
+  const paneIndex = opts.paneIndex ?? COMPARE_PANE;
+  const register = useCallback(
+    (map: maplibregl.Map | null) => {
+      if (isPane) setPaneMapLibre(paneIndex, map);
+      else setActiveMapLibre(map);
+    },
+    [isPane, paneIndex],
+  );
   const isActive =
     activeTab === 'globe' &&
     (opts.pane ? splitActive && opts.pane.renderer === 'maplibre' : renderer === 'maplibre');

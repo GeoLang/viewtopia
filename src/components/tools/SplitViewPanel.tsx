@@ -9,16 +9,30 @@ import { IconColumns } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { useAppStore, type Basemap } from '../../store/app';
 import { basemapSelectGroups } from '../../hooks/basemapTiles';
-import { useSplitViewStore, usePanes, type PaneRenderer } from '../../store/splitView';
+import {
+  useSplitViewStore,
+  usePanes,
+  paneLayout,
+  type PaneRenderer,
+  type SplitLayout,
+} from '../../store/splitView';
 
-/** The globe renderers either pane can show. */
+/** The globe renderers any pane can show. */
 const RENDERERS = [
   { value: 'cesium', label: 'CesiumJS (3D)' },
   { value: 'maplibre', label: 'MapLibre' },
 ];
 
-/** Where each pane sits in today's layout, by pane index. */
-const PANE_LABELS = ['Left pane', 'Right pane'];
+const LAYOUTS = [
+  { value: 'twoAcross', label: 'Two across' },
+  { value: 'grid', label: '2x2 grid' },
+];
+
+/** Where each pane sits, by layout and pane index. */
+const PANE_LABELS: Record<SplitLayout, string[]> = {
+  twoAcross: ['Left pane', 'Right pane'],
+  grid: ['Top left pane', 'Top right pane', 'Bottom left pane', 'Bottom right pane'],
+};
 
 export function SplitViewPanel({ onClose }: { onClose: () => void }) {
   const activeTab = useAppStore((s) => s.activeTab);
@@ -27,7 +41,9 @@ export function SplitViewPanel({ onClose }: { onClose: () => void }) {
   const setActive = useSplitViewStore((s) => s.setActive);
   const setPaneRenderer = useSplitViewStore((s) => s.setPaneRenderer);
   const setPaneBasemap = useSplitViewStore((s) => s.setPaneBasemap);
+  const setLayout = useSplitViewStore((s) => s.setLayout);
   const panes = usePanes();
+  const layout = paneLayout(panes.length);
 
   return (
     <PanelCard width={280}>
@@ -46,8 +62,17 @@ export function SplitViewPanel({ onClose }: { onClose: () => void }) {
           color="violet"
         />
 
+        <Select
+          size="xs"
+          label="Layout"
+          data={LAYOUTS}
+          value={layout}
+          onChange={(v) => v && setLayout(v as SplitLayout)}
+          allowDeselect={false}
+        />
+
         {panes.map((pane, index) => {
-          const label = PANE_LABELS[index] ?? `Pane ${index + 1}`;
+          const label = PANE_LABELS[layout][index] ?? `Pane ${index + 1}`;
           return (
             <Fragment key={label}>
               <Select
@@ -72,7 +97,7 @@ export function SplitViewPanel({ onClose }: { onClose: () => void }) {
 
         {activeTab !== 'globe' && (
           <Text size="xs" c="orange">
-            Both panes are globe renderers, so the split only shows on the 3D
+            Every pane is a globe renderer, so the split only shows on the 3D
             Globe tab.
           </Text>
         )}
@@ -80,7 +105,7 @@ export function SplitViewPanel({ onClose }: { onClose: () => void }) {
         <Text size="xs" c="dimmed">
           The panes share the camera and the agent's layers. Tools that act on
           one viewer — Ion tilesets, terrain, OGC layers, draw and measure —
-          stay in the left pane.
+          stay in the top left pane.
         </Text>
       </Stack>
     </PanelCard>

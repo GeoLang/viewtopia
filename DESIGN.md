@@ -378,7 +378,9 @@ map, plus a synced split view. Picking/draw/measure/agent-layers survive rendere
 - Split view panes are a list of `{renderer, basemap}` entries, the viewer itself being pane 0
   in the app store, each pane with its own basemap picker, all driven by one shared-camera hub
   with a re-entrancy guard and a subscribe-time snap, with clean teardown so the WebGL context
-  limit holds.
+  limit holds. The layout is two panes across or a 2x2 grid, derived from how many panes there
+  are rather than stored, and the viewer is the top left one. A swipe compare overlays two
+  panes under a clip path, so it is two panes only.
 - All navigation, bookmarks included, goes through the shared fly-to pipeline, which is what
   makes it work on the 2D renderers and for bookmarks that carry no camera.
 - The 2D map tab disables the renderer select and the vector basemap options.

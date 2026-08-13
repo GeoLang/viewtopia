@@ -12,17 +12,45 @@ export interface Pane {
 }
 
 /**
- * Panes in left-to-right order. The viewer is pane 0: it is the app's active
+ * Panes in reading order across the layout. The viewer is pane 0: it is the app's active
  * renderer, so every tool that acts on the registered viewer keeps working, and
  * its renderer and basemap live in the app store. The rest are created only
  * while the split is on.
  */
 export const VIEWER_PANE = 0;
 
-/** The one pane beside the viewer in today's two-pane layout. */
+/** The first pane beside the viewer, and the only one a swipe compare uses. */
 export const COMPARE_PANE = 1;
 
-const DEFAULT_COMPARE_PANES: Pane[] = [{ renderer: 'maplibre', basemap: DEFAULT_BASEMAP }];
+/** How the panes are tiled. */
+export type SplitLayout = 'twoAcross' | 'grid';
+
+/** Panes each layout draws, the viewer counted. */
+export const TWO_ACROSS_PANE_COUNT = 2;
+export const GRID_PANE_COUNT = 4;
+
+const LAYOUT_PANE_COUNT: Record<SplitLayout, number> = {
+  twoAcross: TWO_ACROSS_PANE_COUNT,
+  grid: GRID_PANE_COUNT,
+};
+
+/** The layout a pane list draws as. Nothing stores it, the pane count is it. */
+export function paneLayout(paneCount: number): SplitLayout {
+  return paneCount > TWO_ACROSS_PANE_COUNT ? 'grid' : 'twoAcross';
+}
+
+function defaultPane(): Pane {
+  return { renderer: 'maplibre', basemap: DEFAULT_BASEMAP };
+}
+
+const DEFAULT_COMPARE_PANES: Pane[] = [defaultPane()];
+
+/** Grow or shrink the compare panes to a count, keeping the ones already there. */
+function resizeComparePanes(panes: Pane[], count: number): Pane[] {
+  if (panes.length === count) return panes;
+  if (panes.length > count) return panes.slice(0, count);
+  return [...panes, ...Array.from({ length: count - panes.length }, defaultPane)];
+}
 
 interface SplitViewState {
   active: boolean;
@@ -37,6 +65,7 @@ interface SplitViewState {
   swipeAt: number | null;
   setActive: (v: boolean) => void;
   setComparePanes: (panes: Pane[]) => void;
+  setLayout: (layout: SplitLayout) => void;
   setPaneRenderer: (index: number, r: PaneRenderer) => void;
   setPaneBasemap: (index: number, b: Basemap) => void;
   setSwipeAt: (v: number | null) => void;
@@ -53,6 +82,10 @@ export const useSplitViewStore = create<SplitViewState>((set) => ({
   swipeAt: null,
   setActive: (active) => set({ active }),
   setComparePanes: (comparePanes) => set({ comparePanes }),
+  setLayout: (layout) =>
+    set((s) => ({
+      comparePanes: resizeComparePanes(s.comparePanes, LAYOUT_PANE_COUNT[layout] - 1),
+    })),
   setPaneRenderer: (index, renderer) => {
     if (index === VIEWER_PANE) {
       useAppStore.getState().setRenderer(renderer);

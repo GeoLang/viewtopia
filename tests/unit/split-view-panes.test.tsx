@@ -4,6 +4,7 @@ import { render, renderHook, screen, fireEvent, within } from '@testing-library/
 import { MantineProvider } from '@mantine/core';
 import { SplitViewPanel } from '../../src/components/tools/SplitViewPanel';
 import { useAppStore } from '../../src/store/app';
+import { DEFAULT_BASEMAP } from '../../src/hooks/basemapTiles';
 import {
   useSplitViewStore,
   usePanes,
@@ -92,6 +93,22 @@ describe('split view panes', () => {
       'topo',
     ]);
   });
+
+  it('fills the grid with default panes and drops them again', () => {
+    useSplitViewStore.getState().setLayout('grid');
+
+    expect(useSplitViewStore.getState().comparePanes).toEqual([
+      { renderer: 'maplibre', basemap: 'satellite' },
+      { renderer: 'maplibre', basemap: DEFAULT_BASEMAP },
+      { renderer: 'maplibre', basemap: DEFAULT_BASEMAP },
+    ]);
+
+    useSplitViewStore.getState().setLayout('twoAcross');
+
+    expect(useSplitViewStore.getState().comparePanes).toEqual([
+      { renderer: 'maplibre', basemap: 'satellite' },
+    ]);
+  });
 });
 
 describe('the split view panel', () => {
@@ -109,6 +126,18 @@ describe('the split view panel', () => {
 
     expect(useSplitViewStore.getState().comparePanes[0].basemap).toBe('osm');
     expect(useAppStore.getState().basemap).toBe('dark');
+  });
+
+  it('names every pane by its quadrant once the grid is picked', async () => {
+    panel();
+
+    pick('Layout', '2x2 grid');
+
+    expect(
+      await screen.findByRole('textbox', { name: 'Top left pane basemap' }),
+    ).toHaveValue('Dark');
+    expect(screen.getByRole('textbox', { name: 'Bottom right pane basemap' })).toBeVisible();
+    expect(screen.queryByRole('textbox', { name: 'Right pane' })).toBeNull();
   });
 
   it('sends the left pane picker to the viewer', () => {
