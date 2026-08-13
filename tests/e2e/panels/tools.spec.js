@@ -238,8 +238,8 @@ const clockMillis = (page) =>
 const localeTime = (page, iso) => page.evaluate((s) => new Date(s).toLocaleString(), iso);
 
 /** Choose a Mantine Select option by the input's accessible name. */
-async function selectOption(page, panel, name, option) {
-  await panel.getByRole('textbox', { name }).click();
+async function selectOption(page, panel, name, option, { exact = false } = {}) {
+  await panel.getByRole('textbox', { name, exact }).click();
   await page.getByRole('option', { name: option }).click();
 }
 
@@ -439,9 +439,14 @@ test.describe('Tools panels', () => {
 
     // MapLibre on both sides: same type in both panes, and two swiftshader
     // Cesium contexts next to the stack are too slow to drive reliably
-    await selectOption(page, panel, 'Left pane', 'MapLibre');
-    await expect(panel.getByRole('textbox', { name: 'Left pane' })).toHaveValue('MapLibre');
-    await expect(panel.getByRole('textbox', { name: 'Right pane' })).toHaveValue('MapLibre');
+    // exact, or the per-pane basemap Select ("Left pane basemap") matches too
+    await selectOption(page, panel, 'Left pane', 'MapLibre', { exact: true });
+    await expect(panel.getByRole('textbox', { name: 'Left pane', exact: true })).toHaveValue(
+      'MapLibre'
+    );
+    await expect(panel.getByRole('textbox', { name: 'Right pane', exact: true })).toHaveValue(
+      'MapLibre'
+    );
     await page.waitForFunction(() => !!window.__viewtopiaMap);
 
     // unsplit: one renderer, filling the viewer area
@@ -494,7 +499,9 @@ test.describe('Tools panels', () => {
   }) => {
     await openApp(page);
     const panel = await openPanel(page, 'Split View', 'Split View');
-    await expect(panel.getByRole('textbox', { name: 'Left pane' })).toHaveValue('CesiumJS (3D)');
+    await expect(panel.getByRole('textbox', { name: 'Left pane', exact: true })).toHaveValue(
+      'CesiumJS (3D)'
+    );
 
     await panel.getByText('Enable Split View').click();
     await page.waitForFunction(() => !!window.__viewtopiaPaneMap);
