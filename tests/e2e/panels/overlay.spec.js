@@ -76,10 +76,12 @@ test('a utm world file with a .prj georeferences through projicio wasm', async (
     { name: 'site.pgw', mimeType: 'text/plain', buffer: Buffer.from('2\n0\n0\n-2\n585000.5\n4510000.5\n') },
     { name: 'site.prj', mimeType: 'text/plain', buffer: Buffer.from(UTM_18N_PRJ) },
   ]);
-  await expect(panel.getByTestId('overlay-source')).toContainText('.prj');
+  // the placement effect compiles projicio wasm right after this render, which
+  // can starve a loaded box before the source line paints, so the first
+  // observable after the drop gets the long leash, like raster's first op
+  await expect(panel.getByTestId('overlay-source')).toContainText('.prj', { timeout: 30000 });
 
-  // 585000E 4510000N in UTM 18N is near -73.993, 40.737. the first assert
-  // covers the initial projicio wasm fetch and compile, like raster's first op
+  // 585000E 4510000N in UTM 18N is near -73.993, 40.737
   await expect(panel.getByTestId('overlay-west')).toHaveValue(/-73\.99/, { timeout: 30000 });
   await expect(panel.getByTestId('overlay-north')).toHaveValue(/40\.73/);
 });
