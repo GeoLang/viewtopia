@@ -5,7 +5,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { registerPmtilesProtocol } from '../features/pmtiles/source';
 import { registerCachedTileProtocol } from '../offline/tileProtocol';
 import { useAppStore } from '../store/app';
-import { useSplitViewStore } from '../store/splitView';
+import { useSplitViewStore, type Pane } from '../store/splitView';
 import { getSharedCamera, setSharedCamera } from './sharedCamera';
 import {
   applyMapLibreCamera,
@@ -19,31 +19,31 @@ import { useBuildingStore, styleDrawsBuildings } from '../store/buildings';
 interface UseMapLibreOptions {
   containerId?: string;
   /**
-   * 'pane' is the split view's second map: it follows the split's own renderer
-   * choice, stays out of the registry every tool reads, and is removed when the
-   * pane unmounts.
+   * Set for a split pane: the map follows that pane's own renderer and basemap,
+   * stays out of the registry every tool reads, and is removed when the pane
+   * unmounts. Unset, the map is the viewer pane the app store drives.
    */
-  slot?: 'active' | 'pane';
+  pane?: Pane;
 }
 
 export function useMapLibre(opts: UseMapLibreOptions = {}) {
   const mapRef = useRef<maplibregl.Map | null>(null);
   /** Style key the live map was built from, so activation doesn't re-set it. */
   const styledKeyRef = useRef<string | null>(null);
-  const basemap = useAppStore((s) => s.basemap);
+  const viewerBasemap = useAppStore((s) => s.basemap);
   const selfHostedUrl = useAppStore((s) => s.settings.selfHostedBasemapUrl);
   const customBasemap = useAppStore((s) => s.customBasemap);
   const localBasemap = useAppStore((s) => s.localBasemap);
   const renderer = useAppStore((s) => s.renderer);
   const activeTab = useAppStore((s) => s.activeTab);
   const splitActive = useSplitViewStore((s) => s.active);
-  const paneRenderer = useSplitViewStore((s) => s.paneRenderer);
 
-  const isPane = opts.slot === 'pane';
+  const isPane = !!opts.pane;
+  const basemap = opts.pane?.basemap ?? viewerBasemap;
   const register = isPane ? setPaneMapLibre : setActiveMapLibre;
   const isActive =
     activeTab === 'globe' &&
-    (isPane ? splitActive && paneRenderer === 'maplibre' : renderer === 'maplibre');
+    (opts.pane ? splitActive && opts.pane.renderer === 'maplibre' : renderer === 'maplibre');
   // the custom url is part of the key: picking another catalog entry keeps
   // basemap === 'custom' and only changes the tiles
   const styleKey = `${basemap}|${selfHostedUrl}|${customBasemap?.url ?? ''}|${

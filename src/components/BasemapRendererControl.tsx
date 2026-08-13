@@ -2,7 +2,7 @@ import { ActionIcon, Button, FileButton, Popover, Select, Stack, Tooltip } from 
 import { notifications } from '@mantine/notifications';
 import { IconFileImport, IconMap2 } from '@tabler/icons-react';
 import { useAppStore, type Renderer, type Basemap, type LocalBasemap } from '../store/app';
-import { BASEMAP_SELECT_GROUPS, localBasemapSelectGroup } from '../hooks/basemapTiles';
+import { BASEMAP_SELECT_GROUPS, basemapSelectGroups } from '../hooks/basemapTiles';
 import { addLocalPmtiles } from '../features/pmtiles/source';
 
 const RENDERER_OPTIONS: { value: Renderer; label: string }[] = [
@@ -37,15 +37,7 @@ export function BasemapRendererControl() {
           : g,
       )
     : BASEMAP_SELECT_GROUPS;
-  // a plugin can set tiles outside the built-in list, and the select renders
-  // blank on a value with no matching option
-  const basemapGroups = [
-    ...availableGroups,
-    ...(localBasemap || basemap === 'local' ? [localBasemapSelectGroup(localBasemap)] : []),
-    ...(basemap === 'custom'
-      ? [{ group: 'Plugin', items: [{ value: 'custom', label: 'Custom' }] }]
-      : []),
-  ];
+  const basemapGroups = basemapSelectGroups(basemap, localBasemap, availableGroups);
 
   const loadLocalBasemap = async (file: File | null) => {
     if (!file) return;

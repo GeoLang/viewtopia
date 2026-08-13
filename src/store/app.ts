@@ -1,7 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { CameraState } from './cameraViews';
-import type { Basemap, CustomBasemap, LocalBasemap } from '../hooks/basemapTiles';
+import {
+  DEFAULT_BASEMAP,
+  type Basemap,
+  type CustomBasemap,
+  type LocalBasemap,
+} from '../hooks/basemapTiles';
 
 export type ViewerTab = 'globe' | 'map';
 export type Renderer = 'cesium' | 'maplibre';
@@ -190,7 +195,7 @@ const DEFAULT_SETTINGS: Settings = {
   showCoordReadout: true,
   showPreviewTools: false,
   defaultRenderer: 'maplibre',
-  defaultBasemap: 'dark',
+  defaultBasemap: DEFAULT_BASEMAP,
   selfHostedBasemapUrl: '',
   probeIntervalSec: 30,
   tiletopiaUrl: '/api/v1',
@@ -232,7 +237,7 @@ export const useAppStore = create<AppState>()(
       setActiveTab: (tab) => set({ activeTab: tab }),
       renderer: 'maplibre',
       setRenderer: (renderer) => set({ renderer }),
-      basemap: 'dark',
+      basemap: DEFAULT_BASEMAP,
       setBasemap: (basemap) => set({ basemap }),
       customBasemap: null,
       setCustomBasemap: (customBasemap) => set({ customBasemap, basemap: 'custom' }),

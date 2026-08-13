@@ -107,7 +107,7 @@ src/duckdb/
 
 - **Bundle size**: DuckDB-WASM is ~5 MB. Mitigation: load only on first SQL use (worker is lazy).
 - **Cross-origin isolation**: DuckDB-WASM needs SharedArrayBuffer for some features. Verify Vite dev server and the deployed CDN headers (`COOP`/`COEP`). Fall back to non-SAB mode if needed.
-- **Spatial extension availability**: confirm it's bundled in the npm distribution version we pin; otherwise host it ourselves.
+- **Spatial extension availability**: hosted ourselves. `scripts/fetch-duckdb-extensions.mjs` (the `prebuild` hook) downloads spatial for the pinned DuckDB version into `public/duckdb-extensions/`, and the worker points `custom_extension_repository` at the app origin, falling back to extensions.duckdb.org only if the origin copy is missing.
 
 ## Effort
 

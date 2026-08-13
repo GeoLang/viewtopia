@@ -10,6 +10,11 @@ export const BUNDLES: duckdb.DuckDBBundles = {
   eh: { mainModule: ehModule, mainWorker: ehWorker },
 };
 
+/** where scripts/fetch-duckdb-extensions.mjs vendors the extension binaries.
+ *  duckdb appends /<duckdb version>/<wasm platform>/<name>.duckdb_extension.wasm */
+export const EXTENSION_REPOSITORY = '/duckdb-extensions';
+const UPSTREAM_EXTENSION_REPOSITORY = 'https://extensions.duckdb.org';
+
 let dbPromise: Promise<duckdb.AsyncDuckDB> | null = null;
 let connPromise: Promise<duckdb.AsyncDuckDBConnection> | null = null;
 
@@ -28,16 +33,30 @@ export function getDb(): Promise<duckdb.AsyncDuckDB> {
   return dbPromise;
 }
 
+/** Installs spatial from the vendored copy, falling back to duckdb's CDN for a
+ *  deploy that skipped the fetch script. Both failing leaves non-spatial SQL working. */
+export async function loadSpatial(conn: { query(sql: string): Promise<unknown> }): Promise<void> {
+  const repositories = [
+    new URL(EXTENSION_REPOSITORY, location.origin).href,
+    UPSTREAM_EXTENSION_REPOSITORY,
+  ];
+  for (const repository of repositories) {
+    try {
+      await conn.query(`SET custom_extension_repository = '${repository}';`);
+      await conn.query(`INSTALL spatial; LOAD spatial;`);
+      return;
+    } catch (err) {
+      console.warn(`[duckdb] spatial extension failed to load from ${repository}`, err);
+    }
+  }
+}
+
 export async function getConnection(): Promise<duckdb.AsyncDuckDBConnection> {
   if (!connPromise) {
     connPromise = (async () => {
       const db = await getDb();
       const conn = await db.connect();
-      try {
-        await conn.query(`INSTALL spatial; LOAD spatial;`);
-      } catch (err) {
-        console.warn('[duckdb] spatial extension failed to load', err);
-      }
+      await loadSpatial(conn);
       return conn;
     })();
   }

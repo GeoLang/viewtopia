@@ -32,6 +32,8 @@
   ],
   "scripts": {
     "dev": "vite",
+    "fetch:duckdb-extensions": "node scripts/fetch-duckdb-extensions.mjs",
+    "prebuild": "node scripts/fetch-duckdb-extensions.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "biome lint",

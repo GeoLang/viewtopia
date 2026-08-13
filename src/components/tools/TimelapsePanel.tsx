@@ -17,7 +17,7 @@ import { IconClock, IconPlayerPlay, IconPlayerPause } from '@tabler/icons-react'
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveMapLibre, getPaneMapLibre } from '../../viewer/registry';
 import { useAppStore } from '../../store/app';
-import { useSplitViewStore, type PaneRenderer } from '../../store/splitView';
+import { useSplitViewStore, COMPARE_PANE, type Pane } from '../../store/splitView';
 import {
   buildSteps,
   listLayers,
@@ -173,18 +173,18 @@ export function TimelapsePanel({ onClose }: { onClose: () => void }) {
   // put the split back the way the user had it, so a compare does not leave
   // their own split view on. First effect declared, so it captures the state
   // before the mode effect below touches it.
-  const restore = useRef<{ active: boolean; paneRenderer: PaneRenderer }>({
+  const restore = useRef<{ active: boolean; comparePanes: Pane[] }>({
     active: false,
-    paneRenderer: 'maplibre',
+    comparePanes: useSplitViewStore.getState().comparePanes,
   });
   useEffect(() => {
     const before = useSplitViewStore.getState();
-    restore.current = { active: before.active, paneRenderer: before.paneRenderer };
+    restore.current = { active: before.active, comparePanes: before.comparePanes };
     return () => {
       const split = useSplitViewStore.getState();
       split.setSwipeAt(null);
       split.setActive(restore.current.active);
-      split.setPaneRenderer(restore.current.paneRenderer);
+      split.setComparePanes(restore.current.comparePanes);
     };
   }, []);
 
@@ -222,7 +222,7 @@ export function TimelapsePanel({ onClose }: { onClose: () => void }) {
       split.setActive(restore.current.active);
       return;
     }
-    split.setPaneRenderer('maplibre');
+    split.setPaneRenderer(COMPARE_PANE, 'maplibre');
     split.setActive(true);
   }, [hasMap, comparing, mode]);
 

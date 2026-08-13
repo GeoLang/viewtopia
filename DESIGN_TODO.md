@@ -142,18 +142,6 @@ left open:
         `^2.28`. Also `bincode` 1.3.3 and `smartstring` 1.0.1, both
         unmaintained with no successor version (RUSTSEC-2025-0141, -2026-0249).
       - itinera: `bincode` 1.3.3, same as geokode's.
-- [ ] **toml is on 0.9 in geodukt, but 1.1 is current.** The three bumps the
-      closed Renovate PR bundled are taken (rusqlite 0.40, petgraph 0.8, toml
-      0.9), each its own commit. None needed a source change: the surfaces
-      geodukt uses kept their signatures. Two things worth knowing before the
-      next one. rusqlite 0.40 puts the `u64`/`usize` `ToSql`/`FromSql` impls
-      behind a new `fallible_uint` feature that is off by default, which is
-      harmless here only because the run store converts through `i64` at both
-      ends; binding a `usize` directly would now fail to compile. And toml 0.9
-      swapped its parser from `toml_edit` to `toml_parser`, so the error text
-      `/validate` hands back verbatim comes from a different parser now, still
-      carrying line, column and a source snippet. Going on to toml 1.1 is a
-      fresh breaking bump nobody has taken.
 - [ ] **geodukt's cdc feature hash depends on `Debug` formatting** of topoi's
       `FeatureGeometry` and `Value`, both git dependencies on master. A `Debug`
       impl changing upstream silently changes geodukt's content hashes, and now
@@ -186,8 +174,6 @@ left open:
       override would. Left alone because it is build-time and
       development-scope, and the dashboard compiles only its own stylesheets,
       so no CSS anyone else chose reaches postcss.
-- [ ] **docs/index.html claims 15 QGIS ports against 11 cards.** The plugin
-      count beside it was wrong too and is now correct. This one was left.
 
 ## OPEN — post-MVP: tiletopia tile edge caching (decided 2026-07-28)
 
@@ -492,9 +478,6 @@ decision rather than a bug. Per-repo changelogs hold what shipped.
       read-only analyst over someone else's data needs the deferred per-form
       grants table. Legacy forms with no creator are admin-only and are not
       backfilled to anyone.
-- [ ] **collecta JSON submissions record no submitter** (only the OpenRosa path
-      sets `collector_id`), so there is no per-submitter audit trail and
-      ownership cannot be reconstructed later.
 - [ ] **collecta role strings outside admin/editor/viewer now fail closed.**
       Nothing in the repo creates others, but a live database predating this may
       hold them, and those accounts stop working on deploy.
@@ -538,12 +521,10 @@ Medium value:
       collections, items, assets and saved favourites, and filters items by
       free text, current view and cloud cover. Services, databases and files
       are still one panel each (OGC Layers, SQL, Import), not one place.
-      Two known limits of the filters: a filtered search shows one page of 20
-      and offers no "Load more", because a STAC server pages a POST search with
-      a next link carrying its own method and body, which this client does not
-      replay; and free text goes out as `q`, the STAC free-text extension,
-      which no real catalog has been tested against, so a catalog lacking the
-      extension either ignores it or 400s into the panel's error line.
+      One known limit of the filters: free text goes out as `q`, the STAC
+      free-text extension, which no real catalog has been tested against, so a
+      catalog lacking the extension either ignores it or 400s into the panel's
+      error line.
 - [ ] **isochrones/service areas and OD matrices**, served by itinera.
 - [ ] **print layout with atlas/map-series generation**: current export is a
       canvas screenshot.
@@ -564,20 +545,6 @@ survives reloads and syncs back, and a service worker precaches the built app
 shell, so a reload with no network still boots the viewer. Everything below is
 what does not work.
 
-- [ ] **the tile budget bounds the whole store, not the browsing half.** Tiles
-      inside a saved region are pinned and only a region delete removes them,
-      and everything else falls under a 200 MB budget, oldest evicted first.
-      So saved regions alone exceeding 200 MB drain the browsing tiles and then
-      stop, leaving the store over budget rather than eating a region. That is
-      the right trade, since a region's size badge would otherwise start lying,
-      but nothing tells the user their regions are the reason nothing caches.
-- [ ] **DuckDB's spatial extension still loads from extensions.duckdb.org.**
-      The wasm bundle and the basemap glyphs are served from the app origin
-      now, so plain SQL works with no network, but `getConnection()` runs
-      `INSTALL spatial; LOAD spatial;` and that fetch is what spatial SQL
-      needs. It is wrapped so a failure degrades rather than throws. Vendoring
-      it means pinning the extension to the exact DuckDB version and a script
-      that refreshes both together on upgrade.
 - [ ] **Cesium terrain needs an external provider** (ion token or terrain
       endpoint), no local/offline terrain source. Blank terrain is the graceful
       floor, a tiletopia-served terrain bundle would be the real fix.
@@ -632,11 +599,12 @@ Known limits:
 - [ ] ptolemy external-source pushdown non-goals (documented in README): near-global
       windows fall back to unfiltered scans; `or`/`not` CQL2 spatial ops are never pushed.
       Revisit only if a real workload hits them.
-- [ ] **Split view: per-pane basemap picker, then tiled views** (owner, 2026-07-26,
-      post-MVP). Panes currently share the basemap, so same-renderer split is a mirror.
-      Step 1: each pane picks its own basemap, cameras stay locked (no focused-pane
-      concept; viewer-scoped tools keep the left-pane convention). Build the pane state
-      as a list of `{renderer, basemap}`, not a single right-pane entry, so step 2 —
-      a 2x2 tiled compare view — is layout work, not a rewrite. Tiles are GL contexts:
-      cap at 4, MapLibre by default, at most one Cesium instance.
+- [ ] **Split view step 2: tiled compare views** (owner, 2026-07-26, post-MVP).
+      Step 1 shipped 2026-08-12: pane state is a list of `{renderer, basemap}`
+      with the viewer as pane 0, each pane has its own basemap picker, cameras
+      stay locked. The 2x2 view is layout work over the pane list plus pane
+      add/remove UI. Tiles are GL contexts: cap at 4, MapLibre by default, at
+      most one Cesium instance. Nothing enforces the one-Cesium rule yet, and
+      today's two panes can already both be Cesium, so enforcing it changes
+      existing behavior and belongs with this step.
 - [ ] Raise jung from its rendering-only coverage into the v1 path *(only if it enters it)*.

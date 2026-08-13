@@ -282,7 +282,7 @@ export async function evictTilesForArea(
  * are dropped to get back under it, so a region's badge never overstates what
  * is still on disk.
  */
-const TILE_CACHE_BUDGET_BYTES = 200 * 1024 * 1024;
+export const TILE_CACHE_BUDGET_BYTES = 200 * 1024 * 1024;
 
 /**
  * Running total of the stored tile bytes, so a tile write never scans the whole
@@ -366,6 +366,15 @@ export async function browsingCacheBytes(): Promise<number> {
   const stored = await tileCache.summaries();
   return stored
     .filter((tile) => !pinned.has(tile.key))
+    .reduce((sum, tile) => sum + tile.bytes, 0);
+}
+
+/** Bytes held by saved region tiles, which the budget cannot evict. */
+export async function pinnedCacheBytes(): Promise<number> {
+  const pinned = await pinnedTileKeys();
+  const stored = await tileCache.summaries();
+  return stored
+    .filter((tile) => pinned.has(tile.key))
     .reduce((sum, tile) => sum + tile.bytes, 0);
 }
 

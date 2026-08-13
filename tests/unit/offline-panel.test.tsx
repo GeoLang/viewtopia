@@ -57,7 +57,7 @@ vi.mock('../../src/offline/db', () => ({
 }));
 
 import { OfflinePanel } from '../../src/components/tools/OfflinePanel';
-import { tileKeysForArea } from '../../src/offline/cache';
+import { TILE_CACHE_BUDGET_BYTES, tileKeysForArea } from '../../src/offline/cache';
 import { cachedRegions, tileCache, type CachedRegion } from '../../src/offline/db';
 import { useAppStore } from '../../src/store/app';
 import { setSharedCamera } from '../../src/hooks/sharedCamera';
@@ -186,6 +186,38 @@ describe('OfflinePanel', () => {
       expect(key).toMatch(/^10\/\d+\/\d+@https:\/\/tile\.openstreetmap\.org/);
     }
     expect(await screen.findByText('No cached regions')).toBeInTheDocument();
+  });
+
+  it('says browsing tiles stop caching once saved regions fill the budget', async () => {
+    const saved = region({ minZoom: 10, maxZoom: 10, bytes: TILE_CACHE_BUDGET_BYTES });
+    const regionKeys = tileKeysForArea(saved.tileUrlTemplate, saved.bounds, {
+      min: saved.minZoom,
+      max: saved.maxZoom,
+    });
+    db.regions = [saved];
+    const bytesPerTile = Math.ceil(TILE_CACHE_BUDGET_BYTES / regionKeys.length);
+    for (const key of regionKeys) db.tiles.set(key, { key, bytes: bytesPerTile, cachedAt: 1 });
+
+    renderPanel();
+
+    expect(await screen.findByTestId('offline-budget-full')).toHaveTextContent(
+      'Saved regions fill the 200.0MB tile budget',
+    );
+  });
+
+  it('stays quiet about the budget while saved regions fit under it', async () => {
+    const saved = region({ minZoom: 10, maxZoom: 10 });
+    const regionKeys = tileKeysForArea(saved.tileUrlTemplate, saved.bounds, {
+      min: saved.minZoom,
+      max: saved.maxZoom,
+    });
+    db.regions = [saved];
+    for (const key of regionKeys) db.tiles.set(key, { key, bytes: 1024, cachedAt: 1 });
+
+    renderPanel();
+
+    await screen.findByTestId('offline-browsing-size');
+    expect(screen.queryByTestId('offline-budget-full')).toBeNull();
   });
 
   it('clears the browsing tiles and leaves the saved region alone', async () => {

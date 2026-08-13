@@ -52,7 +52,10 @@ function resetStores() {
     generation: 0,
   });
   useOgcLayerStore.setState({ layers: [] });
-  useSplitViewStore.setState({ active: false, paneRenderer: 'maplibre' });
+  useSplitViewStore.setState({
+    active: false,
+    comparePanes: [{ renderer: 'maplibre', basemap: 'dark' }],
+  });
 }
 
 // applyProject polls for a Cesium viewer that never arrives in jsdom, so run the
@@ -96,7 +99,10 @@ describe('project round trip', () => {
       markers: [{ id: 'm1', lon: 12.33, lat: 45.44, color: '#f00', label: 'dock' }],
     });
     useOgcLayerStore.getState().addLayer('bathymetry', 'https://example.org/wms', 'wms');
-    useSplitViewStore.setState({ active: true, paneRenderer: 'cesium' });
+    useSplitViewStore.setState({
+      active: true,
+      comparePanes: [{ renderer: 'cesium', basemap: 'satellite' }],
+    });
 
     const saved = JSON.stringify(serializeProject('venice study'));
     resetStores();
@@ -131,7 +137,7 @@ describe('project round trip', () => {
 
     const split = useSplitViewStore.getState();
     expect(split.active).toBe(true);
-    expect(split.paneRenderer).toBe('cesium');
+    expect(split.comparePanes).toEqual([{ renderer: 'cesium', basemap: 'satellite' }]);
   });
 
   it('names an image overlay and its placement, without the bitmap', () => {

@@ -17,6 +17,8 @@ import {
   clearBrowsingCache,
   countTilesForArea,
   evictTilesForArea,
+  pinnedCacheBytes,
+  TILE_CACHE_BUDGET_BYTES,
 } from '../../offline/cache';
 import { cachedRegions, type CachedRegion } from '../../offline/db';
 import { getViewBounds } from '../../lib/viewBounds';
@@ -41,6 +43,7 @@ export function OfflinePanel({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState('');
   const [regions, setRegions] = useState<CachedRegion[]>([]);
   const [browsingBytes, setBrowsingBytes] = useState(0);
+  const [pinnedBytes, setPinnedBytes] = useState(0);
   const [confirmingClear, setConfirmingClear] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const basemap = useAppStore((s) => s.basemap);
@@ -51,6 +54,7 @@ export function OfflinePanel({ onClose }: { onClose: () => void }) {
       const all = await cachedRegions.getAll();
       setRegions(all.sort((a, b) => b.createdAt - a.createdAt));
       setBrowsingBytes(await browsingCacheBytes());
+      setPinnedBytes(await pinnedCacheBytes());
     } catch {
       setError('Cannot read the offline store');
     }
@@ -211,6 +215,13 @@ export function OfflinePanel({ onClose }: { onClose: () => void }) {
         ) : (
           <Text size="xs" c="dimmed" ta="center" py="xs">
             No cached regions
+          </Text>
+        )}
+
+        {pinnedBytes >= TILE_CACHE_BUDGET_BYTES && (
+          <Text size="xs" c="yellow" data-testid="offline-budget-full">
+            Saved regions fill the {megabytes(TILE_CACHE_BUDGET_BYTES)} tile budget, so tiles you
+            browse are not cached until you delete a region.
           </Text>
         )}
 

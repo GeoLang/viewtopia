@@ -377,8 +377,10 @@ map, plus a synced split view. Picking/draw/measure/agent-layers survive rendere
   radius/intensity/weight → `heatmap-*` paint mapping, `useHeatmapsMapLibre` re-adds the layers
   after a basemap swap, and both the Heatmap panel and `add_heatmap` go through it. ScreenGrid
   keeps its deck layer and says so when asked for on the globe.
-- Split view is a second pane per renderer driven by one shared-camera hub with a re-entrancy
-  guard and a subscribe-time snap, with clean teardown so the WebGL context limit holds.
+- Split view panes are a list of `{renderer, basemap}` entries, the viewer itself being pane 0
+  in the app store, each pane with its own basemap picker, all driven by one shared-camera hub
+  with a re-entrancy guard and a subscribe-time snap, with clean teardown so the WebGL context
+  limit holds.
 - All navigation, bookmarks included, goes through the shared fly-to pipeline, which is what
   makes it work on the 2D renderers and for bookmarks that carry no camera.
 - The 2D map tab disables the renderer select and the vector basemap options.

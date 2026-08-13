@@ -9,7 +9,7 @@ import {
 import { overlayImages } from '../../offline/db';
 import { migrateLegacyChoropleth } from '../symbology/symbology';
 import { useOgcLayerStore, loadPmtilesLayer, type OGCLayer } from '../../store/ogcLayers';
-import { useSplitViewStore, type PaneRenderer } from '../../store/splitView';
+import { useSplitViewStore, type Pane } from '../../store/splitView';
 import { captureCameraState, flyToCameraState, type CameraState } from '../../store/cameraViews';
 import { getActiveCesiumViewer, getActiveMapLibre } from '../../viewer/registry';
 import { getSharedCamera, setSharedCamera } from '../../hooks/sharedCamera';
@@ -30,7 +30,7 @@ export interface ViewtopiaProject {
   /** name of the .pmtiles behind basemap 'local'; the file itself never travels */
   localBasemap?: { name: string };
   camera: CameraState;
-  splitView?: { active: boolean; paneRenderer: PaneRenderer };
+  splitView?: { active: boolean; comparePanes: Pane[] };
   agentLayers: AgentLayer[];
   markers: AgentMarker[];
   ogcLayers: OGCLayer[];
@@ -102,7 +102,7 @@ export function serializeProject(name: string): ViewtopiaProject {
       ? { localBasemap: { name: app.localBasemap.name } }
       : {}),
     camera: liveCamera(app.renderer),
-    splitView: { active: split.active, paneRenderer: split.paneRenderer },
+    splitView: { active: split.active, comparePanes: split.comparePanes },
     agentLayers: agent.layers,
     markers: agent.markers,
     imageOverlays: agent.rasterLayers.map(({ url: _url, ...entry }) => entry),
@@ -110,6 +110,18 @@ export function serializeProject(name: string): ViewtopiaProject {
     // session only, so saving its entry would only produce a dead layer
     ogcLayers: useOgcLayerStore.getState().layers.filter((l) => !l.pmtiles?.local),
   };
+}
+
+const KNOWN_BASEMAPS: string[] = [...BASEMAP_OPTIONS.map((o) => o.value), 'custom', 'local'];
+
+/** Saved compare panes, minus any naming a renderer or basemap the app no longer has. */
+function readComparePanes(saved: unknown): Pane[] {
+  const list = Array.isArray(saved) ? saved : [];
+  return list.flatMap((entry: Partial<Pane>) => {
+    const renderer = asRenderer(entry.renderer);
+    if (!renderer || !KNOWN_BASEMAPS.includes(entry.basemap as string)) return [];
+    return [{ renderer, basemap: entry.basemap as Basemap }];
+  });
 }
 
 function requireArray(value: unknown, field: string): unknown[] {
@@ -149,8 +161,7 @@ export function parseProject(text: string): ViewtopiaProject {
   }
   const renderer = asRenderer(p.renderer);
   if (!renderer) throw new Error(`project file: unknown renderer ${String(p.renderer)}`);
-  const basemaps: string[] = [...BASEMAP_OPTIONS.map((o) => o.value), 'custom', 'local'];
-  if (typeof p.basemap !== 'string' || !basemaps.includes(p.basemap)) {
+  if (typeof p.basemap !== 'string' || !KNOWN_BASEMAPS.includes(p.basemap)) {
     throw new Error(`project file: unknown basemap ${String(p.basemap)}`);
   }
 
@@ -164,7 +175,14 @@ export function parseProject(text: string): ViewtopiaProject {
     ...(p.customBasemap ? { customBasemap: p.customBasemap } : {}),
     ...(p.localBasemap?.name ? { localBasemap: { name: p.localBasemap.name } } : {}),
     camera: readCamera(p.camera),
-    ...(p.splitView ? { splitView: p.splitView } : {}),
+    ...(p.splitView
+      ? {
+          splitView: {
+            active: !!p.splitView.active,
+            comparePanes: readComparePanes(p.splitView.comparePanes),
+          },
+        }
+      : {}),
     agentLayers: (requireArray(p.agentLayers, 'agentLayers') as AgentLayer[]).map(
       migrateLegacyChoropleth,
     ),
@@ -252,7 +270,10 @@ export function applyProject(project: ViewtopiaProject): void {
 
   if (project.splitView) {
     const split = useSplitViewStore.getState();
-    split.setPaneRenderer(project.splitView.paneRenderer);
+    // a file saved before panes had their own basemap carries no pane list
+    if (project.splitView.comparePanes.length > 0) {
+      split.setComparePanes(project.splitView.comparePanes);
+    }
     split.setActive(project.splitView.active);
   }
 

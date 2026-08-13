@@ -20,6 +20,11 @@ export interface StacLink {
   title?: string;
   /** what a catalog says the link has to be fetched with, absent meaning GET */
   method?: string;
+  /** the body a POST link is to be sent with */
+  body?: Record<string, unknown>;
+  headers?: Record<string, string>;
+  /** the link's body adds to the body that produced it instead of replacing it */
+  merge?: boolean;
 }
 
 export interface StacAsset {
@@ -58,6 +63,8 @@ export interface ItemRequest {
   url: string;
   /** the POST body, set only when the filters need the catalog's search */
   searchBody: Record<string, unknown> | null;
+  /** headers a paging link asks for, on top of the usual JSON ones */
+  headers?: Record<string, string>;
 }
 
 export interface StacItem {
@@ -69,8 +76,8 @@ export interface StacItem {
 
 export interface StacItemPage {
   items: StacItem[];
-  /** the catalog's own next-page link, absolute; null on the last page */
-  nextUrl: string | null;
+  /** the request the catalog's own next link asks for; null on the last page */
+  next: ItemRequest | null;
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -79,6 +86,19 @@ function record(value: unknown): Record<string, unknown> {
 
 function text(value: unknown): string {
   return typeof value === 'string' ? value : '';
+}
+
+function object(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function stringRecord(value: unknown): Record<string, string> | undefined {
+  const entries = Object.entries(object(value) ?? {}).filter(
+    ([, entry]) => typeof entry === 'string',
+  );
+  return entries.length > 0 ? (Object.fromEntries(entries) as Record<string, string>) : undefined;
 }
 
 function sameOrigin(url: string): boolean {
@@ -108,6 +128,9 @@ export function parseLinks(body: unknown, base: string): StacLink[] {
         href: resolveHref(href, base),
         title: text(link.title) || undefined,
         method: text(link.method) || undefined,
+        body: object(link.body),
+        headers: stringRecord(link.headers),
+        merge: link.merge === true,
       },
     ];
   });
@@ -129,9 +152,15 @@ function jsonHeaders(sending: boolean): Record<string, string> {
 export async function fetchStac(
   url: string,
   searchBody?: Record<string, unknown>,
+  extraHeaders?: Record<string, string>,
 ): Promise<unknown> {
   const local = sameOrigin(url);
-  const init: RequestInit = { headers: local ? apiHeaders() : jsonHeaders(Boolean(searchBody)) };
+  // on our own origin the session bearer goes on last, so a link's own headers
+  // cannot displace it
+  const headers = local
+    ? apiHeaders(extraHeaders)
+    : { ...jsonHeaders(Boolean(searchBody)), ...extraHeaders };
+  const init: RequestInit = { headers };
   if (searchBody) {
     init.method = 'POST';
     init.body = JSON.stringify(searchBody);
@@ -201,7 +230,22 @@ function parseAssets(body: unknown, base: string): StacAsset[] {
   });
 }
 
-export function parseItems(body: unknown, base: string): StacItemPage {
+/**
+ * How to fetch a paging link. A search pages through a POST link carrying its
+ * own body, and `merge` means that body only adds to the one that produced this
+ * page, so the filters survive to the next page.
+ */
+function nextRequest(link: StacLink, sentBody: Record<string, unknown> | null): ItemRequest {
+  if (isGetLink(link)) return { url: link.href, searchBody: null, headers: link.headers };
+  const body = link.merge ? { ...(sentBody ?? {}), ...(link.body ?? {}) } : (link.body ?? {});
+  return { url: link.href, searchBody: body, headers: link.headers };
+}
+
+function parseItems(
+  body: unknown,
+  base: string,
+  sentBody: Record<string, unknown> | null,
+): StacItemPage {
   const raw = record(body).features;
   const features = Array.isArray(raw) ? raw : [];
   const items = features.flatMap((entry) => {
@@ -218,10 +262,14 @@ export function parseItems(body: unknown, base: string): StacItemPage {
       },
     ];
   });
-  // a search pages through a POST link carrying its own body, which this
-  // client cannot replay, so only a plain next link becomes a Load more
-  const next = parseLinks(body, base).find((link) => link.rel === 'next' && isGetLink(link));
-  return { items, nextUrl: next?.href ?? null };
+  const next = parseLinks(body, base).find((link) => link.rel === 'next');
+  return { items, next: next ? nextRequest(next, sentBody) : null };
+}
+
+/** One page of items, plus the request that fetches the page after it. */
+export async function fetchItemPage(request: ItemRequest): Promise<StacItemPage> {
+  const body = await fetchStac(request.url, request.searchBody ?? undefined, request.headers);
+  return parseItems(body, request.url, request.searchBody);
 }
 
 export function catalogTitle(body: unknown, url: string): string {

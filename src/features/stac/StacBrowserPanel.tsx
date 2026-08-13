@@ -31,12 +31,12 @@ import {
   assetAction,
   catalogTitle,
   collectionsUrl,
+  fetchItemPage,
   fetchStac,
   itemFootprints,
   itemRequest,
   itemSearchUrl,
   parseCollections,
-  parseItems,
   parseLinks,
   STAC_CATALOGS,
   type AssetAction,
@@ -64,7 +64,7 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
   const [catalog, setCatalog] = useState<StacCatalog | null>(null);
   const [collection, setCollection] = useState<StacCollection | null>(null);
   const [items, setItems] = useState<StacItem[]>([]);
-  const [nextUrl, setNextUrl] = useState<string | null>(null);
+  const [nextPage, setNextPage] = useState<ItemRequest | null>(null);
   const [openItemId, setOpenItemId] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
   const [itemQuery, setItemQuery] = useState('');
@@ -127,10 +127,9 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setError(null);
     try {
-      const body = await fetchStac(request.url, request.searchBody ?? undefined);
-      const page = parseItems(body, request.url);
+      const page = await fetchItemPage(request);
       setItems((previous) => (append ? [...previous, ...page.items] : page.items));
-      setNextUrl(page.nextUrl);
+      setNextPage(page.next);
     } catch (e) {
       setError(message(e));
     } finally {
@@ -546,13 +545,13 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
                   })}
               </Stack>
             ))}
-            {nextUrl && (
+            {nextPage && (
               <Button
                 size="xs"
                 variant="subtle"
                 color="violet"
                 loading={busy}
-                onClick={() => void loadItems({ url: nextUrl, searchBody: null }, true)}
+                onClick={() => void loadItems(nextPage, true)}
               >
                 Load more
               </Button>

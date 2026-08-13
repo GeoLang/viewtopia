@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Ion, Viewer } from 'cesium';
 import { useAppStore } from '../store/app';
-import { useSplitViewStore } from '../store/splitView';
+import { useSplitViewStore, type Pane } from '../store/splitView';
 import { getSharedCamera, setSharedCamera } from './sharedCamera';
 import {
   applyCesiumCamera,
@@ -16,11 +16,11 @@ interface UseCesiumOptions {
   containerId?: string;
   ionToken?: string;
   /**
-   * 'pane' is the split view's second viewer: it follows the split's own
-   * renderer choice, stays out of the registry every tool reads, and is
-   * destroyed when the pane unmounts.
+   * Set for a split pane: the viewer follows that pane's own renderer and
+   * basemap, stays out of the registry every tool reads, and is destroyed when
+   * the pane unmounts. Unset, it is the viewer pane the app store drives.
    */
-  slot?: 'active' | 'pane';
+  pane?: Pane;
 }
 
 /**
@@ -40,18 +40,18 @@ export function cesiumImageryProvider(basemap: string, custom?: CustomBasemap | 
 
 export function useCesium(opts: UseCesiumOptions = {}) {
   const viewerRef = useRef<Viewer | null>(null);
-  const basemap = useAppStore((s) => s.basemap);
+  const viewerBasemap = useAppStore((s) => s.basemap);
   const customBasemap = useAppStore((s) => s.customBasemap);
   const renderer = useAppStore((s) => s.renderer);
   const activeTab = useAppStore((s) => s.activeTab);
   const splitActive = useSplitViewStore((s) => s.active);
-  const paneRenderer = useSplitViewStore((s) => s.paneRenderer);
 
-  const isPane = opts.slot === 'pane';
+  const isPane = !!opts.pane;
+  const basemap = opts.pane?.basemap ?? viewerBasemap;
   const register = isPane ? setPaneCesiumViewer : setActiveCesiumViewer;
   const isActive =
     activeTab === 'globe' &&
-    (isPane ? splitActive && paneRenderer === 'cesium' : renderer === 'cesium');
+    (opts.pane ? splitActive && opts.pane.renderer === 'cesium' : renderer === 'cesium');
 
   // Create/destroy viewer based on active state
   useEffect(() => {

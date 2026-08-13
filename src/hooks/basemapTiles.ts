@@ -99,6 +99,9 @@ export const VECTOR_BASEMAPS: Record<string, { styleUrl: string }> = {
 /** Vector style MapLibre falls back to when 'selfhosted' has no URL set. */
 export const DEFAULT_VECTOR_BASEMAP = 'liberty';
 
+/** What a view draws before anyone picks something else. */
+export const DEFAULT_BASEMAP: Basemap = 'dark';
+
 export interface BasemapOption {
   value: Basemap;
   label: string;
@@ -141,6 +144,25 @@ export function localBasemapSelectGroup(local: LocalBasemap | null) {
     group: 'Local file (MapLibre only)',
     items: [{ value: 'local', label: local?.name ?? 'PMTiles archive' }],
   };
+}
+
+/**
+ * Groups for a basemap picker showing `basemap`. A plugin can set tiles outside
+ * the built-in list, and a select renders blank on a value with no option, so
+ * the local archive and the plugin's entry are added when they are the value.
+ */
+export function basemapSelectGroups(
+  basemap: Basemap,
+  local: LocalBasemap | null,
+  groups = BASEMAP_SELECT_GROUPS,
+) {
+  return [
+    ...groups,
+    ...(local || basemap === 'local' ? [localBasemapSelectGroup(local)] : []),
+    ...(basemap === 'custom'
+      ? [{ group: 'Plugin', items: [{ value: 'custom', label: 'Custom' }] }]
+      : []),
+  ];
 }
 
 export function isVectorBasemap(basemap: string): boolean {

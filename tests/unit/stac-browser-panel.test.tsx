@@ -89,9 +89,25 @@ const ITEMS_DOC = {
   links: [{ rel: 'next', href: `${ITEMS}?page=2` }],
 };
 
+/** what the catalog's next link adds to the search body that produced the page */
+const NEXT_TOKEN = { token: 'after:S2A_TILE_20240601' };
+
 const SEARCH_DOC = {
   ...ITEMS_DOC,
-  links: [{ rel: 'next', href: SEARCH, method: 'POST', body: {} }],
+  links: [{ rel: 'next', href: SEARCH, method: 'POST', merge: true, body: NEXT_TOKEN }],
+};
+
+const SEARCH_PAGE_TWO = {
+  type: 'FeatureCollection',
+  features: [
+    {
+      id: 'S2A_TILE_20240602',
+      geometry: null,
+      properties: { datetime: '2024-06-02T10:20:30Z' },
+      assets: {},
+    },
+  ],
+  links: [],
 };
 
 const OUTLINE_DOC = {
@@ -118,6 +134,20 @@ function respondWithCatalog() {
     if (url === COLLECTIONS) return jsonOk(COLLECTIONS_DOC);
     if (url.startsWith(ITEMS)) return jsonOk(ITEMS_DOC);
     if (url.endsWith('outline.geojson')) return jsonOk(OUTLINE_DOC);
+    return jsonOk({}, 404);
+  });
+}
+
+/** the same catalog, with a search that pages through its POST next link */
+function respondWithSearch() {
+  respond((url, init) => {
+    if (url === CATALOG) return jsonOk(ROOT_DOC);
+    if (url === COLLECTIONS) return jsonOk(COLLECTIONS_DOC);
+    if (url === SEARCH) {
+      const sent = JSON.parse(String(init?.body ?? '{}'));
+      return jsonOk(sent.token === NEXT_TOKEN.token ? SEARCH_PAGE_TWO : SEARCH_DOC);
+    }
+    if (url.startsWith(ITEMS)) return jsonOk(ITEMS_DOC);
     return jsonOk({}, 404);
   });
 }
@@ -309,13 +339,7 @@ describe('StacBrowserPanel', () => {
   });
 
   it('searches with the filters the plain item listing cannot express', async () => {
-    respond((url) => {
-      if (url === CATALOG) return jsonOk(ROOT_DOC);
-      if (url === COLLECTIONS) return jsonOk(COLLECTIONS_DOC);
-      if (url === SEARCH) return jsonOk(SEARCH_DOC);
-      if (url.startsWith(ITEMS)) return jsonOk(ITEMS_DOC);
-      return jsonOk({}, 404);
-    });
+    respondWithSearch();
     await renderPanel();
     await openCatalog();
     await openCollection();
@@ -342,18 +366,41 @@ describe('StacBrowserPanel', () => {
     });
     expect(body.bbox).toHaveLength(4);
     expect(screen.getByTestId('stac-item-S2A_TILE_20240601')).toBeInTheDocument();
-    // the search pages through a POST link this client cannot replay
+    expect(screen.getByRole('button', { name: 'Load more' })).toBeInTheDocument();
+  });
+
+  it('loads the next search page through the POST link the catalog gives', async () => {
+    respondWithSearch();
+    await renderPanel();
+    await openCatalog();
+    await openCollection();
+
+    fireEvent.change(screen.getByLabelText('Search items'), { target: { value: 'reflectance' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Load more' }));
+    });
+
+    const [requested, init] = fetchMock.mock.calls[fetchMock.mock.calls.length - 1];
+    expect(requested).toBe(SEARCH);
+    const sent = init as RequestInit;
+    expect(sent.method).toBe('POST');
+    // merge:true, so the link's token rides along with the filters that searched
+    expect(JSON.parse(String(sent.body))).toEqual({
+      collections: ['sentinel-2-l2a'],
+      limit: 20,
+      q: 'reflectance',
+      token: NEXT_TOKEN.token,
+    });
+    expect(screen.getByTestId('stac-item-S2A_TILE_20240601')).toBeInTheDocument();
+    expect(screen.getByTestId('stac-item-S2A_TILE_20240602')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Load more' })).toBeNull();
   });
 
   it('returns to the plain item listing once the filters are cleared', async () => {
-    respond((url) => {
-      if (url === CATALOG) return jsonOk(ROOT_DOC);
-      if (url === COLLECTIONS) return jsonOk(COLLECTIONS_DOC);
-      if (url === SEARCH) return jsonOk(SEARCH_DOC);
-      if (url.startsWith(ITEMS)) return jsonOk(ITEMS_DOC);
-      return jsonOk({}, 404);
-    });
+    respondWithSearch();
     await renderPanel();
     await openCatalog();
     await openCollection();

@@ -3,20 +3,20 @@ import { useCesium } from '../hooks/useCesium';
 import { useMapLibre } from '../hooks/useMapLibre';
 import { useAgentLayersCesium } from '../hooks/useAgentLayersCesium';
 import { useAgentLayersMapLibre } from '../hooks/useAgentLayersMapLibre';
-import type { PaneRenderer } from '../store/splitView';
+import type { Pane } from '../store/splitView';
 
 /**
- * The split view's second pane. Mounted only while the split is on, so
+ * A split view pane beside the viewer. Mounted only while the split is on, so
  * unmounting is what tears the renderer down: the hooks destroy their instance
  * (and its WebGL context) on unmount.
  *
- * The pane draws the basemap and the agent's layers. Everything else a tool can
- * add (Ion tilesets, terrain, OGC services, draw and measure) acts on the one
- * registered viewer, which stays the left pane.
+ * The pane draws its own basemap and the agent's layers. Everything else a tool
+ * can add (Ion tilesets, terrain, OGC services, draw and measure) acts on the
+ * one registered viewer, which stays the left pane.
  */
-export function SplitPane({ renderer }: { renderer: PaneRenderer }) {
-  const cesiumRef = useCesium({ containerId: 'cesium-pane', slot: 'pane' });
-  const maplibreRef = useMapLibre({ containerId: 'maplibre-pane', slot: 'pane' });
+export function SplitPane({ pane }: { pane: Pane }) {
+  const cesiumRef = useCesium({ containerId: 'cesium-pane', pane });
+  const maplibreRef = useMapLibre({ containerId: 'maplibre-pane', pane });
 
   useAgentLayersCesium(cesiumRef);
   useAgentLayersMapLibre(maplibreRef);
@@ -29,7 +29,7 @@ export function SplitPane({ renderer }: { renderer: PaneRenderer }) {
       maplibreRef.current?.resize();
     }, 150);
     return () => clearTimeout(timer);
-  }, [renderer, cesiumRef, maplibreRef]);
+  }, [pane.renderer, cesiumRef, maplibreRef]);
 
   return (
     <>
@@ -38,7 +38,7 @@ export function SplitPane({ renderer }: { renderer: PaneRenderer }) {
         style={{
           position: 'absolute',
           inset: 0,
-          display: renderer === 'cesium' ? 'block' : 'none',
+          display: pane.renderer === 'cesium' ? 'block' : 'none',
         }}
       />
       <div
@@ -46,7 +46,7 @@ export function SplitPane({ renderer }: { renderer: PaneRenderer }) {
         style={{
           position: 'absolute',
           inset: 0,
-          display: renderer === 'maplibre' ? 'block' : 'none',
+          display: pane.renderer === 'maplibre' ? 'block' : 'none',
         }}
       />
     </>

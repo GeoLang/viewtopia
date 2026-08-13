@@ -4,7 +4,7 @@ import { Cartesian2, Cartesian3, Cartographic, Math as CesiumMath } from 'cesium
 import { useAppStore } from '../store/app';
 import { useDrawStore } from '../store/draw';
 import { useMeasureStore } from '../store/measure';
-import { useSplitViewStore } from '../store/splitView';
+import { useSplitViewStore, usePanes } from '../store/splitView';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { useCesium } from '../hooks/useCesium';
 import { useMapLibre } from '../hooks/useMapLibre';
@@ -41,8 +41,9 @@ import { SplitPane } from './SplitPane';
 export function ViewerArea() {
   const { activeTab, renderer } = useAppStore();
   const splitActive = useSplitViewStore((s) => s.active);
-  const paneRenderer = useSplitViewStore((s) => s.paneRenderer);
   const swipeAt = useSplitViewStore((s) => s.swipeAt);
+  // the viewer is the first pane, and today's layout puts one pane beside it
+  const [, comparePane] = usePanes();
   // the second pane is a globe renderer, so the 2D map tab stays single
   const split = splitActive && activeTab === 'globe';
   // a swipe overlays the panes instead of halving them
@@ -283,7 +284,7 @@ export function ViewerArea() {
       </Box>
 
       {/* Right pane: a second renderer instance, synced to the left one */}
-      {split && (
+      {split && comparePane && (
         <Box
           data-testid="viewer-pane-right"
           style={{
@@ -296,7 +297,7 @@ export function ViewerArea() {
             clipPath: swipe ? `inset(0 0 0 ${swipeAt}%)` : undefined,
           }}
         >
-          <SplitPane renderer={paneRenderer} />
+          <SplitPane pane={comparePane} />
         </Box>
       )}
 

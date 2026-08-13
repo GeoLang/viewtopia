@@ -6,6 +6,40 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-12: **each split-view pane picks its own basemap**. Pane state is a
+  list of renderer-plus-basemap entries rather than a single right-pane
+  renderer, the viewer itself is pane 0 and keeps its state in the app store
+  where viewer-scoped tools already read it, and the Split View panel shows a
+  renderer and a basemap select per pane. Cameras stay locked and there is
+  still no focused-pane concept. A project file saves the pane list, and one
+  saved before this keeps whatever panes are loaded instead of restoring an
+  empty list. Nothing can grow the list past two panes yet, so the cap of 4
+  and the one-Cesium rule wait for the tiled compare view.
+
+- 2026-08-12: **STAC search pages past its first 20 items**. A filtered search
+  now offers Load more, replaying the catalog's next link as the STAC API spec
+  says: the link's own method, body and headers, with `merge: true` folding the
+  link body over the body that produced the page so the filters survive. On a
+  same-origin catalog the session bearer is applied after the link's headers,
+  so a link cannot displace it.
+
+- 2026-08-12: **the Offline panel says when saved regions starve the cache**.
+  Region tiles are pinned and everything else shares the 200 MB budget, so
+  regions alone filling it silently stopped browsing tiles from caching. The
+  panel now says so in one line, shown only when pinned region size meets or
+  exceeds the budget.
+
+- 2026-08-12: **spatial SQL no longer leaves the app origin**. `INSTALL
+  spatial` pulled from extensions.duckdb.org on every fresh session. A
+  `prebuild` script now probes the pinned DuckDB-wasm for its engine version
+  and downloads the spatial extension for each shipped wasm platform into
+  `public/duckdb-extensions/` (gitignored, refetched on version bumps), and
+  the worker points `custom_extension_repository` at the app origin, falling
+  back to the CDN only when the origin copy is missing. The binaries stay out
+  of the service worker precache like the DuckDB wasm itself, so a session
+  with no network at all still has no spatial SQL, what changed is that no
+  external host is needed.
+
 - 2026-08-12: **STAC item filters, and the data-catalog plugin is gone**. The
   STAC Browser panel listed a collection's items and could cut them to the
   current view, and nothing else. Free text and a maximum cloud cover now sit
@@ -384,6 +418,9 @@ All notable changes to this project will be documented in this file.
   posting, segment rendering and the bell.
 
 ### Fixed
+
+- 2026-08-12: **docs page claimed 15 QGIS ports**. The QGIS Plugin Equivalents
+  section shows 11 cards, and the stat beside it now says 11.
 
 - 2026-08-12: **the standalone map export drew no basemap**. Its raster style
   carried the app's `cached://` tile URLs, which resolve only through the
