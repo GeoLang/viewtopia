@@ -215,27 +215,79 @@ already shipped: terrano's COG writer emits only Float64, so a browser convertin
 `bands_to_tiles` plus the bits and format IFD entries, then rebuild the vendored
 wasm package and wire viewtopia. Details under the raster conversion item below.
 
-## OPEN — sensors and observations, answered 2026-08-13
+## FEATURE — region watch: IoT sensors and change over time
 
-Asked: should the platform have an observation management and sensor monitoring
-feature. Answer: not as a product line. What follows is the reasoning and the
-two smaller things that do follow from it.
+One feature with two halves: a region you care about, watched over time, fed by
+live sensor streams and by imagery, alerting when it changes. Wanted by the
+owner, 2026-08-13.
 
-The engine already exists and is real. fluvius does geofencing with per-entity
-state, complex event processing, tumbling/sliding/session windows, watermarks,
-temporal joins, an R-tree over millions of entities, and carries MQTT, Kafka and
-WebSocket connectors. 182 tests. Nothing about sensor ingest needs building.
+**What already exists**, verified rather than assumed:
 
-It is deployed nowhere. No reference to fluvius in the terraform, the platform
-compose, or the proxy Caddyfile. It is a library and a CLI the platform never
-starts.
+- **fluvius** is a real stream processor, not a stub. Geofencing with per-entity
+  state, complex event processing, tumbling/sliding/session windows, watermarks,
+  temporal joins, an R-tree over millions of entities, and MQTT, Kafka and
+  WebSocket connectors. 182 tests. It is deployed nowhere: no reference in the
+  terraform, the platform compose, or the proxy Caddyfile.
+- **geoplumb** already answers the hard half of region change. `POST
+  /zonal/{layer}` returns zonal statistics over a region and `POST
+  /zonal/{layer}/series` returns a time series, on demand, against STAC
+  collections or local COGs. That is region change tracking already, missing only
+  persistence and a schedule.
+- **terrano** has `RasterStack`: composites, linear trend fitting, change
+  detection, anomaly z-scores, phenology metrics, normalized difference indices.
+- **panoptes** does pixel-difference change detection, plus an ONNX segmentation
+  path that works but ships no weights.
+- **ptolemy** versions features with branch, diff, merge and audit, so change over
+  time on *vector* data is already a solved problem here.
+- **viewtopia** has TimelinePanel, TimelapsePanel and HeatmapPanel.
 
-What is genuinely missing is the store, not the monitoring. fluvius processes a
-stream and emits. Nothing persists observations so you can ask what a sensor read
-last Tuesday. That is what "observation management" means, the OGC standard for
-it is SensorThings API, and nothing here implements it. Building it is an IoT
-platform, which competes with the thesis rather than serving it. The scope
-discipline above says win one workflow and refuse parity fights.
+**What is missing**, in dependency order:
+
+1. **the watch object.** A persisted region plus its sources, rule and cadence.
+   Nothing holds one. Decide where it lives: ptolemy already versions geometry
+   and would give diff and audit for free, but a watch is configuration rather
+   than a feature, so it may not belong in a feature store.
+2. **the scheduler.** Something has to re-run the pull and compare. geoplumb is
+   pull-only by design and computes only when asked. Do not put a scheduler
+   inside it, that breaks its one architectural rule. The trigger belongs
+   outside.
+3. **the result store.** A per-watch time series of readings and detected
+   changes. This is the real observation-store gap. For raster it is small, one
+   row per run per region. For high-frequency sensors it is not, and that is the
+   piece that quietly turns into an IoT platform if left unbounded. Bound it up
+   front with a retention window and a per-watch cap.
+4. **alerting.** fluvius already does thresholds and CEP over streams. On the
+   raster side the rule is a threshold on a zonal statistic or a z-score.
+   Delivery is the open question, a webhook is the cheapest first answer.
+5. **sensor ingest.** fluvius deployed as a service with MQTT and WebSocket
+   sources, emitting into agora so viewtopia renders it as an ordinary layer
+   whose features move. No new ingest path and no new store, since agora already
+   carries live multiplayer. This also answers FleetPanel, which is the same gap.
+
+**Sequencing.** Raster first: a watch over a region with a scheduled
+`/zonal/series` call, a threshold and a webhook is a working, useful feature that
+needs no new compute at all. Sensors second, because that half needs fluvius
+deployed and the bounded store designed. Splitting it this way means something
+ships before the expensive part starts.
+
+**Open questions to settle before building:**
+
+- whether watch results belong in ptolemy as versioned features, which brings
+  diff and audit for free, or in their own store
+- retention, per watch, for sensor readings. Decide the number before writing the
+  store, not after
+- what a shared or anonymous viewer sees of a watch, which ties to hosted share
+  links
+- whether the sensor half should speak OGC SensorThings API or a private schema.
+  SensorThings is the standard and buys interoperability, but it is a large
+  surface to implement and nothing in the tree speaks it today
+- whether agora can carry a high-frequency feed without competing with
+  collaboration traffic, and what a live layer's features do when a user saves
+  the map
+
+**Scope note, recorded once.** This is the largest addition in the backlog and it
+competes with the hosted flagship for attention. The raster-first sequencing is
+what keeps it affordable, because it reuses geoplumb wholesale.
 
 - [ ] **verify what viewtopia and tiletopia already claim about sensors.** Same
       class as the panoptes overselling, and wider. `viewtopia/README.md` line 99
