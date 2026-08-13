@@ -6,6 +6,7 @@ import { useAgentLayerStore } from '../store/agentLayers';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { isPreviewPanel } from './toolMenus';
 import { PluginPanel } from '../plugins/PluginHost';
+import { PluginManagerPanel } from '../plugins/runtime/PluginManagerPanel';
 import { MeasurementPanel } from './tools/MeasurementPanel';
 import { FeaturePickerPanel } from './tools/FeaturePickerPanel';
 import { GeoJsonEditorPanel } from './tools/GeoJsonEditorPanel';
@@ -298,6 +299,8 @@ export function ToolPanels() {
       return <ConvertPanel onClose={close} />;
     case 'printExport':
       return <PrintExportPanel onClose={close} />;
+    case 'pluginManager':
+      return <PluginManagerPanel onClose={close} />;
     default:
       // Check if it's a plugin panel
       if (activePanel) {

@@ -24,7 +24,7 @@ import { toggleInspectPanel } from '../store/featurePicker';
 import { TOOLBAR_ICONS_ONLY_QUERY } from '../theme';
 import { useViewOnlyLive } from '../live/liveStore';
 import { useSpaceTimeStore } from '../features/spacetime/store';
-import { getPlugins } from '../plugins/registry';
+import { getPlugins, usePluginRegistryVersion } from '../plugins/registry';
 import {
   ACTIONS_MENU,
   ANALYSIS_MENU,
@@ -54,6 +54,7 @@ export function ViewerToolbar({ compact = false }: { compact?: boolean }) {
   const toggleSpaceTime = useSpaceTimeStore((s) => s.togglePanel);
   const showPreviewTools = useAppStore((s) => s.settings.showPreviewTools);
   const viewOnly = useViewOnlyLive();
+  usePluginRegistryVersion();
   const plugins = getPlugins();
   const iconsOnly = useMediaQuery(TOOLBAR_ICONS_ONLY_QUERY, false, {
     getInitialValueInEffect: false,

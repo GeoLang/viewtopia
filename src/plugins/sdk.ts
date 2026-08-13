@@ -13,6 +13,9 @@
 
 import type { ReactNode } from 'react';
 
+/** bumped when the PluginContext shape changes; downloaded bundles can check it */
+export const PLUGIN_SDK_VERSION = 1;
+
 // ─── Plugin Context (passed to every plugin panel) ──────────────────
 
 export interface PluginMapContext {

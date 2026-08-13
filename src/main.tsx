@@ -13,6 +13,12 @@ if (container) {
   // both branches load late so the presenter window never pulls in the viewer
   const view = isStoryPresenterRequested()
     ? import('./components/StoryPresenterView').then((m) => <m.StoryPresenterView />)
-    : import('./App').then((m) => <m.App />);
+    : import('./App').then(async (m) => {
+        // App's imports register the built-in plugins, so an installed plugin
+        // can never claim an id the build already owns
+        const { loadInstalledPlugins } = await import('./plugins/runtime/manager');
+        loadInstalledPlugins();
+        return <m.App />;
+      });
   view.then((element) => root.render(<StrictMode>{element}</StrictMode>));
 }

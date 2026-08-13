@@ -132,6 +132,88 @@ Plugins can import from any dependency in `package.json`:
 - `react` / `react-dom`
 - Any npm package you add to the project
 
+## Runtime Plugins
+
+Plugins can also be installed while the app is running, from **More → Plugin Manager**. Installs
+only ever come from a registry document, never from a URL a user pastes.
+
+### Registry document
+
+JSON served over https (http is allowed on `localhost` and `127.0.0.1` for development):
+
+```json
+{
+  "plugins": [
+    {
+      "id": "my-plugin",
+      "name": "My Plugin",
+      "version": "1.0.0",
+      "description": "What it does",
+      "author": "Someone",
+      "url": "https://plugins.example.com/my-plugin-1.0.0.js",
+      "integrity": "sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
+    }
+  ]
+}
+```
+
+`id` is kebab-case and may not be the id of a plugin that ships with the build. `url` points at an
+ESM bundle. `integrity` is mandatory and is the sha-256 of the bundle bytes in SRI form:
+
+```sh
+echo "sha256-$(openssl dgst -binary -sha256 my-plugin-1.0.0.js | base64)"
+```
+
+The bundle is refused unless its bytes hash to exactly that value, at install and again at every
+load from local storage. Ship a new file with a new hash for each version rather than replacing a
+published one.
+
+Point the app at a registry with `VITE_PLUGIN_REGISTRY_URL` at build time, or with the Plugin
+Registry URL field in the Plugin Manager. With neither set, the panel says no registry is
+configured.
+
+### Building a bundle
+
+A runtime plugin default-exports the same `PluginDefinition` as a built-in one, but it must render
+with the host's React: a second copy of React in the page breaks hooks. Externalize `react`,
+`react/jsx-runtime` and the SDK, and resolve them to `window.__viewtopiaPluginHost`. Everything
+else, Mantine and icons included, has to be bundled in, so a runtime plugin is best kept to plain
+elements and its own styles.
+
+```js
+// vite.config.js for a plugin
+const hostModules = {
+  react: 'react',
+  'react/jsx-runtime': 'jsxRuntime',
+  '@viewtopia/plugin-sdk': 'sdk',
+};
+
+const hostGlobals = {
+  name: 'viewtopia-host-globals',
+  resolveId: (id) => (id in hostModules ? `\0host:${id}` : null),
+  load(id) {
+    if (!id.startsWith('\0host:')) return null;
+    const key = hostModules[id.slice('\0host:'.length)];
+    return `const m = window.__viewtopiaPluginHost.${key};
+export default m;
+export const { ${key === 'jsxRuntime' ? 'jsx, jsxs, Fragment' : 'useState, useEffect, useMemo, useRef, useCallback, createElement'} } = m;`;
+  },
+};
+
+export default {
+  plugins: [hostGlobals],
+  build: {
+    lib: { entry: 'src/index.tsx', formats: ['es'], fileName: 'my-plugin' },
+    rollupOptions: { external: Object.keys(hostModules) },
+  },
+};
+```
+
+The `id` the bundle exports must match the `id` the registry lists, or the load is refused.
+
+A plugin that fails to load is left disabled with the reason shown in the Plugin Manager. It is not
+retried until the next reload, and it never blocks the rest of the app.
+
 ## File Structure
 
 ```

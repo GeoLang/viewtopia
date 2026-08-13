@@ -38,6 +38,7 @@ import {
   IconPhoto,
   IconPhotoPlus,
   IconPlanet,
+  IconPlug,
   IconPrinter,
   IconRoute,
   IconRuler2,
@@ -166,6 +167,7 @@ export const MORE_MENU: ToolMenuItem[][] = [
   [
     { panel: 'shareLink', label: 'Share Link', icon: IconLink },
     { panel: 'tour', label: 'Tour', icon: IconSchool },
+    { panel: 'pluginManager', label: 'Plugin Manager', icon: IconPlug },
   ],
 ];
 

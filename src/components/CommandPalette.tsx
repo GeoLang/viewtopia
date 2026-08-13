@@ -19,7 +19,7 @@ import { useAppStore, type ToolPanel } from '../store/app';
 import { toggleInspectPanel } from '../store/featurePicker';
 import { useViewOnlyLive } from '../live/liveStore';
 import { useSpaceTimeStore } from '../features/spacetime/store';
-import { getPlugins } from '../plugins/registry';
+import { getPlugins, usePluginRegistryVersion } from '../plugins/registry';
 import { TOOL_MENU_GROUPS, visibleToolItems, type ToolMenuItem } from './toolMenus';
 import { exportMapPng } from './mapExport';
 
@@ -37,6 +37,7 @@ export function CommandPalette() {
   const showPreviewTools = useAppStore((s) => s.settings.showPreviewTools);
   const toggleSpaceTime = useSpaceTimeStore((s) => s.togglePanel);
   const viewOnly = useViewOnlyLive();
+  const pluginRegistryVersion = usePluginRegistryVersion();
 
   const actionGroups = useMemo<SpotlightActionGroupData[]>(() => {
     const toolAction = (item: ToolMenuItem) => ({
@@ -156,7 +157,16 @@ export function CommandPalette() {
     }
 
     return groups;
-  }, [togglePanel, setActiveTab, toggleUiHidden, toggleSpaceTime, showPreviewTools, viewOnly]);
+  }, [
+    togglePanel,
+    setActiveTab,
+    toggleUiHidden,
+    toggleSpaceTime,
+    showPreviewTools,
+    viewOnly,
+    // getPlugins() is read inside, so a runtime install has to rebuild the list
+    pluginRegistryVersion,
+  ]);
 
   return (
     <Spotlight
