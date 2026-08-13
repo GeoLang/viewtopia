@@ -1,5 +1,5 @@
 import { test, expect } from '../console-guard';
-import { PANEL, MENU_ITEM, openApp } from '../panel-helpers';
+import { PANEL, MENU_ITEM, openApp, openBasemapRendererControl } from '../panel-helpers';
 
 /**
  * Functional smoke for the Tools menu panels against the live platform stack.
@@ -158,6 +158,25 @@ const jumpPaneMap = (page, index, view) =>
   page.evaluate(
     ({ i, v }) => window.__viewtopiaPaneMaps[i].jumpTo({ center: [v.lon, v.lat], zoom: v.zoom }),
     { i: index, v: view },
+  );
+
+/** Centre and zoom of a Leaflet split pane, which draws tiles rather than a canvas. */
+const paneLeafletCamera = (page, index) =>
+  page.evaluate((i) => {
+    const map = window.__viewtopiaPaneLeaflets?.[i];
+    if (!map) return null;
+    const c = map.getCenter();
+    return { lon: c.lng, lat: c.lat, zoom: map.getZoom() };
+  }, index);
+
+/** What a live map is drawing, as the sources of its style. */
+const mapStyleSources = (page, key) =>
+  page.evaluate((k) => JSON.stringify(window[k]?.getStyle().sources ?? null), key);
+
+const paneStyleSources = (page, index) =>
+  page.evaluate(
+    (i) => JSON.stringify(window.__viewtopiaPaneMaps?.[i]?.getStyle().sources ?? null),
+    index,
   );
 
 /** A map camera match that tolerates the float noise of a renderer round trip. */
@@ -626,6 +645,63 @@ test.describe('Tools panels', () => {
       await expect(page.getByTestId(id).locator('canvas')).toHaveCount(1);
     }
     await expect(page.locator('canvas')).toHaveCount(4);
+
+    await panel.getByText('Enable Split View').click();
+    await expect(page.getByTestId('viewer-pane-bottom-right')).toHaveCount(0);
+    await closePanel(page, panel);
+  });
+
+  test('split view: the corner control styles the pane that was clicked', async ({ page }) => {
+    await openApp(page);
+    const panel = await openPanel(page, 'Split View', 'Split View');
+
+    await selectOption(page, panel, 'Left pane', 'MapLibre', { exact: true });
+    await page.waitForFunction(() => !!window.__viewtopiaMap);
+    await selectOption(page, panel, 'Layout', '2x2 grid');
+    await panel.getByText('Enable Split View').click();
+    await page.waitForFunction(() => Object.keys(window.__viewtopiaPaneMaps ?? {}).length === 3);
+    // the panel's own basemap selects would match the corner control's by name
+    await closePanel(page, panel);
+
+    // the styling starts on the viewer, and the click moves it
+    const viewerPane = page.getByTestId('viewer-pane-left');
+    const bottomRight = page.getByTestId('viewer-pane-bottom-right');
+    await expect(viewerPane.getByTestId('active-pane-frame')).toHaveCount(1);
+    await bottomRight.click();
+    await expect(bottomRight.getByTestId('active-pane-frame')).toHaveCount(1);
+    await expect(viewerPane.getByTestId('active-pane-frame')).toHaveCount(0);
+
+    const viewerStyle = await mapStyleSources(page, '__viewtopiaMap');
+    await openBasemapRendererControl(page);
+    await page.getByRole('textbox', { name: 'Basemap', exact: true }).click();
+    await page.getByRole('option', { name: 'Satellite' }).click();
+
+    // only the clicked pane redraws, the viewer keeps the basemap it had
+    await expect.poll(() => paneStyleSources(page, 3)).toContain('arcgisonline');
+    expect(await mapStyleSources(page, '__viewtopiaMap')).toBe(viewerStyle);
+    expect(await paneStyleSources(page, 1)).not.toContain('arcgisonline');
+  });
+
+  test('split view: a 2D pane in the grid follows the shared camera', async ({ page }) => {
+    await openApp(page);
+    const panel = await openPanel(page, 'Split View', 'Split View');
+
+    await selectOption(page, panel, 'Left pane', 'MapLibre', { exact: true });
+    await page.waitForFunction(() => !!window.__viewtopiaMap);
+    await selectOption(page, panel, 'Layout', '2x2 grid');
+    await selectOption(page, panel, 'Bottom right pane', 'Leaflet (2D)', { exact: true });
+    await panel.getByText('Enable Split View').click();
+    await page.waitForFunction(() => !!window.__viewtopiaPaneLeaflets?.[3]);
+
+    // leaflet draws tiles into the DOM, so this pane has no canvas of its own
+    const bottomRight = page.getByTestId('viewer-pane-bottom-right');
+    await expect(bottomRight.locator('.leaflet-container')).toHaveCount(1);
+    await expect(bottomRight.locator('canvas')).toHaveCount(0);
+    await expect(bottomRight.locator('img.leaflet-tile').first()).toBeAttached();
+
+    // a move on the viewer arrives as this pane's centre and zoom
+    await jumpMap(page, '__viewtopiaMap', ICELAND_VIEW);
+    await expect.poll(() => paneLeafletCamera(page, 3)).toEqual(nearView(ICELAND_VIEW));
 
     await panel.getByText('Enable Split View').click();
     await expect(page.getByTestId('viewer-pane-bottom-right')).toHaveCount(0);

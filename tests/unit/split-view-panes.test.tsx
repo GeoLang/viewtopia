@@ -8,8 +8,10 @@ import { DEFAULT_BASEMAP } from '../../src/hooks/basemapTiles';
 import {
   useSplitViewStore,
   usePanes,
+  paneRendererChoices,
   VIEWER_PANE,
   COMPARE_PANE,
+  type Pane,
 } from '../../src/store/splitView';
 
 window.matchMedia = vi.fn().mockReturnValue({
@@ -34,8 +36,23 @@ beforeEach(() => {
   useSplitViewStore.setState({
     active: true,
     comparePanes: [{ renderer: 'maplibre', basemap: 'satellite' }],
+    activePane: VIEWER_PANE,
   });
 });
+
+/** The pane list the way usePanes builds it, read outside a render. */
+function panesNow(): Pane[] {
+  const app = useAppStore.getState();
+  return [
+    { renderer: app.renderer, basemap: app.basemap },
+    ...useSplitViewStore.getState().comparePanes,
+  ];
+}
+
+/** Whether one pane's renderer select still offers Cesium. */
+function cesiumOffered(panes: Pane[], index: number): boolean {
+  return paneRendererChoices(panes, index).some((c) => c.value === 'cesium' && !c.disabled);
+}
 
 function panel() {
   return render(
@@ -109,6 +126,52 @@ describe('split view panes', () => {
       { renderer: 'maplibre', basemap: 'satellite' },
     ]);
   });
+
+  it('styles the pane that was clicked', () => {
+    useSplitViewStore.getState().setLayout('grid');
+    useSplitViewStore.getState().setActivePane(3);
+
+    expect(useSplitViewStore.getState().activePane).toBe(3);
+  });
+
+  it('takes the styling back to the viewer when the grid shrinks', () => {
+    useSplitViewStore.getState().setLayout('grid');
+    useSplitViewStore.getState().setActivePane(3);
+
+    useSplitViewStore.getState().setLayout('twoAcross');
+
+    expect(useSplitViewStore.getState().activePane).toBe(VIEWER_PANE);
+  });
+
+  it('takes the styling back to the viewer when the split closes', () => {
+    useSplitViewStore.getState().setActivePane(COMPARE_PANE);
+
+    useSplitViewStore.getState().setActive(false);
+
+    expect(useSplitViewStore.getState().activePane).toBe(VIEWER_PANE);
+  });
+
+  it('offers the 2D renderer beside the viewer only', () => {
+    const panes = panesNow();
+
+    expect(paneRendererChoices(panes, VIEWER_PANE).map((c) => c.value)).toEqual([
+      'cesium',
+      'maplibre',
+    ]);
+    expect(paneRendererChoices(panes, COMPARE_PANE).map((c) => c.value)).toEqual([
+      'cesium',
+      'maplibre',
+      'leaflet',
+    ]);
+  });
+
+  it('closes Cesium to every pane but the one already drawing it', () => {
+    useAppStore.setState({ renderer: 'cesium' });
+    const panes = panesNow();
+
+    expect(cesiumOffered(panes, VIEWER_PANE)).toBe(true);
+    expect(cesiumOffered(panes, COMPARE_PANE)).toBe(false);
+  });
 });
 
 describe('the split view panel', () => {
@@ -138,6 +201,21 @@ describe('the split view panel', () => {
     ).toHaveValue('Dark');
     expect(screen.getByRole('textbox', { name: 'Bottom right pane basemap' })).toBeVisible();
     expect(screen.queryByRole('textbox', { name: 'Right pane' })).toBeNull();
+  });
+
+  it('closes the Cesium option to a pane while the viewer holds it', () => {
+    useAppStore.setState({ renderer: 'cesium' });
+    panel();
+
+    fireEvent.click(screen.getByRole('textbox', { name: 'Right pane' }));
+    const options = within(screen.getByRole('listbox', { name: 'Right pane' }));
+
+    expect(options.getByRole('option', { name: 'CesiumJS (3D)' })).toHaveAttribute(
+      'data-combobox-disabled',
+    );
+    expect(options.getByRole('option', { name: 'Leaflet (2D)' })).not.toHaveAttribute(
+      'data-combobox-disabled',
+    );
   });
 
   it('sends the left pane picker to the viewer', () => {

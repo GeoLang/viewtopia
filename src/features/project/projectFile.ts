@@ -9,7 +9,7 @@ import {
 import { overlayImages } from '../../offline/db';
 import { migrateLegacyChoropleth } from '../symbology/symbology';
 import { useOgcLayerStore, loadPmtilesLayer, type OGCLayer } from '../../store/ogcLayers';
-import { useSplitViewStore, type Pane } from '../../store/splitView';
+import { useSplitViewStore, asPaneRenderer, type Pane } from '../../store/splitView';
 import { captureCameraState, flyToCameraState, type CameraState } from '../../store/cameraViews';
 import { getActiveCesiumViewer, getActiveMapLibre } from '../../viewer/registry';
 import { getSharedCamera, setSharedCamera } from '../../hooks/sharedCamera';
@@ -118,7 +118,7 @@ const KNOWN_BASEMAPS: string[] = [...BASEMAP_OPTIONS.map((o) => o.value), 'custo
 function readComparePanes(saved: unknown): Pane[] {
   const list = Array.isArray(saved) ? saved : [];
   return list.flatMap((entry: Partial<Pane>) => {
-    const renderer = asRenderer(entry.renderer);
+    const renderer = asPaneRenderer(entry.renderer);
     if (!renderer || !KNOWN_BASEMAPS.includes(entry.basemap as string)) return [];
     return [{ renderer, basemap: entry.basemap as Basemap }];
   });

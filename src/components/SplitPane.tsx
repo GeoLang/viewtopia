@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useCesium } from '../hooks/useCesium';
 import { useMapLibre } from '../hooks/useMapLibre';
+import { useLeaflet } from '../hooks/useLeaflet';
 import { useAgentLayersCesium } from '../hooks/useAgentLayersCesium';
 import { useAgentLayersMapLibre } from '../hooks/useAgentLayersMapLibre';
 import type { Pane, SplitLayout } from '../store/splitView';
@@ -10,9 +11,11 @@ import type { Pane, SplitLayout } from '../store/splitView';
  * unmounting is what tears the renderer down: the hooks destroy their instance
  * (and its WebGL context) on unmount.
  *
- * The pane draws its own basemap and the agent's layers. Everything else a tool
- * can add (Ion tilesets, terrain, OGC services, draw and measure) acts on the
- * one registered viewer, which stays the top left pane.
+ * The pane draws its own basemap, and the agent's layers on the two globe
+ * renderers: useAgentLayersLeaflet re-adds its layers on a tab switch, which is
+ * when the 2D viewer is rebuilt, so it never sees a pane map appear.
+ * Everything else a tool can add (Ion tilesets, terrain, OGC services, draw and
+ * measure) acts on the one registered viewer, which stays the top left pane.
  */
 export function SplitPane({
   pane,
@@ -25,8 +28,10 @@ export function SplitPane({
 }) {
   const cesiumId = `cesium-pane-${index}`;
   const maplibreId = `maplibre-pane-${index}`;
+  const leafletId = `leaflet-pane-${index}`;
   const cesiumRef = useCesium({ containerId: cesiumId, pane, paneIndex: index });
   const maplibreRef = useMapLibre({ containerId: maplibreId, pane, paneIndex: index });
+  const leafletRef = useLeaflet({ containerId: leafletId, pane, paneIndex: index });
 
   useAgentLayersCesium(cesiumRef);
   useAgentLayersMapLibre(maplibreRef);
@@ -38,9 +43,10 @@ export function SplitPane({
       const viewer = cesiumRef.current;
       if (viewer && !viewer.isDestroyed()) viewer.resize();
       maplibreRef.current?.resize();
+      leafletRef.current?.invalidateSize();
     }, 150);
     return () => clearTimeout(timer);
-  }, [pane.renderer, layout, cesiumRef, maplibreRef]);
+  }, [pane.renderer, layout, cesiumRef, maplibreRef, leafletRef]);
 
   return (
     <>
@@ -58,6 +64,17 @@ export function SplitPane({
           position: 'absolute',
           inset: 0,
           display: pane.renderer === 'maplibre' ? 'block' : 'none',
+        }}
+      />
+      <div
+        id={leafletId}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          display: pane.renderer === 'leaflet' ? 'block' : 'none',
+          // leaflet panes carry z-index 400+; without an own stacking context
+          // they paint over body-level dropdowns (z 300)
+          zIndex: 0,
         }}
       />
     </>

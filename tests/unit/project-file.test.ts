@@ -140,6 +140,28 @@ describe('project round trip', () => {
     expect(split.comparePanes).toEqual([{ renderer: 'cesium', basemap: 'satellite' }]);
   });
 
+  it('keeps a 2D compare pane and drops one naming no renderer', () => {
+    useSplitViewStore.setState({
+      active: true,
+      comparePanes: [
+        { renderer: 'leaflet', basemap: 'osm' },
+        { renderer: 'maplibre', basemap: 'dark' },
+      ],
+    });
+
+    const saved = JSON.parse(JSON.stringify(serializeProject('four up')));
+    saved.splitView.comparePanes.push({ renderer: 'globe', basemap: 'osm' });
+    resetStores();
+
+    applyProject(parseProject(JSON.stringify(saved)));
+    flushCameraPoll();
+
+    expect(useSplitViewStore.getState().comparePanes).toEqual([
+      { renderer: 'leaflet', basemap: 'osm' },
+      { renderer: 'maplibre', basemap: 'dark' },
+    ]);
+  });
+
   it('names an image overlay and its placement, without the bitmap', () => {
     useAgentLayerStore.getState().addRasterLayer({
       id: 'plan',

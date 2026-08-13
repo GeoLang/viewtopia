@@ -13,15 +13,25 @@ import {
   useSplitViewStore,
   usePanes,
   paneLayout,
+  paneRendererChoices,
+  type Pane,
   type PaneRenderer,
   type SplitLayout,
 } from '../../store/splitView';
 
-/** The globe renderers any pane can show. */
-const RENDERERS = [
-  { value: 'cesium', label: 'CesiumJS (3D)' },
-  { value: 'maplibre', label: 'MapLibre' },
-];
+const RENDERER_LABELS: Record<PaneRenderer, string> = {
+  cesium: 'CesiumJS (3D)',
+  maplibre: 'MapLibre',
+  leaflet: 'Leaflet (2D)',
+};
+
+/** The renderers one pane may switch to, named the way this panel names them. */
+function rendererOptions(panes: Pane[], index: number) {
+  return paneRendererChoices(panes, index).map((choice) => ({
+    ...choice,
+    label: RENDERER_LABELS[choice.value],
+  }));
+}
 
 const LAYOUTS = [
   { value: 'twoAcross', label: 'Two across' },
@@ -78,7 +88,7 @@ export function SplitViewPanel({ onClose }: { onClose: () => void }) {
               <Select
                 size="xs"
                 label={label}
-                data={RENDERERS}
+                data={rendererOptions(panes, index)}
                 value={pane.renderer}
                 onChange={(v) => v && setPaneRenderer(index, v as PaneRenderer)}
                 allowDeselect={false}

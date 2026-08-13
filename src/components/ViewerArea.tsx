@@ -48,6 +48,25 @@ const PANE_TEST_IDS = [
   'viewer-pane-bottom-right',
 ];
 
+/**
+ * A frame over the pane the basemap and renderer pickers style. Pointer
+ * transparent, so the pane under it still takes the click that picked it.
+ */
+function ActivePaneFrame() {
+  return (
+    <div
+      data-testid="active-pane-frame"
+      style={{
+        position: 'absolute',
+        inset: 0,
+        border: '2px solid var(--mantine-color-violet-5)',
+        pointerEvents: 'none',
+        zIndex: 1,
+      }}
+    />
+  );
+}
+
 /** Where a pane sits in a columns by rows tiling of the viewer area. */
 function paneBox(index: number, columns: number, rows: number): CSSProperties {
   const column = index % columns;
@@ -68,6 +87,8 @@ export function ViewerArea() {
   const splitActive = useSplitViewStore((s) => s.active);
   const swipeAt = useSplitViewStore((s) => s.swipeAt);
   const comparePanes = useSplitViewStore((s) => s.comparePanes);
+  const activePane = useSplitViewStore((s) => s.activePane);
+  const setActivePane = useSplitViewStore((s) => s.setActivePane);
   const layout = paneLayout(comparePanes.length + 1);
   // the panes beside the viewer are globe renderers, so the 2D map tab stays single
   const split = splitActive && activeTab === 'globe';
@@ -266,6 +287,7 @@ export function ViewerArea() {
       <Box
         data-testid={PANE_TEST_IDS[VIEWER_PANE]}
         style={paneBox(VIEWER_PANE, columns, rows)}
+        onClick={() => setActivePane(VIEWER_PANE)}
       >
         {/* CesiumJS 3D Globe */}
         <div
@@ -303,6 +325,8 @@ export function ViewerArea() {
             zIndex: 0,
           }}
         />
+
+        {split && activePane === VIEWER_PANE && <ActivePaneFrame />}
       </Box>
 
       {/* The panes beside it: their own renderer instances, synced to the viewer */}
@@ -318,8 +342,10 @@ export function ViewerArea() {
                   ? { position: 'absolute', inset: 0, clipPath: `inset(0 0 0 ${swipeAt}%)` }
                   : paneBox(index, columns, rows)
               }
+              onClick={() => setActivePane(index)}
             >
               <SplitPane pane={pane} index={index} layout={layout} />
+              {activePane === index && <ActivePaneFrame />}
             </Box>
           );
         })}

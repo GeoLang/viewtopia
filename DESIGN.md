@@ -380,7 +380,11 @@ map, plus a synced split view. Picking/draw/measure/agent-layers survive rendere
   with a re-entrancy guard and a subscribe-time snap, with clean teardown so the WebGL context
   limit holds. The layout is two panes across or a 2x2 grid, derived from how many panes there
   are rather than stored, and the viewer is the top left one. A swipe compare overlays two
-  panes under a clip path, so it is two panes only.
+  panes under a clip path, so it is two panes only. Compare panes may also draw with Leaflet,
+  on the raster approximation of a vector basemap; the viewer pane stays a globe because the
+  tool bindings assume one. Clicking a pane makes it the active one, which is what the
+  map-corner basemap and renderer pickers style, and only the UI keeps Cesium to one pane: the
+  option is closed wherever another pane holds it.
 - All navigation, bookmarks included, goes through the shared fly-to pipeline, which is what
   makes it work on the 2D renderers and for bookmarks that carry no camera.
 - The 2D map tab disables the renderer select and the vector basemap options.

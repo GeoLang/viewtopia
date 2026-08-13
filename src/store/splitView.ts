@@ -1,9 +1,19 @@
 import { useMemo } from 'react';
 import { create } from 'zustand';
 import { DEFAULT_BASEMAP } from '../hooks/basemapTiles';
-import { useAppStore, type Basemap, type Renderer } from './app';
+import { useAppStore, asRenderer, type Basemap, type Renderer } from './app';
 
-export type PaneRenderer = Renderer;
+/**
+ * The viewer's two globe renderers plus the 2D map. Leaflet is a compare-pane
+ * choice only: the registered viewer every tool binds to has to be a globe, and
+ * the 2D Map tab is already the Leaflet view of it.
+ */
+export type PaneRenderer = Renderer | 'leaflet';
+
+/** A saved pane renderer, or null when the app has no renderer by that name. */
+export function asPaneRenderer(value: unknown): PaneRenderer | null {
+  return value === 'leaflet' ? 'leaflet' : asRenderer(value);
+}
 
 /** What one pane draws: its own renderer and its own basemap. */
 export interface Pane {
@@ -52,10 +62,45 @@ function resizeComparePanes(panes: Pane[], count: number): Pane[] {
   return [...panes, ...Array.from({ length: count - panes.length }, defaultPane)];
 }
 
+/**
+ * Only one pane may draw with Cesium, so say whether some other pane already
+ * holds it. Two panes running the Cesium globe at once is more WebGL than a
+ * machine can be asked for, and the second one starves the first.
+ */
+export function cesiumHeldElsewhere(panes: Pane[], index: number): boolean {
+  return panes.some((pane, i) => i !== index && pane.renderer === 'cesium');
+}
+
+/**
+ * What one pane may switch to, in menu order: the 2D renderer beside the viewer
+ * only, and Cesium wherever it is free. The labels are the caller's, so the
+ * panel and the map-corner control can name the same renderer differently.
+ */
+export function paneRendererChoices(
+  panes: Pane[],
+  index: number,
+): { value: PaneRenderer; disabled: boolean }[] {
+  const cesiumTaken = cesiumHeldElsewhere(panes, index);
+  const choices: PaneRenderer[] =
+    index === VIEWER_PANE ? ['cesium', 'maplibre'] : ['cesium', 'maplibre', 'leaflet'];
+  return choices.map((value) => ({ value, disabled: value === 'cesium' && cesiumTaken }));
+}
+
+/** An active pane the layout no longer has falls back to the viewer. */
+function clampActivePane(activePane: number, comparePanes: Pane[]): number {
+  return activePane <= comparePanes.length ? activePane : VIEWER_PANE;
+}
+
 interface SplitViewState {
   active: boolean;
   /** The panes after the viewer, so pane index n is comparePanes[n - 1]. */
   comparePanes: Pane[];
+  /**
+   * The pane the map-corner basemap and renderer pickers style, picked by
+   * clicking in it. Tools, agent commands and the viewer registry ignore it:
+   * they act on pane 0 whichever pane is active.
+   */
+  activePane: number;
   /**
    * Percentage across the viewer where a swipe compare cuts. Set, the second
    * pane overlays the first at full width and is clipped from here rightward,
@@ -66,6 +111,7 @@ interface SplitViewState {
   setActive: (v: boolean) => void;
   setComparePanes: (panes: Pane[]) => void;
   setLayout: (layout: SplitLayout) => void;
+  setActivePane: (index: number) => void;
   setPaneRenderer: (index: number, r: PaneRenderer) => void;
   setPaneBasemap: (index: number, b: Basemap) => void;
   setSwipeAt: (v: number | null) => void;
@@ -79,16 +125,22 @@ function withPane(panes: Pane[], index: number, change: Partial<Pane>): Pane[] {
 export const useSplitViewStore = create<SplitViewState>((set) => ({
   active: false,
   comparePanes: DEFAULT_COMPARE_PANES,
+  activePane: VIEWER_PANE,
   swipeAt: null,
-  setActive: (active) => set({ active }),
-  setComparePanes: (comparePanes) => set({ comparePanes }),
+  // closing the split leaves one pane, so the styling controls go back to it
+  setActive: (active) => set((s) => ({ active, activePane: active ? s.activePane : VIEWER_PANE })),
+  setComparePanes: (comparePanes) =>
+    set((s) => ({ comparePanes, activePane: clampActivePane(s.activePane, comparePanes) })),
   setLayout: (layout) =>
-    set((s) => ({
-      comparePanes: resizeComparePanes(s.comparePanes, LAYOUT_PANE_COUNT[layout] - 1),
-    })),
+    set((s) => {
+      const comparePanes = resizeComparePanes(s.comparePanes, LAYOUT_PANE_COUNT[layout] - 1);
+      return { comparePanes, activePane: clampActivePane(s.activePane, comparePanes) };
+    }),
+  setActivePane: (activePane) => set({ activePane }),
   setPaneRenderer: (index, renderer) => {
     if (index === VIEWER_PANE) {
-      useAppStore.getState().setRenderer(renderer);
+      // the viewer is a globe: paneRendererChoices never offers it the 2D one
+      if (renderer !== 'leaflet') useAppStore.getState().setRenderer(renderer);
       return;
     }
     set((s) => ({ comparePanes: withPane(s.comparePanes, index, { renderer }) }));

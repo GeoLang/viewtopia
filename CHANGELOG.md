@@ -6,6 +6,21 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-13: **the split view styles the pane you click, and offers 2D panes**.
+  Clicking a pane makes it the active one, framed in violet while the split is
+  on, and the map-corner basemap and renderer pickers act on that pane instead
+  of always on the viewer. The active pane goes back to the viewer when the
+  split closes or the grid shrinks past it, and tools, agent commands and the
+  viewer registry still act on pane 0 whichever pane is active. Cesium is
+  limited to one pane at a time: its option is closed in every other pane's
+  renderer select, in the panel and in the corner control, with no rule behind
+  it in the store, so a project file naming two Cesium panes still loads as it
+  was saved. A compare pane can also draw with Leaflet, on the raster
+  approximation of a vector basemap the way the 2D tab does it, following the
+  shared camera by centre and zoom. The viewer pane stays a globe, since the
+  tools bound to it assume one, and the agent's layers draw on the globe panes
+  only.
+
 - 2026-08-13: **the split view tiles four panes**. The Split View panel now
   picks between two panes across and a 2x2 grid, naming the grid's panes by
   quadrant. The layout is the pane count rather than a field of its own, so a
