@@ -129,6 +129,92 @@ Scope discipline that follows from the thesis: Figma did not beat Photoshop
 on features, it won one workflow. Win "a team makes and analyzes a map
 together in the browser" and refuse feature-parity fights with ArcGIS.
 
+## PLANS — the bigger features, written up 2026-08-13
+
+Each of these is too big to hand an agent cold. Written as a plan rather than a
+line item so the next session starts from the shape rather than rediscovering it.
+
+### Hosted flagship instance, the thesis blocker
+
+This is next. Everything else here is optional by comparison, because the thesis
+is "click a link, you're in the map" and nothing else delivers that.
+
+State: the executor precondition closed 2026-08-09, the tool-boundary token
+exchange closed 2026-08-12, and the 2026-08-13 terraform pass closed force_ssl,
+immutable tags, the agora and jupyter security group splits, and the ALB
+restriction. So the infrastructure is no longer the blocker.
+
+What actually stands in the way, in order:
+1. **the AWS account decision** (open since 2026-08-05, also blocks geoplumb
+   in-region serving). Nothing proceeds without it. It is money and ops, not
+   engineering.
+2. **four owner calls**, each listed under platform hygiene above: ptolemy
+   classifying every GET as public, terraform CI moving to OIDC, the S3 state
+   backend needing a bucket, and the executor's 8081 admitting the VPC CIDR.
+   Only the first is a genuine blocker for a public domain. The other three are
+   things you would regret later rather than at launch.
+3. **the mechanical apply blockers**, in infrastructure's README: the geolang
+   image must contain application source, every enabled ECR image must be pushed
+   under `image_tag`, EFS spatial and coverage data staged, and every secret
+   container given a value including the two database URLs with
+   `sslmode=verify-full`.
+4. **share links themselves**, which do not exist yet in any repo. A link that
+   opens a document for someone with no account needs a decision on what an
+   anonymous viewer may see and do. That is a product design question, not a
+   deploy step, and it is worth separating from the deploy so the deploy is not
+   held up by it.
+
+Suggested order: deploy privately first with no share links, prove the stack
+runs in-region, then design sharing against a real instance.
+
+### Live layer, if you want fluvius wired in
+
+Decided 2026-08-13 that a sensor historian is off-thesis but a live layer is not.
+The plan, should it ever be wanted: fluvius emits over its existing WebSocket
+sink into agora, which already carries live multiplayer, and viewtopia renders it
+as an ordinary layer whose features move. No new ingest path, no new store, no
+observation history. This also answers FleetPanel, which is the same gap.
+
+Unknowns to settle first: whether agora's attachment model can carry a
+high-frequency feed without competing with collaboration traffic, and what
+happens to a live layer's features when a user edits or saves the map.
+
+### terravista v0.2 and v0.3, the biggest advertised-vs-real gap
+
+v0.2 is HTTP tile fetch and MVT decode, so the SDK can actually draw a map. v0.3
+is Metal and Vulkan rendering and needs platform GPU toolchains. Both are real
+implementation work rather than decisions.
+
+Worth saying plainly: this is post-v1 by the existing phasing, and it competes
+with the hosted flagship for attention. The honest options are to do it properly
+or to label the SDK's current reach as clearly as panoptes now labels its own.
+Doing neither is what leaves a README overselling.
+
+### verne, the next adapter
+
+Blocked on real customer data rather than on engineering. v0.1 is KML/KMZ and
+v0.2 is the Esri File Geodatabase. The recorded demand order puts photogrammetry
+and reality-capture next, then CAD-adjacent platforms. Check any candidate
+against GDAL's driver list before committing, and do not assume a reader exists.
+The enterprise version tree is separately blocked on an enterprise deployment to
+test against, with requirements documented under the verne section below.
+
+### viewtopia product gaps: data source manager, print layout
+
+Both are medium-sized UI work with no blocking unknowns. The data source manager
+merges OGC Layers, SQL and Import into one panel alongside the existing STAC
+browser. Print layout with atlas and map-series generation replaces what is
+currently a canvas screenshot. Neither is on the thesis critical path, both are
+the kind of thing that makes a viewer feel finished.
+
+### COG follow-through, the small one worth doing first
+
+Not a big feature, listed here because it is the cheapest way to finish something
+already shipped: terrano's COG writer emits only Float64, so a browser converting
+8-bit RGB writes a file eight times larger than it should. Roughly 60 lines in
+`bands_to_tiles` plus the bits and format IFD entries, then rebuild the vendored
+wasm package and wire viewtopia. Details under the raster conversion item below.
+
 ## OPEN — sensors and observations, answered 2026-08-13
 
 Asked: should the platform have an observation management and sensor monitoring
