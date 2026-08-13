@@ -77,6 +77,32 @@ const STYLE_KEYS: Record<GeoJSON.Geometry['type'], string[]> = {
   GeometryCollection: ['fill', 'stroke', 'marker-color'],
 };
 
+export type GeometryKind = 'point' | 'line' | 'polygon';
+
+const GEOMETRY_KINDS: Record<GeoJSON.Geometry['type'], GeometryKind | null> = {
+  Point: 'point',
+  MultiPoint: 'point',
+  LineString: 'line',
+  MultiLineString: 'line',
+  Polygon: 'polygon',
+  MultiPolygon: 'polygon',
+  GeometryCollection: null,
+};
+
+/**
+ * The kinds of geometry the features hold, for an exchange format that
+ * symbolizes each kind separately. A layer with nothing to read counts as
+ * polygons, so an export still carries its colours.
+ */
+export function geometryKinds(geojson: GeoJSON.FeatureCollection): GeometryKind[] {
+  const kinds = new Set<GeometryKind>();
+  for (const feature of geojson.features) {
+    const kind = GEOMETRY_KINDS[feature.geometry?.type];
+    if (kind) kinds.add(kind);
+  }
+  return kinds.size ? [...kinds] : ['polygon'];
+}
+
 const isNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
 /** The layer's features as they were before any symbology. */

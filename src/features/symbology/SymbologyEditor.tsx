@@ -9,7 +9,9 @@ import {
   type ZoomRange,
 } from '../../store/agentLayers';
 import { useColumnLabels } from '../../store/datasetSchemas';
+import { MapboxStyleImport } from './MapboxStyleImport';
 import { SldImport } from './SldImport';
+import { SymbologyExport } from './SymbologyExport';
 import {
   CATEGORY_PALETTE,
   COLOR_RAMPS,
@@ -125,6 +127,8 @@ export function SymbologyEditor({ layer }: { layer: AgentLayer }) {
           Nothing to style by: no field varies across these features.
         </Text>
         <SldImport layer={layer} />
+        <MapboxStyleImport layer={layer} />
+        <SymbologyExport layer={layer} />
         <ZoomRangeControl layer={layer} />
       </Stack>
     );
@@ -314,6 +318,8 @@ export function SymbologyEditor({ layer }: { layer: AgentLayer }) {
       {sym && <SymbologyLegend sym={sym} />}
 
       <SldImport layer={layer} />
+      <MapboxStyleImport layer={layer} />
+      <SymbologyExport layer={layer} />
       <ZoomRangeControl layer={layer} />
     </Stack>
   );
