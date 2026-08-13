@@ -50,6 +50,22 @@ function segmentLength(a: PathPoint, b: PathPoint): number {
   return Math.hypot(ground, b.height - a.height);
 }
 
+/**
+ * Waypoints along a route's [lng, lat] geometry, flown at a fixed height over
+ * the terrain. Without a ground sampler the height is above the ellipsoid.
+ */
+export function pathFromRouteGeometry(
+  geometry: [number, number][],
+  heightAboveGround: number,
+  groundHeightAt?: (longitude: number, latitude: number) => number | undefined,
+): PathPoint[] {
+  return geometry.map(([longitude, latitude]) => ({
+    longitude,
+    latitude,
+    height: (groundHeightAt?.(longitude, latitude) ?? 0) + heightAboveGround,
+  }));
+}
+
 export function pathLength(waypoints: PathPoint[]): number {
   let total = 0;
   for (let i = 1; i < waypoints.length; i += 1) total += segmentLength(waypoints[i - 1], waypoints[i]);
@@ -183,27 +199,42 @@ export function createCameraPath(viewer: Viewer, options: CameraPathOptions): Ca
 /**
  * Playback state for a panel: builds a path on the first play, resumes on the
  * next, and rebuilds whenever the plan changes. Escape stops the flight.
+ * onFlightEnd fires once each time playback leaves the air, however it ends.
  */
-export function useCameraFlight(viewer: Viewer | null) {
+export function useCameraFlight(viewer: Viewer | null, onFlightEnd?: () => void) {
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const current = useRef<{ key: string; path: CameraPath } | null>(null);
+  const inFlight = useRef(false);
+  const flightEnd = useRef(onFlightEnd);
+  useEffect(() => {
+    flightEnd.current = onFlightEnd;
+  });
+
+  const end = useCallback(() => {
+    if (!inFlight.current) return;
+    inFlight.current = false;
+    flightEnd.current?.();
+  }, []);
 
   const stop = useCallback(() => {
     current.current?.path.stop();
     current.current = null;
     setPlaying(false);
     setProgress(0);
-  }, []);
+    end();
+  }, [end]);
 
   const pause = useCallback(() => {
     current.current?.path.pause();
     setPlaying(false);
-  }, []);
+    end();
+  }, [end]);
 
+  /** True once the camera is flying, false when the plan describes no path. */
   const play = useCallback(
     (plan: FlightPlan) => {
-      if (!viewer) return;
+      if (!viewer) return false;
       const key = JSON.stringify(plan);
       if (current.current && current.current.key !== key) {
         current.current.path.stop();
@@ -221,18 +252,27 @@ export function useCameraFlight(viewer: Viewer | null) {
           onDone: () => {
             current.current = null;
             setPlaying(false);
+            end();
           },
         });
-        if (!path) return;
+        if (!path) return false;
         current.current = { key, path };
       }
       current.current.path.play();
+      inFlight.current = true;
       setPlaying(true);
+      return true;
     },
-    [viewer],
+    [viewer, end],
   );
 
-  useEffect(() => () => current.current?.path.stop(), []);
+  useEffect(
+    () => () => {
+      current.current?.path.stop();
+      end();
+    },
+    [end],
+  );
 
   useEffect(() => {
     if (!playing) return;

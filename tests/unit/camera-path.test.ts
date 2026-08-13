@@ -53,7 +53,12 @@ vi.mock('cesium', () => ({
   },
 }));
 
-import { createCameraPath, flightDuration, pathLength } from '../../src/lib/cameraPath';
+import {
+  createCameraPath,
+  flightDuration,
+  pathFromRouteGeometry,
+  pathLength,
+} from '../../src/lib/cameraPath';
 import type { Viewer } from 'cesium';
 
 const frames: FrameRequestCallback[] = [];
@@ -108,6 +113,27 @@ describe('pathLength', () => {
       3,
     );
     expect(flightDuration({ waypoints: [AT, NEAR], speed: 100000 })).toBe(1000);
+  });
+});
+
+describe('pathFromRouteGeometry', () => {
+  const geometry: [number, number][] = [
+    [10, 45],
+    [10.01, 45.005],
+  ];
+
+  it('reads the route in lng, lat order and flies it at one height', () => {
+    expect(pathFromRouteGeometry(geometry, 300)).toEqual([
+      { longitude: 10, latitude: 45, height: 300 },
+      { longitude: 10.01, latitude: 45.005, height: 300 },
+    ]);
+    expect(pathFromRouteGeometry([], 300)).toEqual([]);
+  });
+
+  it('clears the terrain under each point when the ground is known', () => {
+    const ground = (longitude: number) => (longitude === 10 ? 120 : undefined);
+
+    expect(pathFromRouteGeometry(geometry, 300, ground).map((p) => p.height)).toEqual([420, 300]);
   });
 });
 

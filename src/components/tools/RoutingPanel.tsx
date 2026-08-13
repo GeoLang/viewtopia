@@ -7,17 +7,21 @@ import {
   Button,
   Badge,
 } from '@mantine/core';
-import { IconRoute, IconMapPin } from '@tabler/icons-react';
+import { IconRoute, IconMapPin, IconMovie } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { PanelSkeleton } from '../PanelStates';
 import { geocode } from '../../services/geocode';
 import { route, type RouteResult } from '../../services/route';
+import { useAppStore } from '../../store/app';
+import { useFlythroughStore } from '../../store/flythrough';
 
 const routingFailed = (message: string) =>
   notifications.show({ title: 'Routing failed', message, color: 'red' });
 
 export function RoutingPanel({ onClose }: { onClose: () => void }) {
+  const setActivePanel = useAppStore((s) => s.setActivePanel);
+  const setRouteGeometry = useFlythroughStore((s) => s.setRouteGeometry);
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
   const [loading, setLoading] = useState(false);
@@ -103,6 +107,18 @@ export function RoutingPanel({ onClose }: { onClose: () => void }) {
             <Text size="xs" c="dimmed">
               {result.geometry.length} waypoints
             </Text>
+            <Button
+              size="xs"
+              variant="light"
+              color="violet"
+              leftSection={<IconMovie size={14} />}
+              onClick={() => {
+                setRouteGeometry(result.geometry);
+                setActivePanel('flythrough');
+              }}
+            >
+              Fly This Route
+            </Button>
           </Stack>
         )}
       </Stack>
