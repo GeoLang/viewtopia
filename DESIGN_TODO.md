@@ -483,12 +483,6 @@ High value, product-level:
       scale-dependent visibility 2026-08-11, SLD import 2026-08-12, SLD export
       and Mapbox style import/export 2026-08-13): expression renderers and QML
       style import/export.
-- [ ] **runtime plugin install**: plugins are build-time only
-      (`import.meta.glob` in `src/plugins/registry.ts`). GeoLibre ships a
-      marketplace with install/update/remove. Decided already: an install
-      pulls only from an owner-controlled registry, and a self-hoster may
-      point at their own.
-
 Medium value:
 
 - [ ] **data source manager panel**: the STAC Browser panel covers catalogs,

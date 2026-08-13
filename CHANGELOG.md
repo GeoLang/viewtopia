@@ -6,6 +6,18 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-13: **runtime plugin install from an owner-controlled registry**.
+  More → Plugin Manager installs, updates and removes plugins listed by the
+  registry named in `VITE_PLUGIN_REGISTRY_URL` or the panel's own setting, so
+  a self-hoster may point at their own. Bundles are fetched over https only
+  and verified against a mandatory sha256 integrity value at install and again
+  at every load from IndexedDB, a bundle cannot claim a built-in plugin's id,
+  and a plugin that fails any check is disabled with a visible reason rather
+  than retried. There is no sandbox and the design does not claim one:
+  installation is the trust decision, made per plugin with the bundle origin
+  shown. `docs/plugins.md` covers the registry format and how to build a
+  bundle against the host globals.
+
 - 2026-08-13: **story presenter window**. The Stories panel opens a second
   window showing the current step's speaker notes, the next step, and the
   position, with prev/next/jump controls that drive the viewer over a
