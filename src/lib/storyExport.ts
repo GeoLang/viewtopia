@@ -7,6 +7,8 @@ export interface StoryStep {
   id: string;
   title: string;
   description: string;
+  /** speaker notes: the presenter window shows them, the exported page never does */
+  notes?: string;
   camera: CameraState;
 }
 

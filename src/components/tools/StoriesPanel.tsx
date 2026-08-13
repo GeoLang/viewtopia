@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Text,
   Stack,
@@ -10,6 +10,7 @@ import {
   NumberInput,
   ScrollArea,
   Badge,
+  UnstyledButton,
 } from '@mantine/core';
 import {
   IconBook,
@@ -18,6 +19,7 @@ import {
   IconPlayerStop,
   IconTrash,
   IconFileDownload,
+  IconPresentation,
 } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer } from '../../viewer/registry';
@@ -26,18 +28,14 @@ import { captureCameraState, flyToCameraState, type CameraState } from '../../st
 import { useAccessibilityStore } from '../../store/accessibility';
 import { useAppStore } from '../../store/app';
 import { rasterTiles, LOCAL_BASEMAP_REFUSAL } from '../../hooks/basemapTiles';
-import { buildStoryHtml, type StoryStep } from '../../lib/storyExport';
-
-const STORAGE_KEY = 'viewtopia-stories';
-
-function loadSteps(): StoryStep[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as StoryStep[]) : [];
-  } catch {
-    return [];
-  }
-}
+import { buildStoryHtml } from '../../lib/storyExport';
+import {
+  STORY_STEPS_STORAGE_KEY,
+  loadStorySteps,
+  openStoryPresenterChannel,
+  openStoryPresenterWindow,
+  type StoryPresenterChannel,
+} from '../../lib/storyPresenter';
 
 function sharedAsCamera(): CameraState {
   const cam = getSharedCamera();
@@ -52,21 +50,68 @@ function sharedAsCamera(): CameraState {
 }
 
 export function StoriesPanel({ onClose }: { onClose: () => void }) {
-  const [steps, setSteps] = useState<StoryStep[]>(loadSteps);
+  const [steps, setSteps] = useState(loadStorySteps);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [dwellSec, setDwellSec] = useState(3);
   const [playing, setPlaying] = useState(false);
-  const [current, setCurrent] = useState(-1);
+  const [current, setCurrent] = useState(0);
   const [status, setStatus] = useState<string | null>(null);
   const reduceMotion = useAccessibilityStore((s) => s.reduceMotion);
   const basemap = useAppStore((s) => s.basemap);
   const customBasemap = useAppStore((s) => s.customBasemap);
   const playRef = useRef(false);
+  const channelRef = useRef<StoryPresenterChannel | null>(null);
+
+  const goToStep = useCallback(
+    (index: number) => {
+      const step = steps[index];
+      if (!step) return;
+      playRef.current = false;
+      setPlaying(false);
+      setCurrent(index);
+      const viewer = getActiveCesiumViewer();
+      if (viewer) flyToCameraState(viewer, step.camera, { reduceMotion });
+    },
+    [steps, reduceMotion],
+  );
+
+  // the presenter window's commands arrive on a channel opened once, so the
+  // handler reads the latest state through a ref instead of resubscribing
+  const latestRef = useRef({ goToStep, current, playing });
+  useEffect(() => {
+    latestRef.current = { goToStep, current, playing };
+  });
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(steps));
+    localStorage.setItem(STORY_STEPS_STORAGE_KEY, JSON.stringify(steps));
+    channelRef.current?.send({ type: 'steps-changed' });
   }, [steps]);
+
+  useEffect(() => {
+    channelRef.current?.send({ type: 'state', index: current, playing });
+  }, [current, playing]);
+
+  useEffect(() => {
+    const channel = openStoryPresenterChannel((message) => {
+      const latest = latestRef.current;
+      if (message.type === 'hello') {
+        channel.send({ type: 'state', index: latest.current, playing: latest.playing });
+      } else if (message.type === 'goto') {
+        latest.goToStep(message.index);
+      }
+    });
+    channelRef.current = channel;
+    const sayGoodbye = () => channel.send({ type: 'viewer-closed' });
+    window.addEventListener('pagehide', sayGoodbye);
+
+    return () => {
+      window.removeEventListener('pagehide', sayGoodbye);
+      sayGoodbye();
+      channel.close();
+      channelRef.current = null;
+    };
+  }, []);
 
   useEffect(() => () => {
     playRef.current = false;
@@ -84,6 +129,12 @@ export function StoriesPanel({ onClose }: { onClose: () => void }) {
     setDescription('');
   };
 
+  const removeStep = (id: string) => {
+    const remaining = steps.filter((s) => s.id !== id);
+    setSteps(remaining);
+    setCurrent((c) => Math.min(c, Math.max(0, remaining.length - 1)));
+  };
+
   const play = async () => {
     if (steps.length === 0) return;
     playRef.current = true;
@@ -97,13 +148,11 @@ export function StoriesPanel({ onClose }: { onClose: () => void }) {
     }
     playRef.current = false;
     setPlaying(false);
-    setCurrent(-1);
   };
 
   const stop = () => {
     playRef.current = false;
     setPlaying(false);
-    setCurrent(-1);
   };
 
   const exportHtml = () => {
@@ -175,34 +224,50 @@ export function StoriesPanel({ onClose }: { onClose: () => void }) {
       <ScrollArea flex={1}>
         <Stack gap={4}>
           {steps.map((step, i) => (
-            <Group
+            <Stack
               key={step.id}
-              justify="space-between"
+              gap={4}
               p="xs"
               style={{
                 background: i === current ? '#2d2140' : 'var(--mantine-color-dark-6)',
                 borderRadius: 4,
               }}
             >
-              <div>
-                <Text size="xs" c="white" fw={500}>
-                  {i + 1}. {step.title}
-                </Text>
-                {step.description && (
-                  <Text size="xs" c="dimmed" lineClamp={1}>
-                    {step.description}
+              <Group justify="space-between" wrap="nowrap">
+                <UnstyledButton onClick={() => goToStep(i)} style={{ flex: 1, minWidth: 0 }}>
+                  <Text size="xs" c="white" fw={500}>
+                    {i + 1}. {step.title}
                   </Text>
-                )}
-              </div>
-              <ActionIcon aria-label="Delete step"
-                size="xs"
-                variant="subtle"
-                color="red"
-                onClick={() => setSteps((p) => p.filter((s) => s.id !== step.id))}
-              >
-                <IconTrash size={12} />
-              </ActionIcon>
-            </Group>
+                  {step.description && (
+                    <Text size="xs" c="dimmed" lineClamp={1}>
+                      {step.description}
+                    </Text>
+                  )}
+                </UnstyledButton>
+                <ActionIcon aria-label="Delete step"
+                  size="xs"
+                  variant="subtle"
+                  color="red"
+                  onClick={() => removeStep(step.id)}
+                >
+                  <IconTrash size={12} />
+                </ActionIcon>
+              </Group>
+              {i === current && (
+                <Textarea
+                  size="xs"
+                  autosize
+                  minRows={2}
+                  aria-label={`Speaker notes for step ${i + 1}`}
+                  placeholder="Speaker notes (presenter window only)…"
+                  value={step.notes ?? ''}
+                  onChange={(e) => {
+                    const notes = e.currentTarget.value;
+                    setSteps((p) => p.map((s) => (s.id === step.id ? { ...s, notes } : s)));
+                  }}
+                />
+              )}
+            </Stack>
           ))}
         </Stack>
       </ScrollArea>
@@ -219,6 +284,17 @@ export function StoriesPanel({ onClose }: { onClose: () => void }) {
             data-testid="stories-play"
           >
             {playing ? 'Stop Story' : 'Play Story'}
+          </Button>
+          <Button
+            size="xs"
+            variant="light"
+            color="violet"
+            leftSection={<IconPresentation size={14} />}
+            onClick={openStoryPresenterWindow}
+            fullWidth
+            data-testid="stories-present"
+          >
+            Open presenter window
           </Button>
           <Button
             size="xs"

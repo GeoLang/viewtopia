@@ -6,6 +6,9 @@ import { StoriesPanel } from '../../src/components/tools/StoriesPanel';
 import { buildStoryHtml, type StoryStep } from '../../src/lib/storyExport';
 import { BASEMAP_TILES } from '../../src/hooks/basemapTiles';
 import { useAppStore } from '../../src/store/app';
+import { installFakeBroadcastChannel } from './stubs/fakeBroadcastChannel';
+
+installFakeBroadcastChannel();
 
 window.matchMedia = vi.fn().mockReturnValue({
   matches: false,
@@ -158,6 +161,19 @@ describe('exporting from the stories panel', () => {
     expect(downloads).toHaveLength(1);
     expect(downloads[0].name).toBe('story.html');
     expect(await downloads[0].blob.text()).toContain('<h2>Harbour</h2>');
+  });
+
+  it('keeps speaker notes out of the exported page', async () => {
+    openPanel();
+    fireEvent.change(screen.getByLabelText('Speaker notes for step 1'), {
+      target: { value: 'mention the ferries' },
+    });
+
+    const stored = JSON.parse(localStorage.getItem('viewtopia-stories') ?? '[]');
+    expect(stored[0].notes).toBe('mention the ferries');
+
+    fireEvent.click(screen.getByTestId('stories-export'));
+    expect(await downloads[0].blob.text()).not.toContain('mention the ferries');
   });
 
   it('refuses a basemap only this machine has', () => {
