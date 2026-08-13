@@ -1,4 +1,11 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["local>GeoLang/renovate-config"]
+  "extends": ["local>GeoLang/renovate-config"],
+  "packageRules": [
+    {
+      "description": "the @babel/core override must stay loadable by workbox-build, which requires ^7 (its plugins refuse 8 at sw build)",
+      "matchPackageNames": ["@babel/core"],
+      "allowedVersions": "<8"
+    }
+  ]
 }
