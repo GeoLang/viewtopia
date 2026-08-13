@@ -555,9 +555,6 @@ Known limits:
 - [ ] ptolemy merge is **feature-level** (edits to different attributes of one feature
       conflict). Attribute-level auto-merge would be a conflict-detection redesign; behavior
       is currently pinned by a test. Decide if it's worth it.
-- [ ] ptolemy re-merge of an already-merged branch creates a redundant merge changeset each
-      time (merge commits record only one parent, so the base never advances). "Already up to
-      date" detection needs second-parent bookkeeping.
 - [ ] ptolemy external-source pushdown non-goals (documented in README): near-global
       windows fall back to unfiltered scans; `or`/`not` CQL2 spatial ops are never pushed.
       Revisit only if a real workload hits them.
