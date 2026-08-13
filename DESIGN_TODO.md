@@ -218,8 +218,12 @@ wasm package and wire viewtopia. Details under the raster conversion item below.
 ## FEATURE — region watch: IoT sensors and change over time
 
 One feature with two halves: a region you care about, watched over time, fed by
-live sensor streams and by imagery, alerting when it changes. Wanted by the
-owner, 2026-08-13.
+live sensor streams and by imagery, alerting when it changes.
+
+**Parked 2026-08-13**, no use case available to test against. Written up while it
+was fresh rather than built. Nothing here is in progress. Pick it up when a real
+region and a real feed exist to point it at, since every open question below
+needs a concrete case to answer well.
 
 **What already exists**, verified rather than assumed:
 
