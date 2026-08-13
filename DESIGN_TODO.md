@@ -4,7 +4,7 @@
 > Status keys: `[ ]` todo · `[~]` in progress · `[!]` blocked.
 > **Open work only** — a completed item is deleted; durable design knowledge folds
 > into DESIGN.md's current-state sections, dated history goes in per-repo changelogs.
-> Last brought current: **2026-08-12**.
+> Last brought current: **2026-08-13**.
 
 ---
 
@@ -36,33 +36,11 @@ current state in DESIGN.md). Open work from it:
       (decided 2026-08-09) is closed: tool code runs in `geolang-executor`,
       a container holding no platform signing secret, no service account and
       no model key, with capabilities dropped and resource limits, and the
-      platform compose wires it (see geolang's DESIGN.md and README). What
-      the split does not close is the bearer question below.
-
-- [ ] **a tool holds the caller's own bearer while it runs**, so tool code
-      that misbehaves can spend the caller's full identity anywhere on the
-      platform. The forwarding itself is deliberate and documented in
-      geolang's `src/core/user_token.py`: the viewer's platform JWT rides the
-      whole chain, opaque and never re-signed, so a tool acts as the person
-      who asked. Two ways out, and the choice is a platform decision rather
-      than a geolang one:
-
-      Keep forwarding, and treat the executor container as the boundary. Costs
-      nothing, and is honest as long as the blast radius of a rogue tool is
-      understood to be the caller's whole account.
-
-      Or exchange the caller's token for a narrow short-lived one per tool
-      call. The minting half already exists and is proven: `sign_mcp_token` in
-      geolang's `src/core/auth.py` signs a token carrying a private claim
-      marker, because every service decodes with an audience of None and so
-      rejects any token carrying `aud`. What does not exist is anyone
-      enforcing the marker. Both that function's docstring and
-      `mcp_token_error`'s say it plainly: away from geolang's own door the
-      minted token is an ordinary token with an ordinary token's reach. So the
-      work is not minting, it is teaching ptolemy, geodukt, tiletopia and
-      agora to read a scope claim and refuse what it does not cover, plus
-      deciding what the scopes are. That is a platform-wide claim contract and
-      a migration, not a geolang change.
+      platform compose wires it (see geolang's DESIGN.md and README). The
+      bearer question closed 2026-08-12: geolang exchanges the caller's JWT at
+      the tool boundary for a five-minute token carrying only that tool's
+      operation scopes, and ptolemy, geodukt, tiletopia and agora each enforce
+      the scope claim (per-repo changelogs).
 
 From the Felt comparison (2026-08-07, sourced from their docs): the gaps
 below are where their product is ahead in ways that serve the same
@@ -272,8 +250,6 @@ fix.
 - [ ] the sweep only covers the SQL branches its fixtures reach, which is what
       query variants are for, and a handler that swallows its error is invisible
       to it. Add a variant when a route grows a second branch.
-- [ ] The relationship API still cannot express `is_composite`, though the column
-      exists. Feature gap, not a bug.
 - [ ] the throwaway script that generated the 130-entry request-body table by
       parsing handler structs lives in no repo. Worth keeping as a small dev
       script if the table needs regenerating.
@@ -504,8 +480,9 @@ High value, product-level:
 
 - [ ] **symbology, what the first cut left open** (categorized, graduated and
       rule-based renderers plus the legend panel shipped 2026-08-02,
-      scale-dependent visibility 2026-08-11, SLD import 2026-08-12): expression
-      renderers, SLD export, and QML/Mapbox style import/export.
+      scale-dependent visibility 2026-08-11, SLD import 2026-08-12, SLD export
+      and Mapbox style import/export 2026-08-13): expression renderers and QML
+      style import/export.
 - [ ] **runtime plugin install**: plugins are build-time only
       (`import.meta.glob` in `src/plugins/registry.ts`). GeoLibre ships a
       marketplace with install/update/remove. Decided already: an install
@@ -514,10 +491,6 @@ High value, product-level:
 
 Medium value:
 
-- [ ] **story presenter view**: the Stories panel exports a scroll-driven
-      standalone page (2026-08-12), but there is no second window with speaker
-      notes, the next step and a synced position. Steps have no notes field to
-      show either.
 - [ ] **data source manager panel**: the STAC Browser panel covers catalogs,
       collections, items, assets and saved favourites, and filters items by
       free text, current view and cloud cover. Services, databases and files
@@ -526,13 +499,8 @@ Medium value:
       free-text extension, which no real catalog has been tested against, so a
       catalog lacking the extension either ignores it or 400s into the panel's
       error line.
-- [ ] **isochrones/service areas and OD matrices**, served by itinera.
 - [ ] **print layout with atlas/map-series generation**: current export is a
       canvas screenshot.
-- [ ] **time slider over PMTiles archives** (the STAC side shipped 2026-08-06
-      as the Timelapse panel over geoplumb).
-- [ ] **map-to-video recording and route animation with MP4 export**: the
-      flythrough panel plays live but exports nothing.
 - [ ] **offline area download**: regions download and the app shell is
       service-worker cached. What is left is in the offline story section
       below.
@@ -599,11 +567,12 @@ Known limits:
 - [ ] ptolemy external-source pushdown non-goals (documented in README): near-global
       windows fall back to unfiltered scans; `or`/`not` CQL2 spatial ops are never pushed.
       Revisit only if a real workload hits them.
-- [ ] **Split view leftovers** (the 2x2 grid shipped 2026-08-13 with
-      active-pane styling, a UI-enforced one-Cesium rule, and 2D leaflet
-      compare panes): agent layers do not draw on leaflet panes, because
-      useAgentLayersLeaflet re-adds layers only on a tab switch and never sees
-      a pane map appear. Also confirm panels run 31719658189 went green
-      (dispatched 2026-08-13 for the batch, two known analysis-2 flakes pass
-      on retry), then delete that half of this item.
+- [ ] **Split view leftovers** (the 2x2 grid shipped 2026-08-13; the
+      leaflet-pane agent-layer gap closed 2026-08-13): confirm panels run
+      31719658189 went green (dispatched 2026-08-13 for the batch, two known
+      analysis-2 flakes pass on retry), then delete this item. Latent cousin
+      of the closed gap: useAgentLayersMapLibre and useAgentLayersCesium key
+      on app-level renderer state rather than the pane's map instance, so a
+      pane switching to those renderers after mount works by effect ordering
+      rather than by subscription.
 - [ ] Raise jung from its rendering-only coverage into the v1 path *(only if it enters it)*.

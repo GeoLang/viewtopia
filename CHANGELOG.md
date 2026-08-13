@@ -6,6 +6,36 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-13: **story presenter window**. The Stories panel opens a second
+  window showing the current step's speaker notes, the next step, and the
+  position, with prev/next/jump controls that drive the viewer over a
+  BroadcastChannel. Steps gain a notes field, which stays out of the exported
+  scroll page. The presenter boots its own 4 kB entry, never the viewer engine.
+
+- 2026-08-13: **flythrough records the map to a video file**. Arming "Record
+  Video" captures the flight from the Cesium canvas and downloads it when the
+  flight ends, as MP4 where the browser can write it and WebM otherwise.
+  Routing can hand its result to the flythrough as a path with "Fly This
+  Route", at a configurable altitude, so a route animation records the same
+  way.
+
+- 2026-08-13: **the Timelapse panel plays a PMTiles series**. A source select
+  switches the panel between geoplumb layers and a series of PMTiles archives
+  added by URL or by file. Each archive takes its step from a date in its name
+  (2024, 2024-06, 2024-06-01, anywhere in the basename), editable by hand, and
+  the series runs oldest first with unlabelled archives at the end. The step
+  slider and play button show one archive at a time, raster or vector, styled
+  from the same header probe the layer list uses. The series lasts as long as
+  the panel is open.
+
+- 2026-08-13: **symbology exports to SLD 1.0 and Mapbox style JSON, and imports
+  Mapbox styles**, next to the existing SLD import. Export is client-side and
+  writes the constructs fenestra's importer reads back, so an exported SLD
+  round-trips to an equivalent renderer. Mapbox export carries categorized,
+  graduated and rule renderers as match, step and case expressions; import
+  takes the first layer classified that way and lists what it could not carry
+  rather than dropping it silently.
+
 - 2026-08-13: **the split view styles the pane you click, and offers 2D panes**.
   Clicking a pane makes it the active one, framed in violet while the split is
   on, and the map-corner basemap and renderer pickers act on that pane instead
@@ -443,6 +473,14 @@ All notable changes to this project will be documented in this file.
   posting, segment rendering and the bell.
 
 ### Fixed
+
+- 2026-08-13: **agent layers draw on leaflet compare panes**. The leaflet
+  agent-layer hook keyed its effects on the 2D tab, a proxy for "the map was
+  rebuilt", so it never saw a pane map appear. useLeaflet now renders its
+  caller again when the map instance changes and the hook keys on the instance,
+  so layers appear when a pane switches to leaflet and come off with the pane's
+  map, with visibility, opacity, zoom range and symbology behaving as on the 2D
+  tab.
 
 - 2026-08-12: **docs page claimed 15 QGIS ports**. The QGIS Plugin Equivalents
   section shows 11 cards, and the stat beside it now says 11.
