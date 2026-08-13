@@ -44,6 +44,10 @@ export async function loadSpatial(conn: { query(sql: string): Promise<unknown> }
     try {
       await conn.query(`SET custom_extension_repository = '${repository}';`);
       await conn.query(`INSTALL spatial; LOAD spatial;`);
+      // the setting outlives this call, and only spatial is vendored: leaving it
+      // set sends every later autoload (json, parquet) to the app origin, which
+      // answers with index.html and fails the signature check
+      await conn.query(`RESET custom_extension_repository;`);
       return;
     } catch (err) {
       console.warn(`[duckdb] spatial extension failed to load from ${repository}`, err);

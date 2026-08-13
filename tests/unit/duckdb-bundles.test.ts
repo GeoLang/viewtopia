@@ -39,6 +39,9 @@ describe('spatial extension', () => {
     expect(conn.queries[0]).toContain(`${location.origin}${EXTENSION_REPOSITORY}`);
     expect(conn.queries[1]).toContain('INSTALL spatial');
     expect(conn.queries.join('\n')).not.toContain(UPSTREAM);
+    // other extensions (json, parquet) are not vendored, so autoload must not
+    // keep resolving against the app origin after spatial is in
+    expect(conn.queries.at(-1)).toContain('RESET custom_extension_repository');
   });
 
   it('falls back to duckdb.org when the vendored copy is missing', async () => {
