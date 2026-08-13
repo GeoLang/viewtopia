@@ -107,6 +107,25 @@ together in the browser" and refuse feature-parity fights with ArcGIS.
       Fargate until a secrets path (SSM/Secrets Manager → task env) exists.
       geoplumb also needs its layers TOML baked into the deployed image, since
       the ecs module mounts no volumes.
+- [ ] **hosted stack decisions before a public deploy** (from the 2026-08-13
+      security review of the hosted terraform, out of scope for its fixes, each
+      needs an owner call):
+      - ptolemy classifies every GET/HEAD/OPTIONS as public, so the entire
+        geodatabase read API is anonymous on a public domain.
+      - the ALB security group admits 0.0.0.0/0, so CloudFront can be bypassed
+        and its behaviors are advisory for a direct caller. The WAF sits on the
+        ALB and still applies.
+      - `rds.force_ssl` is 0, database traffic inside the VPC is plaintext.
+      - ECR tags are mutable and every service deploys `:latest`, so a deploy
+        is not reproducible and a pushed tag silently changes running services
+        on next restart.
+      - the terraform plan CI job authenticates with long-lived AWS access
+        keys rather than OIDC.
+      - the S3 state backend is commented out, terraform state is local only.
+- [ ] **platform-proxy Caddyfile is not profile-aware**: it is one static file,
+      so the minimal profile advertises routes to services that profile does
+      not deploy and they 502. Fine while profiles stay close, generate or gate
+      the routes if they diverge.
 
 ## OPEN — dependencies and supply chain (2026-08-12)
 
