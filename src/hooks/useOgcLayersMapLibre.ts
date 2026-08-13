@@ -10,59 +10,18 @@ import {
   type OGCLayer,
 } from '../store/ogcLayers';
 import { useAppStore } from '../store/app';
-import { CATEGORY_PALETTE } from '../features/symbology/symbology';
+import { addPmtilesLayers } from '../features/pmtiles/mapLayers';
 
 const PREFIX = 'ogc-layer-';
 
-/**
- * A vector archive says nothing about how to draw itself, so each source layer
- * gets one colour across the three geometry kinds, like an agent layer would.
- */
-function addPmtilesLayers(map: maplibregl.Map, layer: OGCLayer, id: string): void {
-  const info = layer.pmtiles;
-  if (!info) return;
-  const visibility = ogcLayerVisible(layer) ? 'visible' : 'none';
-  const opacity = ogcLayerOpacity(layer);
-  if (info.kind === 'raster') {
-    map.addSource(id, { type: 'raster', url: pmtilesStyleUrl(layer) });
-    map.addLayer({
-      id: `${id}-raster`,
-      type: 'raster',
-      source: id,
-      layout: { visibility },
-      paint: { 'raster-opacity': opacity },
-    });
-    return;
-  }
-  map.addSource(id, { type: 'vector', url: pmtilesStyleUrl(layer) });
-  info.vectorLayers.forEach((sourceLayer, i) => {
-    const color = CATEGORY_PALETTE[i % CATEGORY_PALETTE.length];
-    map.addLayer({
-      id: `${id}-${sourceLayer}-fill`,
-      type: 'fill',
-      source: id,
-      'source-layer': sourceLayer,
-      filter: ['==', '$type', 'Polygon'],
-      layout: { visibility },
-      paint: { 'fill-color': color, 'fill-opacity': 0.3 * opacity },
-    });
-    map.addLayer({
-      id: `${id}-${sourceLayer}-line`,
-      type: 'line',
-      source: id,
-      'source-layer': sourceLayer,
-      layout: { visibility },
-      paint: { 'line-color': color, 'line-width': 1.5, 'line-opacity': opacity },
-    });
-    map.addLayer({
-      id: `${id}-${sourceLayer}-circle`,
-      type: 'circle',
-      source: id,
-      'source-layer': sourceLayer,
-      filter: ['==', '$type', 'Point'],
-      layout: { visibility },
-      paint: { 'circle-color': color, 'circle-radius': 4, 'circle-opacity': opacity },
-    });
+function addOgcPmtilesLayers(map: maplibregl.Map, layer: OGCLayer, id: string): void {
+  if (!layer.pmtiles) return;
+  addPmtilesLayers(map, {
+    id,
+    url: pmtilesStyleUrl(layer),
+    info: layer.pmtiles,
+    opacity: ogcLayerOpacity(layer),
+    visible: ogcLayerVisible(layer),
   });
 }
 
@@ -91,7 +50,7 @@ export function useOgcLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map | n
       for (const layer of rasterLayers) {
         const id = `${PREFIX}${layer.id}`;
         if (layer.type === 'pmtiles') {
-          addPmtilesLayers(map, layer, id);
+          addOgcPmtilesLayers(map, layer, id);
           continue;
         }
         map.addSource(id, {

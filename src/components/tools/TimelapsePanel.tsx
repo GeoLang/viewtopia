@@ -7,13 +7,22 @@ import {
   Slider,
   Select,
   Loader,
+  TextInput,
+  ActionIcon,
+  FileButton,
 } from '@mantine/core';
 import type {
   ErrorEvent as MapErrorEvent,
   Map as MapLibreMap,
   MapSourceDataEvent,
 } from 'maplibre-gl';
-import { IconClock, IconPlayerPlay, IconPlayerPause } from '@tabler/icons-react';
+import {
+  IconClock,
+  IconPlayerPlay,
+  IconPlayerPause,
+  IconTrash,
+  IconUpload,
+} from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveMapLibre, getPaneMapLibre } from '../../viewer/registry';
 import { useAppStore } from '../../store/app';
@@ -28,12 +37,23 @@ import {
   type PlumbLayer,
   type StepSize,
 } from '../../lib/geoplumb';
+import { addLocalPmtiles, addRemotePmtiles } from '../../features/pmtiles/source';
+import { addPmtilesLayers, removePmtilesLayers } from '../../features/pmtiles/mapLayers';
+import { makeArchive, orderedArchives, type PmtilesArchive } from '../../features/pmtiles/series';
 
 /** Source ids; each layer is `<source>-raster`, the convention the other raster tools use. */
 const A_SOURCE = 'timelapse-a';
 const B_SOURCE = 'timelapse-b';
+/** The one archive of the series that is on the map right now. */
+const SERIES_SOURCE = 'timelapse-pmtiles';
 
 type Mode = 'swipe' | 'sideBySide' | 'opacity';
+type SourceMode = 'geoplumb' | 'pmtiles';
+
+const SOURCE_MODES = [
+  { value: 'geoplumb', label: 'Geoplumb layers' },
+  { value: 'pmtiles', label: 'PMTiles series' },
+];
 
 const MODES = [
   { value: 'swipe', label: 'Swipe' },
@@ -134,6 +154,49 @@ function watchTileLoading(
   };
 }
 
+function PlaybackControls({
+  speed,
+  onSpeed,
+  playing,
+  onPlaying,
+  disabled,
+}: {
+  speed: number;
+  onSpeed: (speed: number) => void;
+  playing: boolean;
+  onPlaying: (playing: boolean) => void;
+  disabled: boolean;
+}) {
+  return (
+    <>
+      <Text size="xs" c="dimmed">
+        Speed: {speed} steps/s
+      </Text>
+      <Slider
+        size="xs"
+        min={0.25}
+        max={4}
+        step={0.25}
+        value={speed}
+        onChange={onSpeed}
+        color="violet"
+      />
+
+      <Button
+        size="xs"
+        variant="filled"
+        color="violet"
+        leftSection={playing ? <IconPlayerPause size={14} /> : <IconPlayerPlay size={14} />}
+        onClick={() => onPlaying(!playing)}
+        disabled={disabled}
+        fullWidth
+      >
+        {playing ? 'Pause' : 'Play'}
+      </Button>
+    </>
+  );
+}
+
 export function TimelapsePanel({ onClose }: { onClose: () => void }) {
   const [layers, setLayers] = useState<PlumbLayer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -149,12 +212,20 @@ export function TimelapsePanel({ onClose }: { onClose: () => void }) {
   const [playing, setPlaying] = useState(false);
   const [aTilesLoading, setATilesLoading] = useState(false);
   const [bTilesLoading, setBTilesLoading] = useState(false);
+  const [sourceMode, setSourceMode] = useState<SourceMode>('geoplumb');
+  const [archives, setArchives] = useState<PmtilesArchive[]>([]);
+  const [archiveIndex, setArchiveIndex] = useState(0);
+  const [archiveUrl, setArchiveUrl] = useState('');
+  const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [readingArchive, setReadingArchive] = useState(false);
 
   // maplibre draws the raster tiles, and the compare's second view is the
   // split pane, which only exists on the globe tab
   const renderer = useAppStore((s) => s.renderer);
   const activeTab = useAppStore((s) => s.activeTab);
   const hasMap = renderer === 'maplibre' && activeTab === 'globe';
+  const geoplumbActive = hasMap && sourceMode === 'geoplumb';
+  const seriesActive = hasMap && sourceMode === 'pmtiles';
 
   const layer = layers.find((l) => l.name === layerName) ?? null;
   const steps = useMemo(
@@ -163,7 +234,11 @@ export function TimelapsePanel({ onClose }: { onClose: () => void }) {
   );
   const aStep = steps[aIndex] ?? null;
   const bStep = steps[bIndex] ?? null;
-  const comparing = !!layerName && steps.length > 0;
+  const comparing = geoplumbActive && !!layerName && steps.length > 0;
+
+  const series = useMemo(() => orderedArchives(archives), [archives]);
+  const seriesIndex = Math.min(archiveIndex, Math.max(0, series.length - 1));
+  const activeArchive = series[seriesIndex] ?? null;
   // B rides the split's second map unless the two are blended into one
   const bOnPane = mode !== 'opacity';
 
@@ -235,17 +310,17 @@ export function TimelapsePanel({ onClose }: { onClose: () => void }) {
 
   // A on the active map, always
   useEffect(() => {
-    if (!hasMap || !aStep || !layerName) {
+    if (!geoplumbActive || !aStep || !layerName) {
       removeRaster(getActiveMapLibre(), A_SOURCE);
       return;
     }
     const url = tileUrl(layerName, stepInterval(aStep, stepSize));
     return whenMapReady(getActiveMapLibre, (map) => setRaster(map, A_SOURCE, url, 1));
-  }, [hasMap, layerName, aStep, stepSize]);
+  }, [geoplumbActive, layerName, aStep, stepSize]);
 
   // B on whichever map this mode compares against
   useEffect(() => {
-    if (!hasMap || !bStep || !layerName) {
+    if (!geoplumbActive || !bStep || !layerName) {
       removeRaster(getActiveMapLibre(), B_SOURCE);
       removeRaster(getPaneMapLibre(), B_SOURCE);
       return;
@@ -256,18 +331,18 @@ export function TimelapsePanel({ onClose }: { onClose: () => void }) {
     return whenMapReady(bOnPane ? getPaneMapLibre : getActiveMapLibre, (map) =>
       setRaster(map, B_SOURCE, url, bOnPane ? 1 : blendRef.current / 100),
     );
-  }, [hasMap, layerName, bStep, stepSize, bOnPane]);
+  }, [geoplumbActive, layerName, bStep, stepSize, bOnPane]);
 
   useEffect(() => {
-    if (!hasMap || !aStep || !layerName) {
+    if (!geoplumbActive || !aStep || !layerName) {
       setATilesLoading(false);
       return;
     }
     return watchTileLoading(getActiveMapLibre, A_SOURCE, setATilesLoading);
-  }, [hasMap, layerName, aStep]);
+  }, [geoplumbActive, layerName, aStep]);
 
   useEffect(() => {
-    if (!hasMap || !bStep || !layerName) {
+    if (!geoplumbActive || !bStep || !layerName) {
       setBTilesLoading(false);
       return;
     }
@@ -276,7 +351,7 @@ export function TimelapsePanel({ onClose }: { onClose: () => void }) {
       B_SOURCE,
       setBTilesLoading,
     );
-  }, [hasMap, layerName, bStep, bOnPane]);
+  }, [geoplumbActive, layerName, bStep, bOnPane]);
 
   // the blend slider repaints rather than re-adding the source, which would
   // refetch every tile on each drag
@@ -289,12 +364,39 @@ export function TimelapsePanel({ onClose }: { onClose: () => void }) {
   }, [blend, bOnPane]);
 
   useEffect(() => {
-    if (!playing || steps.length < 2) return;
+    if (!playing || sourceMode !== 'geoplumb' || steps.length < 2) return;
     const id = window.setInterval(() => {
       setBIndex((i) => (i + 1) % steps.length);
     }, 1000 / speed);
     return () => window.clearInterval(id);
-  }, [playing, speed, steps.length]);
+  }, [playing, speed, steps.length, sourceMode]);
+
+  // one archive of the series on the map at a time, swapped as the step moves
+  useEffect(() => {
+    if (!seriesActive || !activeArchive) return;
+    const stopWaiting = whenMapReady(getActiveMapLibre, (map) =>
+      addPmtilesLayers(map, {
+        id: SERIES_SOURCE,
+        url: activeArchive.url,
+        info: activeArchive.info,
+        opacity: 1,
+        visible: true,
+      }),
+    );
+    return () => {
+      stopWaiting();
+      const map = getActiveMapLibre();
+      if (map) removePmtilesLayers(map, SERIES_SOURCE);
+    };
+  }, [seriesActive, activeArchive]);
+
+  useEffect(() => {
+    if (!playing || sourceMode !== 'pmtiles' || series.length < 2) return;
+    const id = window.setInterval(() => {
+      setArchiveIndex((i) => (i + 1) % series.length);
+    }, 1000 / speed);
+    return () => window.clearInterval(id);
+  }, [playing, speed, series.length, sourceMode]);
 
   useEffect(
     () => () => {
@@ -310,6 +412,47 @@ export function TimelapsePanel({ onClose }: { onClose: () => void }) {
     setPlaying(false);
     setBIndex(index);
   };
+
+  const takeOverStep = (index: number) => {
+    setPlaying(false);
+    setArchiveIndex(index);
+  };
+
+  const addUrlArchive = async () => {
+    const typed = archiveUrl.trim();
+    if (!typed) return;
+    setReadingArchive(true);
+    try {
+      const url = new URL(typed, window.location.href).href;
+      const info = await addRemotePmtiles(url);
+      setArchives((list) => [...list, makeArchive(url, `pmtiles://${url}`, info)]);
+      setArchiveUrl('');
+      setArchiveError(null);
+    } catch (err) {
+      setArchiveError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setReadingArchive(false);
+    }
+  };
+
+  const addFileArchive = async (file: File | null) => {
+    if (!file) return;
+    setReadingArchive(true);
+    try {
+      const { url, info } = await addLocalPmtiles(file);
+      setArchives((list) => [...list, makeArchive(file.name, url, info)]);
+      setArchiveError(null);
+    } catch (err) {
+      setArchiveError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setReadingArchive(false);
+    }
+  };
+
+  const setArchiveLabel = (id: string, timeLabel: string) =>
+    setArchives((list) => list.map((a) => (a.id === id ? { ...a, timeLabel } : a)));
+
+  const removeArchive = (id: string) => setArchives((list) => list.filter((a) => a.id !== id));
 
   const stepData = steps.map((s, i) => ({ value: String(i), label: stepLabel(s, stepSize) }));
 
@@ -328,7 +471,130 @@ export function TimelapsePanel({ onClose }: { onClose: () => void }) {
         </Text>
       ) : (
         <Stack gap="xs">
-          {loading && (
+          <Select
+            size="xs"
+            label="Source"
+            data={SOURCE_MODES}
+            value={sourceMode}
+            onChange={(v) => {
+              if (!v) return;
+              setPlaying(false);
+              setSourceMode(v as SourceMode);
+            }}
+            allowDeselect={false}
+          />
+
+          {sourceMode === 'pmtiles' && (
+            <>
+              <Group gap="xs" align="flex-end" wrap="nowrap">
+                <TextInput
+                  size="xs"
+                  label="Archive URL"
+                  placeholder="https://…/roads-2024.pmtiles"
+                  style={{ flex: 1 }}
+                  value={archiveUrl}
+                  onChange={(e) => setArchiveUrl(e.currentTarget.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addUrlArchive()}
+                />
+                <Button size="xs" variant="light" color="violet" onClick={addUrlArchive}>
+                  Add
+                </Button>
+              </Group>
+
+              <FileButton accept=".pmtiles" onChange={addFileArchive}>
+                {(props) => (
+                  <Button
+                    {...props}
+                    size="xs"
+                    variant="default"
+                    leftSection={<IconUpload size={14} />}
+                    fullWidth
+                  >
+                    Add archive file
+                  </Button>
+                )}
+              </FileButton>
+
+              {readingArchive && (
+                <Group gap="xs">
+                  <Loader size="xs" color="violet" />
+                  <Text size="xs" c="dimmed">
+                    Reading the archive…
+                  </Text>
+                </Group>
+              )}
+
+              {archiveError && (
+                <Text size="xs" c="red">
+                  {archiveError}
+                </Text>
+              )}
+
+              {series.length === 0 ? (
+                <Text size="xs" c="dimmed">
+                  Add the same layer's archives one per date. A date in the file name
+                  (2024, 2024-06, 2024-06-01) becomes its step, and anything else you
+                  label by hand.
+                </Text>
+              ) : (
+                series.map((archive) => (
+                  <Group key={archive.id} gap="xs" wrap="nowrap">
+                    <Text size="xs" truncate style={{ flex: 1 }} title={archive.name}>
+                      {archive.name}
+                    </Text>
+                    <TextInput
+                      size="xs"
+                      w={82}
+                      aria-label={`Time for ${archive.name}`}
+                      placeholder="YYYY-MM"
+                      value={archive.timeLabel}
+                      onChange={(e) => setArchiveLabel(archive.id, e.currentTarget.value)}
+                    />
+                    <ActionIcon
+                      size="sm"
+                      variant="subtle"
+                      color="red"
+                      aria-label={`Remove ${archive.name}`}
+                      onClick={() => removeArchive(archive.id)}
+                    >
+                      <IconTrash size={14} />
+                    </ActionIcon>
+                  </Group>
+                ))
+              )}
+
+              {series.length > 1 && (
+                <Slider
+                  size="xs"
+                  min={0}
+                  max={series.length - 1}
+                  step={1}
+                  value={seriesIndex}
+                  onChange={takeOverStep}
+                  thumbLabel="Series step"
+                  label={(value) => series[value]?.timeLabel || series[value]?.name}
+                  color="violet"
+                />
+              )}
+
+              {activeArchive && (
+                <Text size="xs" c="dimmed" data-testid="pmtiles-series-step">
+                  Step {seriesIndex + 1} of {series.length}:{' '}
+                  {activeArchive.timeLabel || activeArchive.name}
+                </Text>
+              )}
+
+              <PlaybackControls
+                speed={speed}
+                onSpeed={setSpeed}
+                playing={playing}
+                onPlaying={setPlaying}
+                disabled={series.length < 2}
+              />
+            </>
+          )}
+
+          {sourceMode === 'geoplumb' && loading && (
             <Group gap="xs">
               <Loader size="xs" color="violet" />
               <Text size="xs" c="dimmed">
@@ -337,20 +603,20 @@ export function TimelapsePanel({ onClose }: { onClose: () => void }) {
             </Group>
           )}
 
-          {error && (
+          {sourceMode === 'geoplumb' && error && (
             <Text size="xs" c="red">
               {error}
             </Text>
           )}
 
-          {!loading && !error && layers.length === 0 && (
+          {sourceMode === 'geoplumb' && !loading && !error && layers.length === 0 && (
             <Text size="xs" c="dimmed">
               No layer on the tile service carries a time range, so there is
               nothing to compare across time.
             </Text>
           )}
 
-          {layers.length > 0 && (
+          {sourceMode === 'geoplumb' && layers.length > 0 && (
             <>
               <Select
                 size="xs"
@@ -440,32 +706,13 @@ export function TimelapsePanel({ onClose }: { onClose: () => void }) {
                 </>
               )}
 
-              <Text size="xs" c="dimmed">
-                Speed: {speed} steps/s
-              </Text>
-              <Slider
-                size="xs"
-                min={0.25}
-                max={4}
-                step={0.25}
-                value={speed}
-                onChange={setSpeed}
-                color="violet"
-              />
-
-              <Button
-                size="xs"
-                variant="filled"
-                color="violet"
-                leftSection={
-                  playing ? <IconPlayerPause size={14} /> : <IconPlayerPlay size={14} />
-                }
-                onClick={() => setPlaying(!playing)}
+              <PlaybackControls
+                speed={speed}
+                onSpeed={setSpeed}
+                playing={playing}
+                onPlaying={setPlaying}
                 disabled={steps.length < 2}
-                fullWidth
-              >
-                {playing ? 'Pause' : 'Play'}
-              </Button>
+              />
 
               {(aTilesLoading || bTilesLoading) && (
                 <Group gap="xs">
