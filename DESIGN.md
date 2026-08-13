@@ -15,36 +15,36 @@
 GeoLang is ~20 sibling repos under `/home/aaron/src/GeoLang/` (~250k LOC), a full
 Esri/Cesium-class platform, not an "LLM-over-GIS" toy. All repos are **AGPL-3.0** and
 public on GitHub. Every Rust repo carries standardized CI (fmt, clippy, test, cargo-deny,
-coverage, cross-platform); geolang has none (open item in DESIGN_TODO).
+coverage, cross-platform). Geolang runs Ruff and its pytest suite in CI.
 
 The three big structural bets are **settled**:
 1. **Golden path proven and gated.** The full stack comes up from one compose file and a
-   Playwright suite (18 tests, 0 skips) locks the viewer → backends → agent round-trip
+   Playwright suite (22 tests, 0 skips) locks the viewer → backends → agent round-trip
    against the live services, in CI, without stubbing geolang. See §3, Phase 0.
 2. **ViewTopia is one stack.** React (`main.tsx`) is the only front-end. There is no
    vanilla `.js` shell.
-3. **The backbone has real tests.** ptolemy carries ~308 tests including conflict-depth,
+3. **The backbone has real tests.** ptolemy carries 594 test functions including conflict-depth,
    write-path and visibility coverage.
 
-Maturity (test-fn counts via `grep -rE '#\[(test|tokio::test|sqlx::test)'`):
+Maturity from source-level test declarations:
 
 | Repo | Role | Tests | Read |
 |------|------|-------|------|
-| tiletopia | 3D tiles / terrain / COG | 651 | Mature ✅ |
-| ptolemy | versioned PostGIS backbone | 581 | Hardened ✅ |
+| tiletopia | 3D tiles / terrain / COG | 708 | Mature ✅ |
+| ptolemy | versioned PostGIS backbone | 594 | Hardened ✅ |
 | jung | cartographic rendering | 307 | Well-tested ✅ |
-| verne | foreign-format inventory + extractor (§2.7) | 230 | ✅ |
-| geodukt / fluvius | ETL+workflow / spatial streams | 187 / 170 | ✅ |
-| nubis / topoi | point cloud / geometry | 158 / 140 | ✅ |
+| verne | foreign-format inventory + extractor (§2.7) | 233 | ✅ |
+| geodukt / fluvius | ETL+workflow / spatial streams | 232 / 182 | ✅ |
+| nubis / topoi | point cloud / geometry | 161 / 246 | ✅ |
 | terravista | mobile SDK | 107 | core only, renderer is roadmap ⚠️ |
-| collecta | field collection | 103 | JWT auth + sync real, media is roadmap ⚠️ |
-| projicio / sibyl | CRS / agent loop (§2.4) | 97 / 87 | ✅ |
-| terrano / fenestra | raster / OGC gateway (WMS/WFS/WMTS/WCS/OGC API) | 86 / 83 | ✅ |
-| geokode / geogit / itinera | geocode / geo VCS / routing | 72 / 70 / 62 | ✅ |
-| interiora | indoor | 49 | ✅ |
+| collecta | field collection | 113 | JWT auth + sync real, media is roadmap ⚠️ |
+| projicio / sibyl | CRS / agent loop (§2.4) | 198 / 87 | ✅ |
+| terrano / fenestra | raster / OGC gateway (WMS/WFS/WMTS/WCS/OGC API) | 140 / 98 | ✅ |
+| geokode / geogit / itinera | geocode / geo VCS / routing | 75 / 73 / 84 | ✅ |
+| interiora | indoor | 82 | ✅ |
 | panoptes | imagery ML | 45 | ONNX path real, **no published weights** ⚠️ |
-| viewtopia | flagship viewer | 347 vitest + 18 platform E2E | 48 registry panels (18 preview-gated) + 22 plugin panels |
-| geolang | NL→GIS agent | 172 (py) | 39 tools, wired to ptolemy/itinera/geokode/geodukt |
+| viewtopia | flagship viewer | 1,091 Vitest declarations + 22 platform E2E | 48 registry panels (18 preview-gated) + 22 plugin panels |
+| geolang | NL→GIS agent | 404 pytest functions | 39 tools, wired to ptolemy/itinera/geokode/geodukt |
 
 **Current headline risks:**
 - **terravista can't draw a map yet.** Camera, cache and FFI are real, but GPU rendering,
@@ -57,13 +57,11 @@ Maturity (test-fn counts via `grep -rE '#\[(test|tokio::test|sqlx::test)'`):
 - **ptolemy's raw-write CI check has a blind spot.** `ci/no-raw-writes.sh` cannot see a
   mutating Postgres function called through `SELECT`, which `topology.rs` does. Those routes
   are admin-only for that reason.
-- **The tiletopia terrain service's `layer.json` is still un-consumable** by the viewer's
-  terrain panel, which falls back to a no-source state. Tracked in DESIGN_TODO.
 - **CDN config is validated, not applied.** The CloudFront catalog path forwards Authorization
   and Origin, allows the full method set (the origin 405s what it lacks) and sets TTL 0 so an
-  authorized response is never replayed cross-token or post-expiry. The Terraform passes
-  `validate` but has not been applied to live infra, and two questions are open: default-behavior
-  TTL versus revoked tokens, and untested `Sec-WebSocket-Protocol` forwarding for realtime.
+  authorized response is never replayed cross-token or post-expiry. Realtime behaviors forward
+  `Sec-WebSocket-Protocol`. The Terraform passes `validate` but has not been applied to live
+  infrastructure, so the remaining risk is the untested live path.
 
 ---
 
@@ -475,7 +473,7 @@ open" without reconnecting into the same refusal.
 local-first + op queue; no service worker yet, see DESIGN_TODO), `projects/`, `store/` (Zustand),
 `duckdb/` (in-browser analytics). ~228 source files.
 
-**Test surface.** A vitest unit suite, an 18-test platform E2E suite against the live stack with
+**Test surface.** A vitest unit suite, a 22-test platform E2E suite against the live stack with
 a strict console-error tripwire and zero 5xx tolerance, a registry-derived panel sweep across 50
 tools, and a runtime-enumerated plugin sweep across all 23 plugin panels. The panels and sweep
 stacks run without an agent, so `openApp` in `tests/e2e/panel-helpers.js` stubs the
@@ -597,8 +595,8 @@ honestly after teardown. Its fenestra scenario measures the proxy route by defau
 Detailed task state lives in [DESIGN_TODO.md](DESIGN_TODO.md). High-level:
 
 - **Phase 0, prove & lock the golden path.** ✅ DONE. Stack bring-up is reproducible, and one
-  golden journey (viewer → tileset → geocode → route → NL agent command) is locked by an
-  18-test Playwright gate against the live stack, wired into CI without stubbing geolang.
+  golden journey (viewer → tileset → geocode → route → NL agent command) is locked by a
+  22-test Playwright gate against the live stack, wired into CI without stubbing geolang.
 - **Phase 0b, collapse ViewTopia to one stack.** ✅ DONE. React is the only front-end, and
   NL→map is verified end-to-end through nginx.
 - **Phase 1, finish the v1 surface (viewer + agent + services).** ✅ DONE. Vertical panels wired

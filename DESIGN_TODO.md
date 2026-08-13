@@ -82,31 +82,9 @@ together in the browser" and refuse feature-parity fights with ArcGIS.
 
 ## OPEN — platform hygiene
 
-- [ ] **tiletopia multi-node HA (raft)** — future reference, no open work. The
-      openraft half of cluster.rs was deleted 2026-07-27: it was a never-compiled
-      textbook key-value example wired to nothing (no transport, no discovery, no
-      real server state through it). The single-process leader election that
-      actually runs remains. If clustering ever becomes a requirement, design it
-      around what needs replicating (catalog and auth state via Raft; tile data
-      needs shared/object storage regardless) instead of resurrecting the deleted
-      scaffolding.
-- [ ] **tiletopia CloudFront default behavior caches authenticated responses ~1h**
-      (post-MVP decision): Authorization is in the cache key so no cross-user leak,
-      but a revoked token's responses keep serving until TTL. Clean fix: split the
-      two public tile patterns into an aggressive-TTL behavior, default to TTL 0.
-- [ ] **CloudFront realtime WS untested**: auth rides Sec-WebSocket-Protocol, which
-      the distribution never forwards explicitly; collab may fail closed through the
-      CDN. Test on a live distribution before relying on it.
-- [ ] **ALB rules cannot strip path prefixes**, so every nginx location that
-      rewrites before proxying (/plumb, /api/indoor, /api/geocode, /api/route,
-      /tiles) reaches its container unstripped on ECS and 404s. Works through
-      the compose nginx only. Fix is either prefix-aware routes in each service
-      or an ECS-side proxy layer; the ecs module comment documents it.
-- [ ] **No terraform service wires PLATFORM_JWT_SECRET**, so every service that
-      refuses to start without it (ptolemy, tiletopia, interiora) crash-loops on
-      Fargate until a secrets path (SSM/Secrets Manager → task env) exists.
-      geoplumb also needs its layers TOML baked into the deployed image, since
-      the ecs module mounts no volumes.
+- [ ] **CloudFront realtime WS untested live**: the realtime behavior forwards
+      `Sec-WebSocket-Protocol` and has a zero TTL, but the distribution has never
+      carried a real collaboration session. Test it on the deployed distribution.
 - [ ] **hosted stack decisions before a public deploy** (from the 2026-08-13
       security review of the hosted terraform, out of scope for its fixes, each
       needs an owner call):
@@ -122,6 +100,15 @@ together in the browser" and refuse feature-parity fights with ArcGIS.
       - the terraform plan CI job authenticates with long-lived AWS access
         keys rather than OIDC.
       - the S3 state backend is commented out, terraform state is local only.
+      - the executor's security group can reach port 3000, which it needs for
+        ptolemy, tiletopia, geokode and itinera, but agora listens on 3000 in
+        the same shared group, so unauthenticated agora calls from escaped tool
+        code are possible. Blocking that means agora in its own security group.
+      - jupyter shares the executor's security group, inheriting 3000 and 8100
+        egress it does not need. Splitting them is a second group.
+      - the executor's inbound 8081 admits the whole VPC CIDR (a security group
+        reference cycle prevents naming geolang-api's group), so
+        `GEOLANG_EXECUTOR_SECRET` is the only guard on it.
 - [ ] **platform-proxy Caddyfile is not profile-aware**: it is one static file,
       so the minimal profile advertises routes to services that profile does
       not deploy and they 502. Fine while profiles stay close, generate or gate
