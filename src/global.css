@@ -152,6 +152,16 @@
   }
 }
 
+/* A minimized card shows its title bar and nothing else. Hiding the body rather
+   than unmounting it keeps whatever was typed into the panel. */
+.panel-card-minimized > *:not(:first-child) {
+  display: none;
+}
+
+.panel-card-minimized > *:first-child {
+  margin-bottom: 0;
+}
+
 /* Keyboard focus on the non-Mantine map controls (Mantine draws its own) */
 .maplibregl-ctrl button:focus-visible,
 .leaflet-bar a:focus-visible {

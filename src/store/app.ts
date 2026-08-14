@@ -160,6 +160,12 @@ interface AppState {
   activePanel: ToolPanel;
   setActivePanel: (p: ToolPanel) => void;
   togglePanel: (p: ToolPanel) => void;
+  /** the open panel is collapsed to its title bar */
+  panelMinimized: boolean;
+  togglePanelMinimized: () => void;
+  /** viewport coords the open panel was dragged to, null while it sits where it belongs */
+  panelPosition: { x: number; y: number } | null;
+  setPanelPosition: (p: { x: number; y: number } | null) => void;
 
   // Backends
   tiletopiaOnline: boolean;
@@ -209,6 +215,9 @@ const DEFAULT_SETTINGS: Settings = {
   googleMapsApiKey: '',
 };
 
+/** minimizing and dragging last only as long as the panel that was minimized or dragged */
+const PANEL_PLACEMENT = { panelMinimized: false, panelPosition: null } as const;
+
 /**
  * The bookmarks this browser owns, held aside while a live document's bookmarks
  * are the ones on screen. Null when no live document is showing.
@@ -249,8 +258,13 @@ export const useAppStore = create<AppState>()(
       setLocalBasemap: (localBasemap) => set({ localBasemap, basemap: 'local' }),
 
       activePanel: null,
-      setActivePanel: (activePanel) => set({ activePanel }),
-      togglePanel: (p) => set((s) => ({ activePanel: s.activePanel === p ? null : p })),
+      setActivePanel: (activePanel) => set({ activePanel, ...PANEL_PLACEMENT }),
+      togglePanel: (p) =>
+        set((s) => ({ activePanel: s.activePanel === p ? null : p, ...PANEL_PLACEMENT })),
+      panelMinimized: false,
+      togglePanelMinimized: () => set((s) => ({ panelMinimized: !s.panelMinimized })),
+      panelPosition: null,
+      setPanelPosition: (panelPosition) => set({ panelPosition }),
 
       tiletopiaOnline: false,
       geolangOnline: false,

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import {
-  Paper,
   Text,
   Stack,
   Switch,
@@ -10,7 +9,7 @@ import {
   TextInput,
 } from '@mantine/core';
 import { IconSettings } from '@tabler/icons-react';
-import { PanelHeader } from '../PanelCard';
+import { PanelCard, PanelHeader } from '../PanelCard';
 import { useAppStore, type Renderer, type Basemap } from '../../store/app';
 import { BASEMAP_SELECT_GROUPS, isPmtilesUrl } from '../../hooks/basemapTiles';
 import { apiHeaders, noticeRefusal } from '../../lib/apiAuth';
@@ -20,21 +19,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const { settings, updateSettings } = useAppStore();
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 300,
-        background: 'var(--mantine-color-dark-7)',
-        border: '1px solid var(--mantine-color-dark-5)',
-        // above the nav toggle (zIndex 400) so the close X isn't covered
-        zIndex: 500,
-      }}
-    >
+    <PanelCard width={300} testId="settings-panel">
       <PanelHeader
         icon={<IconSettings size={16} />}
         title="Settings"
@@ -149,7 +134,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         <Text size="xs" c="dimmed" fw={600}>Plugin Settings</Text>
         <PluginSettingsPanel />
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }
 

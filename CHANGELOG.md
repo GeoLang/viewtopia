@@ -6,6 +6,17 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-13: **every tool panel minimizes and moves out of the way**. The shared
+  panel header gained a minimize button beside the close X, collapsing the card to
+  its title bar in place, docked or floating, with a double click of the title bar
+  doing the same. The title bar is also a drag handle: pointer drag detaches the
+  card to a fixed position clamped inside the viewport, portaled cards included,
+  and the handlers sit on the header alone so touch scrolling inside a panel still
+  works. Both the collapsed flag and the dragged position live in the app store and
+  are dropped when the open panel changes or closes, so neither is persisted. The
+  settings panel now renders through `PanelCard` like every other panel and so
+  gained both affordances.
+
 - 2026-08-13: **a loaded raster converts to a Cloud Optimized GeoTIFF and downloads**.
   The raster panel gained a Convert to COG card beside the analysis ops, pointed at
   any source band or the last result, writing through the same terrano wasm module
