@@ -50,8 +50,9 @@ function geojsonFile(name, features) {
 
 async function importLayer(page, name, features) {
   await page.getByRole('button', { name: 'Data' }).click();
-  await page.locator(MENU_ITEM).filter({ hasText: 'Import' }).first().click();
-  const panel = page.locator(PANEL).filter({ hasText: 'Import Data' });
+  await page.locator(MENU_ITEM).filter({ hasText: 'Data Sources' }).first().click();
+  const panel = page.locator(PANEL).filter({ hasText: 'Data Sources' });
+  await panel.getByRole('tab', { name: 'Files' }).click();
   await panel.locator('input[type="file"]').setInputFiles(geojsonFile(name, features));
   await expect(panel.getByTestId('import-status')).toHaveText(
     `${name}: ${features.length} features`,

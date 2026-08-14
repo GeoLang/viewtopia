@@ -1,8 +1,6 @@
 import { useEffect } from 'react';
 import { Badge } from '@mantine/core';
 import { useAppStore, type ToolPanel } from '../store/app';
-import { useOgcLayerStore } from '../store/ogcLayers';
-import { useAgentLayerStore } from '../store/agentLayers';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { isPreviewPanel } from './toolMenus';
 import { PluginPanel } from '../plugins/PluginHost';
@@ -16,7 +14,7 @@ import { StacBrowserPanel } from '../features/stac/StacBrowserPanel';
 import { useStacStore } from '../features/stac/store';
 import { DashboardPanel } from '../features/dashboards/DashboardPanel';
 import { ProjectPanel } from '../features/project/ProjectPanel';
-import { SqlWorkspacePanel } from '../features/sql/SqlWorkspacePanel';
+import { DataSourcesPanel, dataSourceTab } from '../features/dataSources/DataSourcesPanel';
 import { GeocodingPanel } from './tools/GeocodingPanel';
 import { RoutingPanel } from './tools/RoutingPanel';
 import { TravelTimePanel } from './tools/TravelTimePanel';
@@ -26,8 +24,6 @@ import { GeofencePanel } from './tools/GeofencePanel';
 import { BookmarkPanel } from './tools/BookmarkPanel';
 import { LayerManager } from './layers/LayerManager';
 import { LegendPanel } from '../features/symbology/LegendPanel';
-import { OGCLayersPanel } from './layers/OGCLayersPanel';
-import { DragDropImport } from './tools/DragDropImport';
 import { ClippingPanel } from './tools/ClippingPanel';
 import { CrossSectionPanel } from './tools/CrossSectionPanel';
 import { HeatmapPanel } from './tools/HeatmapPanel';
@@ -103,10 +99,6 @@ export function ToolPanels() {
     removeLayer,
     reorderLayers,
   } = useAppStore();
-  const ogcLayers = useOgcLayerStore((s) => s.layers);
-  const addOgcLayer = useOgcLayerStore((s) => s.addLayer);
-  const removeOgcLayer = useOgcLayerStore((s) => s.removeLayer);
-  const addAgentLayer = useAgentLayerStore((s) => s.addLayer);
   const stacRasterUrl = useStacStore((s) => s.rasterAnalysisUrl);
   const flyTo = useSpaceTimeStore((s) => s.flyTo);
   // Space-Time lives in its own store but is one of the panels users open from
@@ -184,29 +176,20 @@ export function ToolPanels() {
       );
     case 'legend':
       return <LegendPanel onClose={close} />;
+    case 'dataSources':
     case 'ogc':
-      return (
-        <OGCLayersPanel
-          layers={ogcLayers}
-          onAdd={addOgcLayer}
-          onRemove={removeOgcLayer}
-          onClose={close}
-        />
-      );
     case 'import':
+    case 'sqlWorkspace':
       return (
-        <DragDropImport
-          // imported files join the agent layers, so every renderer draws them
-          onImport={(name, geojson) =>
-            addAgentLayer({ id: crypto.randomUUID(), name, color: '#38bdf8', geojson })
-          }
+        <DataSourcesPanel
+          // the tab is the panel's own state, so a new id has to mount a new panel
+          key={activePanel}
+          tab={dataSourceTab(activePanel)}
           onClose={close}
         />
       );
     case 'project':
       return <ProjectPanel onClose={close} />;
-    case 'sqlWorkspace':
-      return <SqlWorkspacePanel onClose={close} />;
     case 'clipping':
       return <ClippingPanel onClose={close} />;
     case 'crossSection':

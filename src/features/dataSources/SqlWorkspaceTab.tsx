@@ -11,14 +11,12 @@ import {
   Select,
 } from '@mantine/core';
 import {
-  IconDatabase,
   IconPlayerPlay,
   IconMap,
   IconDownload,
   IconLink,
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import { PanelCard, PanelHeader } from '../../components/PanelCard';
 import { query, queryAsGeoJson, NoGeometryError } from '../../duckdb';
 import { exportQuery, type ExportFormat } from '../../duckdb/exportFile';
 import { attachCsvUrl, attachParquetUrl } from '../../duckdb/loaders';
@@ -73,7 +71,7 @@ function slug(name: string): string {
   return cleaned || 'remote';
 }
 
-export function SqlWorkspacePanel({ onClose }: { onClose: () => void }) {
+export function SqlWorkspaceTab() {
   const [sql, setSql] = useState('SHOW TABLES;');
   const [results, setResults] = useState<Results | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -182,174 +180,166 @@ export function SqlWorkspacePanel({ onClose }: { onClose: () => void }) {
   const shown = results ? results.rows.slice(0, MAX_ROWS) : [];
 
   return (
-    <PanelCard width={460}>
-      <PanelHeader
-        icon={<IconDatabase size={16} />}
-        title="SQL"
-        onClose={onClose}
+    <Stack gap="xs">
+      <Textarea
+        autosize
+        minRows={4}
+        maxRows={10}
+        value={sql}
+        onChange={(e) => setSql(e.currentTarget.value)}
+        onKeyDown={(e) => {
+          if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            void run();
+          }
+        }}
+        data-testid="sql-editor"
+        styles={{
+          input: {
+            background: 'var(--mantine-color-dark-8)',
+            borderColor: 'var(--mantine-color-dark-5)',
+            fontFamily: 'monospace',
+            fontSize: 12,
+          },
+        }}
       />
 
-      <Stack gap="xs">
-        <Textarea
-          autosize
-          minRows={4}
-          maxRows={10}
-          value={sql}
-          onChange={(e) => setSql(e.currentTarget.value)}
-          onKeyDown={(e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-              e.preventDefault();
-              void run();
-            }
-          }}
-          data-testid="sql-editor"
-          styles={{
-            input: {
-              background: 'var(--mantine-color-dark-8)',
-              borderColor: 'var(--mantine-color-dark-5)',
-              fontFamily: 'monospace',
-              fontSize: 12,
-            },
-          }}
-        />
-
-        <Group gap="xs">
-          <Button
-            size="xs"
-            color="violet"
-            loading={busy}
-            leftSection={<IconPlayerPlay size={14} />}
-            onClick={() => void run()}
-            data-testid="sql-run"
-          >
-            Run
-          </Button>
-          <Button
-            size="xs"
-            variant="default"
-            leftSection={<IconMap size={14} />}
-            onClick={() => void addToMap()}
-            data-testid="sql-add-map"
-          >
-            Add to map
-          </Button>
-          <Text size="xs" c="dimmed">
-            Ctrl+Enter
-          </Text>
-        </Group>
-
-        <Select
+      <Group gap="xs">
+        <Button
           size="xs"
-          placeholder="Sample queries"
-          data={SAMPLES}
-          value={null}
-          onChange={(value) => value && setSql(value)}
-          data-testid="sql-samples"
-        />
+          color="violet"
+          loading={busy}
+          leftSection={<IconPlayerPlay size={14} />}
+          onClick={() => void run()}
+          data-testid="sql-run"
+        >
+          Run
+        </Button>
+        <Button
+          size="xs"
+          variant="default"
+          leftSection={<IconMap size={14} />}
+          onClick={() => void addToMap()}
+          data-testid="sql-add-map"
+        >
+          Add to map
+        </Button>
+        <Text size="xs" c="dimmed">
+          Ctrl+Enter
+        </Text>
+      </Group>
 
-        {error && (
-          <Text size="xs" c="red" data-testid="sql-error">
-            {error}
-          </Text>
-        )}
+      <Select
+        size="xs"
+        placeholder="Sample queries"
+        data={SAMPLES}
+        value={null}
+        onChange={(value) => value && setSql(value)}
+        data-testid="sql-samples"
+      />
 
-        {results && (
-          <>
-            {results.rows.length > MAX_ROWS && (
-              <Text size="xs" c="dimmed" data-testid="sql-cap">
-                Showing {MAX_ROWS} of {results.rows.length} rows
-              </Text>
-            )}
-            <ScrollArea.Autosize mah={220} type="auto">
-              <Table striped highlightOnHover fz="xs" data-testid="sql-results">
-                <Table.Thead>
-                  <Table.Tr>
+      {error && (
+        <Text size="xs" c="red" data-testid="sql-error">
+          {error}
+        </Text>
+      )}
+
+      {results && (
+        <>
+          {results.rows.length > MAX_ROWS && (
+            <Text size="xs" c="dimmed" data-testid="sql-cap">
+              Showing {MAX_ROWS} of {results.rows.length} rows
+            </Text>
+          )}
+          <ScrollArea.Autosize mah={220} type="auto">
+            <Table striped highlightOnHover fz="xs" data-testid="sql-results">
+              <Table.Thead>
+                <Table.Tr>
+                  {results.columns.map((column) => (
+                    <Table.Th key={column}>{column}</Table.Th>
+                  ))}
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {shown.map((row, index) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: result rows have no id
+                  <Table.Tr key={index}>
                     {results.columns.map((column) => (
-                      <Table.Th key={column}>{column}</Table.Th>
+                      <Table.Td key={column}>{cell(row[column])}</Table.Td>
                     ))}
                   </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {shown.map((row, index) => (
-                    // biome-ignore lint/suspicious/noArrayIndexKey: result rows have no id
-                    <Table.Tr key={index}>
-                      {results.columns.map((column) => (
-                        <Table.Td key={column}>{cell(row[column])}</Table.Td>
-                      ))}
-                    </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
-            </ScrollArea.Autosize>
-          </>
-        )}
+                ))}
+              </Table.Tbody>
+            </Table>
+          </ScrollArea.Autosize>
+        </>
+      )}
 
-        <Group gap="xs" grow>
-          <Button
-            size="xs"
-            variant="default"
-            leftSection={<IconDownload size={14} />}
-            onClick={() => void download('csv')}
-          >
-            Export CSV
-          </Button>
-          <Button
-            size="xs"
-            variant="default"
-            leftSection={<IconDownload size={14} />}
-            onClick={() => void download('parquet')}
-          >
-            Export GeoParquet
-          </Button>
-        </Group>
+      <Group gap="xs" grow>
+        <Button
+          size="xs"
+          variant="default"
+          leftSection={<IconDownload size={14} />}
+          onClick={() => void download('csv')}
+        >
+          Export CSV
+        </Button>
+        <Button
+          size="xs"
+          variant="default"
+          leftSection={<IconDownload size={14} />}
+          onClick={() => void download('parquet')}
+        >
+          Export GeoParquet
+        </Button>
+      </Group>
 
-        <Group gap="xs" align="flex-end">
-          <TextInput
-            size="xs"
-            style={{ flex: 1 }}
-            label="Attach a .parquet or .csv URL"
-            value={url}
-            onChange={(e) => setUrl(e.currentTarget.value)}
-            data-testid="sql-url"
-          />
-          <Button
-            size="xs"
-            variant="default"
-            leftSection={<IconLink size={14} />}
-            onClick={() => void attach()}
-          >
-            Attach
-          </Button>
-        </Group>
+      <Group gap="xs" align="flex-end">
+        <TextInput
+          size="xs"
+          style={{ flex: 1 }}
+          label="Attach a .parquet or .csv URL"
+          value={url}
+          onChange={(e) => setUrl(e.currentTarget.value)}
+          data-testid="sql-url"
+        />
+        <Button
+          size="xs"
+          variant="default"
+          leftSection={<IconLink size={14} />}
+          onClick={() => void attach()}
+        >
+          Attach
+        </Button>
+      </Group>
 
-        {history.length > 0 && (
-          <Stack gap={2}>
-            <Text size="xs" c="dimmed">
-              History
-            </Text>
-            <ScrollArea.Autosize mah={100} type="auto">
-              {history.map((entry) => (
-                <Text
-                  key={entry}
-                  size="xs"
-                  c="dark.2"
-                  data-testid="sql-history-item"
-                  onClick={() => setSql(entry)}
-                  style={{
-                    cursor: 'pointer',
-                    fontFamily: 'monospace',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {entry.replace(/\s+/g, ' ')}
-                </Text>
-              ))}
-            </ScrollArea.Autosize>
-          </Stack>
-        )}
-      </Stack>
-    </PanelCard>
+      {history.length > 0 && (
+        <Stack gap={2}>
+          <Text size="xs" c="dimmed">
+            History
+          </Text>
+          <ScrollArea.Autosize mah={100} type="auto">
+            {history.map((entry) => (
+              <Text
+                key={entry}
+                size="xs"
+                c="dark.2"
+                data-testid="sql-history-item"
+                onClick={() => setSql(entry)}
+                style={{
+                  cursor: 'pointer',
+                  fontFamily: 'monospace',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {entry.replace(/\s+/g, ' ')}
+              </Text>
+            ))}
+          </ScrollArea.Autosize>
+        </Stack>
+      )}
+    </Stack>
   );
 }

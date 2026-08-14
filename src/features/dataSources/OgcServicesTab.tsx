@@ -7,28 +7,20 @@ import {
   Button,
   Select,
   Badge,
-  ScrollArea,
 } from '@mantine/core';
-import { IconWorld, IconX, IconPlus } from '@tabler/icons-react';
+import { IconX, IconPlus } from '@tabler/icons-react';
 import { useState } from 'react';
-import { PanelCard, PanelHeader } from '../PanelCard';
 import { loadPmtilesLayer, loadWfsLayer, type OGCLayer, type OGCType } from '../../store/ogcLayers';
 
-interface OGCLayersPanelProps {
+interface OgcServicesTabProps {
   layers: OGCLayer[];
   onAdd: (name: string, url: string, type: OGCType) => OGCLayer;
   onRemove: (id: string) => void;
-  onClose: () => void;
 }
 
 const WMTS_NOTE = 'WMTS: paste the RESTful tile template. KVP and GetCapabilities are not read yet.';
 
-export function OGCLayersPanel({
-  layers,
-  onAdd,
-  onRemove,
-  onClose,
-}: OGCLayersPanelProps) {
+export function OgcServicesTab({ layers, onAdd, onRemove }: OgcServicesTabProps) {
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   const [type, setType] = useState<OGCType>('wms');
@@ -71,13 +63,7 @@ export function OGCLayersPanel({
   };
 
   return (
-    <PanelCard width={340} maxHeight="60vh">
-      <PanelHeader
-        icon={<IconWorld size={16} />}
-        title="OGC Layers"
-        onClose={onClose}
-      />
-
+    <>
       <Stack gap="xs" mb="xs" p="xs" style={{ background: 'var(--mantine-color-dark-6)', borderRadius: 4 }}>
         <TextInput
           size="xs"
@@ -135,46 +121,44 @@ export function OGCLayersPanel({
         )}
       </Stack>
 
-      <ScrollArea flex={1}>
-        <Stack gap={4}>
-          {layers.length === 0 ? (
-            <Text c="dimmed" size="xs" ta="center" py="md">
-              No OGC layers added
-            </Text>
-          ) : (
-            layers.map((layer) => (
-              <Group
-                key={layer.id}
-                justify="space-between"
-                p="xs"
-                style={{ background: 'var(--mantine-color-dark-6)', borderRadius: 4 }}
-              >
-                <Stack gap={0}>
-                  <Text size="xs" c="white">
-                    {layer.name}
-                  </Text>
-                  <Text size="xs" c="dimmed" lineClamp={1}>
-                    {layer.url}
-                  </Text>
-                </Stack>
-                <Group gap={4}>
-                  <Badge size="xs" variant="light">
-                    {layer.type.toUpperCase()}
-                  </Badge>
-                  <ActionIcon aria-label="Remove layer"
-                    size="xs"
-                    variant="subtle"
-                    color="red"
-                    onClick={() => onRemove(layer.id)}
-                  >
-                    <IconX size={10} />
-                  </ActionIcon>
-                </Group>
+      <Stack gap={4}>
+        {layers.length === 0 ? (
+          <Text c="dimmed" size="xs" ta="center" py="md">
+            No OGC layers added
+          </Text>
+        ) : (
+          layers.map((layer) => (
+            <Group
+              key={layer.id}
+              justify="space-between"
+              p="xs"
+              style={{ background: 'var(--mantine-color-dark-6)', borderRadius: 4 }}
+            >
+              <Stack gap={0}>
+                <Text size="xs" c="white">
+                  {layer.name}
+                </Text>
+                <Text size="xs" c="dimmed" lineClamp={1}>
+                  {layer.url}
+                </Text>
+              </Stack>
+              <Group gap={4}>
+                <Badge size="xs" variant="light">
+                  {layer.type.toUpperCase()}
+                </Badge>
+                <ActionIcon aria-label="Remove layer"
+                  size="xs"
+                  variant="subtle"
+                  color="red"
+                  onClick={() => onRemove(layer.id)}
+                >
+                  <IconX size={10} />
+                </ActionIcon>
               </Group>
-            ))
-          )}
-        </Stack>
-      </ScrollArea>
-    </PanelCard>
+            </Group>
+          ))
+        )}
+      </Stack>
+    </>
   );
 }
