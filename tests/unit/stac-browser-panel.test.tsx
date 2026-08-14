@@ -372,7 +372,7 @@ describe('StacBrowserPanel', () => {
     expect(body).toMatchObject({
       collections: ['sentinel-2-l2a'],
       limit: 20,
-      q: 'reflectance',
+      q: ['reflectance'],
       query: { 'eo:cloud_cover': { lte: 20 } },
     });
     expect(body.bbox).toHaveLength(4);
@@ -402,7 +402,7 @@ describe('StacBrowserPanel', () => {
     expect(JSON.parse(String(sent.body))).toEqual({
       collections: ['sentinel-2-l2a'],
       limit: 20,
-      q: 'reflectance',
+      q: ['reflectance'],
       token: NEXT_TOKEN.token,
     });
     expect(screen.getByTestId('stac-item-S2A_TILE_20240601')).toBeInTheDocument();
@@ -540,8 +540,8 @@ describe('free-text conformance', () => {
     ).toBe(false);
   });
 
-  it('sends q only when the catalog conforms', () => {
-    expect(itemSearchBody('sentinel-2-l2a', FILTERS, true).q).toBe('reflectance');
+  it('sends q as the array of terms the class takes, and only when it conforms', () => {
+    expect(itemSearchBody('sentinel-2-l2a', FILTERS, true).q).toEqual(['reflectance']);
     expect(itemSearchBody('sentinel-2-l2a', FILTERS, false).q).toBeUndefined();
   });
 });

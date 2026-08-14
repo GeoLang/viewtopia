@@ -8,6 +8,7 @@ import { apiHeaders, noticeRefusal } from '../../lib/apiAuth';
 export const STAC_CATALOGS: { url: string; label: string }[] = [
   { url: 'https://earth-search.aws.element84.com/v1', label: 'Earth Search (Sentinel, Landsat)' },
   { url: 'https://planetarycomputer.microsoft.com/api/stac/v1', label: 'Microsoft Planetary Computer' },
+  { url: 'https://api.stac.ceda.ac.uk', label: 'CEDA (CMIP6, ESA CCI, Sentinel ARD)' },
 ];
 
 /** How many items one page of a collection asks for. */
@@ -311,7 +312,8 @@ export function itemSearchBody(
   if (filters.bbox) body.bbox = filters.bbox;
   // a catalog outside the free-text conformance class either ignores q or, like
   // NASA CMR, answers HTTP 500 and loses the whole search
-  if (freeTextSearch && filters.text) body.q = filters.text;
+  // the class takes q as an array of terms on POST, a bare string is HTTP 400
+  if (freeTextSearch && filters.text) body.q = [filters.text];
   if (filters.maxCloudCover !== null) {
     body.query = { [CLOUD_COVER_FIELD]: { lte: filters.maxCloudCover } };
   }

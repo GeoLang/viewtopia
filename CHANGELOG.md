@@ -6,6 +6,14 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-08-14: **the STAC item search box was dead on every catalog the panel
+  offers**, since neither Earth Search nor Planetary Computer advertises the
+  free-text conformance class the input is gated on. The CEDA STAC API does
+  advertise it and now sits in the well-known list, so the box is live on a
+  default catalog. Its `q` also goes out as an array of terms, which is what
+  that class takes on POST, where the string the panel used to send comes back
+  HTTP 400.
+
 - 2026-08-14: **the README sold the Environmental plugin as live sensor
   monitoring with threshold alerts**, and it is neither. `SensorPanel` fetches
   `/api/v1/sensors` once when it opens and never again, with no websocket and
