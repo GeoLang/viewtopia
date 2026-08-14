@@ -15,6 +15,11 @@ vi.mock('../../src/viewer/registry', () => ({
 }));
 
 import { StacBrowserPanel } from '../../src/features/stac/StacBrowserPanel';
+import {
+  itemSearchBody,
+  parseFreeTextSearch,
+  type ItemFilters,
+} from '../../src/features/stac/client';
 import { useStacStore } from '../../src/features/stac/store';
 import { useAppStore } from '../../src/store/app';
 import { useAgentLayerStore } from '../../src/store/agentLayers';
@@ -37,11 +42,17 @@ const COLLECTIONS = `${CATALOG}/collections`;
 const ITEMS = `${COLLECTIONS}/sentinel-2-l2a/items`;
 const SEARCH = `${CATALOG}/search`;
 
+const FREE_TEXT_CLASS = 'https://api.stacspec.org/v1.0.0/item-search#free-text';
+
 const ROOT_DOC = {
   id: 'example-stac',
   title: 'Example STAC',
+  conformsTo: ['https://api.stacspec.org/v1.0.0/item-search', FREE_TEXT_CLASS],
   links: [{ rel: 'data', href: COLLECTIONS }],
 };
+
+/** the same catalog with no conformance list at all, so no free text */
+const PLAIN_ROOT_DOC = { id: 'example-stac', title: 'Example STAC', links: ROOT_DOC.links };
 
 const COLLECTIONS_DOC = {
   collections: [
@@ -139,9 +150,9 @@ function respondWithCatalog() {
 }
 
 /** the same catalog, with a search that pages through its POST next link */
-function respondWithSearch() {
+function respondWithSearch(root: unknown = ROOT_DOC) {
   respond((url, init) => {
-    if (url === CATALOG) return jsonOk(ROOT_DOC);
+    if (url === CATALOG) return jsonOk(root);
     if (url === COLLECTIONS) return jsonOk(COLLECTIONS_DOC);
     if (url === SEARCH) {
       const sent = JSON.parse(String(init?.body ?? '{}'));
@@ -399,6 +410,42 @@ describe('StacBrowserPanel', () => {
     expect(screen.queryByRole('button', { name: 'Load more' })).toBeNull();
   });
 
+  it('refuses text search on a catalog that does not conform to free text', async () => {
+    respondWithSearch(PLAIN_ROOT_DOC);
+    await renderPanel();
+    await openCatalog();
+    await openCollection();
+
+    const input = screen.getByLabelText('Search items');
+    expect(input).toBeDisabled();
+    expect(screen.getByText('This catalog has no text search.')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Maximum cloud cover'), { target: { value: '20' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+    });
+
+    const [requested, init] = fetchMock.mock.calls[fetchMock.mock.calls.length - 1];
+    expect(requested).toBe(SEARCH);
+    const body = JSON.parse(String((init as RequestInit).body));
+    expect(body.q).toBeUndefined();
+    expect(body.query).toEqual({ 'eo:cloud_cover': { lte: 20 } });
+  });
+
+  it('re-enables the text input when the next catalog conforms to free text', async () => {
+    respondWithSearch(PLAIN_ROOT_DOC);
+    await renderPanel();
+    await openCatalog();
+    await openCollection();
+    expect(screen.getByLabelText('Search items')).toBeDisabled();
+
+    respondWithSearch();
+    await openCatalog();
+    await openCollection();
+    expect(screen.getByLabelText('Search items')).toBeEnabled();
+    expect(screen.queryByText('This catalog has no text search.')).toBeNull();
+  });
+
   it('returns to the plain item listing once the filters are cleared', async () => {
     respondWithSearch();
     await renderPanel();
@@ -472,5 +519,29 @@ describe('StacBrowserPanel', () => {
     await openCatalog();
 
     expect(screen.getByTestId('stac-error')).toHaveTextContent('The catalog is unreachable.');
+  });
+});
+
+describe('free-text conformance', () => {
+  const FILTERS: ItemFilters = { text: 'reflectance', bbox: null, maxCloudCover: null };
+
+  it('reads the class off a landing page whatever version it names', () => {
+    expect(parseFreeTextSearch(ROOT_DOC)).toBe(true);
+    expect(
+      parseFreeTextSearch({ conformsTo: ['https://api.stacspec.org/v1.1.0/item-search#free-text'] }),
+    ).toBe(true);
+  });
+
+  it('treats a landing page without the class as having no free text', () => {
+    expect(parseFreeTextSearch(PLAIN_ROOT_DOC)).toBe(false);
+    expect(parseFreeTextSearch({ conformsTo: [] })).toBe(false);
+    expect(
+      parseFreeTextSearch({ conformsTo: ['https://api.stacspec.org/v1.0.0/item-search'] }),
+    ).toBe(false);
+  });
+
+  it('sends q only when the catalog conforms', () => {
+    expect(itemSearchBody('sentinel-2-l2a', FILTERS, true).q).toBe('reflectance');
+    expect(itemSearchBody('sentinel-2-l2a', FILTERS, false).q).toBeUndefined();
   });
 });

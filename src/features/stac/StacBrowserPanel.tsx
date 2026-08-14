@@ -37,6 +37,7 @@ import {
   itemRequest,
   itemSearchUrl,
   parseCollections,
+  parseFreeTextSearch,
   parseLinks,
   STAC_CATALOGS,
   type AssetAction,
@@ -101,6 +102,7 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
     setCollection(null);
     setItems([]);
     setOpenItemId(null);
+    setItemQuery('');
     try {
       const root = await fetchStac(catalogUrl);
       const links = parseLinks(root, catalogUrl);
@@ -110,6 +112,7 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
         url: catalogUrl,
         title: catalogTitle(root, catalogUrl),
         searchUrl: itemSearchUrl(links, catalogUrl),
+        freeTextSearch: parseFreeTextSearch(root),
         collections: parseCollections(body, listUrl),
       };
       setCatalog(loaded);
@@ -151,7 +154,7 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
     setOpenItemId(null);
     setItems([]);
     setStatus('');
-    await loadItems(itemRequest(from.searchUrl, picked, filters(inViewOnly)), false);
+    await loadItems(itemRequest(from, picked, filters(inViewOnly)), false);
   }
 
   async function openFavorite(favorite: StacFavorite) {
@@ -164,7 +167,7 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
 
   function applyFilters(inView: boolean) {
     if (!catalog || !collection) return;
-    void loadItems(itemRequest(catalog.searchUrl, collection, filters(inView)), false);
+    void loadItems(itemRequest(catalog, collection, filters(inView)), false);
   }
 
   function toggleInView(checked: boolean) {
@@ -370,6 +373,8 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
               flex={1}
               aria-label="Search items"
               placeholder="Search items"
+              disabled={!catalog?.freeTextSearch}
+              description={catalog?.freeTextSearch ? undefined : 'This catalog has no text search.'}
               value={itemQuery}
               onChange={(e) => setItemQuery(e.currentTarget.value)}
               onKeyDown={(e) => {
