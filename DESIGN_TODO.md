@@ -25,10 +25,9 @@ region watch inventory below. The Logistics row and plugin description were
 corrected the same way (FleetPanel is an honest empty state, only the delivery
 optimizer is real).
 
-- [~] **terravista sample UI upgrade**: basemap picker menu instead of the
-      cycle button, download sheet showing the region estimate before
-      fetching, compass and zoom overlay. Plain views, no Compose, no new
-      dependencies unless already present.
+The sample UI upgrade closed 2026-08-14 (terravista changelog): basemap
+picker menu, estimate dialog before any region fetch, zoom and compass
+overlay, stock views only, exercised control by control on the Pixel.
 
 The offline tiles track closed 2026-08-14 (terravista changelog): ambient disk
 cache plus pinned region downloads, region enumerator in core (which fixed a
