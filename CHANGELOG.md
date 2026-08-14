@@ -50,6 +50,21 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-14: **collecta joins the platform: field data lands on the map**. The
+  compose stack gains a collecta service (OpenRosa for ODK Collect plus its
+  REST API) behind an nginx /collecta/ route whose 60m body limit lets photo
+  parts reach collecta's own 50MB cap instead of 413ing at the proxy. A Field
+  Data panel (Data menu) lists the forms the account may read and loads a
+  form's submissions as a map layer: geometry from the first geo field in the
+  form's field order, falling back to the device location, scalar answers as
+  feature properties, and photo attachments fetched with the bearer into
+  object URLs, since an img tag cannot send Authorization. Submissions with no
+  location are counted and said, not silently dropped. Platform tokens verify
+  at collecta directly because both sides already speak HS256 {sub, exp,
+  role}; ODK Collect signs in with Basic auth against collecta's own seeded
+  users. Pushing submissions into ptolemy stays deliberately parked
+  (DESIGN_TODO).
+
 - 2026-08-13: **a print layout panel composes a page instead of screenshotting
   the window**. Page size (A4, A3, Letter, Legal), orientation and margins, with
   a title, a scale bar sized from the zoom and the width the map prints at, a

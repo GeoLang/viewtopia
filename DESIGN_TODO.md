@@ -15,6 +15,21 @@ In flight 2026-08-14:
       screen-resolution pixels. Off-screen MapLibre render at the page's
       target pixel size behind the existing `MapCapture` seam; Cesium keeps
       the live-frame path with its documented limit, Leaflet stays refused.
+      Done and verified (suite, build, lint), awaiting commit.
+- [~] **wire collecta into the platform**: increments 1 (deploy: Dockerfile,
+      compose service, nginx `/collecta/` route) and 2 (Field Data panel
+      loading submissions as a layer) are done and verified, awaiting commit
+      (viewtopia changelog has the full entry). Live-checked against the
+      built image: empty `COLLECTA_JWT_SECRET` refuses to start, a
+      tiletopia-shaped HS256 token (uuid sub, role) lists/creates/reads
+      forms and submissions, no token 401s, and the wire shapes match what
+      the panel parses.
+
+- [ ] **collecta increment 3: push submissions into ptolemy** as versioned
+      features, deliberately parked until the panel proves demand. Needs the
+      form-schema-to-dataset mapping, incremental sync off collecta's
+      cursor, and a decision on who owns the bridge (an exporter in collecta
+      versus a puller elsewhere).
 
 ## OPEN — direction: the Figma of GIS, only open (stated 2026-08-06)
 

@@ -76,6 +76,7 @@ export type ToolPanel =
   | 'modelImport'
   | 'trackImport'
   | 'cesiumIon'
+  | 'collecta'
   | 'google3d'
   | 'globalTerrain'
   | 'vectorTiles'

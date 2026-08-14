@@ -61,6 +61,7 @@ import { BuildingsPanel } from './tools/BuildingsPanel';
 import { ModelImportPanel } from './tools/ModelImportPanel';
 import { TrackImportPanel } from './tools/TrackImportPanel';
 import { CesiumIonPanel } from './tools/CesiumIonPanel';
+import { CollectaPanel } from './tools/CollectaPanel';
 import { Google3DPanel } from './tools/Google3DPanel';
 import { GlobalTerrainPanel } from './tools/GlobalTerrainPanel';
 import { VectorTilesPanel } from './tools/VectorTilesPanel';
@@ -264,6 +265,8 @@ export function ToolPanels() {
       return <TrackImportPanel onClose={close} />;
     case 'cesiumIon':
       return <CesiumIonPanel onClose={close} />;
+    case 'collecta':
+      return <CollectaPanel onClose={close} />;
     case 'google3d':
       return <Google3DPanel onClose={close} />;
     case 'globalTerrain':

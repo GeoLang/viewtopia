@@ -19,6 +19,7 @@
 #   - interiora:  Indoor venue maps + indoor routing (internal port 3000)
 #   - geoplumb:   Windowed raster tiles over STAC (:5174/plumb/, internal port 3000)
 #   - agora:      Live shared map documents over websockets (:5174/agora/, internal port 3000)
+#   - collecta:   Field data collection, OpenRosa + REST (:5174/collecta/, internal port 3000)
 #   - sibyl:      Rust agent loop service (internal port 8090)
 #   - geodukt:    Declarative pipeline runner for agent plans (internal port 8100)
 #   - geolang-api: AI/NLP geospatial agent API (port 8080)
@@ -187,6 +188,25 @@ services:
       DATABASE_URL: postgres://ptolemy:${POSTGRES_PASSWORD:-ptolemy}@db/agora
       PLATFORM_JWT_SECRET: ${PLATFORM_JWT_SECRET:-}
       RUST_LOG: info
+
+  # Field data collection: OpenRosa server for ODK Collect in the field plus
+  # the REST API the viewer's Collecta panel reads. nginx routes /collecta/
+  # here. Platform tokens verify directly (same HS256 secret and {sub, exp,
+  # role} claims as tiletopia), so the secret is as mandatory here as it is
+  # for ptolemy, and the server refuses an empty one. ODK Collect signs in
+  # with Basic auth against collecta's own user table, seeded with
+  # `docker compose exec collecta collecta-server create-user <email>`.
+  # COLLECTA_BASE_URL is what OpenRosa downloadUrls point back at, so it must
+  # be the public /collecta prefix, not the container address.
+  collecta:
+    build:
+      context: ../collecta
+    environment:
+      COLLECTA_JWT_SECRET: ${PLATFORM_JWT_SECRET:-}
+      COLLECTA_BASE_URL: ${COLLECTA_BASE_URL:-http://localhost:5174/collecta}
+      RUST_LOG: info
+    volumes:
+      - collecta-data:/data
 
   # Windowed raster compute: renders XYZ png tiles out of public STAC
   # collections, each request naming the time interval to composite over, which
@@ -424,3 +444,4 @@ volumes:
   sibyl-data:
   interiora-data:
   geoplumb-cache:
+  collecta-data:
