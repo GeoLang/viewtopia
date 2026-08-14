@@ -14,9 +14,6 @@ Dispatched as parallel agents, one per repo, viewtopia tracks in separate
 worktrees under `.wt/`. Agents commit locally and never push; the orchestrator
 session reviews, merges and pushes.
 
-- [~] **tiletopia**: Ion-compat leftovers, the `AssetType::Imagery` endpoint
-      answering `"IMAGERY"` with a tileset.json URL, and the numeric-id vs uuid
-      inconsistency between `/v1/assets` and the id-taking routes.
 - [~] **viewtopia**: panels minimizable, and movable out of the way, for screen
       real estate (worktree `.wt/panel-minimize`). Resolved design: minimize
       button in the shared PanelCard header collapsing to the title bar, title
@@ -27,12 +24,6 @@ session reviews, merges and pushes.
       Kotlin surface, default styling only.
 - [~] **geoplumb**: recon only, options for composite latency on dense
       collections (report, no edits).
-- [~] **viewtopia**: gate STAC free-text `q` on the item-search free-text
-      conformance class, disable the text input with a hint otherwise, and fix
-      or drop the broken OpenLandMap default catalog (worktree
-      `.wt/stac-freetext`, owns `src/features/stac/`). Live verification found
-      no major catalog advertises the class, three ignore `q` silently and NASA
-      CMR 500s on it.
 - [~] **geoplumb**: per-strip item footprint filter and per-item early
       intersection check, the two low-effort wins from the composite latency
       recon. The decoded-chunk cache and unordered streaming reads wait on
@@ -773,10 +764,12 @@ Medium value:
       collections, items, assets and saved favourites, and filters items by
       free text, current view and cloud cover. Services, databases and files
       are still one panel each (OGC Layers, SQL, Import), not one place.
-      One known limit of the filters: free text goes out as `q`, the STAC
-      free-text extension, which no real catalog has been tested against, so a
-      catalog lacking the extension either ignores it or 400s into the panel's
-      error line.
+      One known limit of the filters: free text is conformance-gated
+      (2026-08-13), and neither remaining default catalog advertises the
+      free-text class, so the item search box ships disabled on both. Making it
+      useful again means adding a conforming catalog to the defaults or
+      teaching the panel client-side filtering, which was ruled out as
+      look-like-search-while-missing-everything beyond the fetched page.
 - [ ] **print layout with atlas/map-series generation**: current export is a
       canvas screenshot.
 - [ ] **offline area download**: regions download and the app shell is
@@ -817,20 +810,6 @@ did. The rest of this entry is kept for the correction it records.
 
       The `Custom URL` field already works today if a user types the bundle URL
       by hand, so this is a convenience, not a blocker.
-- [ ] **tiletopia Ion-compat leftovers.** The terrain endpoint was fixed
-      2026-08-13, along with the missing `attributions` array that made every
-      Ion-compat asset of every type throw before its first tile. Two gaps
-      remain, both found while fixing those:
-      - `GET /v1/assets` returns numeric ids from `uuid_to_ion_id`, but
-        `/v1/assets/{id}` and `/v1/assets/{id}/endpoint` take a uuid path
-        parameter. A client that takes an id from the list cannot call the
-        endpoint with it, for every asset type. The conversion drops 8 of 16
-        bytes and calls `.abs()`, so it is not reversible and a real fix needs a
-        stored numeric id. Passing a uuid string to `IonResource.fromAssetId`
-        works today, so the flow is usable, just not self-consistent.
-      - `AssetType::Imagery` still maps to `"IMAGERY"` while returning a
-        `tileset.json` URL, the same class of bug as the terrain one. There is no
-        imagery endpoint to point it at yet.
 - [ ] **tiletopia's ecosystem page has the wrong sections for two repos.**
       Descriptions were corrected 2026-08-13 for panoptes, fluvius, fenestra and
       ptolemy, but fenestra now reads as an OGC server while sitting under
