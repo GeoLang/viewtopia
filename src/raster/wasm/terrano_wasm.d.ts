@@ -51,6 +51,16 @@ export function slope(data: Float64Array, width: number, height: number, cell_si
 export function writeCog(data: Float64Array, width: number, height: number, nodata: number, epsg: number, origin_x: number, origin_y: number, pixel_width: number, pixel_height: number, tile_size: number, overview_levels: number, deflate: boolean, sample_format: string): Uint8Array;
 
 /**
+ * Encode a multi-band raster as a pixel-interleaved COG, returning the file
+ * bytes.
+ *
+ * `data` holds the bands end to end, each `width * height` long, so band `b`
+ * starts at `b * width * height`. Every other argument means what it does in
+ * `writeCog`, which is this function at one band.
+ */
+export function writeCogBands(data: Float64Array, band_count: number, width: number, height: number, nodata: number, epsg: number, origin_x: number, origin_y: number, pixel_width: number, pixel_height: number, tile_size: number, overview_levels: number, deflate: boolean, sample_format: string): Uint8Array;
+
+/**
  * Rows come back flat as [zone, count, min, max, mean, sum, std, median].
  */
 export function zonalStats(values: Float64Array, zones: Float64Array, width: number, height: number, cell_size: number, nodata: number): Float64Array;
@@ -72,6 +82,7 @@ export interface InitOutput {
     readonly reclassify: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
     readonly slope: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly writeCog: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number) => [number, number, number, number];
+    readonly writeCogBands: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number) => [number, number, number, number];
     readonly zonalStats: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;

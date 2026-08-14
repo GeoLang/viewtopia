@@ -404,16 +404,18 @@ function storesExactly(value: number, format: SampleFormat): boolean {
  * An integer COG has no NaN, so one ordinary sample value has to stand in for
  * absent. The source's own nodata wins whenever the format can hold it, which
  * keeps the cells already carrying it absent. Failing that the write takes a
- * value the band never uses, counting in from the end of the range: the bottom
- * for a signed format, the top for an unsigned one.
+ * value no band uses, counting in from the end of the range: the bottom for a
+ * signed format, the top for an unsigned one.
  */
-function pickNodata(data: Float32Array, format: SampleFormat, declared: number | null): number {
+function pickNodata(bands: Float32Array[], format: SampleFormat, declared: number | null): number {
   if (declared !== null && storesExactly(declared, format)) return declared;
   const range = INTEGER_RANGES[format];
   if (!range) return Number.NaN;
   const [low, high] = range;
   const used = new Set<number>();
-  for (const value of data) used.add(Math.round(value));
+  for (const band of bands) {
+    for (const value of band) used.add(Math.round(value));
+  }
   const start = low < 0 ? low : high;
   const step = low < 0 ? 1 : -1;
   for (let i = 0; i < NODATA_SEARCH; i++) {
@@ -437,15 +439,18 @@ const COG_TILE_SIZE = 512;
 const COG_OVERVIEW_LEVELS = 4;
 
 /**
- * Write one band out as a Cloud Optimized GeoTIFF.
+ * Write bands out as one pixel-interleaved Cloud Optimized GeoTIFF, all of
+ * them sharing the grid the first one is on.
  *
- * `sampleFormat` is the type the band came in as, so an 8-bit image goes back
- * out 8-bit instead of eight times its size. Pixel size comes from the bbox
- * rather than the file's resolution because a large raster is read
- * downsampled, and the bytes here are what was read.
+ * `sampleFormat` is the type the bands came in as, so an 8-bit image goes back
+ * out 8-bit instead of eight times its size. One file carries one sample type
+ * and one nodata value, so bands read at different widths have to be given a
+ * format that holds them all. Pixel size comes from the bbox rather than the
+ * file's resolution because a large raster is read downsampled, and the bytes
+ * here are what was read.
  */
-export function terranoWriteCog(
-  data: Float32Array,
+export function terranoWriteCogBands(
+  bands: Float32Array[],
   width: number,
   height: number,
   bbox: [number, number, number, number],
@@ -454,11 +459,14 @@ export function terranoWriteCog(
   noData: number | null,
 ): Uint8Array {
   const [xmin, ymin, xmax, ymax] = bbox;
-  return wasm.writeCog(
-    toF64(data),
+  const flat = new Float64Array(bands.length * width * height);
+  for (let i = 0; i < bands.length; i++) flat.set(bands[i], i * width * height);
+  return wasm.writeCogBands(
+    flat,
+    bands.length,
     width,
     height,
-    pickNodata(data, sampleFormat, noData),
+    pickNodata(bands, sampleFormat, noData),
     epsgCode(crs),
     xmin,
     ymax,
@@ -469,4 +477,17 @@ export function terranoWriteCog(
     true,
     sampleFormat,
   );
+}
+
+/** Write one band out as a single-band Cloud Optimized GeoTIFF. */
+export function terranoWriteCog(
+  data: Float32Array,
+  width: number,
+  height: number,
+  bbox: [number, number, number, number],
+  crs: string,
+  sampleFormat: SampleFormat,
+  noData: number | null,
+): Uint8Array {
+  return terranoWriteCogBands([data], width, height, bbox, crs, sampleFormat, noData);
 }

@@ -39,6 +39,7 @@ export {
   terranoReclass,
   terranoSlope,
   terranoWriteCog,
+  terranoWriteCogBands,
   terranoZonalStats,
   terranoZonalStatsByPolygons,
 } from './terrano';

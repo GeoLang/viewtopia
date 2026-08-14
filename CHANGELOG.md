@@ -6,6 +6,14 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-13: **a multi-band raster converts to one multi-band COG**. The Convert to
+  COG card offers All bands above the per-band options whenever the raster carries
+  two or more, writing every band into one pixel-interleaved file through terrano's
+  new `writeCogBands`. The vendored `src/raster/wasm/` artifact was rebuilt for that
+  binding, and the single-band write now goes through it at one band, which is what
+  terrano's own `writeCog` already does. One file carries one sample type, so bands
+  read at different widths go out as f64, and the nodata value is one no band uses.
+
 - 2026-08-13: **a loaded raster converts to a Cloud Optimized GeoTIFF and downloads**.
   The raster panel gained a Convert to COG card beside the analysis ops, pointed at
   any source band or the last result, writing through the same terrano wasm module

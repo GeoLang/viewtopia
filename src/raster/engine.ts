@@ -156,6 +156,18 @@ export function writeCog(
   return call('cog', [data, width, height, bbox, crs, sampleFormat, noData]);
 }
 
+export function writeCogBands(
+  bands: Float32Array[],
+  width: number,
+  height: number,
+  bbox: [number, number, number, number],
+  crs: string,
+  sampleFormat: SampleFormat,
+  noData: number | null,
+): Promise<Uint8Array> {
+  return call('cog-bands', [bands, width, height, bbox, crs, sampleFormat, noData]);
+}
+
 export function zonalStatsByPolygons(
   values: Float32Array,
   features: GeoJSON.Feature[],
