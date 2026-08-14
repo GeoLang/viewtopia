@@ -25,6 +25,10 @@ region watch inventory below. The Logistics row and plugin description were
 corrected the same way (FleetPanel is an honest empty state, only the delivery
 optimizer is real).
 
+- [ ] **terravista sample UI upgrade** (queued behind the offline track, same
+      files): basemap picker menu instead of the cycle button, download sheet
+      showing the region estimate before fetching, compass and zoom overlay.
+      Plain views, no Compose, no new dependencies unless already present.
 - [~] **terravista offline tiles** (dispatched 2026-08-14): ambient disk
       cache in `cacheDir` with an LRU byte cap, pinned region downloads in
       `filesDir` (`downloadRegion`/`regions`/`deleteRegion`, progress,
