@@ -110,11 +110,14 @@ Unknowns to settle first: whether agora's attachment model can carry a
 high-frequency feed without competing with collaboration traffic, and what
 happens to a live layer's features when a user edits or saves the map.
 
-### terravista v0.2 and v0.3, the biggest advertised-vs-real gap
+### terravista v0.3, the remaining advertised-vs-real gap
 
-v0.2 is HTTP tile fetch and MVT decode, so the SDK can actually draw a map. v0.3
-is Metal and Vulkan rendering and needs platform GPU toolchains. Both are real
-implementation work rather than decisions.
+The v0.2 half of this entry shipped and is deleted: the Android library fetches
+tiles over HTTP, the core decodes MVT to draw commands, and the sample draws
+street-level vector tiles from OpenFreeMap, reading its TileJSON at runtime
+because the tile urls rotate (terravista changelog). v0.3 is Metal and Vulkan
+rendering and needs platform GPU toolchains, real implementation work rather
+than decisions.
 
 Worth saying plainly: this is post-v1 by the existing phasing, and it competes
 with the hosted flagship for attention. The honest options are to do it properly
@@ -828,16 +831,6 @@ Known limits:
 
 ## OPEN — Phase 3 (mobile & ML breadth, after v1)
 
-- [ ] **terravista: Kotlin half not in CI** — CI is Rust-only, so the Kotlin
-      library and sample are proven only by local gradle runs and device
-      sessions. A gradle job needs an Android SDK on the runner.
-- [ ] **terravista: street-level vector in the sample** — the sample's vector
-      source is MapLibre's demo tileset, capped at zoom 6. Going deeper means
-      OpenFreeMap, whose tile URLs rotate, so the sample would have to read
-      its TileJSON at runtime.
-- [ ] **terravista: fold `tile_package.rs` into `OfflineRegion`** — it holds a
-      third copy of the tile-range maths with its own `BoundingBox`, unused by
-      the region download path.
 - [ ] **terravista v0.3** — Metal/Vulkan GPU rendering. Biggest advertised-vs-real gap; needs
       platform GPU toolchains.
 - [ ] **panoptes model weights** — train or source one usable segmentation model and publish
