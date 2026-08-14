@@ -8,99 +8,28 @@
 
 ---
 
-## IN FLIGHT — 2026-08-13 TODO burndown
+## IN FLIGHT — 2026-08-13 parallel tracks
 
-Nothing below is committed. Every change named here sits uncommitted in that
-repo's working tree, so `git status` in each repo is the source of truth if this
-session is lost. Per-repo CHANGELOG and DESIGN entries were written alongside
-each change.
+Dispatched as parallel agents, one per repo, viewtopia tracks in separate
+worktrees under `.wt/`. Agents commit locally and never push; the orchestrator
+session reviews, merges and pushes.
 
-Round one finished and is committed and pushed across infrastructure, agora,
-ptolemy, viewtopia, tiletopia, collecta, panoptes and terrano.
+- [~] **terrano + viewtopia**: `write_cog_bands` binding in terrano-wasm,
+      rebuild the vendored `crates/terrano-wasm/pkg/`, then wire viewtopia's
+      Convert button for multi-band COG output (worktree `.wt/cog-bands`).
+- [~] **tiletopia**: Ion-compat leftovers, the `AssetType::Imagery` endpoint
+      answering `"IMAGERY"` with a tileset.json URL, and the numeric-id vs uuid
+      inconsistency between `/v1/assets` and the id-taking routes.
+- [~] **ptolemy, geokode, itinera**: sha2 0.11 digest migration off the `{:x}`
+      pattern, goldens captured on the old version first since geokode and
+      itinera hash stored API keys. geodukt's `hex.rs` is the model.
+- [~] **viewtopia**: panels minimizable, and movable out of the way, for screen
+      real estate (worktree `.wt/panel-minimize`). Design pending recon of the
+      panel chrome.
 
-**Hosting deferred by owner decision 2026-08-13.** Everything under the hosted
-flagship plan, the hosted stack decisions, the database TLS operator steps, the
-CloudFront realtime test and geoplumb in-region serving is parked with it. Do not
-treat any of those as next.
-
-Round two, started 2026-08-13, all off the hosting path:
-
-- [~] **terrano**: sample formats beyond Float64 in the COG writer, and the
-      `write_geotiff` triple-build cleanup. Unblocks the viewtopia raster
-      conversion wiring, which waits on this landing first.
-- [~] **viewtopia**: wire the Cesium terrain bundle picker (four steps spelled
-      out under the offline story), correct the two panoptes descriptions in
-      `docs/verticals.md` and the test count in `DESIGN.md`, and investigate
-      dependabot alert 19, a moderate the dependency section does not account
-      for.
-- [~] **ptolemy**: the `geoprocessing.rs` NULL panic, and the helm chart's
-      missing external-database override.
-- [~] **tiletopia**: the Ion-compat endpoint returning a tileset.json URL for
-      terrain assets, and the stale panoptes description in
-      `docs/ecosystem.html`.
-- [~] **audit**: verify the remaining entries in this file against the code and
-      report which are stale. Four were found stale today, so the rest are
-      suspect. Reports only, changes nothing.
-
-Landed in the working tree:
-
-- **infrastructure**: `rds.force_ssl` is 1, ECR repositories are IMMUTABLE with
-  deploys taking a new `image_tag` root variable instead of `:latest`, agora and
-  jupyter each hold their own security group, and ALB ingress is restricted to
-  the CloudFront origin-facing managed prefix list when a CDN is enabled. That
-  prefix list weighs 55 against a default 60-rule quota, so only one port can be
-  admitted from it, 443 when a certificate is configured. `terraform fmt` and
-  `validate` pass, no `plan` is possible without credentials. `image_tag`
-  defaults to `v0.1.0`, which nobody has pushed yet.
-- **infrastructure**: the platform-proxy Caddyfile is profile-aware. Each route
-  carries a named matcher gated on an `ENABLE_*` env var defaulting closed, fed
-  by a `proxy_route_gates` local in `main.tf` mapping to the existing
-  `var.enable_*` flags. The 16 routes the minimal profile could not serve now
-  return 501 instead of 502. Verified by running the real Caddyfile in
-  `caddy:2.11.4-alpine` against stub upstreams across four service sets, with the
-  full profile diffing clean against the original.
-- **agora**: sqlx built with `tls-rustls-ring`, and the Dockerfile fetches the
-  AWS RDS global CA bundle to `/etc/ssl/rds-global-bundle.pem`. No code change,
-  so local and CI plaintext still work. Verified against a scratch postgres with
-  `pg_hba` set to `hostssl` only.
-- **ptolemy**: `/branches/{id}/permissions/{user}/check` now answers what the
-  write ladder actually enforces, and both check routes reject an unknown
-  `required` level with a 400.
-
-Agents still running when this was written, one per repo:
-
-- **ptolemy**: done. `tls-rustls-ring` plus the RDS bundle in the Dockerfile,
-  same shape as agora's. Both TLS stacks were already in ptolemy's graph
-  (rustls via mongodb and reqwest, openssl via elasticsearch's hyper-tls), so
-  the whole lock delta is one re-export shim crate.
-- **viewtopia**: done. QML style import/export, expression renderers, the offline
-  external-API behaviour, and the pane agent-layer hooks for MapLibre and Cesium.
-  1293 tests passing across 130 files.
-- **tiletopia**: done. Prebuilt quantized-mesh bundles served from
-  `/api/v1/terrain/bundles/`, taking `ctb-tile` output verbatim. The bundle's
-  `tiles` template is rewritten to a relative one, so a bundle built against
-  another host cannot send Cesium off this server, which is what makes it
-  genuinely offline. tiletopia's own `terrain_bundle` export already writes this
-  exact layout, so export and serve now round-trip.
-- **collecta**: done. The attachments themselves turned out to be already
-  implemented (commits `ea8f66d` and `b4dfc7e`), so the TODO entry was stale.
-  What was genuinely missing was a content type policy, now in
-  `crates/collecta-server/src/attachment.rs`: a claimed type is narrowed to a
-  known capture format or to `application/octet-stream`, applied on ingest and
-  again on read so rows written before the policy are served under it too. Every
-  download is `Content-Disposition: attachment` with `nosniff`. 50 MB per part,
-  51 MB whole request, 413 in an OpenRosa envelope. A refusal on an attachment
-  read is 404 rather than 403, so an id cannot be confirmed by probing. Verified
-  against the OpenRosa spec on every point, and both new tests were
-  mutation-checked so the denial assertion is live rather than vacuous.
-- [~] **panoptes**: the honesty pass landed, README, CLI warnings, crate docs
-      and the workspace description all now say no weights are published. Now on
-      getting the onnx test into CI, see the item below.
-- **terrano**: done. The COG writer existed but produced a tiled multi-page TIFF
-  rather than a COG. Fixed and GDAL-validated, plus a `writeCog` wasm binding
-  that did not exist before. Remaining gaps are under the raster conversion item
-  below.
-
+Verified this session: verne's `live-load` CI job ran green on a real runner,
+which closes the two runner-only unknowns (`$GITHUB_ENV` token handoff and
+port 3000).
 
 ## OPEN — direction: the Figma of GIS, only open (stated 2026-08-06)
 
@@ -158,8 +87,11 @@ line item so the next session starts from the shape rather than rediscovering it
 
 ### Hosted flagship instance, the thesis blocker
 
-This is next. Everything else here is optional by comparison, because the thesis
-is "click a link, you're in the map" and nothing else delivers that.
+Hosting was deferred by owner decision 2026-08-13, so everything in this section
+is parked with it, along with the hosted stack decisions, the database TLS
+operator steps, the CloudFront realtime test and geoplumb in-region serving. It
+is still the thesis blocker, because the thesis is "click a link, you're in the
+map" and nothing else delivers that.
 
 State: the executor precondition closed 2026-08-09, the tool-boundary token
 exchange closed 2026-08-12, and the 2026-08-13 terraform pass closed force_ssl,
@@ -232,10 +164,10 @@ the kind of thing that makes a viewer feel finished.
 ### COG follow-through, the small one worth doing first
 
 Not a big feature, listed here because it is the cheapest way to finish something
-already shipped: terrano's COG writer emits only Float64, so a browser converting
-8-bit RGB writes a file eight times larger than it should. Roughly 60 lines in
-`bands_to_tiles` plus the bits and format IFD entries, then rebuild the vendored
-wasm package and wire viewtopia. Details under the raster conversion item below.
+already shipped. The sample-width half landed (terrano `10ab2e9`), so what is
+left is the `write_cog_bands` binding in terrano-wasm, a rebuild of the vendored
+wasm package, and wiring viewtopia's Convert button for multi-band output.
+Details under the raster conversion item below. In flight, see the top section.
 
 ## FEATURE — region watch: IoT sensors and change over time
 
@@ -348,18 +280,24 @@ a real bug was still there for a different reason.
 - [ ] Verify an entry against the code before working it, and do not trust the
       mechanism it names.
 
-      A sweep on 2026-08-13 found no further stale entries, but it only reached
-      part of the file. It confirmed as current, with evidence: the ptolemy
-      topology raw-writes gap (`ci/no-raw-writes.sh` itself documents that it
-      cannot see a mutating function called through `SELECT`, naming those three
-      by name), the geoprocessing NULL panic, collecta legacy-form access,
-      the terrain wiring, tiletopia's Ion-compat endpoint, terrano's Float64-only
-      writer, and ptolemy's feature-level merge.
+      The sweep is finished and found no further stale entries. It confirmed as
+      current, with evidence: the ptolemy topology raw-writes gap
+      (`ci/no-raw-writes.sh` itself documents that it cannot see a mutating
+      function called through `SELECT`, naming those three by name), the
+      geoprocessing NULL panic, collecta legacy-form access, the terrain wiring,
+      tiletopia's Ion-compat endpoint and ptolemy's feature-level merge.
 
-      Still unchecked, and checkable in code rather than needing a deployment:
-      the NL agent `sql_query` bypass, tiletopia asset metadata and annotation
-      reads, and whether the data source manager and print layout panels exist.
-      Worth a second pass.
+      The second pass closed the rest. The NL agent `sql_query` bypass is real:
+      `TOOL_RUNS_CALLER_CODE = True` is declared only on sql_query, plan steps
+      carry the flag, and the approval panel labels such a step rather than
+      gating it, with the discouragement living in the persona text. tiletopia
+      asset metadata is as described, `GET /assets` filters rows through
+      `may_view_asset` while `GET /assets/{id}` applies no check at all and the
+      Ion-compat `/v1/assets/{id}` is public. tiletopia annotation reads answer
+      for any valid token while writes go through `may_modify_asset`. The
+      viewtopia data source manager and print layout panels both really are
+      missing: the panel registry in `ToolPanels.tsx` names 67 panels and
+      neither is among them, and `PrintExportPanel.tsx` scales the live canvas.
 
 ## OPEN — platform hygiene
 
@@ -819,20 +757,13 @@ desktop/mobile wrapper (competes with the terravista/collecta track).
 
 High value, existing GeoLang crates supply the engine:
 
-- [ ] **convert loaded rasters to COG**: the writer blocker is gone (terrano,
-      2026-08-13, working tree). What is left before wiring viewtopia to real
-      imagery:
-      - **the writer only emits Float64.** A browser converting 8-bit RGB or
-        16-bit gets a file 8x or 4x larger than it should be. The reader already
-        handles u8/u16/u32/i8/i16/i32/f32, so this is an asymmetry rather than a
-        design limit. A sample-format parameter is roughly 60 lines in
-        `bands_to_tiles` plus the bits/format IFD entries. Do this first.
-      - `writeCog` in terrano-wasm is single-band, there is no `writeCogBands`
-        binding yet.
-      - the vendored `crates/terrano-wasm/pkg/` needs rebuilding before viewtopia
-        can see `writeCog` at all.
-      - no BigTIFF, so files cap at 4 GiB. That is now a clear error rather than
-        silent truncation.
+- [ ] **multi-band COG conversion from the browser**: the browser path shipped.
+      `RasterPanel.tsx` has a Convert button whose handler calls the wasm
+      `writeCog` and downloads the bytes as `image/tiff`, the writer emits every
+      sample format terrano's reader decodes, and the 4 GiB classic-TIFF cap is a
+      clear error rather than silent truncation. The one gap left is that
+      terrano-wasm exports only `writeCog`, not terrano-core's `write_cog_bands`,
+      so conversion from the browser is single-band.
 
       What the terrano pass found, worth keeping: terrano already had a 1857-line
       hand-rolled COG writer with no TIFF dependency, and it did not produce a
@@ -845,19 +776,7 @@ High value, existing GeoLang crates supply the engine:
       GDAL 3.11.5 `--full-check=yes` validates clean across 10 files, and a
       wasm32-unknown-unknown build produced a GDAL-validated COG with exact
       pixels.
-- [ ] **terrano `write_geotiff` builds its output buffer three times**, throwing
-      the first two away, with leftover comments reading "Wait, IFD comes after
-      header" and "Let me redo this properly" (`geotiff.rs` around line 60). It
-      works, it is just dead work on every call. Found during the COG fix and
-      left alone to keep that diff scoped.
 
-      Ecosystem note, since the old entry said an upstream Rust writer was in
-      progress: that is stale. The `tiff` crate encoder is still strip-only with
-      no tile API (image-rs/image-tiff#205, open since June 2023, no PR).
-      `geotiff-writer` 0.8.1 shipped and documents correct COG layout plus wasm,
-      but it is five months old with 13 stars and its correctness is documented
-      rather than verified. Adopting it would trade a writer we control for an
-      unproven dependency.
       (Vector conversion shipped 2026-08-06: GeoParquet, FlatGeobuf, GeoJSON,
       PMTiles. PMTiles per-layer export shipped 2026-08-02.)
 
