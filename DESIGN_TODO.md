@@ -8,24 +8,21 @@
 
 ---
 
-## IN FLIGHT — 2026-08-13 parallel tracks
+## IN FLIGHT — 2026-08-14 session
 
-Dispatched as parallel agents, one per repo, viewtopia tracks in separate
-worktrees under `.wt/`. Agents commit locally and never push; the orchestrator
-session reviews, merges and pushes.
+Closed this session before dispatch: the React E2E break on every master push
+since 2026-08-13 (the terrain panel's bundle-list fetch 500s with no platform
+stack, and yesterday's console-guard allowance for it was written but never
+committed, now landed), the stale tiletopia `agent/scoped-tool-tokens` worktree
+and branch (merged, pruned), and the terravista version disagreement (workspace
+Cargo version and gradle `VERSION_NAME` now match the changelog's 0.4.0, the
+Android README keeps 0.2.0 because that is the latest JitPack tag). The two
+geoplumb composite-latency tracks from 2026-08-13 landed and pushed.
 
-- [~] **geoplumb**: recon only, options for composite latency on dense
-      collections (report, no edits).
-- [~] **geoplumb**: per-strip item footprint filter and per-item early
-      intersection check, the two low-effort wins from the composite latency
-      recon. The decoded-chunk cache and unordered streaming reads wait on
-      profiling evidence.
-
-Verified this session, no work needed: verne's `live-load` CI job ran green on
-a real runner, closing the two runner-only unknowns (`$GITHUB_ENV` token
-handoff and port 3000), and the sha2 0.11 digest migration turned out to be
-already done in all three repos (geokode `f5a737e`, itinera `166c835`, ptolemy
-already hex-encodes with sha2 0.11 in the workspace).
+- [~] **sensor claims verification** (the item under the region watch feature
+      below): one agent verifying the five README claims against code and
+      correcting whichever do not hold. Owns viewtopia/README.md,
+      tiletopia/README.md and both CHANGELOGs, commits locally, never pushes.
 
 ## OPEN — direction: the Figma of GIS, only open (stated 2026-08-06)
 
@@ -864,8 +861,6 @@ Known limits:
       JitPack builds at release), no real tile server has been hit, the FFI
       flattening drops the layer name so colour is the only per-layer signal,
       there is no style setter, and the sample app still shows raster only.
-      Version numbers also disagree across Cargo (0.1.0), the Android README
-      (0.2.0) and the CHANGELOG (0.4.0).
 - [ ] **terravista v0.3** — Metal/Vulkan GPU rendering. Biggest advertised-vs-real gap; needs
       platform GPU toolchains.
 - [ ] **panoptes model weights** — train or source one usable segmentation model and publish
