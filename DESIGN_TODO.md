@@ -149,13 +149,12 @@ against GDAL's driver list before committing, and do not assume a reader exists.
 The enterprise version tree is separately blocked on an enterprise deployment to
 test against, with requirements documented under the verne section below.
 
-### viewtopia product gaps: data source manager, print layout
+### viewtopia product gaps: print layout
 
-Both are medium-sized UI work with no blocking unknowns. The data source manager
-merges OGC Layers, SQL and Import into one panel alongside the existing STAC
-browser. Print layout with atlas and map-series generation replaces what is
-currently a canvas screenshot. Neither is on the thesis critical path, both are
-the kind of thing that makes a viewer feel finished.
+The data source manager shipped 2026-08-13: one Data Sources panel with
+Services, Database and Files tabs, the old panel ids opening it on the right
+tab. Print layout with atlas and map-series generation, replacing the canvas
+screenshot, is in flight (worktree `.wt/print-layout`).
 
 ## FEATURE — region watch: IoT sensors and change over time
 
@@ -752,18 +751,16 @@ High value, product-level:
       the encoding off. Everything else in the first cut is done.
 Medium value:
 
-- [ ] **data source manager panel**: the STAC Browser panel covers catalogs,
-      collections, items, assets and saved favourites, and filters items by
-      free text, current view and cloud cover. Services, databases and files
-      are still one panel each (OGC Layers, SQL, Import), not one place.
-      One known limit of the filters: free text is conformance-gated
-      (2026-08-13), and neither remaining default catalog advertises the
-      free-text class, so the item search box ships disabled on both. Making it
-      useful again means adding a conforming catalog to the defaults or
-      teaching the panel client-side filtering, which was ruled out as
+- [ ] **STAC free-text defaults**: free text is conformance-gated (2026-08-13)
+      and neither default catalog (Earth Search, Planetary Computer) advertises
+      the free-text class, so the item search box ships disabled on both.
+      Making it useful again means adding a conforming catalog to the defaults
+      or teaching the panel client-side filtering, which was ruled out as
       look-like-search-while-missing-everything beyond the fetched page.
-- [ ] **print layout with atlas/map-series generation**: current export is a
-      canvas screenshot.
+      (The data source manager itself shipped 2026-08-13: Services, Database
+      and Files tabs in one panel, old ids open the right tab.)
+- [~] **print layout with atlas/map-series generation**: current export is a
+      canvas screenshot. In flight, see the plans section.
 - [ ] **offline area download**: regions download and the app shell is
       service-worker cached. What is left is in the offline story section
       below.
