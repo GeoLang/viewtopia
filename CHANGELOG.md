@@ -6,6 +6,16 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-13: **STAC free text is only sent to catalogs that advertise it**. The
+  landing page's `conformsTo` is read alongside its links, and `q` goes into the
+  search body only when the item-search free-text class is there. None of Earth
+  Search, Planetary Computer or LandsatLook advertises it and they quietly return
+  unfiltered results, while NASA CMR answers HTTP 500 to any body carrying `q`, so
+  the browser panel now disables the item search box with a note when the open
+  catalog has no text search. The OpenLandMap default was dropped: its host serves
+  an SPA on every path, and the real catalog is a static file with no collections
+  link the panel could walk.
+
 - 2026-08-13: **a loaded raster converts to a Cloud Optimized GeoTIFF and downloads**.
   The raster panel gained a Convert to COG card beside the analysis ops, pointed at
   any source band or the last result, writing through the same terrano wasm module

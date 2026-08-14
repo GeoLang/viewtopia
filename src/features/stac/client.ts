@@ -8,7 +8,6 @@ import { apiHeaders, noticeRefusal } from '../../lib/apiAuth';
 export const STAC_CATALOGS: { url: string; label: string }[] = [
   { url: 'https://earth-search.aws.element84.com/v1', label: 'Earth Search (Sentinel, Landsat)' },
   { url: 'https://planetarycomputer.microsoft.com/api/stac/v1', label: 'Microsoft Planetary Computer' },
-  { url: 'https://stac.openlandmap.org', label: 'OpenLandMap' },
 ];
 
 /** How many items one page of a collection asks for. */
@@ -48,6 +47,8 @@ export interface StacCatalog {
   title: string;
   /** where the catalog takes a filtered item search */
   searchUrl: string;
+  /** whether the catalog conforms to free text on item search */
+  freeTextSearch: boolean;
   collections: StacCollection[];
 }
 
@@ -202,6 +203,16 @@ export function itemSearchUrl(links: StacLink[], catalogUrl: string): string {
   return linkHref(links, 'search') ?? `${trimSlash(catalogUrl)}/search`;
 }
 
+/** The part of a conformance URI that names free text on item search, any version. */
+const FREE_TEXT_CONFORMANCE = 'item-search#free-text';
+
+/** Whether the catalog's landing page claims free text on item search. */
+export function parseFreeTextSearch(body: unknown): boolean {
+  const raw = record(body).conformsTo;
+  if (!Array.isArray(raw)) return false;
+  return raw.some((uri) => typeof uri === 'string' && uri.includes(FREE_TEXT_CONFORMANCE));
+}
+
 export function parseCollections(body: unknown, base: string): StacCollection[] {
   const raw = record(body).collections;
   if (!Array.isArray(raw)) return [];
@@ -291,14 +302,16 @@ const CLOUD_COVER_FIELD = 'eo:cloud_cover';
 export function itemSearchBody(
   collectionId: string,
   filters: ItemFilters,
+  freeTextSearch: boolean,
 ): Record<string, unknown> {
   const body: Record<string, unknown> = {
     collections: [collectionId],
     limit: ITEM_PAGE_SIZE,
   };
   if (filters.bbox) body.bbox = filters.bbox;
-  // free text is its own STAC extension, a catalog without it ignores q
-  if (filters.text) body.q = filters.text;
+  // a catalog outside the free-text conformance class either ignores q or, like
+  // NASA CMR, answers HTTP 500 and loses the whole search
+  if (freeTextSearch && filters.text) body.q = filters.text;
   if (filters.maxCloudCover !== null) {
     body.query = { [CLOUD_COVER_FIELD]: { lte: filters.maxCloudCover } };
   }
@@ -310,14 +323,18 @@ export function itemSearchBody(
  * use until a filter the listing cannot express is set.
  */
 export function itemRequest(
-  searchUrl: string,
+  catalog: StacCatalog,
   collection: StacCollection,
   filters: ItemFilters,
 ): ItemRequest {
-  if (!filters.text && filters.maxCloudCover === null) {
+  const searchesText = catalog.freeTextSearch && filters.text !== '';
+  if (!searchesText && filters.maxCloudCover === null) {
     return { url: itemsPageUrl(collection, filters.bbox), searchBody: null };
   }
-  return { url: searchUrl, searchBody: itemSearchBody(collection.id, filters) };
+  return {
+    url: catalog.searchUrl,
+    searchBody: itemSearchBody(collection.id, filters, catalog.freeTextSearch),
+  };
 }
 
 /**
