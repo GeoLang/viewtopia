@@ -25,6 +25,19 @@ region watch inventory below. The Logistics row and plugin description were
 corrected the same way (FleetPanel is an honest empty state, only the delivery
 optimizer is real).
 
+Dispatched as parallel agents, disjoint repos, commit locally, never push:
+
+- [~] **terravista v0.2 leftovers**: carry the layer name through the FFI
+      flattening, add a per-layer style setter to the Kotlin surface, and
+      compile the Kotlin half against the local SDK
+      (`/home/aaron/Android/sdk`, platform 35, NDK r27c at
+      `~/android-ndk-r27c`, cargo-ndk 4.1.2). Sample app grows a minimal
+      vector layer so a phone install can prove the new path.
+- [~] **viewtopia STAC free-text default**: probe public catalogs'
+      `/conformance` live for the free-text class, add a genuinely useful
+      conforming one to `STAC_CATALOGS`, verified by a real `q=` search. If
+      none exists, report rather than force it.
+
 ## OPEN — direction: the Figma of GIS, only open (stated 2026-08-06)
 
 The owner's product thesis: GeoLang becomes what Figma is to design, for GIS,
