@@ -19,10 +19,11 @@ Cargo version and gradle `VERSION_NAME` now match the changelog's 0.4.0, the
 Android README keeps 0.2.0 because that is the latest JitPack tag). The two
 geoplumb composite-latency tracks from 2026-08-13 landed and pushed.
 
-- [~] **sensor claims verification** (the item under the region watch feature
-      below): one agent verifying the five README claims against code and
-      correcting whichever do not hold. Owns viewtopia/README.md,
-      tiletopia/README.md and both CHANGELOGs, commits locally, never pushes.
+The sensor claims verification also closed this session: verdicts and evidence
+are in both repos' changelogs, and the durable finding is folded into the
+region watch inventory below. The Logistics row and plugin description were
+corrected the same way (FleetPanel is an honest empty state, only the delivery
+optimizer is real).
 
 ## OPEN — direction: the Figma of GIS, only open (stated 2026-08-06)
 
@@ -186,6 +187,14 @@ needs a concrete case to answer well.
 - **ptolemy** versions features with branch, diff, merge and audit, so change over
   time on *vector* data is already a solved problem here.
 - **viewtopia** has TimelinePanel, TimelapsePanel and HeatmapPanel.
+- **tiletopia** carries two written, unit-tested but unwired modules, verified
+  2026-08-14: `scripting.rs` (threshold triggers, comparison operators, alert
+  severities) and `geofence.rs`. Each is referenced only by its `pub mod` line,
+  no route or `AppState` field constructs either, so wiring them is route work,
+  not engine work. The realtime WebSocket is real but carries a closed enum of
+  collaboration messages and drops anything else, so a sensor feed through it
+  needs a new message variant, not a new socket. The sensor claims audit
+  (2026-08-14, both repos' changelogs) removed the README claims these backed.
 
 **What is missing**, in dependency order:
 
@@ -235,15 +244,6 @@ ships before the expensive part starts.
 competes with the hosted flagship for attention. The raster-first sequencing is
 what keeps it affordable, because it reuses geoplumb wholesale.
 
-- [ ] **verify what viewtopia and tiletopia already claim about sensors.** Same
-      class as the panoptes overselling, and wider. `viewtopia/README.md` line 99
-      sells "Live IoT sensor monitoring with threshold alerts" as an
-      Environmental vertical. `tiletopia/README.md` promises a WebSocket
-      real-time layer (line 35), live sensor injection into the 3D scene (45),
-      entity linking from building id to sensor readings (47), and a rules engine
-      for threshold alerts (51). Nobody has checked whether tiletopia's WS layer
-      is real. Check those five claims before a public deploy and correct
-      whichever do not hold.
 - [ ] **if any of this is wanted, the in-thesis version is a live layer, not a
       sensor platform**: fluvius emitting over WebSocket into agora, which
       already carries live multiplayer. One connector, reusing shipped
