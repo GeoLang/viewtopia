@@ -72,7 +72,7 @@ function LogisticsPanel({ ctx }: { ctx: PluginContext }) {
 const plugin: PluginDefinition = {
   id: 'logistics',
   name: 'Logistics',
-  description: 'Real-time fleet tracking and multi-stop delivery route optimization',
+  description: 'Multi-stop delivery route optimization, plus a fleet panel awaiting a live feed',
   version: '1.0.0',
   author: 'TileTopia-HQ',
   icon: <IconTruck size={14} />,

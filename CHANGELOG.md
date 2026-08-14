@@ -16,6 +16,11 @@ All notable changes to this project will be documented in this file.
   a sensor inventory with server-reported status that filters by type and
   flies to a sensor.
 
+- 2026-08-14: **the Logistics row and plugin description claimed fleet tracking
+  via WebSocket**, but FleetPanel is a deliberate empty state, since no service
+  serves vehicle positions. Both now lead with the real half, the itinera
+  multi-stop delivery optimizer, and say the fleet panel waits on a feed.
+
 - 2026-08-13: **the Cesium globe drew every basemap tile upside down**, a
   patchwork of flipped tiles mismatched at their borders. The offline
   `CachedImageryProvider` decoded tiles with `imageOrientation: 'none'`, while

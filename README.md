@@ -95,7 +95,7 @@
 | Plugin | Description |
 |--------|-------------|
 | **Real Estate** | Parcel search (APN/address/owner), comparable sales, split/merge editing |
-| **Logistics** | Fleet tracking via WebSocket, multi-stop delivery optimization |
+| **Logistics** | Multi-stop delivery optimization, fleet tracking panel awaiting a live telemetry feed |
 | **Environmental** | Sensor inventory from a configured sensors dataset, server-reported status, filter by type, fly to a sensor |
 | **Construction** | Survey comparison, cut/fill volumes, milestone tracking |
 | **Agriculture** | NDVI field health, soil moisture, crop status |
