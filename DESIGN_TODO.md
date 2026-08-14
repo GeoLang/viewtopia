@@ -810,9 +810,9 @@ did. The rest of this entry is kept for the correction it records.
       level deep while `S3Store::list` is recursive and capped at 1000 keys, so
       discovery would differ per backend. The availability walk touches every
       tile file, so a large bundle makes the layer.json request slow unless the
-      bundle ships its own `available` array. `list_bundles` returns an empty
-      array on any `read_dir` failure, not only a missing directory, so a
-      permissions error looks like an empty server.
+      bundle ships its own `available` array. (The third limit closed
+      2026-08-13: an unreadable bundles directory now answers 500 with a logged
+      reason instead of looking like an empty server.)
 Closed 2026-08-13. Geocoding and routing already preferred the
 platform, verified against geokode's and itinera's real response shapes. What was
 missing was offline behaviour: both now go through `offlineFetch()` so a repeat
