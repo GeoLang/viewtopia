@@ -216,7 +216,7 @@ const RGB_FORM = /^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/i;
 const HEX_FORM = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
 
 /** A colour's channels, in either form an exchange format hands one back. */
-function colorChannels(color: string): [number, number, number] | null {
+export function colorChannels(color: string): [number, number, number] | null {
   const rgb = RGB_FORM.exec(color.trim());
   if (rgb) return [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])];
   const digits = HEX_FORM.exec(color.trim())?.[1];

@@ -15,6 +15,7 @@ import {
   type BasemapTiles,
 } from '../../hooks/basemapTiles';
 import { getSharedCamera } from '../../hooks/sharedCamera';
+import { metersPerCssPixel, niceScaleBar } from '../../lib/scaleBar';
 
 type ExportFormat = 'png' | 'jpeg' | 'html-embed' | 'html-full';
 
@@ -23,21 +24,6 @@ function activeCanvas(activeTab: string, renderer: string): HTMLCanvasElement | 
   const containerId =
     activeTab === 'map' ? 'leaflet-container' : renderer === 'maplibre' ? 'maplibre-container' : 'cesium-container';
   return document.getElementById(containerId)?.querySelector('canvas') ?? null;
-}
-
-/** Ground meters per pixel of the exported image, from the web-mercator zoom. */
-function metersPerPixel(latitude: number, zoom: number, cssWidth: number, exportWidth: number): number {
-  const perCssPixel = (156_543.03392 * Math.cos((latitude * Math.PI) / 180)) / 2 ** zoom;
-  return (perCssPixel * cssWidth) / exportWidth;
-}
-
-/** Round scale-bar distance near the target pixel width, and how wide it draws. */
-function scaleBar(mpp: number, targetPx: number): { label: string; px: number } {
-  const raw = mpp * targetPx;
-  const pow = 10 ** Math.floor(Math.log10(raw));
-  const nice = [1, 2, 5, 10].map((m) => m * pow).find((v) => v >= raw) ?? pow * 10;
-  const label = nice >= 1000 ? `${(nice / 1000).toLocaleString()} km` : `${nice} m`;
-  return { label, px: nice / mpp };
 }
 
 // reads the live app store rather than ctx, so a basemap or renderer switch re-renders the panel
@@ -116,12 +102,13 @@ function ExportMapPanel(_props: { ctx: PluginContext }) {
 
       // Add scale bar, sized from the current zoom and latitude
       if (includeScaleBar) {
-        const mpp = metersPerPixel(camera.latitude, camera.zoom, mapCanvas.clientWidth || width, width);
-        const bar = scaleBar(mpp, 100);
+        const cssWidth = mapCanvas.clientWidth || width;
+        const mpp = (metersPerCssPixel(camera.latitude, camera.zoom) * cssWidth) / width;
+        const bar = niceScaleBar(mpp, 100);
         exportCtx.fillStyle = '#333';
-        exportCtx.fillRect(20, height - 40, bar.px, 4);
+        exportCtx.fillRect(20, height - 40, bar.length, 4);
         exportCtx.fillRect(20, height - 44, 2, 8);
-        exportCtx.fillRect(20 + bar.px, height - 44, 2, 8);
+        exportCtx.fillRect(20 + bar.length, height - 44, 2, 8);
         exportCtx.font = '11px sans-serif';
         exportCtx.fillText(bar.label, 20, height - 48);
       }

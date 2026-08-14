@@ -12,7 +12,7 @@ import {
 import { useAgentLayerStore } from '../../src/store/agentLayers';
 import { parseImport } from '../../src/lib/importGeoJson';
 import { gridSummary, collectPoints } from '../../src/lib/pointData';
-import { exportPixelSize } from '../../src/components/tools/PrintExportPanel';
+import { exportPixelSize } from '../../src/features/printLayout/imageExport';
 import { useSpaceTimeStore } from '../../src/features/spacetime/store';
 
 /**

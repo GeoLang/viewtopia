@@ -4,7 +4,7 @@ import { test, expect } from '../console-guard';
 import { PANEL, MENU_ITEM, openApp } from '../panel-helpers.js';
 
 /**
- * Functional smoke for Tools ▸ Data Table, Collaborate, Print/Export against the
+ * Functional smoke for Tools ▸ Data Table, Collaborate, Print Layout against the
  * live platform stack on :5174. Each test drives the panel's primary action and
  * asserts the value it produces, not just that the panel opened.
  *
@@ -455,11 +455,11 @@ test.describe('Tools panels (batch 2)', () => {
     await expect(panel).toHaveCount(0);
   });
 
-  test('Print/Export: exporting downloads an image of the live canvas', async ({ page }) => {
+  test('Print Layout: exporting downloads an image of the live canvas', async ({ page }) => {
     await openApp(page);
-    await openPanel(page, 'Print/Export');
+    await openPanel(page, 'Print Layout');
 
-    const panel = page.locator(PANEL).filter({ hasText: 'Print / Export' });
+    const panel = page.locator(PANEL).filter({ hasText: 'Print Layout' });
     await expect(panel).toBeVisible();
 
     // nothing downloads until Export is clicked, so the count below is the
@@ -474,6 +474,10 @@ test.describe('Tools panels (batch 2)', () => {
       .evaluate((c) => ({ width: c.width, height: c.height }));
     expect(canvasSize.width).toBeGreaterThan(0);
 
+    // the image formats carry the pixel controls, the PDF page carries none
+    await panel.getByLabel('Format').click();
+    await page.getByRole('option', { name: 'PNG' }).click();
+
     // ask for an output size that is nothing like the canvas, and confirm the
     // panel took the values. re-rendering the form must not produce a status or
     // a file: only Export does
@@ -487,13 +491,13 @@ test.describe('Tools panels (batch 2)', () => {
     // 96 DPI is the CSS reference, so the file is exactly the size asked for
     await expect(panel.getByTestId('printexport-size')).toContainText('Output: 640 × 480 px');
     expect(downloads).toHaveLength(0);
-    await expect(panel.getByText('Exported!')).toHaveCount(0);
+    await expect(panel.getByText('Exported.')).toHaveCount(0);
 
     const [pngDownload] = await Promise.all([
       page.waitForEvent('download'),
       panel.getByRole('button', { name: 'Export' }).click(),
     ]);
-    await expect(panel.getByText('Exported!')).toBeVisible();
+    await expect(panel.getByText('Exported.')).toBeVisible();
     expect(downloads).toHaveLength(1);
     expect(pngDownload.suggestedFilename()).toBe('viewtopia-export.png');
 
@@ -533,9 +537,8 @@ test.describe('Tools panels (batch 2)', () => {
     expect([...jpg.subarray(0, 3)]).toEqual([0xff, 0xd8, 0xff]);
     expect(jpg.length).toBeGreaterThan(1000);
 
-    // raster only: PDF was dropped rather than kept as a PNG under a .pdf name
     await panel.getByLabel('Format').click();
-    await expect(page.getByRole('option')).toHaveText(['PNG', 'JPEG']);
+    await expect(page.getByRole('option')).toHaveText(['PDF page', 'PNG', 'JPEG']);
     await page.getByRole('option', { name: 'PNG' }).click();
 
     // DPI scales the raster: the same 640x480 at 300 DPI is 2000x1500 px
@@ -550,6 +553,22 @@ test.describe('Tools panels (batch 2)', () => {
       width: 2000,
       height: 1500,
     });
+
+    // the PDF page composes rather than screenshots, so it takes the page
+    // controls instead of the pixel ones
+    await panel.getByLabel('Format').click();
+    await page.getByRole('option', { name: 'PDF page' }).click();
+    await expect(panel.getByTestId('printexport-size')).toHaveCount(0);
+    await panel.getByLabel('Title').fill('Smoke sheet');
+    const [pdfDownload] = await Promise.all([
+      page.waitForEvent('download'),
+      panel.getByRole('button', { name: 'Export' }).click(),
+    ]);
+    expect(downloads).toHaveLength(4);
+    expect(pdfDownload.suggestedFilename()).toBe('viewtopia-layout.pdf');
+    const pdf = await fs.readFile(await pdfDownload.path());
+    expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
+    await expect(panel.getByText('Exported 1 page.')).toBeVisible();
 
     await page.keyboard.press('Escape');
     await expect(panel).toHaveCount(0);

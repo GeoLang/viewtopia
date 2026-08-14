@@ -4,19 +4,24 @@ import type { AgentLayer } from '../store/agentLayers';
 export function agentLayersBounds(
   layers: AgentLayer[],
 ): [number, number, number, number] | null {
+  return featuresBounds(layers.flatMap((layer) => layer.geojson.features ?? []));
+}
+
+/** [west, south, east, north] covering every position, or null if there are none. */
+export function featuresBounds(
+  features: GeoJSON.Feature[],
+): [number, number, number, number] | null {
   const bounds: [number, number, number, number] = [180, 90, -180, -90];
   let any = false;
 
-  for (const layer of layers) {
-    for (const f of layer.geojson.features ?? []) {
-      forEachPosition(f.geometry, ([lng, lat]) => {
-        any = true;
-        if (lng < bounds[0]) bounds[0] = lng;
-        if (lat < bounds[1]) bounds[1] = lat;
-        if (lng > bounds[2]) bounds[2] = lng;
-        if (lat > bounds[3]) bounds[3] = lat;
-      });
-    }
+  for (const f of features) {
+    forEachPosition(f.geometry, ([lng, lat]) => {
+      any = true;
+      if (lng < bounds[0]) bounds[0] = lng;
+      if (lat < bounds[1]) bounds[1] = lat;
+      if (lng > bounds[2]) bounds[2] = lng;
+      if (lat > bounds[3]) bounds[3] = lat;
+    });
   }
 
   if (!any) return null;

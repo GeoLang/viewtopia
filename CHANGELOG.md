@@ -16,6 +16,21 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-13: **a print layout panel composes a page instead of screenshotting
+  the window**. Page size (A4, A3, Letter, Legal), orientation and margins, with
+  a title, a scale bar sized from the zoom and the width the map prints at, a
+  north arrow that follows the bearing, and the Legend panel's own swatches down
+  the right, all out as PDF through jsPDF. The map keeps the captured aspect and
+  letterboxes rather than stretching. Atlas mode takes a loaded vector layer and
+  prints one page per feature, fitting the camera to each feature's padded
+  bounds and titling the page from a chosen attribute, capped at 60 pages with
+  the layer's real count reported. The camera goes back where the user left it,
+  including when a page fails mid-series. Print/Export is absorbed: its PNG and
+  JPEG export at a chosen size and DPI is a format on the new panel, and the
+  `printExport` id still opens it. Capture reads the live canvas, so MapLibre
+  and Cesium work and Leaflet refuses with a message: it draws its tiles as
+  images that no canvas can read back.
+
 - 2026-08-13: **one Data Sources panel replaces the OGC Layers, SQL and Import
   panels**. Services, Database and Files are now tabs of a single card, each one
   the body of the panel it came from, moved to `src/features/dataSources/` with

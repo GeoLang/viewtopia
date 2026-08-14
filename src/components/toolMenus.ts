@@ -132,7 +132,12 @@ export const TOOLS_MENU: ToolMenuItem[][] = [
     { panel: 'timeline', label: 'Timeline', icon: IconTimeline },
     { panel: 'dataTable', label: 'Data Table', icon: IconTable },
     { panel: 'collaboration', label: 'Collaborate', icon: IconUsers },
-    { panel: 'printExport', label: 'Print/Export', icon: IconPrinter },
+    {
+      panel: 'printLayout',
+      label: 'Print Layout',
+      icon: IconPrinter,
+      keywords: ['print', 'export', 'pdf', 'atlas', 'map series'],
+    },
   ],
 ];
 
