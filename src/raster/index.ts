@@ -21,6 +21,7 @@ export type {
   ZonalStatsParams,
   ZonalResult,
   ClassDef,
+  SampleFormat,
 } from './types';
 
 export { loadCogFromUrl, loadCogFromBuffer, loadCogOverview, getCogOverviews } from './loader';
@@ -37,6 +38,7 @@ export {
   terranoPolygonize,
   terranoReclass,
   terranoSlope,
+  terranoWriteCog,
   terranoZonalStats,
   terranoZonalStatsByPolygons,
 } from './terrano';

@@ -9,17 +9,7 @@ import { IconDownload, IconTransform } from '@tabler/icons-react';
 import { PanelCard, PanelCloseButton } from '../../components/PanelCard';
 import { CONVERT_FORMATS, convertFileName, convertLayer, type ConvertFormat } from './formats';
 import { useGeoJsonSources } from '../../lib/geojsonSources';
-
-function download(bytes: Uint8Array, fileName: string, mimeType: string): void {
-  // copied off the wasm heap, whose buffer Blob will not take
-  const blob = new Blob([Uint8Array.from(bytes)], { type: mimeType });
-  const href = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = href;
-  anchor.download = fileName;
-  anchor.click();
-  URL.revokeObjectURL(href);
-}
+import { downloadBytes } from '../../lib/downloadBytes';
 
 export function ConvertPanel({ onClose }: { onClose: () => void }) {
   const sources = useGeoJsonSources();
@@ -40,7 +30,7 @@ export function ConvertPanel({ onClose }: { onClose: () => void }) {
     try {
       const bytes = await convertLayer(source.geojson, source.name, format);
       const fileName = convertFileName(source.name, format);
-      download(bytes, fileName, spec.mimeType);
+      downloadBytes(bytes, fileName, spec.mimeType);
       setWritten({ fileName, bytes: bytes.length });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'the conversion failed');

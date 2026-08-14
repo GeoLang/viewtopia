@@ -465,6 +465,15 @@ Tools" setting with a Preview badge, so there are no dead buttons in the default
 - SQL exports go through `COPY (...) TO '<temp>'` and `copyFileToBuffer`, then drop the temp file.
   In the browser that file lives in the wasm filesystem, under the node bundle used by the tests it
   lands in the process working directory instead.
+- A loaded raster is written back out as a Cloud Optimized GeoTIFF by the same terrano wasm
+  module the analysis ops run in, one band or one analysis result per file, tiled with
+  overviews and deflated. The band goes out in the sample type it was read as, which
+  `RasterMetadata.sampleFormats` carries from the typed array geotiff decoded it into, so an
+  8-bit image stays 8-bit rather than costing eight times its size as f64. An analysis result
+  is f32. Pixel size comes from the bbox and the size actually read, because a large raster is
+  read downsampled and the resolution tag describes the file. An integer COG has no NaN, so
+  nodata is the source's own value when the format can hold it and otherwise a sample the band
+  never uses, counted in from the bottom of a signed range or the top of an unsigned one.
 - Binary vector imports read registered buffers through DuckDB spatial. Zips are unpacked with
   fflate because `/vsizip/` cannot see a registered buffer, the geometry column and its CRS both
   come from `DESCRIBE` (`GEOMETRY('EPSG:3857')`), and `ST_Transform` needs `always_xy` or EPSG:4326

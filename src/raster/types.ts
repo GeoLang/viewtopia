@@ -23,6 +23,9 @@ export interface BandRef {
   label?: string;
 }
 
+/** Sample types a COG can hold, named the way terrano's writer names them */
+export type SampleFormat = 'u8' | 'i8' | 'u16' | 'i16' | 'u32' | 'i32' | 'f32' | 'f64';
+
 /** Raster dataset metadata */
 export interface RasterMetadata {
   width: number;
@@ -33,6 +36,8 @@ export interface RasterMetadata {
   noData: number | null;
   resolution: [number, number];
   bandLabels?: string[];
+  /** the sample type each loaded band came in as, one entry per band */
+  sampleFormats: SampleFormat[];
 }
 
 /** Parameters for NDVI computation */

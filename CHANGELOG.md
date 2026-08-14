@@ -6,6 +6,17 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-13: **a loaded raster converts to a Cloud Optimized GeoTIFF and downloads**.
+  The raster panel gained a Convert to COG card beside the analysis ops, pointed at
+  any source band or the last result, writing through the same terrano wasm module
+  in the raster worker and the same download the vector Convert panel uses. The
+  vendored `src/raster/wasm/` artifact was rebuilt from terrano master for the
+  `writeCog` binding. A band goes out in the sample type it was read as, tracked on
+  `RasterMetadata.sampleFormats`, so an 8-bit image writes 8-bit instead of eight
+  times the bytes, and a result writes f32. Nodata keeps the source's own value when
+  the sample type can hold it, otherwise the write takes a sample the band never
+  uses. A failure shows in the panel's alert rather than downloading a broken file.
+
 - 2026-08-13: **the terrain panel offers tiletopia's prebuilt terrain bundles**.
   The panel asks `/tiles/v1/terrain/bundles` on mount, an anonymous list, and adds
   a provider option per name under a "Terrain bundles" group. Picking one loads

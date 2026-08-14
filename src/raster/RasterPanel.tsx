@@ -22,6 +22,7 @@ import {
 import {
   IconCalculator,
   IconChartHistogram,
+  IconDownload,
   IconGridDots,
   IconLeaf,
   IconLink,
@@ -44,7 +45,16 @@ import { ZonalTable } from './ZonalTable';
 import { useAgentLayerStore } from '../store/agentLayers';
 import { renderToDataUrl } from './renderer';
 import { cornersOfBbox } from '../overlay/georeference';
-import type { RasterResult, ColorRamp, FocalStat, Neighborhood, ZonalResult } from './types';
+import { fileNameSlug } from '../features/convert/formats';
+import { downloadBytes } from '../lib/downloadBytes';
+import type {
+  RasterResult,
+  ColorRamp,
+  FocalStat,
+  Neighborhood,
+  SampleFormat,
+  ZonalResult,
+} from './types';
 
 /** a run that produced features rather than a grid: contours, polygonize */
 interface VectorResult {
@@ -71,6 +81,9 @@ export function RasterPanel({ onClose, initialUrl = '' }: RasterPanelProps) {
   const [vector, setVector] = useState<VectorResult | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [colorRamp, setColorRamp] = useState<ColorRamp>('viridis');
+  const [rasterName, setRasterName] = useState('raster');
+  const [cogInput, setCogInput] = useState('0');
+  const [cogWritten, setCogWritten] = useState<{ fileName: string; bytes: number } | null>(null);
 
   // Operation params
   const [indexKey, setIndexKey] = useState('ndvi');
@@ -131,6 +144,27 @@ export function RasterPanel({ onClose, initialUrl = '' }: RasterPanelProps) {
     ...polygonLayers.map((l) => ({ value: `layer:${l.id}`, label: l.name })),
   ];
 
+  /**
+   * A COG holds one band, so the write takes whichever grid the panel is
+   * pointed at. A source band goes back out as the type it was read as, an
+   * analysis result is f32 and marks absent cells with NaN rather than the
+   * source file's nodata value.
+   */
+  const cogSource: {
+    data: Float32Array | null;
+    format: SampleFormat;
+    noData: number | null;
+    label: string;
+  } =
+    cogInput === 'result' && result
+      ? { data: result.data, format: 'f32', noData: null, label: result.operation }
+      : {
+          data: raster?.bands[Number(cogInput)] ?? null,
+          format: raster?.metadata.sampleFormats[Number(cogInput)] ?? 'f32',
+          noData: raster?.metadata.noData ?? null,
+          label: `band-${Number(cogInput) + 1}`,
+        };
+
   async function handleLoadUrl() {
     if (!url.trim()) return;
     setLoading(true);
@@ -138,10 +172,12 @@ export function RasterPanel({ onClose, initialUrl = '' }: RasterPanelProps) {
     try {
       const loaded = await loadCogFromUrl(url, { maxDimension: 1024 });
       setRaster(loaded);
+      setRasterName(url.split('/').pop() || 'raster');
       setResult(null);
       setResultImage(null);
       setVector(null);
       setZonalRows(null);
+      setCogWritten(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load raster');
     } finally {
@@ -157,10 +193,12 @@ export function RasterPanel({ onClose, initialUrl = '' }: RasterPanelProps) {
       const buffer = await file.arrayBuffer();
       const loaded = await loadCogFromBuffer(buffer, { maxDimension: 1024 });
       setRaster(loaded);
+      setRasterName(file.name);
       setResult(null);
       setResultImage(null);
       setVector(null);
       setZonalRows(null);
+      setCogWritten(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load raster');
     } finally {
@@ -313,6 +351,33 @@ export function RasterPanel({ onClose, initialUrl = '' }: RasterPanelProps) {
       setResultImage(renderToDataUrl(res, { ramp: colorRamp }));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Analysis failed');
+    } finally {
+      setRunning(null);
+    }
+  }
+
+  async function handleConvertCog() {
+    if (!raster || !cogSource.data) return;
+    const { width, height, bbox, crs } = raster.metadata;
+
+    setRunning('cog');
+    setError(null);
+    setCogWritten(null);
+    try {
+      const bytes = await engine.writeCog(
+        cogSource.data,
+        width,
+        height,
+        bbox,
+        crs,
+        cogSource.format,
+        cogSource.noData,
+      );
+      const fileName = `${fileNameSlug(rasterName)}-${cogSource.label}.tif`;
+      downloadBytes(bytes, fileName, 'image/tiff');
+      setCogWritten({ fileName, bytes: bytes.length });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'the conversion failed');
     } finally {
       setRunning(null);
     }
@@ -817,6 +882,48 @@ export function RasterPanel({ onClose, initialUrl = '' }: RasterPanelProps) {
               {polygonLayers.length === 0 && (
                 <Text size="xs" c="dimmed" mt={4}>
                   Add a polygon layer to the map to group by its features.
+                </Text>
+              )}
+            </Paper>
+
+            <Paper p="xs" withBorder bg="var(--mantine-color-dark-8)">
+              <Group justify="space-between" mb={4}>
+                <Group gap={4}>
+                  <IconDownload size={14} />
+                  <Text size="xs" fw={500} c="white">
+                    Convert to COG
+                  </Text>
+                </Group>
+                <Button
+                  size="xs"
+                  variant="light"
+                  color="blue"
+                  aria-label="Convert to COG"
+                  onClick={handleConvertCog}
+                  loading={running === 'cog'}
+                  disabled={!cogSource.data}
+                >
+                  Convert
+                </Button>
+              </Group>
+              <Select
+                aria-label="COG input"
+                label="Input"
+                size="xs"
+                w={140}
+                data={sourceOptions}
+                value={cogInput}
+                onChange={(v) => {
+                  setCogInput(v ?? '0');
+                  setCogWritten(null);
+                }}
+              />
+              <Text size="xs" c="dimmed" mt={4}>
+                Writes {cogSource.format} samples, tiled with overviews.
+              </Text>
+              {cogWritten && (
+                <Text size="xs" c="teal" mt={4} data-testid="cog-result">
+                  {cogWritten.fileName}: {cogWritten.bytes} bytes
                 </Text>
               )}
             </Paper>

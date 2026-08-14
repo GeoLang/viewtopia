@@ -17,6 +17,7 @@ import type {
   PolygonizeResult,
   RasterMetadata,
   RasterResult,
+  SampleFormat,
   ZonalResult,
 } from './types';
 
@@ -377,4 +378,95 @@ export function terranoZonalStatsByPolygons(
     nodata,
   );
   return decodeZoneRows(wasm.zonalStats(toF64(values), zones, width, height, 1.0, nodata));
+}
+
+/** Lowest and highest sample each integer format can hold. */
+const INTEGER_RANGES: Partial<Record<SampleFormat, [number, number]>> = {
+  u8: [0, 255],
+  i8: [-128, 127],
+  u16: [0, 65535],
+  i16: [-32768, 32767],
+  u32: [0, 4294967295],
+  i32: [-2147483648, 2147483647],
+};
+
+/** how far in from the end of a range to look for a sample the band skips */
+const NODATA_SEARCH = 256;
+
+function storesExactly(value: number, format: SampleFormat): boolean {
+  const range = INTEGER_RANGES[format];
+  if (range) return Number.isInteger(value) && value >= range[0] && value <= range[1];
+  if (format === 'f32') return Number.isNaN(value) || Math.fround(value) === value;
+  return true;
+}
+
+/**
+ * An integer COG has no NaN, so one ordinary sample value has to stand in for
+ * absent. The source's own nodata wins whenever the format can hold it, which
+ * keeps the cells already carrying it absent. Failing that the write takes a
+ * value the band never uses, counting in from the end of the range: the bottom
+ * for a signed format, the top for an unsigned one.
+ */
+function pickNodata(data: Float32Array, format: SampleFormat, declared: number | null): number {
+  if (declared !== null && storesExactly(declared, format)) return declared;
+  const range = INTEGER_RANGES[format];
+  if (!range) return Number.NaN;
+  const [low, high] = range;
+  const used = new Set<number>();
+  for (const value of data) used.add(Math.round(value));
+  const start = low < 0 ? low : high;
+  const step = low < 0 ? 1 : -1;
+  for (let i = 0; i < NODATA_SEARCH; i++) {
+    const candidate = start + i * step;
+    if (!used.has(candidate)) return candidate;
+  }
+  return start;
+}
+
+function epsgCode(crs: string): number {
+  const code = Number(crs.replace(/^EPSG:/i, ''));
+  if (!Number.isInteger(code) || code < 1 || code > 65535) {
+    throw new Error(`a COG carries its CRS as an EPSG code, and this raster is ${crs}`);
+  }
+  return code;
+}
+
+/** GDAL's own default tiling, and what most COG readers expect. */
+const COG_TILE_SIZE = 512;
+/** enough of a pyramid for a 1024-cell read to zoom out to a few pixels */
+const COG_OVERVIEW_LEVELS = 4;
+
+/**
+ * Write one band out as a Cloud Optimized GeoTIFF.
+ *
+ * `sampleFormat` is the type the band came in as, so an 8-bit image goes back
+ * out 8-bit instead of eight times its size. Pixel size comes from the bbox
+ * rather than the file's resolution because a large raster is read
+ * downsampled, and the bytes here are what was read.
+ */
+export function terranoWriteCog(
+  data: Float32Array,
+  width: number,
+  height: number,
+  bbox: [number, number, number, number],
+  crs: string,
+  sampleFormat: SampleFormat,
+  noData: number | null,
+): Uint8Array {
+  const [xmin, ymin, xmax, ymax] = bbox;
+  return wasm.writeCog(
+    toF64(data),
+    width,
+    height,
+    pickNodata(data, sampleFormat, noData),
+    epsgCode(crs),
+    xmin,
+    ymax,
+    (xmax - xmin) / width,
+    (ymax - ymin) / height,
+    COG_TILE_SIZE,
+    COG_OVERVIEW_LEVELS,
+    true,
+    sampleFormat,
+  );
 }

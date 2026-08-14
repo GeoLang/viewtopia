@@ -40,6 +40,17 @@ export function reclassify(data: Float64Array, width: number, height: number, ce
 export function slope(data: Float64Array, width: number, height: number, cell_size: number, nodata: number): Float64Array;
 
 /**
+ * Encode a raster as a Cloud Optimized GeoTIFF, returning the file bytes.
+ *
+ * `overview_levels` of 0 writes no pyramid. `sample_format` is one of
+ * "u8", "i8", "u16", "i16", "u32", "i32", "f32", "f64": an 8-bit image sent
+ * back as "f64" costs eight times the bytes it needs. On an integer format
+ * `nodata` is an ordinary sample value set aside to mean absent, so it has
+ * to be whole and inside that format's range.
+ */
+export function writeCog(data: Float64Array, width: number, height: number, nodata: number, epsg: number, origin_x: number, origin_y: number, pixel_width: number, pixel_height: number, tile_size: number, overview_levels: number, deflate: boolean, sample_format: string): Uint8Array;
+
+/**
  * Rows come back flat as [zone, count, min, max, mean, sum, std, median].
  */
 export function zonalStats(values: Float64Array, zones: Float64Array, width: number, height: number, cell_size: number, nodata: number): Float64Array;
@@ -60,6 +71,7 @@ export interface InitOutput {
     readonly rasterize: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
     readonly reclassify: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
     readonly slope: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+    readonly writeCog: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number) => [number, number, number, number];
     readonly zonalStats: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;

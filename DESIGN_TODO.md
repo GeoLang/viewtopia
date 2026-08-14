@@ -919,12 +919,26 @@ did. The rest of this entry is kept for the correction it records.
 
       The `Custom URL` field already works today if a user types the bundle URL
       by hand, so this is a convenience, not a blocker.
-- [ ] **tiletopia's Ion-compat endpoint is wrong for terrain assets.**
-      `ion_compat.rs` maps `AssetType::Terrain` to `"TERRAIN"`, but
-      `GET /v1/assets/{id}/endpoint` returns a `tileset.json` URL for it, which
-      Cesium cannot use as terrain. Pointing it at a bundle needs an
-      asset-id-to-bundle mapping that does not exist, since bundles are named
-      directories rather than asset uuids.
+- [ ] **tiletopia Ion-compat leftovers.** The terrain endpoint was fixed
+      2026-08-13, along with the missing `attributions` array that made every
+      Ion-compat asset of every type throw before its first tile. Two gaps
+      remain, both found while fixing those:
+      - `GET /v1/assets` returns numeric ids from `uuid_to_ion_id`, but
+        `/v1/assets/{id}` and `/v1/assets/{id}/endpoint` take a uuid path
+        parameter. A client that takes an id from the list cannot call the
+        endpoint with it, for every asset type. The conversion drops 8 of 16
+        bytes and calls `.abs()`, so it is not reversible and a real fix needs a
+        stored numeric id. Passing a uuid string to `IonResource.fromAssetId`
+        works today, so the flow is usable, just not self-consistent.
+      - `AssetType::Imagery` still maps to `"IMAGERY"` while returning a
+        `tileset.json` URL, the same class of bug as the terrain one. There is no
+        imagery endpoint to point it at yet.
+- [ ] **tiletopia's ecosystem page has the wrong sections for two repos.**
+      Descriptions were corrected 2026-08-13 for panoptes, fluvius, fenestra and
+      ptolemy, but fenestra now reads as an OGC server while sitting under
+      "Geometry & Topology" with a library badge, and fluvius sits under
+      "Spatial Analysis". Re-sectioning is a page restructure rather than a
+      factual fix, so it needs an owner call.
 - [ ] **terrain bundle limits worth knowing** (each deliberate, none blocking):
       bundles are filesystem only, not S3/GCS, because `LocalStore::list` is one
       level deep while `S3Store::list` is recursive and capped at 1000 keys, so

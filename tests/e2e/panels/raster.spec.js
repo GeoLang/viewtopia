@@ -70,6 +70,14 @@ test('raster panel runs terrano wasm ops on an uploaded dem', async ({ page }) =
   await panel.getByRole('button', { name: 'Run slope' }).click();
   await expect(panel.getByText('Result: slope')).toBeVisible({ timeout: 15000 });
 
+  // the write crosses the same worker, and the sample width is the file's own:
+  // geotiff.js wrote this dem as 8-bit DN, so it goes back out 8-bit
+  await expect(panel.getByText('Writes u8 samples, tiled with overviews.')).toBeVisible();
+  const download = page.waitForEvent('download');
+  await panel.getByRole('button', { name: 'Convert to COG' }).click();
+  expect((await download).suggestedFilename()).toBe('dem-band-1.tif');
+  await expect(panel.getByTestId('cog-result')).toContainText('dem-band-1.tif');
+
   // focal stats smooth band 1 in a moving window
   await panel.getByRole('button', { name: 'Run focal statistics' }).click();
   await expect(panel.getByText('Result: focal')).toBeVisible({ timeout: 15000 });

@@ -9,6 +9,7 @@ import type {
   Neighborhood,
   PolygonizeResult,
   RasterResult,
+  SampleFormat,
   ZonalResult,
 } from './types';
 
@@ -141,6 +142,18 @@ export function zonalStats(
   noData: number | null,
 ): Promise<ZonalResult[]> {
   return call('zonal', [values, zones, width, height, noData]);
+}
+
+export function writeCog(
+  data: Float32Array,
+  width: number,
+  height: number,
+  bbox: [number, number, number, number],
+  crs: string,
+  sampleFormat: SampleFormat,
+  noData: number | null,
+): Promise<Uint8Array> {
+  return call('cog', [data, width, height, bbox, crs, sampleFormat, noData]);
 }
 
 export function zonalStatsByPolygons(

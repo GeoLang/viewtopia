@@ -14,6 +14,7 @@ import {
   terranoPolygonize,
   terranoReclass,
   terranoSlope,
+  terranoWriteCog,
   terranoZonalStats,
   terranoZonalStatsByPolygons,
 } from './terrano';
@@ -31,6 +32,7 @@ const ops: Record<string, (...args: never[]) => unknown> = {
   focal: terranoFocalStats,
   zonal: terranoZonalStats,
   'zonal-polygons': terranoZonalStatsByPolygons,
+  cog: terranoWriteCog,
 };
 
 let ready: Promise<unknown> | null = null;

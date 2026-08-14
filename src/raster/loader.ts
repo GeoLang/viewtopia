@@ -2,7 +2,24 @@
  * COG (Cloud Optimized GeoTIFF) loader — reads raster data from URLs or files.
  */
 import { fromUrl, fromArrayBuffer, type GeoTIFF, type GeoTIFFImage } from 'geotiff';
-import type { RasterMetadata } from './types';
+import type { RasterMetadata, SampleFormat } from './types';
+
+/**
+ * geotiff decodes a band into the typed array its SampleFormat and
+ * BitsPerSample tags call for, so the array says what the file holds: 12-bit
+ * unsigned lands in a Uint16Array, half floats land in a Float32Array. Bands
+ * are kept as f32 here, which is what an unrecognized array is written as.
+ */
+function sampleFormatOf(band: ArrayLike<number>): SampleFormat {
+  if (band instanceof Uint8Array) return 'u8';
+  if (band instanceof Int8Array) return 'i8';
+  if (band instanceof Uint16Array) return 'u16';
+  if (band instanceof Int16Array) return 'i16';
+  if (band instanceof Uint32Array) return 'u32';
+  if (band instanceof Int32Array) return 'i32';
+  if (band instanceof Float64Array) return 'f64';
+  return 'f32';
+}
 
 /** Loaded raster with bands and metadata */
 export interface LoadedRaster {
@@ -70,9 +87,11 @@ async function loadFromTiff(tiff: GeoTIFF, options?: {
   });
 
   const bands: Float32Array[] = [];
+  const sampleFormats: SampleFormat[] = [];
   for (let i = 0; i < bandIndices.length; i++) {
     const bandData = rasterData[i] as ArrayLike<number>;
     bands.push(new Float32Array(bandData));
+    sampleFormats.push(sampleFormatOf(bandData));
   }
 
   // Get noData value
@@ -93,6 +112,7 @@ async function loadFromTiff(tiff: GeoTIFF, options?: {
     noData,
     resolution: [Math.abs(resolution[0]), Math.abs(resolution[1])],
     bandLabels: bandIndices.map((i) => `Band ${i + 1}`),
+    sampleFormats,
   };
 
   return { metadata, bands, image };
@@ -112,8 +132,11 @@ export async function loadCogOverview(url: string, overviewLevel: number): Promi
 
   const rasterData = await image.readRasters();
   const bands: Float32Array[] = [];
+  const sampleFormats: SampleFormat[] = [];
   for (let i = 0; i < numBands; i++) {
-    bands.push(new Float32Array(rasterData[i] as ArrayLike<number>));
+    const bandData = rasterData[i] as ArrayLike<number>;
+    bands.push(new Float32Array(bandData));
+    sampleFormats.push(sampleFormatOf(bandData));
   }
 
   const fileDir2 = image.getFileDirectory() as unknown as Record<string, unknown>;
@@ -127,6 +150,7 @@ export async function loadCogOverview(url: string, overviewLevel: number): Promi
       width, height, bands: numBands, bbox,
       crs: `EPSG:${epsg}`, noData,
       resolution: [Math.abs(resolution[0]), Math.abs(resolution[1])],
+      sampleFormats,
     },
     bands,
     image,

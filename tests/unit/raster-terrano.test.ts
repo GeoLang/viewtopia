@@ -5,6 +5,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fromArrayBuffer } from 'geotiff';
 import { initSync } from '../../src/raster/wasm/terrano_wasm';
 import {
   cellSizeMeters,
@@ -16,6 +17,7 @@ import {
   terranoPolygonize,
   terranoReclass,
   terranoSlope,
+  terranoWriteCog,
   terranoZonalStats,
   terranoZonalStatsByPolygons,
 } from '../../src/raster/terrano';
@@ -278,10 +280,39 @@ describe('terrano wasm wrappers', () => {
       crs: 'EPSG:4326',
       noData: null,
       resolution: [0.001, 0.001] as [number, number],
+      sampleFormats: ['f32' as const],
     };
     const expected = 0.001 * 111320 * Math.cos((45 * Math.PI) / 180);
     expect(cellSizeMeters(meta)).toBeCloseTo(expected, 6);
     // projected rasters already carry ground units
     expect(cellSizeMeters({ ...meta, crs: 'EPSG:32632' })).toBe(0.001);
+  });
+
+  it('writes a cog a reader opens, 8-bit samples staying 8-bit', async () => {
+    const band = new Float32Array(64 * 64);
+    for (let i = 0; i < band.length; i++) band[i] = i % 200;
+
+    const bytes = terranoWriteCog(band, 64, 64, [10, 40, 12, 44], 'EPSG:4326', 'u8', null);
+
+    const image = await (await fromArrayBuffer(bytes.buffer as ArrayBuffer)).getImage();
+    expect(image.getWidth()).toBe(64);
+    expect(image.getBitsPerSample()).toBe(8);
+    // 1 is TIFF's unsigned integer sample format
+    expect(image.getSampleFormat()).toBe(1);
+    expect(image.getBoundingBox()).toEqual([10, 40, 12, 44]);
+
+    const [samples] = (await image.readRasters()) as unknown as Uint8Array[];
+    expect(samples).toBeInstanceOf(Uint8Array);
+    expect(Array.from(samples.slice(0, 4))).toEqual([0, 1, 2, 3]);
+  });
+
+  it('writes the same raster four times smaller at 8 bits than at 64', () => {
+    const band = new Float32Array(64 * 64);
+    for (let i = 0; i < band.length; i++) band[i] = i % 200;
+
+    const narrow = terranoWriteCog(band, 64, 64, [10, 40, 12, 44], 'EPSG:4326', 'u8', null);
+    const wide = terranoWriteCog(band, 64, 64, [10, 40, 12, 44], 'EPSG:4326', 'f64', null);
+
+    expect(narrow.length * 4).toBeLessThan(wide.length);
   });
 });

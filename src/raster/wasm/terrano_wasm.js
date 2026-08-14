@@ -276,6 +276,43 @@ export function slope(data, width, height, cell_size, nodata) {
 }
 
 /**
+ * Encode a raster as a Cloud Optimized GeoTIFF, returning the file bytes.
+ *
+ * `overview_levels` of 0 writes no pyramid. `sample_format` is one of
+ * "u8", "i8", "u16", "i16", "u32", "i32", "f32", "f64": an 8-bit image sent
+ * back as "f64" costs eight times the bytes it needs. On an integer format
+ * `nodata` is an ordinary sample value set aside to mean absent, so it has
+ * to be whole and inside that format's range.
+ * @param {Float64Array} data
+ * @param {number} width
+ * @param {number} height
+ * @param {number} nodata
+ * @param {number} epsg
+ * @param {number} origin_x
+ * @param {number} origin_y
+ * @param {number} pixel_width
+ * @param {number} pixel_height
+ * @param {number} tile_size
+ * @param {number} overview_levels
+ * @param {boolean} deflate
+ * @param {string} sample_format
+ * @returns {Uint8Array}
+ */
+export function writeCog(data, width, height, nodata, epsg, origin_x, origin_y, pixel_width, pixel_height, tile_size, overview_levels, deflate, sample_format) {
+    const ptr0 = passArrayF64ToWasm0(data, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(sample_format, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.writeCog(ptr0, len0, width, height, nodata, epsg, origin_x, origin_y, pixel_width, pixel_height, tile_size, overview_levels, deflate, ptr1, len1);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v3;
+}
+
+/**
  * Rows come back flat as [zone, count, min, max, mean, sum, std, median].
  * @param {Float64Array} values
  * @param {Float64Array} zones
@@ -324,6 +361,11 @@ function __wbg_get_imports() {
 function getArrayF64FromWasm0(ptr, len) {
     ptr = ptr >>> 0;
     return getFloat64ArrayMemory0().subarray(ptr / 8, ptr / 8 + len);
+}
+
+function getArrayU8FromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return getUint8ArrayMemory0().subarray(ptr / 1, ptr / 1 + len);
 }
 
 let cachedFloat64ArrayMemory0 = null;

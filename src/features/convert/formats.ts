@@ -84,10 +84,14 @@ export async function convertLayer(
   }
 }
 
+/** A source name as a download-safe file stem, its extension dropped. */
+export function fileNameSlug(name: string): string {
+  const stem = name.toLowerCase().replace(/\.[a-z0-9]+$/, '');
+  return stem.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'layer';
+}
+
 export function convertFileName(layerName: string, format: ConvertFormat): string {
   const spec = CONVERT_FORMATS.find((f) => f.id === format);
   if (!spec) throw new Error(`unknown format: ${format}`);
-  const stem = layerName.toLowerCase().replace(/\.[a-z0-9]+$/, '');
-  const slug = stem.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'layer';
-  return `${slug}.${spec.extension}`;
+  return `${fileNameSlug(layerName)}.${spec.extension}`;
 }
