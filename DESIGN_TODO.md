@@ -14,9 +14,6 @@ Dispatched as parallel agents, one per repo, viewtopia tracks in separate
 worktrees under `.wt/`. Agents commit locally and never push; the orchestrator
 session reviews, merges and pushes.
 
-- [~] **terrano + viewtopia**: `write_cog_bands` binding in terrano-wasm,
-      rebuild the vendored `crates/terrano-wasm/pkg/`, then wire viewtopia's
-      Convert button for multi-band COG output (worktree `.wt/cog-bands`).
 - [~] **tiletopia**: Ion-compat leftovers, the `AssetType::Imagery` endpoint
       answering `"IMAGERY"` with a tileset.json URL, and the numeric-id vs uuid
       inconsistency between `/v1/assets` and the id-taking routes.
@@ -179,14 +176,6 @@ merges OGC Layers, SQL and Import into one panel alongside the existing STAC
 browser. Print layout with atlas and map-series generation replaces what is
 currently a canvas screenshot. Neither is on the thesis critical path, both are
 the kind of thing that makes a viewer feel finished.
-
-### COG follow-through, the small one worth doing first
-
-Not a big feature, listed here because it is the cheapest way to finish something
-already shipped. The sample-width half landed (terrano `10ab2e9`), so what is
-left is the `write_cog_bands` binding in terrano-wasm, a rebuild of the vendored
-wasm package, and wiring viewtopia's Convert button for multi-band output.
-Details under the raster conversion item below. In flight, see the top section.
 
 ## FEATURE — region watch: IoT sensors and change over time
 
@@ -765,30 +754,12 @@ any single item as table stakes. Deliberately skipped: planetary basemaps,
 PGlite (redundant with DuckDB Spatial), Gaussian splats, and a Tauri
 desktop/mobile wrapper (competes with the terravista/collecta track).
 
-High value, existing GeoLang crates supply the engine:
-
-- [ ] **multi-band COG conversion from the browser**: the browser path shipped.
-      `RasterPanel.tsx` has a Convert button whose handler calls the wasm
-      `writeCog` and downloads the bytes as `image/tiff`, the writer emits every
-      sample format terrano's reader decodes, and the 4 GiB classic-TIFF cap is a
-      clear error rather than silent truncation. The one gap left is that
-      terrano-wasm exports only `writeCog`, not terrano-core's `write_cog_bands`,
-      so conversion from the browser is single-band.
-
-      What the terrano pass found, worth keeping: terrano already had a 1857-line
-      hand-rolled COG writer with no TIFF dependency, and it did not produce a
-      cloud optimized GeoTIFF. It omitted `NewSubfileType` on the overview IFDs,
-      so GDAL read the pyramid as four unrelated pages, and the COG validator
-      passed *vacuously*, never seeing overviews so skipping every overview
-      check. A green validator run is not evidence unless the output names the
-      overviews. Tile data was also ordered largest-first, exactly backwards from
-      what the format wants so a zoomed-out reader can stop early. Now
-      GDAL 3.11.5 `--full-check=yes` validates clean across 10 files, and a
-      wasm32-unknown-unknown build produced a GDAL-validated COG with exact
-      pixels.
-
-      (Vector conversion shipped 2026-08-06: GeoParquet, FlatGeobuf, GeoJSON,
-      PMTiles. PMTiles per-layer export shipped 2026-08-02.)
+Format conversion is closed on both halves: raster on 2026-08-13 (multi-band
+COG from the browser through terrano-wasm `writeCogBands`) and vector on
+2026-08-06 (GeoParquet, FlatGeobuf, GeoJSON, PMTiles, with per-layer PMTiles
+export from 2026-08-02). A durable lesson from the terrano COG pass: a green
+COG-validator run is not evidence unless the output names the overviews, the
+old writer passed vacuously while omitting them.
 
 High value, product-level:
 
