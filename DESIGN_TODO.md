@@ -149,12 +149,16 @@ against GDAL's driver list before committing, and do not assume a reader exists.
 The enterprise version tree is separately blocked on an enterprise deployment to
 test against, with requirements documented under the verne section below.
 
-### viewtopia product gaps: print layout
+### viewtopia product gaps: closed 2026-08-13
 
-The data source manager shipped 2026-08-13: one Data Sources panel with
-Services, Database and Files tabs, the old panel ids opening it on the right
-tab. Print layout with atlas and map-series generation, replacing the canvas
-screenshot, is in flight (worktree `.wt/print-layout`).
+Both shipped: the Data Sources panel (Services, Database and Files tabs, old
+panel ids open the right tab) and the print layout panel (page composition
+with title, legend, scale bar and north arrow, PDF export, atlas capped at 60
+pages, the old PrintExportPanel absorbed with its id aliased). Two known
+limits worth keeping: Leaflet cannot be captured (tiles are img elements, same
+as the old export), and the printed map is the live frame scaled to the page,
+so a 300 DPI page carries screen-resolution pixels. Print-resolution rendering
+means an off-screen render at target size, a separate piece of work.
 
 ## FEATURE — region watch: IoT sensors and change over time
 
@@ -759,8 +763,6 @@ Medium value:
       look-like-search-while-missing-everything beyond the fetched page.
       (The data source manager itself shipped 2026-08-13: Services, Database
       and Files tabs in one panel, old ids open the right tab.)
-- [~] **print layout with atlas/map-series generation**: current export is a
-      canvas screenshot. In flight, see the plans section.
 - [ ] **offline area download**: regions download and the app shell is
       service-worker cached. What is left is in the offline story section
       below.
