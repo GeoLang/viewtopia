@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- 2026-08-13: **the Cesium globe drew every basemap tile upside down**, a
+  patchwork of flipped tiles mismatched at their borders. The offline
+  `CachedImageryProvider` decoded tiles with `imageOrientation: 'none'`, while
+  Cesium's own `ImageryProvider.loadImage` fetches everything with `flipY`, so
+  each tile came out inverted relative to what the renderer expects. Found by a
+  headless probe whose screenshot showed EUROPE mirrored, pinned by a test on
+  the decode options.
+
 ### Added
 
 - 2026-08-13: **a multi-band raster converts to one multi-band COG**. The Convert to
