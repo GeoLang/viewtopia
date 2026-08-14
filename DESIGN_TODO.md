@@ -20,16 +20,17 @@ session reviews, merges and pushes.
 - [~] **tiletopia**: Ion-compat leftovers, the `AssetType::Imagery` endpoint
       answering `"IMAGERY"` with a tileset.json URL, and the numeric-id vs uuid
       inconsistency between `/v1/assets` and the id-taking routes.
-- [~] **ptolemy, geokode, itinera**: sha2 0.11 digest migration off the `{:x}`
-      pattern, goldens captured on the old version first since geokode and
-      itinera hash stored API keys. geodukt's `hex.rs` is the model.
 - [~] **viewtopia**: panels minimizable, and movable out of the way, for screen
-      real estate (worktree `.wt/panel-minimize`). Design pending recon of the
-      panel chrome.
+      real estate (worktree `.wt/panel-minimize`). Resolved design: minimize
+      button in the shared PanelCard header collapsing to the title bar, title
+      bar as a drag handle detaching to a fixed floating position, both reset on
+      panel switch or close, SettingsPanel brought under PanelCard.
 
-Verified this session: verne's `live-load` CI job ran green on a real runner,
-which closes the two runner-only unknowns (`$GITHUB_ENV` token handoff and
-port 3000).
+Verified this session, no work needed: verne's `live-load` CI job ran green on
+a real runner, closing the two runner-only unknowns (`$GITHUB_ENV` token
+handoff and port 3000), and the sha2 0.11 digest migration turned out to be
+already done in all three repos (geokode `f5a737e`, itinera `166c835`, ptolemy
+already hex-encodes with sha2 0.11 in the workspace).
 
 ## OPEN — direction: the Figma of GIS, only open (stated 2026-08-06)
 
