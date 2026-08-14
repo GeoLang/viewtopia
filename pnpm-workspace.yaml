@@ -3,8 +3,10 @@
 # Security: pnpm blocks dependency lifecycle/build scripts by default. Only the
 # packages listed here are allowed to run install scripts — keep this list small
 # and audited. esbuild downloads its platform binary (required by Vite);
-# protobufjs's postinstall is benign but flagged.
+# protobufjs's postinstall is benign but flagged. core-js arrives as an optional
+# dependency of jspdf and its postinstall only prints a funding banner.
 allowBuilds:
+  core-js: false
   esbuild: true
   protobufjs: true
 

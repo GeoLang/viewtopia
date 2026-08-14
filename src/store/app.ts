@@ -90,6 +90,8 @@ export type ToolPanel =
   | 'portal'
   | 'stacBrowser'
   | 'dashboards'
+  | 'printLayout'
+  // the panel the print layout took over, kept so an old id still opens it
   | 'printExport'
   | 'pluginManager';
 
