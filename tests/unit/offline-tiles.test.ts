@@ -86,6 +86,7 @@ async function leafletTile(
 }
 
 let imageBitmapBlobs: Blob[] = [];
+let imageBitmapOptions: ImageBitmapOptions[] = [];
 let objectUrlBlobs: Blob[] = [];
 
 function setOnline(online: boolean) {
@@ -105,12 +106,14 @@ describe('offline tile cache across renderers', () => {
     store.clear();
     get.mockClear();
     imageBitmapBlobs = [];
+    imageBitmapOptions = [];
     objectUrlBlobs = [];
     setOnline(true);
     vi.stubGlobal(
       'createImageBitmap',
-      vi.fn(async (blob: Blob) => {
+      vi.fn(async (blob: Blob, options: ImageBitmapOptions) => {
         imageBitmapBlobs.push(blob);
+        imageBitmapOptions.push(options);
         return {} as ImageBitmap;
       }),
     );
@@ -140,6 +143,21 @@ describe('offline tile cache across renderers', () => {
     expect(new Uint8Array(fromMapLibre)).toEqual(new Uint8Array(cached));
     expect(new Uint8Array(await fromCesium.arrayBuffer())).toEqual(new Uint8Array(cached));
     expect(new Uint8Array(await fromLeaflet.arrayBuffer())).toEqual(new Uint8Array(cached));
+  });
+
+  // Cesium's own ImageryProvider.loadImage fetches every tile with flipY, so a
+  // tile decoded any other way renders upside down on the globe
+  it('decodes a cesium tile the way cesium loads imagery', async () => {
+    seed(KEY, new Uint8Array([1, 2, 3]).buffer);
+    setOnline(false);
+
+    await cesiumTile(TEMPLATE, TILE.z, TILE.x, TILE.y);
+
+    expect(imageBitmapOptions.at(-1)).toEqual({
+      imageOrientation: 'flipY',
+      premultiplyAlpha: 'none',
+      colorSpaceConversion: 'default',
+    });
   });
 
   it('asks the cache for one key whichever renderer renders the tile', async () => {

@@ -33,10 +33,10 @@ async function cachedTileImage(
   y: number,
 ): Promise<ImageBitmap> {
   const { bytes, contentType } = await loadTile(tileUrlTemplate, z, x, y);
-  // the options Cesium's own image loading uses for imagery tiles, so a cached
-  // tile is not flipped or premultiplied differently from a fetched one
+  // ImageryProvider.loadImage fetches with flipY, so decoding any other way
+  // renders the tile upside down on the globe
   return createImageBitmap(new Blob([bytes], { type: contentType }), {
-    imageOrientation: 'none',
+    imageOrientation: 'flipY',
     premultiplyAlpha: 'none',
     colorSpaceConversion: 'default',
   });
