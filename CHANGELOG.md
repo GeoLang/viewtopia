@@ -6,6 +6,16 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-08-14: **the README sold the Environmental plugin as live sensor
+  monitoring with threshold alerts**, and it is neither. `SensorPanel` fetches
+  `/api/v1/sensors` once when it opens and never again, with no websocket and
+  no polling, and the status badge it shows per sensor is whatever the server
+  already put on the feature, not a threshold this code evaluates. The
+  plugin's own `wsUrl` and `alertThreshold` settings are declared and then
+  never read by anything. The verticals table now describes what the panel is,
+  a sensor inventory with server-reported status that filters by type and
+  flies to a sensor.
+
 - 2026-08-13: **the Cesium globe drew every basemap tile upside down**, a
   patchwork of flipped tiles mismatched at their borders. The offline
   `CachedImageryProvider` decoded tiles with `imageOrientation: 'none'`, while

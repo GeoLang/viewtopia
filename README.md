@@ -96,7 +96,7 @@
 |--------|-------------|
 | **Real Estate** | Parcel search (APN/address/owner), comparable sales, split/merge editing |
 | **Logistics** | Fleet tracking via WebSocket, multi-stop delivery optimization |
-| **Environmental** | Live IoT sensor monitoring with threshold alerts |
+| **Environmental** | Sensor inventory from a configured sensors dataset, server-reported status, filter by type, fly to a sensor |
 | **Construction** | Survey comparison, cut/fill volumes, milestone tracking |
 | **Agriculture** | NDVI field health, soil moisture, crop status |
 | **Telecom** | Tower inventory, RF coverage simulation (Hata model) |
