@@ -867,15 +867,6 @@ Known limits:
       there is no style setter, and the sample app still shows raster only.
       Version numbers also disagree across Cargo (0.1.0), the Android README
       (0.2.0) and the CHANGELOG (0.4.0).
-- [ ] **extract jung's MVT decoder into a shared crate.** terravista needed a
-      decoder and jung-core's is welded into the cartography engine (drags
-      ttf-parser and jung-style, normalises coordinates for jung's own
-      convention, and treats every ring after the first as a hole, so
-      multipolygons come out wrong). terravista adapted a copy that keeps tile
-      units and splits rings by winding, so the platform now has two decoders
-      that can drift, and jung's multipolygon bug is still in jung. A small
-      standalone MVT crate both depend on is the fix, and crates.io has no
-      zero-dependency alternative worth taking instead.
 - [ ] **terravista v0.3** — Metal/Vulkan GPU rendering. Biggest advertised-vs-real gap; needs
       platform GPU toolchains.
 - [ ] **panoptes model weights** — train or source one usable segmentation model and publish
