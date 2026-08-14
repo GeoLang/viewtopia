@@ -233,13 +233,14 @@ const OFF_RANGE = {
   current: '2024-06-01T00:00:00Z',
 };
 
-/** Import TIMED_PINGS through Data ▸ Import, the way a user brings time in. */
+/** Import TIMED_PINGS through Data ▸ Data Sources ▸ Files, the way a user brings time in. */
 async function importTimedPings(page) {
   await page.getByRole('button', { name: 'Data' }).click();
-  await page.locator(MENU_ITEM).filter({ hasText: 'Import' }).first().click();
+  await page.locator(MENU_ITEM).filter({ hasText: 'Data Sources' }).first().click();
   await expect(page.locator('[class*="mantine-Menu-dropdown"]')).toHaveCount(0);
-  const panel = page.locator(PANEL).filter({ hasText: 'Import Data' });
+  const panel = page.locator(PANEL).filter({ hasText: 'Data Sources' });
   await expect(panel).toHaveCount(1);
+  await panel.getByRole('tab', { name: 'Files' }).click();
 
   await panel.locator('input[type="file"]').setInputFiles({
     name: 'pings.geojson',

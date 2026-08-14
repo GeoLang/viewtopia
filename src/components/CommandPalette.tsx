@@ -43,6 +43,7 @@ export function CommandPalette() {
     const toolAction = (item: ToolMenuItem) => ({
       id: item.panel,
       label: item.label,
+      keywords: item.keywords,
       leftSection: <item.icon size={18} />,
       rightSection: item.preview ? previewBadge : undefined,
       onClick: () => togglePanel(item.panel),

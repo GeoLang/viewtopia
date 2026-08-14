@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
-import { SqlWorkspacePanel } from '../../src/features/sql/SqlWorkspacePanel';
+import { SqlWorkspaceTab } from '../../src/features/dataSources/SqlWorkspaceTab';
 import { useAgentLayerStore } from '../../src/store/agentLayers';
 
 // only the duckdb boundary is mocked, the panel itself is the real one
@@ -47,7 +47,7 @@ function result(rows: Record<string, unknown>[]) {
 function setup() {
   render(
     <MantineProvider>
-      <SqlWorkspacePanel onClose={() => {}} />
+      <SqlWorkspaceTab />
     </MantineProvider>,
   );
 }
@@ -73,7 +73,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('SqlWorkspacePanel', () => {
+describe('SqlWorkspaceTab', () => {
   it('shows the rows a query returns', async () => {
     queryMock.mockResolvedValue(result([{ name: 'Lisbon', pop: 545000 }]));
     setup();

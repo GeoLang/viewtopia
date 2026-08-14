@@ -151,6 +151,13 @@ async function openPanel(page, label, title) {
   return panel;
 }
 
+/** the OGC services, SQL and file import bodies are tabs of the one data panel */
+async function openDataSources(page, tab) {
+  const panel = await openPanel(page, 'Data Sources', 'Data Sources');
+  await panel.getByRole('tab', { name: tab }).click();
+  return panel;
+}
+
 async function closePanel(page, panel) {
   await page.keyboard.press('Escape');
   await expect(panel).toHaveCount(0);
@@ -260,7 +267,7 @@ test.describe('Data panels', () => {
     });
 
     await openViewer(page);
-    const panel = await openPanel(page, 'OGC Layers', 'OGC Layers');
+    const panel = await openDataSources(page, 'Services');
 
     const imageryCount = () =>
       page.evaluate(() => window.__viewtopiaViewer.imageryLayers.length);
@@ -311,7 +318,7 @@ test.describe('Data panels', () => {
     test.skip(!reachable, 'fenestra is not up on :3003');
 
     await openViewer(page);
-    const panel = await openPanel(page, 'OGC Layers', 'OGC Layers');
+    const panel = await openDataSources(page, 'Services');
 
     const imageryCount = () =>
       page.evaluate(() => window.__viewtopiaViewer.imageryLayers.length);
@@ -380,7 +387,7 @@ test.describe('Data panels', () => {
 
   test('import: a browsed GeoJSON file renders on the globe', async ({ page }) => {
     await openViewer(page);
-    const panel = await openPanel(page, 'Import', 'Import Data');
+    const panel = await openDataSources(page, 'Files');
 
     const dataSourceCount = () =>
       page.evaluate(() => window.__viewtopiaViewer.dataSources.length);

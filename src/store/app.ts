@@ -33,10 +33,12 @@ export type ToolPanel =
   | 'geofence'
   | 'layers'
   | 'legend'
+  | 'dataSources'
+  // the panels the data sources manager took over, kept as deep links to its tabs
   | 'ogc'
   | 'import'
-  | 'project'
   | 'sqlWorkspace'
+  | 'project'
   | 'clipping'
   | 'crossSection'
   | 'heatmap'

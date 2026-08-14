@@ -51,12 +51,10 @@ import {
   IconTimeline,
   IconTools,
   IconTransform,
-  IconUpload,
   IconUsers,
   IconVectorTriangle,
   IconWind,
   IconWorldSearch,
-  IconWorldWww,
 } from '@tabler/icons-react';
 import type { ToolPanel } from '../store/app';
 
@@ -69,6 +67,8 @@ export interface ToolMenuItem {
   label: string;
   icon: Icon;
   preview?: boolean;
+  /** extra terms the command palette searches, for names the label drops */
+  keywords?: string[];
 }
 
 /** each menu is a list of sections; the toolbar renders a divider between them */
@@ -143,10 +143,13 @@ export const DATA_MENU: ToolMenuItem[][] = [
   ],
   [
     { panel: 'assets', label: 'Assets', icon: IconPackage },
-    { panel: 'ogc', label: 'OGC Layers', icon: IconWorldWww },
-    { panel: 'import', label: 'Import', icon: IconUpload },
+    {
+      panel: 'dataSources',
+      label: 'Data Sources',
+      icon: IconDatabase,
+      keywords: ['ogc', 'wms', 'wmts', 'wfs', 'sql', 'duckdb', 'import'],
+    },
     { panel: 'project', label: 'Project', icon: IconDeviceFloppy },
-    { panel: 'sqlWorkspace', label: 'SQL', icon: IconDatabase },
     { panel: 'modelImport', label: 'glTF Models', icon: IconBox },
     { panel: 'trackImport', label: 'Tracks', icon: IconMapRoute },
     { panel: 'vectorTiles', label: 'Vector Tiles', icon: IconVectorTriangle },

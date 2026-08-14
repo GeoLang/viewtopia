@@ -6,6 +6,17 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-13: **one Data Sources panel replaces the OGC Layers, SQL and Import
+  panels**. Services, Database and Files are now tabs of a single card, each one
+  the body of the panel it came from, moved to `src/features/dataSources/` with
+  its logic and tests intact. The three menu entries collapse into one, and the
+  command palette matches it on the old names through the menu registry's new
+  `keywords`. Opening `ogc`, `sqlWorkspace` or `import` still works and lands on
+  the matching tab, so links and agent commands holding an old id keep working.
+  The tabs stay mounted, so a half-written query survives a look at another tab,
+  and the tab in front is component state that is not persisted. The STAC browser
+  stays its own panel.
+
 - 2026-08-13: **a multi-band raster converts to one multi-band COG**. The Convert to
   COG card offers All bands above the per-band options whenever the raster carries
   two or more, writing every band into one pixel-interleaved file through terrano's

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
-import { DragDropImport } from '../../src/components/tools/DragDropImport';
+import { FileImportTab } from '../../src/features/dataSources/FileImportTab';
 
 // only the duckdb side is mocked, the text-format path stays the real one
 const importVectorFiles = vi.hoisted(() => vi.fn());
@@ -33,7 +33,7 @@ function setup() {
   const onImport = vi.fn();
   render(
     <MantineProvider>
-      <DragDropImport onImport={onImport} onClose={() => {}} />
+      <FileImportTab onImport={onImport} />
     </MantineProvider>,
   );
   return onImport;
@@ -45,7 +45,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('DragDropImport routing', () => {
+describe('FileImportTab routing', () => {
   it('sends a shapefile and its sidecars through as one batch', async () => {
     importVectorFiles.mockResolvedValue({
       layers: [{ name: 'roads.shp', geojson: point, tableName: 'roads_shp' }],

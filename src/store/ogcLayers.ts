@@ -3,7 +3,7 @@ import { useAgentLayerStore, toFeatureCollection } from './agentLayers';
 import { addRemotePmtiles, type PmtilesInfo } from '../features/pmtiles/source';
 
 /**
- * OGC services the user added (OGCLayersPanel). Raster services (WMS, WMTS, XYZ)
+ * OGC services the user added (OgcServicesTab). Raster services (WMS, WMTS, XYZ)
  * are held here so Cesium and MapLibre draw the same set and switching renderers
  * keeps them on screen. WFS is vector: its features go into the agent layers,
  * which every renderer already draws, and the entry here is the handle for them.

@@ -52,8 +52,9 @@ function geojsonFile(name, features) {
 /** Both layers on the globe, through the Import panel, which every renderer draws. */
 async function importLayers(page) {
   await page.getByRole('button', { name: 'Data' }).click();
-  await page.locator(MENU_ITEM).filter({ hasText: 'Import' }).first().click();
-  const panel = page.locator(PANEL).filter({ hasText: 'Import Data' });
+  await page.locator(MENU_ITEM).filter({ hasText: 'Data Sources' }).first().click();
+  const panel = page.locator(PANEL).filter({ hasText: 'Data Sources' });
+  await panel.getByRole('tab', { name: 'Files' }).click();
   const input = panel.locator('input[type="file"]');
 
   await input.setInputFiles(geojsonFile('parcels.geojson', PARCELS));
