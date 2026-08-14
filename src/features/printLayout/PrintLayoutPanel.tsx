@@ -15,6 +15,7 @@ import {
 import { IconLayoutBoardSplit } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../../components/PanelCard';
 import { useAgentLayerStore } from '../../store/agentLayers';
+import { useAppStore } from '../../store/app';
 import { MAX_ATLAS_PAGES, atlasFields, atlasPages } from './atlas';
 import { buildPdfPages } from './build';
 import { CAPTURE_REFUSAL, activeMapCapture } from './capture';
@@ -68,6 +69,7 @@ export function PrintLayoutPanel({ onClose }: { onClose: () => void }) {
   const [busy, setBusy] = useState(false);
 
   const layers = useAgentLayerStore((s) => s.layers);
+  const renderer = useAppStore((s) => s.renderer);
   const atlasFeatures = useMemo(
     () => layers.find((l) => l.id === atlasLayerId)?.geojson.features ?? [],
     [layers, atlasLayerId],
@@ -114,6 +116,7 @@ export function PrintLayoutPanel({ onClose }: { onClose: () => void }) {
         scaleBar: showScaleBar,
         northArrow: showNorthArrow,
         atlas: atlasEntries,
+        dpi: Number(dpi) || 0,
       });
       downloadPdf(pages, atlasEntries ? 'viewtopia-atlas.pdf' : 'viewtopia-layout.pdf');
       setStatus(`Exported ${pages.length} page${pages.length === 1 ? '' : 's'}.`);
@@ -271,11 +274,20 @@ export function PrintLayoutPanel({ onClose }: { onClose: () => void }) {
                   max={8000}
                 />
               </Group>
-              <NumberInput size="xs" label="DPI" value={dpi} onChange={setDpi} min={72} max={600} />
               <Text size="xs" c="dimmed" data-testid="printexport-size">
                 Output: {imageSize.width} × {imageSize.height} px, scaled from the live view
               </Text>
             </>
+          )}
+
+          <NumberInput size="xs" label="DPI" value={dpi} onChange={setDpi} min={72} max={600} />
+
+          {format === 'pdf' && (
+            <Text size="xs" c="dimmed" data-testid="print-fidelity">
+              {renderer === 'maplibre'
+                ? 'The map is drawn again at this DPI for the page.'
+                : 'The 3D view goes on the page as the live frame, at screen resolution.'}
+            </Text>
           )}
 
           <Button

@@ -1,4 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { printResolutionCapture } = vi.hoisted(() => ({
+  printResolutionCapture: vi.fn(async (): Promise<unknown> => null),
+}));
+
+vi.mock('../../src/features/printLayout/printMap', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/features/printLayout/printMap')>()),
+  printResolutionCapture,
+}));
+
 import { MAX_ATLAS_PAGES, atlasFields, atlasPages, expandBounds } from '../../src/features/printLayout/atlas';
 import { buildPdfPages } from '../../src/features/printLayout/build';
 import type { MapCapture } from '../../src/features/printLayout/capture';
@@ -242,14 +252,13 @@ describe('atlas', () => {
 });
 
 describe('buildPdfPages', () => {
-  function fakeCapture() {
+  function fakeCapture(image = 'map', size = { clientWidth: 1000, clientHeight: 500 }) {
     const restore = vi.fn(async () => {});
     const canvas = {
-      clientWidth: 1000,
-      clientHeight: 500,
+      ...size,
       width: 2000,
       height: 1000,
-      toDataURL: () => 'data:image/png;base64,map',
+      toDataURL: () => `data:image/png;base64,${image}`,
     } as unknown as HTMLCanvasElement;
     const capture: MapCapture = {
       renderFrame: vi.fn(),
@@ -268,7 +277,53 @@ describe('buildPdfPages', () => {
     scaleBar: true,
     northArrow: true,
     atlas: null,
+    dpi: 300,
   };
+
+  beforeEach(() => {
+    printResolutionCapture.mockClear();
+    printResolutionCapture.mockResolvedValue(null);
+  });
+
+  it('asks for a print canvas the size of the map box on the page', async () => {
+    const { capture } = fakeCapture();
+    await buildPdfPages(capture, options);
+
+    // a 2:1 view letterboxed in the 277x190 mm frame is 277x138.5 mm of paper,
+    // which is 1047 css px wide, and 300 DPI is 3.125 device pixels to each one
+    expect(printResolutionCapture).toHaveBeenCalledWith({
+      cssWidth: 1047,
+      cssHeight: 523,
+      pixelRatio: 3.125,
+    });
+  });
+
+  it('draws the pages off the print map and disposes it, live capture untouched', async () => {
+    const { capture } = fakeCapture('screen');
+    const print = fakeCapture('print', { clientWidth: 1047, clientHeight: 523 });
+    const dispose = vi.fn();
+    printResolutionCapture.mockResolvedValue({ capture: print.capture, dispose });
+
+    const pages = await buildPdfPages(capture, options);
+
+    expect(pages[0].mapImage).toBe('data:image/png;base64,print');
+    expect(print.capture.renderFrame).toHaveBeenCalledTimes(1);
+    expect(capture.renderFrame).not.toHaveBeenCalled();
+    expect(dispose).toHaveBeenCalledTimes(1);
+  });
+
+  it('disposes the print map when a page fails', async () => {
+    const { capture } = fakeCapture();
+    const print = fakeCapture('print');
+    const dispose = vi.fn();
+    vi.mocked(print.capture.showBounds).mockRejectedValueOnce(new Error('tiles gone'));
+    printResolutionCapture.mockResolvedValue({ capture: print.capture, dispose });
+
+    await expect(
+      buildPdfPages(capture, { ...options, atlas: [{ title: 'a', bounds: [0, 0, 1, 1] }] }),
+    ).rejects.toThrow('tiles gone');
+    expect(dispose).toHaveBeenCalledTimes(1);
+  });
 
   it('composes one page from the live view, leaving the camera alone', async () => {
     const { capture } = fakeCapture();

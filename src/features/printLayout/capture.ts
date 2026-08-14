@@ -34,7 +34,7 @@ export function activeMapCapture(): MapCapture | null {
   return viewer ? cesiumCapture(viewer) : null;
 }
 
-function maplibreSettled(map: MapLibreMap): Promise<void> {
+export function maplibreSettled(map: MapLibreMap): Promise<void> {
   return new Promise((resolve) => {
     const done = () => {
       clearTimeout(timer);
@@ -46,7 +46,7 @@ function maplibreSettled(map: MapLibreMap): Promise<void> {
   });
 }
 
-function maplibreCapture(map: MapLibreMap): MapCapture {
+export function maplibreCapture(map: MapLibreMap): MapCapture {
   return {
     renderFrame() {
       map.redraw();

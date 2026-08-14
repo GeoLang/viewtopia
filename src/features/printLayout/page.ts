@@ -121,55 +121,85 @@ function legendLines(
   return { lines, height: y - top + LEGEND_PAD_MM };
 }
 
+/** What the page gives the title, the map and the legend, before any of them is drawn. */
+interface PageBands {
+  titleBand: Rect | null;
+  mapFrame: Rect;
+  legendBand: Rect | null;
+}
+
+function pageBands(
+  setup: PageSetup,
+  content: Pick<PageContent, 'title' | 'legend'>,
+): PageBands {
+  const [pageWidth, pageHeight] = pageSizeMm(setup);
+  const margin = clampMargin(setup.marginMm, pageWidth, pageHeight);
+  const left = margin;
+  const width = pageWidth - margin * 2;
+  const bottom = pageHeight - margin;
+
+  const titleBand = content.title.trim()
+    ? { x: left, y: margin, width, height: TITLE_BAND_MM }
+    : null;
+  const top = titleBand ? margin + TITLE_BAND_MM : margin;
+  const height = bottom - top;
+
+  const hasLegend =
+    content.legend.some((group) => group.entries.length > 0) &&
+    width - LEGEND_WIDTH_MM - LEGEND_GAP_MM >= MIN_MAP_WIDTH_MM;
+
+  return {
+    titleBand,
+    mapFrame: {
+      x: left,
+      y: top,
+      width: hasLegend ? width - LEGEND_WIDTH_MM - LEGEND_GAP_MM : width,
+      height,
+    },
+    legendBand: hasLegend
+      ? { x: left + width - LEGEND_WIDTH_MM, y: top, width: LEGEND_WIDTH_MM, height }
+      : null,
+  };
+}
+
+/**
+ * The millimetres the map has to work with, which is what a renderer drawing
+ * for the page rather than for the screen has to fill.
+ */
+export function mapFrameMm(
+  setup: PageSetup,
+  content: Pick<PageContent, 'title' | 'legend'>,
+): Rect {
+  return pageBands(setup, content).mapFrame;
+}
+
 /**
  * Everything the page draws, in the order it draws: the map image first, then
  * whatever sits over it. The map keeps the captured image's aspect, so a page
  * shaped unlike the viewer letterboxes rather than stretching the world.
  */
 export function composePage(setup: PageSetup, content: PageContent): PageElement[] {
-  const [pageWidth, pageHeight] = pageSizeMm(setup);
-  const margin = clampMargin(setup.marginMm, pageWidth, pageHeight);
-  const left = margin;
-  const width = pageWidth - margin * 2;
-  const bottom = pageHeight - margin;
+  const { titleBand, mapFrame, legendBand } = pageBands(setup, content);
   const elements: PageElement[] = [];
 
-  let top = margin;
-  const title = content.title.trim();
-  if (title) {
+  if (titleBand) {
     elements.push({
       kind: 'title',
-      rect: { x: left, y: top, width, height: TITLE_BAND_MM },
-      text: title,
+      rect: titleBand,
+      text: content.title.trim(),
       fontSize: TITLE_FONT_PT,
     });
-    top += TITLE_BAND_MM;
   }
 
-  const hasLegend =
-    content.legend.some((group) => group.entries.length > 0) &&
-    width - LEGEND_WIDTH_MM - LEGEND_GAP_MM >= MIN_MAP_WIDTH_MM;
-  const frameHeight = bottom - top;
-  const frame: Rect = {
-    x: left,
-    y: top,
-    width: hasLegend ? width - LEGEND_WIDTH_MM - LEGEND_GAP_MM : width,
-    height: frameHeight,
-  };
   const aspect = content.mapSize ? content.mapSize.width / content.mapSize.height : 0;
-  const map = fitRect(frame, aspect);
+  const map = fitRect(mapFrame, aspect);
   elements.push({ kind: 'map', rect: map });
 
-  if (hasLegend) {
-    const { lines, height } = legendLines(content.legend, top, frameHeight);
+  if (legendBand) {
+    const { lines, height } = legendLines(content.legend, legendBand.y, legendBand.height);
     elements.push({
       kind: 'legend',
-      rect: {
-        x: left + width - LEGEND_WIDTH_MM,
-        y: top,
-        width: LEGEND_WIDTH_MM,
-        height: Math.min(height, frameHeight),
-      },
+      rect: { ...legendBand, height: Math.min(height, legendBand.height) },
       lines,
       swatchSize: LEGEND_SWATCH_MM,
       fontSize: LEGEND_FONT_PT,

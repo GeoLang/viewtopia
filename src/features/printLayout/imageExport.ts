@@ -1,10 +1,10 @@
 import type { MapCapture } from './capture';
 
 /** CSS reference resolution: at 96 DPI the requested pixels are the output pixels. */
-const CSS_DPI = 96;
+export const CSS_DPI = 96;
 
 /** Chrome refuses to encode a canvas larger than this on a side. */
-const MAX_SIDE = 8192;
+export const MAX_SIDE = 8192;
 
 export type ImageFormat = 'png' | 'jpg';
 
