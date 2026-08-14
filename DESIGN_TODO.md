@@ -25,18 +25,16 @@ region watch inventory below. The Logistics row and plugin description were
 corrected the same way (FleetPanel is an honest empty state, only the delivery
 optimizer is real).
 
-Dispatched as parallel agents, disjoint repos, commit locally, never push:
-
-- [~] **terravista v0.2 leftovers**: carry the layer name through the FFI
-      flattening, add a per-layer style setter to the Kotlin surface, and
-      compile the Kotlin half against the local SDK
-      (`/home/aaron/Android/sdk`, platform 35, NDK r27c at
-      `~/android-ndk-r27c`, cargo-ndk 4.1.2). Sample app grows a minimal
-      vector layer so a phone install can prove the new path.
-- [~] **viewtopia STAC free-text default**: probe public catalogs'
-      `/conformance` live for the free-text class, add a genuinely useful
-      conforming one to `STAC_CATALOGS`, verified by a real `q=` search. If
-      none exists, report rather than force it.
+The terravista v0.2 leftovers closed the same day, verified on a real Pixel:
+FFI layer-name table plus `tv_map_set_layer_style`, Kotlin `setLayerStyle` and
+`visibleVectorLayers`, sample app vector toggle against MapLibre's demo
+tileset. The "Kotlin compiles nowhere" premise was stale, `assembleRelease`
+passed on the untouched tree. What stays open moved to the Phase 3 entry.
+The STAC free-text track closed the same day: CEDA joined the defaults and a
+real bug fell out (`q` must be an array of terms on POST, the bare string the
+panel sent gets HTTP 400). Of ~14 public catalogs probed live, only CEDA and
+the UK EO DataHub advertise the class; the hub was rejected as the same CEDA
+archive re-served with no `numberMatched` and an anonymous-empty collection.
 
 ## OPEN — direction: the Figma of GIS, only open (stated 2026-08-06)
 
@@ -765,14 +763,6 @@ High value, product-level:
       the encoding off. Everything else in the first cut is done.
 Medium value:
 
-- [ ] **STAC free-text defaults**: free text is conformance-gated (2026-08-13)
-      and neither default catalog (Earth Search, Planetary Computer) advertises
-      the free-text class, so the item search box ships disabled on both.
-      Making it useful again means adding a conforming catalog to the defaults
-      or teaching the panel client-side filtering, which was ruled out as
-      look-like-search-while-missing-everything beyond the fetched page.
-      (The data source manager itself shipped 2026-08-13: Services, Database
-      and Files tabs in one panel, old ids open the right tab.)
 - [ ] **offline area download**: regions download and the app shell is
       service-worker cached. What is left is in the offline story section
       below.
@@ -866,14 +856,13 @@ Known limits:
 
 ## OPEN — Phase 3 (mobile & ML breadth, after v1)
 
-- [ ] **terravista v0.2 leftovers** — the vector half shipped 2026-08-13: MVT
-      decode in the Rust core (spec v2, checked against a reference-encoder
-      fixture), placement through `DrawVectorLayer`, FFI grown to 50 symbols
-      and a `vectorTileUrlTemplate` Kotlin surface. Still open: the Kotlin
-      drawing code compiles nowhere (no Android SDK locally, CI is Rust-only,
-      JitPack builds at release), no real tile server has been hit, the FFI
-      flattening drops the layer name so colour is the only per-layer signal,
-      there is no style setter, and the sample app still shows raster only.
+- [ ] **terravista v0.2 leftovers** — closed 2026-08-14 except two: CI is
+      still Rust-only, so the Kotlin half is proven only by local gradle runs
+      (it does compile, and the sample ran on a real Pixel with vector layers
+      and per-layer styling), and the sample's vector source is MapLibre's
+      demo tileset, fine for a sample, capped at zoom 6. Street-level vector
+      in the sample would mean OpenFreeMap, whose tile URLs rotate, so the
+      sample would have to read its TileJSON at runtime.
 - [ ] **terravista v0.3** — Metal/Vulkan GPU rendering. Biggest advertised-vs-real gap; needs
       platform GPU toolchains.
 - [ ] **panoptes model weights** — train or source one usable segmentation model and publish
