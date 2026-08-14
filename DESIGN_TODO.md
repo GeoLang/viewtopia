@@ -14,11 +14,6 @@ Dispatched as parallel agents, one per repo, viewtopia tracks in separate
 worktrees under `.wt/`. Agents commit locally and never push; the orchestrator
 session reviews, merges and pushes.
 
-- [~] **viewtopia**: panels minimizable, and movable out of the way, for screen
-      real estate (worktree `.wt/panel-minimize`). Resolved design: minimize
-      button in the shared PanelCard header collapsing to the title bar, title
-      bar as a drag handle detaching to a fixed floating position, both reset on
-      panel switch or close, SettingsPanel brought under PanelCard.
 - [~] **terravista**: v0.2's vector half, MVT decode in the Rust core plus
       rendering through the existing `DrawVectorLayer` command, minimal FFI and
       Kotlin surface, default styling only.

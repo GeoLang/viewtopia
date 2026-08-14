@@ -33,9 +33,9 @@ All notable changes to this project will be documented in this file.
   works. The collapsed flag and the dragged position live in the app store keyed by
   card, since the space-time panel opens beside a tool panel, and are dropped when
   the panel closes or another one opens, so neither is persisted. Settings,
-  geoprocessing and image overlay now render through `PanelCard`, and the
-  space-time and convert panels through `PanelHeader`, so the only panel left
-  without the two affordances is the raster one.
+  geoprocessing, image overlay and raster analysis now render through
+  `PanelCard`, and the space-time and convert panels through `PanelHeader`, so
+  every panel carries both affordances.
 
 - 2026-08-13: **a loaded raster converts to a Cloud Optimized GeoTIFF and downloads**.
   The raster panel gained a Convert to COG card beside the analysis ops, pointed at

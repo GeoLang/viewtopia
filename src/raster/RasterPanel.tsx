@@ -34,7 +34,7 @@ import {
   IconUpload,
   IconVector,
 } from '@tabler/icons-react';
-import { PanelHeader } from '../components/PanelCard';
+import { PanelCard, PanelHeader } from '../components/PanelCard';
 import { loadCogFromUrl, loadCogFromBuffer, type LoadedRaster } from './loader';
 import { computeBandMath, computeStats } from './operations';
 import * as engine from './engine';
@@ -445,29 +445,14 @@ export function RasterPanel({ onClose, initialUrl = '' }: RasterPanelProps) {
   };
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 320,
-        maxHeight: 'calc(100vh - 120px)',
-        overflowY: 'auto',
-        background: 'var(--mantine-color-dark-7)',
-        border: '1px solid var(--mantine-color-dark-5)',
-        zIndex: 300,
-      }}
-    >
+    <PanelCard width={320} maxHeight="calc(100vh - 120px)">
       <PanelHeader
         icon={<IconSatellite size={16} />}
         title="Raster Analysis"
         onClose={onClose}
       />
 
-      <Stack gap="xs">
+      <Stack gap="xs" flex={1} style={{ overflowY: 'auto' }}>
         <Group gap="xs" wrap="nowrap">
           <TextInput
             placeholder="https://example.com/dem.tif"
@@ -1060,6 +1045,6 @@ export function RasterPanel({ onClose, initialUrl = '' }: RasterPanelProps) {
           </Text>
         )}
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }
