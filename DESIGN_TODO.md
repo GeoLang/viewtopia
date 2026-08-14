@@ -4,49 +4,9 @@
 > Status keys: `[ ]` todo · `[~]` in progress · `[!]` blocked.
 > **Open work only** — a completed item is deleted; durable design knowledge folds
 > into DESIGN.md's current-state sections, dated history goes in per-repo changelogs.
-> Last brought current: **2026-08-13**.
+> Last brought current: **2026-08-14**.
 
 ---
-
-## IN FLIGHT — 2026-08-14 session
-
-Closed this session before dispatch: the React E2E break on every master push
-since 2026-08-13 (the terrain panel's bundle-list fetch 500s with no platform
-stack, and yesterday's console-guard allowance for it was written but never
-committed, now landed), the stale tiletopia `agent/scoped-tool-tokens` worktree
-and branch (merged, pruned), and the terravista version disagreement (workspace
-Cargo version and gradle `VERSION_NAME` now match the changelog's 0.4.0, the
-Android README keeps 0.2.0 because that is the latest JitPack tag). The two
-geoplumb composite-latency tracks from 2026-08-13 landed and pushed.
-
-The sensor claims verification also closed this session: verdicts and evidence
-are in both repos' changelogs, and the durable finding is folded into the
-region watch inventory below. The Logistics row and plugin description were
-corrected the same way (FleetPanel is an honest empty state, only the delivery
-optimizer is real).
-
-The sample UI upgrade closed 2026-08-14 (terravista changelog): basemap
-picker menu, estimate dialog before any region fetch, zoom and compass
-overlay, stock views only, exercised control by control on the Pixel.
-
-The offline tiles track closed 2026-08-14 (terravista changelog): ambient disk
-cache plus pinned region downloads, region enumerator in core (which fixed a
-Mercator-limit clamp and an antimeridian underflow, both tested), validated on
-the Pixel in airplane mode with per-source keying proven. Follow-up worth a
-line: `tile_package.rs` still holds a third copy of the tile-range maths with
-its own `BoundingBox`, unused by the region path, fold it into `OfflineRegion`
-next time someone is in there.
-
-The terravista v0.2 leftovers closed the same day, verified on a real Pixel:
-FFI layer-name table plus `tv_map_set_layer_style`, Kotlin `setLayerStyle` and
-`visibleVectorLayers`, sample app vector toggle against MapLibre's demo
-tileset. The "Kotlin compiles nowhere" premise was stale, `assembleRelease`
-passed on the untouched tree. What stays open moved to the Phase 3 entry.
-The STAC free-text track closed the same day: CEDA joined the defaults and a
-real bug fell out (`q` must be an array of terms on POST, the bare string the
-panel sent gets HTTP 400). Of ~14 public catalogs probed live, only CEDA and
-the UK EO DataHub advertise the class; the hub was rejected as the same CEDA
-archive re-served with no `numberMatched` and an anonymous-empty collection.
 
 ## OPEN — direction: the Figma of GIS, only open (stated 2026-08-06)
 
@@ -868,13 +828,16 @@ Known limits:
 
 ## OPEN — Phase 3 (mobile & ML breadth, after v1)
 
-- [ ] **terravista v0.2 leftovers** — closed 2026-08-14 except two: CI is
-      still Rust-only, so the Kotlin half is proven only by local gradle runs
-      (it does compile, and the sample ran on a real Pixel with vector layers
-      and per-layer styling), and the sample's vector source is MapLibre's
-      demo tileset, fine for a sample, capped at zoom 6. Street-level vector
-      in the sample would mean OpenFreeMap, whose tile URLs rotate, so the
-      sample would have to read its TileJSON at runtime.
+- [ ] **terravista: Kotlin half not in CI** — CI is Rust-only, so the Kotlin
+      library and sample are proven only by local gradle runs and device
+      sessions. A gradle job needs an Android SDK on the runner.
+- [ ] **terravista: street-level vector in the sample** — the sample's vector
+      source is MapLibre's demo tileset, capped at zoom 6. Going deeper means
+      OpenFreeMap, whose tile URLs rotate, so the sample would have to read
+      its TileJSON at runtime.
+- [ ] **terravista: fold `tile_package.rs` into `OfflineRegion`** — it holds a
+      third copy of the tile-range maths with its own `BoundingBox`, unused by
+      the region download path.
 - [ ] **terravista v0.3** — Metal/Vulkan GPU rendering. Biggest advertised-vs-real gap; needs
       platform GPU toolchains.
 - [ ] **panoptes model weights** — train or source one usable segmentation model and publish
