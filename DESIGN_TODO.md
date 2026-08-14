@@ -8,6 +8,21 @@
 
 ---
 
+In flight 2026-08-14, one main-session fix and one worktree agent:
+
+- [~] **offline 3D boot** (main session): with the origin down the service
+      worker serves the shell, 2D boots, but building the Cesium viewer fetches
+      `cesium/Workers/*` and `cesium/Assets/*` from the network and dies with
+      Cesium's "rendering has stopped" panel showing a stringified
+      `RequestErrorEvent`. Reproduced against the exact built app by refusing
+      those paths. Fix: precache the cesium runtime directories in the app
+      shell globs (14 MB total).
+- [~] **print-resolution rendering** (agent worktree): the printed map is the
+      live frame scaled to the page, so a 300 DPI page carries
+      screen-resolution pixels. Off-screen MapLibre render at the page's
+      target pixel size behind the existing `MapCapture` seam; Cesium keeps
+      the live-frame path with its documented limit, Leaflet stays refused.
+
 ## OPEN — direction: the Figma of GIS, only open (stated 2026-08-06)
 
 The owner's product thesis: GeoLang becomes what Figma is to design, for GIS,
