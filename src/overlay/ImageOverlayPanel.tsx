@@ -1,16 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  ActionIcon,
   Button,
   FileButton,
   Group,
   NumberInput,
-  Paper,
   Slider,
   Stack,
   Text,
 } from '@mantine/core';
-import { IconMapPin, IconPhotoPlus, IconX } from '@tabler/icons-react';
+import { IconMapPin, IconPhotoPlus } from '@tabler/icons-react';
+import { PanelCard, PanelHeader } from '../components/PanelCard';
 import { useAgentLayerStore } from '../store/agentLayers';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { clickCoordinates } from '../lib/mapClickCoordinates';
@@ -203,35 +202,15 @@ export function ImageOverlayPanel({ onClose }: { onClose: () => void }) {
   ];
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="md"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 12,
-        width: 340,
-        maxHeight: 'calc(100vh - 80px)',
-        overflowY: 'auto',
-        background: 'var(--mantine-color-dark-7)',
-        border: '1px solid var(--mantine-color-dark-5)',
-        zIndex: 400,
-      }}
-    >
-      <Group justify="space-between" mb="sm">
-        <Group gap="xs">
-          <IconPhotoPlus size={16} style={{ color: 'var(--mantine-color-violet-4)' }} />
-          <Text size="sm" fw={600} c="white">
-            Image Overlay
-          </Text>
-        </Group>
-        <ActionIcon aria-label="Close image overlay" size="sm" variant="subtle" color="gray" onClick={onClose}>
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+    <PanelCard width={340} maxHeight="calc(100vh - 80px)">
+      <PanelHeader
+        icon={<IconPhotoPlus size={16} />}
+        title="Image Overlay"
+        onClose={onClose}
+        closeLabel="Close image overlay"
+      />
 
-      <Stack gap="sm">
+      <Stack gap="sm" flex={1} style={{ overflowY: 'auto' }}>
         <Stack
           align="center"
           gap={4}
@@ -341,6 +320,6 @@ export function ImageOverlayPanel({ onClose }: { onClose: () => void }) {
           </Text>
         )}
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

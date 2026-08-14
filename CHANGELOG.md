@@ -24,6 +24,19 @@ All notable changes to this project will be documented in this file.
   an SPA on every path, and the real catalog is a static file with no collections
   link the panel could walk.
 
+- 2026-08-13: **every tool panel minimizes and moves out of the way**. The shared
+  panel header gained a minimize button beside the close X, collapsing the card to
+  its title bar in place, docked or floating, with a double click of the title bar
+  doing the same. The title bar is also a drag handle: pointer drag detaches the
+  card to a fixed position clamped inside the viewport, portaled cards included,
+  and the handlers sit on the header alone so touch scrolling inside a panel still
+  works. The collapsed flag and the dragged position live in the app store keyed by
+  card, since the space-time panel opens beside a tool panel, and are dropped when
+  the panel closes or another one opens, so neither is persisted. Settings,
+  geoprocessing and image overlay now render through `PanelCard`, and the
+  space-time and convert panels through `PanelHeader`, so the only panel left
+  without the two affordances is the raster one.
+
 - 2026-08-13: **a loaded raster converts to a Cloud Optimized GeoTIFF and downloads**.
   The raster panel gained a Convert to COG card beside the analysis ops, pointed at
   any source band or the last result, writing through the same terrano wasm module

@@ -24,7 +24,7 @@ import {
   TextInput,
 } from '@mantine/core';
 import { IconMap, IconPlayerPlay, IconVectorTriangle, IconX } from '@tabler/icons-react';
-import { PanelHeader } from '../components/PanelCard';
+import { PanelCard, PanelHeader } from '../components/PanelCard';
 import { TOOLS, TOOL_GROUPS, toolsInGroup, type ParamKey, type ToolId } from './catalog';
 import { runTool, type ToolOutput, type ToolParams } from './engine';
 import { bboxOf, frameFor, projectBbox, type Bbox } from './projection';
@@ -256,29 +256,14 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Paper
-      shadow="xl"
-      radius="md"
-      p="sm"
-      style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        width: 340,
-        maxHeight: 'calc(100vh - 120px)',
-        overflowY: 'auto',
-        background: 'var(--mantine-color-dark-7)',
-        border: '1px solid var(--mantine-color-dark-5)',
-        zIndex: 300,
-      }}
-    >
+    <PanelCard width={340} maxHeight="calc(100vh - 120px)">
       <PanelHeader
         icon={<IconVectorTriangle size={16} />}
         title="Geoprocessing"
         onClose={onClose}
       />
 
-      <Stack gap="xs">
+      <Stack gap="xs" flex={1} style={{ overflowY: 'auto' }}>
         <Select
           label="Tool"
           size="xs"
@@ -596,6 +581,6 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
           </>
         )}
       </Stack>
-    </Paper>
+    </PanelCard>
   );
 }

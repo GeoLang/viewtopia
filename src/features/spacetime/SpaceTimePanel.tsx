@@ -17,7 +17,7 @@ import {
   IconUpload,
   IconFileTypeCsv,
 } from '@tabler/icons-react';
-import { PanelCard, PanelCloseButton } from '../../components/PanelCard';
+import { PanelCard, PanelHeader } from '../../components/PanelCard';
 import { useSpaceTimeStore } from './store';
 import { EntityList } from './components/EntityList';
 import { TrackPlayer } from './components/TrackPlayer';
@@ -168,27 +168,21 @@ export function SpaceTimePanel() {
 
   return (
     <PanelCard width={380} anchor="left" maxHeight="calc(100vh - 120px)">
-      <Group
-        justify="space-between"
-        p="xs"
-        style={{ borderBottom: '1px solid var(--mantine-color-dark-5)' }}
-      >
-        <Group gap="xs">
-          <IconClock size={16} style={{ color: 'var(--mantine-color-violet-4)' }} />
-          <Text size="sm" fw={600} c="white">
-            Space-Time Intelligence
-          </Text>
-        </Group>
-        <Group gap={4}>
-          <Badge size="xs" variant="light" color="violet">
-            {entities.size} entities
-          </Badge>
-          <Badge size="xs" variant="light" color="blue">
-            {tracks.length} tracks
-          </Badge>
-          <PanelCloseButton onClose={togglePanel} />
-        </Group>
-      </Group>
+      <PanelHeader
+        icon={<IconClock size={16} />}
+        title="Space-Time Intelligence"
+        onClose={togglePanel}
+        actions={
+          <>
+            <Badge size="xs" variant="light" color="violet">
+              {entities.size} entities
+            </Badge>
+            <Badge size="xs" variant="light" color="blue">
+              {tracks.length} tracks
+            </Badge>
+          </>
+        }
+      />
 
       <Tabs defaultValue="entities" variant="pills" radius="sm">
         <Tabs.List px="xs" pt="xs">
