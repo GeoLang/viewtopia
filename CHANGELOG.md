@@ -12,10 +12,11 @@ All notable changes to this project will be documented in this file.
   doing the same. The title bar is also a drag handle: pointer drag detaches the
   card to a fixed position clamped inside the viewport, portaled cards included,
   and the handlers sit on the header alone so touch scrolling inside a panel still
-  works. Both the collapsed flag and the dragged position live in the app store and
-  are dropped when the open panel changes or closes, so neither is persisted. The
-  settings panel now renders through `PanelCard` like every other panel and so
-  gained both affordances.
+  works. The collapsed flag and the dragged position live in the app store keyed by
+  card, since the space-time panel opens beside a tool panel, and are dropped when
+  the panel closes or another one opens, so neither is persisted. Settings and
+  geoprocessing now render through `PanelCard`, and the space-time and convert
+  panels through `PanelHeader`, so no panel is left without the two affordances.
 
 - 2026-08-13: **a loaded raster converts to a Cloud Optimized GeoTIFF and downloads**.
   The raster panel gained a Convert to COG card beside the analysis ops, pointed at

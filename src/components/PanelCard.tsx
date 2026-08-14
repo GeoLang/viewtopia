@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useSyncExternalStore } from 'react';
+import { createContext, useContext, useEffect, useId, useRef, useSyncExternalStore } from 'react';
 import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { ActionIcon, Box, Group, Paper, Text } from '@mantine/core';
@@ -37,8 +37,8 @@ function subscribeToPanelDock(listener: () => void) {
   };
 }
 
-/** true for a header rendered inside a PanelCard, the only place minimize and drag work */
-const InPanelCard = createContext(false);
+/** the enclosing card's id, null for a header rendered without one (no minimize, no drag) */
+const PanelCardId = createContext<string | null>(null);
 
 interface PanelCardProps {
   /** card width when floating (left/center anchor); docked cards fill the dock */
@@ -59,9 +59,16 @@ const CARD_STYLE: CSSProperties = {
 /** the tool-panel chrome: dark card, docked right or floating left/center */
 export function PanelCard({ width, anchor = 'right', maxHeight, testId, children }: PanelCardProps) {
   const dock = useSyncExternalStore(subscribeToPanelDock, () => panelDockElement);
-  const minimized = useAppStore((s) => s.panelMinimized);
-  const position = useAppStore((s) => s.panelPosition);
+  const cardId = useId();
+  const cardPlacement = useAppStore((s) => s.panelPlacements[cardId]);
+  const forgetPlacement = useAppStore((s) => s.forgetPanelPlacement);
+  const minimized = cardPlacement?.minimized ?? false;
+  const position = cardPlacement?.position ?? null;
   const docked = anchor === 'right' && dock !== null;
+
+  // the space-time card opens and closes on its own, outside the one-panel-at-a-time
+  // rule the store's reset follows
+  useEffect(() => () => forgetPlacement(cardId), [cardId, forgetPlacement]);
   const placement = placementStyle({ position, docked, anchor, width });
 
   const card = (
@@ -74,7 +81,7 @@ export function PanelCard({ width, anchor = 'right', maxHeight, testId, children
       data-testid={testId}
       style={{ ...CARD_STYLE, maxHeight: minimized ? undefined : maxHeight, ...placement }}
     >
-      <InPanelCard.Provider value={true}>{children}</InPanelCard.Provider>
+      <PanelCardId.Provider value={cardId}>{children}</PanelCardId.Provider>
     </Paper>
   );
 
@@ -117,12 +124,13 @@ function isControl(target: EventTarget | null) {
 }
 
 /** drags the whole card by its title bar, once the pointer has moved far enough to mean it */
-function usePanelDrag() {
+function usePanelDrag(cardId: string | null) {
   const setPanelPosition = useAppStore((s) => s.setPanelPosition);
   const stopRef = useRef<(() => void) | null>(null);
   useEffect(() => () => stopRef.current?.(), []);
 
   return (event: ReactPointerEvent<HTMLElement>) => {
+    if (!cardId) return;
     if (event.button !== 0 || isControl(event.target)) return;
     const card = event.currentTarget.closest('[data-panel-card]');
     if (!(card instanceof HTMLElement)) return;
@@ -140,6 +148,7 @@ function usePanelDrag() {
       dragging = true;
       const current = card.getBoundingClientRect();
       setPanelPosition(
+        cardId,
         clampToViewport(e.clientX - offsetX, e.clientY - offsetY, current.width, current.height),
       );
     };
@@ -172,10 +181,14 @@ interface PanelHeaderProps {
 }
 
 export function PanelHeader({ icon, title, onClose, actions, badge, closeLabel }: PanelHeaderProps) {
-  const inCard = useContext(InPanelCard);
-  const minimized = useAppStore((s) => s.panelMinimized);
-  const toggleMinimized = useAppStore((s) => s.togglePanelMinimized);
-  const startDrag = usePanelDrag();
+  const cardId = useContext(PanelCardId);
+  const minimized = useAppStore((s) => (cardId ? s.panelPlacements[cardId]?.minimized : false));
+  const togglePanelMinimized = useAppStore((s) => s.togglePanelMinimized);
+  const startDrag = usePanelDrag(cardId);
+  const inCard = cardId !== null;
+  const toggleMinimized = () => {
+    if (cardId) togglePanelMinimized(cardId);
+  };
 
   return (
     <Group

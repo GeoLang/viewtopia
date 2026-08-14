@@ -19,14 +19,14 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const { settings, updateSettings } = useAppStore();
 
   return (
-    <PanelCard width={300} testId="settings-panel">
+    <PanelCard width={300} maxHeight="calc(100vh - 120px)" testId="settings-panel">
       <PanelHeader
         icon={<IconSettings size={16} />}
         title="Settings"
         onClose={onClose}
       />
 
-      <Stack gap="xs">
+      <Stack gap="xs" flex={1} style={{ overflowY: 'auto' }}>
         <Text size="xs" c="dimmed" fw={600}>Display</Text>
         <Switch
           size="xs"

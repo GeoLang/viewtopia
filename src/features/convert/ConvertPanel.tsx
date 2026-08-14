@@ -4,9 +4,9 @@
  * picks a layer, calls the writer and hands the bytes to a download.
  */
 import { useState } from 'react';
-import { Alert, Button, Group, Select, Stack, Text } from '@mantine/core';
+import { Alert, Button, Select, Stack, Text } from '@mantine/core';
 import { IconDownload, IconTransform } from '@tabler/icons-react';
-import { PanelCard, PanelCloseButton } from '../../components/PanelCard';
+import { PanelCard, PanelHeader } from '../../components/PanelCard';
 import { CONVERT_FORMATS, convertFileName, convertLayer, type ConvertFormat } from './formats';
 import { useGeoJsonSources } from '../../lib/geojsonSources';
 import { downloadBytes } from '../../lib/downloadBytes';
@@ -41,15 +41,11 @@ export function ConvertPanel({ onClose }: { onClose: () => void }) {
 
   return (
     <PanelCard width={320}>
-      <Group justify="space-between" mb="xs">
-        <Group gap="xs">
-          <IconTransform size={16} color="#38bdf8" />
-          <Text size="sm" fw={600} c="white">
-            Convert
-          </Text>
-        </Group>
-        <PanelCloseButton onClose={onClose} />
-      </Group>
+      <PanelHeader
+        icon={<IconTransform size={16} color="#38bdf8" />}
+        title="Convert"
+        onClose={onClose}
+      />
 
       <Stack gap="xs">
         {sources.length === 0 && (

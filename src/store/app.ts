@@ -91,6 +91,13 @@ export type ToolPanel =
   | 'printExport'
   | 'pluginManager';
 
+/** minimizing and dragging last only as long as the panel that was minimized or dragged */
+export interface PanelPlacement {
+  minimized: boolean;
+  /** viewport coords the card was dragged to, null while it sits where it belongs */
+  position: { x: number; y: number } | null;
+}
+
 export interface LayerItem {
   id: string;
   name: string;
@@ -160,12 +167,14 @@ interface AppState {
   activePanel: ToolPanel;
   setActivePanel: (p: ToolPanel) => void;
   togglePanel: (p: ToolPanel) => void;
-  /** the open panel is collapsed to its title bar */
-  panelMinimized: boolean;
-  togglePanelMinimized: () => void;
-  /** viewport coords the open panel was dragged to, null while it sits where it belongs */
-  panelPosition: { x: number; y: number } | null;
-  setPanelPosition: (p: { x: number; y: number } | null) => void;
+  /**
+   * How each panel card on screen was collapsed or dragged, keyed by the card's
+   * own id. The space-time panel opens beside a tool panel, so one entry each.
+   */
+  panelPlacements: Record<string, PanelPlacement>;
+  togglePanelMinimized: (cardId: string) => void;
+  setPanelPosition: (cardId: string, position: { x: number; y: number }) => void;
+  forgetPanelPlacement: (cardId: string) => void;
 
   // Backends
   tiletopiaOnline: boolean;
@@ -215,9 +224,6 @@ const DEFAULT_SETTINGS: Settings = {
   googleMapsApiKey: '',
 };
 
-/** minimizing and dragging last only as long as the panel that was minimized or dragged */
-const PANEL_PLACEMENT = { panelMinimized: false, panelPosition: null } as const;
-
 /**
  * The bookmarks this browser owns, held aside while a live document's bookmarks
  * are the ones on screen. Null when no live document is showing.
@@ -258,13 +264,34 @@ export const useAppStore = create<AppState>()(
       setLocalBasemap: (localBasemap) => set({ localBasemap, basemap: 'local' }),
 
       activePanel: null,
-      setActivePanel: (activePanel) => set({ activePanel, ...PANEL_PLACEMENT }),
+      setActivePanel: (activePanel) => set({ activePanel, panelPlacements: {} }),
       togglePanel: (p) =>
-        set((s) => ({ activePanel: s.activePanel === p ? null : p, ...PANEL_PLACEMENT })),
-      panelMinimized: false,
-      togglePanelMinimized: () => set((s) => ({ panelMinimized: !s.panelMinimized })),
-      panelPosition: null,
-      setPanelPosition: (panelPosition) => set({ panelPosition }),
+        set((s) => ({ activePanel: s.activePanel === p ? null : p, panelPlacements: {} })),
+      panelPlacements: {},
+      togglePanelMinimized: (cardId) =>
+        set((s) => ({
+          panelPlacements: {
+            ...s.panelPlacements,
+            [cardId]: {
+              minimized: !s.panelPlacements[cardId]?.minimized,
+              position: s.panelPlacements[cardId]?.position ?? null,
+            },
+          },
+        })),
+      setPanelPosition: (cardId, position) =>
+        set((s) => ({
+          panelPlacements: {
+            ...s.panelPlacements,
+            [cardId]: { minimized: s.panelPlacements[cardId]?.minimized ?? false, position },
+          },
+        })),
+      forgetPanelPlacement: (cardId) =>
+        set((s) => {
+          if (!(cardId in s.panelPlacements)) return {};
+          const panelPlacements = { ...s.panelPlacements };
+          delete panelPlacements[cardId];
+          return { panelPlacements };
+        }),
 
       tiletopiaOnline: false,
       geolangOnline: false,
