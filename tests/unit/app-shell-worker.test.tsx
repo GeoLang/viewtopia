@@ -217,10 +217,16 @@ describe.skipIf(!existsSync(generatedWorkerPath))('generated precache manifest',
     const urls = precachedUrls();
 
     expect(urls).not.toContain('manifest.json');
-    expect(urls.some((url) => url.endsWith('.wasm'))).toBe(false);
     expect(urls.some((url) => url.includes('duckdb'))).toBe(false);
     expect(urls.some((url) => url.startsWith('basemaps-assets/'))).toBe(false);
-    expect(urls.some((url) => url.startsWith('cesium/Assets/'))).toBe(false);
-    expect(urls.some((url) => url.startsWith('cesium/Workers/'))).toBe(false);
+  });
+
+  it('covers the files cesium lazy-loads when a 3d viewer is built', () => {
+    const urls = precachedUrls();
+
+    expect(urls.some((url) => url.startsWith('cesium/Assets/'))).toBe(true);
+    expect(urls.some((url) => url.startsWith('cesium/Workers/'))).toBe(true);
+    expect(urls).toContain('cesium/ThirdParty/draco_decoder.wasm');
+    expect(urls).toContain('cesium/Assets/approximateTerrainHeights.json');
   });
 });

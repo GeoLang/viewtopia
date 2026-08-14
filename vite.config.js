@@ -11,14 +11,19 @@ import react from '@vitejs/plugin-react';
 const PLATFORM_STACK = 'http://localhost:5174';
 const BACKEND_PREFIXES = ['/agent', '/agora', '/api', '/ogc', '/plumb', '/tiles', '/jupyter', '/ws'];
 
-// everything index.html pulls at boot: entry chunks, styles, fonts, and the
-// cesium runtime the bundle binds to as a global. cesium's Assets and Workers
-// load later, only when a 3D viewer is built, so they stay on the network.
+// everything index.html pulls at boot (entry chunks, styles, fonts, the cesium
+// runtime the bundle binds to as a global), plus all of cesium's lazy-loaded
+// files: building a 3d viewer fetches Workers and Assets on demand, and with
+// the origin down that fetch fails inside the render loop and the globe dies
+// with cesium's "rendering has stopped" panel while 2d keeps working
 const APP_SHELL_GLOBS = [
   'index.html',
   'assets/*.{js,css,woff,woff2}',
   'cesium/Cesium.js',
-  'cesium/Widgets/widgets.css',
+  'cesium/Assets/**/*',
+  'cesium/ThirdParty/**/*',
+  'cesium/Widgets/**/*',
+  'cesium/Workers/**/*',
 ];
 
 // manifest.json: offline/network.ts pings it to tell online from offline, and a

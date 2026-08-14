@@ -6,6 +6,17 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-08-14: **switching to 3D with the origin down killed the globe with
+  Cesium's "rendering has stopped" panel showing "[object Object]"**. The
+  service worker precached the app shell but left cesium's lazy-loaded
+  Workers, Assets and ThirdParty files on the network, so the shell booted
+  and 2D worked while building a 3D viewer fetched those files from the dead
+  origin and a stringified `RequestErrorEvent` landed in the render loop. The
+  whole cesium runtime is precached now (422 entries, ~21 MB total), and the
+  manifest test asserts the lazy files are present instead of asserting they
+  are absent. Verified by installing the worker, killing the server,
+  reloading and switching to 3D against a build served from cache alone.
+
 - 2026-08-14: **the STAC item search box was dead on every catalog the panel
   offers**, since neither Earth Search nor Planetary Computer advertises the
   free-text conformance class the input is gated on. The CEDA STAC API does
