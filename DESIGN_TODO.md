@@ -25,6 +25,13 @@ region watch inventory below. The Logistics row and plugin description were
 corrected the same way (FleetPanel is an honest empty state, only the delivery
 optimizer is real).
 
+- [~] **terravista offline tiles** (dispatched 2026-08-14): ambient disk
+      cache in `cacheDir` with an LRU byte cap, pinned region downloads in
+      `filesDir` (`downloadRegion`/`regions`/`deleteRegion`, progress,
+      cancel, preview estimate, ~10k tile cap per region), region coord
+      enumerator in the Rust core exposed over FFI. Sample gets a download
+      button, validated on the Pixel with airplane mode.
+
 The terravista v0.2 leftovers closed the same day, verified on a real Pixel:
 FFI layer-name table plus `tv_map_set_layer_style`, Kotlin `setLayerStyle` and
 `visibleVectorLayers`, sample app vector toggle against MapLibre's demo
