@@ -25,16 +25,18 @@ region watch inventory below. The Logistics row and plugin description were
 corrected the same way (FleetPanel is an honest empty state, only the delivery
 optimizer is real).
 
-- [ ] **terravista sample UI upgrade** (queued behind the offline track, same
-      files): basemap picker menu instead of the cycle button, download sheet
-      showing the region estimate before fetching, compass and zoom overlay.
-      Plain views, no Compose, no new dependencies unless already present.
-- [~] **terravista offline tiles** (dispatched 2026-08-14): ambient disk
-      cache in `cacheDir` with an LRU byte cap, pinned region downloads in
-      `filesDir` (`downloadRegion`/`regions`/`deleteRegion`, progress,
-      cancel, preview estimate, ~10k tile cap per region), region coord
-      enumerator in the Rust core exposed over FFI. Sample gets a download
-      button, validated on the Pixel with airplane mode.
+- [~] **terravista sample UI upgrade**: basemap picker menu instead of the
+      cycle button, download sheet showing the region estimate before
+      fetching, compass and zoom overlay. Plain views, no Compose, no new
+      dependencies unless already present.
+
+The offline tiles track closed 2026-08-14 (terravista changelog): ambient disk
+cache plus pinned region downloads, region enumerator in core (which fixed a
+Mercator-limit clamp and an antimeridian underflow, both tested), validated on
+the Pixel in airplane mode with per-source keying proven. Follow-up worth a
+line: `tile_package.rs` still holds a third copy of the tile-range maths with
+its own `BoundingBox`, unused by the region path, fold it into `OfflineRegion`
+next time someone is in there.
 
 The terravista v0.2 leftovers closed the same day, verified on a real Pixel:
 FFI layer-name table plus `tv_map_set_layer_style`, Kotlin `setLayerStyle` and
