@@ -40,7 +40,8 @@ export async function loadPluginBundle(
   code: Uint8Array,
 ): Promise<PluginDefinition> {
   installHostGlobal();
-  const objectUrl = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }));
+  // copy so the blob sees a plain ArrayBuffer, a shared one is not a BlobPart
+  const objectUrl = URL.createObjectURL(new Blob([new Uint8Array(code)], { type: 'text/javascript' }));
   let module: { default?: PluginDefinition };
   try {
     module = (await import(/* @vite-ignore */ objectUrl)) as { default?: PluginDefinition };

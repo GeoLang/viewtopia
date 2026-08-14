@@ -33,8 +33,16 @@ session reviews, merges and pushes.
       `.wt/dep-graph`, owns `.github/workflows/` only).
 - [~] **geoplumb**: recon only, options for composite latency on dense
       collections (report, no edits).
-- [~] **STAC free-text**: live verification of the panel's `q` parameter
-      against real public catalogs (report, no edits).
+- [~] **viewtopia**: gate STAC free-text `q` on the item-search free-text
+      conformance class, disable the text input with a hint otherwise, and fix
+      or drop the broken OpenLandMap default catalog (worktree
+      `.wt/stac-freetext`, owns `src/features/stac/`). Live verification found
+      no major catalog advertises the class, three ignore `q` silently and NASA
+      CMR 500s on it.
+- [~] **geoplumb**: per-strip item footprint filter and per-item early
+      intersection check, the two low-effort wins from the composite latency
+      recon. The decoded-chunk cache and unordered streaming reads wait on
+      profiling evidence.
 
 Verified this session, no work needed: verne's `live-load` CI job ran green on
 a real runner, closing the two runner-only unknowns (`$GITHUB_ENV` token
