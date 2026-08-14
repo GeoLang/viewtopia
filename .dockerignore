@@ -2,6 +2,7 @@
 # (pnpm's node_modules is a symlink farm with host paths — must not be copied in.)
 node_modules
 **/node_modules
+.wt
 dist
 dist-react
 .git
