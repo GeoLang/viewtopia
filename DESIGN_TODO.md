@@ -25,6 +25,16 @@ session reviews, merges and pushes.
       button in the shared PanelCard header collapsing to the title bar, title
       bar as a drag handle detaching to a fixed floating position, both reset on
       panel switch or close, SettingsPanel brought under PanelCard.
+- [~] **terravista**: v0.2's vector half, MVT decode in the Rust core plus
+      rendering through the existing `DrawVectorLayer` command, minimal FFI and
+      Kotlin surface, default styling only.
+- [~] **viewtopia**: dependency submission workflow so GitHub's dependency
+      graph stops resolving against the deleted `package-lock.json` (worktree
+      `.wt/dep-graph`, owns `.github/workflows/` only).
+- [~] **geoplumb**: recon only, options for composite latency on dense
+      collections (report, no edits).
+- [~] **STAC free-text**: live verification of the panel's `q` parameter
+      against real public catalogs (report, no edits).
 
 Verified this session, no work needed: verne's `live-load` CI job ran green on
 a real runner, closing the two runner-only unknowns (`$GITHUB_ENV` token
@@ -349,15 +359,6 @@ a real bug was still there for a different reason.
       - `PTOLEMY_EXTERNAL_DATABASE_URL`, if set, needs the same two parameters.
       - assumes the deployment reaches RDS directly rather than through RDS
         Proxy, which uses ACM certificates and would not need this bundle.
-- [ ] **ptolemy's helm chart has no external-database override.**
-      `deploy/helm/ptolemy/templates/deployment.yaml` line 42 builds an
-      in-cluster plaintext URL from chart values. Fine while it targets
-      in-cluster postgres, but a chart-based RDS deployment would connect
-      plaintext with no way to say otherwise.
-- [ ] **latent panic in ptolemy geoprocessing** (`geoprocessing.rs` line 767,
-      found incidentally): `row.get("geojson")` is non-`Option`, so an
-      `ST_Union` over a feature set that matches nothing returns NULL and panics
-      the handler. Pre-existing and unrelated to the TLS work.
 
 ## OPEN — dependencies and supply chain (2026-08-12)
 
@@ -867,7 +868,7 @@ did. The rest of this entry is kept for the correction it records.
       bundle ships its own `available` array. `list_bundles` returns an empty
       array on any `read_dir` failure, not only a missing directory, so a
       permissions error looks like an empty server.
-Closed 2026-08-13 (working tree). Geocoding and routing already preferred the
+Closed 2026-08-13. Geocoding and routing already preferred the
 platform, verified against geokode's and itinera's real response shapes. What was
 missing was offline behaviour: both now go through `offlineFetch()` so a repeat
 query answers from IndexedDB, and offline they raise a readable message instead
@@ -908,34 +909,25 @@ Known limits:
 
 ## OPEN — Phase 3 (mobile & ML breadth, after v1)
 
-- [ ] **terravista v0.2** — HTTP tile fetch + MVT decode (the SDK can't fetch/draw tiles yet).
+- [~] **terravista v0.2** — the raster half shipped 2026-07-29 (Kotlin MapView
+      with HTTP raster tile fetch and drawing, JitPack packaging), so the old
+      "can't fetch/draw tiles" wording was stale. What remains is MVT decode and
+      vector layer rendering through the existing `DrawVectorLayer` render
+      command. In flight, see the top section.
 - [ ] **terravista v0.3** — Metal/Vulkan GPU rendering. Biggest advertised-vs-real gap; needs
       platform GPU toolchains.
 - [ ] **panoptes model weights** — train or source one usable segmentation model and publish
-      weights. The "keep it clearly labeled experimental" branch is done (2026-08-13, working
-      tree), so nothing oversells itself now, but no weights exist and segmentation still does
+      weights. The "keep it clearly labeled experimental" branch is done (2026-08-13), so
+      nothing oversells itself now, but no weights exist and segmentation still does
       not work out of the box. The ONNX inference path is real and proven end to end from the
       CLI against a synthetic sigmoid model.
-Closed 2026-08-13 (working tree): the onnx test now runs in CI. A separate `onnx`
+Closed 2026-08-13: the onnx test now runs in CI. A separate `onnx`
 job downloads onnxruntime 1.20.1 from the microsoft/onnxruntime release, verifies
 its sha256, exports `ORT_DYLIB_PATH`, then runs clippy and tests under the
 feature. The default matrix is untouched, so the crate is still proven to build
 and test with no ONNX Runtime present. `ort` cannot supply the runtime itself:
 `load-dynamic` sets `ort-sys/disable-linking`, and that build script returns
 before any download logic, so `download-binaries` would be a no-op.
-- [ ] **panoptes descriptions in sibling repos are wrong**, found during the honesty pass.
-      Each is a one-line doc fix in a repo that was busy at the time:
-      - `tiletopia/docs/ecosystem.html` line 130 repeats the old "Geospatial monitoring and
-        change detection" workspace description, which panoptes has since corrected at source.
-        In flight.
-
-      The viewtopia half closed 2026-08-13: `docs/verticals.md` now credits panoptes with
-      imagery feature extraction and says plainly that no weights ship, the sensor line moved
-      to fluvius, which has the MQTT and Kafka connectors, and collecta took the observation
-      forms line. `DESIGN.md` says 44 tests, and its viewtopia count was stale too, at 1,091
-      against a real 1,299.
-- [~] **collecta media attachments** — photo/document capture + sync (deferred from Phase 2).
-      In flight over the OpenRosa multipart submission path.
 - [ ] **viewtopia FleetPanel** — currently an honest "no live feed" state; nothing serves
       vehicle positions. Decide whether real-time fleet tracking is in scope before building
       a WS/ingest path for it. Same gap as the sensors section above, and the same answer
