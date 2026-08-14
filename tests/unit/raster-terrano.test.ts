@@ -18,6 +18,7 @@ import {
   terranoReclass,
   terranoSlope,
   terranoWriteCog,
+  terranoWriteCogBands,
   terranoZonalStats,
   terranoZonalStatsByPolygons,
 } from '../../src/raster/terrano';
@@ -304,6 +305,26 @@ describe('terrano wasm wrappers', () => {
     const [samples] = (await image.readRasters()) as unknown as Uint8Array[];
     expect(samples).toBeInstanceOf(Uint8Array);
     expect(Array.from(samples.slice(0, 4))).toEqual([0, 1, 2, 3]);
+  });
+
+  it('writes three bands into one file a reader reads back band by band', async () => {
+    const bands = [0, 1, 2].map((b) => {
+      const band = new Float32Array(64 * 64);
+      for (let i = 0; i < band.length; i++) band[i] = (i + b * 50) % 200;
+      return band;
+    });
+
+    const bytes = terranoWriteCogBands(bands, 64, 64, [10, 40, 12, 44], 'EPSG:4326', 'u8', null);
+
+    const image = await (await fromArrayBuffer(bytes.buffer as ArrayBuffer)).getImage();
+    expect(image.getSamplesPerPixel()).toBe(3);
+    expect(image.getBoundingBox()).toEqual([10, 40, 12, 44]);
+
+    const samples = (await image.readRasters()) as unknown as Uint8Array[];
+    expect(samples.length).toBe(3);
+    samples.forEach((band, b) => {
+      expect(Array.from(band.slice(0, 4))).toEqual(Array.from(bands[b].slice(0, 4)));
+    });
   });
 
   it('writes the same raster four times smaller at 8 bits than at 64', () => {

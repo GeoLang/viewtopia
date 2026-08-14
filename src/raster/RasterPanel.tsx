@@ -71,6 +71,48 @@ interface RasterPanelProps {
   initialUrl?: string;
 }
 
+/** the COG input option that writes every band of the raster into one file */
+const ALL_BANDS = 'all';
+
+/**
+ * One COG carries one sample type, so bands read at different widths go out in
+ * the widest thing that holds them all.
+ */
+function sharedSampleFormat(formats: SampleFormat[]): SampleFormat {
+  const first = formats[0] ?? 'f32';
+  return formats.every((f) => f === first) ? first : 'f64';
+}
+
+/**
+ * The grids a Convert writes. A source band goes back out as the type it was
+ * read as, an analysis result is f32 and marks absent cells with NaN rather
+ * than the source file's nodata value.
+ */
+function cogSourceOf(
+  raster: LoadedRaster | null,
+  result: RasterResult | null,
+  input: string,
+): { bands: Float32Array[]; format: SampleFormat; noData: number | null; label: string } {
+  if (input === 'result' && result) {
+    return { bands: [result.data], format: 'f32', noData: null, label: result.operation };
+  }
+  if (input === ALL_BANDS && raster) {
+    return {
+      bands: raster.bands,
+      format: sharedSampleFormat(raster.metadata.sampleFormats),
+      noData: raster.metadata.noData,
+      label: 'bands',
+    };
+  }
+  const band = raster?.bands[Number(input)];
+  return {
+    bands: band ? [band] : [],
+    format: raster?.metadata.sampleFormats[Number(input)] ?? 'f32',
+    noData: raster?.metadata.noData ?? null,
+    label: `band-${Number(input) + 1}`,
+  };
+}
+
 export function RasterPanel({ onClose, initialUrl = '' }: RasterPanelProps) {
   const [url, setUrl] = useState(initialUrl);
   const [raster, setRaster] = useState<LoadedRaster | null>(null);
@@ -144,26 +186,9 @@ export function RasterPanel({ onClose, initialUrl = '' }: RasterPanelProps) {
     ...polygonLayers.map((l) => ({ value: `layer:${l.id}`, label: l.name })),
   ];
 
-  /**
-   * A COG holds one band, so the write takes whichever grid the panel is
-   * pointed at. A source band goes back out as the type it was read as, an
-   * analysis result is f32 and marks absent cells with NaN rather than the
-   * source file's nodata value.
-   */
-  const cogSource: {
-    data: Float32Array | null;
-    format: SampleFormat;
-    noData: number | null;
-    label: string;
-  } =
-    cogInput === 'result' && result
-      ? { data: result.data, format: 'f32', noData: null, label: result.operation }
-      : {
-          data: raster?.bands[Number(cogInput)] ?? null,
-          format: raster?.metadata.sampleFormats[Number(cogInput)] ?? 'f32',
-          noData: raster?.metadata.noData ?? null,
-          label: `band-${Number(cogInput) + 1}`,
-        };
+  const cogSource = cogSourceOf(raster, result, cogInput);
+  const cogOptions =
+    bandCount >= 2 ? [{ value: ALL_BANDS, label: 'All bands' }, ...sourceOptions] : sourceOptions;
 
   async function handleLoadUrl() {
     if (!url.trim()) return;
@@ -357,22 +382,33 @@ export function RasterPanel({ onClose, initialUrl = '' }: RasterPanelProps) {
   }
 
   async function handleConvertCog() {
-    if (!raster || !cogSource.data) return;
+    if (!raster || cogSource.bands.length === 0) return;
     const { width, height, bbox, crs } = raster.metadata;
 
     setRunning('cog');
     setError(null);
     setCogWritten(null);
     try {
-      const bytes = await engine.writeCog(
-        cogSource.data,
-        width,
-        height,
-        bbox,
-        crs,
-        cogSource.format,
-        cogSource.noData,
-      );
+      const bytes =
+        cogSource.bands.length > 1
+          ? await engine.writeCogBands(
+              cogSource.bands,
+              width,
+              height,
+              bbox,
+              crs,
+              cogSource.format,
+              cogSource.noData,
+            )
+          : await engine.writeCog(
+              cogSource.bands[0],
+              width,
+              height,
+              bbox,
+              crs,
+              cogSource.format,
+              cogSource.noData,
+            );
       const fileName = `${fileNameSlug(rasterName)}-${cogSource.label}.tif`;
       downloadBytes(bytes, fileName, 'image/tiff');
       setCogWritten({ fileName, bytes: bytes.length });
@@ -901,7 +937,7 @@ export function RasterPanel({ onClose, initialUrl = '' }: RasterPanelProps) {
                   aria-label="Convert to COG"
                   onClick={handleConvertCog}
                   loading={running === 'cog'}
-                  disabled={!cogSource.data}
+                  disabled={cogSource.bands.length === 0}
                 >
                   Convert
                 </Button>
@@ -911,7 +947,7 @@ export function RasterPanel({ onClose, initialUrl = '' }: RasterPanelProps) {
                 label="Input"
                 size="xs"
                 w={140}
-                data={sourceOptions}
+                data={cogOptions}
                 value={cogInput}
                 onChange={(v) => {
                   setCogInput(v ?? '0');
@@ -919,7 +955,9 @@ export function RasterPanel({ onClose, initialUrl = '' }: RasterPanelProps) {
                 }}
               />
               <Text size="xs" c="dimmed" mt={4}>
-                Writes {cogSource.format} samples, tiled with overviews.
+                {cogSource.bands.length > 1
+                  ? `Writes ${cogSource.bands.length} bands of ${cogSource.format} samples, tiled with overviews.`
+                  : `Writes ${cogSource.format} samples, tiled with overviews.`}
               </Text>
               {cogWritten && (
                 <Text size="xs" c="teal" mt={4} data-testid="cog-result">

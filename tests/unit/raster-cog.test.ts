@@ -5,10 +5,10 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-vi.mock('../../src/raster/wasm/terrano_wasm', () => ({ writeCog: vi.fn() }));
+vi.mock('../../src/raster/wasm/terrano_wasm', () => ({ writeCogBands: vi.fn() }));
 
-import { terranoWriteCog } from '../../src/raster/terrano';
-import { writeCog } from '../../src/raster/wasm/terrano_wasm';
+import { terranoWriteCog, terranoWriteCogBands } from '../../src/raster/terrano';
+import { writeCogBands } from '../../src/raster/wasm/terrano_wasm';
 
 const BBOX: [number, number, number, number] = [10, 40, 12, 44];
 
@@ -16,6 +16,7 @@ const BBOX: [number, number, number, number] = [10, 40, 12, 44];
 function lastCall() {
   const [
     data,
+    bandCount,
     width,
     height,
     nodata,
@@ -28,9 +29,10 @@ function lastCall() {
     overviewLevels,
     deflate,
     sampleFormat,
-  ] = vi.mocked(writeCog).mock.calls.at(-1) ?? [];
+  ] = vi.mocked(writeCogBands).mock.calls.at(-1) ?? [];
   return {
     data,
+    bandCount,
     width,
     height,
     nodata,
@@ -47,8 +49,8 @@ function lastCall() {
 }
 
 beforeEach(() => {
-  vi.mocked(writeCog).mockReset();
-  vi.mocked(writeCog).mockReturnValue(new Uint8Array([73, 73, 42, 0]));
+  vi.mocked(writeCogBands).mockReset();
+  vi.mocked(writeCogBands).mockReturnValue(new Uint8Array([73, 73, 42, 0]));
 });
 
 describe('writing a loaded raster as a COG', () => {
@@ -58,6 +60,7 @@ describe('writing a loaded raster as a COG', () => {
     terranoWriteCog(band, 2, 2, BBOX, 'EPSG:4326', 'u8', null);
 
     expect(lastCall().sampleFormat).toBe('u8');
+    expect(lastCall().bandCount).toBe(1);
     expect(Array.from(lastCall().data ?? [])).toEqual([0, 1, 2, 3]);
   });
 
@@ -124,16 +127,39 @@ describe('writing a loaded raster as a COG', () => {
     const band = new Float32Array(4);
 
     expect(() => terranoWriteCog(band, 2, 2, BBOX, 'unknown', 'f32', null)).toThrow(/EPSG/);
-    expect(writeCog).not.toHaveBeenCalled();
+    expect(writeCogBands).not.toHaveBeenCalled();
   });
 
   it('lets a writer failure through to the caller', () => {
-    vi.mocked(writeCog).mockImplementation(() => {
+    vi.mocked(writeCogBands).mockImplementation(() => {
       throw new Error('unknown sample format q8, expected one of u8, i8');
     });
 
     expect(() =>
       terranoWriteCog(new Float32Array(4), 2, 2, BBOX, 'EPSG:4326', 'f32', null),
     ).toThrow('unknown sample format q8, expected one of u8, i8');
+  });
+});
+
+describe('writing several bands into one COG', () => {
+  const red = new Float32Array([1, 2, 3, 4]);
+  const green = new Float32Array([5, 6, 7, 8]);
+  const blue = new Float32Array([9, 10, 11, 12]);
+
+  it('lays the bands out end to end, one grid each', () => {
+    terranoWriteCogBands([red, green, blue], 2, 2, BBOX, 'EPSG:4326', 'u8', null);
+
+    const call = lastCall();
+    expect(call.bandCount).toBe(3);
+    expect(Array.from(call.data ?? [])).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+    expect([call.width, call.height]).toEqual([2, 2]);
+  });
+
+  it('picks a nodata no band uses', () => {
+    const high = new Float32Array([255, 254, 253, 1]);
+
+    terranoWriteCogBands([high, green], 2, 2, BBOX, 'EPSG:4326', 'u8', null);
+
+    expect(lastCall().nodata).toBe(252);
   });
 });

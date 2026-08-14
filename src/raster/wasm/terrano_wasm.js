@@ -313,6 +313,43 @@ export function writeCog(data, width, height, nodata, epsg, origin_x, origin_y, 
 }
 
 /**
+ * Encode a multi-band raster as a pixel-interleaved COG, returning the file
+ * bytes.
+ *
+ * `data` holds the bands end to end, each `width * height` long, so band `b`
+ * starts at `b * width * height`. Every other argument means what it does in
+ * `writeCog`, which is this function at one band.
+ * @param {Float64Array} data
+ * @param {number} band_count
+ * @param {number} width
+ * @param {number} height
+ * @param {number} nodata
+ * @param {number} epsg
+ * @param {number} origin_x
+ * @param {number} origin_y
+ * @param {number} pixel_width
+ * @param {number} pixel_height
+ * @param {number} tile_size
+ * @param {number} overview_levels
+ * @param {boolean} deflate
+ * @param {string} sample_format
+ * @returns {Uint8Array}
+ */
+export function writeCogBands(data, band_count, width, height, nodata, epsg, origin_x, origin_y, pixel_width, pixel_height, tile_size, overview_levels, deflate, sample_format) {
+    const ptr0 = passArrayF64ToWasm0(data, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(sample_format, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.writeCogBands(ptr0, len0, band_count, width, height, nodata, epsg, origin_x, origin_y, pixel_width, pixel_height, tile_size, overview_levels, deflate, ptr1, len1);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v3;
+}
+
+/**
  * Rows come back flat as [zone, count, min, max, mean, sum, std, median].
  * @param {Float64Array} values
  * @param {Float64Array} zones
