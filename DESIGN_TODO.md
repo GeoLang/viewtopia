@@ -25,9 +25,6 @@ session reviews, merges and pushes.
 - [~] **terravista**: v0.2's vector half, MVT decode in the Rust core plus
       rendering through the existing `DrawVectorLayer` command, minimal FFI and
       Kotlin surface, default styling only.
-- [~] **viewtopia**: dependency submission workflow so GitHub's dependency
-      graph stops resolving against the deleted `package-lock.json` (worktree
-      `.wt/dep-graph`, owns `.github/workflows/` only).
 - [~] **geoplumb**: recon only, options for composite latency on dense
       collections (report, no edits).
 - [~] **viewtopia**: gate STAC free-text `q` on the item-search free-text
@@ -399,24 +396,25 @@ left open:
       is green. Each resolves itself when those upstreams move. geokode and
       itinera took the same bump with no duplicate, so this is not inherent to
       sha2 0.11.
-- [ ] **github's dependency graph for viewtopia reads a lockfile that no longer
-      exists.** All 22 alerts on the repo carry `manifest_path:
-      package-lock.json`, which commit `dcdbde7e` deleted on 2026-06-20 in the
-      pnpm migration. The remote returns 404 for that path and the SBOM endpoint
-      404s too, consistent with the graph never having picked up
-      `pnpm-lock.yaml`. So every npm advisory resolves against pinned versions
-      this repo stopped using seven weeks ago, which is why alerts keep firing on
-      ranges the tree has already left. This is the same cause as the postcss
-      alert dismissed as stale below, so it is a pattern rather than one bad
-      alert, and until it is fixed a real advisory is indistinguishable from a
-      ghost. Worth solving before trusting any alert on this repo.
-
-      Alert 19 was the case that exposed it: GHSA-55q2-fjhq-7xh7, a dompurify
-      advisory published 2026-08-09, patched in 3.4.13. `pnpm why` finds exactly
-      one dompurify in the tree and it is already 3.4.13, so there was nothing to
-      upgrade. It is also unreachable here for the same reason recorded below,
-      dompurify arrives only through `@cesium/engine` and nothing in this repo
-      imports it. The alert can be dismissed as already fixed.
+- [!] **enable the dependency graph for GeoLang repos, an owner-only click.**
+      Diagnosed 2026-08-13: the graph is DISABLED for viewtopia (and every
+      GeoLang repo probed, their SBOM endpoints all 404), because GitHub turned
+      it off by default for new public repos in May 2025 and this org never
+      enabled it, while Dependabot alerts stayed on. Alerts therefore keep
+      matching new advisories against the last snapshot ever computed, taken
+      from `package-lock.json` before the pnpm migration deleted it, which is
+      why every one of the 22 alerts carries that manifest path and ghosts keep
+      firing on ranges the tree left long ago (alert 19, dompurify, is such a
+      ghost: the tree holds 3.4.13, past the fix). No workflow can help, the
+      submission API 404s while the graph is off, and none is needed: pnpm v9
+      lockfiles parse natively once it is on. Fix is owner-only, either per repo
+      (Settings, Advanced Security, Dependency graph, Enable) or org-wide via a
+      code-security configuration with `dependency_graph: enabled` attached to
+      all repos without one (needs `write:org`, which the local gh token lacks).
+      After enabling, the SBOM endpoint should return ~1000 packages and the
+      alerts should re-resolve against `pnpm-lock.yaml`; whether stale alerts
+      auto-close was not verifiable in advance, so check alert 19 and dismiss it
+      by hand if it survives.
 - [ ] **viewtopia's two `image-size` advisories have no fix published.** Both
       are denial of service through infinite loops in the JXL, HEIF and ICNS
       parsers, reached through deck.gl's texture-compressor. Nothing to upgrade
