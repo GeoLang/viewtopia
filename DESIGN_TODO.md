@@ -14,9 +14,6 @@ Dispatched as parallel agents, one per repo, viewtopia tracks in separate
 worktrees under `.wt/`. Agents commit locally and never push; the orchestrator
 session reviews, merges and pushes.
 
-- [~] **terravista**: v0.2's vector half, MVT decode in the Rust core plus
-      rendering through the existing `DrawVectorLayer` command, minimal FFI and
-      Kotlin surface, default styling only.
 - [~] **geoplumb**: recon only, options for composite latency on dense
       collections (report, no edits).
 - [~] **geoplumb**: per-strip item footprint filter and per-item early
@@ -860,11 +857,25 @@ Known limits:
 
 ## OPEN — Phase 3 (mobile & ML breadth, after v1)
 
-- [~] **terravista v0.2** — the raster half shipped 2026-07-29 (Kotlin MapView
-      with HTTP raster tile fetch and drawing, JitPack packaging), so the old
-      "can't fetch/draw tiles" wording was stale. What remains is MVT decode and
-      vector layer rendering through the existing `DrawVectorLayer` render
-      command. In flight, see the top section.
+- [ ] **terravista v0.2 leftovers** — the vector half shipped 2026-08-13: MVT
+      decode in the Rust core (spec v2, checked against a reference-encoder
+      fixture), placement through `DrawVectorLayer`, FFI grown to 50 symbols
+      and a `vectorTileUrlTemplate` Kotlin surface. Still open: the Kotlin
+      drawing code compiles nowhere (no Android SDK locally, CI is Rust-only,
+      JitPack builds at release), no real tile server has been hit, the FFI
+      flattening drops the layer name so colour is the only per-layer signal,
+      there is no style setter, and the sample app still shows raster only.
+      Version numbers also disagree across Cargo (0.1.0), the Android README
+      (0.2.0) and the CHANGELOG (0.4.0).
+- [ ] **extract jung's MVT decoder into a shared crate.** terravista needed a
+      decoder and jung-core's is welded into the cartography engine (drags
+      ttf-parser and jung-style, normalises coordinates for jung's own
+      convention, and treats every ring after the first as a hole, so
+      multipolygons come out wrong). terravista adapted a copy that keeps tile
+      units and splits rings by winding, so the platform now has two decoders
+      that can drift, and jung's multipolygon bug is still in jung. A small
+      standalone MVT crate both depend on is the fix, and crates.io has no
+      zero-dependency alternative worth taking instead.
 - [ ] **terravista v0.3** — Metal/Vulkan GPU rendering. Biggest advertised-vs-real gap; needs
       platform GPU toolchains.
 - [ ] **panoptes model weights** — train or source one usable segmentation model and publish
