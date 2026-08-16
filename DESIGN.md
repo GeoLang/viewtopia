@@ -57,9 +57,9 @@ Maturity from source-level test declarations:
 - **CDN config is validated, not applied.** The CloudFront catalog path forwards Authorization
   and Origin, allows the full method set (the origin 405s what it lacks) and sets TTL 0 so an
   authorized response is never replayed cross-token or post-expiry. Realtime behaviors forward
-  `Sec-WebSocket-Protocol`. Tile cache behaviors match `/api/v1/assets/*/tiles*`, not the
-  public `/tiles/v1/*` the viewer uses. The Terraform passes `validate` but has not been
-  applied to live infrastructure, so the remaining risk is the untested live path.
+  `Sec-WebSocket-Protocol`. Tile cache behaviors match `/tiles/v1/assets/*/…` and
+  `/tiles/v1/terrain/*`. The Terraform passes `validate` but has not been applied to live
+  infrastructure, so the remaining risk is the untested live path.
 - **nginx splits tiletopia.** `/tiles/` rewrites to tiletopia `/api/`. `/api/v1/auth/`,
   `/api/v1/portal/` and `/api/v1/realtime/` are special locations to tiletopia. Everything
   else under `/api/` is ptolemy. Asset and export calls must use `/tiles/v1`.

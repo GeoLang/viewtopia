@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- 2026-08-15: each agent run sends the sibyl session id as the AG-UI
+  `threadId`, so two tabs keep separate histories instead of sharing one
+  server-side active session.
+
 ### Fixed
 
 - 2026-08-15: **the Assets panel and 3D export talked to ptolemy.** Both

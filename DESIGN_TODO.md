@@ -29,9 +29,8 @@ attribute-level merge of disjoint property edits; geodukt
 
 Still too big to fake as a README fix, or not a runner-shaped gap:
 
-- [ ] **fluvius windowing / watermarks / temporal joins / R-tree.** Modules
-      exist; `Pipeline::run` is still a straight operator chain. Wiring them
-      means changing the runner, not one operator.
+- [ ] **fluvius temporal joins and R-tree.** Windowing and watermarks drive
+      the runner. Temporal joins and the R-tree are still unused modules.
 - [ ] **geodukt parallel DAG.** `ParallelScheduler` loads sources in parallel
       then still runs transforms sequentially, and `execute` does not call it.
       Independent transform branches would need a Sync reader/op rewrite.
@@ -48,9 +47,6 @@ Still too big to fake as a README fix, or not a runner-shaped gap:
       ptolemy docs "∞ features" and "gRPC", fluvius docs 89 tests (182),
       projicio docs "6 projections" and sub-mm, terravista docs 58 tests
       (130), tiletopia docs test badge 649.
-- [ ] **infrastructure CloudFront tile cache** still matches
-      `/api/v1/assets/*/tiles*`, not `/tiles/v1/*`. Already noted under
-      post-MVP tile edge caching; the path mismatch is why.
 
 ## OPEN — direction: the Figma of GIS, only open (stated 2026-08-06)
 
@@ -451,17 +447,10 @@ left open:
 
 ## OPEN — post-MVP: tiletopia tile edge caching (decided 2026-07-28)
 
-- [ ] The CloudFront `/tiles/v1/*` cache behaviors have never matched a real
-      tiletopia route, so tiles are not edge-cached on AWS (they ride the safe
-      TTL-0 default). Aliasing the API under `/tiles/v1/` is blocked three ways:
-      tiletopia's `is_public_read` treats any path containing `/tiles/` as
-      public (the alias would expose the whole authenticated GET surface),
-      routes are registered with absolute paths, and four handlers emit
-      absolute `/api/v1` URLs in responses. Viable designs, pick one post-MVP:
-      host-based `tiles.<domain>` routing (native ALB support, but CORS and
-      viewer URL changes), or first rewrite `is_public_read` to anchored
-      prefix matches, then the route/URL refactor. A dead-behavior TODO sits
-      in infrastructure/modules/cdn/main.tf until then.
+CloudFront now matches the public `/tiles/v1/assets/*/…` and `/tiles/v1/terrain/*`
+paths the viewer uses. The remaining post-MVP question is hosting tiles on a
+separate host (`tiles.<domain>`) so authenticated API paths and public tiles
+do not share a prefix, if private-asset tile gating ever ships.
 
 ## OPEN — deferred decision: private-asset tile gating
 
@@ -726,9 +715,9 @@ PROJ, which vendors through cmake and is why that image takes minutes to build:
 
 ## OPEN — sibyl cutover cleanup
 
-- [ ] Session routing is still server-side-global (sibyl active flag mirrors the
-      old behavior). Later cleanup: route runs by AG-UI `thread_id` so sessions
-      are per-client and stateless; needs viewer session-switcher rework.
+Runs take `thread_id` (2026-08-15). The process-wide active flag is only the
+fallback for headless callers with no thread. Activate/switch stays for the
+session list UI.
 
 ## OPEN — what the enforcement pass left open per service (2026-08-01)
 

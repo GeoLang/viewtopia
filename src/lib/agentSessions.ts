@@ -1,10 +1,9 @@
 /**
  * sibyl's server-side chat sessions, reached through the /agent/ gateway.
  *
- * The viewer keeps its own sessions in the chat store, client-side. sibyl keeps
- * one active session per server and appends every run to it, so without pointing
- * it at the session on screen, one history grows across unrelated conversations
- * until the model's context overflows.
+ * The viewer keeps its own sessions in the chat store, client-side. Each run
+ * carries that session's sibyl id as AG-UI thread_id, so two tabs do not share
+ * one server-side history. These helpers still create and rename those ids.
  *
  * None of this may block the viewer: every call that fails warns and returns, the
  * chat stays usable, and the next send re-attaches. The run itself surfaces the
