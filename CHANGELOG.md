@@ -6,6 +6,12 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-08-15: **the Assets panel and 3D export talked to ptolemy.** Both
+  hardcoded `/api/v1`, and nginx `/api/` is ptolemy. Terrain already used
+  `/tiles/v1`, which rewrites to tiletopia `/api/`. The panels now do too.
+  Auth, portal and realtime stay on `/api/v1` through their own nginx
+  locations. Verified by the existing unit suites, now pointed at `/tiles/v1`.
+
 - 2026-08-14: **switching to 3D with the origin down killed the globe with
   Cesium's "rendering has stopped" panel showing "[object Object]"**. The
   service worker precached the app shell but left cesium's lazy-loaded

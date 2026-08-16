@@ -25,7 +25,8 @@ import { getAuthToken } from '../../features/auth/store';
 import { noticeRefusal } from '../../lib/apiAuth';
 import { useAppStore } from '../../store/app';
 
-const API = '/api/v1';
+// nginx /api/ is ptolemy; /tiles/ rewrites to tiletopia /api/
+const API = '/tiles/v1';
 const POLL_MS = 3000;
 const ACCEPT =
   '.las,.laz,.e57,.ply,.tif,.tiff,.hgt,.dt0,.dt1,.dt2,.gltf,.glb,.obj,.fbx,.ifc,.dae,.jpg,.jpeg,.png,.jp2';

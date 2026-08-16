@@ -702,9 +702,9 @@
 - Getis-Ord Gi* (hotspot analysis)
 
 ### CLI
-- `nubis info <file.las>` — Point cloud metadata
-- `nubis ground <file.las>` — Ground classification
-- `nubis thin <file.las>` — Point cloud decimation
+- `nubis info --input scan.las` — Point cloud metadata
+- `nubis ground-classify --input scan.las --output ground.las` — Ground classification
+- `nubis thin --input scan.las --output thin.las` — Point cloud decimation
 
 ---
 
@@ -713,11 +713,13 @@
 **Stack**: Rust, image processing, ML inference
 
 ### AI Models
-- `buildings-v1` — Building footprint extraction
-- `roads-v1` — Road network extraction
-- `landcover-v1` — Land use/land cover classification
-- `vegetation-v1` — Vegetation detection
-- `change-v1` — Temporal change detection
+Catalog names only. No weights ship. Naming one of them runs the threshold heuristic.
+
+- `buildings-v1` — planned
+- `roads-v1` — planned
+- `landcover-v1` — planned
+- `vegetation-v1` — planned
+- `change-v1` — planned
 
 ### Capabilities
 - Semantic segmentation (per-pixel classification)

@@ -44,7 +44,7 @@ VITE_SENSOR_WS_URL=ws://localhost:3004/ws/sensors
 
 ### Backend: tiletopia + nubis + terrano
 - tiletopia: 3D Tiles serving for BIM models and point clouds
-- nubis: LAS/LAZ point cloud processing
+- nubis: LAS point cloud processing (formats 0–3; LAZ is tiletopia's ingest crate)
 - terrano: terrain models, GeoTIFF, cut/fill calculations
 
 ### Use Cases

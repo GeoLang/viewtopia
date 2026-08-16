@@ -14,7 +14,8 @@ import { PanelCard, PanelHeader } from '../PanelCard';
 import { getAuthToken } from '../../features/auth/store';
 import { noticeRefusal } from '../../lib/apiAuth';
 
-const API = '/api/v1';
+// nginx /api/ is ptolemy; /tiles/ rewrites to tiletopia /api/
+const API = '/tiles/v1';
 const POLL_MS = 3000;
 
 interface FormatOption {

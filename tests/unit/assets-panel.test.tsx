@@ -149,7 +149,7 @@ describe('AssetsPanel', () => {
     await renderPanel();
 
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe('/api/v1/assets');
+    expect(url).toBe('/tiles/v1/assets');
     expect((init as RequestInit).headers).toEqual({ Authorization: 'Bearer jwt-token' });
 
     const row = screen.getByTestId('assets-row-a1b2');
@@ -166,7 +166,7 @@ describe('AssetsPanel', () => {
     const xhr = FakeXHR.last;
     if (!xhr) throw new Error('no upload started');
     expect(xhr.method).toBe('POST');
-    expect(xhr.url).toBe('/api/v1/assets');
+    expect(xhr.url).toBe('/tiles/v1/assets');
     expect(xhr.headers.Authorization).toBe('Bearer jwt-token');
     expect(xhr.body?.get('name')).toBe('cloud.las');
     expect(xhr.body?.get('file')).toBeInstanceOf(File);
@@ -178,7 +178,7 @@ describe('AssetsPanel', () => {
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '50');
 
     const tiling = { ...READY, name: 'cloud.las', status: 'tiling' };
-    respond((url) => (url === '/api/v1/assets/a1b2' ? jsonOk(tiling) : jsonOk([])));
+    respond((url) => (url === '/tiles/v1/assets/a1b2' ? jsonOk(tiling) : jsonOk([])));
     await act(async () => {
       xhr.status = 201;
       xhr.responseText = JSON.stringify(tiling);
@@ -189,7 +189,7 @@ describe('AssetsPanel', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(POLL_MS);
     });
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/assets/a1b2', {
+    expect(fetchMock).toHaveBeenCalledWith('/tiles/v1/assets/a1b2', {
       headers: { Authorization: 'Bearer jwt-token' },
     });
 
@@ -215,8 +215,8 @@ describe('AssetsPanel', () => {
 
     const tiling = { ...READY, name: 'cloud.las', status: 'tiling' };
     respond((url) => {
-      if (url === '/api/v1/assets/a1b2') return jsonOk(tiling);
-      if (url === '/api/v1/jobs/job-7') return jsonOk({ status: 'running', progress: 0.42 });
+      if (url === '/tiles/v1/assets/a1b2') return jsonOk(tiling);
+      if (url === '/tiles/v1/jobs/job-7') return jsonOk({ status: 'running', progress: 0.42 });
       return jsonOk([]);
     });
     await act(async () => {
@@ -230,7 +230,7 @@ describe('AssetsPanel', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(POLL_MS);
     });
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/jobs/job-7', {
+    expect(fetchMock).toHaveBeenCalledWith('/tiles/v1/jobs/job-7', {
       headers: { Authorization: 'Bearer jwt-token' },
     });
     expect(tilingPercent()).toBe('42');
@@ -238,8 +238,8 @@ describe('AssetsPanel', () => {
     // the asset endpoint knows nothing of the job, so its next answer must not
     // wipe the progress already read
     respond((url) => {
-      if (url === '/api/v1/assets/a1b2') return jsonOk(tiling);
-      if (url === '/api/v1/jobs/job-7') return jsonOk({ status: 'running', progress: 0.8 });
+      if (url === '/tiles/v1/assets/a1b2') return jsonOk(tiling);
+      if (url === '/tiles/v1/jobs/job-7') return jsonOk({ status: 'running', progress: 0.8 });
       return jsonOk([]);
     });
     await act(async () => {
@@ -264,10 +264,10 @@ describe('AssetsPanel', () => {
   it('finds the job of an asset it only listed, and shows its progress', async () => {
     const tiling = { ...READY, status: 'tiling' };
     respond((url) => {
-      if (url === '/api/v1/assets') return jsonOk([tiling]);
-      if (url === '/api/v1/assets/a1b2') return jsonOk(tiling);
-      if (url === '/api/v1/assets/a1b2/jobs') return jsonOk([{ id: 'job-9', progress: 0.25 }]);
-      if (url === '/api/v1/jobs/job-9') return jsonOk({ status: 'running', progress: 0.25 });
+      if (url === '/tiles/v1/assets') return jsonOk([tiling]);
+      if (url === '/tiles/v1/assets/a1b2') return jsonOk(tiling);
+      if (url === '/tiles/v1/assets/a1b2/jobs') return jsonOk([{ id: 'job-9', progress: 0.25 }]);
+      if (url === '/tiles/v1/jobs/job-9') return jsonOk({ status: 'running', progress: 0.25 });
       return jsonOk([]);
     });
     await renderPanel();
@@ -279,7 +279,7 @@ describe('AssetsPanel', () => {
 
     // the job is looked up once, not on every tick
     const lookups = () =>
-      fetchMock.mock.calls.filter((call) => call[0] === '/api/v1/assets/a1b2/jobs').length;
+      fetchMock.mock.calls.filter((call) => call[0] === '/tiles/v1/assets/a1b2/jobs').length;
     expect(lookups()).toBe(1);
     await act(async () => {
       await vi.advanceTimersByTimeAsync(POLL_MS * 2);
@@ -294,7 +294,7 @@ describe('AssetsPanel', () => {
     if (!xhr) throw new Error('no upload started');
 
     const tiling = { ...READY, name: 'city.glb', status: 'tiling' };
-    respond((url) => (url === '/api/v1/assets/a1b2' ? jsonOk(tiling) : jsonOk([])));
+    respond((url) => (url === '/tiles/v1/assets/a1b2' ? jsonOk(tiling) : jsonOk([])));
     await act(async () => {
       xhr.status = 201;
       xhr.responseText = JSON.stringify(tiling);
@@ -305,7 +305,7 @@ describe('AssetsPanel', () => {
       await vi.advanceTimersByTimeAsync(POLL_MS);
     });
     expect(screen.queryByTestId('assets-tiling-a1b2')).not.toBeInTheDocument();
-    expect(fetchMock.mock.calls.map((c) => c[0])).not.toContain('/api/v1/jobs/null');
+    expect(fetchMock.mock.calls.map((c) => c[0])).not.toContain('/tiles/v1/jobs/null');
   });
 
   it('loads a tiled asset into the globe from its tileset url', async () => {
@@ -318,9 +318,9 @@ describe('AssetsPanel', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Add quarry.las to globe' }));
     });
 
-    expect(Cesium3DTileset.fromUrl).toHaveBeenCalledWith('/api/v1/assets/a1b2/tileset.json');
+    expect(Cesium3DTileset.fromUrl).toHaveBeenCalledWith('/tiles/v1/assets/a1b2/tileset.json');
     expect(viewer.scene.primitives.add).toHaveBeenCalledWith({
-      tileset: '/api/v1/assets/a1b2/tileset.json',
+      tileset: '/tiles/v1/assets/a1b2/tileset.json',
     });
     expect(viewer.flyTo).toHaveBeenCalled();
   });
@@ -337,7 +337,7 @@ describe('AssetsPanel', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     });
 
-    expect(fetchMock).toHaveBeenLastCalledWith('/api/v1/assets/a1b2', {
+    expect(fetchMock).toHaveBeenLastCalledWith('/tiles/v1/assets/a1b2', {
       method: 'DELETE',
       headers: { Authorization: 'Bearer jwt-token' },
     });

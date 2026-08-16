@@ -4,32 +4,53 @@
 > Status keys: `[ ]` todo · `[~]` in progress · `[!]` blocked.
 > **Open work only** — a completed item is deleted; durable design knowledge folds
 > into DESIGN.md's current-state sections, dated history goes in per-repo changelogs.
-> Last brought current: **2026-08-14**.
+> Last brought current: **2026-08-15**.
 
 ---
-
-In flight 2026-08-14:
-
-- [~] **print-resolution rendering** (agent worktree): the printed map is the
-      live frame scaled to the page, so a 300 DPI page carries
-      screen-resolution pixels. Off-screen MapLibre render at the page's
-      target pixel size behind the existing `MapCapture` seam; Cesium keeps
-      the live-frame path with its documented limit, Leaflet stays refused.
-      Done and verified (suite, build, lint), awaiting commit.
-- [~] **wire collecta into the platform**: increments 1 (deploy: Dockerfile,
-      compose service, nginx `/collecta/` route) and 2 (Field Data panel
-      loading submissions as a layer) are done and verified, awaiting commit
-      (viewtopia changelog has the full entry). Live-checked against the
-      built image: empty `COLLECTA_JWT_SECRET` refuses to start, a
-      tiletopia-shaped HS256 token (uuid sub, role) lists/creates/reads
-      forms and submissions, no token 401s, and the wire shapes match what
-      the panel parses.
 
 - [ ] **collecta increment 3: push submissions into ptolemy** as versioned
       features, deliberately parked until the panel proves demand. Needs the
       form-schema-to-dataset mapping, incremental sync off collecta's
       cursor, and a decision on who owns the bridge (an exporter in collecta
-      versus a puller elsewhere).
+      versus a puller elsewhere). Print-resolution rendering and collecta
+      increments 1–2 (compose + Field Data panel) shipped 2026-08-14.
+
+## OPEN — advertised vs implemented (audited 2026-08-15)
+
+The 2026-08-14 pass covered six repos (renovate-config, sibyl, terrano, agora,
+collecta, fenestra) and those ACTIONs closed the same day. The rest of the
+suite was finished 2026-08-15. Reword unless a finding says to wire.
+
+Advertised gaps implemented 2026-08-15 (code, not reword): geokode
+directional/unit matching + autocomplete `lon`/`lat` bias; fluvius stop
+detection, path smoothing, and `map_match` topology operator; ptolemy
+attribute-level merge of disjoint property edits; geodukt
+`incremental`/`lineage`/`quality` project flags.
+
+Still too big to fake as a README fix, or not a runner-shaped gap:
+
+- [ ] **fluvius windowing / watermarks / temporal joins / R-tree.** Modules
+      exist; `Pipeline::run` is still a straight operator chain. Wiring them
+      means changing the runner, not one operator.
+- [ ] **geodukt parallel DAG.** `ParallelScheduler` loads sources in parallel
+      then still runs transforms sequentially, and `execute` does not call it.
+      Independent transform branches would need a Sync reader/op rewrite.
+- [ ] **geogit PostGIS working copy** is advertised on the docs comparison
+      page. `create-workingcopy postgresql://` writes tables; there is no
+      PostGIS `WorkingCopy` impl and no status/commit from PostGIS.
+- [ ] **jung unused render modules** (labels, TTF, MIL-STD, heatmap, print)
+      and viewtopia jung-wasm. Real work, not a wire-up.
+- [ ] **itinera WASM crate.** No crate, no graph in the browser.
+- [ ] **ptolemy OGC API Features Part 2** and a shipped QGIS plugin.
+- [ ] **tiletopia docs/ecosystem.html** still puts fenestra under Geometry &
+      Topology with a library badge and fluvius under Spatial Analysis.
+- [ ] **Vanity ∞ / leftover counts**: geogit "∞ features", topoi "∞ precision",
+      ptolemy docs "∞ features" and "gRPC", fluvius docs 89 tests (182),
+      projicio docs "6 projections" and sub-mm, terravista docs 58 tests
+      (130), tiletopia docs test badge 649.
+- [ ] **infrastructure CloudFront tile cache** still matches
+      `/api/v1/assets/*/tiles*`, not `/tiles/v1/*`. Already noted under
+      post-MVP tile edge caching; the path mismatch is why.
 
 ## OPEN — direction: the Figma of GIS, only open (stated 2026-08-06)
 
@@ -282,7 +303,8 @@ a real bug was still there for a different reason.
       (`ci/no-raw-writes.sh` itself documents that it cannot see a mutating
       function called through `SELECT`, naming those three by name), the
       geoprocessing NULL panic, collecta legacy-form access, the terrain wiring,
-      tiletopia's Ion-compat endpoint and ptolemy's feature-level merge.
+      tiletopia's Ion-compat endpoint and ptolemy's merge (attribute-level
+      for disjoint keys as of 2026-08-15).
 
       The second pass closed the rest. The NL agent `sql_query` bypass is real:
       `TOOL_RUNS_CALLER_CODE = True` is declared only on sql_query, plan steps
@@ -876,9 +898,8 @@ before any download logic, so `download-binaries` would be a no-op.
 
 ## OPEN — deferred design decisions (not bugs)
 
-- [ ] ptolemy merge is **feature-level** (edits to different attributes of one feature
-      conflict). Attribute-level auto-merge would be a conflict-detection redesign; behavior
-      is currently pinned by a test. Decide if it's worth it.
+- [ ] ptolemy merge is **attribute-level** for disjoint property edits (shipped
+      2026-08-15). Same-key and both-sides-moved-geometry still conflict.
 - [ ] ptolemy external-source pushdown non-goals (documented in README): near-global
       windows fall back to unfiltered scans; `or`/`not` CQL2 spatial ops are never pushed.
       Revisit only if a real workload hits them.

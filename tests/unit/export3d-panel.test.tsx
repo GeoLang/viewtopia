@@ -52,8 +52,8 @@ function respond(handler: (url: string, init?: RequestInit) => unknown) {
 /** the load pair the panel fires on mount, plus whatever the case adds */
 function respondDefault(extra: (url: string, init?: RequestInit) => unknown = () => null) {
   respond((url, init) => {
-    if (url === '/api/v1/assets') return jsonOk([READY_ASSET, TILING_ASSET]);
-    if (url === '/api/v1/exports/formats') return jsonOk(FORMATS);
+    if (url === '/tiles/v1/assets') return jsonOk([READY_ASSET, TILING_ASSET]);
+    if (url === '/tiles/v1/exports/formats') return jsonOk(FORMATS);
     return extra(url, init) ?? jsonOk(null, 404);
   });
 }
@@ -100,10 +100,10 @@ describe('Export3DPanel', () => {
   it('offers the tiled assets and the formats the server advertises', async () => {
     await renderPanel();
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/assets', {
+    expect(fetchMock).toHaveBeenCalledWith('/tiles/v1/assets', {
       headers: { Authorization: 'Bearer jwt-token' },
     });
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/exports/formats', {
+    expect(fetchMock).toHaveBeenCalledWith('/tiles/v1/exports/formats', {
       headers: { Authorization: 'Bearer jwt-token' },
     });
 
@@ -126,14 +126,14 @@ describe('Export3DPanel', () => {
 
   it('posts the export and polls the job until it is ready', async () => {
     respondDefault((url, init) =>
-      url === '/api/v1/exports' && init?.method === 'POST'
+      url === '/tiles/v1/exports' && init?.method === 'POST'
         ? jsonOk({ id: JOB_ID, status: 'Queued' }, 202)
         : null,
     );
     await renderPanel();
     await startExport();
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/exports', {
+    expect(fetchMock).toHaveBeenCalledWith('/tiles/v1/exports', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer jwt-token' },
       body: JSON.stringify({ asset_id: 'a1b2', format: 'geojson' }),
@@ -141,18 +141,18 @@ describe('Export3DPanel', () => {
     expect(screen.getByTestId(`export3d-job-${JOB_ID}`)).toHaveTextContent('queued');
 
     respondDefault((url) =>
-      url === `/api/v1/exports/${JOB_ID}` ? jsonOk({ id: JOB_ID, status: 'Processing' }) : null,
+      url === `/tiles/v1/exports/${JOB_ID}` ? jsonOk({ id: JOB_ID, status: 'Processing' }) : null,
     );
     await act(async () => {
       await vi.advanceTimersByTimeAsync(POLL_MS);
     });
-    expect(fetchMock).toHaveBeenCalledWith(`/api/v1/exports/${JOB_ID}`, {
+    expect(fetchMock).toHaveBeenCalledWith(`/tiles/v1/exports/${JOB_ID}`, {
       headers: { Authorization: 'Bearer jwt-token' },
     });
     expect(screen.getByTestId(`export3d-job-${JOB_ID}`)).toHaveTextContent('encoding');
 
     respondDefault((url) =>
-      url === `/api/v1/exports/${JOB_ID}` ? jsonOk({ id: JOB_ID, status: 'Ready' }) : null,
+      url === `/tiles/v1/exports/${JOB_ID}` ? jsonOk({ id: JOB_ID, status: 'Ready' }) : null,
     );
     await act(async () => {
       await vi.advanceTimersByTimeAsync(POLL_MS);
@@ -169,7 +169,7 @@ describe('Export3DPanel', () => {
 
   it('links a finished export to its download route', async () => {
     respondDefault((url, init) =>
-      url === '/api/v1/exports' && init?.method === 'POST'
+      url === '/tiles/v1/exports' && init?.method === 'POST'
         ? jsonOk({ id: JOB_ID, status: 'Ready' }, 202)
         : null,
     );
@@ -177,12 +177,12 @@ describe('Export3DPanel', () => {
     await startExport();
 
     const link = screen.getByRole('link', { name: /Download/ });
-    expect(link).toHaveAttribute('href', `/api/v1/exports/download/${JOB_ID}`);
+    expect(link).toHaveAttribute('href', `/tiles/v1/exports/download/${JOB_ID}`);
   });
 
   it('surfaces a failed job with the server reason', async () => {
     respondDefault((url, init) =>
-      url === '/api/v1/exports' && init?.method === 'POST'
+      url === '/tiles/v1/exports' && init?.method === 'POST'
         ? jsonOk({ id: JOB_ID, status: { Failed: 'no input point cloud on disk' } }, 202)
         : null,
     );
@@ -197,7 +197,7 @@ describe('Export3DPanel', () => {
 
   it('explains a refusal from an account without edit access', async () => {
     respondDefault((url, init) =>
-      url === '/api/v1/exports' && init?.method === 'POST' ? jsonOk(null, 403) : null,
+      url === '/tiles/v1/exports' && init?.method === 'POST' ? jsonOk(null, 403) : null,
     );
     await renderPanel();
     await startExport();

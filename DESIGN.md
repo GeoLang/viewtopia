@@ -23,45 +23,46 @@ The three big structural bets are **settled**:
    against the live services, in CI, without stubbing geolang. See §3, Phase 0.
 2. **ViewTopia is one stack.** React (`main.tsx`) is the only front-end. There is no
    vanilla `.js` shell.
-3. **The backbone has real tests.** ptolemy carries 594 test functions including conflict-depth,
+3. **The backbone has real tests.** ptolemy carries ~595 test functions including conflict-depth,
    write-path and visibility coverage.
 
 Maturity from source-level test declarations:
 
 | Repo | Role | Tests | Read |
 |------|------|-------|------|
-| tiletopia | 3D tiles / terrain / COG | 708 | Mature ✅ |
-| ptolemy | versioned PostGIS backbone | 594 | Hardened ✅ |
-| jung | cartographic rendering | 307 | Well-tested ✅ |
-| verne | foreign-format inventory + extractor (§2.7) | 233 | ✅ |
-| geodukt / fluvius | ETL+workflow / spatial streams | 232 / 182 | ✅ |
-| nubis / topoi | point cloud / geometry | 161 / 246 | ✅ |
-| terravista | mobile SDK | 107 | core only, renderer is roadmap ⚠️ |
-| collecta | field collection | 113 | JWT auth + sync real, media is roadmap ⚠️ |
+| tiletopia | 3D tiles / terrain / COG | ~746 | Mature ✅ |
+| ptolemy | versioned PostGIS backbone | ~595 | Hardened ✅ |
+| jung | cartographic rendering library | 322 | Well-tested; viewtopia does not use the wasm crate |
+| verne | foreign-format inventory + extractor (§2.7) | 233 | ✅ live-load CI against ptolemy |
+| geodukt / fluvius | ETL+workflow / spatial streams | ~232 / 182 | geodukt consumed; fluvius not deployed |
+| nubis / topoi | point cloud / geometry | 161 / 246 | nubis via geoplumb; topoi as viewer wasm |
+| terravista | mobile SDK | 130 Rust | Android fetches and draws (Canvas); Metal/Vulkan is v0.3 ⚠️ |
+| collecta | field collection | 117 | OpenRosa + attachments + Field Data panel |
 | projicio / sibyl | CRS / agent loop (§2.4) | 198 / 87 | ✅ |
 | terrano / fenestra | raster / OGC gateway (WMS/WFS/WMTS/WCS/OGC API) | 140 / 98 | ✅ |
-| geokode / geogit / itinera | geocode / geo VCS / routing | 75 / 73 / 84 | ✅ |
+| geokode / geogit / itinera | geocode / geo VCS / routing | 75 / 73 / 84 | geogit is CLI-only, not in the viewer |
 | interiora | indoor | 82 | ✅ |
 | panoptes | imagery ML | 44 | ONNX path real, **no published weights** ⚠️ |
 | viewtopia | flagship viewer | 1,299 Vitest tests + 22 platform E2E | 48 registry panels (18 preview-gated) + 22 plugin panels |
 | geolang | NL→GIS agent | 404 pytest functions | 39 tools, wired to ptolemy/itinera/geokode/geodukt |
 
 **Current headline risks:**
-- **terravista can't draw a map yet.** Camera, cache and FFI are real, but GPU rendering,
-  HTTP tile fetch and MVT decode are all still roadmap (v0.2/v0.3). Biggest
-  advertised-vs-real gap.
+- **terravista v0.3 is Metal/Vulkan.** The Android library fetches tiles over HTTP and
+  draws on Canvas, including MVT. The core still only describes the frame. Biggest
+  remaining advertised-vs-real gap on mobile.
 - **panoptes ships no model weights.** Inference works only with a user-supplied ONNX file.
-- **verne's ptolemy loader is not covered by CI.** ptolemy publishes no container image and
-  no OpenAPI spec, so CI has nothing to stand up or check shapes against, and a mocked test
-  would only assert verne's own assumptions. Verified by hand against a live ptolemy instead.
 - **ptolemy's raw-write CI check has a blind spot.** `ci/no-raw-writes.sh` cannot see a
   mutating Postgres function called through `SELECT`, which `topology.rs` does. Those routes
   are admin-only for that reason.
 - **CDN config is validated, not applied.** The CloudFront catalog path forwards Authorization
   and Origin, allows the full method set (the origin 405s what it lacks) and sets TTL 0 so an
   authorized response is never replayed cross-token or post-expiry. Realtime behaviors forward
-  `Sec-WebSocket-Protocol`. The Terraform passes `validate` but has not been applied to live
-  infrastructure, so the remaining risk is the untested live path.
+  `Sec-WebSocket-Protocol`. Tile cache behaviors match `/api/v1/assets/*/tiles*`, not the
+  public `/tiles/v1/*` the viewer uses. The Terraform passes `validate` but has not been
+  applied to live infrastructure, so the remaining risk is the untested live path.
+- **nginx splits tiletopia.** `/tiles/` rewrites to tiletopia `/api/`. `/api/v1/auth/`,
+  `/api/v1/portal/` and `/api/v1/realtime/` are special locations to tiletopia. Everything
+  else under `/api/` is ptolemy. Asset and export calls must use `/tiles/v1`.
 
 ---
 
@@ -345,7 +346,7 @@ model scores 1.00 over the 10-task set.
 - Trajectories pick a JSONB fallback path per request so they work on the stock PostGIS that
   CI and the compose stack run. The five trajectory analytics routes stay MobilityDB-only.
 - External sources push predicates down (3-15x, and plain GiST indexing suffices).
-- ptolemy publishes no container image and no OpenAPI spec.
+- ptolemy publishes `ghcr.io/geolang/ptolemy` from `.github/workflows/docker.yml`. No OpenAPI spec.
 
 ### 2.6 ViewTopia internals (this repo)
 
@@ -597,7 +598,7 @@ elements left open, so an unchecked read reports a truncated file as a clean one
   from the verdict rather than from the caller, so the report and the log cannot give different
   accounts of the same thing. Operator and timestamp are required, because the licence position
   is that "with permission" must be a mechanism with a record of what was taken.
-- **The loader is verified against a real ptolemy, not by verne's CI** (§1 risks).
+- **The loader's live tests run in CI** (`live-load` against `ghcr.io/geolang/ptolemy:master`).
 - The measured comparison in verne's README is the clearest statement of why the project exists:
   for the same conversion, GDAL's GeoPackage keeps 18 of 62 domains, none of the 10 relationship
   classes and no subtypes at all. Most of those domains are reachable only through subtypes,
@@ -658,9 +659,9 @@ Detailed task state lives in [DESIGN_TODO.md](DESIGN_TODO.md). High-level:
 - **Phase 2, harden the backbone.** ✅ DONE. ptolemy write/merge hardening + fork-aware
   feature view, multi-tenancy across ptolemy and tiletopia (§2.3), collecta JWT auth + sync
   protocol, fenestra real WCS. All verifier-confirmed.
-- **Phase 3, mobile & ML breadth.** ⏳ NEXT. terravista v0.2 (HTTP tiles + MVT) then v0.3
-  (GPU rendering), panoptes model weights, collecta media attachments. Off the core
-  viewer+agent path, so sequenced after v1.
+- **Phase 3, mobile & ML breadth.** ⏳ NEXT. terravista v0.2 (HTTP tiles + MVT on Android)
+  shipped; v0.3 is Metal/Vulkan. panoptes model weights. collecta media attachments
+  shipped; increment 3 is ptolemy push. Off the core viewer+agent path.
 
 **Explicitly not being invested in until the core ships:** breadth for its own sake. The
 platform is already wide, and the work is depth on the golden path.
