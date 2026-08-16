@@ -30,11 +30,11 @@ Maturity from source-level test declarations:
 
 | Repo | Role | Tests | Read |
 |------|------|-------|------|
-| tiletopia | 3D tiles / terrain / COG | ~746 | Mature ✅ |
+| tiletopia | 3D tiles / terrain / COG | ~737 | Mature ✅ |
 | ptolemy | versioned PostGIS backbone | ~595 | Hardened ✅ |
 | jung | cartographic rendering library | 322 | Well-tested; viewtopia does not use the wasm crate |
 | verne | foreign-format inventory + extractor (§2.7) | 233 | ✅ live-load CI against ptolemy |
-| geodukt / fluvius | ETL+workflow / spatial streams | ~232 / 182 | geodukt consumed; fluvius not deployed |
+| geodukt / fluvius | ETL+workflow / spatial streams | ~240 / 187 | geodukt consumed; fluvius not deployed |
 | nubis / topoi | point cloud / geometry | 161 / 246 | nubis via geoplumb; topoi as viewer wasm |
 | terravista | mobile SDK | 130 Rust | Android fetches and draws (Canvas); Metal/Vulkan is v0.3 ⚠️ |
 | collecta | field collection | 117 | OpenRosa + attachments + Field Data panel |

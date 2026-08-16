@@ -25,15 +25,14 @@ Advertised gaps implemented 2026-08-15 (code, not reword): geokode
 directional/unit matching + autocomplete `lon`/`lat` bias; fluvius stop
 detection, path smoothing, and `map_match` topology operator; ptolemy
 attribute-level merge of disjoint property edits; geodukt
-`incremental`/`lineage`/`quality` project flags.
+`incremental`/`lineage`/`quality` project flags and `Pipeline::execute`
+running independent DAG waves through `ParallelScheduler`. Vanity counts
+and the tiletopia ecosystem page were reworded the same day.
 
 Still too big to fake as a README fix, or not a runner-shaped gap:
 
 - [ ] **fluvius temporal joins and R-tree.** Windowing and watermarks drive
       the runner. Temporal joins and the R-tree are still unused modules.
-- [ ] **geodukt parallel DAG.** `ParallelScheduler` loads sources in parallel
-      then still runs transforms sequentially, and `execute` does not call it.
-      Independent transform branches would need a Sync reader/op rewrite.
 - [ ] **geogit PostGIS working copy** is advertised on the docs comparison
       page. `create-workingcopy postgresql://` writes tables; there is no
       PostGIS `WorkingCopy` impl and no status/commit from PostGIS.
@@ -41,12 +40,6 @@ Still too big to fake as a README fix, or not a runner-shaped gap:
       and viewtopia jung-wasm. Real work, not a wire-up.
 - [ ] **itinera WASM crate.** No crate, no graph in the browser.
 - [ ] **ptolemy OGC API Features Part 2** and a shipped QGIS plugin.
-- [ ] **tiletopia docs/ecosystem.html** still puts fenestra under Geometry &
-      Topology with a library badge and fluvius under Spatial Analysis.
-- [ ] **Vanity ∞ / leftover counts**: geogit "∞ features", topoi "∞ precision",
-      ptolemy docs "∞ features" and "gRPC", fluvius docs 89 tests (182),
-      projicio docs "6 projections" and sub-mm, terravista docs 58 tests
-      (130), tiletopia docs test badge 649.
 
 ## OPEN — direction: the Figma of GIS, only open (stated 2026-08-06)
 
@@ -810,12 +803,6 @@ did. The rest of this entry is kept for the correction it records.
 
       The `Custom URL` field already works today if a user types the bundle URL
       by hand, so this is a convenience, not a blocker.
-- [ ] **tiletopia's ecosystem page has the wrong sections for two repos.**
-      Descriptions were corrected 2026-08-13 for panoptes, fluvius, fenestra and
-      ptolemy, but fenestra now reads as an OGC server while sitting under
-      "Geometry & Topology" with a library badge, and fluvius sits under
-      "Spatial Analysis". Re-sectioning is a page restructure rather than a
-      factual fix, so it needs an owner call.
 - [ ] **terrain bundle limits worth knowing** (each deliberate, none blocking):
       bundles are filesystem only, not S3/GCS, because `LocalStore::list` is one
       level deep while `S3Store::list` is recursive and capped at 1000 keys, so
