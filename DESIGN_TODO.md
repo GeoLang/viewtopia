@@ -25,16 +25,8 @@ Headline features that are wrong, not merely unwired. The 2026-08-21 batch
 keys and topology/peers reads, geokode CSV match, agora short-session
 checkpoint, fenestra SLD filters, viewtopia KMZ import and local invite links)
 is done. Sibyl per-session run locks, itinera turn restrictions, the nearest-node
-R-tree, and CH distance/steps are done too.
-
-- [ ] **fenestra GetCapabilities documents are not client-consumable.** The WFS
-      document emits `wfs:`/`ows:` prefixes with no `xmlns:` declarations, so a
-      namespace-aware parser rejects it outright. WMS has no Capability/Request
-      section, so a client cannot discover GetMap. WMTS has no TileMatrix levels.
-
-- [ ] **fluvius count-based windows never close.** A count window sets its end
-      from wall clock while expiry compares against an event-time watermark, so
-      events accumulate unboundedly and the configured count never participates.
+R-tree, CH distance/steps, fenestra GetCapabilities, and fluvius count windows
+are done too.
 
 - [ ] **geodukt `quality = true` skips engine-resident transforms**, which is the
       common case (a filter, schema_map or clip directly under a source).
