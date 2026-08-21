@@ -13,8 +13,15 @@ const DB_VERSION = 1;
 
 let dbInstance: IDBDatabase | null = null;
 
+function hasIndexedDb(): boolean {
+  return typeof indexedDB !== 'undefined';
+}
+
 function openDb(): Promise<IDBDatabase> {
   if (dbInstance) return Promise.resolve(dbInstance);
+  if (!hasIndexedDb()) {
+    return Promise.reject(new Error('IndexedDB is unavailable'));
+  }
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = () => {
@@ -30,6 +37,7 @@ function openDb(): Promise<IDBDatabase> {
 }
 
 async function loadAll(): Promise<Notebook[]> {
+  if (!hasIndexedDb()) return [];
   const db = await openDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readonly');
@@ -40,6 +48,7 @@ async function loadAll(): Promise<Notebook[]> {
 }
 
 async function saveNotebook(notebook: Notebook): Promise<void> {
+  if (!hasIndexedDb()) return;
   const db = await openDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
@@ -50,6 +59,7 @@ async function saveNotebook(notebook: Notebook): Promise<void> {
 }
 
 async function deleteNotebook(id: string): Promise<void> {
+  if (!hasIndexedDb()) return;
   const db = await openDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
@@ -115,8 +125,12 @@ export const useNotebookStore = create<NotebookStoreState & NotebookStoreActions
 
   async load() {
     set({ loading: true });
-    const notebooks = await loadAll();
-    set({ notebooks, loading: false });
+    try {
+      const notebooks = await loadAll();
+      set({ notebooks, loading: false });
+    } catch {
+      set({ notebooks: [], loading: false });
+    }
   },
 
   setRuntime(runtime: NotebookRuntime) {

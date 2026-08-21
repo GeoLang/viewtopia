@@ -12,6 +12,10 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-08-21: notebooks IndexedDB access no longer throws when `indexedDB` is
+  missing (jsdom / vitest). The all-panels test mounts NotebookPanel and that
+  was failing CI on macos.
+
 - 2026-08-15: **the Assets panel and 3D export talked to ptolemy.** Both
   hardcoded `/api/v1`, and nginx `/api/` is ptolemy. Terrain already used
   `/tiles/v1`, which rewrites to tiletopia `/api/`. The panels now do too.
