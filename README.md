@@ -739,7 +739,7 @@ scripts/clone-geolang.sh  [DIR]   # macOS/Linux/Git-Bash
 - **Frontend:** Vite, React + Mantine UI, CesiumJS, deck.gl, MapLibre GL, Leaflet, Apache Arrow
 - **Backend:** [GeoLang](https://github.com/GeoLang/tiletopia) (Rust) + [GeoLang](https://github.com/GeoLang/geolang) (Python)
 - **AI:** sibyl agent loop (Rust) + spatial tools, 36 tools
-- **Analysis:** 31 space-time intelligence modules (Gotham-class)
+- **Analysis:** space-time entity tracks and colocation in the Analysis tab, plus the charts and SQL workspace
 - **Deploy:** Docker Compose, Helm, Terraform
 
 ---

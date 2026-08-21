@@ -18,80 +18,11 @@
 
 ---
 
-## Do next — still on the path people actually click
+## Do next — strip the lie before building the missing thing
 
-Headline features that are wrong, not merely unwired. The 2026-08-21 batch
-(sibyl memory isolation, geolang confinement, geodukt `/gp` auth, ptolemy API
-keys and topology/peers reads, geokode CSV match, agora short-session
-checkpoint, fenestra SLD filters, viewtopia KMZ import and local invite links)
-is done. Sibyl per-session run locks, itinera turn restrictions, the nearest-node
-R-tree, CH distance/steps, fenestra GetCapabilities, and fluvius count windows
-are done too.
-
-- [ ] **geodukt `quality = true` skips engine-resident transforms**, which is the
-      common case (a filter, schema_map or clip directly under a source).
-      Verified: the same invalid polygon fails locally and passes on the engine.
-
-- [ ] **geodukt lineage records a fabricated positional mapping** (output i came
-      from input i) regardless of what the operation did, and writes an empty
-      file when transforms are engine-resident.
-
-- [ ] **geogit loses geometry on three paths**: GeoJSON export emits
-      `"geometry": null` always, shapefile import inserts the literal string
-      `"GEOMETRY"`, and PostGIS import reads every non-geometry column as
-      `Option<String>` so integers, floats, booleans and dates all land as Null.
-      No test in the repo ever moves a geometry value, which is why none of it
-      surfaced.
-
-- [ ] **ptolemy FlatGeobuf export emits GeoJSON** with a `.geojson` filename and
-      no FGB crate in any manifest. Implement or rename the route.
-
-- [ ] **ptolemy room relay echoes each message back to its sender** (it subscribes
-      to the same channel it sends on), so a client applying camera updates
-      naively echo-loops.
-
-- [ ] **terrano GRIB2 decoding cannot succeed for any input.** Only sections 0 and
-      1 are parsed; the grid is hardcoded, `data_length` is 0 and `data_offset`
-      points past section 1, so decode always fails a length check. NetCDF is
-      nearly as bad: the variable's `begin` offset is read and discarded, so only
-      the first variable can land on its data.
-
-- [ ] **terrano `read_geotiff` ignores BitsPerSample, SampleFormat, Compression
-      and RowsPerStrip** and reads 8 bytes per pixel unconditionally, so a 16-bit
-      or compressed DEM is read as garbage with no error. fenestra's WCS path
-      calls this on fetched bytes.
-
-- [ ] **nubis octree does no spatial pruning.** The radius query recurses into
-      every child with no bounds test, so every query is a full linear scan with
-      tree-walk overhead. The stored child centres come from a member point
-      rather than the node's geometry, so they are unusable for pruning as-is.
-
-- [ ] **topoi segment intersection misses two whole classes.** The parallel test
-      uses an absolute epsilon on a quantity that scales as the square of
-      coordinate magnitude, so segments crossing at right angles over a 1e-7 span
-      return None (about a centimetre in degrees, ordinary survey data). Collinear
-      overlapping segments, including the shared-endpoint case, return None too.
-
-- [ ] **topoi `intersects` is a bounding-box test** over each polygon's exterior
-      only, so two disjoint polygons with overlapping envelopes return true. It is
-      exported to JS as `polygonsIntersect`, where the name carries no caveat.
-
-- [ ] **viewtopia notebooks are unreachable.** `src/notebooks/` is real and has no
-      panel id, no menu entry and no `ToolPanels` case, and nothing outside the
-      directory imports it. A Jupyter container runs in the platform compose for
-      it. This one is a genuine wire-up: one panel id, one menu entry, one case.
-
-- [ ] **projicio's Lambert Azimuthal Equal Area does not exist**, and its landing
-      page Quick Start calls a method that is not on `Transform` and prints a
-      result 199 m and 265 m off projicio's own arithmetic.
-
-- [ ] **panoptes polygonization emits axis-aligned bounding boxes**, not feature
-      outlines, so every polygon in every GeoJSON it writes is a rectangle. Its
-      whole satellite-preprocessing card is unreachable: `SatelliteImage` is never
-      constructed anywhere including tests, and the only reader calls `to_rgb8()`
-      so no NIR or SWIR band can enter.
-
-## Strip the lie before building the missing thing
+The click-path defects (quality, lineage, geometry IO, FlatGeobuf, room echo,
+GRIB2/GeoTIFF, octree prune, topoi intersects, notebooks, LAEA, polygon
+outlines) are done. Next is docs that still advertise what the code does not do.
 
 Doc edits landed for agora, collecta, fenestra, fluvius, geodukt, geogit, geokode,
 geolang, geoplumb, infrastructure, interiora, itinera, jung, panoptes, projicio
@@ -99,8 +30,9 @@ geolang, geoplumb, infrastructure, interiora, itinera, jung, panoptes, projicio
 because the pass was interrupted. No re-validation is needed, the findings are
 already in this file.
 
-- [ ] **tiletopia** and **viewtopia**: validated, no doc edits applied. These are
-      the two largest sets of findings in the sweep.
+- [ ] **tiletopia** and **viewtopia**: validated, mostly no doc edits applied.
+      ViewTopia dropped the Palantir comparison table. The rest of the sweep
+      findings still need README/docs cuts. These are the two largest sets.
 - [ ] **ptolemy** `docs/index.html` and `docs/comparison.html` (README done). These
       hold the multi-tenancy claims, which migration 028 deleted from the product,
       and the "32 topology rule types, full Esri-equivalent set implemented" cell.
@@ -108,14 +40,6 @@ already in this file.
 - [ ] **terravista** and **projicio** `docs/index.html` (READMEs done).
 - [ ] **terrano**, **verne**, **topoi**, **sibyl**, **nubis**: nothing applied yet.
 - [ ] **GeoLang.github.io**, the org landing page: never validated.
-- [ ] **itinera WASM crate.** No crate, no graph in the browser. The README
-      comparison table already marks WASM ❌, but `docs/index.html:49` still
-      calls itinera "WASM-capable" in its tagline while the same page's own
-      table says ❌. Build the crate or drop the tagline.
-- [ ] **ptolemy QGIS plugin.** Does not exist anywhere in the platform and is
-      not planned; `qgis.rs` is server-side HTTP endpoints. The roadmap line
-      was reworded to match, but `README.md:63`'s architecture diagram still
-      lists "QGIS Plugin" as a client. Drop it or build one.
 
 The 2026-08-14/15 advertised-vs-implemented pass closed most of the vanity
 counts. What it left that is not in **Do next**:
@@ -195,13 +119,11 @@ module with no advertised surface. Wiring them is a product decision.
 
 - [ ] **viewtopia Space-Time Intelligence: 31 advertised rows, ~3 working.** The
       Analysis tab renders seven buttons with no `onClick`. Sixteen of the rows
-      have no code at all (co-travel, activity histogram, swimlanes, alerting,
-      CDR import, audit trail, ontology, entity resolution, attachments, timeline
-      correlation, classification/RBAC, data fusion, and the four performance
-      claims). Seven more have a real algorithm and zero callers. Classification
-      and RBAC are absent entirely, not merely unenforced. Ten of these are ✅ in
-      the comparison table against Palantir Gotham. Strip the table. Do not build
-      Gotham.
+      have no code at all. Seven more have a real algorithm and zero callers.
+      Classification and RBAC are absent. The Palantir Gotham comparison table
+      and "Gotham-class" copy were stripped from docs/index.html and the README
+      stack line. FEATURES.md and the remaining README table still oversell.
+      Do not build Gotham.
 
 - [ ] **viewtopia conflict resolution is dead code.** The three-way merge only
       runs for `update`+`feature` ops, which nothing ever queues, and

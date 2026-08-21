@@ -426,8 +426,8 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 
 <section>
 <div class="container">
-<h2>🕵️ Space-Time Intelligence</h2>
-<p style="color:var(--muted);margin-bottom:20px">Gotham-class analyst toolset — ontology-driven entity resolution, case management, classification, provenance tracking, pattern-of-life, and predictive analytics. All running in the browser with Web Workers and Apache Arrow.</p>
+<h2>Space-Time tracks</h2>
+<p style="color:var(--muted);margin-bottom:20px">Entity tracks, colocation, and a time scrubber in the browser. Not a Palantir Gotham replacement.</p>
 <div class="grid">
 <div class="card">
 <h3>👤 Entity Management</h3>
@@ -693,27 +693,17 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <div style="overflow-x:auto">
 <table>
 <thead>
-<tr><th>Capability</th><th>ViewTopia</th><th>Palantir Gotham</th><th>Cesium Ion Viewer</th><th>QGIS</th><th>kepler.gl</th><th>Google Earth</th></tr>
+<tr><th>Capability</th><th>ViewTopia</th><th>Cesium Ion Viewer</th><th>QGIS</th><th>kepler.gl</th><th>Google Earth</th></tr>
 </thead>
 <tbody>
-<tr><td>3D Globe (CesiumJS)</td><td class="check">✅</td><td class="cross">❌</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="check">✅</td></tr>
-<tr><td>2D Map (Leaflet)</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td></tr>
-<tr><td>AI chat agent</td><td class="check">✅</td><td class="check">✅ (AIP)</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
-<tr><td>Multi-renderer (3 engines)</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="check">✅ (deck.gl)</td><td class="cross">❌</td></tr>
-<tr><td>Ontology / typed schema</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
-<tr><td>Entity resolution</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
-<tr><td>Classification / RBAC</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
-<tr><td>Case management</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
-<tr><td>Multi-source data fusion</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
-<tr><td>Timeline correlation</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
-<tr><td>Space-time entity tracking</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
-<tr><td>Link analysis / social network</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
-<tr><td>Pattern-of-life / predictive</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
-<tr><td>Document attachments</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
-<tr><td>Open source</td><td class="check">✅ AGPL-3.0</td><td class="cross">❌ Proprietary</td><td class="cross">❌</td><td class="check">✅ GPL</td><td class="check">✅ MIT</td><td class="cross">❌</td></tr>
-<tr><td>Self-hosted / offline</td><td class="check">✅</td><td class="cross">❌ (SaaS)</td><td class="cross">❌</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td></tr>
-<tr><td>Web-based (no install)</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌ (desktop)</td><td class="cross">❌</td><td class="check">✅</td><td class="cross">❌</td></tr>
-<tr><td><strong>Price</strong></td><td class="check"><strong>$0</strong></td><td class="cross">$1M+/yr</td><td class="cross">$150+/mo</td><td class="check">$0</td><td class="check">$0</td><td class="cross">$0 (limited)</td></tr>
+<tr><td>3D Globe (CesiumJS)</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="check">✅</td></tr>
+<tr><td>2D Map (Leaflet)</td><td class="check">✅</td><td class="cross">❌</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td></tr>
+<tr><td>AI chat agent</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
+<tr><td>MapLibre vector globe</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="check">✅ (deck.gl)</td><td class="cross">❌</td></tr>
+<tr><td>Open source</td><td class="check">✅ AGPL-3.0</td><td class="cross">❌</td><td class="check">✅ GPL</td><td class="check">✅ MIT</td><td class="cross">❌</td></tr>
+<tr><td>Self-hosted / offline</td><td class="check">✅</td><td class="cross">❌</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td></tr>
+<tr><td>Web-based (no install)</td><td class="check">✅</td><td class="cross">❌ (desktop)</td><td class="cross">❌</td><td class="check">✅</td><td class="cross">❌</td></tr>
+<tr><td><strong>Price</strong></td><td class="check"><strong>$0</strong></td><td class="cross">$150+/mo</td><td class="check">$0</td><td class="check">$0</td><td class="cross">$0 (limited)</td></tr>
 </tbody>
 </table>
 </div>
