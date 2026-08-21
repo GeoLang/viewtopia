@@ -8,8 +8,8 @@ import { useState, useRef } from 'react';
 import { Paper, Text, Stack, Button, Group, Badge, FileInput, Code, SegmentedControl, Textarea } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconFileImport, IconFileExport, IconFile } from '@tabler/icons-react';
-import { kml, gpx } from '@tmcw/togeojson';
 import type { PluginDefinition, PluginContext } from '../sdk';
+import { geojsonFromKmlKmzGpx } from './parseKml';
 
 type ImportFormat = 'kml' | 'kmz' | 'gpx';
 
@@ -63,25 +63,8 @@ function KmlToolsPanel({ ctx }: { ctx: PluginContext }) {
     setImportResult(null);
 
     try {
-      let geojson: GeoJSON.FeatureCollection;
-
-      if (file.name.endsWith('.kmz')) {
-        // KMZ is a ZIP containing doc.kml
-        const { entries } = await import('https://unpkg.com/@nicolo-ribaudo/unzip@1.0.0/index.js' as string).catch(() => ({ entries: null }));
-        // Fallback: try reading as KML (some .kmz files are just renamed)
-        const text = await file.text();
-        const dom = new DOMParser().parseFromString(text, 'text/xml');
-        geojson = kml(dom) as GeoJSON.FeatureCollection;
-      } else if (file.name.endsWith('.gpx')) {
-        const text = await file.text();
-        const dom = new DOMParser().parseFromString(text, 'text/xml');
-        geojson = gpx(dom) as GeoJSON.FeatureCollection;
-      } else {
-        // KML
-        const text = await file.text();
-        const dom = new DOMParser().parseFromString(text, 'text/xml');
-        geojson = kml(dom) as GeoJSON.FeatureCollection;
-      }
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const geojson = geojsonFromKmlKmzGpx(file.name, bytes);
 
       const layerId = `import-${file.name.replace(/\.[^.]+$/, '')}-${Date.now()}`;
       ctx.map.addGeoJsonLayer(layerId, geojson, { color: '#3498db', lineWidth: 2 });

@@ -34,6 +34,7 @@ import { registerAppShellWorker } from './offline/appShellWorker';
 import { initSync } from './offline/sync';
 import { startDocumentBridge } from './live/documentBridge';
 import { useJoinLiveFromLink } from './live/joinFromLink';
+import { useJoinProjectFromLink } from './projects/joinFromLink';
 import { MapPresence } from './live/MapPresence';
 import { OverlayCornerHandles } from './overlay/OverlayCornerHandles';
 import { EmbedBadge } from './components/EmbedBadge';
@@ -73,6 +74,7 @@ export function App() {
   // mirrors layers, annotations and bookmarks while a live document is open
   useEffect(() => startDocumentBridge(), []);
   useJoinLiveFromLink();
+  useJoinProjectFromLink();
 
   // a view-role share link renders view-only chrome: no chat, no draw
   const viewOnly = useViewOnlyLive();

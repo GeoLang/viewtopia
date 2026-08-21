@@ -3,7 +3,6 @@
  */
 import { create } from 'zustand';
 import { workspaces as workspacesDb } from '../offline/db';
-import { queueOperation } from '../offline/sync';
 import type { Workspace, WorkspaceSettings } from './types';
 
 export interface WorkspacesState {
@@ -63,7 +62,6 @@ export const useWorkspacesStore = create<WorkspacesState & WorkspacesActions>((s
     };
 
     await workspacesDb.put(workspace);
-    await queueOperation('create', 'session', workspace.id, workspace);
     set((s) => ({ items: [...s.items, workspace] }));
     return workspace;
   },
@@ -74,13 +72,11 @@ export const useWorkspacesStore = create<WorkspacesState & WorkspacesActions>((s
 
     const updated: Workspace = { ...existing, ...changes, updatedAt: Date.now() };
     await workspacesDb.put(updated);
-    await queueOperation('update', 'session', id, updated);
     set((s) => ({ items: s.items.map((w) => (w.id === id ? updated : w)) }));
   },
 
   async remove(id) {
     await workspacesDb.remove(id);
-    await queueOperation('delete', 'session', id, { id });
     set((s) => ({
       items: s.items.filter((w) => w.id !== id),
       activeWorkspaceId: s.activeWorkspaceId === id ? null : s.activeWorkspaceId,

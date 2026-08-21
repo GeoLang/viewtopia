@@ -5,10 +5,15 @@
  * map document shares through agora instead, see src/live.
  */
 import { shareInvites as invitesDb } from '../offline/db';
-import { queueOperation } from '../offline/sync';
 import type { ShareInvite, Role, Member } from './types';
 import { useProjectsStore } from './projectsStore';
 import { useWorkspacesStore } from './workspacesStore';
+
+export const PROJECT_INVITE_PARAM = 'invite';
+
+export function projectInviteUrl(token: string): string {
+  return `${location.origin}/?${PROJECT_INVITE_PARAM}=${encodeURIComponent(token)}`;
+}
 
 /**
  * Invite a user by email to a project or workspace.
@@ -29,7 +34,6 @@ export async function inviteByEmail(params: {
   };
 
   await invitesDb.put(invite);
-  await queueOperation('create', 'session', invite.id, invite);
   return invite;
 }
 
@@ -54,11 +58,8 @@ export async function generateShareLink(params: {
   };
 
   await invitesDb.put(invite);
-  await queueOperation('create', 'session', invite.id, invite);
 
-  const baseUrl = window.location.origin;
-  const url = `${baseUrl}/join?token=${token}`;
-  return { invite, url };
+  return { invite, url: projectInviteUrl(token) };
 }
 
 /**
@@ -95,10 +96,22 @@ export async function acceptInvite(inviteId: string, userId: string, email: stri
     }
   }
 
-  // Mark invite as accepted
   const updated: ShareInvite = { ...invite, acceptedAt: Date.now() };
   await invitesDb.put(updated);
-  await queueOperation('update', 'session', invite.id, updated);
+}
+
+export async function joinProjectFromToken(token: string): Promise<ShareInvite> {
+  const invite = await invitesDb.getByToken(token);
+  if (!invite) throw new Error('Invite not found');
+  await useProjectsStore.getState().load();
+  await useWorkspacesStore.getState().load();
+  await acceptInvite(invite.id, 'local-user', '');
+  if (invite.targetType === 'project') {
+    await useProjectsStore.getState().switchTo(invite.targetId);
+  } else {
+    useWorkspacesStore.getState().setActive(invite.targetId);
+  }
+  return invite;
 }
 
 /**
@@ -106,7 +119,6 @@ export async function acceptInvite(inviteId: string, userId: string, email: stri
  */
 export async function revokeInvite(inviteId: string): Promise<void> {
   await invitesDb.remove(inviteId);
-  await queueOperation('delete', 'session', inviteId, { id: inviteId });
 }
 
 /**

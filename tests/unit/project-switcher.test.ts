@@ -33,8 +33,6 @@ vi.mock('../../src/offline/db', () => ({
   overlayImages: { put: vi.fn(async () => undefined), get: vi.fn(async () => undefined) },
 }));
 
-vi.mock('../../src/offline/sync', () => ({ queueOperation: vi.fn(async () => undefined) }));
-
 import { useProjectsStore } from '../../src/projects/projectsStore';
 import { useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers';
 import { useAppStore } from '../../src/store/app';

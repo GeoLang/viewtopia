@@ -475,4 +475,9 @@ export const shareInvites = {
       req.onerror = () => reject(req.error);
     });
   },
+
+  async getByToken(token: string): Promise<ShareInvite | undefined> {
+    const invites = await getAll<ShareInvite>('shareInvites');
+    return invites.find((invite) => invite.token === token && !invite.acceptedAt);
+  },
 };

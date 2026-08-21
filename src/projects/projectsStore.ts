@@ -3,7 +3,6 @@
  */
 import { create } from 'zustand';
 import { projects as projectsDb, projectMaps } from '../offline/db';
-import { queueOperation } from '../offline/sync';
 import {
   applyProject,
   serializeProject,
@@ -105,7 +104,6 @@ export const useProjectsStore = create<ProjectsState & ProjectsActions>((set, ge
     };
 
     await projectsDb.put(project);
-    await queueOperation('create', 'session', project.id, project);
     set((s) => ({ items: [...s.items, project] }));
     return project;
   },
@@ -116,14 +114,12 @@ export const useProjectsStore = create<ProjectsState & ProjectsActions>((set, ge
 
     const updated: Project = { ...existing, ...changes, updatedAt: Date.now() };
     await projectsDb.put(updated);
-    await queueOperation('update', 'session', id, updated);
     set((s) => ({ items: s.items.map((p) => (p.id === id ? updated : p)) }));
   },
 
   async remove(id) {
     await projectsDb.remove(id);
     await projectMaps.remove(id);
-    await queueOperation('delete', 'session', id, { id });
     set((s) => ({
       items: s.items.filter((p) => p.id !== id),
       activeProjectId: s.activeProjectId === id ? null : s.activeProjectId,
