@@ -71,6 +71,7 @@ import { ImageOverlayPanel } from '../overlay/ImageOverlayPanel';
 import { ConvertPanel } from '../features/convert/ConvertPanel';
 import { RunHistoryPanel } from '../features/runs/RunHistoryPanel';
 import { PrintLayoutPanel } from '../features/printLayout/PrintLayoutPanel';
+import { NotebookPanel } from '../notebooks/NotebookPanel';
 
 /** floating marker over unfinished tools so they never pass as shipped features */
 function PreviewMarker({ panel }: { panel: ToolPanel }) {
@@ -286,6 +287,8 @@ export function ToolPanels() {
     case 'printLayout':
     case 'printExport':
       return <PrintLayoutPanel onClose={close} />;
+    case 'notebooks':
+      return <NotebookPanel onClose={close} />;
     case 'pluginManager':
       return <PluginManagerPanel onClose={close} />;
     default:

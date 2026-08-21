@@ -94,6 +94,7 @@ export type ToolPanel =
   | 'printLayout'
   // the panel the print layout took over, kept so an old id still opens it
   | 'printExport'
+  | 'notebooks'
   | 'pluginManager';
 
 /** minimizing and dragging last only as long as the panel that was minimized or dragged */

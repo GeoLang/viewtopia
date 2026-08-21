@@ -39,8 +39,9 @@ import {
   IconMap2,
 } from '@tabler/icons-react';
 import { Table as MantineTable } from '@mantine/core';
+import { PanelCard, PanelHeader } from '../components/PanelCard';
 import { useNotebookStore } from './notebookStore';
-import type { NotebookCell, } from './types';
+import type { NotebookCell } from './types';
 
 function formatCell(value: unknown): string {
   if (value === null || value === undefined) return '';
@@ -224,7 +225,7 @@ function Cell({
 }
 
 /** Main notebook panel */
-export function NotebookPanel() {
+export function NotebookPanel({ onClose }: { onClose: () => void }) {
   const {
     notebooks,
     activeNotebookId,
@@ -254,15 +255,10 @@ export function NotebookPanel() {
   }
 
   if (!activeNotebook) {
-    // Notebook list view
     return (
-      <Stack p="md">
-        <Group justify="space-between">
-          <Group gap={8}>
-            <IconNotebook size={20} />
-            <Text fw={600}>Notebooks</Text>
-          </Group>
-        </Group>
+      <PanelCard width={480} maxHeight="80vh" testId="notebooks-panel">
+        <PanelHeader icon={<IconNotebook size={16} />} title="Notebooks" onClose={onClose} />
+        <Stack gap="sm">
 
         <Group>
           <TextInput
@@ -308,13 +304,15 @@ export function NotebookPanel() {
             </Paper>
           ))}
         </Stack>
-      </Stack>
+        </Stack>
+      </PanelCard>
     );
   }
 
-  // Active notebook view
   return (
-    <Stack p="md" gap="sm">
+    <PanelCard width={480} maxHeight="80vh" testId="notebooks-panel">
+      <PanelHeader icon={<IconNotebook size={16} />} title="Notebooks" onClose={onClose} />
+      <Stack gap="sm">
       <Group justify="space-between">
         <Group gap={8}>
           <ActionIcon aria-label="Back to notebooks" size="sm" variant="subtle" onClick={() => setActive(null)}>
@@ -379,5 +377,6 @@ export function NotebookPanel() {
         </Button>
       </Group>
     </Stack>
+    </PanelCard>
   );
 }

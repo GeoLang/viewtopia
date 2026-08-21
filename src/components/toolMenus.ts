@@ -32,6 +32,7 @@ import {
   IconMoon,
   IconMountain,
   IconMovie,
+  IconNotebook,
   IconPackage,
   IconPackageExport,
   IconPalette,
@@ -138,6 +139,12 @@ export const TOOLS_MENU: ToolMenuItem[][] = [
       label: 'Print Layout',
       icon: IconPrinter,
       keywords: ['print', 'export', 'pdf', 'atlas', 'map series'],
+    },
+    {
+      panel: 'notebooks',
+      label: 'Notebooks',
+      icon: IconNotebook,
+      keywords: ['jupyter', 'notebook', 'cells'],
     },
   ],
 ];
