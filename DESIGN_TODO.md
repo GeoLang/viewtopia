@@ -24,22 +24,8 @@ Headline features that are wrong, not merely unwired. The 2026-08-21 batch
 (sibyl memory isolation, geolang confinement, geodukt `/gp` auth, ptolemy API
 keys and topology/peers reads, geokode CSV match, agora short-session
 checkpoint, fenestra SLD filters, viewtopia KMZ import and local invite links)
-is done.
-
-- [ ] **sibyl runs serialize globally on one lock**, so a second `POST /runs`
-      blocks even on a different `thread_id`. Memory is now per session. This
-      lock is the leftover.
-
-- [ ] **itinera parses OSM turn restrictions and no routing algorithm consults
-      them**, so routes drive through banned turns. Enforcing needs edge-based
-      state (previous way id) in dijkstra, A* and CH.
-
-- [ ] **itinera rebuilds the nearest-node R-tree inside every query** and throws
-      it away, twice per `/route` call. Build once at load, hold it on the graph.
-
-- [ ] **itinera `algorithm=ch` fabricates distance** by assuming 50 km/h for the
-      whole route and returns zero turn-by-turn steps. CH unpacking already
-      yields the full node path, so both are recoverable.
+is done. Sibyl per-session run locks, itinera turn restrictions, the nearest-node
+R-tree, and CH distance/steps are done too.
 
 - [ ] **fenestra GetCapabilities documents are not client-consumable.** The WFS
       document emits `wfs:`/`ows:` prefixes with no `xmlns:` declarations, so a
