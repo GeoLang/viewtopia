@@ -80,11 +80,15 @@ module with no advertised surface. Wiring them is a product decision.
       reporting `source: Srtm30m`; API-key management seeds three fake keys and
       `get_by_hash` has zero callers, so a key cannot authenticate anything.
 
-- [ ] **tiletopia only tiles point clouds.** 18 input formats are advertised and
-      the job queue calls `read_point_cloud` unconditionally. `read_vector` has
-      zero callers, the mesh tiler is unreachable, and `.tif/.glb/.obj/.ifc`
-      uploads queue a job that fails. Several extensions are misclassified as
-      PointCloud by a `_ =>` arm.
+- [ ] **tiletopia's own mesh and vector readers are unreachable.** Since
+      2026-08-22 the job queue tiles glTF, glb, OBJ, FBX, GeoJSON, GeoPackage,
+      KML and CityGML by running mago-3d-tiler (MPL-2.0, bundled in the image,
+      `TILETOPIA_MAGO_JAR`). Point clouds keep the native tiler. IFC and DAE
+      uploads fail with a clear error because mago has no input type for them.
+      Unknown extensions answer 400. What is still dead: `read_mesh`,
+      `read_vector`, the eleven format readers and `mesh_tiler.rs`. Either
+      delete them or make them the IFC path, since `ifc-lite` is already a
+      dependency and mago cannot take IFC.
 
 - [ ] **viewtopia Space-Time Intelligence: four panel surfaces work.**
       Entities, CSV ingest, track player, manual links. The Analysis tab
