@@ -80,15 +80,15 @@ module with no advertised surface. Wiring them is a product decision.
       reporting `source: Srtm30m`; API-key management seeds three fake keys and
       `get_by_hash` has zero callers, so a key cannot authenticate anything.
 
-- [ ] **tiletopia's own mesh and vector readers are unreachable.** Since
-      2026-08-22 the job queue tiles glTF, glb, OBJ, FBX, GeoJSON, GeoPackage,
-      KML and CityGML by running mago-3d-tiler (MPL-2.0, bundled in the image,
-      `TILETOPIA_MAGO_JAR`). Point clouds keep the native tiler. IFC and DAE
-      uploads fail with a clear error because mago has no input type for them.
-      Unknown extensions answer 400. What is still dead: `read_mesh`,
-      `read_vector`, the eleven format readers and `mesh_tiler.rs`. Either
-      delete them or make them the IFC path, since `ifc-lite` is already a
-      dependency and mago cannot take IFC.
+- [ ] **tiletopia's remaining dead readers.** Since 2026-08-22 the job queue
+      tiles glTF, glb, OBJ, FBX, GeoJSON, GeoPackage, KML and CityGML with
+      mago-3d-tiler (MPL-2.0, bundled in the image, `TILETOPIA_MAGO_JAR`,
+      Linux and Windows x64 only) and IFC with the repo's own reader and
+      mesh tiler, placed from the upload's longitude and latitude or the
+      IfcSite coordinates. Point clouds keep the native tiler. DAE is the one
+      model extension no tiler takes. Still dead: the gltf, obj, fbx, citygml
+      and cityjson readers, `read_vector` and its readers, `imagery_tiler.rs`
+      and `photogrammetry.rs`. Delete them or give them a caller.
 
 - [ ] **viewtopia Space-Time Intelligence: four panel surfaces work.**
       Entities, CSV ingest, track player, manual links. The Analysis tab
