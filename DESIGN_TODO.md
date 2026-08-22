@@ -26,26 +26,10 @@ pages, nubis PMF wording, and GeoLang.github.io were stripped to match the
 code. sibyl has no docs site. verne, topoi and terrano READMEs already matched
 the post-fix code.
 
-What the 2026-08-14/15 pass left as **code**, not docs:
-
-- [ ] **fluvius temporal joins and R-tree.** Windowing and watermarks drive
-      the runner. Temporal joins and the R-tree are still unused modules.
-- [ ] **geogit PostGIS working copy** is advertised on the docs comparison
-      page. `create-workingcopy postgresql://` writes tables; there is no
-      PostGIS `WorkingCopy` impl and no status/commit from PostGIS. One
-      `impl WorkingCopy` (GeoPackage). `create-workingcopy postgresql://`
-      writes a config nothing reads, and its writes bind every value as a
-      String against BIGINT/DOUBLE/BOOLEAN/GEOMETRY columns with the failures
-      swallowed by `let _ =`. Also the `<path>` argument is ignored:
-      `wc_path()` hardcodes `<root>/<rootname>.gpkg`.
-- [ ] **ptolemy OGC API Features Part 2.** Not implemented: the `/crs` routes
-      are a CRS lookup service, not the Features CRS extension, and there is no
-      `storageCrs` and no `crs` query parameter. README and the docs site
-      already scope the claim to Part 1, so only the code is open.
-- [ ] **nubis "progressive morphological filter" is a single-pass minimum-Z
-      threshold** with no opening, no window progression, no slope term and no
-      iteration. PMF is a specific named algorithm and this is a different method.
-      Docs now say so. The function name and algorithm are the remaining item.
+The four code items that pass left (fluvius R-tree, geogit working copy path,
+ptolemy Features Part 2, nubis PMF) closed 2026-08-21. Nothing is queued here.
+The next pick is an owner call on the **Delete, do not wire** list below, one
+module at a time, or a hosting decision under **Before any public deploy**.
 
 ## Delete, do not wire
 
@@ -642,7 +626,8 @@ What already exists, verified rather than assumed:
 
 - **fluvius** is a real stream processor, not a stub. Geofencing with per-entity
   state, complex event processing, tumbling/sliding/session windows, watermarks,
-  temporal joins, an rstar R-tree, and MQTT, Kafka and WebSocket connectors. 187
+  an rstar R-tree behind the proximity operator, and MQTT, Kafka and WebSocket
+  connectors. 187
   test functions, 181 passing under `--all-features`. The "millions of entities"
   the README claims is a design target rather than a measurement: the repo has
   no benchmarks and no test above trivial scale. It is deployed nowhere: no
