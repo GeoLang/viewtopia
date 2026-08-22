@@ -80,15 +80,19 @@ module with no advertised surface. Wiring them is a product decision.
       reporting `source: Srtm30m`; API-key management seeds three fake keys and
       `get_by_hash` has zero callers, so a key cannot authenticate anything.
 
-- [ ] **tiletopia's remaining dead readers.** Since 2026-08-22 the job queue
-      tiles glTF, glb, OBJ, FBX, GeoJSON, GeoPackage, KML and CityGML with
-      mago-3d-tiler (MPL-2.0, bundled in the image, `TILETOPIA_MAGO_JAR`,
-      Linux and Windows x64 only) and IFC with the repo's own reader and
-      mesh tiler, placed from the upload's longitude and latitude or the
-      IfcSite coordinates. Point clouds keep the native tiler. DAE is the one
-      model extension no tiler takes. Still dead: the gltf, obj, fbx, citygml
-      and cityjson readers, `read_vector` and its readers, `imagery_tiler.rs`
-      and `photogrammetry.rs`. Delete them or give them a caller.
+- [ ] **tiletopia-worker is a dead crate.** `tiletopia-server` and
+      `tiletopia-cli` list it in Cargo.toml and never reference
+      `tiletopia_worker`. It is a second job runner over `read_point_cloud`,
+      `read_heightmap` and `read_mesh`. Delete it. Context: since 2026-08-22
+      the real job queue tiles point clouds natively, IFC natively, and
+      glTF, glb, OBJ, FBX and CityGML with mago-3d-tiler when
+      `TILETOPIA_MAGO_JAR` is set (Linux and Windows x64 only) or the native
+      mesh tiler without textures when it is not. GeoJSON, GeoPackage and KML
+      are mago only. DAE fails. photogrammetry.rs, imagery_tiler.rs,
+      bim_reader.rs and the vector readers are deleted. The FBX reader
+      assumes y up and does not read the file's `GlobalSettings` UpAxis. The
+      long-term plan is textures and materials through the native readers so
+      mago can go.
 
 - [ ] **viewtopia Space-Time Intelligence: four panel surfaces work.**
       Entities, CSV ingest, track player, manual links. The Analysis tab
