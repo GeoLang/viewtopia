@@ -182,22 +182,11 @@
 - ~5 MB worker bundle is lazy-loaded on first SQL use; subsequent queries hit the warm connection
 
 ### Space-Time Intelligence
-- Entity tracking
-- Colocation detection
-- Co-travel analysis
-- Pattern-of-life profiling
-- Geofencing (enter/exit/dwell)
-- Network graph visualization
-- Behavioral clustering
-- Predictive location estimation
-- CDR (Call Detail Record) import & analysis
-- Multi-format ingest: CSV, GPX, KML, GeoJSON, CDR
-- Export: KML, CSV, video capture
-
-### Data Fusion
-- Multi-source data with provenance tracking
-- Field conflict detection
-- Entity resolution (Levenshtein distance matching)
+- Entity CRUD in the Space-Time panel
+- CSV ingest (name, lat, lng, timestamp)
+- Track player with a time scrubber
+- Manual entity links
+- Analysis tab buttons have no handlers. Colocation, pattern-of-life, clustering and the rest of the library functions are not reachable from the UI. Classification, RBAC, CDR import, ontology and case management are not built.
 
 ### Plugin System (23+ Built-in)
 - Real Estate, Logistics, Environmental, Construction, Agriculture, Telecom, Emergency

@@ -73,7 +73,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <div class="stat"><div class="num">3</div><div class="label">Renderers</div></div>
 <div class="stat"><div class="num">20</div><div class="label">Plugins</div></div>
 <div class="stat"><div class="num">11</div><div class="label">QGIS Ports</div></div>
-<div class="stat"><div class="num">31</div><div class="label">SpaceTime Tools</div></div>
+<div class="stat"><div class="num">4</div><div class="label">Space-Time panel surfaces</div></div>
 <div class="stat"><div class="num">347</div><div class="label">Unit Tests</div></div>
 <div class="stat"><div class="num">$0</div><div class="label">Per month</div></div>
 </div>
@@ -427,151 +427,37 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <section>
 <div class="container">
 <h2>Space-Time tracks</h2>
-<p style="color:var(--muted);margin-bottom:20px">Entity tracks, colocation, and a time scrubber in the browser. Not a Palantir Gotham replacement.</p>
+<p style="color:var(--muted);margin-bottom:20px">Entities, CSV ingest, a time scrubber, and manual links. Classification, RBAC and Gotham-class analysis are not in this product.</p>
 <div class="grid">
 <div class="card">
-<h3>👤 Entity Management</h3>
+<h3>Entity Management</h3>
 <ul>
-<li>Create/edit/delete entities (person, vehicle, device)</li>
-<li>Aliases, metadata, color coding</li>
-<li>Entity merge and full-text search</li>
-<li>Detail panel with properties and notes</li>
+<li>Create, list and select entities (person, vehicle, device)</li>
 </ul>
 </div>
 <div class="card">
-<h3>📡 Track Visualization</h3>
+<h3>CSV ingest</h3>
 <ul>
-<li>Animated 3D arcs with time scrubber</li>
-<li>Configurable trail duration and elevation</li>
-<li>Smooth playback at adjustable speed</li>
-<li>deck.gl DataFilterExtension for GPU filtering</li>
+<li>Drop or browse a CSV with name, lat, lng, timestamp</li>
 </ul>
 </div>
 <div class="card">
-<h3>🔗 Link Analysis</h3>
+<h3>Track Visualization</h3>
 <ul>
-<li>Automatic colocation detection</li>
-<li>Co-travel identification (multi-step patterns)</li>
-<li>Manual link creation with evidence metadata</li>
-<li>Force-directed network graph visualization</li>
+<li>Time scrubber and play/pause over imported positions</li>
 </ul>
 </div>
 <div class="card">
-<h3>📊 Network Metrics</h3>
+<h3>Manual Linking</h3>
 <ul>
-<li>Degree, betweenness, closeness centrality</li>
-<li>PageRank scoring</li>
-<li>Community detection (label propagation)</li>
-<li>Identify key connectors and brokers</li>
+<li>Dialog for analyst-created entity relationships</li>
 </ul>
 </div>
 <div class="card">
-<h3>🏠 Pattern-of-Life</h3>
+<h3>Analysis tab</h3>
 <ul>
-<li>Frequent location detection</li>
-<li>Daily routine patterns (24-hour profile)</li>
-<li>Anomaly detection (unusual locations/times)</li>
-<li>Auto-classify Home/Work/Transit</li>
-</ul>
-</div>
-<div class="card">
-<h3>🎯 Geo-Fencing &amp; Alerting</h3>
-<ul>
-<li>Circle and polygon fence zones</li>
-<li>Enter/exit crossing detection</li>
-<li>Proximity, speed, inactivity alerts</li>
-<li>Real-time rule evaluation with callbacks</li>
-</ul>
-</div>
-<div class="card">
-<h3>🔮 Predictive Analytics</h3>
-<ul>
-<li>Future location prediction (3 strategies)</li>
-<li>Behavioral clustering (k-means on movement)</li>
-<li>Data quality detection (GPS outliers, teleportation)</li>
-<li>Confidence scoring for all predictions</li>
-</ul>
-</div>
-<div class="card">
-<h3>📥 Multi-Format Ingest</h3>
-<ul>
-<li>CSV, GPX, KML, GeoJSON, CDR</li>
-<li>Telecom CDR with auto column mapping</li>
-<li>Drag-and-drop or browse import</li>
-<li>Export to KML, CSV, video capture</li>
-</ul>
-</div>
-<div class="card">
-<h3>⚡ Performance at Scale</h3>
-<ul>
-<li>Apache Arrow binary columnar store</li>
-<li>Web Worker pool for analysis offloading</li>
-<li>Viewport tiling (render only visible)</li>
-<li>IndexedDB persistence (auto-save/restore)</li>
-<li>Virtual scroll for large entity lists</li>
-</ul>
-</div>
-<div class="card">
-<h3>🧬 Ontology Engine</h3>
-<ul>
-<li>8 entity types with typed properties</li>
-<li>10 relationship types with constraints</li>
-<li>Validation against schema rules</li>
-<li>Import/export ontology definitions</li>
-</ul>
-</div>
-<div class="card">
-<h3>🔍 Entity Resolution</h3>
-<ul>
-<li>Fuzzy name matching (Levenshtein + token overlap)</li>
-<li>Alias-based deduplication</li>
-<li>Scored candidate pairs with reasons</li>
-<li>Interactive merge/dismiss UI</li>
-</ul>
-</div>
-<div class="card">
-<h3>📎 Document Attachments</h3>
-<ul>
-<li>File/media upload linked to entities</li>
-<li>IndexedDB blob storage</li>
-<li>Multi-entity linking and search</li>
-<li>Download and remove management</li>
-</ul>
-</div>
-<div class="card">
-<h3>📅 Timeline Correlation</h3>
-<ul>
-<li>Unified cross-entity temporal view</li>
-<li>Movements, links, alerts, fence crossings</li>
-<li>Canvas visualization with type filters</li>
-<li>Click-to-select time navigation</li>
-</ul>
-</div>
-<div class="card">
-<h3>🔒 Classification &amp; RBAC</h3>
-<ul>
-<li>6 security levels (U through TS/SCI)</li>
-<li>8 compartments (SIGINT, HUMINT, IMINT…)</li>
-<li>Role-based access control</li>
-<li>Classification banner and marking system</li>
-</ul>
-</div>
-<div class="card">
-<h3>📋 Case Management</h3>
-<ul>
-<li>Investigation workflow with phases</li>
-<li>Notes, tags, entity/link assignment</li>
-<li>Status tracking (draft → archived)</li>
-<li>JSON export/import for collaboration</li>
-</ul>
-</div>
-<div class="card">
-<h3>🔗 Multi-Source Data Fusion</h3>
-<ul>
-<li>10 source types (SIGINT, HUMINT, OSINT…)</li>
-<li>Provenance tracking per field per source</li>
-<li>Automatic field conflict detection</li>
-<li>Confidence scoring and resolution</li>
+<li>Seven buttons, no handlers</li>
+<li>Colocation, pattern-of-life, clustering and the rest exist as library code with no UI caller</li>
 </ul>
 </div>
 </div>

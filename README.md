@@ -38,39 +38,16 @@
 | **Charts** | Histogram, scatter, and time series |
 
 ### Space-Time Intelligence
+The panel tracks entities and their positions over time. Classification, RBAC and Gotham-class analysis are not in this product.
+
 | Feature | Description |
 |---------|-------------|
-| **Entity Management** | CRUD entities (person/vehicle/device), aliases, merge, search |
-| **Track Visualization** | Animated 3D arcs with time scrubber, trails, and elevation |
-| **Colocation Detection** | Find entities that were near each other at the same time |
-| **Co-Travel Detection** | Identify entities moving together over multiple time steps |
-| **Pattern-of-Life** | Detect frequent locations, daily routines, and anomalies |
-| **Geo-Fencing** | Circle/polygon fences with enter/exit crossing detection |
-| **Network Graph** | Force-directed entity relationship visualization |
-| **Activity Histogram** | Timeline showing event density across all entities |
-| **Entity Swimlanes** | Per-entity timeline with events, speed, and current-time cursor |
-| **Network Metrics** | Degree, betweenness, closeness, PageRank centrality + community detection |
-| **Behavioral Clustering** | K-means clustering on movement features (speed, spread, patterns) |
-| **Predictive Location** | Multi-strategy future location prediction with confidence scores |
-| **Data Quality** | GPS outlier, impossible speed, null island, altitude spike detection |
-| **Alerting Rules** | Geofence entry, proximity, speed, inactivity triggers with callbacks |
-| **CDR Import** | Telecom call-detail-record ingest with auto column mapping |
-| **Multi-Format Ingest** | CSV, GPX, KML, GeoJSON, CDR — drag & drop or browse |
-| **Export** | KML, CSV (tracks + links), video capture |
-| **Audit Trail** | Timestamped action log with filtering, CSV export, and UI panel |
-| **Manual Linking** | Dialog for analyst-created entity relationships with evidence |
-| **Ontology Engine** | Typed entity/link schema with 8 entity types, 10 link types, validation, import/export |
-| **Entity Resolution** | Fuzzy dedup via Levenshtein, token overlap, alias matching with scored candidates |
-| **Document Attachments** | Link files/media to entities with IndexedDB blob storage, search, multi-entity linking |
-| **Timeline Correlation** | Unified cross-entity temporal view — movements, links, alerts, fence crossings |
-| **Classification / RBAC** | 6 security levels (U through TS/SCI), 8 compartments, role-based access control |
-| **Case Management** | Investigation workflow — phases, notes, tags, entity/link/attachment assignment, export |
-| **Multi-Source Data Fusion** | Provenance tracking with 10 source types, field conflict detection, resolution |
-| **IndexedDB Persistence** | Auto-save/restore sessions with entities, tracks, and links |
-| **Binary Columnar Store** | Apache Arrow-backed storage for 100k+ event datasets |
-| **Web Worker Analysis** | Offload colocation, pattern, and geofence analysis to workers |
-| **Viewport Tiling** | Only render events visible in current map extent |
-| **Virtual Scroll** | Smooth scrolling for large entity lists |
+| **Entity Management** | Create, list and select entities (person/vehicle/device) |
+| **CSV ingest** | Drop or browse a CSV with name, lat, lng, timestamp columns |
+| **Track Visualization** | Time scrubber and play/pause over imported positions |
+| **Manual Linking** | Dialog for analyst-created entity relationships |
+
+The Analysis tab draws seven buttons with no handlers. Colocation, pattern-of-life, network metrics, clustering, prediction and data-quality functions exist as library code. Nothing in the panel calls them. Co-travel, geofencing UI, ontology, entity resolution, CDR import, case management and classification/RBAC have no UI.
 
 ### Plugin System
 | Feature | Description |

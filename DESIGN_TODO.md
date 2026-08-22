@@ -18,31 +18,15 @@
 
 ---
 
-## Do next — strip the lie before building the missing thing
+## Do next
 
-The click-path defects (quality, lineage, geometry IO, FlatGeobuf, room echo,
-GRIB2/GeoTIFF, octree prune, topoi intersects, notebooks, LAEA, polygon
-outlines) are done. Next is docs that still advertise what the code does not do.
+The click-path defects and the advertised-vs-real doc cuts (2026-08-21) are
+done. TileTopia, ViewTopia, ptolemy docs pages, terravista and projicio landing
+pages, nubis PMF wording, and GeoLang.github.io were stripped to match the
+code. sibyl has no docs site. verne, topoi and terrano READMEs already matched
+the post-fix code.
 
-Doc edits landed for agora, collecta, fenestra, fluvius, geodukt, geogit, geokode,
-geolang, geoplumb, infrastructure, interiora, itinera, jung, panoptes, projicio
-(README only), ptolemy (README only), terravista (README only). Still to do,
-because the pass was interrupted. No re-validation is needed, the findings are
-already in this file.
-
-- [ ] **tiletopia** and **viewtopia**: validated, mostly no doc edits applied.
-      ViewTopia dropped the Palantir comparison table. The rest of the sweep
-      findings still need README/docs cuts. These are the two largest sets.
-- [ ] **ptolemy** `docs/index.html` and `docs/comparison.html` (README done). These
-      hold the multi-tenancy claims, which migration 028 deleted from the product,
-      and the "32 topology rule types, full Esri-equivalent set implemented" cell.
-      `comparison.html`'s "42 full parity of 48" is wrong by at least 12 cells.
-- [ ] **terravista** and **projicio** `docs/index.html` (READMEs done).
-- [ ] **terrano**, **verne**, **topoi**, **sibyl**, **nubis**: nothing applied yet.
-- [ ] **GeoLang.github.io**, the org landing page: never validated.
-
-The 2026-08-14/15 advertised-vs-implemented pass closed most of the vanity
-counts. What it left that is not in **Do next**:
+What the 2026-08-14/15 pass left as **code**, not docs:
 
 - [ ] **fluvius temporal joins and R-tree.** Windowing and watermarks drive
       the runner. Temporal joins and the R-tree are still unused modules.
@@ -61,6 +45,7 @@ counts. What it left that is not in **Do next**:
 - [ ] **nubis "progressive morphological filter" is a single-pass minimum-Z
       threshold** with no opening, no window progression, no slope term and no
       iteration. PMF is a specific named algorithm and this is a different method.
+      Docs now say so. The function name and algorithm are the remaining item.
 
 ## Delete, do not wire
 
@@ -117,13 +102,11 @@ module with no advertised surface. Wiring them is a product decision.
       uploads queue a job that fails. Several extensions are misclassified as
       PointCloud by a `_ =>` arm.
 
-- [ ] **viewtopia Space-Time Intelligence: 31 advertised rows, ~3 working.** The
-      Analysis tab renders seven buttons with no `onClick`. Sixteen of the rows
-      have no code at all. Seven more have a real algorithm and zero callers.
-      Classification and RBAC are absent. The Palantir Gotham comparison table
-      and "Gotham-class" copy were stripped from docs/index.html and the README
-      stack line. FEATURES.md and the remaining README table still oversell.
-      Do not build Gotham.
+- [ ] **viewtopia Space-Time Intelligence: four panel surfaces work.**
+      Entities, CSV ingest, track player, manual links. The Analysis tab
+      renders seven buttons with no `onClick`. Sixteen advertised rows have
+      no code at all. Seven more have a real algorithm and zero callers.
+      Classification and RBAC are absent. Docs now match. Do not build Gotham.
 
 - [ ] **viewtopia conflict resolution is dead code.** The three-way merge only
       runs for `update`+`feature` ops, which nothing ever queues, and

@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-21: Space-Time docs name the four panel surfaces that work
+  (entities, CSV ingest, track player, manual links). FEATURES.md, README
+  and docs/index.html no longer list colocation, classification, RBAC or
+  the rest of the 31-row table.
 - 2026-08-15: each agent run sends the sibyl session id as the AG-UI
   `threadId`, so two tabs keep separate histories instead of sharing one
   server-side active session.
