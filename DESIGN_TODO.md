@@ -173,20 +173,12 @@ sees the result. Each task needs source, integration, and failure-path tests.
      the owner's seq 5, and both sides appeared in the peer list with role
      `edit`.
 
-   - [ ] **A project member cannot find a project-linked live map.** Agora's
-     `GET /documents` returns members-table rows only, so the Live picker
-     offers a project editor nothing to join and starting a second document is
-     the only thing left to do. Joining by `?doc=<id>` works. Folding the
-     project role into the listing means resolving the caller's projects for a
-     whole list rather than one document at a time, which is all
-     `project_grant` does now.
-
-   - [ ] **Live maps started from the UI are never project-linked.**
-     `createLiveDocument` sends `project_id`. Agora's `CreateDocumentRequest`
-     is `rename_all = "camelCase"` and reads `projectId` with
-     `#[serde(default)]`, so the key is dropped and the document is created
-     unlinked with a 201. Documents created this way carry `project_id` null,
-     and the tests that cover the attach path never go through the client.
+   - [x] Let a project member find a project-linked live map. `GET /documents`
+     folds the project role in, resolved with one call to ptolemy's
+     `/api/v1/projects` for the whole listing, so the Live picker offers a
+     project editor the documents their role reaches.
+   - [x] Send `projectId` from `createLiveDocument`, the key agora reads, so a
+     live map started inside a project is linked to it.
 
    Resolved design for the two propagation tasks (2026-08-23):
    - Ptolemy: nullable `project_id` on datasets. Attach requires dataset admin

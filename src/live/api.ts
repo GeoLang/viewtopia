@@ -96,7 +96,7 @@ export function createLiveDocument(
 ): Promise<LiveDocumentSummary> {
   return agoraRequest('/documents', {
     method: 'POST',
-    body: JSON.stringify(projectId ? { name, project_id: projectId } : { name }),
+    body: JSON.stringify(projectId ? { name, projectId } : { name }),
   });
 }
 

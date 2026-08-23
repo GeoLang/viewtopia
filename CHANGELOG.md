@@ -6,6 +6,12 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-23: **a live map started inside a project is linked to it**.
+  `createLiveDocument` sent `project_id` where agora reads `projectId`, so the
+  key was dropped and every session started from the UI was created unlinked
+  with a 201. Project members could not reach it, and the Live picker did not
+  list it for them either, which is fixed on agora's side.
+
 - 2026-08-23: **annotations work on the 2D Map tab**. `useAnnotationsLeaflet`
   draws the same dot and label the globe renderers use, through a leaflet
   divIcon carrying the shared marker element, and binds click-to-place with a

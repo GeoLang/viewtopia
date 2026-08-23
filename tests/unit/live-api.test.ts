@@ -52,7 +52,7 @@ describe('agora http api', () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ id: 'doc-2', name: 'atlas' }, 201));
     await createLiveDocument('atlas', 'project-7');
     expect(lastRequest().init.body).toBe(
-      JSON.stringify({ name: 'atlas', project_id: 'project-7' }),
+      JSON.stringify({ name: 'atlas', projectId: 'project-7' }),
     );
   });
 
