@@ -565,6 +565,24 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
       versus a puller elsewhere). Print-resolution rendering and collecta
       increments 1–2 (compose + Field Data panel) shipped 2026-08-14.
 
+- [ ] **precomputed vector tilesets for large static uploads** — shell out to
+      felt/tippecanoe when a user wants to drop a multi-gigabyte file on the
+      map. Decided 2026-08-23 against building it: the hard parts are feature
+      dropping per zoom, a tile size budget that only settles by encoding and
+      re-encoding, a streaming disk sort so the input never has to fit in
+      memory, and topology-preserving polygon simplification that does not
+      leave slivers between neighbours. Fenestra's MVT encoder, topoi's
+      Douglas-Peucker and geoplumb's pyramid walker cover none of those.
+      Linking it is worse than running it: it builds no library, its entry
+      point `traverse_zooms` takes `sqlite3 *` and STL types across what would
+      be the ABI, it calls `exit()` in 512 places, and its configuration is
+      global mutable state, so concurrent builds would need a mutex. It reads a
+      file and writes a file, so a subprocess costs one exec and buys crash and
+      memory isolation from a tool that is OOM-prone on big inputs. Ptolemy's
+      own tiles stay live from PostGIS: a precomputed tileset is stale the
+      moment someone commits, and editable data is the thing tippecanoe cannot
+      serve at all. Integration write-up under **Plans** below.
+
 - [ ] **read-only warehouse sources** (weigh before building) — Felt reads
       Snowflake/BigQuery/Databricks live, enterprise-only. Ptolemy already
       does external read-only PostGIS tables; the same model could take a
@@ -1018,3 +1036,61 @@ feature-gated. Ship the service as a container with GDAL from the distro.
       linking. "With permission" must be a mechanism, not a promise: explicit
       operator credentials and a log of what was extracted, nothing that sniffs
       or crawls.
+
+### Vector tilesets for large static uploads
+
+Shell out to `felt/tippecanoe`. The decision not to build an equivalent, and
+the reasons, sit under **Wait for demand** above. This is the integration.
+
+The serving half is already written and switched off. `tiletopia` carries a
+`martin` cargo feature (`default = []`, so off) giving `MartinTileBackend` over
+`martin-core` 0.5 with the `mbtiles`, `pmtiles` and `postgres` features, a
+128 MB `PmtCache`, and `martin_routes()` serving a catalog, a TileJSON document
+and `/{source}/{z}/{x}/{y}`. Nothing mounts `martin_routes`, and no CI job or
+Dockerfile passes `--features martin`. `object_store` 0.13 with `fs` is already
+a dependency behind the same feature. So most of phase 1 is turning on code
+that exists rather than writing any.
+
+What this must not touch: ptolemy's own MVT path stays live from PostGIS. A
+precomputed archive is stale the moment someone commits, so editable datasets
+keep the per-request tiles. `/branches/{id}/import/geojson` also stays as it is:
+it reads the whole FeatureCollection into one `serde_json::Value` and commits
+every feature as a versioned row, which is right for editable data and wrong
+for a file measured in gigabytes. The upload path here is a separate one that
+never enters the versioned store.
+
+1. **Serve an archive.** Mount `martin_routes`, enable the feature in the
+   Dockerfile and CI, and register a `.pmtiles` file by hand. Worth doing
+   alone: it proves the whole idea against a real archive before any builder
+   exists, and a hand-built tileset from a laptop is enough to test with.
+2. **Decide where archives live.** Not postgres `bytea` and not the
+   `attachments` table, both of which hold bytes in a column and are sized for
+   a photo rather than a few hundred megabytes. `object_store` on a volume,
+   with a row naming the object key, the dataset it came from, and the build
+   that produced it.
+3. **Run the builder.** A `tippecanoe` binary in the tiletopia image, built
+   from source in its own Dockerfile stage or taken from a distro package.
+   The child needs a memory limit, a timeout, a work directory with a disk
+   quota, and its stderr captured, which is the only place it reports progress
+   and the only place it explains a refusal. It exits non-zero and prints, so
+   there is no api to check.
+4. **Make it a job.** A build runs for minutes, so it cannot be a request. A
+   jobs table, a worker, a status endpoint, and a way to cancel. This is the
+   largest piece and none of it is tile work.
+5. **Show it.** viewtopia adds the source. It already talks to tiletopia for
+   basemaps, so this is a layer entry pointing at a new source id.
+
+Open decisions, each worth settling before the phase that needs it:
+- **pmtiles over mbtiles**, unless something argues otherwise. One file, range
+  readable, servable straight off object storage. mbtiles is sqlite and wants a
+  live file handle.
+- **who owns the archive.** tiletopia serves tiles and already has
+  `object_store`; ptolemy owns datasets, visibility and permissions. A tileset
+  is not versioned, so it does not fit ptolemy's model, but an archive tiletopia
+  serves has to answer the same visibility rules as the dataset it came from.
+  Whatever owns it, that check cannot be skipped, and a bare object key is a
+  readable url to anyone who guesses it.
+- **what happens when the source dataset changes.** A tileset is a photograph.
+  Either it is explicitly a snapshot with a build date shown to the user, or
+  something has to rebuild it, and rebuilding a gigabyte on every commit is not
+  a thing to do quietly.
