@@ -9,6 +9,7 @@ import {
 } from '@tabler/icons-react';
 import { useMantineColorScheme } from '@mantine/core';
 import { useFullscreen, useMediaQuery } from '@mantine/hooks';
+import { useFullscreenKeyboardLock } from '../hooks/useFullscreenKeyboardLock';
 import { useAppStore } from '../store/app';
 import { useViewOnlyLive } from '../live/liveStore';
 import { MOBILE_QUERY } from '../theme';
@@ -23,6 +24,7 @@ import { ViewerToolbar } from './ViewerToolbar';
 export function Header() {
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const { toggle: toggleFullscreen, fullscreen } = useFullscreen();
+  useFullscreenKeyboardLock(fullscreen);
   const navOpened = useAppStore((s) => s.navOpened);
   const toggleNav = useAppStore((s) => s.toggleNav);
   const viewOnly = useViewOnlyLive();
