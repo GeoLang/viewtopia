@@ -13,6 +13,7 @@ import {
 } from '@mantine/core';
 import { IconBroadcast, IconLogout, IconShare } from '@tabler/icons-react';
 import { useAuthStore } from '../features/auth/store';
+import { useProjectsStore } from '../projects/projectsStore';
 import { agoraErrorText, createLiveDocument, listLiveDocuments } from './api';
 import { captureStateForNewDocument } from './documentBridge';
 import { LiveComments } from './LiveComments';
@@ -54,7 +55,13 @@ export function LiveSessionControl() {
     setBusy(true);
     setError('');
     try {
-      const created = await createLiveDocument(name.trim() || 'Untitled live map');
+      // a document started inside a project belongs to it, so project members
+      // reach the session through their project role. agora refuses an attach
+      // from a project viewer, so a viewer's session starts unattached instead
+      const { items, activeProjectId } = useProjectsStore.getState();
+      const activeRole = items.find((project) => project.id === activeProjectId)?.role;
+      const projectId = activeRole === 'owner' || activeRole === 'editor' ? activeProjectId : null;
+      const created = await createLiveDocument(name.trim() || 'Untitled live map', projectId);
       // the document starts from what this browser already has on screen
       captureStateForNewDocument();
       connect({ documentId: created.id });

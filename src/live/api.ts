@@ -90,8 +90,14 @@ export function attachmentSourceUrl(path: string): string {
   return `${AGORA_BASE}${path}`;
 }
 
-export function createLiveDocument(name: string): Promise<LiveDocumentSummary> {
-  return agoraRequest('/documents', { method: 'POST', body: JSON.stringify({ name }) });
+export function createLiveDocument(
+  name: string,
+  projectId?: string | null,
+): Promise<LiveDocumentSummary> {
+  return agoraRequest('/documents', {
+    method: 'POST',
+    body: JSON.stringify(projectId ? { name, project_id: projectId } : { name }),
+  });
 }
 
 export function listLiveDocuments(): Promise<LiveDocumentSummary[]> {

@@ -48,6 +48,14 @@ describe('agora http api', () => {
     expect((init.headers as Headers).get('Authorization')).toBe('Bearer jwt-token');
   });
 
+  it('creates a document attached to a project', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: 'doc-2', name: 'atlas' }, 201));
+    await createLiveDocument('atlas', 'project-7');
+    expect(lastRequest().init.body).toBe(
+      JSON.stringify({ name: 'atlas', project_id: 'project-7' }),
+    );
+  });
+
   it('lists documents', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse([{ id: 'doc-1', name: 'atlas' }]));
     await expect(listLiveDocuments()).resolves.toEqual([{ id: 'doc-1', name: 'atlas' }]);
