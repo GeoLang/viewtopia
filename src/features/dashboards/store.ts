@@ -41,7 +41,7 @@ function defaultConfig(type: WidgetType): Record<string, unknown> {
 }
 
 /** What this browser saved before dashboards belonged to a project. */
-export function legacyLocalDashboards(): Dashboard[] {
+function legacyLocalDashboards(): Dashboard[] {
   try {
     const stored = localStorage.getItem(LEGACY_LOCAL_KEY);
     const parsed: unknown = stored ? JSON.parse(stored) : [];
@@ -54,7 +54,7 @@ export function legacyLocalDashboards(): Dashboard[] {
 interface DashboardsState {
   dashboards: Dashboard[];
   activeId: string | null;
-  /** the project the loaded dashboards belong to, so a stale write cannot land */
+  /** the project the loaded dashboards came from, and the one a write goes back to */
   projectId: string | null;
   refresh: () => void;
   create: () => void;
