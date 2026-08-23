@@ -2,13 +2,14 @@
 #
 # Usage:
 #   docker compose -f docker-compose.re.yml up --build
+#   add --profile seed to also load the sample data
 #
 # Services:
 #   - db:        PostGIS database
 #   - ptolemy:   Spatial feature server + RE endpoints (port 3000)
 #   - geokode:   Geocoding service (port 3001)
 #   - viewtopia: Frontend app (port 5174)
-#   - data-init: One-shot container that loads sample parcel + sales data
+#   - data-init: One-shot container that loads sample parcel + sales data (seed profile only)
 
 services:
   db:
@@ -76,6 +77,7 @@ services:
 
   data-init:
     image: curlimages/curl:latest
+    profiles: ["seed"]
     depends_on:
       ptolemy:
         condition: service_started

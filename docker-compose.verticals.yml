@@ -2,6 +2,7 @@
 #
 # Usage:
 #   docker compose -f docker-compose.verticals.yml up --build
+#   add --profile seed to also load the sample data
 #
 # Services:
 #   - db:        PostGIS database
@@ -9,6 +10,7 @@
 #   - itinera:   Routing + delivery optimization (port 3002)
 #   - geokode:   Geocoding (port 3001)
 #   - viewtopia: Frontend (port 5174)
+#   - data-init: One-shot container that loads sample vertical data (seed profile only)
 
 services:
   db:
@@ -95,6 +97,7 @@ services:
 
   data-init:
     image: curlimages/curl:latest
+    profiles: ["seed"]
     depends_on:
       ptolemy:
         condition: service_started
