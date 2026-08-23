@@ -50,7 +50,7 @@ describe('project sharing', () => {
     });
 
     const expectedExpiry = '2026-08-29T12:00:00.000Z';
-    expect(api.createInvitation).toHaveBeenCalledWith('project', 'proj-1', 'viewer', expectedExpiry);
+    expect(api.createInvitation).toHaveBeenCalledWith('project', 'proj-1', 'viewer', expectedExpiry, undefined);
     expect(invite.expiresAt).toBe(expectedExpiry);
     expect(url).toBe(projectInviteUrl('link-token'));
     expect(url).toContain(`?${PROJECT_INVITE_PARAM}=`);

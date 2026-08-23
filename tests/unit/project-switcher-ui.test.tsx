@@ -13,6 +13,7 @@ const api = vi.hoisted(() => ({
   deleteMember: vi.fn(),
   deleteProject: vi.fn(),
   deleteWorkspace: vi.fn(),
+  getCapabilities: vi.fn(),
   listInvitations: vi.fn(),
   listMembers: vi.fn(),
   listProjects: vi.fn(),
@@ -211,5 +212,90 @@ describe('ProjectSwitcher roles', () => {
     await waitFor(() => {
       expect(useProjectsStore.getState().activeProjectId).toBe('project-2');
     });
+  });
+});
+
+describe('share dialog email field', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // the modal mounts a Mantine ScrollArea, which observes its own size
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({
+        matches: false,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+      }),
+    );
+    useAuthStore.setState({ loggedIn: true, user: { email: 'owner@example.com' }, token: 'jwt-abc', error: null });
+    api.listMembers.mockResolvedValue([]);
+    api.listInvitations.mockResolvedValue([]);
+    setRole('owner');
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  async function openShareModal(): Promise<void> {
+    draw();
+    fireEvent.click(await screen.findByRole('button', { name: 'Project' }));
+    fireEvent.click(await screen.findByText('Manage Sharing'));
+  }
+
+  it('offers no email field when the server sends no email', async () => {
+    api.getCapabilities.mockResolvedValue({ emailConfigured: false });
+    await openShareModal();
+
+    expect(await screen.findByText(/No email is sent/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Email the link to')).not.toBeInTheDocument();
+  });
+
+  it('emails the link and says so when the server has a relay', async () => {
+    api.getCapabilities.mockResolvedValue({ emailConfigured: true });
+    api.createInvitation.mockResolvedValue({ id: 'invite-1', token: 'tok-1', email: { status: 'sent' } });
+    await openShareModal();
+
+    const field = await screen.findByLabelText('Email the link to');
+    fireEvent.change(field, { target: { value: 'invitee@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Generate Link' }));
+
+    expect(await screen.findByText('Invite emailed.')).toBeInTheDocument();
+    expect(api.createInvitation).toHaveBeenCalledWith(
+      'project',
+      'project-1',
+      'viewer',
+      expect.any(String),
+      'invitee@example.com',
+    );
+  });
+
+  it('says the relay refused it and leaves the link to copy', async () => {
+    api.getCapabilities.mockResolvedValue({ emailConfigured: true });
+    api.createInvitation.mockResolvedValue({
+      id: 'invite-2',
+      token: 'tok-2',
+      email: { status: 'failed', error: 'connection refused' },
+    });
+    await openShareModal();
+
+    fireEvent.change(await screen.findByLabelText('Email the link to'), {
+      target: { value: 'invitee@example.com' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Generate Link' }));
+
+    expect(await screen.findByText(/Email failed: connection refused/)).toBeInTheDocument();
+    expect(screen.getByText(/invite=tok-2/)).toBeInTheDocument();
   });
 });

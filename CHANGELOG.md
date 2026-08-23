@@ -6,6 +6,17 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-23: **the share dialog can email an invite link**. It reads
+  `GET /api/v1/capabilities` when it opens and shows an "Email the link to"
+  field only where ptolemy reports a relay. The address goes with the
+  create-invitation call, and the dialog says the invite was emailed or names
+  the relay's refusal, leaving the link to copy either way.
+
+- 2026-08-23: **a first run says where to start**. A profile that has imported
+  nothing, opened no project and joined no live session gets a panel on the map
+  naming those three entry actions. Doing any one of them retires it, as does
+  the Got it button, under the `viewtopia-first-run` localStorage key.
+
 - 2026-08-23: **a project's map lives on the server**. The snapshot
   `serializeProject` builds goes to ptolemy under the project's `map` state key,
   debounced four seconds behind any change to the renderer, basemap, layers,

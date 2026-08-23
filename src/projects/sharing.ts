@@ -3,6 +3,7 @@ import {
   createInvitation,
   deleteInvitation,
   deleteMember,
+  type InvitationEmailDelivery,
   listInvitations,
   listMembers,
   setMember,
@@ -36,13 +37,16 @@ export async function generateShareLink(params: {
   targetType: TargetType;
   targetId: string;
   role: Role;
-}): Promise<{ invite: ShareInvite; url: string }> {
+  // ptolemy mails the link, and only when a relay is configured there
+  email?: string;
+}): Promise<{ invite: ShareInvite; url: string; email?: InvitationEmailDelivery }> {
   const expiresAt = invitationExpiry();
   const created = await createInvitation(
     params.targetType,
     params.targetId,
     invitationRole(params.role),
     expiresAt,
+    params.email,
   );
   const invite: ShareInvite = {
     id: created.id,
@@ -53,7 +57,7 @@ export async function generateShareLink(params: {
     createdAt: new Date().toISOString(),
     expiresAt,
   };
-  return { invite, url: projectInviteUrl(created.token) };
+  return { invite, url: projectInviteUrl(created.token), email: created.email };
 }
 
 export async function joinProjectFromToken(token: string): Promise<void> {
