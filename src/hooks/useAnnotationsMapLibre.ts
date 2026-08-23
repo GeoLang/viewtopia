@@ -6,9 +6,11 @@ import { useAppStore } from '../store/app';
 
 const DOT_DIAMETER = 12;
 const DOT_BORDER = 2;
+/** Where the dot's centre sits, measured from the element's left edge and top. */
+export const DOT_CENTRE_OFFSET = DOT_DIAMETER / 2 + DOT_BORDER;
 // anchor 'left' puts the element's left edge on the point, so shift the row
 // left by half a dot to sit the dot itself there
-const MARKER_OFFSET: [number, number] = [-(DOT_DIAMETER / 2 + DOT_BORDER), 0];
+const MARKER_OFFSET: [number, number] = [-DOT_CENTRE_OFFSET, 0];
 
 /**
  * A dot plus the label text. MapLibre draws no text without a `glyphs` entry on

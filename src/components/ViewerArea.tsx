@@ -25,6 +25,7 @@ import { useDrawCesium } from '../hooks/useDrawCesium';
 import { useDrawMapLibre } from '../hooks/useDrawMapLibre';
 import { useAnnotationsCesium } from '../hooks/useAnnotationsCesium';
 import { useAnnotationsMapLibre } from '../hooks/useAnnotationsMapLibre';
+import { useAnnotationsLeaflet } from '../hooks/useAnnotationsLeaflet';
 import { useMeasureCesium } from '../hooks/useMeasureCesium';
 import { useFeaturePickerCesium } from '../hooks/useFeaturePickerCesium';
 import { useFeaturePickerMapLibre } from '../hooks/useFeaturePickerMapLibre';
@@ -145,6 +146,7 @@ export function ViewerArea() {
   // live peer still draws while the panel is closed
   useAnnotationsCesium(cesiumRef);
   useAnnotationsMapLibre(maplibreRef);
+  useAnnotationsLeaflet(leafletRef);
 
   // Measurement tools (Cesium + MapLibre)
   useMeasureCesium(cesiumRef);

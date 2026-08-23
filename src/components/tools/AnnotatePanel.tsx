@@ -16,7 +16,6 @@ import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { getSharedCamera } from '../../hooks/sharedCamera';
 import { useAnnotationStore } from '../../store/annotations';
-import { useAppStore } from '../../store/app';
 
 function placedMessage(lat: number, lng: number): string {
   return `Placed at ${lat.toFixed(3)}, ${lng.toFixed(3)}`;
@@ -29,8 +28,6 @@ export function AnnotatePanel({ onClose }: { onClose: () => void }) {
   const pendingPlacement = useAnnotationStore((s) => s.pendingPlacement);
   const startPlacement = useAnnotationStore((s) => s.startPlacement);
   const cancelPlacement = useAnnotationStore((s) => s.cancelPlacement);
-  // both globe renderers bind the click, the 2D map has no annotation binding
-  const clickToPlaceWorks = useAppStore((s) => s.activeTab) === 'globe';
   const [label, setLabel] = useState('');
   const [color, setColor] = useState('#a78bfa');
   const [status, setStatus] = useState('');
@@ -71,10 +68,6 @@ export function AnnotatePanel({ onClose }: { onClose: () => void }) {
     if (pendingPlacement) {
       cancelPlacement();
       setStatus('');
-      return;
-    }
-    if (!clickToPlaceWorks) {
-      setStatus('Click to place needs the 3D globe');
       return;
     }
     startPlacement(label.trim(), color);

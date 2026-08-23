@@ -165,10 +165,28 @@ sees the result. Each task needs source, integration, and failure-path tests.
    - [x] Pass the focused multi-user PostGIS test in Ptolemy. Pass ViewTopia's
      18 focused tests, the full Vitest suite with 143 files and 1419 tests,
      TypeScript, and changed-file lint.
-   - [ ] Propagate project roles to Ptolemy dataset grants.
-   - [ ] Propagate project roles to Agora document members.
-   - [ ] Run the two-browser live stack acceptance session for owner, editor,
-     and viewer behavior.
+   - [x] Propagate project roles to Ptolemy dataset grants.
+   - [x] Propagate project roles to Agora document members.
+   - [x] Run the two-browser live stack acceptance session for owner, editor,
+     and viewer behavior. A second browser signed in as a project editor with
+     no members row on the document joined it, wrote annotation seq 4, received
+     the owner's seq 5, and both sides appeared in the peer list with role
+     `edit`.
+
+   - [ ] **A project member cannot find a project-linked live map.** Agora's
+     `GET /documents` returns members-table rows only, so the Live picker
+     offers a project editor nothing to join and starting a second document is
+     the only thing left to do. Joining by `?doc=<id>` works. Folding the
+     project role into the listing means resolving the caller's projects for a
+     whole list rather than one document at a time, which is all
+     `project_grant` does now.
+
+   - [ ] **Live maps started from the UI are never project-linked.**
+     `createLiveDocument` sends `project_id`. Agora's `CreateDocumentRequest`
+     is `rename_all = "camelCase"` and reads `projectId` with
+     `#[serde(default)]`, so the key is dropped and the document is created
+     unlinked with a 201. Documents created this way carry `project_id` null,
+     and the tests that cover the attach path never go through the client.
 
    Resolved design for the two propagation tasks (2026-08-23):
    - Ptolemy: nullable `project_id` on datasets. Attach requires dataset admin
@@ -657,6 +675,19 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
 ## Open decisions that are not bugs
 
 Deliberate scope calls, each a product decision rather than a defect to fix.
+
+- [ ] **one JSON case convention across the platform APIs**: agora is camelCase
+      in 7 of its 8 request and response structs and in the websocket protocol
+      (`clientSeq`), ptolemy is snake_case in 223 structs with none in camel.
+      A client author crosses that boundary with nothing to warn them, which is
+      how `createLiveDocument` sent `project_id` to a server reading
+      `projectId`. Renaming either side breaks every client, so the cheap half
+      is first: neither service sets `deny_unknown_fields` on any request
+      struct, so a wrong key is discarded and the call still succeeds. Setting
+      it turns the whole class into a 400 on the first request without changing
+      any payload that works today. Only then decide whether the convention
+      itself is worth a rename, camelCase being the right target for
+      browser-facing JSON.
 
 - [~] **geodukt as plan substrate**: plan-then-approve flow shipped. Every plan
       step now carries `runs_caller_code`, set from the tool's own

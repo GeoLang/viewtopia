@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-23: **annotations work on the 2D Map tab**. `useAnnotationsLeaflet`
+  draws the same dot and label the globe renderers use, through a leaflet
+  divIcon carrying the shared marker element, and binds click-to-place with a
+  crosshair over the container. The panel no longer refuses with "Click to
+  place needs the 3D globe", and a placement armed on the globe tab stays armed
+  across a switch to 2D.
+
 - 2026-08-23: **offline conflict resolution runs end to end**. Editing a
   feature's properties queues an `update` op keyed on the feature id, so repeat
   edits collapse into one op whose base stays at the state of the last sync. On

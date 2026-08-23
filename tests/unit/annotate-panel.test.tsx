@@ -87,16 +87,14 @@ describe('AnnotatePanel', () => {
     expect(useAnnotationStore.getState().pendingPlacement).toBeNull();
   });
 
-  it('says click to place needs the globe on the 2D map', () => {
+  it('arms click to place on the 2D map too', () => {
     useAppStore.setState({ activeTab: 'map' });
     renderPanel();
     label('Site A');
     fireEvent.click(screen.getByRole('button', { name: 'Place on map' }));
 
-    expect(useAnnotationStore.getState().pendingPlacement).toBeNull();
-    expect(screen.getByTestId('annotate-status')).toHaveTextContent(
-      'Click to place needs the 3D globe',
-    );
+    expect(useAnnotationStore.getState().pendingPlacement).toMatchObject({ label: 'Site A' });
+    expect(screen.getByTestId('annotate-status')).toHaveTextContent('Click the map to place');
   });
 
   it('adds at the shared camera when no Cesium viewer answers', () => {
