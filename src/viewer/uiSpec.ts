@@ -56,6 +56,7 @@ export async function renderUISpec(spec: UiSpec): Promise<void> {
   const specLayers = spec.layers ?? [];
   const loaded: AgentLayer[] = [];
   let unauthorized = 0;
+  let missing = 0;
   let failed = 0;
 
   for (let i = 0; i < specLayers.length; i++) {
@@ -76,6 +77,7 @@ export async function renderUISpec(spec: UiSpec): Promise<void> {
       if (!res.ok) {
         noticeRefusal(res.status);
         if (res.status === 401) unauthorized++;
+        else if (res.status === 404) missing++;
         else failed++;
         continue;
       }
@@ -100,6 +102,13 @@ export async function renderUISpec(spec: UiSpec): Promise<void> {
     notifications.show({
       title: 'Sign in required',
       message: 'Sign in to load analysis layers.',
+      color: 'yellow',
+    });
+  } else if (missing) {
+    // geolang resolves a layer under the caller's own outputs directory
+    notifications.show({
+      title: 'Layers are not in this workspace',
+      message: `${missing} layer file${missing === 1 ? ' is' : 's are'} gone. Analysis outputs belong to the account that ran them, and are not kept forever.`,
       color: 'yellow',
     });
   } else if (failed) {

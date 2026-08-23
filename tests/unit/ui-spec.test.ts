@@ -92,6 +92,23 @@ describe('renderUISpec', () => {
     );
   });
 
+  it('names the workspace when replay gets 404s', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(new Response('File not found', { status: 404 }))),
+    );
+
+    await renderUISpec({
+      type: 'map',
+      layers: [{ name: 'Flood risk', file: 'outputs/venice_env_risk.gpkg' }],
+    });
+
+    expect(useAgentLayerStore.getState().layers).toHaveLength(0);
+    const [notice] = vi.mocked(notifications.show).mock.calls[0];
+    expect(notice.title).toBe('Layers are not in this workspace');
+    expect(notice.message).toContain('belong to the account that ran them');
+  });
+
   it('keeps the source path on the layer it puts in the store', async () => {
     vi.stubGlobal(
       'fetch',

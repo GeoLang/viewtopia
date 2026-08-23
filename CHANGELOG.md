@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-23: **a replayed chat map says why a layer is missing**. geolang
+  resolves a layer under the caller's own outputs directory, so opening an old
+  chat message as a different account returned 404 and the viewer reported the
+  same red "Could not load N layers" it shows for a broken request. A 404 now
+  says the files are not in this workspace and that analysis outputs belong to
+  the account that ran them.
+
 - 2026-08-23: **a live map started inside a project is linked to it**.
   `createLiveDocument` sent `project_id` where agora reads `projectId`, so the
   key was dropped and every session started from the UI was created unlinked
