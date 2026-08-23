@@ -1,9 +1,23 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { notifications } from '@mantine/notifications';
+import type { CachedResponse } from '../../src/offline/db';
+import { useNetworkStore } from '../../src/offline/network';
 import { renderUISpec } from '../../src/viewer/uiSpec';
 import { useAgentLayerStore } from '../../src/store/agentLayers';
 
 vi.mock('@mantine/notifications', () => ({ notifications: { show: vi.fn() } }));
+
+// jsdom has no indexedDB, so back the api cache with a map
+const cachedResponses = new Map<string, CachedResponse>();
+vi.mock('../../src/offline/db', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/offline/db')>()),
+  apiCache: {
+    get: async (url: string) => cachedResponses.get(url),
+    put: async (entry: CachedResponse) => {
+      cachedResponses.set(entry.url, entry);
+    },
+  },
+}));
 
 // No live Cesium viewer is registered in jsdom, so renderUISpec should no-op
 // gracefully (it bails when getActiveCesiumViewer() is null) without throwing.
@@ -27,6 +41,38 @@ describe('renderUISpec', () => {
     vi.unstubAllGlobals();
     vi.mocked(notifications.show).mockClear();
     useAgentLayerStore.setState({ layers: [], markers: [], generation: 0 });
+    useNetworkStore.setState({ online: true });
+    cachedResponses.clear();
+  });
+
+  it('replays a cached layer offline without touching the network', async () => {
+    useNetworkStore.setState({ online: false });
+    cachedResponses.set('/agent/geojson/venice_env_risk.gpkg', {
+      url: '/agent/geojson/venice_env_risk.gpkg',
+      method: 'GET',
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'FeatureCollection',
+        features: [
+          { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [12.33, 45.44] } },
+        ],
+      }),
+      cachedAt: Date.now(),
+      ttl: 0,
+    });
+    vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('network down'))));
+
+    await renderUISpec({
+      type: 'map',
+      layers: [{ name: 'Flood risk', file: 'outputs/venice_env_risk.gpkg' }],
+    });
+
+    expect(fetch).not.toHaveBeenCalled();
+    const [layer] = useAgentLayerStore.getState().layers;
+    expect(layer.name).toBe('Flood risk');
+    expect(layer.geojson.features).toHaveLength(1);
+    expect(notifications.show).not.toHaveBeenCalled();
   });
 
   it('says sign-in is needed when replay gets 401s', async () => {

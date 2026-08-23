@@ -9,10 +9,15 @@
 import { notifications } from '@mantine/notifications';
 import { applySymbology, suggestSymbology } from '../features/symbology/symbology';
 import { authHeaders, noticeRefusal } from '../lib/apiAuth';
+import { offlineFetch } from '../offline/cache';
 import { useAppStore } from '../store/app';
 import { useAgentLayerStore, type AgentLayer } from '../store/agentLayers';
 
 const LAYER_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+
+// output files are immutable per run, so a viewed result stays replayable
+// offline for a month rather than the cache's one-hour default
+const AGENT_LAYER_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 export interface UiSpecLayer {
   name?: string;
@@ -63,7 +68,11 @@ export async function renderUISpec(spec: UiSpec): Promise<void> {
     const color = layer.color || LAYER_COLORS[i % LAYER_COLORS.length];
 
     try {
-      const res = await fetch(`/agent/geojson/${file}`, { headers: authHeaders() });
+      const res = await offlineFetch(
+        `/agent/geojson/${file}`,
+        { headers: authHeaders() },
+        { ttl: AGENT_LAYER_CACHE_TTL_MS },
+      );
       if (!res.ok) {
         noticeRefusal(res.status);
         if (res.status === 401) unauthorized++;

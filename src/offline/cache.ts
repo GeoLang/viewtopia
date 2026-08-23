@@ -27,6 +27,7 @@ function shouldCache(url: string): boolean {
 export async function offlineFetch(
   input: RequestInfo | URL,
   init?: RequestInit,
+  options?: { ttl?: number },
 ): Promise<Response> {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
   const method = init?.method?.toUpperCase() || 'GET';
@@ -38,31 +39,42 @@ export async function offlineFetch(
 
   // If online, try network first (stale-while-revalidate)
   if (isOnline()) {
+    let resp: Response | null = null;
     try {
-      const resp = await fetch(input, init);
-      // Cache successful responses
-      if (resp.ok) {
-        const body = await resp.clone().text();
-        const headers: Record<string, string> = {};
-        resp.headers.forEach((v, k) => (headers[k] = v));
-        await apiCache.put({
-          url,
-          method,
-          status: resp.status,
-          headers,
-          body,
-          cachedAt: Date.now(),
-          ttl: DEFAULT_TTL,
-        });
-      }
-      return resp;
+      resp = await fetch(input, init);
     } catch {
       // Network error — fall through to cache
+    }
+    if (resp) {
+      if (resp.ok) {
+        try {
+          const body = await resp.clone().text();
+          const headers: Record<string, string> = {};
+          resp.headers.forEach((v, k) => (headers[k] = v));
+          await apiCache.put({
+            url,
+            method,
+            status: resp.status,
+            headers,
+            body,
+            cachedAt: Date.now(),
+            ttl: options?.ttl ?? DEFAULT_TTL,
+          });
+        } catch {
+          // a failed cache write must not lose the response
+        }
+      }
+      return resp;
     }
   }
 
   // Offline or network error — serve from cache
-  const cached = await apiCache.get(url);
+  let cached: Awaited<ReturnType<typeof apiCache.get>>;
+  try {
+    cached = await apiCache.get(url);
+  } catch {
+    // no usable cache (e.g. storage blocked) reads the same as a miss
+  }
   if (cached) {
     return new Response(cached.body, {
       status: cached.status,

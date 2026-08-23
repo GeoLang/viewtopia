@@ -131,11 +131,11 @@ describe('tool menu registry', () => {
     }
   });
 
-  it('has no entry that opens an empty panel', () => {
-    for (const item of ALL_TOOL_MENU_ITEMS) {
-      const { container } = openPanel(item.panel);
-      expect(container, item.label).not.toBeEmptyDOMElement();
-      cleanup();
-    }
+  // one test per entry: all of them in one body outruns the test timeout on a
+  // loaded machine
+  it.each(ALL_TOOL_MENU_ITEMS)('the $label entry opens a non-empty panel', (item) => {
+    const { container } = openPanel(item.panel);
+    expect(container, item.label).not.toBeEmptyDOMElement();
+    cleanup();
   });
 });
