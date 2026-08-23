@@ -28,6 +28,7 @@ import {
 import { modals } from '@mantine/modals';
 import { notifications } from '@mantine/notifications';
 import { useAuthStore } from '../features/auth/store';
+import { getCapabilities, type InvitationEmailDelivery } from './api';
 import { useProjectsStore } from './projectsStore';
 import {
   addMember,
@@ -101,6 +102,9 @@ export function ProjectSwitcher() {
   const [memberRole, setMemberRole] = useState<Role>('viewer');
   const [shareRole, setShareRole] = useState<InvitationRole>('viewer');
   const [shareLink, setShareLink] = useState('');
+  const [shareEmail, setShareEmail] = useState('');
+  const [emailConfigured, setEmailConfigured] = useState(false);
+  const [emailDelivery, setEmailDelivery] = useState<InvitationEmailDelivery | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [invitations, setInvitations] = useState<ShareInvite[]>([]);
   const [shareLoading, setShareLoading] = useState(false);
@@ -111,6 +115,8 @@ export function ProjectSwitcher() {
     setMembers([]);
     setInvitations([]);
     setShareLink('');
+    setShareEmail('');
+    setEmailDelivery(null);
     setShareLoading(false);
     setShareModalOpen(false);
     setMetadataModal(null);
@@ -217,8 +223,14 @@ export function ProjectSwitcher() {
   function openSharing(): void {
     setMemberUserId('');
     setShareLink('');
+    setShareEmail('');
+    setEmailDelivery(null);
     setShareModalOpen(true);
     void refreshSharing();
+    // a server with no relay must not be offered an email field
+    getCapabilities()
+      .then((capabilities) => setEmailConfigured(capabilities.emailConfigured))
+      .catch(() => setEmailConfigured(false));
   }
 
   async function handleAddMember(): Promise<void> {
@@ -240,14 +252,17 @@ export function ProjectSwitcher() {
   async function handleGenerateLink(): Promise<void> {
     if (!activeProject) return;
     const token = useAuthStore.getState().token;
+    const recipient = emailConfigured ? shareEmail.trim() : '';
     try {
-      const { url } = await generateShareLink({
+      const { url, email } = await generateShareLink({
         targetType: 'project',
         targetId: activeProject.id,
         role: shareRole,
+        email: recipient || undefined,
       });
       if (!currentSession(token)) return;
       setShareLink(url);
+      setEmailDelivery(email ?? null);
       await refreshSharing();
     } catch (failure) {
       reportFailure('Could not create invite link', failure);
@@ -443,7 +458,10 @@ export function ProjectSwitcher() {
         size="md"
       >
         <Stack>
-          <Text size="sm" c="dimmed">Add a member by authenticated user ID, or create an invite link. No email is sent.</Text>
+          <Text size="sm" c="dimmed">
+            Add a member by authenticated user ID, or create an invite link.
+            {emailConfigured ? ' The link can also be emailed.' : ' No email is sent.'}
+          </Text>
           <Group align="end">
             <TextInput
               label="User ID"
@@ -459,9 +477,24 @@ export function ProjectSwitcher() {
           </Group>
           <Divider label="invite link" labelPosition="center" />
           <Text size="xs" c="dimmed">Invite links expire after seven days.</Text>
+          {emailConfigured && (
+            <TextInput
+              label="Email the link to"
+              placeholder="person@example.com"
+              type="email"
+              value={shareEmail}
+              onChange={(event) => setShareEmail(event.currentTarget.value)}
+            />
+          )}
           <Group>
             <Select aria-label="Invite link role" data={INVITATION_ROLE_OPTIONS} value={shareRole} onChange={(value) => setShareRole((value as InvitationRole) ?? 'viewer')} w={110} />
             <Button variant="light" onClick={() => void handleGenerateLink()} disabled={shareLoading}>Generate Link</Button>
+            {emailDelivery?.status === 'sent' && <Text size="xs" c="teal">Invite emailed.</Text>}
+            {emailDelivery?.status === 'failed' && (
+              <Text size="xs" c="red" style={{ wordBreak: 'break-word' }}>
+                Email failed: {emailDelivery.error}. Copy the link instead.
+              </Text>
+            )}
             {shareLink && (
               <Group gap={4}>
                 <Text size="xs" style={{ wordBreak: 'break-all' }}>{shareLink}</Text>

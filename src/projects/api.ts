@@ -36,9 +36,18 @@ interface InvitationResponse {
   expires_at: string;
 }
 
+/** What became of the invitation email, absent when none was asked for. */
+export type InvitationEmailDelivery = { status: 'sent' } | { status: 'failed'; error: string };
+
 interface CreatedInvitationResponse {
   id: string;
   token: string;
+  email?: InvitationEmailDelivery;
+}
+
+/** What this deployment can do, so the UI offers only controls that work here. */
+export interface ServerCapabilities {
+  emailConfigured: boolean;
 }
 
 export interface InvitationAcceptance {
@@ -219,14 +228,20 @@ export async function createInvitation(
   targetId: string,
   role: InvitationRole,
   expiresAt: string,
+  email?: string,
 ): Promise<CreatedInvitationResponse> {
   if (role !== 'editor' && role !== 'viewer') {
     throw new Error('Invite links can grant editor or viewer access only.');
   }
   return ptolemyRequest<CreatedInvitationResponse>(`${resourcePath(targetType, targetId)}/invitations`, {
     method: 'POST',
-    body: JSON.stringify({ role, expires_at: expiresAt }),
+    body: JSON.stringify(email ? { role, expires_at: expiresAt, email } : { role, expires_at: expiresAt }),
   });
+}
+
+export async function getCapabilities(): Promise<ServerCapabilities> {
+  const capabilities = await ptolemyRequest<{ email_configured: boolean }>('/capabilities');
+  return { emailConfigured: capabilities.email_configured === true };
 }
 
 export function deleteInvitation(targetType: TargetType, targetId: string, invitationId: string): Promise<Response> {

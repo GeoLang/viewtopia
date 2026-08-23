@@ -20,7 +20,7 @@ const REACT_URL = '/';
 
 // the first-visit welcome card is default-boot.spec.js's subject, not this one's
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('viewtopia-welcome', 'seen'));
+  await page.addInitScript(() => localStorage.setItem('viewtopia-first-run', 'dismissed'));
 });
 
 test.describe('React shell smoke', () => {

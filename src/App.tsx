@@ -18,7 +18,7 @@ import { ViewerToolbar } from './components/ViewerToolbar';
 import { CommandPalette } from './components/CommandPalette';
 import { WindowDropZone } from './components/WindowDropZone';
 import { TilesetOffer } from './features/tilesets/TilesetOffer';
-import { WelcomeCard } from './components/WelcomeCard';
+import { FirstRunOverlay } from './onboarding/FirstRunOverlay';
 import { TourOverlay } from './components/TourOverlay';
 import { ViewerArea } from './components/ViewerArea';
 import { SpaceTimePanel } from './features/spacetime/SpaceTimePanel';
@@ -243,7 +243,7 @@ export function App() {
             <MapPresence />
             {!embed && <WindowDropZone />}
             {!embed && <TilesetOffer />}
-            {!uiHidden && !embed && <WelcomeCard />}
+            {!uiHidden && !embed && <FirstRunOverlay />}
             {!uiHidden && !embed && <TourOverlay />}
             {embed && <EmbedBadge />}
           </AppShell.Main>
