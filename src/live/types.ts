@@ -108,6 +108,8 @@ export interface LiveCommentAnchor {
   lng: number;
   lat: number;
   zoom: number;
+  /** the author pinned this point, so it draws on the map instead of only flying to */
+  placed?: boolean;
 }
 
 /**

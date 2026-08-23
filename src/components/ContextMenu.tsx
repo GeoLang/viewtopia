@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react';
 import { Paper, Text, Stack, Divider } from '@mantine/core';
 import {
   IconMapPin,
+  IconMessage,
   IconRuler,
   IconCopy,
   IconCamera,
@@ -9,6 +10,8 @@ import {
   IconInfoCircle,
   IconClock,
 } from '@tabler/icons-react';
+import { canEditLiveDocument } from '../live/liveStore';
+import { useMapCommentsStore } from '../live/mapCommentsStore';
 import { useAppStore } from '../store/app';
 
 interface MenuAction {
@@ -60,6 +63,18 @@ export function ContextMenu() {
         hideContextMenu();
       },
     },
+    ...(canEditLiveDocument()
+      ? [
+          {
+            icon: <IconMessage size={14} />,
+            label: 'Comment here',
+            onClick: () => {
+              useMapCommentsStore.getState().openDraft(lng, lat);
+              hideContextMenu();
+            },
+          },
+        ]
+      : []),
     {
       icon: <IconRuler size={14} />,
       label: 'Measure from here',

@@ -6,6 +6,15 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-23: **comments pin to the map**. "Comment here" in the map context
+  menu, offered in a live edit session, composes a comment at the clicked point
+  and marks its anchor `placed`. Placed unresolved threads draw as pins over
+  all three renderers through one projected overlay, and clicking a pin opens
+  the thread in a floating box sharing the side panel's thread component, so
+  replies, mentions, resolve and copy-link behave identically. Resolving
+  removes the pin. Camera-anchored comments keep their fly-to behavior and
+  never pin.
+
 - 2026-08-23: **one real editing path against a ptolemy branch**. A new Dataset
   Editor panel picks a dataset and branch, lists the branch's features, and
   edits one feature's properties. Each edit queues an op that the sync engine

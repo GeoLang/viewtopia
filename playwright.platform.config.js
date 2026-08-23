@@ -15,6 +15,7 @@ export default defineConfig({
     'live-session.spec.js',
     'realestate-smoke.spec.js',
     'dataset-editing.spec.js',
+    'map-comment-pins.spec.js',
     'analysis-smoke.spec.js',
   ],
   timeout: 30000,

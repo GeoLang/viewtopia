@@ -31,6 +31,7 @@ import { useFeaturePickerCesium } from '../hooks/useFeaturePickerCesium';
 import { useFeaturePickerMapLibre } from '../hooks/useFeaturePickerMapLibre';
 import { useMeasureMapLibre } from '../hooks/useMeasureMapLibre';
 import { useShareLinkHash } from '../hooks/useShareLinkHash';
+import { MapCommentsOverlay } from '../live/MapCommentsOverlay';
 import { CesiumNavControl } from './CesiumNavControl';
 import { Minimap } from './Minimap';
 import { CoordReadout } from './CoordReadout';
@@ -326,6 +327,13 @@ export function ViewerArea() {
             // context they paint over body-level dropdowns (z 300)
             zIndex: 0,
           }}
+        />
+
+        {/* placed live comments, projected onto whichever renderer is up */}
+        <MapCommentsOverlay
+          cesiumRef={cesiumRef}
+          maplibreRef={maplibreRef}
+          leafletRef={leafletRef}
         />
 
         {split && activePane === VIEWER_PANE && <ActivePaneFrame />}
