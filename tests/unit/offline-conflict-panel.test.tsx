@@ -18,7 +18,6 @@ globalThis.ResizeObserver = class {
 
 const db = vi.hoisted(() => ({
   ops: new Map<string, { id: string; payload: unknown; attempts: number; lastError?: string }>(),
-  features: new Map<string, { id: string; properties: Record<string, unknown> }>(),
 }));
 
 vi.mock('../../src/offline/db', () => ({
@@ -35,12 +34,6 @@ vi.mock('../../src/offline/db', () => ({
     count: async () => db.ops.size,
     updateAttempts: async () => {},
   },
-  features: {
-    get: async (id: string) => db.features.get(id),
-    put: async (feature: { id: string }) => {
-      db.features.set(feature.id, feature as never);
-    },
-  },
 }));
 
 vi.mock('../../src/offline/network', () => ({
@@ -48,47 +41,56 @@ vi.mock('../../src/offline/network', () => ({
   useNetworkStore: (selector: (s: { online: boolean }) => unknown) => selector({ online: true }),
 }));
 
+vi.mock('../../src/features/auth/store', () => ({
+  getAuthToken: () => 'test-token',
+  endRefusedSession: () => {},
+}));
+
 import { OfflineIndicator } from '../../src/offline/OfflineIndicator';
 import { queueFeatureUpdate, syncNow, discardPending, getSyncState } from '../../src/offline/sync';
 
-const FEATURE_ID = 'feat-1';
-const POINT = { type: 'Point', coordinates: [10, 50] };
+const BRANCH_ID = '11111111-1111-1111-1111-111111111111';
+const FEATURE_ID = '22222222-2222-2222-2222-222222222222';
+const POINT: GeoJSON.Geometry = { type: 'Point', coordinates: [1, 2] };
+// what geojsonToWkbHex writes for POINT
+const POINT_HEX = '0101000000000000000000f03f0000000000000040';
 
-/** Server holds `name: theirs`, we edited the same property to `name: mine`. */
-async function conflictOnName(): Promise<{ puts: unknown[] }> {
-  db.features.set(FEATURE_ID, {
-    id: FEATURE_ID,
-    properties: { name: 'synced' },
-  } as never);
+/** The property committed by each commit the branch received. */
+function committedProperties(commits: unknown[]): unknown[] {
+  return commits.map(
+    (body) => (body as { operations: { properties: unknown }[] }).operations[0].properties,
+  );
+}
 
-  const puts: unknown[] = [];
+/** The branch holds `name: theirs`, we edited the same property to `name: mine`. */
+async function conflictOnName(): Promise<{ commits: unknown[] }> {
+  const commits: unknown[] = [];
   vi.stubGlobal(
     'fetch',
     vi.fn(async (_url: string, init?: RequestInit) => {
       if (!init?.method) {
         return {
           ok: true,
+          status: 200,
           json: async () => ({
-            id: FEATURE_ID,
+            feature_id: FEATURE_ID,
+            geometry_wkb_hex: POINT_HEX,
             properties: { name: 'theirs' },
-            geometry: POINT,
-            updatedAt: 2,
           }),
         } as Response;
       }
-      puts.push(JSON.parse(init.body as string));
+      commits.push(JSON.parse(init.body as string));
       return { ok: true, status: 200, statusText: 'OK' } as Response;
     }),
   );
 
-  await queueFeatureUpdate('viewtopia-drawn', {
-    id: FEATURE_ID,
-    properties: { name: 'mine' },
-    geometry: POINT,
-    updatedAt: 10,
-  });
+  await queueFeatureUpdate(
+    BRANCH_ID,
+    { id: FEATURE_ID, properties: { name: 'mine' }, geometry: POINT },
+    { id: FEATURE_ID, properties: { name: 'synced' }, geometry: POINT },
+  );
   await syncNow();
-  return { puts };
+  return { commits };
 }
 
 function renderIndicator() {
@@ -109,7 +111,6 @@ async function openResolver() {
 describe('the sync indicator opens the conflict resolver', () => {
   beforeEach(async () => {
     db.ops.clear();
-    db.features.clear();
     await discardPending();
     vi.unstubAllGlobals();
   });
@@ -144,39 +145,39 @@ describe('the sync indicator opens the conflict resolver', () => {
   });
 
   it('keeping the server side syncs that value and clears the conflict', async () => {
-    const { puts } = await conflictOnName();
+    const { commits } = await conflictOnName();
     renderIndicator();
     await openResolver();
 
     fireEvent.click(screen.getByRole('button', { name: /keep all server/i }));
 
-    await waitFor(() => expect(puts).toHaveLength(1));
-    expect(puts[0]).toEqual({ properties: { name: 'theirs' }, geometry: POINT });
+    await waitFor(() => expect(commits).toHaveLength(1));
+    expect(committedProperties(commits)).toEqual([{ name: 'theirs' }]);
     expect(getSyncState().conflicts).toEqual([]);
     expect(db.ops.size).toBe(0);
   });
 
   it('keeping our side syncs our value', async () => {
-    const { puts } = await conflictOnName();
+    const { commits } = await conflictOnName();
     renderIndicator();
     await openResolver();
 
     fireEvent.click(screen.getByRole('button', { name: /keep all mine/i }));
 
-    await waitFor(() => expect(puts).toHaveLength(1));
-    expect(puts[0]).toEqual({ properties: { name: 'mine' }, geometry: POINT });
+    await waitFor(() => expect(commits).toHaveLength(1));
+    expect(committedProperties(commits)).toEqual([{ name: 'mine' }]);
     expect(db.ops.size).toBe(0);
   });
 
   it('cancelling drops the conflict and leaves the edit queued', async () => {
-    const { puts } = await conflictOnName();
+    const { commits } = await conflictOnName();
     renderIndicator();
     await openResolver();
 
     fireEvent.click(screen.getByRole('button', { name: /cancel sync/i }));
 
     await waitFor(() => expect(getSyncState().conflicts).toEqual([]));
-    expect(puts).toEqual([]);
+    expect(commits).toEqual([]);
     expect(db.ops.size).toBe(1);
   });
 });

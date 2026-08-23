@@ -198,11 +198,33 @@ sees the result. Each task needs source, integration, and failure-path tests.
      attach/detach UI is a follow-up; the API path is exercised by tests.
 
 3. **Complete one real shared editing path.**
-   Repositories: `viewtopia`, `ptolemy`, `geodukt`, `collecta`. Choose one
-   dataset format, import it, edit a feature, commit it, reload it from another
-   session, and show the change on the map. Add conflict handling for that path
-   or remove the conflict-resolution claims. Do not start with every import
-   format or every Ptolemy extension.
+   Repositories: `viewtopia`, `ptolemy`.
+   - [x] Edit one feature's attributes against a ptolemy branch and commit them.
+     The Dataset Editor panel picks a dataset and branch, lists the branch's
+     features, and edits one feature's properties. Each edit queues an op that
+     the sync engine commits as a `POST /branches/{id}/commit` `update`, the
+     same call the real-estate panels make. An update that omits the geometry
+     keeps the one already on the branch, so a property edit sends properties
+     alone. Every value keeps the JSON type it had, so a number edited in place
+     does not come back a string.
+   - [x] Read one feature back. ptolemy answers
+     `GET /branches/{id}/features/{feature_id}` with geometry as hex WKB beside
+     the properties, 404 for a feature not live on the branch.
+   - [x] Merge before committing. The queued op carries what the branch held
+     when the feature was opened, so the three-way merge in
+     `src/offline/conflicts.ts` runs on every sync. A property both sides
+     changed stops the op and the existing `ConflictResolver` asks which side
+     wins. Before this the merge sat behind a request to a route that did not
+     exist and had never run.
+   - [x] Prove the loop. `tests/e2e/dataset-editing.spec.js` imports a GeoJSON
+     feature, edits it in the browser, commits, reloads it from the branch,
+     draws it on the map, and reads the change back from a session that never
+     touched the browser.
+   - [ ] Commit a geometry change. The panel edits attributes only, and the
+     Draw tool's shapes are local to the browser with no dataset behind them.
+   - [ ] Draw every geometry type. `src/lib/wkb.ts` decodes Point, Polygon and
+     MultiPolygon, so a line feature lists with no geometry and the map layer
+     skips it.
 
 4. **Make the advertised agent tool set truthful and runnable.**
    Repositories: `geolang`, `sibyl`, `geodukt`, `viewtopia`. Either package the

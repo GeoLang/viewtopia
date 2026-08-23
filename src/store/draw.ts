@@ -1,10 +1,6 @@
 import { create } from 'zustand';
-import { queueFeatureUpdate } from '../offline/sync';
 
 export type DrawMode = 'point' | 'line' | 'polygon' | 'circle' | 'rectangle' | null;
-
-/** Shapes drawn in this browser sync as one layer. */
-const DRAWN_FEATURES_LAYER_ID = 'viewtopia-drawn';
 
 export interface DrawnFeature {
   id: string;
@@ -128,19 +124,10 @@ export const useDrawStore = create<DrawState>((set, get) => ({
   removeFeature: (id) =>
     set((s) => ({ features: s.features.filter((f) => f.id !== id) })),
 
-  setFeatureProperties: (id, properties) => {
+  setFeatureProperties: (id, properties) =>
     set((s) => ({
       features: s.features.map((f) => (f.id === id ? { ...f, properties } : f)),
-    }));
-    const edited = get().features.find((f) => f.id === id);
-    if (!edited) return;
-    void queueFeatureUpdate(DRAWN_FEATURES_LAYER_ID, {
-      id: edited.id,
-      properties: edited.properties ?? {},
-      geometry: drawnFeatureGeometry(edited),
-      updatedAt: Date.now(),
-    });
-  },
+    })),
 
   clearAll: () => set({ features: [], pending: [] }),
 }));

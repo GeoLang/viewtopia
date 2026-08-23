@@ -1,17 +1,15 @@
 /**
- * Sync Engine — push local changes to server when online.
+ * Sync Engine — push queued feature edits to ptolemy when online.
  *
- * Design:
- * - All mutations go to IndexedDB first (always fast, always works)
- * - Each mutation also creates a PendingOperation
- * - When online, the sync engine processes pending ops in FIFO order
- * - Failed ops are retried with exponential backoff
- * - Conflicts are detected via three-way merge (base vs local vs server)
- * - Like git: work offline, sync when you choose
+ * An edit lands in IndexedDB first and queues a PendingOperation. When online,
+ * queued ops go out in FIFO order: read the branch head, three-way merge it
+ * against the edit's base, then commit. A property both sides changed stops the
+ * op and asks the user which side wins.
  */
 
-import { features, hasIndexedDb, pendingOps, type OfflineFeature, type PendingOperation } from './db';
+import { hasIndexedDb, pendingOps, type PendingOperation } from './db';
 import { isOnline } from './network';
+import { commitFeatureUpdate, fetchBranchFeature } from '../lib/branchFeatures';
 import {
   threeWayMerge,
   type ConflictResolution,
@@ -64,26 +62,6 @@ export function getSyncState(): SyncState {
   return syncState;
 }
 
-/** Queue a new operation for sync */
-export async function queueOperation(
-  type: PendingOperation['type'],
-  resource: PendingOperation['resource'],
-  resourceId: string,
-  payload: unknown,
-): Promise<void> {
-  const op: PendingOperation = {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    createdAt: Date.now(),
-    type,
-    resource,
-    resourceId,
-    payload,
-    attempts: 0,
-  };
-  await pendingOps.add(op);
-  await announceQueued();
-}
-
 async function announceQueued(): Promise<void> {
   setState({ pendingCount: await pendingOps.count() });
   if (isOnline()) {
@@ -93,8 +71,9 @@ async function announceQueued(): Promise<void> {
 
 /** Payload of a queued feature update, shaped for the three-way merge on sync. */
 interface FeatureUpdatePayload {
-  layerId: string;
-  /** State at the last sync, the merge's common ancestor */
+  /** The ptolemy branch the edit commits to */
+  branchId: string;
+  /** What the branch held when the feature was opened, the merge's ancestor */
   base: FeatureVersion | null;
   /** State this browser edited to */
   ours: FeatureVersion;
@@ -106,40 +85,32 @@ function featureUpdateOpId(featureId: string): string {
   return `feature-update-${featureId}`;
 }
 
-function isFeatureUpdate(op: PendingOperation): boolean {
-  return (
-    op.type === 'update' &&
-    op.resource === 'feature' &&
-    typeof op.payload === 'object' &&
-    op.payload !== null &&
-    'ours' in op.payload
-  );
-}
-
-function toFeatureVersion(feature: OfflineFeature | undefined): FeatureVersion | null {
-  if (!feature) return null;
-  return {
-    id: feature.id,
-    properties: feature.properties,
-    geometry: feature.geometry,
-    updatedAt: feature.updatedAt,
-  };
+/** The payload of a syncable op, or null for one this build cannot send. */
+function featureUpdate(op: PendingOperation): FeatureUpdatePayload | null {
+  if (op.type !== 'update' || op.resource !== 'feature') return null;
+  if (typeof op.payload !== 'object' || op.payload === null) return null;
+  const payload = op.payload as Partial<FeatureUpdatePayload>;
+  if (!payload.ours || !payload.branchId) return null;
+  return payload as FeatureUpdatePayload;
 }
 
 /**
- * Queue a feature edit for sync. Repeat edits to one feature share an op id so
- * they collapse into a single update whose base stays at the last synced state.
+ * Queue a feature edit for sync. `base` is what the branch held when the editor
+ * opened the feature, the merge's common ancestor. Repeat edits to one feature
+ * share an op id and collapse into a single update keeping the first base.
  */
-export async function queueFeatureUpdate(layerId: string, ours: FeatureVersion): Promise<void> {
+export async function queueFeatureUpdate(
+  branchId: string,
+  ours: FeatureVersion,
+  base: FeatureVersion | null,
+): Promise<void> {
   if (!hasIndexedDb()) return;
 
   const id = featureUpdateOpId(ours.id);
   const queued = (await pendingOps.getAll()).find((op) => op.id === id);
   const payload: FeatureUpdatePayload = {
-    layerId,
-    base: queued
-      ? (queued.payload as FeatureUpdatePayload).base
-      : toFeatureVersion(await features.get(ours.id)),
+    branchId,
+    base: queued ? (queued.payload as FeatureUpdatePayload).base : base,
     ours,
     properties: ours.properties,
     geometry: ours.geometry,
@@ -183,7 +154,6 @@ export async function applyConflictResolutions(
           ...payload.ours,
           properties: resolution.properties,
           geometry: resolution.geometry,
-          updatedAt: Date.now(),
         },
         properties: resolution.properties,
         geometry: resolution.geometry,
@@ -224,6 +194,11 @@ export async function syncNow(): Promise<void> {
       await executeSync(op);
       await pendingOps.remove(op.id);
     } catch (err) {
+      if (err instanceof UnsendableError) {
+        console.warn(`[sync] discarding ${op.id}: ${err.message}`);
+        await pendingOps.remove(op.id);
+        continue;
+      }
       allSucceeded = false;
       if (err instanceof ConflictError) {
         // stays queued until the user picks a side, and is not a failed attempt
@@ -263,84 +238,37 @@ function statusAfterSync(conflictCount: number, allSucceeded: boolean): SyncStat
   return allSucceeded ? 'idle' : 'error';
 }
 
-/** Execute a single sync operation against the server */
+/**
+ * Merge one queued edit against the branch head and commit it. A feature the
+ * branch does not hold has no "theirs", so the edit goes as it stands.
+ */
 async function executeSync(op: PendingOperation): Promise<void> {
-  const baseUrl = getServerUrl();
-  if (!baseUrl) {
-    throw new Error('No server URL configured');
+  const update = featureUpdate(op);
+  if (!update) {
+    throw new UnsendableError(`op ${op.id} carries no branch to sync to`);
   }
 
-  const resourcePath = getResourcePath(op.resource, op.resourceId);
-  const url = `${baseUrl}${resourcePath}`;
-
-  const featureUpdate = isFeatureUpdate(op) ? (op.payload as FeatureUpdatePayload) : null;
-
-  if (featureUpdate) {
-    const serverResp = await fetch(url);
-    if (serverResp.ok) {
-      const theirs: FeatureVersion = await serverResp.json();
-      const mergeResult = threeWayMerge(featureUpdate.base, featureUpdate.ours, theirs);
-      if (mergeResult.conflicts.length > 0) {
-        throw new ConflictError(mergeResult.conflicts);
-      }
-      if (mergeResult.resolved.length > 0) {
-        const merged = mergeResult.resolved[0];
-        featureUpdate.properties = merged.mergedProperties;
-        if (merged.mergedGeometry) {
-          featureUpdate.geometry = merged.mergedGeometry;
-        }
+  const head = await fetchBranchFeature(update.branchId, op.resourceId);
+  if (head) {
+    const theirs: FeatureVersion = {
+      id: head.id,
+      properties: head.properties,
+      geometry: head.geometry ?? undefined,
+    };
+    const mergeResult = threeWayMerge(update.base, update.ours, theirs);
+    if (mergeResult.conflicts.length > 0) {
+      throw new ConflictError(mergeResult.conflicts);
+    }
+    if (mergeResult.resolved.length > 0) {
+      const merged = mergeResult.resolved[0];
+      update.properties = merged.mergedProperties;
+      if (merged.mergedGeometry) {
+        update.geometry = merged.mergedGeometry;
       }
     }
   }
 
-  let method: string;
-  switch (op.type) {
-    case 'create':
-      method = 'POST';
-      break;
-    case 'update':
-      method = 'PUT';
-      break;
-    case 'delete':
-      method = 'DELETE';
-      break;
-  }
-
-  const resp = await fetch(url, {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-    body: op.type !== 'delete' ? JSON.stringify(requestBody(op, featureUpdate)) : undefined,
-  });
-
-  if (!resp.ok) {
-    throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
-  }
-
-  if (featureUpdate) {
-    await recordSyncedFeature(op.resourceId, featureUpdate);
-  }
-}
-
-/** The merge bookkeeping stays local, the server sees the merged feature. */
-function requestBody(op: PendingOperation, featureUpdate: FeatureUpdatePayload | null): unknown {
-  if (!featureUpdate) return op.payload;
-  return { properties: featureUpdate.properties, geometry: featureUpdate.geometry };
-}
-
-/** What was just sent becomes the base for the next edit's merge. */
-async function recordSyncedFeature(
-  featureId: string,
-  featureUpdate: FeatureUpdatePayload,
-): Promise<void> {
-  const geometry = featureUpdate.geometry ?? featureUpdate.ours.geometry;
-  if (!geometry) return;
-  await features.put({
-    id: featureId,
-    layerId: featureUpdate.layerId,
-    geometry,
-    properties: featureUpdate.properties,
-    updatedAt: Date.now(),
-  });
+  await commitFeatureUpdate(update.branchId, op.resourceId, update.properties, update.geometry);
 }
 
 /** Error thrown when conflicts are detected */
@@ -352,36 +280,8 @@ export class ConflictError extends Error {
   }
 }
 
-function getResourcePath(resource: string, id: string): string {
-  switch (resource) {
-    case 'layer':
-      return `/layers/${id}`;
-    case 'feature':
-      return `/features/${id}`;
-    case 'annotation':
-      return `/annotations/${id}`;
-    case 'bookmark':
-      return `/bookmarks/${id}`;
-    case 'session':
-      return `/sessions/${id}`;
-    default:
-      return `/${resource}/${id}`;
-  }
-}
-
-function getServerUrl(): string | null {
-  // Read from localStorage (set by app store settings)
-  try {
-    const stored = localStorage.getItem('viewtopia-app');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      const url = parsed?.state?.settings?.tiletopiaUrl;
-      if (url && !url.startsWith('/')) return url;
-    }
-  } catch { /* ignore */ }
-  // Fallback: relative path (works when server is on same origin)
-  return '/api/v1';
-}
+/** A queue entry an older build wrote that this one has no way to send. */
+class UnsendableError extends Error {}
 
 function isTransientError(err: unknown): boolean {
   if (err instanceof Error) {

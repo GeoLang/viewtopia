@@ -126,7 +126,8 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 | **GPX/KML Import** | Track and waypoint rendering |
 | **SQL** | Run DuckDB SQL over imported and attached data, draw the result on the map, export CSV or Parquet |
 | **Layer Manager** | Reorder, toggle visibility, opacity, remove |
-| **GeoJSON Editor** | Edit feature properties and vertices |
+| **GeoJSON Editor** | Edit the properties of shapes drawn in this browser |
+| **Dataset Editor** | Pick a Ptolemy dataset and branch, edit a feature's properties, and commit them to the branch |
 
 ### Visualization
 | Feature | Description |
@@ -160,11 +161,11 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 | Feature | Description |
 |---------|-------------|
 | **Local-first storage** | Offline browser state uses IndexedDB and localStorage. Not all data is available without network |
-| **Operation queue** | Client mutations can be queued locally. Each backend path requires a matching server API |
+| **Operation queue** | A feature edit queues locally and commits to its Ptolemy branch on sync. Other resources have no server path and are not queued |
 | **Auto-sync** | Attempts to push queued operations when the browser reconnects |
 | **API response cache** | GET responses cached with TTL for offline fallback |
 | **Sync indicator** | Real-time UI showing pending/synced/offline status |
-| **Three-way merge** | Feature property edits queue as `update` operations. On sync the server version is fetched and merged against the state at the last sync |
+| **Three-way merge** | On sync the branch head is read and merged against what the branch held when the feature was opened, then committed as one `update` operation |
 | **Column-level resolution** | Changes to different properties merge without asking. Same-property changes on both sides open the resolver from the sync indicator, where you pick a side per property or in bulk |
 
 ### Projects & Workspaces

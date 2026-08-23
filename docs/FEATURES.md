@@ -52,9 +52,6 @@ and the source paths named by those documents.
 
 - Space-Time classification, RBAC, ontology, CDR import, entity resolution,
   geofencing UI, and case management.
-- A mounted conflict resolution UI with a working platform sync path.
-- Propagating project roles to Ptolemy dataset grants and Agora document
-  members.
 - Returning DuckDB result rows to the agent for follow-up reasoning.
 - A standalone SQL workbench panel. The notebook and agent SQL paths are
   implemented.

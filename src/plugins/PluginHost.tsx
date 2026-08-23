@@ -10,7 +10,7 @@
 
 import { useMemo } from 'react';
 import { useAppStore } from '../store/app';
-import { useAgentLayerStore, toFeatureCollection } from '../store/agentLayers';
+import { addGeoJsonLayer, removeGeoJsonLayer } from '../lib/mapLayers';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { getPlugin } from './registry';
 import type { PluginContext, PluginMapContext, PluginStoreContext, PluginApiContext, PluginSettingsContext } from './sdk';
@@ -34,35 +34,8 @@ export function PluginPanel({ pluginId, onClose }: PluginPanelProps) {
         window.addEventListener('viewtopia:map:click', handler);
         return () => window.removeEventListener('viewtopia:map:click', handler);
       },
-      addGeoJsonLayer: (id, geojson, options) => {
-        const collection = toFeatureCollection(geojson);
-        if (!collection) return;
-        // the app store entry is the LayerManager list, the agent layer is what
-        // the three renderers draw
-        store.addLayer({
-          id,
-          name: id,
-          type: 'geojson',
-          visible: true,
-          opacity: options?.opacity ?? 1,
-        });
-        useAgentLayerStore.getState().addLayer({
-          id,
-          name: id,
-          color: options?.color ?? '#3388ff',
-          geojson: collection,
-          style: {
-            opacity: options?.opacity,
-            lineWidth: options?.lineWidth,
-            filled: options?.filled,
-            stroked: options?.stroked,
-          },
-        });
-      },
-      removeLayer: (id) => {
-        store.removeLayer(id);
-        useAgentLayerStore.getState().removeLayer(id);
-      },
+      addGeoJsonLayer,
+      removeLayer: removeGeoJsonLayer,
       fitBounds: (bounds) => {
         const [west, south, east, north] = bounds;
         const lng = (west + east) / 2;

@@ -23,7 +23,6 @@ export interface FeatureVersion {
   id: string;
   properties: Record<string, unknown>;
   geometry?: GeoJSON.Geometry;
-  updatedAt: number;
 }
 
 export interface MergeConflict {

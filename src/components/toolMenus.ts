@@ -50,6 +50,7 @@ import {
   IconSolarPanel,
   IconSun,
   IconTable,
+  IconDatabaseEdit,
   IconTimeline,
   IconTools,
   IconTransform,
@@ -83,6 +84,7 @@ export const ACTIONS_MENU: ToolMenuItem[][] = [
     { panel: 'geocoding', label: 'Search', icon: IconSearch },
     { panel: 'buildings', label: 'Buildings', icon: IconBuildingSkyscraper },
     { panel: 'geojsonEditor', label: 'GeoJSON Editor', icon: IconVectorTriangle },
+    { panel: 'datasetEditor', label: 'Dataset Editor', icon: IconDatabaseEdit, keywords: ['ptolemy', 'branch', 'features', 'attributes'] },
     { panel: 'styleEditor', label: 'Style Editor', icon: IconPalette },
   ],
 ];

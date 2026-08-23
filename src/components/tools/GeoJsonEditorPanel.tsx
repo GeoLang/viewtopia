@@ -5,31 +5,18 @@ import {
   Group,
   ActionIcon,
   Button,
-  TextInput,
   ScrollArea,
   Badge,
 } from '@mantine/core';
-import { IconVectorTriangle, IconX, IconPlus, IconTrash, IconDownload } from '@tabler/icons-react';
+import { IconVectorTriangle, IconTrash, IconDownload } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { useDrawStore, featuresToGeoJSON } from '../../store/draw';
-
-interface Row {
-  key: string;
-  value: string;
-}
-
-function rowsFromProps(props?: Record<string, string>): Row[] {
-  return Object.entries(props ?? {}).map(([key, value]) => ({ key, value }));
-}
-
-function rowsToProps(rows: Row[]): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const r of rows) {
-    const k = r.key.trim();
-    if (k) out[k] = r.value;
-  }
-  return out;
-}
+import {
+  PropertyRows,
+  rowsFromProperties,
+  rowsToProperties,
+  type PropertyRow,
+} from './PropertyRows';
 
 export function GeoJsonEditorPanel({ onClose }: { onClose: () => void }) {
   const features = useDrawStore((s) => s.features);
@@ -37,7 +24,7 @@ export function GeoJsonEditorPanel({ onClose }: { onClose: () => void }) {
   const setFeatureProperties = useDrawStore((s) => s.setFeatureProperties);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [rows, setRows] = useState<Row[]>([]);
+  const [rows, setRows] = useState<PropertyRow[]>([]);
 
   const selected = features.find((f) => f.id === selectedId) ?? null;
 
@@ -47,13 +34,13 @@ export function GeoJsonEditorPanel({ onClose }: { onClose: () => void }) {
       setSelectedId(features[0].id);
       return;
     }
-    setRows(rowsFromProps(selected?.properties));
+    setRows(rowsFromProperties(selected?.properties));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, features.length]);
 
-  const commit = (next: Row[]) => {
+  const commit = (next: PropertyRow[]) => {
     setRows(next);
-    if (selectedId) setFeatureProperties(selectedId, rowsToProps(next));
+    if (selectedId) setFeatureProperties(selectedId, rowsToProperties(next));
   };
 
   const downloadGeoJSON = () => {
@@ -134,58 +121,8 @@ export function GeoJsonEditorPanel({ onClose }: { onClose: () => void }) {
                 Properties
               </Text>
               <ScrollArea.Autosize mah={220}>
-                <Stack gap={4}>
-                  {rows.length === 0 && (
-                    <Text size="xs" c="dimmed">
-                      No properties.
-                    </Text>
-                  )}
-                  {rows.map((row, idx) => (
-                    <Group key={idx} gap={4} wrap="nowrap">
-                      <TextInput
-                        size="xs"
-                        placeholder="key"
-                        value={row.key}
-                        onChange={(e) => {
-                          const next = [...rows];
-                          next[idx] = { ...row, key: e.currentTarget.value };
-                          commit(next);
-                        }}
-                        styles={{ input: { width: 110 } }}
-                      />
-                      <TextInput
-                        size="xs"
-                        placeholder="value"
-                        value={row.value}
-                        onChange={(e) => {
-                          const next = [...rows];
-                          next[idx] = { ...row, value: e.currentTarget.value };
-                          commit(next);
-                        }}
-                        style={{ flex: 1 }}
-                      />
-                      <ActionIcon
-                        size="sm"
-                        variant="subtle"
-                        color="gray"
-                        aria-label="Remove property"
-                        onClick={() => commit(rows.filter((_, i) => i !== idx))}
-                      >
-                        <IconX size={12} />
-                      </ActionIcon>
-                    </Group>
-                  ))}
-                </Stack>
+                <PropertyRows rows={rows} onChange={commit} color="violet" />
               </ScrollArea.Autosize>
-              <Button
-                size="xs"
-                variant="light"
-                color="violet"
-                leftSection={<IconPlus size={12} />}
-                onClick={() => commit([...rows, { key: '', value: '' }])}
-              >
-                Add Property
-              </Button>
             </>
           )}
 

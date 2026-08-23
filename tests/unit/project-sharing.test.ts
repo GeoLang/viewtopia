@@ -19,10 +19,6 @@ vi.mock('../../src/offline/db', () => ({
   projectMaps: { get: vi.fn(), put: vi.fn(), remove: vi.fn() },
 }));
 
-vi.mock('../../src/offline/sync', () => ({
-  queueOperation: vi.fn(),
-}));
-
 import { useProjectsStore } from '../../src/projects/projectsStore';
 import { useAuthStore } from '../../src/features/auth/store';
 import {

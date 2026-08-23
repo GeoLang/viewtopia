@@ -14,6 +14,7 @@ export default defineConfig({
     'golden-path.spec.js',
     'live-session.spec.js',
     'realestate-smoke.spec.js',
+    'dataset-editing.spec.js',
     'analysis-smoke.spec.js',
   ],
   timeout: 30000,

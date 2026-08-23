@@ -8,6 +8,7 @@ import { PluginManagerPanel } from '../plugins/runtime/PluginManagerPanel';
 import { MeasurementPanel } from './tools/MeasurementPanel';
 import { FeaturePickerPanel } from './tools/FeaturePickerPanel';
 import { GeoJsonEditorPanel } from './tools/GeoJsonEditorPanel';
+import { DatasetEditorPanel } from './tools/DatasetEditorPanel';
 import { StyleEditorPanel } from './tools/StyleEditorPanel';
 import { PortalPanel } from '../features/portal/PortalPanel';
 import { StacBrowserPanel } from '../features/stac/StacBrowserPanel';
@@ -140,6 +141,8 @@ export function ToolPanels() {
       return <FeaturePickerPanel onClose={close} />;
     case 'geojsonEditor':
       return <GeoJsonEditorPanel onClose={close} />;
+    case 'datasetEditor':
+      return <DatasetEditorPanel onClose={close} />;
     case 'styleEditor':
       return <StyleEditorPanel onClose={close} />;
     case 'portal':

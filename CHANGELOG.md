@@ -6,6 +6,17 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-23: **one real editing path against a ptolemy branch**. A new Dataset
+  Editor panel picks a dataset and branch, lists the branch's features, and
+  edits one feature's properties. Each edit queues an op that the sync engine
+  commits as `POST /branches/{id}/commit` with an `update`, authenticated like
+  every other client call. Values keep the JSON type they had, so a number
+  edited in place does not come back a string. Before this the sync engine sent
+  `PUT /features/{id}` with no bearer to a route ptolemy has never had, so
+  nothing it queued could reach the server and the three-way merge, which ran
+  only after a successful read, had never run at all. The draw store no longer
+  queues: a drawn shape has no dataset behind it.
+
 - 2026-08-23: **a replayed chat map says why a layer is missing**. geolang
   resolves a layer under the caller's own outputs directory, so opening an old
   chat message as a different account returned 404 and the viewer reported the
