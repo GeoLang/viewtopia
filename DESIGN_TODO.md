@@ -31,6 +31,49 @@ ptolemy Features Part 2, nubis PMF) closed 2026-08-21. Nothing is queued here.
 The next pick is an owner call on the **Delete, do not wire** list below, one
 module at a time, or a hosting decision under **Before any public deploy**.
 
+## In progress: Felt gap slice, 2026-08-23
+
+Owner calls 2026-08-23: the AWS deploy stays parked. P0 item 1 is untouched, the
+account decision is still open, and the first deploy will be private with no
+domain. This slice closes the other Felt gaps.
+
+- [ ] **large static uploads, tileset plan phases 2-5.** Detail and settled
+      decisions under **Vector tilesets for large static uploads** below.
+      Contract for the viewer: `POST /api/v1/tilesets` multipart upload
+      (geojson, geojson.gz, fgb, csv) answers 202 with a job id,
+      `GET /api/v1/tilesets` lists archives with status, source id and
+      built_at, `DELETE /api/v1/tilesets/{id}` removes the archive and its
+      source, tiles at `/martin/{source}/{z}/{x}/{y}` and TileJSON at
+      `/martin/{source}`, both already live. tippecanoe runs as a subprocess in
+      the tiletopia image with a memory limit, a timeout, a work directory
+      quota, and stderr captured into the job record. Viewer half: nginx routes
+      `/martin/*` to tiletopia, the import path offers the tileset route for a
+      file over a size threshold instead of loading it into the browser, a
+      layer entry points at the source, job status polls until the source
+      serves.
+
+- [ ] **server-backed map state.** ptolemy gets
+      `project_state(project_id, key, value jsonb, updated_at, updated_by)`
+      with `GET/PUT /api/v1/projects/{id}/state/{key}`, viewer role reads,
+      editor writes, keys `map` and `dashboards`, value capped at 5 MB.
+      viewtopia saves the ViewtopiaProject snapshot there debounced on change
+      and loads it on project switch. IndexedDB `projectMaps` stays as the
+      offline cache, newest `savedAt` wins, offline changes retry on reconnect.
+      Overlay bitmaps move from data URLs inside the snapshot to ptolemy
+      project attachments, so the attachments one-owner CHECK gains
+      `project_id`. The dashboards store moves from the `viewtopia_dashboards`
+      localStorage key to the `dashboards` state key, scoped per project.
+
+- [ ] **invite email and first-run guidance.** ptolemy sends the invitation
+      link by email when SMTP is configured (`SMTP_URL` and `SMTP_FROM`
+      env vars, both optional, unset keeps the copy-the-link flow) and the
+      create-invitation body takes an optional recipient email. viewtopia's
+      share dialog shows the email field only when the server reports email
+      configured. First-run guidance: an empty-state overlay on a fresh
+      profile pointing at import, projects and live sessions, dismissed once
+      used. Felt's canvas annotation renderer stays not chased, recorded in
+      DESIGN.md.
+
 ## Cross-repository audit, 2026-08-22
 
 These are verified advertised gaps found by reading every repository README,
@@ -1064,14 +1107,10 @@ feature-gated. Ship the service as a container with GDAL from the distro.
 Shell out to `felt/tippecanoe`. The decision not to build an equivalent, and
 the reasons, sit under **Wait for demand** above. This is the integration.
 
-The serving half is already written and switched off. `tiletopia` carries a
-`martin` cargo feature (`default = []`, so off) giving `MartinTileBackend` over
-`martin-core` 0.5 with the `mbtiles`, `pmtiles` and `postgres` features, a
-128 MB `PmtCache`, and `martin_routes()` serving a catalog, a TileJSON document
-and `/{source}/{z}/{x}/{y}`. Nothing mounts `martin_routes`, and no CI job or
-Dockerfile passes `--features martin`. `object_store` 0.13 with `fs` is already
-a dependency behind the same feature. So most of phase 1 is turning on code
-that exists rather than writing any.
+Phase 1 shipped 2026-08-23: `TILETOPIA_PMTILES_DIR` registers every archive at
+startup and `/martin` serves the catalog, TileJSON and tiles behind the platform
+JWT, with the `martin` cargo feature built in the Docker image and every CI row.
+`object_store` 0.13 with `fs` is already a dependency behind the same feature.
 
 What this must not touch: ptolemy's own MVT path stays live from PostGIS. A
 precomputed archive is stale the moment someone commits, so editable datasets
@@ -1102,17 +1141,13 @@ never enters the versioned store.
 5. **Show it.** viewtopia adds the source. It already talks to tiletopia for
    basemaps, so this is a layer entry pointing at a new source id.
 
-Open decisions, each worth settling before the phase that needs it:
-- **pmtiles over mbtiles**, unless something argues otherwise. One file, range
-  readable, servable straight off object storage. mbtiles is sqlite and wants a
-  live file handle.
-- **who owns the archive.** tiletopia serves tiles and already has
-  `object_store`; ptolemy owns datasets, visibility and permissions. A tileset
-  is not versioned, so it does not fit ptolemy's model, but an archive tiletopia
-  serves has to answer the same visibility rules as the dataset it came from.
-  Whatever owns it, that check cannot be skipped, and a bare object key is a
+Decisions, settled 2026-08-23:
+- **pmtiles, not mbtiles.** One file, range readable, servable straight off
+  object storage. mbtiles is sqlite and wants a live file handle.
+- **tiletopia owns upload, build, storage and serving**, every route behind the
+  platform JWT. V1 sources are user files, not ptolemy datasets, so dataset
+  visibility does not apply yet. When a build from a ptolemy dataset arrives,
+  the archive must answer that dataset's visibility, and a bare object key is a
   readable url to anyone who guesses it.
-- **what happens when the source dataset changes.** A tileset is a photograph.
-  Either it is explicitly a snapshot with a build date shown to the user, or
-  something has to rebuild it, and rebuilding a gigabyte on every commit is not
-  a thing to do quietly.
+- **an archive is an explicit snapshot.** The list shows built_at, nothing
+  rebuilds automatically, re-upload makes a new archive.
