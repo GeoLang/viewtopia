@@ -6,6 +6,12 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-23: **escape closes popups in full screen on chromium**. Entering
+  full screen locks the Escape key through the keyboard lock api, so one press
+  closes an open menu or dialog instead of leaving full screen, and leaving
+  full screen takes press-and-hold Escape or the header button. Browsers
+  without the api keep the native behavior.
+
 - 2026-08-23: **comments pin to the map**. "Comment here" in the map context
   menu, offered in a live edit session, composes a comment at the clicked point
   and marks its anchor `placed`. Placed unresolved threads draw as pins over
