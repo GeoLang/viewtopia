@@ -17,6 +17,7 @@ import { ChatPanel } from './components/ChatPanel';
 import { ViewerToolbar } from './components/ViewerToolbar';
 import { CommandPalette } from './components/CommandPalette';
 import { WindowDropZone } from './components/WindowDropZone';
+import { TilesetOffer } from './features/tilesets/TilesetOffer';
 import { WelcomeCard } from './components/WelcomeCard';
 import { TourOverlay } from './components/TourOverlay';
 import { ViewerArea } from './components/ViewerArea';
@@ -241,6 +242,7 @@ export function App() {
             {!uiHidden && !embed && <OverlayCornerHandles />}
             <MapPresence />
             {!embed && <WindowDropZone />}
+            {!embed && <TilesetOffer />}
             {!uiHidden && !embed && <WelcomeCard />}
             {!uiHidden && !embed && <TourOverlay />}
             {embed && <EmbedBadge />}

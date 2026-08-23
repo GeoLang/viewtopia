@@ -6,6 +6,21 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-23: **a large vector file is tiled on the server instead of parsed in
+  the tab**. A dropped or browsed `.geojson`, `.fgb` or `.csv` over 50 MB, and a
+  `.geojson.gz` at any size, is offered to tiletopia's tileset builder rather
+  than read into a FeatureCollection: the file is uploaded with a progress bar,
+  the build is polled until it is ready or failed, and a failure shows the tail
+  of tippecanoe's stderr. A ready archive becomes a vector tile layer reading
+  its TileJSON at `/martin/{source}`, styled per source layer across the three
+  geometry kinds, and it rides the project snapshot like every other layer. A
+  smaller file that the builder can read is offered the same route as a second
+  option after it imports. Only the MapLibre renderer draws these, the same as
+  PMTiles. The Layers panel lists the archives with their status and build date,
+  adds one as a layer, and deletes one behind a confirmation. nginx routes
+  `/martin/*` to tiletopia and takes tileset uploads up to 4 GB, and the map
+  puts the platform bearer on its `/martin` requests.
+
 - 2026-08-23: **a project's map lives on the server**. The snapshot
   `serializeProject` builds goes to ptolemy under the project's `map` state key,
   debounced four seconds behind any change to the renderer, basemap, layers,

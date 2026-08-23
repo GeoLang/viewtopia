@@ -15,6 +15,7 @@ import {
 import { maplibreStyle } from './basemapTiles';
 import { setActiveMapLibre, setPaneMapLibre } from '../viewer/registry';
 import { useBuildingStore, styleDrawsBuildings } from '../store/buildings';
+import { martinRequest } from '../features/tilesets/api';
 
 interface UseMapLibreOptions {
   containerId?: string;
@@ -96,6 +97,9 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
       bearing: cam.bearing,
       maxPitch: 85,
       preserveDrawingBuffer: true,
+      // tiletopia checks the platform JWT on every /martin route, and a tile
+      // request MapLibre makes on its own carries no header
+      transformRequest: martinRequest,
     } as maplibregl.MapOptions);
 
     map.addControl(new maplibregl.NavigationControl(), 'top-right');

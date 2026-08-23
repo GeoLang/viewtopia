@@ -31,6 +31,7 @@ import {
 import { setLayerOpacity, setLayerVisible } from '../../store/layerControls';
 import { SymbologyEditor } from '../../features/symbology/SymbologyEditor';
 import { geojsonToPmtiles } from '../../features/pmtiles/writer';
+import { TilesetsSection } from '../../features/tilesets/TilesetsSection';
 
 /** Tile and download the layer's features as a .pmtiles archive. */
 function exportPmtiles(layer: AgentLayer): void {
@@ -461,6 +462,7 @@ export function LayerManager({ layers, onRemove, onClose }: LayerManagerProps) {
               }}
             />
           ))}
+          <TilesetsSection />
         </Stack>
       </ScrollArea>
     </PanelCard>

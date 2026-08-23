@@ -123,6 +123,7 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 | **OGC Layers** | Import WMS, WMTS, WFS, and XYZ tile services |
 | **Image Overlay** | Drop a site plan image or PDF, place it by world file + `.prj` (projicio wasm) or two clicks, keep it as a layer |
 | **Drag & Drop** | Drop GeoJSON, GPX, KML, CSV, GeoPackage, Shapefile (loose or zipped), FlatGeobuf and GeoParquet files to import |
+| **Server Tilesets** | A GeoJSON, FlatGeobuf or CSV over 50 MB is built into a vector tileset by TileTopia and drawn as tiles, MapLibre only |
 | **GPX/KML Import** | Track and waypoint rendering |
 | **SQL** | Run DuckDB SQL over imported and attached data, draw the result on the map, export CSV or Parquet |
 | **Layer Manager** | Reorder, toggle visibility, opacity, remove |

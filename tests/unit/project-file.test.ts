@@ -224,6 +224,22 @@ describe('project round trip', () => {
     ]);
   });
 
+  it('restores a server tileset with what it needs to draw, asking nothing', async () => {
+    const tileset = {
+      id: 'tileset-816fb8d0',
+      name: 'plots.geojson',
+      type: 'tileset',
+      url: '/martin/816fb8d0/{z}/{x}/{y}',
+      tileset: { id: '816fb8d0', layers: ['plots'], minZoom: 0, maxZoom: 6 },
+    };
+
+    applyProject(projectWithOgcLayers([tileset]));
+    await vi.advanceTimersByTimeAsync(4200);
+
+    expect(useOgcLayerStore.getState().layers).toEqual([tileset]);
+    expect(addRemotePmtiles).not.toHaveBeenCalled();
+  });
+
   it('restores the rest when one archive cannot be read', async () => {
     vi.mocked(addRemotePmtiles).mockRejectedValueOnce(new Error('404'));
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);

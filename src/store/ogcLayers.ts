@@ -7,9 +7,21 @@ import { addRemotePmtiles, type PmtilesInfo } from '../features/pmtiles/source';
  * are held here so Cesium and MapLibre draw the same set and switching renderers
  * keeps them on screen. WFS is vector: its features go into the agent layers,
  * which every renderer already draws, and the entry here is the handle for them.
- * PMTiles archives also live here, but only MapLibre can draw them.
+ * PMTiles archives also live here, but only MapLibre can draw them, and so do
+ * the server-built tilesets tiletopia serves under /martin.
  */
-export type OGCType = 'wms' | 'wmts' | 'wfs' | 'xyz' | 'pmtiles';
+export type OGCType = 'wms' | 'wmts' | 'wfs' | 'xyz' | 'pmtiles' | 'tileset';
+
+/** A server-built archive as the map needs to know it. */
+export interface TilesetSource {
+  /** The tiletopia archive id, so its row and its layer can be paired up. */
+  id: string;
+  /** Layer names inside the archive. */
+  layers: string[];
+  /** Zoom bounds the archive holds tiles for; unset lets MapLibre pick. */
+  minZoom?: number;
+  maxZoom?: number;
+}
 
 export interface OGCLayer {
   id: string;
@@ -18,6 +30,11 @@ export interface OGCLayer {
   url: string;
   /** Set once the archive's header has been read; unset means not drawable yet. */
   pmtiles?: PmtilesInfo;
+  /**
+   * What a tileset layer draws, read from the archive's TileJSON when the layer
+   * is added and kept, so a reloaded project draws without asking again.
+   */
+  tileset?: TilesetSource;
   /** Unset counts as visible. */
   visible?: boolean;
   /** Unset counts as fully opaque. */

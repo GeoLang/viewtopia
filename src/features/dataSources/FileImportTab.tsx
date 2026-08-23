@@ -2,6 +2,13 @@ import { useState } from 'react';
 import { Text, Button, Stack, FileButton } from '@mantine/core';
 import { IconFile } from '@tabler/icons-react';
 import { ACCEPT_FORMATS, importFiles, type ImportStatus } from '../../lib/importFiles';
+import {
+  BROWSER_IMPORT_LIMIT_BYTES,
+  TILESET_FORMATS,
+  formatBytes,
+  tilesetFormat,
+} from '../tilesets/api';
+import { useTilesetStore } from '../tilesets/store';
 
 interface FileImportTabProps {
   onImport: (name: string, geojson: GeoJSON.FeatureCollection) => void;
@@ -10,8 +17,15 @@ interface FileImportTabProps {
 export function FileImportTab({ onImport }: FileImportTabProps) {
   const [dragging, setDragging] = useState(false);
   const [status, setStatus] = useState<ImportStatus | null>(null);
+  // the last imported file the server could tile instead, so the offer can be
+  // made a second time without asking for the file again
+  const [candidate, setCandidate] = useState<File | null>(null);
+  const offerTileset = useTilesetStore((s) => s.offer);
 
-  const handleFiles = (files: File[]) => importFiles(files, onImport, setStatus);
+  const handleFiles = (files: File[]) => {
+    setCandidate(files.find((file) => tilesetFormat(file.name)) ?? null);
+    return importFiles(files, onImport, setStatus);
+  };
 
   return (
     <>
@@ -54,6 +68,25 @@ export function FileImportTab({ onImport }: FileImportTabProps) {
           )}
         </FileButton>
       </Stack>
+
+      {candidate && (
+        <Stack gap={4} mt="xs" align="center">
+          <Button
+            size="xs"
+            variant="subtle"
+            color="gray"
+            data-testid="build-tileset"
+            onClick={() => offerTileset(candidate)}
+          >
+            Build a server tileset from {candidate.name}
+          </Button>
+          <Text size="xs" c="dimmed" ta="center">
+            Tiled on the server and drawn by the MapLibre renderer only. A{' '}
+            {TILESET_FORMATS.join(', ')} file over {formatBytes(BROWSER_IMPORT_LIMIT_BYTES)} is
+            offered this on import.
+          </Text>
+        </Stack>
+      )}
 
       {status && (
         <Text

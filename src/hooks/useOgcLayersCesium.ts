@@ -45,10 +45,14 @@ export function useOgcLayersCesium(viewerRef: MutableRefObject<Viewer | null>) {
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || viewer.isDestroyed()) return;
-    // WFS is vector (drawn from the agent layers), and PMTiles rides a MapLibre
-    // protocol Cesium has no provider for, so neither is draped here
+    // WFS is vector (drawn from the agent layers), and PMTiles and the
+    // server-built tilesets are vector tiles Cesium has no imagery provider
+    // for, so none of them is draped here
     const added = layers
-      .filter((layer) => layer.type !== 'wfs' && layer.type !== 'pmtiles')
+      .filter(
+        (layer) =>
+          layer.type !== 'wfs' && layer.type !== 'pmtiles' && layer.type !== 'tileset',
+      )
       .map((layer) => {
         const imagery = viewer.imageryLayers.addImageryProvider(imageryProvider(layer));
         imagery.alpha = ogcLayerOpacity(layer);

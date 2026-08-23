@@ -10,7 +10,7 @@ import {
   type OGCLayer,
 } from '../store/ogcLayers';
 import { useAppStore } from '../store/app';
-import { addPmtilesLayers } from '../features/pmtiles/mapLayers';
+import { addPmtilesLayers, addVectorTileStyleLayers } from '../features/pmtiles/mapLayers';
 
 const PREFIX = 'ogc-layer-';
 
@@ -25,6 +25,22 @@ function addOgcPmtilesLayers(map: maplibregl.Map, layer: OGCLayer, id: string): 
   });
 }
 
+// the tile url and the layer names came off the archive's TileJSON when the
+// tileset was added, so nothing is read here. The map's request transform is
+// what puts the bearer on the tile requests
+function addTilesetLayers(map: maplibregl.Map, layer: OGCLayer, id: string): void {
+  if (!layer.tileset) return;
+  const { layers, minZoom, maxZoom } = layer.tileset;
+  map.addSource(id, {
+    type: 'vector',
+    tiles: [layer.url],
+    ...(minZoom === undefined ? {} : { minzoom: minZoom }),
+    // past the archive's top zoom MapLibre would ask for tiles nothing holds
+    ...(maxZoom === undefined ? {} : { maxzoom: maxZoom }),
+  });
+  addVectorTileStyleLayers(map, id, layers, ogcLayerOpacity(layer), ogcLayerVisible(layer));
+}
+
 /** Draws the user's OGC/XYZ services on MapLibre as raster sources. */
 export function useOgcLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map | null>) {
   const layers = useOgcLayerStore((s) => s.layers);
@@ -35,9 +51,13 @@ export function useOgcLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map | n
     const map = mapRef.current;
     if (!map) return;
     // WFS is vector: its features are drawn from the agent layers instead.
-    // A PMTiles layer is drawable only once its header has been read.
-    const rasterLayers = layers.filter(
-      (layer) => layer.type !== 'wfs' && (layer.type !== 'pmtiles' || layer.pmtiles),
+    // A PMTiles layer is drawable only once its header has been read, and a
+    // tileset only once its TileJSON named the layers inside the archive.
+    const drawable = layers.filter(
+      (layer) =>
+        layer.type !== 'wfs' &&
+        (layer.type !== 'pmtiles' || layer.pmtiles) &&
+        (layer.type !== 'tileset' || layer.tileset?.layers.length),
     );
 
     const apply = () => {
@@ -47,10 +67,14 @@ export function useOgcLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map | n
       for (const id of Object.keys(map.getStyle()?.sources ?? {})) {
         if (id.startsWith(PREFIX)) map.removeSource(id);
       }
-      for (const layer of rasterLayers) {
+      for (const layer of drawable) {
         const id = `${PREFIX}${layer.id}`;
         if (layer.type === 'pmtiles') {
           addOgcPmtilesLayers(map, layer, id);
+          continue;
+        }
+        if (layer.type === 'tileset') {
+          addTilesetLayers(map, layer, id);
           continue;
         }
         map.addSource(id, {
@@ -73,7 +97,7 @@ export function useOgcLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map | n
     const reapplyIfDropped = () => {
       if (!map.isStyleLoaded()) return;
       const sources = Object.keys(map.getStyle()?.sources ?? {});
-      if (rasterLayers.some((layer) => !sources.includes(`${PREFIX}${layer.id}`))) apply();
+      if (drawable.some((layer) => !sources.includes(`${PREFIX}${layer.id}`))) apply();
     };
 
     if (map.isStyleLoaded()) apply();

@@ -11,12 +11,20 @@ import { addLocalPmtiles } from '../features/pmtiles/source';
 import { useOgcLayerStore } from '../store/ogcLayers';
 import { importOverlayFiles } from '../overlay/importOverlay';
 import { OVERLAY_ACCEPT, overlayFileKind } from '../overlay/worldFile';
+import { tilesetFormat, tooLargeForBrowser } from '../features/tilesets/api';
+import { useTilesetStore } from '../features/tilesets/store';
 
 const extOf = (name: string) => '.' + name.split('.').pop()?.toLowerCase();
 
 // .pmtiles and the overlay formats stay out of ALL_IMPORT_FORMATS: they become
-// a tile layer and a draped image, neither of which is GeoJSON
-export const ACCEPT_FORMATS = [...ALL_IMPORT_FORMATS, '.pmtiles', ...OVERLAY_ACCEPT];
+// a tile layer and a draped image, neither of which is GeoJSON. .geojson.gz has
+// no reader here at all and goes to the tileset builder
+export const ACCEPT_FORMATS = [
+  ...ALL_IMPORT_FORMATS,
+  '.geojson.gz',
+  '.pmtiles',
+  ...OVERLAY_ACCEPT,
+];
 
 export interface ImportStatus {
   text: string;
@@ -93,12 +101,39 @@ async function handleOverlayFiles(files: File[], onStatus: StatusHandler) {
   }
 }
 
-/** Route dropped or browsed files through every import path the app has. */
+/**
+ * Route dropped or browsed files through every import path the app has. A file
+ * the server should tile instead is offered to the tileset builder rather than
+ * parsed here, and reaches the browser paths only if that offer is turned down.
+ */
 export async function importFiles(
   files: File[],
   onImport: ImportHandler,
   onStatus: StatusHandler = () => {},
 ) {
+  // a gzipped GeoJSON has no browser reader at all, so it goes to the builder
+  // whatever its size
+  const forServer = files.filter(
+    (f) =>
+      tilesetFormat(f.name) &&
+      (tooLargeForBrowser(f) || !ALL_IMPORT_FORMATS.includes(extOf(f.name))),
+  );
+  if (forServer.length) {
+    const [first, ...deferred] = forServer;
+    const readable = ALL_IMPORT_FORMATS.includes(extOf(first.name));
+    useTilesetStore
+      .getState()
+      .offer(first, readable ? () => void runImport([first], onImport, onStatus) : undefined);
+    // one offer at a time, so the rest of a batch is left for the user to bring back
+    for (const file of deferred) {
+      onStatus({ text: `${file.name}: build it into a tileset on its own`, failed: true });
+    }
+  }
+  const forBrowser = files.filter((f) => !forServer.includes(f));
+  if (forBrowser.length) await runImport(forBrowser, onImport, onStatus);
+}
+
+async function runImport(files: File[], onImport: ImportHandler, onStatus: StatusHandler) {
   const pmtilesFiles = files.filter((f) => extOf(f.name) === '.pmtiles');
   for (const file of pmtilesFiles) await handlePmtilesFile(file, onStatus);
   let rest = files.filter((f) => !pmtilesFiles.includes(f));
