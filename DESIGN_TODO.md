@@ -37,7 +37,15 @@ Owner calls 2026-08-23: the AWS deploy stays parked. P0 item 1 is untouched, the
 account decision is still open, and the first deploy will be private with no
 domain. This slice closes the other Felt gaps.
 
-- [ ] **large static uploads, tileset plan phases 2-5.** Detail and settled
+- [~] **large static uploads, tileset plan phases 2-5.** Server half shipped
+      2026-08-23 (tiletopia changelog): upload, tippecanoe build job, registry,
+      serving via /martin, contract as below with the 202 body
+      `{job_id, tileset}` where job_id equals the tileset id and clients poll
+      `GET /api/v1/tilesets/{id}`. Viewer half still open, plus two tickets:
+      no cancel route (a delete mid-build lets tippecanoe finish and clean up),
+      and `POST /api/v1/assets` still buffers uploads in memory under axum's
+      2 MB default, the same bug the tileset route fixed.
+      Original item: Detail and settled
       decisions under **Vector tilesets for large static uploads** below.
       Contract for the viewer: `POST /api/v1/tilesets` multipart upload
       (geojson, geojson.gz, fgb, csv) answers 202 with a job id,
@@ -52,7 +60,12 @@ domain. This slice closes the other Felt gaps.
       layer entry points at the source, job status polls until the source
       serves.
 
-- [ ] **server-backed map state.** ptolemy gets
+- [x] **server-backed map state.** Shipped 2026-08-23, see both changelogs.
+      Leftovers: an overlay removed from the map leaves its project attachment
+      behind (the delete route exists, nothing calls it), the save retry queue
+      is in memory so only the open project pushes a stale cache after reload,
+      and dashboard writes are one PUT per edit, not debounced.
+      Original item: ptolemy gets
       `project_state(project_id, key, value jsonb, updated_at, updated_by)`
       with `GET/PUT /api/v1/projects/{id}/state/{key}`, viewer role reads,
       editor writes, keys `map` and `dashboards`, value capped at 5 MB.
@@ -290,10 +303,10 @@ sees the result. Each task needs source, integration, and failure-path tests.
    and incident pages labelled as configured integrations.
 
 7. **Close the routing correctness gap before presenting routes as authoritative.**
-   Repositories: `itinera`, `viewtopia`. Enforce parsed turn restrictions,
-   add route tests that would fail without them, and label or remove the
-   unbenchmarked contraction-hierarchy claim. The viewer must show whether it
-   received a real road route or a demo fallback.
+   Repositories: `itinera`, `viewtopia`. Closed 2026-08-23: `turn_is_banned`
+   is enforced in Dijkstra, A* and Contraction Hierarchies with No and Only
+   restriction tests, RoutingPanel badges itinera versus fallback, and the
+   README now says enforced and labels sub-millisecond CH as a target.
 
 8. **Remove or finish the highest-risk facade routes.**
    Repositories: `tiletopia`, `ptolemy`, `fenestra`. For each route exposed to
