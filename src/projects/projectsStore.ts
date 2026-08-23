@@ -3,17 +3,25 @@
  */
 import { create } from 'zustand';
 import { projectMaps } from '../offline/db';
-import {
-  applyProject,
-  serializeProject,
-  storeOverlayImages,
-} from '../features/project/projectFile';
 import { useAuthStore } from '../features/auth/store';
 import { createProject, deleteProject, listProjects, listWorkspaceProjects, updateProject } from './api';
+import { loadProjectMap, pushUnsavedMaps, saveProjectMap, watchMapForSaving } from './mapSync';
 import type { Project } from './types';
 
 function currentSession(token: string | null): boolean {
   return token !== null && useAuthStore.getState().token === token;
+}
+
+let watchingMap = false;
+
+/** One watcher for the session, whatever signs in and out under it. */
+function startMapSaving(): void {
+  if (watchingMap) return;
+  watchingMap = true;
+  watchMapForSaving(() => {
+    const project = useProjectsStore.getState().getActive();
+    return project ? { id: project.id, name: project.name } : null;
+  });
 }
 
 export interface ProjectsState {
@@ -32,7 +40,7 @@ export interface ProjectsActions {
   loadByWorkspace: (workspaceId: string) => Promise<void>;
   /** Set the active project, leaving the map alone */
   setActive: (projectId: string | null) => void;
-  /** Put the map the project was left showing back on screen. */
+  /** Save the outgoing project's map, then put the incoming project's on screen. */
   switchTo: (projectId: string) => Promise<void>;
   /** Create a new project */
   create: (params: {
@@ -64,10 +72,11 @@ export const useProjectsStore = create<ProjectsState & ProjectsActions>((set, ge
       const items = await listProjects();
       if (!currentSession(token)) return;
       const savedId = localStorage.getItem('viewtopia-active-project');
-      set({
-        items,
-        activeProjectId: savedId && items.some((project) => project.id === savedId) ? savedId : items[0]?.id ?? null,
-      });
+      const activeProjectId =
+        savedId && items.some((project) => project.id === savedId) ? savedId : items[0]?.id ?? null;
+      set({ items, activeProjectId });
+      startMapSaving();
+      if (activeProjectId) await loadProjectMap(activeProjectId);
     } finally {
       if (currentSession(token)) set({ loading: false });
     }
@@ -103,16 +112,11 @@ export const useProjectsStore = create<ProjectsState & ProjectsActions>((set, ge
     if (activeProjectId === projectId) return;
 
     const leaving = items.find((project) => project.id === activeProjectId);
-    if (leaving) {
-      await storeOverlayImages();
-      await projectMaps.put({ id: leaving.id, map: serializeProject(leaving.name) });
-    }
+    if (leaving) await saveProjectMap(leaving.id, leaving.name);
+    await pushUnsavedMaps();
 
     get().setActive(projectId);
-    // a project nobody has left a map in keeps what is on screen, so switching
-    // into a fresh one never throws work away
-    const stored = await projectMaps.get(projectId);
-    if (stored) applyProject(stored.map);
+    await loadProjectMap(projectId);
   },
 
   async create(params) {

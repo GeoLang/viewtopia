@@ -17,7 +17,7 @@ calls. Several surfaces are local-only or depend on configured services:
 - Ptolemy stores workspace and project names, descriptions, memberships, roles,
   and expiring invitation records. ViewTopia does not write this metadata or
   invitations to IndexedDB.
-- Dashboard definitions are stored in localStorage only.
+- Dashboard definitions belong to the active project and are stored on the server.
 - Conflict merge code exists, but the resolver is not mounted and the platform
   sync path does not queue the feature operations it expects.
 - Space-Time Analysis buttons are present but have no handlers.
@@ -172,13 +172,13 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 | Feature | Description |
 |---------|-------------|
 | **Workspaces** | Server-backed names, descriptions, memberships, and roles for groups of projects |
-| **Projects** | Server-backed names, descriptions, and roles with browser-local map snapshots |
+| **Projects** | Server-backed names, descriptions, roles, and map snapshots, so every member opens the same map |
 | **Share by user** | Owners add known users by JWT subject with direct member roles |
 | **Share by link** | Owners create expiring invite links for editor or viewer access. Links expire after seven days and store only token hashes server-side |
 | **Role-based access** | Workspace access is inherited by projects. Direct project membership can grant project-only access, and the highest effective role is returned |
 | **Project switcher** | Header dropdown to create/switch/manage projects |
-| **Offline scope** | Map snapshots and overlay files are browser-local. Project data sync is not implemented |
-| **Cross-device** | Project and workspace metadata reads and mutations are server-backed. Map snapshots and overlay files remain browser-local |
+| **Offline scope** | Map snapshots and overlay bitmaps cache in the browser and sync to the server. Feature-level project data sync is not implemented |
+| **Cross-device** | Project and workspace metadata, map snapshots, overlay bitmaps, and dashboards are server-backed |
 
 ### Raster Analysis
 | Feature | Description |

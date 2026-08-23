@@ -11,6 +11,10 @@ const api = vi.hoisted(() => ({
   listProjects: vi.fn(),
   listWorkspaceProjects: vi.fn(),
   updateProject: vi.fn(),
+  getProjectState: vi.fn(),
+  putProjectState: vi.fn(),
+  uploadProjectAttachment: vi.fn(),
+  getProjectAttachmentDataUrl: vi.fn(),
 }));
 
 vi.mock('../../src/projects/api', () => api);

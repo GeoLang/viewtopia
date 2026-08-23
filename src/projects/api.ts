@@ -241,3 +241,100 @@ export function acceptInvitation(token: string): Promise<InvitationAcceptance> {
     body: JSON.stringify({ token }),
   });
 }
+
+// ─── Project state ───────────────────────────────────────────────────
+
+const NOT_FOUND = 404;
+
+export interface ProjectStateEnvelope<Value> {
+  value: Value;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+interface ProjectStateResponse {
+  value: unknown;
+  updated_at: string;
+  updated_by: string;
+}
+
+function statePath(projectId: string, key: string): string {
+  return `${resourcePath('project', projectId)}/state/${encodeURIComponent(key)}`;
+}
+
+/** null when nobody has written the key yet, which is not a failure. */
+export async function getProjectState<Value>(
+  projectId: string,
+  key: string,
+): Promise<ProjectStateEnvelope<Value> | null> {
+  try {
+    const response = await ptolemyRequest<ProjectStateResponse>(statePath(projectId, key));
+    return {
+      value: response.value as Value,
+      updatedAt: response.updated_at,
+      updatedBy: response.updated_by,
+    };
+  } catch (failure) {
+    if (failure instanceof PtolemyRequestError && failure.status === NOT_FOUND) return null;
+    throw failure;
+  }
+}
+
+export async function putProjectState(projectId: string, key: string, value: unknown): Promise<void> {
+  await ptolemyFetch(statePath(projectId, key), { method: 'PUT', body: JSON.stringify(value) });
+}
+
+// ─── Project attachments ─────────────────────────────────────────────
+
+interface AttachmentMetaResponse {
+  id: string;
+}
+
+function attachmentsPath(projectId: string): string {
+  return `${resourcePath('project', projectId)}/attachments`;
+}
+
+/** `data:image/png;base64,AAAA` split into what the upload body wants. */
+function splitDataUrl(dataUrl: string): { contentType: string; base64: string } {
+  const match = /^data:([^;,]*);base64,(.*)$/s.exec(dataUrl);
+  if (!match) throw new Error('image overlay is not a base64 data URL');
+  return { contentType: match[1] || 'application/octet-stream', base64: match[2] };
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error ?? new Error('could not read the attachment'));
+    reader.readAsDataURL(blob);
+  });
+}
+
+/** The id ptolemy filed the bitmap under, which the map snapshot then names. */
+export async function uploadProjectAttachment(
+  projectId: string,
+  name: string,
+  dataUrl: string,
+): Promise<string> {
+  const { contentType, base64 } = splitDataUrl(dataUrl);
+  const created = await ptolemyRequest<AttachmentMetaResponse>(attachmentsPath(projectId), {
+    method: 'POST',
+    body: JSON.stringify({
+      name,
+      content_type: contentType,
+      data: base64,
+      created_by: 'viewtopia',
+    }),
+  });
+  return created.id;
+}
+
+export async function getProjectAttachmentDataUrl(
+  projectId: string,
+  attachmentId: string,
+): Promise<string> {
+  const response = await ptolemyFetch(
+    `${attachmentsPath(projectId)}/${encodeURIComponent(attachmentId)}`,
+  );
+  return blobToDataUrl(await response.blob());
+}

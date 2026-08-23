@@ -6,6 +6,30 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-23: **a project's map lives on the server**. The snapshot
+  `serializeProject` builds goes to ptolemy under the project's `map` state key,
+  debounced four seconds behind any change to the renderer, basemap, layers,
+  split view or camera, and is read back on project switch and on sign-in.
+  IndexedDB `projectMaps` stays as the offline cache: the newer `savedAt` of the
+  two wins, and a save the network refused goes out again on the next change,
+  the next project switch, or the browser's `online` event. Opening a project
+  over a live MapLibre map now moves that map, which it did not do before:
+  MapLibre reads the shared camera when it is built and never again.
+
+- 2026-08-23: **overlay bitmaps travel with the project**. A draped image is
+  uploaded as a ptolemy project attachment and the snapshot names the
+  attachment, so a member who has never seen the picture draws it instead of
+  skipping the overlay. IndexedDB `overlayImages` stays the local cache and is
+  still what a project saved to a file relies on.
+
+- 2026-08-23: **a dashboard belongs to a project**. The dashboards store reads
+  and writes the project's `dashboards` state key rather than the
+  `viewtopia_dashboards` localStorage key, so every member sees the same ones.
+  Dashboards already in that key move into the first project opened after this
+  and the key is dropped. With no project open there is nowhere to put a
+  dashboard, so the edit is refused rather than held in a browser that would
+  lose it.
+
 - 2026-08-23: **comments pin to the map**. "Comment here" in the map context
   menu, offered in a live edit session, composes a comment at the clicked point
   and marks its anchor `placed`. Placed unresolved threads draw as pins over

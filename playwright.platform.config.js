@@ -17,6 +17,7 @@ export default defineConfig({
     'dataset-editing.spec.js',
     'map-comment-pins.spec.js',
     'analysis-smoke.spec.js',
+    'project-map-state.spec.js',
   ],
   timeout: 30000,
   use: {

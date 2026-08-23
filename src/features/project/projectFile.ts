@@ -7,6 +7,7 @@ import {
   type AgentRasterLayer,
 } from '../../store/agentLayers';
 import { overlayImages } from '../../offline/db';
+import { getProjectAttachmentDataUrl, uploadProjectAttachment } from '../../projects/api';
 import { migrateLegacyChoropleth } from '../symbology/symbology';
 import { useOgcLayerStore, loadPmtilesLayer, type OGCLayer } from '../../store/ogcLayers';
 import { useSplitViewStore, asPaneRenderer, type Pane } from '../../store/splitView';
@@ -34,7 +35,10 @@ export interface ViewtopiaProject {
   agentLayers: AgentLayer[];
   markers: AgentMarker[];
   ogcLayers: OGCLayer[];
-  /** Draped images, without their bitmaps: those live in IndexedDB. */
+  /**
+   * Draped images, without their bitmaps: those live in IndexedDB and, for a
+   * project saved to the server, in a ptolemy project attachment the entry names.
+   */
   imageOverlays: ImageOverlayEntry[];
 }
 
@@ -192,34 +196,75 @@ export function parseProject(text: string): ViewtopiaProject {
   };
 }
 
-/** Keep the bitmaps the saved file will ask for by id when it is opened. */
-export async function storeOverlayImages(): Promise<void> {
+/**
+ * Keep the bitmaps the saved snapshot will ask for by id when it is opened.
+ *
+ * With a project id the bitmap also goes to ptolemy as a project attachment and
+ * the snapshot carries the attachment id, so another member's browser can draw
+ * an overlay it has never seen. IndexedDB stays the local cache either way, and
+ * a project saved to a file still names only ids.
+ */
+export async function storeOverlayImages(projectId?: string): Promise<void> {
+  // every bitmap is cached before the first upload, so an upload that fails
+  // offline does not leave the later overlays out of this browser's cache
   for (const layer of useAgentLayerStore.getState().rasterLayers) {
     await overlayImages.put({ id: layer.id, dataUrl: layer.url });
+  }
+  if (!projectId) return;
+  for (const layer of useAgentLayerStore.getState().rasterLayers) {
+    if (layer.attachmentId) continue;
+    const attachmentId = await uploadProjectAttachment(projectId, layer.name, layer.url);
+    useAgentLayerStore.getState().addRasterLayer({ ...layer, attachmentId });
   }
 }
 
 /**
- * Put back the overlays whose bitmaps this browser still holds. A project saved
- * on another machine has no picture here, so those are dropped rather than
- * drawn blank.
+ * Put back the overlays this browser can draw: the bitmap it still holds, or
+ * the project attachment the entry names. An overlay with neither is dropped
+ * rather than drawn blank.
  */
-export async function restoreImageOverlays(entries: ImageOverlayEntry[]): Promise<void> {
+export async function restoreImageOverlays(
+  entries: ImageOverlayEntry[],
+  projectId?: string,
+): Promise<void> {
   for (const entry of entries) {
-    const image = await overlayImages.get(entry.id);
-    if (!image) {
+    const cached = await overlayImages.get(entry.id);
+    if (cached) {
+      useAgentLayerStore.getState().addRasterLayer({ ...entry, url: cached.dataUrl });
+      continue;
+    }
+    if (!projectId || !entry.attachmentId) {
       console.warn(`image overlay "${entry.name}" skipped: its picture is not in this browser`);
       continue;
     }
-    useAgentLayerStore.getState().addRasterLayer({ ...entry, url: image.dataUrl });
+    try {
+      const dataUrl = await getProjectAttachmentDataUrl(projectId, entry.attachmentId);
+      await overlayImages.put({ id: entry.id, dataUrl });
+      useAgentLayerStore.getState().addRasterLayer({ ...entry, url: dataUrl });
+    } catch (failure) {
+      console.warn(`image overlay "${entry.name}" could not be downloaded`, failure);
+    }
   }
 }
 
-/** Seed the shared camera, then fly the Cesium viewer once it exists. */
+/**
+ * Seed the shared camera, move a MapLibre map that is already on screen, then
+ * fly the Cesium viewer once it exists.
+ *
+ * A MapLibre map reads the shared camera when it is built and never again, so
+ * without the jump a project opened over a live map leaves the view where it
+ * was.
+ */
 function applyCamera(cam: CameraState): void {
   setSharedCamera({
     longitude: cam.lng,
     latitude: cam.lat,
+    zoom: zoomFromHeight(cam.height),
+    bearing: cam.heading || 0,
+    pitch: (cam.pitch || 0) + 90,
+  });
+  getActiveMapLibre()?.jumpTo({
+    center: [cam.lng, cam.lat],
     zoom: zoomFromHeight(cam.height),
     bearing: cam.heading || 0,
     pitch: (cam.pitch || 0) + 90,
@@ -250,7 +295,7 @@ function restoreOgcLayer(saved: OGCLayer): void {
   });
 }
 
-export function applyProject(project: ViewtopiaProject): void {
+export function applyProject(project: ViewtopiaProject, projectId?: string): void {
   const app = useAppStore.getState();
   app.setRenderer(project.renderer);
   if (project.basemap === 'custom' && project.customBasemap) {
@@ -280,7 +325,7 @@ export function applyProject(project: ViewtopiaProject): void {
   useAgentLayerStore.getState().setLayers(project.agentLayers);
   useAgentLayerStore.getState().setMarkers(project.markers);
   useAgentLayerStore.setState({ rasterLayers: [], editingRasterId: null });
-  void restoreImageOverlays(project.imageOverlays);
+  void restoreImageOverlays(project.imageOverlays, projectId);
 
   const ogc = useOgcLayerStore.getState();
   for (const layer of [...ogc.layers]) ogc.removeLayer(layer.id);

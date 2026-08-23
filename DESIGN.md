@@ -454,10 +454,14 @@ Tools" setting with a Preview badge, so there are no dead buttons in the default
 - Choropleth bakes the class colour into each feature as simplestyle properties, which Cesium
   already honours per feature, so MapLibre and Leaflet need only a few lines each. It is offered
   only for a numeric field with more than one distinct value.
-- A project carries its map. Switching saves what the outgoing project was showing and applies
-  what the incoming one was left with, held per project in the `projectMaps` IndexedDB store in
-  the same shape as a `.viewtopia.json` file (bitmaps stay in `overlayImages`). A project with
-  no stored map keeps what is on screen, so creating one forks the current map rather than
+- A project carries its map, and the map lives on the server: the snapshot goes to ptolemy under
+  the project's `map` state key, debounced behind any change, and is read back on project switch
+  and on sign-in. `projectMaps` in IndexedDB is the offline cache of the same shape as a
+  `.viewtopia.json` file, the newer `savedAt` of the two wins, and a save the network refused goes
+  out again on the next change, the next project switch, or the browser's `online` event. Overlay
+  bitmaps go up as ptolemy project attachments and the snapshot names them, with `overlayImages`
+  as the local cache, so a member who has never seen a picture still draws the overlay. A project
+  with no stored map keeps what is on screen, so creating one forks the current map rather than
   clearing it. Switching inside a live document imports the project into it, because the
   outbound sync watches the stores `applyProject` writes. OGC layers are the one thing a
   document cannot hold, see DESIGN_TODO.

@@ -116,6 +116,8 @@ export interface AgentRasterLayer {
   name: string;
   /** data URL of the image */
   url: string;
+  /** the ptolemy project attachment holding the bitmap, once it has been uploaded */
+  attachmentId?: string;
   corners: Corners;
   opacity: number;
   visible: boolean;
