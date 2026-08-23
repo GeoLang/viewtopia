@@ -79,8 +79,12 @@ const TOKEN = [
 ].join('.');
 
 /** Seed the logged-in session, without which the panel offers sign-in and no socket. */
-function signIn(page) {
-  return page.addInitScript((token) => {
+async function signIn(page) {
+  // a signed-in boot loads the project switcher's lists, and ptolemy answers
+  // this unsigned token with a 401, which ends the session and drops the join form
+  await page.route('**/api/v1/workspaces', (route) => route.fulfill({ json: [] }));
+  await page.route('**/api/v1/projects', (route) => route.fulfill({ json: [] }));
+  await page.addInitScript((token) => {
     localStorage.setItem(
       'viewtopia_auth',
       JSON.stringify({ user: { name: 'Playwright Tester' }, token }),

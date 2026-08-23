@@ -6,6 +6,11 @@
       "description": "the @babel/core override must stay loadable by workbox-build, which requires ^7 (its plugins refuse 8 at sw build)",
       "matchPackageNames": ["@babel/core"],
       "allowedVersions": "<8"
+    },
+    {
+      "description": "@vitejs/plugin-react 6 needs vite ^8 (peer dep, imports vite/internal); hold until the vite major lands",
+      "matchPackageNames": ["@vitejs/plugin-react"],
+      "allowedVersions": "<6"
     }
   ]
 }
