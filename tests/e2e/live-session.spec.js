@@ -236,7 +236,7 @@ test.describe('Live multiplayer — live platform stack', () => {
     const memberPage = await memberContext.newPage();
     await memberPage.addInitScript((seed) => {
       localStorage.setItem('viewtopia-tour-done', '1');
-      localStorage.setItem('viewtopia-welcome', 'dismissed');
+      localStorage.setItem('viewtopia-first-run', 'dismissed');
       localStorage.setItem('viewtopia_auth', JSON.stringify(seed));
     }, { user: { name: MENTIONED_USER }, token: memberToken });
     await memberPage.goto('/');
@@ -311,7 +311,7 @@ test.describe('Live multiplayer — live platform stack', () => {
     const memberPage = await memberContext.newPage();
     await memberPage.addInitScript((seed) => {
       localStorage.setItem('viewtopia-tour-done', '1');
-      localStorage.setItem('viewtopia-welcome', 'dismissed');
+      localStorage.setItem('viewtopia-first-run', 'dismissed');
       localStorage.setItem('viewtopia_auth', JSON.stringify(seed));
     }, { user: { name: MENTIONED_USER }, token: memberToken });
     await memberPage.goto(link);

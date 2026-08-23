@@ -15,7 +15,10 @@ All notable changes to this project will be documented in this file.
 - 2026-08-23: **a first run says where to start**. A profile that has imported
   nothing, opened no project and joined no live session gets a panel on the map
   naming those three entry actions. Doing any one of them retires it, as does
-  the Got it button, under the `viewtopia-first-run` localStorage key.
+  the Got it button, under the `viewtopia-first-run` localStorage key. The
+  panel also carries the demo-dataset-and-tour offer, and the separate
+  WelcomeCard strip that used to make it is deleted, so a fresh profile sees
+  one first-run surface instead of two.
 
 - 2026-08-23: **a project's map lives on the server**. The snapshot
   `serializeProject` builds goes to ptolemy under the project's `map` state key,

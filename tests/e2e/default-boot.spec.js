@@ -11,10 +11,11 @@ import { test, expect } from './console-guard';
 
 test('first visit offers the demo dataset and hands over to the tour', async ({ page }) => {
   await page.goto('/');
-  const card = page.getByTestId('welcome-card');
-  await expect(card).toBeVisible();
-  await card.getByRole('button', { name: 'Demo & tour' }).click();
-  await expect(card).not.toBeVisible();
+  const overlay = page.getByTestId('first-run-overlay');
+  // the first test pays vite's cold compile, same as the boot waits below
+  await expect(overlay).toBeVisible({ timeout: 60000 });
+  await overlay.getByRole('button', { name: /demo data/i }).click();
+  await expect(overlay).not.toBeVisible();
 
   // the tour starts on its first step
   await expect(page.getByText('Welcome to ViewTopia').first()).toBeVisible();
@@ -24,16 +25,16 @@ test('first visit offers the demo dataset and hands over to the tour', async ({ 
   await expect(page.getByText('San Francisco landmarks').first()).toBeVisible();
 });
 
-test('dismissing the welcome card persists across reloads', async ({ page }) => {
+test('dismissing the first-run overlay persists across reloads', async ({ page }) => {
   await page.goto('/');
-  const card = page.getByTestId('welcome-card');
-  await expect(card).toBeVisible();
-  await card.getByRole('button', { name: 'Dismiss' }).click();
-  await expect(card).not.toBeVisible();
+  const overlay = page.getByTestId('first-run-overlay');
+  await expect(overlay).toBeVisible();
+  await overlay.getByRole('button', { name: 'Got it' }).click();
+  await expect(overlay).not.toBeVisible();
 
   await page.reload();
   await expect(page.getByRole('button', { name: 'Layers' })).toBeVisible();
-  await expect(page.getByTestId('welcome-card')).not.toBeVisible();
+  await expect(page.getByTestId('first-run-overlay')).not.toBeVisible();
 });
 
 test('a clean profile boots MapLibre on the dark vector basemap', async ({ page }) => {

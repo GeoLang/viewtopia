@@ -17,7 +17,6 @@ import { ChatPanel } from './components/ChatPanel';
 import { ViewerToolbar } from './components/ViewerToolbar';
 import { CommandPalette } from './components/CommandPalette';
 import { WindowDropZone } from './components/WindowDropZone';
-import { WelcomeCard } from './components/WelcomeCard';
 import { FirstRunOverlay } from './onboarding/FirstRunOverlay';
 import { TourOverlay } from './components/TourOverlay';
 import { ViewerArea } from './components/ViewerArea';
@@ -243,7 +242,6 @@ export function App() {
             <MapPresence />
             {!embed && <WindowDropZone />}
             {!uiHidden && !embed && <FirstRunOverlay />}
-            {!uiHidden && !embed && <WelcomeCard />}
             {!uiHidden && !embed && <TourOverlay />}
             {embed && <EmbedBadge />}
           </AppShell.Main>
