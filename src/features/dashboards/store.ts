@@ -116,6 +116,7 @@ export const useDashboardsStore = create<DashboardsState>((set, get) => {
     },
 
     create: () => {
+      if (!get().projectId) return;
       const now = new Date().toISOString();
       const dashboard: Dashboard = {
         id: crypto.randomUUID(),

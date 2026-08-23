@@ -97,7 +97,7 @@ function WidgetContent({ widget }: { widget: DashboardWidget }) {
 }
 
 export function DashboardPanel({ onClose }: { onClose: () => void }) {
-  const { dashboards, activeId, refresh, create, open, back, remove, renameActive, addWidget, removeWidget } =
+  const { dashboards, activeId, projectId, refresh, create, open, back, remove, renameActive, addWidget, removeWidget } =
     useDashboardsStore();
   const [picking, setPicking] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -119,7 +119,11 @@ export function DashboardPanel({ onClose }: { onClose: () => void }) {
       {!active ? (
         // ---- List view ----
         <Stack gap="sm">
-          {dashboards.length === 0 ? (
+          {!projectId ? (
+            <Text size="sm" c="dimmed" py="lg" ta="center">
+              Dashboards live in a project. Open one first.
+            </Text>
+          ) : dashboards.length === 0 ? (
             <Text size="sm" c="dimmed" py="lg" ta="center">
               No dashboards yet. Create your first one!
             </Text>
@@ -163,6 +167,7 @@ export function DashboardPanel({ onClose }: { onClose: () => void }) {
             color="violet"
             leftSection={<IconPlus size={14} />}
             onClick={create}
+            disabled={!projectId}
           >
             New Dashboard
           </Button>

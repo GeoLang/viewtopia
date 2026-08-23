@@ -146,25 +146,14 @@ test.describe('React shell smoke', () => {
     expect(errors, `runtime errors:\n${errors.join('\n')}`).toEqual([]);
   });
 
-  test('dashboards: create one and add a widget', async ({ page }) => {
-    // Start clean so the empty-state + create flow is deterministic.
-    await page.addInitScript(() => localStorage.removeItem('viewtopia_dashboards'));
+  test('dashboards need an open project', async ({ page }) => {
+    // Dashboards live in project state on the server now; standalone has no
+    // project, so the panel says so and refuses creation. The create-and-add
+    // -widget flow is platform e2e territory.
     await page.goto(REACT_URL);
     await page.getByRole('button', { name: 'Tools' }).click();
     await page.getByRole('menuitem', { name: 'Dashboards' }).click();
-    await expect(page.getByText(/no dashboards yet/i)).toBeVisible();
-    // Create → enters the editor view.
-    await page.getByRole('button', { name: 'New Dashboard' }).click();
-    await expect(page.getByText(/no widgets yet/i)).toBeVisible();
-    // Add a widget via the picker.
-    await page.getByRole('button', { name: 'Widget', exact: true }).click();
-    await page.getByRole('button', { name: /Indicator/ }).click();
-    await expect(page.getByText('New indicator')).toBeVisible();
-    // Add a chart widget and confirm it renders a real svg, not placeholder text.
-    await page.getByRole('button', { name: 'Widget', exact: true }).click();
-    await page.getByRole('button', { name: /Chart/ }).click();
-    await expect(page.getByText('New chart')).toBeVisible();
-    await expect(page.locator('svg[aria-label$="chart"]')).toBeVisible();
-    await expect(page.getByText('[Chart: bar]')).toHaveCount(0);
+    await expect(page.getByText(/dashboards live in a project/i)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'New Dashboard' })).toBeDisabled();
   });
 });
