@@ -171,6 +171,23 @@ sees the result. Each task needs source, integration, and failure-path tests.
    - [ ] Run the two-browser live stack acceptance session for owner, editor,
      and viewer behavior.
 
+   Resolved design for the two propagation tasks (2026-08-23):
+   - Ptolemy: nullable `project_id` on datasets. Attach requires dataset admin
+     plus project editor or owner, sets visibility private, and detach never
+     flips visibility back. Read/write/admin checks take the max of explicit
+     grants and the effective project role mapped viewer→read, editor→write,
+     owner→admin.
+   - Agora: nullable `project_id` on documents, set at creation or by a
+     document editor. Access on a project-linked document is the max of the
+     members-table role and the project role mapped viewer→view, editor and
+     owner→edit, resolved at access time by calling Ptolemy
+     `GET /api/v1/projects/{id}` with the caller's own bearer (response carries
+     the effective `role`), cached ~30 s per (document, user). Ptolemy
+     unreachable fails closed to the members-table role alone. New env var
+     `PTOLEMY_URL` in agora, wired in docker-compose.platform.yml.
+   - ViewTopia: live document creation passes the active project id. Dataset
+     attach/detach UI is a follow-up; the API path is exercised by tests.
+
 3. **Complete one real shared editing path.**
    Repositories: `viewtopia`, `ptolemy`, `geodukt`, `collecta`. Choose one
    dataset format, import it, edit a feature, commit it, reload it from another
