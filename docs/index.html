@@ -360,16 +360,17 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <div class="card">
 <h3>Three-Way Merge</h3>
 <ul>
-<li>Merge code handles a narrow feature update operation shape</li>
-<li>Different-property changes can merge when the function is called</li>
-<li>No mounted conflict UI uses this code</li>
+<li>Feature property edits queue as update operations</li>
+<li>Sync fetches the server version and merges it against the state at the last sync</li>
+<li>Changes to different properties merge without asking</li>
 </ul>
 </div>
 <div class="card">
 <h3>Conflict UI</h3>
 <ul>
-<li>ConflictResolver exists in source but is not rendered</li>
-<li>No platform sync path queues the feature operations it expects</li>
+<li>Same-property changes on both sides open the resolver from the sync indicator</li>
+<li>Pick a side per property, or keep all local or all server</li>
+<li>The pick is sent to the server and becomes the base for the next edit</li>
 </ul>
 </div>
 </div>

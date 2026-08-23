@@ -6,6 +6,19 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-23: **offline conflict resolution runs end to end**. Editing a
+  feature's properties queues an `update` op keyed on the feature id, so repeat
+  edits collapse into one op whose base stays at the state of the last sync. On
+  sync that op fetches the server's version and runs the three-way merge:
+  changes to different properties merge and go out as one PUT, and
+  same-property changes on both sides leave the op queued and land in
+  `conflicts` without burning a retry attempt. The sync indicator then offers
+  "Resolve Conflicts", which opens `ConflictResolver` with both values side by
+  side. Picking a side rewrites the queued op with the server version as its
+  new base and syncs, so the retry merges cleanly. What was sent is written to
+  the local features store as the base for the next edit, and the server
+  receives only `properties` and `geometry`, not the merge bookkeeping.
+
 - 2026-08-21: Space-Time docs name the four panel surfaces that work
   (entities, CSV ingest, track player, manual links). FEATURES.md, README
   and docs/index.html no longer list colocation, classification, RBAC or

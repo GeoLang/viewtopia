@@ -1,6 +1,10 @@
 import { create } from 'zustand';
+import { queueFeatureUpdate } from '../offline/sync';
 
 export type DrawMode = 'point' | 'line' | 'polygon' | 'circle' | 'rectangle' | null;
+
+/** Shapes drawn in this browser sync as one layer. */
+const DRAWN_FEATURES_LAYER_ID = 'viewtopia-drawn';
 
 export interface DrawnFeature {
   id: string;
@@ -124,43 +128,54 @@ export const useDrawStore = create<DrawState>((set, get) => ({
   removeFeature: (id) =>
     set((s) => ({ features: s.features.filter((f) => f.id !== id) })),
 
-  setFeatureProperties: (id, properties) =>
+  setFeatureProperties: (id, properties) => {
     set((s) => ({
       features: s.features.map((f) => (f.id === id ? { ...f, properties } : f)),
-    })),
+    }));
+    const edited = get().features.find((f) => f.id === id);
+    if (!edited) return;
+    void queueFeatureUpdate(DRAWN_FEATURES_LAYER_ID, {
+      id: edited.id,
+      properties: edited.properties ?? {},
+      geometry: drawnFeatureGeometry(edited),
+      updatedAt: Date.now(),
+    });
+  },
 
   clearAll: () => set({ features: [], pending: [] }),
 }));
+
+type DrawnGeometry =
+  | { type: 'Point'; coordinates: [number, number] }
+  | { type: 'LineString'; coordinates: [number, number][] }
+  | { type: 'Polygon'; coordinates: [number, number][][] };
+
+function drawnFeatureGeometry(f: DrawnFeature): DrawnGeometry {
+  if (f.type === 'Point' || f.type === 'Circle') {
+    return { type: 'Point', coordinates: f.coords[0] };
+  }
+  if (f.type === 'LineString') {
+    return { type: 'LineString', coordinates: f.coords };
+  }
+  // Polygon: close the ring.
+  const ring = [...f.coords];
+  if (ring.length && (ring[0][0] !== ring[ring.length - 1][0] || ring[0][1] !== ring[ring.length - 1][1])) {
+    ring.push(ring[0]);
+  }
+  return { type: 'Polygon', coordinates: [ring] };
+}
 
 /** Build a GeoJSON FeatureCollection from the drawn features (incl. edited properties). */
 export function featuresToGeoJSON(features: DrawnFeature[]) {
   return {
     type: 'FeatureCollection' as const,
-    features: features.map((f) => {
-      let geometry:
-        | { type: 'Point'; coordinates: [number, number] }
-        | { type: 'LineString'; coordinates: [number, number][] }
-        | { type: 'Polygon'; coordinates: [number, number][][] };
-      if (f.type === 'Point' || f.type === 'Circle') {
-        geometry = { type: 'Point' as const, coordinates: f.coords[0] };
-      } else if (f.type === 'LineString') {
-        geometry = { type: 'LineString' as const, coordinates: f.coords };
-      } else {
-        // Polygon: close the ring.
-        const ring = [...f.coords];
-        if (ring.length && (ring[0][0] !== ring[ring.length - 1][0] || ring[0][1] !== ring[ring.length - 1][1])) {
-          ring.push(ring[0]);
-        }
-        geometry = { type: 'Polygon' as const, coordinates: [ring] };
-      }
-      return {
-        type: 'Feature' as const,
-        geometry,
-        properties: {
-          ...(f.properties ?? {}),
-          ...(f.type === 'Circle' && f.radius != null ? { _radius_m: String(f.radius) } : {}),
-        },
-      };
-    }),
+    features: features.map((f) => ({
+      type: 'Feature' as const,
+      geometry: drawnFeatureGeometry(f),
+      properties: {
+        ...(f.properties ?? {}),
+        ...(f.type === 'Circle' && f.radius != null ? { _radius_m: String(f.radius) } : {}),
+      },
+    })),
   };
 }

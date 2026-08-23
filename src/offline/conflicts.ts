@@ -39,6 +39,13 @@ export interface MergeConflict {
   conflictingProperties: string[];
 }
 
+/** One feature's resolved state, ready to send to the server. */
+export interface ConflictResolution {
+  featureId: string;
+  properties: Record<string, unknown>;
+  geometry?: GeoJSON.Geometry;
+}
+
 export interface MergeResult {
   /** Auto-resolved features (no user input needed) */
   resolved: Array<{
@@ -195,7 +202,7 @@ export function batchMerge(
 export function resolveAllConflicts(
   conflicts: MergeConflict[],
   strategy: ConflictStrategy,
-): Array<{ featureId: string; properties: Record<string, unknown>; geometry?: GeoJSON.Geometry }> {
+): ConflictResolution[] {
   return conflicts.map((c) => {
     switch (strategy) {
       case 'ours':

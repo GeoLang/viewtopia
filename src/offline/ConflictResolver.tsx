@@ -18,12 +18,12 @@ import {
   Divider,
 } from '@mantine/core';
 import { IconGitMerge, IconCheck } from '@tabler/icons-react';
-import type { MergeConflict, ConflictStrategy } from './conflicts';
-import { resolveConflictManually } from './conflicts';
+import type { MergeConflict, ConflictResolution, ConflictStrategy } from './conflicts';
+import { resolveAllConflicts, resolveConflictManually } from './conflicts';
 
 interface ConflictResolverProps {
   conflicts: MergeConflict[];
-  onResolved: (results: Array<{ featureId: string; properties: Record<string, unknown>; geometry?: GeoJSON.Geometry }>) => void;
+  onResolved: (results: ConflictResolution[]) => void;
   onCancel: () => void;
 }
 
@@ -43,17 +43,7 @@ export function ConflictResolver({ conflicts, onResolved, onCancel }: ConflictRe
   }
 
   function handleResolveAll(strategy: ConflictStrategy) {
-    const results = conflicts.map((c) => {
-      const res: Record<string, 'ours' | 'theirs'> = {};
-      for (const prop of c.conflictingProperties) {
-        res[prop] = strategy === 'theirs' ? 'theirs' : 'ours';
-      }
-      return {
-        featureId: c.featureId,
-        ...resolveConflictManually(c, res),
-      };
-    });
-    onResolved(results);
+    onResolved(resolveAllConflicts(conflicts, strategy));
   }
 
   function handleFinish() {

@@ -164,8 +164,8 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 | **Auto-sync** | Attempts to push queued operations when the browser reconnects |
 | **API response cache** | GET responses cached with TTL for offline fallback |
 | **Sync indicator** | Real-time UI showing pending/synced/offline status |
-| **Three-way merge** | Merge code exists, but the resolver UI is not mounted and the expected feature sync operations are not queued |
-| **Column-level resolution** | The merge function can resolve different-property changes when called. No mounted conflict flow uses it |
+| **Three-way merge** | Feature property edits queue as `update` operations. On sync the server version is fetched and merged against the state at the last sync |
+| **Column-level resolution** | Changes to different properties merge without asking. Same-property changes on both sides open the resolver from the sync indicator, where you pick a side per property or in bulk |
 
 ### Projects & Workspaces
 | Feature | Description |

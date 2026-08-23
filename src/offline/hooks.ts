@@ -5,7 +5,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useNetworkStore } from './network';
-import { onSyncStateChange, getSyncState, syncNow, discardPending } from './sync';
+import {
+  onSyncStateChange,
+  getSyncState,
+  syncNow,
+  discardPending,
+  applyConflictResolutions,
+  clearConflicts,
+} from './sync';
+import type { ConflictResolution } from './conflicts';
 
 /** Use current online/offline state */
 export function useOnlineStatus() {
@@ -22,6 +30,11 @@ export function useSyncStatus() {
 
   const triggerSync = useCallback(() => syncNow(), []);
   const discard = useCallback(() => discardPending(), []);
+  const resolveConflicts = useCallback(
+    (resolutions: ConflictResolution[]) => applyConflictResolutions(resolutions),
+    [],
+  );
+  const dismissConflicts = useCallback(() => clearConflicts(), []);
 
-  return { ...state, triggerSync, discard };
+  return { ...state, triggerSync, discard, resolveConflicts, dismissConflicts };
 }

@@ -69,8 +69,13 @@ export interface CachedResponse {
 
 let dbInstance: IDBDatabase | null = null;
 
+export function hasIndexedDb(): boolean {
+  return typeof indexedDB !== 'undefined';
+}
+
 function openDb(): Promise<IDBDatabase> {
   if (dbInstance) return Promise.resolve(dbInstance);
+  if (!hasIndexedDb()) return Promise.reject(new Error('IndexedDB is unavailable'));
 
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);

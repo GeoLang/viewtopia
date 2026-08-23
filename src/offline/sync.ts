@@ -10,9 +10,14 @@
  * - Like git: work offline, sync when you choose
  */
 
-import { pendingOps, type PendingOperation } from './db';
+import { features, hasIndexedDb, pendingOps, type OfflineFeature, type PendingOperation } from './db';
 import { isOnline } from './network';
-import { threeWayMerge, type MergeConflict, type FeatureVersion } from './conflicts';
+import {
+  threeWayMerge,
+  type ConflictResolution,
+  type MergeConflict,
+  type FeatureVersion,
+} from './conflicts';
 
 type SyncStatus = 'idle' | 'syncing' | 'error' | 'conflicts';
 
@@ -76,13 +81,118 @@ export async function queueOperation(
     attempts: 0,
   };
   await pendingOps.add(op);
-  const count = await pendingOps.count();
-  setState({ pendingCount: count });
+  await announceQueued();
+}
 
-  // Trigger sync if online
+async function announceQueued(): Promise<void> {
+  setState({ pendingCount: await pendingOps.count() });
   if (isOnline()) {
     scheduleSyncSoon();
   }
+}
+
+/** Payload of a queued feature update, shaped for the three-way merge on sync. */
+interface FeatureUpdatePayload {
+  layerId: string;
+  /** State at the last sync, the merge's common ancestor */
+  base: FeatureVersion | null;
+  /** State this browser edited to */
+  ours: FeatureVersion;
+  properties: Record<string, unknown>;
+  geometry?: GeoJSON.Geometry;
+}
+
+function featureUpdateOpId(featureId: string): string {
+  return `feature-update-${featureId}`;
+}
+
+function isFeatureUpdate(op: PendingOperation): boolean {
+  return (
+    op.type === 'update' &&
+    op.resource === 'feature' &&
+    typeof op.payload === 'object' &&
+    op.payload !== null &&
+    'ours' in op.payload
+  );
+}
+
+function toFeatureVersion(feature: OfflineFeature | undefined): FeatureVersion | null {
+  if (!feature) return null;
+  return {
+    id: feature.id,
+    properties: feature.properties,
+    geometry: feature.geometry,
+    updatedAt: feature.updatedAt,
+  };
+}
+
+/**
+ * Queue a feature edit for sync. Repeat edits to one feature share an op id so
+ * they collapse into a single update whose base stays at the last synced state.
+ */
+export async function queueFeatureUpdate(layerId: string, ours: FeatureVersion): Promise<void> {
+  if (!hasIndexedDb()) return;
+
+  const id = featureUpdateOpId(ours.id);
+  const queued = (await pendingOps.getAll()).find((op) => op.id === id);
+  const payload: FeatureUpdatePayload = {
+    layerId,
+    base: queued
+      ? (queued.payload as FeatureUpdatePayload).base
+      : toFeatureVersion(await features.get(ours.id)),
+    ours,
+    properties: ours.properties,
+    geometry: ours.geometry,
+  };
+
+  await pendingOps.add({
+    id,
+    createdAt: queued?.createdAt ?? Date.now(),
+    type: 'update',
+    resource: 'feature',
+    resourceId: ours.id,
+    payload,
+    attempts: 0,
+  });
+  await announceQueued();
+}
+
+/**
+ * Replace queued feature updates with the versions the user picked, then sync.
+ * The server version becomes the new base so the retry merges cleanly.
+ */
+export async function applyConflictResolutions(
+  resolutions: ConflictResolution[],
+): Promise<void> {
+  const queued = await pendingOps.getAll();
+
+  for (const resolution of resolutions) {
+    const op = queued.find((candidate) => candidate.id === featureUpdateOpId(resolution.featureId));
+    if (!op) continue;
+
+    const payload = op.payload as FeatureUpdatePayload;
+    const conflict = syncState.conflicts.find((c) => c.featureId === resolution.featureId);
+    await pendingOps.add({
+      ...op,
+      attempts: 0,
+      lastError: undefined,
+      payload: {
+        ...payload,
+        base: conflict?.theirs ?? payload.base,
+        ours: {
+          ...payload.ours,
+          properties: resolution.properties,
+          geometry: resolution.geometry,
+          updatedAt: Date.now(),
+        },
+        properties: resolution.properties,
+        geometry: resolution.geometry,
+      } satisfies FeatureUpdatePayload,
+    });
+  }
+
+  setState({ conflicts: [], status: 'idle' });
+  await syncNow();
 }
 
 /** Schedule a sync attempt soon (debounced) */
@@ -107,6 +217,7 @@ export async function syncNow(): Promise<void> {
   ops.sort((a, b) => a.createdAt - b.createdAt);
 
   let allSucceeded = true;
+  const conflicts: MergeConflict[] = [];
 
   for (const op of ops) {
     try {
@@ -114,6 +225,11 @@ export async function syncNow(): Promise<void> {
       await pendingOps.remove(op.id);
     } catch (err) {
       allSucceeded = false;
+      if (err instanceof ConflictError) {
+        // stays queued until the user picks a side, and is not a failed attempt
+        conflicts.push(...err.conflicts);
+        continue;
+      }
       const message = err instanceof Error ? err.message : String(err);
       await pendingOps.updateAttempts(op.id, message);
 
@@ -132,13 +248,19 @@ export async function syncNow(): Promise<void> {
 
   const remaining = await pendingOps.count();
   setState({
-    status: allSucceeded ? 'idle' : 'error',
+    status: statusAfterSync(conflicts.length, allSucceeded),
     pendingCount: remaining,
     lastSyncAt: allSucceeded ? Date.now() : syncState.lastSyncAt,
     lastError: allSucceeded ? null : syncState.lastError,
+    conflicts,
   });
 
   isSyncing = false;
+}
+
+function statusAfterSync(conflictCount: number, allSucceeded: boolean): SyncStatus {
+  if (conflictCount > 0) return 'conflicts';
+  return allSucceeded ? 'idle' : 'error';
 }
 
 /** Execute a single sync operation against the server */
@@ -151,28 +273,21 @@ async function executeSync(op: PendingOperation): Promise<void> {
   const resourcePath = getResourcePath(op.resource, op.resourceId);
   const url = `${baseUrl}${resourcePath}`;
 
-  // For updates, check for conflicts first
-  if (op.type === 'update' && op.resource === 'feature') {
-    const payload = op.payload as { base?: FeatureVersion; ours?: FeatureVersion };
-    if (payload.base) {
-      // Fetch server's current version
-      const serverResp = await fetch(url);
-      if (serverResp.ok) {
-        const theirs: FeatureVersion = await serverResp.json();
-        // Three-way merge
-        const mergeResult = threeWayMerge(payload.base, payload.ours || null, theirs);
-        if (mergeResult.conflicts.length > 0) {
-          // Surface conflicts to UI
-          setState({ status: 'conflicts', conflicts: mergeResult.conflicts });
-          throw new ConflictError(mergeResult.conflicts);
-        }
-        // Auto-resolved — use merged version
-        if (mergeResult.resolved.length > 0) {
-          const merged = mergeResult.resolved[0];
-          (op.payload as Record<string, unknown>).properties = merged.mergedProperties;
-          if (merged.mergedGeometry) {
-            (op.payload as Record<string, unknown>).geometry = merged.mergedGeometry;
-          }
+  const featureUpdate = isFeatureUpdate(op) ? (op.payload as FeatureUpdatePayload) : null;
+
+  if (featureUpdate) {
+    const serverResp = await fetch(url);
+    if (serverResp.ok) {
+      const theirs: FeatureVersion = await serverResp.json();
+      const mergeResult = threeWayMerge(featureUpdate.base, featureUpdate.ours, theirs);
+      if (mergeResult.conflicts.length > 0) {
+        throw new ConflictError(mergeResult.conflicts);
+      }
+      if (mergeResult.resolved.length > 0) {
+        const merged = mergeResult.resolved[0];
+        featureUpdate.properties = merged.mergedProperties;
+        if (merged.mergedGeometry) {
+          featureUpdate.geometry = merged.mergedGeometry;
         }
       }
     }
@@ -194,12 +309,38 @@ async function executeSync(op: PendingOperation): Promise<void> {
   const resp = await fetch(url, {
     method,
     headers: { 'Content-Type': 'application/json' },
-    body: op.type !== 'delete' ? JSON.stringify(op.payload) : undefined,
+    body: op.type !== 'delete' ? JSON.stringify(requestBody(op, featureUpdate)) : undefined,
   });
 
   if (!resp.ok) {
     throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
   }
+
+  if (featureUpdate) {
+    await recordSyncedFeature(op.resourceId, featureUpdate);
+  }
+}
+
+/** The merge bookkeeping stays local, the server sees the merged feature. */
+function requestBody(op: PendingOperation, featureUpdate: FeatureUpdatePayload | null): unknown {
+  if (!featureUpdate) return op.payload;
+  return { properties: featureUpdate.properties, geometry: featureUpdate.geometry };
+}
+
+/** What was just sent becomes the base for the next edit's merge. */
+async function recordSyncedFeature(
+  featureId: string,
+  featureUpdate: FeatureUpdatePayload,
+): Promise<void> {
+  const geometry = featureUpdate.geometry ?? featureUpdate.ours.geometry;
+  if (!geometry) return;
+  await features.put({
+    id: featureId,
+    layerId: featureUpdate.layerId,
+    geometry,
+    properties: featureUpdate.properties,
+    updatedAt: Date.now(),
+  });
 }
 
 /** Error thrown when conflicts are detected */

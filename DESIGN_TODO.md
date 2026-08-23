@@ -97,10 +97,9 @@ ViewTopia, Ptolemy, Jung, TerraVista, Panoptes, and Geoplumb.
       authenticated `/api/v1` calls, with server-enforced roles and expiring
       invite links. Per-project map snapshots and overlay files remain
       browser-local. Project roles are not yet propagated to Ptolemy dataset
-      grants or Agora document members. Dashboards are localStorage-only. The
-      conflict resolver is not mounted, Space-Time Analysis buttons have no
-      handlers, and vertical plugins depend on configured datasets. LiveKit
-      requires an external URL and token.
+      grants or Agora document members. Dashboards are localStorage-only.
+      Space-Time Analysis buttons have no handlers, and vertical plugins depend
+      on configured datasets. LiveKit requires an external URL and token.
 
 ## P0 path to the intended product, 2026-08-22
 
@@ -302,10 +301,6 @@ module with no advertised surface. Wiring them is a product decision.
       renders seven buttons with no `onClick`. Sixteen advertised rows have
       no code at all. Seven more have a real algorithm and zero callers.
       Classification and RBAC are absent. Docs now match. Do not build Gotham.
-
-- [ ] **viewtopia conflict resolution is dead code.** The three-way merge only
-      runs for `update`+`feature` ops, which nothing ever queues, and
-      `ConflictResolver.tsx` is rendered nowhere.
 
 - [ ] **ptolemy's Esri-style topology rule engine does not exist.** 31 rule
       variants are declared, nothing matches on them, stored rules are never read
