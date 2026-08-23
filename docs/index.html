@@ -74,7 +74,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <div class="stat"><div class="num">20</div><div class="label">Plugins</div></div>
 <div class="stat"><div class="num">11</div><div class="label">QGIS Ports</div></div>
 <div class="stat"><div class="num">4</div><div class="label">Space-Time panel surfaces</div></div>
-<div class="stat"><div class="num">347</div><div class="label">Unit Tests</div></div>
+<div class="stat"><div class="num">1405</div><div class="label">Unit Tests</div></div>
 <div class="stat"><div class="num">$0</div><div class="label">Per month</div></div>
 </div>
 </div>
@@ -111,7 +111,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <ul>
 <li>Natural language spatial analysis</li>
 <li>AG-UI event stream from <code>/chat/agui</code></li>
-<li>36 chainable geospatial tools</li>
+<li>Viewer integration with a subset of GeoLang's geospatial tools</li>
 <li>SQL, routing, QGIS (321 algorithms)</li>
 <li>Agent loop runs in sibyl (Rust)</li>
 <li>Auto-renders maps from chat</li>
@@ -247,7 +247,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <section>
 <div class="container">
 <h2>🤝 Real-Time Collaboration</h2>
-<p style="color:var(--muted);margin-bottom:20px">Collaborate in real-time via Ptolemy's ephemeral room relay. Optional LiveKit WebRTC for voice and video.</p>
+<p style="color:var(--muted)">Collaborate in real-time via Ptolemy's ephemeral room relay. LiveKit voice and video are optional and require a configured URL and token.</p>
 <div class="grid">
 <div class="card">
 <h3>👁️ View Sync (Follow Mode)</h3>
@@ -292,14 +292,14 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <section>
 <div class="container">
 <h2>� Plugin System</h2>
-<p style="color:var(--muted);margin-bottom:20px">Extensible file-based plugin architecture — drop a folder in <code>src/plugins/</code> and your panel auto-appears. Full access to map, store, and API context.</p>
+<p style="color:var(--muted)">Extensible file-based plugin architecture. Build-time discovery finds folders in <code>src/plugins/</code>, then the runtime loads their panels.</p>
 <div class="grid">
 <div class="card">
 <h3>⚡ Zero Config</h3>
 <ul>
 <li>Create folder + index.tsx → done</li>
-<li>Vite import.meta.glob auto-discovery</li>
-<li>Hot Module Reload — instant preview</li>
+<li>Vite import.meta.glob build-time discovery</li>
+<li>Hot Module Reload during development</li>
 <li>No manual registration needed</li>
 </ul>
 </div>
@@ -338,12 +338,12 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <section>
 <div class="container">
 <h2>📡 Offline-First & Conflict Resolution</h2>
-<p style="color:var(--muted);margin-bottom:20px">Data you have loaded survives reloads and syncs when you reconnect — conflicts are resolved automatically where possible, with a clear UI for true conflicts.</p>
+<p style="color:var(--muted)">Some browser state survives reloads. The client attempts queued operations when it reconnects. The conflict resolver is not mounted.</p>
 <div class="grid">
 <div class="card">
 <h3>Local-First Storage</h3>
 <ul>
-<li>All data in IndexedDB — reads never hit the network</li>
+<li>Offline browser state uses IndexedDB and localStorage. Not all reads work without network</li>
 <li>Mutations queued in an operation log</li>
 <li>API responses cached with TTL for offline fallback</li>
 </ul>
@@ -351,7 +351,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <div class="card">
 <h3>Automatic Sync</h3>
 <ul>
-<li>Reconnects and pushes pending changes</li>
+<li>Attempts to push pending changes after reconnect</li>
 <li>FIFO queue with retry and exponential backoff</li>
 <li>Real-time indicator: pending/synced/offline</li>
 <li>Pre-cache tiles for an area (bbox + zoom range)</li>
@@ -360,19 +360,16 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <div class="card">
 <h3>Three-Way Merge</h3>
 <ul>
-<li>Mirrors geogit's merge algorithm</li>
-<li>FastForward — only one side changed</li>
-<li>ColumnMerge — different properties → auto-merge</li>
-<li>Conflict UI for same-property divergence</li>
+<li>Merge code handles a narrow feature update operation shape</li>
+<li>Different-property changes can merge when the function is called</li>
+<li>No mounted conflict UI uses this code</li>
 </ul>
 </div>
 <div class="card">
 <h3>Conflict UI</h3>
 <ul>
-<li>Side-by-side diff per conflicting property</li>
-<li>Per-property "Keep Mine" / "Keep Server" toggle</li>
-<li>Bulk "Keep All Mine" / "Keep All Server" buttons</li>
-<li>Multi-feature navigation for batch conflicts</li>
+<li>ConflictResolver exists in source but is not rendered</li>
+<li>No platform sync path queues the feature operations it expects</li>
 </ul>
 </div>
 </div>
@@ -382,33 +379,36 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <section>
 <div class="container">
 <h2>📁 Projects & Workspaces</h2>
-<p style="color:var(--muted);margin-bottom:20px">Organize your work into projects. Share with your team. Each project has its own layers, settings, and offline scope.</p>
+<p style="color:var(--muted)">Ptolemy stores project and workspace metadata. ViewTopia reads and mutates it through authenticated <code>/api/v1</code> calls. Map snapshots and overlay files remain browser-local.</p>
 <div class="grid">
 <div class="card">
 <h3>Workspaces</h3>
 <ul>
-<li>Team-level container with shared branding</li>
-<li>Member management at workspace level</li>
-<li>Default settings inherited by projects</li>
+<li>Team-level container with names, descriptions, and memberships</li>
+<li>Any signed-in user can create a workspace and becomes its owner</li>
+<li>Workspace access is inherited by projects</li>
 <li>Switch between workspaces in header dropdown</li>
 </ul>
 </div>
 <div class="card">
 <h3>Projects</h3>
 <ul>
-<li>Self-contained context: layers, bookmarks, settings</li>
-<li>Mark projects for offline availability</li>
-<li>Syncs across devices via IndexedDB + server</li>
+<li>Server-backed names, descriptions, memberships, and roles</li>
+<li>Workspace editors may create projects and become direct project owners</li>
+<li>Direct project membership can grant project-only access</li>
+<li>Map snapshots and overlay files remain browser-local</li>
+<li>Metadata reads and mutations work across signed-in sessions</li>
 <li>Create/switch/delete from header dropdown</li>
 </ul>
 </div>
 <div class="card">
 <h3>Sharing</h3>
 <ul>
-<li>Invite by email with role (owner/editor/viewer)</li>
-<li>Generate shareable join link</li>
-<li>Role-based access control per project</li>
-<li>Revoke access or change roles anytime</li>
+<li>Owners manage direct members, pending invite links, and deletion</li>
+<li>Invite links expire after seven days and grant editor or viewer access</li>
+<li>Only token hashes are stored server-side</li>
+<li>Owners add known users by JWT subject. There is no email delivery or user directory</li>
+<li>The server enforces roles. UI hiding is secondary</li>
 </ul>
 </div>
 <div class="card">
@@ -648,7 +648,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <span class="hl">│  GeoLang (Rust)   │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  GeoLang (Python)   │</span><br>
 <span class="hl">│  :3000              │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  :8080              │</span><br>
 <span class="hl">│                     │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│                     │</span><br>
-<span class="hl">│  • 3D Tiles server  │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • 36 spatial tools │</span><br>
+<span class="hl">│  • 3D Tiles server  │</span>               <span class="hl">│  • viewer tool subset │</span><br>
 <span class="hl">│  • Terrain mesh     │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • QGIS, GeoPandas  │</span><br>
 <span class="hl">│  • Point clouds     │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • OSM/Nominatim    │</span><br>
 <span class="hl">│  • Classification   │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • Isochrones       │</span><br>

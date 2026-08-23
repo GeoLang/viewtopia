@@ -3,6 +3,12 @@
 Self-hosted, open-source geospatial solutions for multiple industries.
 Each vertical leverages the same underlying platform with specialized panels.
 
+These pages describe integration targets, not complete products. The built-in
+plugins read configured datasets or demo data. They do not supply sensor,
+incident, fleet, parcel, or industry data. Live feeds require a matching
+backend. Panoptes has no published model weights, and Fluvius checkpointing and
+metrics are library-only.
+
 ## Environmental Monitoring
 
 ### Components
@@ -128,13 +134,13 @@ VITE_SENSOR_WS_URL=ws://localhost:3004/ws/sensors
 
 | Capability | Esri | Mapbox | GeoLang |
 |-----------|------|--------|-----------|
-| Environmental monitoring | ✅ | ❌ | ✅ |
-| Construction progress | ✅ | ❌ | ✅ |
-| Precision agriculture | ✅ | ❌ | ✅ |
-| Telecom planning | ✅ | ❌ | ✅ |
-| Emergency management | ✅ | ❌ | ✅ |
-| Fleet/logistics | ✅ | ✅ | ✅ |
-| Real estate | ✅ | ❌ | ✅ |
+| Environmental monitoring | ✅ | ❌ | partial |
+| Construction progress | ✅ | ❌ | partial |
+| Precision agriculture | ✅ | ❌ | partial |
+| Telecom planning | ✅ | ❌ | partial |
+| Emergency management | ✅ | ❌ | partial |
+| Fleet/logistics | ✅ | ✅ | partial |
+| Real estate | ✅ | ❌ | partial |
 | Self-hosted | ❌ | ❌ | ✅ |
 | No per-seat licensing | ❌ | ❌ | ✅ |
 | Open source | ❌ | partial | ✅ |

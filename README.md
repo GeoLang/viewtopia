@@ -7,6 +7,24 @@
 
 ---
 
+## Status
+
+The viewer, local raster and geometry tools, DuckDB SQL, notebooks, 20 built-in
+plugins, IndexedDB stores, and Agora collaboration paths are implemented.
+Project and workspace metadata is server-backed through authenticated `/api/v1`
+calls. Several surfaces are local-only or depend on configured services:
+
+- Ptolemy stores workspace and project names, descriptions, memberships, roles,
+  and expiring invitation records. ViewTopia does not write this metadata or
+  invitations to IndexedDB.
+- Dashboard definitions are stored in localStorage only.
+- Conflict merge code exists, but the resolver is not mounted and the platform
+  sync path does not queue the feature operations it expects.
+- Space-Time Analysis buttons are present but have no handlers.
+- LiveKit voice and video require a configured URL and a token.
+- Vertical plugins read configured service datasets. They do not provide those
+  datasets.
+
 ## Features
 
 ### Viewers
@@ -24,14 +42,14 @@
 | **Natural language queries** | "Fly to London and classify the point cloud" |
 | **30+ commands** | Measurement, routing, styling, analysis — all voice-driven |
 | **Session persistence** | Chat history saved and replayable |
-| **GeoLang agent (36 tools)** | Spatial reasoning backend: `sql_query` (DuckDB), `ptolemy_query`, `list_tilesets`, routing, QGIS (321 algorithms) |
+| **GeoLang agent** | Spatial reasoning backend. The API advertises 39 tools, and the viewer uses a subset including `sql_query`, `ptolemy_query`, `list_tilesets`, routing, and QGIS algorithms |
 
 ### Analysis Tools
 | Feature | Description |
 |---------|-------------|
 | **Measurement** | Distance, area, and elevation measurement |
 | **Terrain Profile** | Cross-section elevation profiles |
-| **Shadow Analysis** | Time-of-day shadow simulation |
+| **Shadow Analysis** | Cesium shadow display with time controls. This is not a sun-position analysis engine |
 | **Viewshed** | Line-of-sight visibility analysis |
 | **Routing** | itinera point-to-point directions (public OSRM demo fallback) |
 | **Travel Time** | itinera service-area bands from a point, and OD matrices between two point layers |
@@ -52,21 +70,21 @@ The Analysis tab draws seven buttons with no handlers. Colocation, pattern-of-li
 ### Plugin System
 | Feature | Description |
 |---------|-------------|
-| **Auto-discovery** | Drop a folder in `src/plugins/` — automatically loaded |
+| **Auto-discovery** | Build-time discovery of folders in `src/plugins/`, followed by runtime loading |
 | **Plugin SDK** | Full context: map control, store access, API proxy, settings |
 | **Settings UI** | Each plugin declares settings schema, rendered in Settings panel |
 | **20 built-in plugins** | Industry verticals + QGIS-equivalent tools (see below) |
-| **Hot reload** | Vite HMR — edit a plugin, see changes instantly |
+| **Hot reload** | Vite HMR during development |
 
 ### Portal & Content Management
 | Feature | Description |
 |---------|-------------|
 | **Item Catalog** | Searchable inventory of maps, layers, datasets, stories, and apps |
-| **Sharing Model** | Private / organization / public sharing levels |
+| **Sharing Model** | Portal items have private, organization, and public levels. Project and workspace metadata uses authenticated `/api/v1` calls |
 | **Portal API** | REST-backed item CRUD with offline localStorage fallback |
 | **Dashboard Builder** | Configurable widget-based dashboards (map, chart, indicator, gauge, list, rich text) |
 | **Dashboard Grid** | CSS grid layout with per-widget positioning |
-| **Save/Load** | Persist dashboard configurations to localStorage or API |
+| **Save/Load** | Persist dashboard configurations to localStorage |
 
 ### Industry Verticals (Plugins)
 | Plugin | Description |
@@ -141,25 +159,25 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 ### Offline-First
 | Feature | Description |
 |---------|-------------|
-| **Local-first storage** | All data in IndexedDB — works without network |
-| **Operation queue** | Mutations queued locally, synced to server when online |
-| **Auto-sync** | Reconnects and pushes pending changes automatically |
+| **Local-first storage** | Offline browser state uses IndexedDB and localStorage. Not all data is available without network |
+| **Operation queue** | Client mutations can be queued locally. Each backend path requires a matching server API |
+| **Auto-sync** | Attempts to push queued operations when the browser reconnects |
 | **API response cache** | GET responses cached with TTL for offline fallback |
 | **Sync indicator** | Real-time UI showing pending/synced/offline status |
-| **Three-way merge** | Conflict resolution: auto-merge when possible, UI for true conflicts |
-| **Column-level resolution** | Different-property changes merge automatically (like git) |
+| **Three-way merge** | Merge code exists, but the resolver UI is not mounted and the expected feature sync operations are not queued |
+| **Column-level resolution** | The merge function can resolve different-property changes when called. No mounted conflict flow uses it |
 
 ### Projects & Workspaces
 | Feature | Description |
 |---------|-------------|
-| **Workspaces** | Team-level containers with shared branding and settings |
-| **Projects** | Self-contained contexts — layers, bookmarks, settings, offline scope |
-| **Share by email** | Invite collaborators with role (owner/editor/viewer) |
-| **Share by link** | Generate token-based join URLs |
-| **Role-based access** | Owner, Editor, Viewer permissions per project/workspace |
+| **Workspaces** | Server-backed names, descriptions, memberships, and roles for groups of projects |
+| **Projects** | Server-backed names, descriptions, and roles with browser-local map snapshots |
+| **Share by user** | Owners add known users by JWT subject with direct member roles |
+| **Share by link** | Owners create expiring invite links for editor or viewer access. Links expire after seven days and store only token hashes server-side |
+| **Role-based access** | Workspace access is inherited by projects. Direct project membership can grant project-only access, and the highest effective role is returned |
 | **Project switcher** | Header dropdown to create/switch/manage projects |
-| **Offline scope** | Mark projects for offline availability — caches only that project's data |
-| **Cross-device** | Projects sync via IndexedDB + server, available on any device |
+| **Offline scope** | Map snapshots and overlay files are browser-local. Project data sync is not implemented |
+| **Cross-device** | Project and workspace metadata reads and mutations are server-backed. Map snapshots and overlay files remain browser-local |
 
 ### Raster Analysis
 | Feature | Description |
@@ -200,7 +218,7 @@ inputs.
 | **Run All / Run Up To** | Execute notebook sequentially or partially |
 | **Replay** | Animated step-by-step workflow replay |
 | **Outputs** | Text, JSON, images, errors displayed below cells |
-| **Offline** | Notebooks stored in IndexedDB, work without internet |
+| **Offline** | Notebook data is stored in IndexedDB. Python and remote-backed cells still need their services |
 | **Project-scoped** | Organize notebooks within projects |
 
 ### Collaboration
@@ -209,7 +227,7 @@ inputs.
 | **Room-based sessions** | Join a named room — all participants see each other |
 | **Presence** | Online user list with coloured indicators |
 | **Chat** | Real-time text messaging within the room |
-| **Voice & Video** | LiveKit WebRTC — mic, camera, and screen share |
+| **Voice & Video** | Optional LiveKit WebRTC for mic, camera, and screen share. A URL and token are required |
 | **Backend** | Connects to tiletopia's `/api/v1/realtime/{room}` ephemeral relay |
 | **Cursors and camera-follow** | Not here: start a live session, then click a peer avatar in the header |
 
@@ -715,7 +733,7 @@ scripts/clone-geolang.sh  [DIR]   # macOS/Linux/Git-Bash
 
 - **Frontend:** Vite, React + Mantine UI, CesiumJS, deck.gl, MapLibre GL, Leaflet, Apache Arrow
 - **Backend:** [GeoLang](https://github.com/GeoLang/tiletopia) (Rust) + [GeoLang](https://github.com/GeoLang/geolang) (Python)
-- **AI:** sibyl agent loop (Rust) + spatial tools, 36 tools
+- **AI:** sibyl agent loop (Rust) plus the viewer's spatial tool subset
 - **Analysis:** space-time entity tracks and colocation in the Analysis tab, plus the charts and SQL workspace
 - **Deploy:** Docker Compose, Helm, Terraform
 

@@ -1,12 +1,14 @@
 import { useEffect } from 'react';
 import { notifications } from '@mantine/notifications';
+import { useAuthStore } from '../features/auth/store';
 import { joinProjectFromToken, PROJECT_INVITE_PARAM } from './sharing';
 
-/** The invite row has to already be in this browser's IndexedDB. */
 export function useJoinProjectFromLink(): void {
+  const signedIn = useAuthStore((state) => state.loggedIn);
+
   useEffect(() => {
     const token = new URLSearchParams(location.search).get(PROJECT_INVITE_PARAM);
-    if (!token) return;
+    if (!token || !signedIn) return;
     joinProjectFromToken(token).catch((failure: unknown) => {
       notifications.show({
         title: 'Invite link failed',
@@ -14,5 +16,5 @@ export function useJoinProjectFromLink(): void {
         color: 'red',
       });
     });
-  }, []);
+  }, [signedIn]);
 }

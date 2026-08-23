@@ -2,11 +2,13 @@
 
 ## Motivation
 
-GeoLibre (https://geolibre.app/) ships an in-browser DuckDB Spatial workbench as a headline feature. ViewTopia already scaffolds a `data.query(sql)` runtime method ([src/notebooks/runtime.ts:21-24](../src/notebooks/runtime.ts#L21-L24)) but has no implementation behind it. This doc lays out how we close that gap and go further: SQL becomes a first-class surface usable from notebooks, the standalone workbench, and the AI agent.
+ViewTopia has an in-browser DuckDB Spatial worker, SQL notebook cells, a map
+bridge, and an agent command. This document records the implemented path and
+the remaining optional work.
 
 ## Why it's a fit, not a graft
 
-- `runtime.data.query(sql)` is already declared — interface exists, body is missing.
+- `runtime.data.query(sql)` calls the DuckDB worker.
 - `apache-arrow` is already a dependency. DuckDB-WASM returns Arrow natively, so no new transitive cost.
 - `idb` is already wired for IndexedDB persistence.
 - The notebook system ([src/notebooks/](../src/notebooks/)) already has cell types, an execution model, and an output renderer — adding a `'sql'` cell is the path of least resistance.
@@ -20,9 +22,9 @@ GeoLibre exposes DuckDB as a generic SQL pad. ViewTopia can do better:
 
 These two make DuckDB a force multiplier rather than a side panel.
 
-## Scope (in order)
+## Implemented scope
 
-### Phase 1 — foundation
+### Phase 1: foundation
 1. Add `@duckdb/duckdb-wasm` dependency.
 2. New module `src/duckdb/`:
    - `index.ts` — public API: `getDb()`, `query(sql)`, `attachLayer(layerId)`, `close()`.
@@ -31,16 +33,16 @@ These two make DuckDB a force multiplier rather than a side panel.
    - `spatial.ts` — ensures `INSTALL spatial; LOAD spatial;` runs once per connection.
 3. Wire `runtime.data.query()` in [runtime.ts](../src/notebooks/runtime.ts) to call into the module.
 
-### Phase 2 — notebook SQL cells
+### Phase 2: notebook SQL cells
 4. Add `'sql'` to `CellType` in [types.ts](../src/notebooks/types.ts).
 5. Add `executeSqlCell()` in `runtime.ts`.
 6. Render Arrow result tables in [NotebookPanel.tsx](../src/notebooks/NotebookPanel.tsx) using the existing data-table component.
 
-### Phase 3 — map bridge
+### Phase 3: map bridge
 7. `map.addLayerFromQuery(sql, options)` runtime helper. Detect geometry columns (WKB/WKT or lon/lat pairs).
 8. "Show on map" button on SQL cell results when a geometry column is detected.
 
-### Phase 4 — agent integration ✓
+### Phase 4: agent integration
 9. Registered `sql_query` viewer command in [src/viewer-commands.js](../src/viewer-commands.js). The GeoLang agent emits this over its SSE `viewer_cmd` channel.
 
 **Protocol — `sql_query` viewer command**
@@ -68,7 +70,7 @@ Frontend behaviour:
 
 Server-side note: the GeoLang agent needs a `sql_query` tool that returns this command. Round-tripping result rows back to the agent for follow-up reasoning is not yet implemented — the agent would need to either re-emit a refined SQL or call a new HTTP endpoint that reads `window.__viewtopiaSqlResults`. Defer until the use case demands it.
 
-### Phase 5 — standalone workbench panel (optional)
+### Remaining optional work: standalone workbench panel
 10. Panel under panel-manager mirroring GeoLibre's SQL pad. Shares the same DuckDB instance as the notebook.
 
 ## Architecture
@@ -111,4 +113,5 @@ src/duckdb/
 
 ## Effort
 
-Phases 1–3 are roughly 2–4 days of focused work. Phase 4 depends on the agent's tool-registration shape. Phase 5 is small once 1–3 land.
+The standalone workbench panel is optional. Returning SQL result rows to the
+agent for follow-up reasoning is also not implemented.

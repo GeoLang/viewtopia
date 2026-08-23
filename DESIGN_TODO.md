@@ -31,6 +31,192 @@ ptolemy Features Part 2, nubis PMF) closed 2026-08-21. Nothing is queued here.
 The next pick is an owner call on the **Delete, do not wire** list below, one
 module at a time, or a hosting decision under **Before any public deploy**.
 
+## Cross-repository audit, 2026-08-22
+
+These are verified advertised gaps found by reading every repository README,
+`docs/index.html` when present, other Markdown documents, and the referenced
+source paths. Existing entries below remain the detailed records for TileTopia,
+ViewTopia, Ptolemy, Jung, TerraVista, Panoptes, and Geoplumb.
+
+- [ ] **Collecta**: no first-party field client, attachment synchronization,
+      Ptolemy integration, recursive repeat validation, or local expression
+      evaluation. Conditions pass through to ODK Collect only.
+
+- [ ] **Fenestra**: capabilities documents are not client-consumable. SLD
+      filters, scale bounds, text, and later symbolizers are not applied. The
+      OGC API Features item route, OpenAPI output, links, MVT endpoint, and the
+      Inspire, geofence, cascade, and printing crates are not complete server
+      features.
+
+- [ ] **Fluvius**: checkpointing and Prometheus metrics are library-only. The
+      topology runner does not use the state store, expose metrics, or retain
+      window aggregation state. WebSocket sources bind listeners instead of
+      connecting to remote feeds, and MQTT authentication is not wired into the
+      running topology.
+
+- [ ] **Geodukt**: `spatial_join` is unavailable. The plugin crate is unused,
+      its round trip does not carry geometry, and the documented Geokode and
+      Jung cross-service wiring is absent.
+
+- [ ] **GeoGit**: Kart repository interoperability, schema evolution,
+      feature-aware three-way merge, and a PostGIS working copy are not
+      implemented. GeoJSON export does not carry feature geometry.
+
+- [ ] **GeoLang**: plan approval is persona text only. `run_workflow` does not
+      require a previously approved plan. The API also advertises tools whose
+      optional geospatial dependencies are absent from the client requirements,
+      so those tools fail when called in that environment.
+
+- [ ] **GeoPlumb**: the server accepts only a small subset of the library
+      operators. Raster and vector sources, focal and map algebra, reclassify,
+      quality masking, mosaics, zonal statistics, time series, tensor paths,
+      and the GeoTIFF encoder are not reachable from a layer file.
+
+- [ ] **Interiora**: no BLE or WiFi signal acquisition is implemented. The
+      positioning result is k-nearest-neighbor over caller-provided signals,
+      and the advertised accuracy is not a validated bound.
+
+- [ ] **Itinera**: turn restrictions are parsed and stored but not enforced by
+      routing. Contraction-hierarchy query time is a target, not a benchmark,
+      and the map-matching module is library-only with no HTTP endpoint.
+
+- [ ] **Panoptes**: no trained model weights ship or are published. COG pixel
+      decoding, georeferencing, satellite preprocessing, object-detection NMS,
+      and several tiling and visualization paths are unreachable from the CLI.
+
+- [ ] **Projicio**: twelve EPSG entries still have no usable projection method,
+      and other CRS transforms still require caller-supplied datum grids. The
+      native Cassini-Soldner, Hotine Oblique Mercator, American Polyconic, Equal
+      Earth, and Laborde paths are implemented. The stale documentation claim
+      that they were fallback gaps was corrected in the README and landing page.
+
+- [ ] **Terrano**: the CLI is a synthetic DEM demonstration. It does not read
+      or write raster files.
+
+- [ ] **ViewTopia**: project and workspace metadata is server-backed through
+      authenticated `/api/v1` calls, with server-enforced roles and expiring
+      invite links. Per-project map snapshots and overlay files remain
+      browser-local. Project roles are not yet propagated to Ptolemy dataset
+      grants or Agora document members. Dashboards are localStorage-only. The
+      conflict resolver is not mounted, Space-Time Analysis buttons have no
+      handlers, and vertical plugins depend on configured datasets. LiveKit
+      requires an external URL and token.
+
+## P0 path to the intended product, 2026-08-22
+
+P0 means a task blocks the stated product path: a team opens one hosted map,
+loads real data, edits it with permission, asks the agent to analyze it, and
+sees the result. Each task needs source, integration, and failure-path tests.
+
+1. **Make the hosted stack start from the published images.**
+   Repositories: `infrastructure`, `geolang`, `viewtopia`, `tiletopia`,
+   `ptolemy`, `agora`.
+   - [x] Package GeoLang `src/` in one image for the API and executor. The
+     deny-first build context is 528 KB. A local image build, both imports, and
+     both `/health` routes passed without a bind mount on 2026-08-22.
+   - [x] Give the API and executor one UID 1000-owned Natural Earth EFS access
+     point at `/app/geolang/natural_earth`. Local platform Compose uses the same
+     shared-volume contract without a source bind. A real UID 1000 download,
+     cross-container geocode, and `/geojson` response passed on 2026-08-22.
+   - [x] Add one publisher for every Terraform ECR repository. It rejects an
+     existing tag before any build, builds all enabled Linux x86_64 images
+     before the first push, handles the geoplumb wrapper, and shares the
+     GeoLang API image with the executor. Its command tests passed on
+     2026-08-22.
+   - [ ] Run `infrastructure/scripts/publish-images.sh` against the applied ECR
+     repositories with one new `image_tag`. No image was pushed during the
+     repository audit.
+   - [x] Add a stdin-only writer for `platform_jwt`, `geolang_executor`,
+     `llm_api_key`, and `jupyter_token`. Values use a mode 600 temporary file
+     and never enter Terraform or the AWS CLI arguments. Command tests passed
+     on 2026-08-22.
+   - [x] Add a 15-minute database secret refresh job. It reads only the two
+     RDS-managed credentials, writes only the matching runtime URL secrets,
+     forces the matching ECS deployments, waits for stability, and restores
+     the previous secret version if the ECS update call fails. Seven focused
+     tests and Terraform validation passed on 2026-08-22.
+   - [ ] After the first AWS apply, populate the four operator-managed secrets,
+     confirm both database URL versions are created, force one RDS rotation,
+     and prove Ptolemy and Agora recover with healthy replacement tasks. No
+     secret value or AWS resource was changed during the repository audit.
+   - [ ] Stage the required EFS data and confirm startup migrations.
+   - [x] Make `/collecta` and `/collecta/*` return the hosted proxy's explicit
+     unavailable response. Both paths returned 501 in a real proxy container on
+     2026-08-22 instead of falling through to ViewTopia's HTML.
+   - [ ] Prove the public route set with service health checks and one
+     authenticated browser session.
+
+2. **Make project and workspace state server-backed.**
+   Repositories: `viewtopia`, `agora`, `ptolemy`.
+   - [x] Store workspace and project names, descriptions, memberships,
+     owner/editor/viewer roles, and expiring invitation records in Ptolemy.
+   - [x] Load and mutate workspace and project metadata from ViewTopia through
+     authenticated `/api/v1` calls. Keep project and workspace metadata out of
+     IndexedDB.
+   - [x] Allow any signed-in user to create a workspace and become owner. Allow
+     workspace editors to create projects and become direct project owners.
+     Inherit workspace access, allow project-only direct membership, and return
+     the highest effective role.
+   - [x] Enforce owner, editor, and viewer permissions on the server. Owners
+     manage direct members, pending invite links, and deletion. Editors update
+     metadata. Viewers read and switch only.
+   - [x] Add seven-day invite links that store only token hashes server-side and
+     grant editor or viewer access. Owners add known users by JWT subject. There
+     is no email delivery or user directory.
+   - [x] Pass the focused multi-user PostGIS test in Ptolemy. Pass ViewTopia's
+     18 focused tests, the full Vitest suite with 143 files and 1419 tests,
+     TypeScript, and changed-file lint.
+   - [ ] Propagate project roles to Ptolemy dataset grants.
+   - [ ] Propagate project roles to Agora document members.
+   - [ ] Run the two-browser live stack acceptance session for owner, editor,
+     and viewer behavior.
+
+3. **Complete one real shared editing path.**
+   Repositories: `viewtopia`, `ptolemy`, `geodukt`, `collecta`. Choose one
+   dataset format, import it, edit a feature, commit it, reload it from another
+   session, and show the change on the map. Add conflict handling for that path
+   or remove the conflict-resolution claims. Do not start with every import
+   format or every Ptolemy extension.
+
+4. **Make the advertised agent tool set truthful and runnable.**
+   Repositories: `geolang`, `sibyl`, `geodukt`, `viewtopia`. Either package the
+   dependencies required by every advertised tool or remove unavailable tools
+   from the manifest. Run every remaining tool through the real HTTP or MCP
+   path, record failures, and make workflow execution reject a manifest that
+   has not passed the selected approval path.
+
+5. **Make the core map data path reliable under service failure.**
+   Repositories: `viewtopia`, `ptolemy`, `tiletopia`, `fenestra`. Define which
+   service owns each layer type, return explicit errors when a backend is absent,
+   and prove load, refresh, and permission failure in the browser. Remove demo
+   payloads from routes that the viewer treats as authoritative data.
+
+6. **Choose and complete one live feed path.**
+   Repositories: `fluvius`, `agora`, `viewtopia`, with `collecta` if field data
+   is the source. The smallest useful target is one WebSocket feed that enters
+   the platform, is permission checked, appears in a shared layer, reconnects,
+   and records a clear offline state. Until that exists, keep fleet, sensor,
+   and incident pages labelled as configured integrations.
+
+7. **Close the routing correctness gap before presenting routes as authoritative.**
+   Repositories: `itinera`, `viewtopia`. Enforce parsed turn restrictions,
+   add route tests that would fail without them, and label or remove the
+   unbenchmarked contraction-hierarchy claim. The viewer must show whether it
+   received a real road route or a demo fallback.
+
+8. **Remove or finish the highest-risk facade routes.**
+   Repositories: `tiletopia`, `ptolemy`, `fenestra`. For each route exposed to
+   the viewer, choose a real implementation with an integration test or delete
+   the route and its documentation claim. Start with fabricated COG offsets,
+   hardcoded STAC results, synthetic elevation, fake API keys, dead Ptolemy
+   event delivery, and non-consumable Fenestra capabilities.
+
+9. **Make the release checks measure the product path.**
+   Repositories: all service repos plus `viewtopia`. Add one CI or harness job
+   that starts the minimum stack, imports a fixture, authenticates, edits a
+   feature, runs one agent tool, renders the result, and shuts the stack down.
+   Keep unit tests for library-only behavior separate from this acceptance path.
+
 ## Delete, do not wire
 
 A module is written, unit-tested, exported by a `pub mod` line, and never called
@@ -135,8 +321,9 @@ is parked with it, along with the hosted stack decisions, the database TLS
 operator steps, the CloudFront realtime test and geoplumb in-region serving.
 The executor precondition closed 2026-08-09, the tool-boundary token exchange
 closed 2026-08-12, and the 2026-08-13 terraform pass closed force_ssl, immutable
-tags, the agora and jupyter security group splits, and the ALB restriction. So
-the infrastructure is no longer the engineering blocker.
+tags, the agora and jupyter security group splits, and the ALB restriction. The
+Terraform definitions are present, but the image, data, secret, and first-apply
+work below still blocks a running hosted stack.
 
 What actually stands in the way, in order:
 
@@ -145,18 +332,14 @@ What actually stands in the way, in order:
    classifying GET as public is a genuine blocker for a public domain.
    Topology name-keyed reads and `GET /replication/peers` are now Admin.
    The other three are things you would regret later rather than at launch.
-3. **the mechanical apply blockers**, in infrastructure's README: the geolang
-   image must contain application source (its Dockerfile installs requirements
-   and never copies `src/`, because compose bind-mounts the repo in), every
-   enabled ECR image must be pushed under `image_tag`, EFS spatial and coverage
-   data staged, every secret container given a value including the two database
-   URLs with `sslmode=verify-full`, and DNS delegation plus ACM validation
-   completed when the platform profile uses `geolang.com`.
-   Two doc bugs to fix while in there: `README.md:210` still lists "must be
-   built with a sqlx TLS backend" as a blocker, which ptolemy and agora both
-   closed (each names `tls-rustls-ring`), and `modules/database/main.tf:154`
-   tells the operator to use `sslmode=require`, which `README.md:39` forbids and
-   which buys encryption with no authentication.
+3. **the mechanical apply blockers**, in infrastructure's README: every enabled
+   ECR image must be pushed under `image_tag`, required spatial and coverage
+   data must be staged, every secret container needs a value including the two
+   database URLs with `sslmode=verify-full`, and DNS delegation plus ACM
+   validation must complete when the platform profile uses `geolang.com`.
+   GeoLang source packaging, its shared Natural Earth path, and the stale SQLx
+   TLS documentation were corrected on 2026-08-22. The Natural Earth EFS access
+   point still needs data staged before the first hosted scale-up.
 4. **share-link policy**, not the links themselves. Share links are built, and
    have been since agora's first migration: create, revoke and resolve, a
    `view` or `edit` role per link, and `resolve_link` mints an anonymous guest
@@ -168,12 +351,12 @@ What actually stands in the way, in order:
    should hand an anonymous guest an `edit` role at all is a product decision
    nobody has made.
 
-Operator-facing errors, all still real:
+Operator-facing deployment gaps:
 
-- [ ] **RDS managed passwords rotate every seven days and nothing rewrites the URL
-      secrets**, so ptolemy and agora lose their databases roughly a week after
-      launch. Decide: disable rotation, read the managed secret directly, or run a
-      rotation-triggered job.
+- [x] **RDS managed passwords rotate every seven days.** A scheduled job now
+      rewrites the Ptolemy and Agora URL secrets within 15 minutes and replaces
+      their ECS tasks. The deployed rotation path still needs the live test in
+      P0 item 1.
 - [ ] **The first apply cannot complete on the platform profile.** The ALB
       security group needs the certificate, which needs ACM validation, which
       needs registrar delegation to a hosted zone the same apply creates. Real

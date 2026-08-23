@@ -116,17 +116,6 @@ function openDb(): Promise<IDBDatabase> {
         db.createObjectStore('cachedRegions', { keyPath: 'id' });
       }
 
-      // Projects
-      if (!db.objectStoreNames.contains('projects')) {
-        const store = db.createObjectStore('projects', { keyPath: 'id' });
-        store.createIndex('byWorkspace', 'workspaceId', { unique: false });
-      }
-
-      // Workspaces
-      if (!db.objectStoreNames.contains('workspaces')) {
-        db.createObjectStore('workspaces', { keyPath: 'id' });
-      }
-
       // Bitmaps behind the image overlays a project file names
       if (!db.objectStoreNames.contains('overlayImages')) {
         db.createObjectStore('overlayImages', { keyPath: 'id' });
@@ -137,11 +126,6 @@ function openDb(): Promise<IDBDatabase> {
         db.createObjectStore('projectMaps', { keyPath: 'id' });
       }
 
-      // Share invites
-      if (!db.objectStoreNames.contains('shareInvites')) {
-        const store = db.createObjectStore('shareInvites', { keyPath: 'id' });
-        store.createIndex('byTarget', ['targetType', 'targetId'], { unique: false });
-      }
     };
 
     req.onsuccess = () => {
@@ -408,9 +392,6 @@ export const cachedRegions = {
   remove: (id: string) => remove('cachedRegions', id),
 };
 
-// ─── Projects ────────────────────────────────────────────────────────
-
-import type { Project, Workspace, ShareInvite } from '../projects/types';
 import type { ViewtopiaProject } from '../features/project/projectFile';
 
 /**
@@ -426,58 +407,4 @@ export const projectMaps = {
   get: (id: string) => getById<ProjectMap>('projectMaps', id),
   put: (entry: ProjectMap) => put('projectMaps', entry),
   remove: (id: string) => remove('projectMaps', id),
-};
-
-export const projects = {
-  getAll: () => getAll<Project>('projects'),
-  get: (id: string) => getById<Project>('projects', id),
-  put: (project: Project) => put('projects', project),
-  remove: (id: string) => remove('projects', id),
-
-  async getByWorkspace(workspaceId: string): Promise<Project[]> {
-    const db = await openDb();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction('projects', 'readonly');
-      const store = tx.objectStore('projects');
-      const index = store.index('byWorkspace');
-      const req = index.getAll(workspaceId);
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
-  },
-};
-
-// ─── Workspaces ──────────────────────────────────────────────────────
-
-export const workspaces = {
-  getAll: () => getAll<Workspace>('workspaces'),
-  get: (id: string) => getById<Workspace>('workspaces', id),
-  put: (workspace: Workspace) => put('workspaces', workspace),
-  remove: (id: string) => remove('workspaces', id),
-};
-
-// ─── Share Invites ───────────────────────────────────────────────────
-
-export const shareInvites = {
-  getAll: () => getAll<ShareInvite>('shareInvites'),
-  get: (id: string) => getById<ShareInvite>('shareInvites', id),
-  put: (invite: ShareInvite) => put('shareInvites', invite),
-  remove: (id: string) => remove('shareInvites', id),
-
-  async getByTarget(targetType: 'project' | 'workspace', targetId: string): Promise<ShareInvite[]> {
-    const db = await openDb();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction('shareInvites', 'readonly');
-      const store = tx.objectStore('shareInvites');
-      const index = store.index('byTarget');
-      const req = index.getAll([targetType, targetId]);
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
-  },
-
-  async getByToken(token: string): Promise<ShareInvite | undefined> {
-    const invites = await getAll<ShareInvite>('shareInvites');
-    return invites.find((invite) => invite.token === token && !invite.acceptedAt);
-  },
 };

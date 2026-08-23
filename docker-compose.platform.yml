@@ -270,21 +270,42 @@ services:
   # TOML manifests to /validate and /run. Internal only, nothing else calls it,
   # so no published port. Port 8100 rather than geodukt's own 8080 default, which
   # is geolang's documented port.
-  # Manifest paths ("outputs/foo.gpkg") are relative to geolang's exec dir, so
-  # geodukt reads and writes through the same bind mount from the same cwd.
   # POST /run follows the shared platform secret like every other gated write,
   # so it needs an editor or admin token (platform-up.sh always generates the
   # secret). /validate and /operations are open either way, so headless planning
   # and the evals never need a token.
+  geolang-data-init:
+    build:
+      context: ../geolang
+      dockerfile: Dockerfile
+    image: geolang-platform:latest
+    user: "0:0"
+    environment:
+      DOCKER_UID: "${DOCKER_UID:-1000}"
+      DOCKER_GID: "${DOCKER_GID:-1000}"
+    volumes:
+      - geolang-outputs:/app/geolang/outputs
+      - geolang-user-data:/app/geolang/user_data
+      - geolang-live-data:/app/geolang/live_data
+      - geolang-natural-earth:/app/geolang/natural_earth
+    command:
+      - /bin/sh
+      - -ec
+      - >-
+        chown "$$DOCKER_UID:$$DOCKER_GID" /app/geolang/outputs
+        /app/geolang/user_data /app/geolang/live_data /app/geolang/natural_earth
+
   geodukt:
     build:
       context: ../geodukt
-    # the image's own user is uid 999, which cannot write the bind-mounted
-    # outputs/ owned by the host user, so every pipeline run fails at its sink.
-    # itinera solves the same problem by dropping privileges in its entrypoint.
     user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
     volumes:
-      - ../geolang:/app/geolang:z
+      - geolang-outputs:/app/geolang/outputs
+      - geolang-user-data:/app/geolang/user_data
+      - geolang-live-data:/app/geolang/live_data
+    depends_on:
+      geolang-data-init:
+        condition: service_completed_successfully
     working_dir: /app/geolang
     environment:
       PLATFORM_JWT_SECRET: ${PLATFORM_JWT_SECRET:-}
@@ -297,18 +318,21 @@ services:
   # PLATFORM_JWT_SECRET: a tool hands caller-written arguments to geopandas,
   # QGIS and DuckDB, and that secret signs a token for any user on any service.
   # So no signing secret, no service account, no model key (hence no env_file)
-  # and no published port. It shares geolang-api's bind mount because a tool
-  # writes the output files the API then serves.
+  # and no published port. Natural Earth reference data is shared with the API.
   geolang-executor:
     build:
       context: ../geolang
       dockerfile: Dockerfile
     image: geolang-platform:latest
-    # the bind-mounted outputs/ is owned by the host user, and root-written
-    # files there would be undeletable from outside the container
     user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
     volumes:
-      - ../geolang:/app/geolang:z
+      - geolang-outputs:/app/geolang/outputs
+      - geolang-user-data:/app/geolang/user_data
+      - geolang-live-data:/app/geolang/live_data
+      - geolang-natural-earth:/app/geolang/natural_earth
+    depends_on:
+      geolang-data-init:
+        condition: service_completed_successfully
     environment:
       TOOL_EXEC_DIR: "/app/geolang"
       GEOLANG_EXECUTOR_SECRET: ${GEOLANG_EXECUTOR_SECRET:-}
@@ -354,8 +378,10 @@ services:
       - "8080:8080"
     volumes:
       - geolang-cache:/app/cache
-      # geolang runs its tools from a bind-mounted repo root (see geolang/docker-compose.yml)
-      - ../geolang:/app/geolang:z
+      - geolang-outputs:/app/geolang/outputs
+      - geolang-user-data:/app/geolang/user_data
+      - geolang-live-data:/app/geolang/live_data
+      - geolang-natural-earth:/app/geolang/natural_earth
     # optional: panels/load CI don't check out geolang, and compose must still parse
     env_file:
       - path: ../geolang/.env
@@ -374,9 +400,14 @@ services:
       GEOLANG_EXECUTOR_URL: http://geolang-executor:8081
       GEOLANG_EXECUTOR_SECRET: ${GEOLANG_EXECUTOR_SECRET:-}
     depends_on:
-      - sibyl
-      - geodukt
-      - geolang-executor
+      geolang-data-init:
+        condition: service_completed_successfully
+      sibyl:
+        condition: service_started
+      geodukt:
+        condition: service_started
+      geolang-executor:
+        condition: service_started
     # nginx routes /agent/ here, and the viewer probes /agent/health on every page
     # load, so a stack without this container answers that probe with a 502. The
     # check gives callers (CI wait loops, compose ps) a way to wait for it.
@@ -441,6 +472,10 @@ volumes:
   pgdata:
   tiletopia-data:
   geolang-cache:
+  geolang-outputs:
+  geolang-user-data:
+  geolang-live-data:
+  geolang-natural-earth:
   sibyl-data:
   interiora-data:
   geoplumb-cache:

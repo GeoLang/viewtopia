@@ -2,8 +2,13 @@
  * Workspaces store — manages workspace CRUD and active workspace.
  */
 import { create } from 'zustand';
-import { workspaces as workspacesDb } from '../offline/db';
-import type { Workspace, WorkspaceSettings } from './types';
+import { useAuthStore } from '../features/auth/store';
+import { createWorkspace, deleteWorkspace, listWorkspaces, updateWorkspace } from './api';
+import type { Workspace } from './types';
+
+function currentSession(token: string | null): boolean {
+  return token !== null && useAuthStore.getState().token === token;
+}
 
 export interface WorkspacesState {
   items: Workspace[];
@@ -14,8 +19,8 @@ export interface WorkspacesState {
 export interface WorkspacesActions {
   load: () => Promise<void>;
   setActive: (workspaceId: string | null) => void;
-  create: (params: { name: string; description?: string; settings?: Partial<WorkspaceSettings> }) => Promise<Workspace>;
-  update: (id: string, changes: Partial<Omit<Workspace, 'id' | 'createdAt' | 'createdBy'>>) => Promise<void>;
+  create: (params: { name: string; description?: string }) => Promise<Workspace>;
+  update: (id: string, changes: { name: string; description?: string }) => Promise<void>;
   remove: (id: string) => Promise<void>;
   getActive: () => Workspace | null;
 }
@@ -26,16 +31,24 @@ export const useWorkspacesStore = create<WorkspacesState & WorkspacesActions>((s
   loading: false,
 
   async load() {
+    const token = useAuthStore.getState().token;
+    if (!token) {
+      set({ items: [], activeWorkspaceId: null, loading: false });
+      return;
+    }
     set({ loading: true });
-    const items = await workspacesDb.getAll();
-    set({ items, loading: false });
-
-    // Restore last active workspace
-    const savedId = localStorage.getItem('viewtopia-active-workspace');
-    if (savedId && items.some((w) => w.id === savedId)) {
-      set({ activeWorkspaceId: savedId });
-    } else if (items.length > 0) {
-      set({ activeWorkspaceId: items[0].id });
+    try {
+      const items = await listWorkspaces();
+      if (!currentSession(token)) return;
+      const savedId = localStorage.getItem('viewtopia-active-workspace');
+      set({
+        items,
+        activeWorkspaceId: savedId && items.some((workspace) => workspace.id === savedId)
+          ? savedId
+          : items[0]?.id ?? null,
+      });
+    } finally {
+      if (currentSession(token)) set({ loading: false });
     }
   },
 
@@ -49,34 +62,24 @@ export const useWorkspacesStore = create<WorkspacesState & WorkspacesActions>((s
   },
 
   async create(params) {
-    const now = Date.now();
-    const workspace: Workspace = {
-      id: crypto.randomUUID(),
-      name: params.name,
-      description: params.description,
-      settings: { ...params.settings },
-      createdAt: now,
-      updatedAt: now,
-      createdBy: 'local-user',
-      members: [{ userId: 'local-user', email: '', role: 'owner', joinedAt: now }],
-    };
-
-    await workspacesDb.put(workspace);
-    set((s) => ({ items: [...s.items, workspace] }));
+    const token = useAuthStore.getState().token;
+    const workspace = await createWorkspace(params);
+    if (currentSession(token)) set((s) => ({ items: [...s.items, workspace] }));
     return workspace;
   },
 
   async update(id, changes) {
-    const existing = get().items.find((w) => w.id === id);
-    if (!existing) return;
-
-    const updated: Workspace = { ...existing, ...changes, updatedAt: Date.now() };
-    await workspacesDb.put(updated);
-    set((s) => ({ items: s.items.map((w) => (w.id === id ? updated : w)) }));
+    const token = useAuthStore.getState().token;
+    const updated = await updateWorkspace(id, changes);
+    if (currentSession(token)) {
+      set((s) => ({ items: s.items.map((w) => (w.id === id ? updated : w)) }));
+    }
   },
 
   async remove(id) {
-    await workspacesDb.remove(id);
+    const token = useAuthStore.getState().token;
+    await deleteWorkspace(id);
+    if (!currentSession(token)) return;
     set((s) => ({
       items: s.items.filter((w) => w.id !== id),
       activeWorkspaceId: s.activeWorkspaceId === id ? null : s.activeWorkspaceId,

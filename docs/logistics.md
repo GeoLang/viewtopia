@@ -1,7 +1,9 @@
 # GeoLang Logistics MVP
 
-A self-hosted fleet management and delivery optimization platform.
-Track vehicles in real-time, optimize multi-stop routes, set up geofences, and manage deliveries — no per-vehicle SaaS fees.
+A self-hosted delivery workflow prototype. The delivery panel can optimize a
+multi-stop order and draw a straight-line sequence. The fleet panel has no
+shipped live feed, and geofences and live event streams require configured
+backend paths.
 
 ## Architecture
 
@@ -58,7 +60,8 @@ pnpm install && pnpm run dev
 ## Features
 
 ### Fleet Tracking (FleetPanel)
-- **Real-time GPS positions** via WebSocket
+- **GPS positions** can be displayed when a compatible feed is configured. No
+  fleet feed is shipped
 - Vehicle status: active, idle, offline, alert
 - Search/filter by name, driver, status
 - Click to fly to vehicle on map
@@ -79,11 +82,11 @@ pnpm install && pnpm run dev
 - Return-to-depot option for round trips
 - Handles 100+ stops efficiently
 
-### Geofencing (GeofencePanel — existing)
+### Geofencing (GeofencePanel)
 - Circle or polygon geofences
 - Enter/exit alerts
 - Warehouse zones, delivery areas, restricted zones
-- Real-time event stream via WebSocket
+- Real-time event stream requires a configured backend
 
 ### Additional Tools (existing)
 - **RoutingPanel** — turn-by-turn directions
@@ -102,7 +105,8 @@ pnpm install && pnpm run dev
 
 ## GPS Tracker Integration
 
-The fleet WebSocket accepts position updates in this format:
+No fleet WebSocket endpoint is supplied by ViewTopia. A compatible external feed
+would need to provide position updates in this format:
 
 ```json
 {
@@ -125,7 +129,7 @@ Compatible with:
 
 | Feature | Esri Fleet | HERE Fleet | Samsara | GeoLang |
 |---------|-----------|-----------|---------|-----------|
-| Real-time tracking | ✅ | ✅ | ✅ | ✅ |
+| Real-time tracking | ✅ | ✅ | ✅ | partial |
 | Route optimization | ✅ | ✅ | ✅ | ✅ |
 | Geofencing | ✅ | ✅ | ✅ | ✅ |
 | Multi-stop delivery | ✅ | ✅ | ✅ | ✅ |
@@ -133,8 +137,8 @@ Compatible with:
 | Self-hosted | ❌ | ❌ | ❌ | ✅ |
 | No per-vehicle fee | ❌ | ❌ | ❌ | ✅ |
 | Open source | ❌ | ❌ | ❌ | ✅ |
-| Custom GPS hardware | ⚠️ | ⚠️ | ✅ | ✅ |
-| Traffic overlay | ✅ | ✅ | ✅ | ✅ |
+| Custom GPS hardware | ⚠️ | ⚠️ | ✅ | partial |
+| Traffic overlay | ✅ | ✅ | ✅ | partial |
 | Address validation | ✅ | ✅ | ❌ | ✅ |
 | 3D visualization | ✅ | ❌ | ❌ | ✅ |
 

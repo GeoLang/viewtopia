@@ -2,16 +2,22 @@
  * Projects store — manages the active project and CRUD operations.
  */
 import { create } from 'zustand';
-import { projects as projectsDb, projectMaps } from '../offline/db';
+import { projectMaps } from '../offline/db';
 import {
   applyProject,
   serializeProject,
   storeOverlayImages,
 } from '../features/project/projectFile';
-import type { Project, ProjectSettings } from './types';
+import { useAuthStore } from '../features/auth/store';
+import { createProject, deleteProject, listProjects, listWorkspaceProjects, updateProject } from './api';
+import type { Project } from './types';
+
+function currentSession(token: string | null): boolean {
+  return token !== null && useAuthStore.getState().token === token;
+}
 
 export interface ProjectsState {
-  /** All projects loaded from IndexedDB */
+  /** All projects visible to the authenticated user */
   items: Project[];
   /** Currently active project ID */
   activeProjectId: string | null;
@@ -20,7 +26,7 @@ export interface ProjectsState {
 }
 
 export interface ProjectsActions {
-  /** Load all projects from IndexedDB */
+  /** Load all accessible projects */
   load: () => Promise<void>;
   /** Load projects for a specific workspace */
   loadByWorkspace: (workspaceId: string) => Promise<void>;
@@ -33,10 +39,9 @@ export interface ProjectsActions {
     workspaceId: string;
     name: string;
     description?: string;
-    settings?: Partial<ProjectSettings>;
   }) => Promise<Project>;
   /** Update an existing project */
-  update: (id: string, changes: Partial<Omit<Project, 'id' | 'createdAt' | 'createdBy'>>) => Promise<void>;
+  update: (id: string, changes: { name: string; description?: string }) => Promise<void>;
   /** Delete a project */
   remove: (id: string) => Promise<void>;
   /** Get the active project */
@@ -49,15 +54,39 @@ export const useProjectsStore = create<ProjectsState & ProjectsActions>((set, ge
   loading: false,
 
   async load() {
+    const token = useAuthStore.getState().token;
+    if (!token) {
+      set({ items: [], activeProjectId: null, loading: false });
+      return;
+    }
     set({ loading: true });
-    const items = await projectsDb.getAll();
-    set({ items, loading: false });
+    try {
+      const items = await listProjects();
+      if (!currentSession(token)) return;
+      const savedId = localStorage.getItem('viewtopia-active-project');
+      set({
+        items,
+        activeProjectId: savedId && items.some((project) => project.id === savedId) ? savedId : items[0]?.id ?? null,
+      });
+    } finally {
+      if (currentSession(token)) set({ loading: false });
+    }
   },
 
   async loadByWorkspace(workspaceId: string) {
+    const token = useAuthStore.getState().token;
+    if (!token) {
+      set({ items: [], activeProjectId: null, loading: false });
+      return;
+    }
     set({ loading: true });
-    const items = await projectsDb.getByWorkspace(workspaceId);
-    set({ items, loading: false });
+    try {
+      const items = await listWorkspaceProjects(workspaceId);
+      if (!currentSession(token)) return;
+      set({ items });
+    } finally {
+      if (currentSession(token)) set({ loading: false });
+    }
   },
 
   setActive(projectId: string | null) {
@@ -87,39 +116,25 @@ export const useProjectsStore = create<ProjectsState & ProjectsActions>((set, ge
   },
 
   async create(params) {
-    const now = Date.now();
-    const project: Project = {
-      id: crypto.randomUUID(),
-      workspaceId: params.workspaceId,
-      name: params.name,
-      description: params.description,
-      settings: {
-        ...params.settings,
-      },
-      createdAt: now,
-      updatedAt: now,
-      createdBy: 'local-user',
-      offlineEnabled: false,
-      members: [{ userId: 'local-user', email: '', role: 'owner', joinedAt: now }],
-    };
-
-    await projectsDb.put(project);
-    set((s) => ({ items: [...s.items, project] }));
+    const token = useAuthStore.getState().token;
+    const project = await createProject(params.workspaceId, params);
+    if (currentSession(token)) set((s) => ({ items: [...s.items, project] }));
     return project;
   },
 
   async update(id, changes) {
-    const existing = get().items.find((p) => p.id === id);
-    if (!existing) return;
-
-    const updated: Project = { ...existing, ...changes, updatedAt: Date.now() };
-    await projectsDb.put(updated);
-    set((s) => ({ items: s.items.map((p) => (p.id === id ? updated : p)) }));
+    const token = useAuthStore.getState().token;
+    const updated = await updateProject(id, changes);
+    if (currentSession(token)) {
+      set((s) => ({ items: s.items.map((p) => (p.id === id ? updated : p)) }));
+    }
   },
 
   async remove(id) {
-    await projectsDb.remove(id);
+    const token = useAuthStore.getState().token;
+    await deleteProject(id);
     await projectMaps.remove(id);
+    if (!currentSession(token)) return;
     set((s) => ({
       items: s.items.filter((p) => p.id !== id),
       activeProjectId: s.activeProjectId === id ? null : s.activeProjectId,

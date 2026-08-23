@@ -1,192 +1,135 @@
-/**
- * Sharing module — invite users to projects/workspaces, generate share links.
- *
- * These invites stay client side, for the local projects in IndexedDB. A live
- * map document shares through agora instead, see src/live.
- */
-import { shareInvites as invitesDb } from '../offline/db';
-import type { ShareInvite, Role, Member } from './types';
+import {
+  acceptInvitation,
+  createInvitation,
+  deleteInvitation,
+  deleteMember,
+  listInvitations,
+  listMembers,
+  setMember,
+} from './api';
+import { useAuthStore } from '../features/auth/store';
 import { useProjectsStore } from './projectsStore';
+import type { Member, Role, ShareInvite } from './types';
 import { useWorkspacesStore } from './workspacesStore';
 
 export const PROJECT_INVITE_PARAM = 'invite';
+export const SHARE_LINK_EXPIRY_DAYS = 7;
+const SHARE_LINK_EXPIRY_MS = SHARE_LINK_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+
+type TargetType = 'project' | 'workspace';
+type InvitationRole = Exclude<Role, 'owner'>;
 
 export function projectInviteUrl(token: string): string {
   return `${location.origin}/?${PROJECT_INVITE_PARAM}=${encodeURIComponent(token)}`;
 }
 
-/**
- * Invite a user by email to a project or workspace.
- */
-export async function inviteByEmail(params: {
-  targetType: 'project' | 'workspace';
-  targetId: string;
-  email: string;
-  role: Role;
-}): Promise<ShareInvite> {
-  const invite: ShareInvite = {
-    id: crypto.randomUUID(),
-    targetType: params.targetType,
-    targetId: params.targetId,
-    invitedEmail: params.email,
-    role: params.role,
-    createdAt: Date.now(),
-  };
-
-  await invitesDb.put(invite);
-  return invite;
+function invitationExpiry(): string {
+  return new Date(Date.now() + SHARE_LINK_EXPIRY_MS).toISOString();
 }
 
-/**
- * Generate a share link for a project or workspace.
- * Returns a token-based URL that recipients can use to join.
- */
+function invitationRole(role: Role): InvitationRole {
+  if (role === 'owner') throw new Error('Invite links can grant editor or viewer access only.');
+  return role;
+}
+
 export async function generateShareLink(params: {
-  targetType: 'project' | 'workspace';
+  targetType: TargetType;
   targetId: string;
   role: Role;
 }): Promise<{ invite: ShareInvite; url: string }> {
-  const token = crypto.randomUUID();
+  const expiresAt = invitationExpiry();
+  const created = await createInvitation(
+    params.targetType,
+    params.targetId,
+    invitationRole(params.role),
+    expiresAt,
+  );
   const invite: ShareInvite = {
-    id: crypto.randomUUID(),
+    id: created.id,
     targetType: params.targetType,
     targetId: params.targetId,
-    invitedEmail: '', // link-based, no specific email
     role: params.role,
-    createdAt: Date.now(),
-    token,
+    createdBy: '',
+    createdAt: new Date().toISOString(),
+    expiresAt,
   };
-
-  await invitesDb.put(invite);
-
-  return { invite, url: projectInviteUrl(token) };
+  return { invite, url: projectInviteUrl(created.token) };
 }
 
-/**
- * Accept an invite — adds the current user as a member.
- */
-export async function acceptInvite(inviteId: string, userId: string, email: string): Promise<void> {
-  const invite = await invitesDb.get(inviteId);
-  if (!invite) throw new Error('Invite not found');
-  if (invite.acceptedAt) throw new Error('Invite already accepted');
+export async function joinProjectFromToken(token: string): Promise<void> {
+  const authToken = useAuthStore.getState().token;
+  if (!authToken) return;
 
-  const member: Member = {
-    userId,
-    email,
-    role: invite.role,
-    joinedAt: Date.now(),
-  };
+  const accepted = await acceptInvitation(token);
+  if (useAuthStore.getState().token !== authToken) return;
 
-  // Add member to the target
-  if (invite.targetType === 'project') {
-    const store = useProjectsStore.getState();
-    const project = store.items.find((p) => p.id === invite.targetId);
-    if (project) {
-      await store.update(invite.targetId, {
-        members: [...project.members, member],
-      });
-    }
+  await Promise.all([
+    useProjectsStore.getState().load(),
+    useWorkspacesStore.getState().load(),
+  ]);
+  if (useAuthStore.getState().token !== authToken) return;
+
+  if (accepted.target === 'project') {
+    const project = useProjectsStore.getState().items.find((item) => item.id === accepted.id);
+    const canReadWorkspace = useWorkspacesStore.getState().items.some(
+      (workspace) => workspace.id === project?.workspaceId,
+    );
+    useWorkspacesStore.getState().setActive(canReadWorkspace ? project?.workspaceId ?? null : null);
+    await useProjectsStore.getState().switchTo(accepted.id);
   } else {
-    const store = useWorkspacesStore.getState();
-    const workspace = store.items.find((w) => w.id === invite.targetId);
-    if (workspace) {
-      await store.update(invite.targetId, {
-        members: [...workspace.members, member],
-      });
+    useWorkspacesStore.getState().setActive(accepted.id);
+    const firstProject = useProjectsStore.getState().items.find(
+      (project) => project.workspaceId === accepted.id,
+    );
+    if (firstProject) {
+      await useProjectsStore.getState().switchTo(firstProject.id);
+    } else {
+      useProjectsStore.getState().setActive(null);
     }
   }
-
-  const updated: ShareInvite = { ...invite, acceptedAt: Date.now() };
-  await invitesDb.put(updated);
+  const url = new URL(location.href);
+  url.searchParams.delete(PROJECT_INVITE_PARAM);
+  history.replaceState(history.state, '', url);
 }
 
-export async function joinProjectFromToken(token: string): Promise<ShareInvite> {
-  const invite = await invitesDb.getByToken(token);
-  if (!invite) throw new Error('Invite not found');
-  await useProjectsStore.getState().load();
-  await useWorkspacesStore.getState().load();
-  await acceptInvite(invite.id, 'local-user', '');
-  if (invite.targetType === 'project') {
-    await useProjectsStore.getState().switchTo(invite.targetId);
-  } else {
-    useWorkspacesStore.getState().setActive(invite.targetId);
-  }
-  return invite;
+export function addMember(params: {
+  targetType: TargetType;
+  targetId: string;
+  userId: string;
+  role: Role;
+}): Promise<Member> {
+  return setMember(params.targetType, params.targetId, params.userId, params.role);
 }
 
-/**
- * Revoke/delete a share invite.
- */
-export async function revokeInvite(inviteId: string): Promise<void> {
-  await invitesDb.remove(inviteId);
-}
-
-/**
- * Remove a member from a project or workspace.
- */
-export async function removeMember(params: {
-  targetType: 'project' | 'workspace';
+export function removeMember(params: {
+  targetType: TargetType;
   targetId: string;
   userId: string;
 }): Promise<void> {
-  if (params.targetType === 'project') {
-    const store = useProjectsStore.getState();
-    const project = store.items.find((p) => p.id === params.targetId);
-    if (project) {
-      await store.update(params.targetId, {
-        members: project.members.filter((m) => m.userId !== params.userId),
-      });
-    }
-  } else {
-    const store = useWorkspacesStore.getState();
-    const workspace = store.items.find((w) => w.id === params.targetId);
-    if (workspace) {
-      await store.update(params.targetId, {
-        members: workspace.members.filter((m) => m.userId !== params.userId),
-      });
-    }
-  }
+  return deleteMember(params.targetType, params.targetId, params.userId).then(() => undefined);
 }
 
-/**
- * Update a member's role.
- */
-export async function updateMemberRole(params: {
-  targetType: 'project' | 'workspace';
+export function updateMemberRole(params: {
+  targetType: TargetType;
   targetId: string;
   userId: string;
   newRole: Role;
-}): Promise<void> {
-  if (params.targetType === 'project') {
-    const store = useProjectsStore.getState();
-    const project = store.items.find((p) => p.id === params.targetId);
-    if (project) {
-      await store.update(params.targetId, {
-        members: project.members.map((m) =>
-          m.userId === params.userId ? { ...m, role: params.newRole } : m
-        ),
-      });
-    }
-  } else {
-    const store = useWorkspacesStore.getState();
-    const workspace = store.items.find((w) => w.id === params.targetId);
-    if (workspace) {
-      await store.update(params.targetId, {
-        members: workspace.members.map((m) =>
-          m.userId === params.userId ? { ...m, role: params.newRole } : m
-        ),
-      });
-    }
-  }
+}): Promise<Member> {
+  return setMember(params.targetType, params.targetId, params.userId, params.newRole);
 }
 
-/**
- * Get all pending invites for a target.
- */
-export async function getPendingInvites(
-  targetType: 'project' | 'workspace',
-  targetId: string
-): Promise<ShareInvite[]> {
-  const invites = await invitesDb.getByTarget(targetType, targetId);
-  return invites.filter((i) => !i.acceptedAt);
+export function getPendingInvites(targetType: TargetType, targetId: string): Promise<ShareInvite[]> {
+  return listInvitations(targetType, targetId);
+}
+
+export function revokeInvite(params: {
+  targetType: TargetType;
+  targetId: string;
+  invitationId: string;
+}): Promise<void> {
+  return deleteInvitation(params.targetType, params.targetId, params.invitationId).then(() => undefined);
+}
+
+export function getMembers(targetType: TargetType, targetId: string): Promise<Member[]> {
+  return listMembers(targetType, targetId);
 }

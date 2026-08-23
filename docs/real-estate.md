@@ -1,7 +1,8 @@
 # GeoLang Real Estate MVP
 
-A self-hosted, open-source alternative to Esri for real estate professionals.
-Search parcels, run comparable sales analysis, split/merge lots, and generate reports — all without vendor lock-in.
+A self-hosted real estate panel prototype. Parcel and sales search require
+configured Ptolemy branches or the seeded demo datasets. Editing uses the
+client geometry path and does not provide a Ptolemy commit-time topology gate.
 
 ## Architecture
 
@@ -115,13 +116,13 @@ Open http://localhost:5173
 ### Parcel Editing (ParcelEditPanel)
 - **Split**: Draw a line across a parcel to subdivide it
 - **Merge**: Select 2+ adjacent parcels to combine
-- Topology validation (shared boundaries required for merge)
+- Client-side parcel editing. Ptolemy topology validation is not implemented
 - Backed by topoi's computational geometry engine
 
 ### Additional Tools
 - **Geocoding** — address search powered by geokode (self-hosted, no API keys)
 - **Routing** — drive-time isochrones from itinera (how far in 5/10/15 min?)
-- **Flood Analysis** — FEMA flood zone overlay
+- **Flood Analysis**: FEMA flood zone overlay when that layer is available
 - **Measurement** — measure lot frontage, depth, area
 - **Print/Export** — PDF map reports for clients
 
@@ -166,11 +167,11 @@ services:
 |---------|------------|--------------|
 | Parcel viewer | ✅ | ✅ |
 | Geocoding | ✅ (hosted) | ✅ (self-hosted) |
-| Comparable sales | ✅ (add-on) | ✅ |
-| Parcel split/merge | ✅ | ✅ |
-| Drive-time analysis | ✅ | ✅ |
-| Flood zone overlay | ✅ | ✅ |
-| Print/PDF export | ✅ | ✅ |
+| Comparable sales | ✅ (add-on) | partial |
+| Parcel split/merge | ✅ | partial |
+| Drive-time analysis | ✅ | partial |
+| Flood zone overlay | ✅ | partial |
+| Print/PDF export | ✅ | partial |
 | Shapefile/GPKG import | ✅ | ✅ |
 | Self-hosted | ❌ | ✅ |
 | No vendor lock-in | ❌ | ✅ |
