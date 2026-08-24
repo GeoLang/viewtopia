@@ -1,7 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Text, Stack, Group, Button, Select, ScrollArea, Badge } from '@mantine/core';
-import { IconDatabaseEdit, IconMap, IconRefresh, IconCloudUpload } from '@tabler/icons-react';
+import {
+  IconDatabaseEdit,
+  IconMap,
+  IconRefresh,
+  IconCloudUpload,
+  IconPencil,
+} from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../PanelCard';
+import { useDrawStore, drawnFeatureGeometry, type DrawMode } from '../../store/draw';
 import {
   branchLayerId,
   fetchBranches,
@@ -41,6 +48,36 @@ function asVersion(feature: BranchFeature): FeatureVersion {
   };
 }
 
+function redrawModeFor(geometry: GeoJSON.Geometry): DrawMode {
+  switch (geometry.type) {
+    case 'Point':
+    case 'MultiPoint':
+      return 'point';
+    case 'LineString':
+    case 'MultiLineString':
+      return 'line';
+    default:
+      return 'polygon';
+  }
+}
+
+/** A single shape replacing a multi geometry keeps the multi type. */
+function matchGeometryFamily(
+  drawn: GeoJSON.Geometry,
+  previous: GeoJSON.Geometry,
+): GeoJSON.Geometry {
+  if (previous.type === 'MultiPoint' && drawn.type === 'Point') {
+    return { type: 'MultiPoint', coordinates: [drawn.coordinates] };
+  }
+  if (previous.type === 'MultiLineString' && drawn.type === 'LineString') {
+    return { type: 'MultiLineString', coordinates: [drawn.coordinates] };
+  }
+  if (previous.type === 'MultiPolygon' && drawn.type === 'Polygon') {
+    return { type: 'MultiPolygon', coordinates: [drawn.coordinates] };
+  }
+  return drawn;
+}
+
 export function DatasetEditorPanel({ onClose }: { onClose: () => void }) {
   const [datasets, setDatasets] = useState<NamedRecord[]>([]);
   const [datasetId, setDatasetId] = useState<string | null>(null);
@@ -54,8 +91,23 @@ export function DatasetEditorPanel({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(0);
   const [syncStatus, setSyncStatus] = useState('idle');
+  /** true while the Draw machinery is capturing a replacement geometry */
+  const [redrawing, setRedrawing] = useState(false);
+  /** drawn-features count when the capture started */
+  const redrawBaseline = useRef(0);
+  /** unmount must clear the draw mode only when this panel set it */
+  const redrawingRef = useRef(false);
 
   const selected = features.find((f) => f.id === selectedId) ?? null;
+
+  const stopRedraw = useCallback(() => {
+    if (!redrawingRef.current) return;
+    redrawingRef.current = false;
+    useDrawStore.getState().setMode(null);
+    setRedrawing(false);
+  }, []);
+
+  useEffect(() => stopRedraw, [stopRedraw]);
 
   useEffect(() => onSyncStateChange((state) => {
     setPending(state.pendingCount);
@@ -78,6 +130,7 @@ export function DatasetEditorPanel({ onClose }: { onClose: () => void }) {
   }, [datasetId]);
 
   const loadFeatures = useCallback(async (branch: string) => {
+    stopRedraw();
     setError(null);
     setSelectedId(null);
     setRows([]);
@@ -88,13 +141,14 @@ export function DatasetEditorPanel({ onClose }: { onClose: () => void }) {
       setFeatures([]);
       setError(message(err));
     }
-  }, []);
+  }, [stopRedraw]);
 
   useEffect(() => {
     if (branchId) void loadFeatures(branchId);
   }, [branchId, loadFeatures]);
 
   function select(feature: BranchFeature) {
+    stopRedraw();
     setSelectedId(feature.id);
     setRows(rowsFromProperties(feature.properties));
     setOpenedAs(asVersion(feature));
@@ -111,6 +165,41 @@ export function DatasetEditorPanel({ onClose }: { onClose: () => void }) {
       openedAs,
     );
   }
+
+  function startRedraw() {
+    if (!selected?.geometry) return;
+    redrawBaseline.current = useDrawStore.getState().features.length;
+    redrawingRef.current = true;
+    useDrawStore.getState().setMode(redrawModeFor(selected.geometry));
+    setRedrawing(true);
+  }
+
+  const applyRedraw = useCallback(
+    (drawn: GeoJSON.Geometry) => {
+      if (!branchId || !selected?.geometry) return;
+      const geometry = matchGeometryFamily(drawn, selected.geometry);
+      setFeatures((current) =>
+        current.map((f) => (f.id === selected.id ? { ...f, geometry } : f)),
+      );
+      void queueFeatureUpdate(branchId, { ...asVersion(selected), geometry }, openedAs);
+    },
+    [branchId, selected, openedAs],
+  );
+
+  // take the shape the Draw machinery finishes as the replacement geometry
+  useEffect(() => {
+    if (!redrawing) return;
+    const unsubscribe = useDrawStore.subscribe((state) => {
+      if (state.features.length <= redrawBaseline.current) return;
+      const drawn = state.features[state.features.length - 1];
+      queueMicrotask(() => {
+        useDrawStore.getState().removeFeature(drawn.id);
+        stopRedraw();
+        applyRedraw(drawnFeatureGeometry(drawn));
+      });
+    });
+    return unsubscribe;
+  }, [redrawing, applyRedraw, stopRedraw]);
 
   /**
    * Commit the queue, then take the branch's answer as the new ancestor, or the
@@ -224,6 +313,29 @@ export function DatasetEditorPanel({ onClose }: { onClose: () => void }) {
             <ScrollArea.Autosize mah={200}>
               <PropertyRows rows={rows} onChange={edit} color={PANEL_COLOR} />
             </ScrollArea.Autosize>
+            {redrawing ? (
+              <>
+                <Text size="xs" c="green">
+                  Draw the replacement on the map. A line or polygon finishes on
+                  double-click.
+                </Text>
+                <Button size="xs" variant="subtle" color="gray" onClick={stopRedraw}>
+                  Cancel redraw
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="xs"
+                variant="light"
+                color={PANEL_COLOR}
+                data-testid="dataset-editor-redraw"
+                leftSection={<IconPencil size={12} />}
+                disabled={!selected.geometry}
+                onClick={startRedraw}
+              >
+                Redraw geometry
+              </Button>
+            )}
           </>
         )}
 

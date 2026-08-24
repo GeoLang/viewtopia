@@ -137,7 +137,7 @@ type DrawnGeometry =
   | { type: 'LineString'; coordinates: [number, number][] }
   | { type: 'Polygon'; coordinates: [number, number][][] };
 
-function drawnFeatureGeometry(f: DrawnFeature): DrawnGeometry {
+export function drawnFeatureGeometry(f: DrawnFeature): DrawnGeometry {
   if (f.type === 'Point' || f.type === 'Circle') {
     return { type: 'Point', coordinates: f.coords[0] };
   }

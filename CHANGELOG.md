@@ -6,6 +6,18 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-23: **a geometry edit commits like an attribute edit**. The Dataset
+  Editor's Redraw geometry button arms the Draw machinery in the selected
+  feature's shape family, and the finished shape replaces the feature's
+  geometry through the same queue, three-way merge and
+  `POST /branches/{id}/commit` as a property edit, with the geometry treated as
+  one value in a conflict. A single shape replacing a Multi geometry keeps the
+  Multi type. The Draw panel gets a Save to dataset section that commits every
+  drawn shape as an insert with a client-minted feature id, and a circle goes
+  as its center point carrying `_radius_m`. `wkb.ts` now codes all six 2D WKB
+  types both ways, so line features list with a drawable geometry instead of
+  none.
+
 - 2026-08-23: **a large vector file is tiled on the server instead of parsed in
   the tab**. A dropped or browsed `.geojson`, `.fgb` or `.csv` over 50 MB, and a
   `.geojson.gz` at any size, is offered to tiletopia's tileset builder rather

@@ -1,10 +1,12 @@
-// Minimal WKB codec for the geometry types the real-estate flow uses:
-// 2D Point, Polygon, MultiPolygon. Little-endian, no embedded SRID.
-// ptolemy stores geometry as SRID 4326 and returns plain WKB via ST_AsBinary,
-// so we neither read nor write an SRID flag here.
+// Minimal WKB codec for the six 2D geometry types. Little-endian, no embedded
+// SRID. ptolemy stores geometry as SRID 4326 and returns plain WKB via
+// ST_AsBinary, so we neither read nor write an SRID flag here.
 
 const WKB_POINT = 1;
+const WKB_LINESTRING = 2;
 const WKB_POLYGON = 3;
+const WKB_MULTIPOINT = 4;
+const WKB_MULTILINESTRING = 5;
 const WKB_MULTIPOLYGON = 6;
 
 type Ring = number[][];
@@ -31,6 +33,14 @@ function pushRings(out: number[], rings: Ring[]): void {
   }
 }
 
+function pushPoints(out: number[], points: number[][]): void {
+  pushUint32LE(out, points.length);
+  for (const [x, y] of points) {
+    pushDoubleLE(out, x);
+    pushDoubleLE(out, y);
+  }
+}
+
 export function geojsonToWkbHex(geom: GeoJSON.Geometry): string {
   const out: number[] = [];
   switch (geom.type) {
@@ -42,10 +52,39 @@ export function geojsonToWkbHex(geom: GeoJSON.Geometry): string {
       pushDoubleLE(out, y);
       break;
     }
+    case 'LineString': {
+      out.push(1);
+      pushUint32LE(out, WKB_LINESTRING);
+      pushPoints(out, geom.coordinates);
+      break;
+    }
     case 'Polygon': {
       out.push(1);
       pushUint32LE(out, WKB_POLYGON);
       pushRings(out, geom.coordinates);
+      break;
+    }
+    case 'MultiPoint': {
+      out.push(1);
+      pushUint32LE(out, WKB_MULTIPOINT);
+      pushUint32LE(out, geom.coordinates.length);
+      for (const [x, y] of geom.coordinates) {
+        out.push(1);
+        pushUint32LE(out, WKB_POINT);
+        pushDoubleLE(out, x);
+        pushDoubleLE(out, y);
+      }
+      break;
+    }
+    case 'MultiLineString': {
+      out.push(1);
+      pushUint32LE(out, WKB_MULTILINESTRING);
+      pushUint32LE(out, geom.coordinates.length);
+      for (const line of geom.coordinates) {
+        out.push(1);
+        pushUint32LE(out, WKB_LINESTRING);
+        pushPoints(out, line);
+      }
       break;
     }
     case 'MultiPolygon': {
@@ -107,21 +146,58 @@ class WkbReader {
     return rings;
   }
 
+  private readPoints(le: boolean): number[][] {
+    const numPts = this.uint32(le);
+    const points: number[][] = [];
+    for (let p = 0; p < numPts; p++) {
+      points.push([this.double(le), this.double(le)]);
+    }
+    return points;
+  }
+
+  // each member of a multi geometry is a full WKB geometry with its own
+  // byte-order flag
+  private member(expected: number): boolean {
+    const memberLe = this.littleEndian();
+    const type = this.uint32(memberLe);
+    if (type !== expected) {
+      throw new Error(`wkbHexToGeojson: expected member type ${expected}, got ${type}`);
+    }
+    return memberLe;
+  }
+
   geometry(): GeoJSON.Geometry {
     const le = this.littleEndian();
     const type = this.uint32(le);
     switch (type) {
       case WKB_POINT:
         return { type: 'Point', coordinates: [this.double(le), this.double(le)] };
+      case WKB_LINESTRING:
+        return { type: 'LineString', coordinates: this.readPoints(le) };
       case WKB_POLYGON:
         return { type: 'Polygon', coordinates: this.readRings(le) };
+      case WKB_MULTIPOINT: {
+        const numPts = this.uint32(le);
+        const points: number[][] = [];
+        for (let i = 0; i < numPts; i++) {
+          const memberLe = this.member(WKB_POINT);
+          points.push([this.double(memberLe), this.double(memberLe)]);
+        }
+        return { type: 'MultiPoint', coordinates: points };
+      }
+      case WKB_MULTILINESTRING: {
+        const numLines = this.uint32(le);
+        const lines: number[][][] = [];
+        for (let i = 0; i < numLines; i++) {
+          lines.push(this.readPoints(this.member(WKB_LINESTRING)));
+        }
+        return { type: 'MultiLineString', coordinates: lines };
+      }
       case WKB_MULTIPOLYGON: {
         const numPolys = this.uint32(le);
         const polys: number[][][][] = [];
         for (let i = 0; i < numPolys; i++) {
-          this.littleEndian();
-          this.uint32(le); // inner type, always polygon
-          polys.push(this.readRings(le));
+          polys.push(this.readRings(this.member(WKB_POLYGON)));
         }
         return { type: 'MultiPolygon', coordinates: polys };
       }

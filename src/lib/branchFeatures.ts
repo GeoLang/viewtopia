@@ -117,6 +117,34 @@ export async function fetchBranchFeature(
   };
 }
 
+export interface FeatureInsert {
+  /** client-minted uuid, so the caller can find the feature again */
+  id: string;
+  properties: Record<string, unknown>;
+  geometry: GeoJSON.Geometry;
+}
+
+/** Commit new features to the branch head, one insert per shape. */
+export async function commitFeatureInserts(
+  branchId: string,
+  inserts: FeatureInsert[],
+  message: string,
+): Promise<void> {
+  await requestOk(`/branches/${branchId}/commit`, {
+    method: 'POST',
+    body: JSON.stringify({
+      message,
+      author: 'viewtopia',
+      operations: inserts.map((insert) => ({
+        type: 'insert',
+        feature_id: insert.id,
+        geometry_wkb_hex: geojsonToWkbHex(insert.geometry),
+        properties: insert.properties,
+      })),
+    }),
+  });
+}
+
 /**
  * Commit one feature's new attributes. An update that omits the geometry keeps
  * the one already on the branch, so a property-only edit sends properties alone.

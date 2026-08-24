@@ -123,3 +123,155 @@ test.describe('the dataset editor commits an attribute edit', () => {
       });
   });
 });
+
+/** Somewhere over land, so the default camera is irrelevant to the click. */
+const VIEW = { lon: 7.425, lat: 43.735, zoom: 13 };
+const CLICK_AT = { x: 240, y: 180 };
+
+async function seedPointDataset(token, name, features) {
+  const dataset = await ptolemy('/datasets', token, {
+    method: 'POST',
+    body: JSON.stringify({
+      name,
+      srid: 4326,
+      geometry_type: 'point',
+      created_by: BROWSER_USER,
+    }),
+  });
+  expect(dataset.status, JSON.stringify(dataset.json)).toBe(201);
+  const branch = await ptolemy(`/datasets/${dataset.json.id}/branches`, token, {
+    method: 'POST',
+    body: JSON.stringify({ name: 'main', created_by: BROWSER_USER }),
+  });
+  expect(branch.status, JSON.stringify(branch.json)).toBe(201);
+  if (features.length > 0) {
+    const imported = await ptolemy(`/branches/${branch.json.id}/import/geojson`, token, {
+      method: 'POST',
+      body: JSON.stringify({ message: 'seed', author: BROWSER_USER, features }),
+    });
+    expect(imported.status, JSON.stringify(imported.json)).toBe(200);
+  }
+  return { datasetId: dataset.json.id, branchId: branch.json.id };
+}
+
+async function signIn(page, token) {
+  await page.addInitScript((seed) => {
+    localStorage.setItem('viewtopia-tour-done', '1');
+    localStorage.setItem('viewtopia-first-run', 'dismissed');
+    localStorage.setItem('viewtopia_auth', JSON.stringify(seed));
+  }, { user: { name: BROWSER_USER }, token });
+  await page.goto('/');
+}
+
+async function mapReady(page) {
+  await page.waitForFunction(() => window.__viewtopiaMap?.isStyleLoaded(), null, {
+    timeout: 60_000,
+  });
+  await page.evaluate(
+    (v) => window.__viewtopiaMap.jumpTo({ center: [v.lon, v.lat], zoom: v.zoom }),
+    VIEW,
+  );
+}
+
+/** lng/lat the next canvas click at CLICK_AT lands on. */
+function clickTarget(page) {
+  return page.evaluate((at) => {
+    const p = window.__viewtopiaMap.unproject([at.x, at.y]);
+    return { lng: p.lng, lat: p.lat };
+  }, CLICK_AT);
+}
+
+function wkbPoint(hex) {
+  const buffer = Buffer.from(hex, 'hex');
+  return { lng: buffer.readDoubleLE(5), lat: buffer.readDoubleLE(13) };
+}
+
+test.describe('the dataset editor commits a geometry edit', () => {
+  test('a redrawn point is what the next session reads', async ({ page }) => {
+    test.setTimeout(120_000);
+    const token = mintToken({ role: 'admin', sub: BROWSER_USER });
+    expect(token, 'PLATFORM_JWT_SECRET is not set, so no authenticated edit is possible').toBeTruthy();
+
+    const datasetName = `redraw-e2e-${Date.now()}`;
+    const { branchId } = await seedPointDataset(token, datasetName, [
+      {
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [1, 2] },
+        properties: { name: 'site A' },
+      },
+    ]);
+    const listed = await ptolemy(`/branches/${branchId}/features`, token);
+    const featureId = listed.json.features[0].id;
+
+    await signIn(page, token);
+    await mapReady(page);
+
+    await page.getByRole('button', { name: 'Actions' }).click();
+    await page.locator(MENU_ITEM).filter({ hasText: 'Dataset Editor' }).first().click();
+    await page.getByPlaceholder('Pick a dataset').click();
+    await page.getByRole('option', { name: datasetName }).click();
+    await expect(page.getByTestId('dataset-editor-feature')).toHaveCount(1);
+    await page.getByTestId('dataset-editor-feature').click();
+
+    await page.getByTestId('dataset-editor-redraw').click();
+    const expected = await clickTarget(page);
+    await page.locator('#maplibre-container canvas').first().click({ position: CLICK_AT });
+
+    await expect(page.getByTestId('dataset-editor-commit')).toBeEnabled();
+    await page.getByTestId('dataset-editor-commit').click();
+    await expect(page.getByTestId('dataset-editor-commit')).toBeDisabled();
+
+    // a session that never saw the browser reads the new geometry back
+    await expect
+      .poll(async () => {
+        const read = await ptolemy(`/branches/${branchId}/features/${featureId}`, token);
+        return read.json?.geometry_wkb_hex ?? '';
+      }, { timeout: 20_000 })
+      .not.toBe(POINT_HEX);
+    const read = await ptolemy(`/branches/${branchId}/features/${featureId}`, token);
+    const point = wkbPoint(read.json.geometry_wkb_hex);
+    expect(Math.abs(point.lng - expected.lng)).toBeLessThan(0.001);
+    expect(Math.abs(point.lat - expected.lat)).toBeLessThan(0.001);
+    // the redraw left the attributes alone
+    expect(read.json.properties).toEqual({ name: 'site A' });
+  });
+});
+
+test.describe('the draw panel inserts shapes into a branch', () => {
+  test('a drawn point committed from the panel becomes a branch feature', async ({ page }) => {
+    test.setTimeout(120_000);
+    const token = mintToken({ role: 'admin', sub: BROWSER_USER });
+    expect(token, 'PLATFORM_JWT_SECRET is not set, so no authenticated edit is possible').toBeTruthy();
+
+    const datasetName = `draw-e2e-${Date.now()}`;
+    const { branchId } = await seedPointDataset(token, datasetName, []);
+
+    await signIn(page, token);
+    await mapReady(page);
+
+    await page.getByRole('button', { name: 'Actions' }).click();
+    await page.locator(MENU_ITEM).filter({ hasText: 'Draw' }).first().click();
+    // the segmented control's radio input is visually hidden
+    await page.locator('.panel-dock label').filter({ hasText: 'Point' }).first().click();
+    const expected = await clickTarget(page);
+    await page.locator('#maplibre-container canvas').first().click({ position: CLICK_AT });
+    await expect(page.getByRole('button', { name: 'Clear All (1)' })).toBeVisible();
+
+    await page.getByTestId('draw-save-open').click();
+    await page.getByPlaceholder('Pick a dataset').click();
+    await page.getByRole('option', { name: datasetName }).click();
+    await expect(page.getByPlaceholder('Pick a branch')).toHaveValue('main');
+    await page.getByTestId('draw-save-commit').click();
+    await expect(page.getByTestId('draw-save-notice')).toHaveText('1 shape(s) committed');
+
+    // the shape left the browser-local list for the branch
+    await expect(page.getByRole('button', { name: 'Clear All (0)' })).toBeVisible();
+    const listed = await ptolemy(`/branches/${branchId}/features`, token);
+    expect(listed.json.features).toHaveLength(1);
+    const point = wkbPoint(
+      Buffer.from(listed.json.features[0].geometry_wkb).toString('hex'),
+    );
+    expect(Math.abs(point.lng - expected.lng)).toBeLessThan(0.001);
+    expect(Math.abs(point.lat - expected.lat)).toBeLessThan(0.001);
+  });
+});

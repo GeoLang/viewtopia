@@ -24,6 +24,7 @@ vi.mock('../../src/offline/sync', () => ({
 import { act } from '@testing-library/react';
 import { DatasetEditorPanel } from '../../src/components/tools/DatasetEditorPanel';
 import { rowsToTypedProperties } from '../../src/components/tools/PropertyRows';
+import { useDrawStore } from '../../src/store/draw';
 
 window.matchMedia = vi.fn().mockReturnValue({
   matches: false,
@@ -95,6 +96,7 @@ function open() {
 beforeEach(() => {
   sync.queueFeatureUpdate.mockClear();
   sync.syncNow.mockClear();
+  useDrawStore.setState({ mode: null, features: [], pending: [] });
   serve();
 });
 afterEach(() => {
@@ -164,6 +166,58 @@ describe('the dataset editor edits a ptolemy branch', () => {
     const [, , base] = sync.queueFeatureUpdate.mock.calls[0];
     // the branch's answer, not the value the row held before the commit
     expect(base.properties).toEqual({ name: 'lot 5', acres: 12.5 });
+  });
+
+  it('queues a redrawn geometry against the feature it started on', async () => {
+    open();
+    fireEvent.click(await screen.findByPlaceholderText('Pick a dataset'));
+    fireEvent.click(await screen.findByText('parcels'));
+    fireEvent.click(await screen.findByText('lot 4'));
+
+    fireEvent.click(await screen.findByTestId('dataset-editor-redraw'));
+    // a Point feature turns the Draw machinery to point mode
+    expect(useDrawStore.getState().mode).toBe('point');
+
+    // the map click the Draw machinery would deliver
+    act(() => {
+      useDrawStore.getState().addPendingPoint(9, 8);
+      useDrawStore.getState().finishFeature();
+    });
+
+    await waitFor(() => expect(sync.queueFeatureUpdate).toHaveBeenCalled());
+    const [branchId, ours, base] = sync.queueFeatureUpdate.mock.calls[0];
+    expect(branchId).toBe(BRANCH_ID);
+    expect(ours.id).toBe(FEATURE_ID);
+    expect(ours.geometry).toEqual({ type: 'Point', coordinates: [9, 8] });
+    expect(ours.properties).toEqual({ name: 'lot 4', acres: 12.5 });
+    // the merge's ancestor keeps the geometry the branch held
+    expect(base.geometry).toEqual({ type: 'Point', coordinates: [1, 2] });
+
+    // the capture shape never stays a drawn feature and the mode is released
+    expect(useDrawStore.getState().features).toHaveLength(0);
+    expect(useDrawStore.getState().mode).toBeNull();
+  });
+
+  it('drops the capture when the selection changes mid-redraw', async () => {
+    open();
+    fireEvent.click(await screen.findByPlaceholderText('Pick a dataset'));
+    fireEvent.click(await screen.findByText('parcels'));
+    fireEvent.click(await screen.findByText('lot 4'));
+
+    fireEvent.click(await screen.findByTestId('dataset-editor-redraw'));
+    fireEvent.click(screen.getByText('lot 4'));
+    expect(useDrawStore.getState().mode).toBeNull();
+
+    act(() => {
+      useDrawStore.getState().setMode('point');
+      useDrawStore.getState().addPendingPoint(9, 8);
+      useDrawStore.getState().finishFeature();
+    });
+
+    // the finished shape stays an ordinary drawn feature, nothing is queued
+    await act(async () => {});
+    expect(sync.queueFeatureUpdate).not.toHaveBeenCalled();
+    expect(useDrawStore.getState().features).toHaveLength(1);
   });
 });
 

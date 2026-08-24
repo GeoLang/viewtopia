@@ -289,11 +289,15 @@ sees the result. Each task needs source, integration, and failure-path tests.
      feature, edits it in the browser, commits, reloads it from the branch,
      draws it on the map, and reads the change back from a session that never
      touched the browser.
-   - [ ] Commit a geometry change. The panel edits attributes only, and the
-     Draw tool's shapes are local to the browser with no dataset behind them.
-   - [ ] Draw every geometry type. `src/lib/wkb.ts` decodes Point, Polygon and
-     MultiPolygon, so a line feature lists with no geometry and the map layer
-     skips it.
+   - [x] Commit a geometry change. Shipped 2026-08-23: the Dataset Editor's
+     Redraw geometry button captures a shape from the Draw machinery and
+     commits it through the same queue and three-way merge as an attribute
+     edit, and the Draw panel commits its shapes to a branch as inserts.
+     Leftovers: no vertex-level editing (a redraw replaces the whole
+     geometry), and a feature whose WKB type the codec still refuses
+     (Z/M, GeometryCollection) cannot be redrawn.
+   - [x] Draw every geometry type. Shipped 2026-08-23: `src/lib/wkb.ts` codes
+     all six 2D WKB types both ways.
 
 4. **Make the advertised agent tool set truthful and runnable.**
    Repositories: `geolang`, `sibyl`, `geodukt`, `viewtopia`. Either package the
