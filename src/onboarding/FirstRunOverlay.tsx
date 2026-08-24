@@ -5,6 +5,7 @@ import { IconBroadcast, IconFileImport, IconFolders } from '@tabler/icons-react'
 import { useLiveStore } from '../live/liveStore';
 import { useProjectsStore } from '../projects/projectsStore';
 import { useAgentLayerStore } from '../store/agentLayers';
+import { useOgcLayerStore } from '../store/ogcLayers';
 import { useTourStore } from '../store/tour';
 import { dismissFirstRun, firstRunDismissed, firstRunVisible, returningVisitor } from './firstRun';
 
@@ -32,7 +33,11 @@ const ENTRY_ACTIONS = [
     dataset and tour as the hands-on alternative. */
 export function FirstRunOverlay() {
   const [dismissed, setDismissed] = useState(() => returningVisitor || firstRunDismissed());
-  const layerCount = useAgentLayerStore((state) => state.layers.length);
+  // raster overlays and service layers are imports too, any of them retires this
+  const vectorLayerCount = useAgentLayerStore((state) => state.layers.length);
+  const rasterLayerCount = useAgentLayerStore((state) => state.rasterLayers.length);
+  const ogcLayerCount = useOgcLayerStore((state) => state.layers.length);
+  const layerCount = vectorLayerCount + rasterLayerCount + ogcLayerCount;
   const activeProjectId = useProjectsStore((state) => state.activeProjectId);
   const liveDocumentId = useLiveStore((state) => state.documentId);
   const startTour = useTourStore((state) => state.start);
@@ -106,7 +111,7 @@ export function FirstRunOverlay() {
         ))}
         <Group justify="space-between">
           <Button size="xs" variant="light" color="violet" onClick={loadDemoAndTour}>
-            Load demo data & take the tour
+            Load the demo & take the tour
           </Button>
           <Button size="xs" variant="subtle" color="gray" onClick={dismiss}>
             Got it

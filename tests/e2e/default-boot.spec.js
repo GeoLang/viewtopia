@@ -14,7 +14,7 @@ test('first visit offers the demo dataset and hands over to the tour', async ({ 
   const overlay = page.getByTestId('first-run-overlay');
   // the first test pays vite's cold compile, same as the boot waits below
   await expect(overlay).toBeVisible({ timeout: 60000 });
-  await overlay.getByRole('button', { name: /demo data/i }).click();
+  await overlay.getByRole('button', { name: /demo/i }).click();
   await expect(overlay).not.toBeVisible();
 
   // the tour starts on its first step
