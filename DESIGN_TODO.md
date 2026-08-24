@@ -109,29 +109,16 @@ facade lists (item 8 and Delete-do-not-wire) the owner's direction is wire for
 real over delete where the module earns it; a per-module proposal is the next
 task after this slice.
 
-- [x] **planned-manifest gate in geolang.** Shipped 2026-08-24 (geolang
-      changelog). Viewer approval-click enforcement stays persona-level and is
-      the recorded follow-up. Live proof rides the first sweep CI run.
-- [x] **golden path runs one real tool.** Shipped 2026-08-24 (viewtopia
-      changelog): voronoi through the real `POST /tools/{name}` and its output
-      drawn with no route mocks. Also fixed: platform-e2e CI never set
-      `GEOLANG_EXECUTOR_SECRET`, so every earlier green run had a dead
-      executor nothing called. Leftover: geolang has no delete route for
-      outputs, so each run leaves two small files in the outputs volume.
-- [x] **nightly tool sweep.** Shipped 2026-08-24, 06:00 UTC workflow plus the
-      per-push offline subset and manifest-derived doc tests. The docs were
-      not stale (39 tools, verified against the loaded manifest). First
-      dispatch pending: it must prove the 14 external-network tools, the plan
-      gate live, and the workflow's own plumbing. External-service failures
-      currently turn the nightly red; downgrade to a warning if that proves
-      noisy.
-- [x] **QGIS tools crash the executor.** Found by the sweep's first local run
-      and fixed 2026-08-24 (geolang changelog): each QGIS tool built and tore
-      down its own QgsApplication, and a second init in one process is a
-      SIGSEGV, so whichever QGIS tool ran second killed the executor. One
-      process-level session in src/core now serves all four tools; pyqgis_api
-      also gained the missing sys.path bridge and its failures the ❌ prefix
-      it was hiding behind.
+- [ ] **viewer approval round trip for run_workflow.** The planned-manifest
+      gate is server-side only: the viewer's approve click never reaches
+      geolang, so "planned" is enforced but "user approved" is still persona
+      text. Wire the approval into geolang and check it in run_workflow.
+- [ ] **prove the sweep's first CI run.** The 14 external-network tools, the
+      plan gate against a post-gate image, and the workflow's own plumbing
+      have never run in CI. If external-service downtime turns the nightly
+      red too often, downgrade external failures to a warning.
+- [ ] **geolang outputs have no delete route.** Every sweep and e2e run
+      leaves files in the outputs volume forever.
 
 Verified 2026-08-24 for item 5: no viewer-called route returns demo data. The
 viewer's elevation panels call open-elevation.com, not tiletopia's synthetic
@@ -379,13 +366,16 @@ sees the result. Each task needs source, integration, and failure-path tests.
    feature, runs one agent tool, renders the result, and shuts the stack down.
    Keep unit tests for library-only behavior separate from this acceptance path.
 
-## Delete, do not wire
+## Wire for real (owner call 2026-08-24, was "delete, do not wire")
 
 A module is written, unit-tested, exported by a `pub mod` line, and never called
 by any route, CLI path or render loop. `cargo` does not flag it because the
-re-export keeps it live. The docs then describe the module as a feature. Do not
-start from these. Per module: delete and drop the claim, or keep as a private
-module with no advertised surface. Wiring them is a product decision.
+re-export keeps it live. The docs then describe the module as a feature.
+Owner call 2026-08-24: implement these for real rather than delete them, each
+with tests through its real route, ordered viewer-facing routes first, then
+platform machinery, then the large islands. One exception to reconfirm when
+reached: Space-Time analysis rows sit under an earlier "do not build Gotham"
+owner call that this direction reverses.
 
 - [ ] **tiletopia scheduler.** Cron/interval/one-shot enum, real cron parsing,
       priority, retry, three GET routes. `spawn()` is called from nowhere,
