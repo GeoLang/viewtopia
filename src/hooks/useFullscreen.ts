@@ -33,6 +33,8 @@ function showBraveKeyboardNotice() {
     message:
       'Brave blocks the keyboard API, so Escape exits full screen instead of closing panels. Allowing fingerprinting for this site in Brave Shields restores it.',
     color: 'yellow',
+    // top-right would sit on the header buttons, full screen included
+    position: 'bottom-right',
     autoClose: BRAVE_KEYBOARD_NOTICE_DURATION_MS,
   });
 }
