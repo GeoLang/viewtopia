@@ -417,7 +417,8 @@ owner call that this direction reverses.
       the vendored source before use, no new dependency); API keys use the
       existing SQLite layer, and the two current dead systems (in-memory
       `ApiKeyStore` demo seeds, uncalled plaintext `api_keys` table in db.rs)
-      collapse into one hashed store. Kriging landed (tiletopia changelog).
+      collapse into one hashed store. Kriging and geoprocessing landed
+      (tiletopia changelog).
       - [ ] **static maps render and return a real image** (`static_map.rs`).
             The route today returns JSON metadata and drops the bytes
             (`#[serde(skip)]`). Return image bytes with the right
@@ -426,10 +427,6 @@ owner call that this direction reverses.
             like elevation; WebP encoded as WebP, SVG as real vector markup,
             PDF as a generated single-page PDF embedding the raster; delete
             the five fabricated `available_styles()` entries.
-      - [ ] **geoprocessing on real geometry** (`geoprocessing.rs`). Buffer,
-            union, intersection, difference through `geo` booleans in a local
-            metric projection instead of radial vertex scaling and convex
-            hulls. Real `POST /api/v1/geoprocessing/run` taking GeoJSON.
       - [ ] **API keys that authenticate** (`api_keys.rs`, `db.rs`). Admin
             routes to create (plaintext shown once, SHA-256 stored), list and
             revoke; an `X-Api-Key` extractor that resolves the hash, checks
