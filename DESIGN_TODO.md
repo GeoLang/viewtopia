@@ -357,12 +357,6 @@ owner call that this direction reverses.
       setup, copied rather than refactored while both were landing. Extract
       into `tests/common/mod.rs`.
 
-- [~] **ptolemy events retention sweep** in the webhook delivery worker's
-      loop (PTOLEMY_EVENTS_RETENTION_DAYS, default 30, batched deletes of
-      settled deliveries and unreferenced events). In flight; the audit and
-      webhook wiring plus the five-subsystem deletion landed (ptolemy
-      changelog).
-
 - [ ] **tiletopia has roughly 25 further modules that are `pub mod` and nothing
       else**, each advertised: temporal versioning, CRDT editing, federation,
       CI/CD validation, multi-tenant isolation, leader election, priority

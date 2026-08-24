@@ -283,9 +283,12 @@ pgvector for the four similarity routes.
   merge, branch create, schema change), claimed with SKIP LOCKED, HMAC-signed, five
   attempts with capped exponential backoff, dead letters kept with their error.
   Webhook management is instance-admin: a subscription redirects dataset content to
-  a caller-chosen URL. SSE, WS events, background jobs, the broken rate limiter and
-  lock enforcement are deleted; the `feature_locks` table from shipped migration 006
-  is orphaned (nothing reads or writes it).
+  a caller-chosen URL. The delivery worker retires settled deliveries and the events
+  nothing pending references, hourly in LIMIT-batched deletes
+  (`PTOLEMY_EVENTS_RETENTION_DAYS`, default 30, 0 keeps everything). SSE, WS events,
+  background jobs, the broken rate limiter and lock enforcement are deleted; the
+  `feature_locks` table from shipped migration 006 is orphaned (nothing reads or
+  writes it).
 - collecta: forms carry a creator. Creating a form or submitting needs editor or admin, reading
   submissions is creator-or-admin, and form definitions are instance-readable so collectors can
   discover them. A form id cannot be taken over: the upsert carries the ownership test in the
