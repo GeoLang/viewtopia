@@ -1,5 +1,6 @@
-import { test, expect } from '../console-guard';
+import { test, expect, allowConsoleError } from '../console-guard';
 import { PANEL, MENU_ITEM, openApp, openBasemapRendererControl } from '../panel-helpers';
+import { mintToken } from '../../../scripts/platform-token.mjs';
 
 /**
  * Functional smoke for the Tools menu panels against the live platform stack.
@@ -80,6 +81,41 @@ async function openPanel(page, label, title) {
 async function closePanel(page, panel) {
   await page.keyboard.press('Escape');
   await expect(panel).toHaveCount(0);
+}
+
+const PTOLEMY = 'http://localhost:3000';
+const DASHBOARDS_USER = 'panels-dashboards-e2e';
+
+/** Reach ptolemy directly, to make a project and to read its state back. */
+async function ptolemy(path, token, init) {
+  const res = await fetch(`${PTOLEMY}/api/v1${path}`, {
+    ...init,
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+  });
+  const text = await res.text();
+  // a refusal body is plain text, so keep it readable in the assertion
+  let json = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    json = null;
+  }
+  return { status: res.status, text, json };
+}
+
+/** A workspace and a project of its own, so reruns never collide. */
+async function createProject(token, label) {
+  const workspace = await ptolemy('/workspaces', token, {
+    method: 'POST',
+    body: JSON.stringify({ name: `${label}-${Date.now()}` }),
+  });
+  expect(workspace.status, workspace.text).toBe(201);
+  const project = await ptolemy(`/workspaces/${workspace.json.id}/projects`, token, {
+    method: 'POST',
+    body: JSON.stringify({ name: `${label}-${Date.now()}` }),
+  });
+  expect(project.status, project.text).toBe(201);
+  return project.json.id;
 }
 
 /** Boot with a stored agent result and draw it, leaving one attributed layer. */
@@ -387,13 +423,46 @@ test.describe('Tools panels', () => {
   });
 
   test('dashboards: added widgets render their content and persist', async ({ page }) => {
+    test.setTimeout(180_000);
+
+    const token = mintToken({ role: 'editor', sub: DASHBOARDS_USER });
+    expect(
+      token,
+      'PLATFORM_JWT_SECRET is not set, so no authenticated project is possible',
+    ).toBeTruthy();
+    const projectId = await createProject(token, 'panels-dashboards-e2e');
+
+    // nobody has written either key for this project, and chromium logs each
+    // 404 as a failed resource. That is the answer for an unset key.
+    allowConsoleError(page, /Failed to load resource.*\/state\/(map|dashboards)/);
+
+    await page.addInitScript(
+      (seed) => {
+        localStorage.setItem('viewtopia-tour-done', '1');
+        localStorage.setItem('viewtopia_auth', JSON.stringify(seed.auth));
+        localStorage.setItem('viewtopia-active-project', seed.projectId);
+      },
+      { auth: { user: { name: DASHBOARDS_USER }, token }, projectId },
+    );
+    // the panel reads the dashboards of the project open when it mounts, and the
+    // project list arrives after the app boots. This read is the app's last step
+    // in opening the project.
+    const mapRead = page.waitForResponse(
+      (response) => response.url().includes(`/projects/${projectId}/state/map`),
+      { timeout: 60_000 },
+    );
     await openApp(page);
+    await mapRead;
+
     // the modal title flips to "Edit Dashboard" once a dashboard is open
     const panel = await openPanel(page, 'Dashboards', /Dashboard/);
 
     await expect(panel.getByText('No dashboards yet. Create your first one!')).toBeVisible();
-    const stored = () =>
-      page.evaluate(() => JSON.parse(localStorage.getItem('viewtopia_dashboards') ?? '[]'));
+    // the store sends every edit to the project without waiting for it, so read
+    // the key back until it catches up
+    const stored = async () =>
+      (await ptolemy(`/projects/${projectId}/state/dashboards`, token)).json?.value ?? [];
+    const storedEventually = () => expect.poll(stored, { timeout: 30_000, intervals: [500] });
 
     await panel.getByRole('button', { name: 'New Dashboard' }).click();
     await expect(panel.getByText('No widgets yet.')).toBeVisible();
@@ -412,7 +481,7 @@ test.describe('Tools panels', () => {
     const gaugeCard = panel.locator('[class*="mantine-Card-root"]').filter({ hasText: 'New gauge' });
     await expect(gaugeCard.getByText('50%')).toBeVisible();
 
-    expect(await stored()).toMatchObject([
+    await storedEventually().toMatchObject([
       { title: 'Panels E2E', widgets: [{ type: 'chart' }, { type: 'gauge' }] },
     ]);
 
@@ -434,7 +503,7 @@ test.describe('Tools panels', () => {
     await chartCard.getByRole('button', { name: 'Add point' }).click();
     await pointValues.nth(3).fill('160');
     await expect.poll(() => barHeights(bars)).toEqual([12, 24, 48, 96]);
-    expect(await stored()).toMatchObject([
+    await storedEventually().toMatchObject([
       {
         widgets: [
           {
@@ -459,7 +528,7 @@ test.describe('Tools panels', () => {
 
     await gaugeCard.getByLabel('Remove widget').click();
     await expect(gaugeCard).toHaveCount(0);
-    expect(await stored()).toMatchObject([
+    await storedEventually().toMatchObject([
       { title: 'Panels E2E', widgets: [{ type: 'chart', config: { chartType: 'pie' } }] },
     ]);
 
