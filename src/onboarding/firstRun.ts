@@ -1,5 +1,8 @@
 export const FIRST_RUN_DISMISSED_KEY = 'viewtopia-first-run';
 
+// read before the app store's first persist write can create the key
+export const returningVisitor = localStorage.getItem('viewtopia-app') !== null;
+
 /** What a profile has done, against the three things the guidance points at. */
 export interface FirstRunProgress {
   dismissed: boolean;

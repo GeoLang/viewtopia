@@ -6,7 +6,7 @@ import { useLiveStore } from '../live/liveStore';
 import { useProjectsStore } from '../projects/projectsStore';
 import { useAgentLayerStore } from '../store/agentLayers';
 import { useTourStore } from '../store/tour';
-import { dismissFirstRun, firstRunDismissed, firstRunVisible } from './firstRun';
+import { dismissFirstRun, firstRunDismissed, firstRunVisible, returningVisitor } from './firstRun';
 
 const DEMO_DATASET_URL = '/demo/sf-landmarks.geojson';
 
@@ -31,7 +31,7 @@ const ENTRY_ACTIONS = [
 /** Where to start on an empty map, shown once and never again, with the demo
     dataset and tour as the hands-on alternative. */
 export function FirstRunOverlay() {
-  const [dismissed, setDismissed] = useState(firstRunDismissed);
+  const [dismissed, setDismissed] = useState(() => returningVisitor || firstRunDismissed());
   const layerCount = useAgentLayerStore((state) => state.layers.length);
   const activeProjectId = useProjectsStore((state) => state.activeProjectId);
   const liveDocumentId = useLiveStore((state) => state.documentId);
