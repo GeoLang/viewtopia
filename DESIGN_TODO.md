@@ -98,28 +98,6 @@ domain. This slice closes the other Felt gaps.
       used. Felt's canvas annotation renderer stays not chased, recorded in
       DESIGN.md.
 
-## In progress: P0 items 4 and 9 slice, 2026-08-24
-
-Owner calls 2026-08-24: run_workflow gets a server-side planned-manifest gate
-(hash of a plan_workflow-validated manifest, not a viewer approval round trip,
-which is a recorded follow-up). The run-every-tool sweep is a nightly scheduled
-platform workflow like the panels suite, with a small offline subset kept in
-per-push CI. Item 5's demo-payload half is closed as verified below. On the
-facade lists (item 8 and Delete-do-not-wire) the owner's direction is wire for
-real over delete where the module earns it; a per-module proposal is the next
-task after this slice.
-
-- [ ] **geolang outputs have no delete route.** Every sweep and e2e run
-      leaves files in the outputs volume forever.
-
-Verified 2026-08-24 for item 5: no viewer-called route returns demo data. The
-viewer's elevation panels call open-elevation.com, not tiletopia's synthetic
-elevation; tiletopia's `/api/v1/demo/*` routes have no viewer caller; the only
-demo payload the viewer loads is the intentional first-run static file. Item 5
-therefore reduces to error-path UX and backend-absent tests. P0 item 9 is
-otherwise already covered by the platform e2e workflow (stack start, fixture
-import, auth, feature edit).
-
 ## Cross-repository audit, 2026-08-22
 
 These are verified advertised gaps found by reading every repository README,
@@ -329,8 +307,12 @@ sees the result. Each task needs source, integration, and failure-path tests.
 5. **Make the core map data path reliable under service failure.**
    Repositories: `viewtopia`, `ptolemy`, `tiletopia`, `fenestra`. Define which
    service owns each layer type, return explicit errors when a backend is absent,
-   and prove load, refresh, and permission failure in the browser. Remove demo
-   payloads from routes that the viewer treats as authoritative data.
+   and prove load, refresh, and permission failure in the browser. The
+   demo-payload half is verified closed: no viewer-called route returns demo
+   data (the elevation panels call open-elevation.com, tiletopia's
+   `/api/v1/demo/*` routes have no viewer caller, and the first-run static
+   file is intentional), so what is left is error-path UX and backend-absent
+   tests in the browser.
 
 6. **Choose and complete one live feed path.**
    Repositories: `fluvius`, `agora`, `viewtopia`, with `collecta` if field data
