@@ -1,0 +1,160 @@
+name: Platform tool sweep (every geolang tool)
+
+# Runs every tool geolang advertises through POST /agent/tools/{name} against the
+# REAL platform stack, one call per manifest entry, with the sample arguments in
+# geolang's tool_sweep/arguments.py. A manifest tool with no entry there is a
+# failure, so a new tool cannot ship unswept.
+#
+# The base URL is the nginx origin the viewer uses, so the sweep goes through the
+# same proxy path the product does rather than straight at geolang-api.
+#
+# Never runs on push: it boots the data plane plus geolang, sibyl and geodukt.
+# geolang's own CI keeps the offline subset (tests/test_tool_sweep.py), which runs
+# the same arguments through the in-process app on every push.
+#
+# The nightly deliberately lets the tools that reach third-party services
+# (Overpass, Nominatim, opentopodata, WorldPop, Natural Earth, public Valhalla)
+# make their real calls. The runner marks those in its summary, so a third party
+# being down reads differently from a broken tool.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * *"
+
+concurrency:
+  group: platform-sweep
+  cancel-in-progress: true
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    # throwaway secret for this ephemeral CI stack, not a real credential. the
+    # fail-closed services refuse to start without it, and the sweep mints its
+    # editor token from the same value (scripts/platform-token.mjs reads it).
+    env:
+      PLATFORM_JWT_SECRET: ci-platform-sweep-secret-not-for-production-use
+      # geolang-executor refuses to start without this, and every tool in the
+      # sweep runs there. Also throwaway.
+      GEOLANG_EXECUTOR_SECRET: ci-platform-sweep-executor-secret
+    steps:
+      - name: Checkout viewtopia
+        uses: actions/checkout@v4
+        with:
+          path: viewtopia
+
+      - name: Checkout ptolemy
+        uses: actions/checkout@v4
+        with: { repository: GeoLang/ptolemy, path: ptolemy }
+      - name: Checkout tiletopia
+        uses: actions/checkout@v4
+        with: { repository: GeoLang/tiletopia, path: tiletopia }
+      - name: Checkout geokode
+        uses: actions/checkout@v4
+        with: { repository: GeoLang/geokode, path: geokode }
+      - name: Checkout itinera
+        uses: actions/checkout@v4
+        with: { repository: GeoLang/itinera, path: itinera }
+
+      - name: Checkout geolang
+        uses: actions/checkout@v4
+        with: { repository: GeoLang/geolang, path: geolang }
+      - name: Checkout sibyl
+        uses: actions/checkout@v4
+        with: { repository: GeoLang/sibyl, path: sibyl }
+      - name: Checkout geodukt
+        uses: actions/checkout@v4
+        with: { repository: GeoLang/geodukt, path: geodukt }
+
+      # sibyl treats an empty key as unset and refuses to start against the
+      # cloud base, so an absent secret must fall back to a non-empty dummy.
+      # No tool in the sweep runs a model, so the key is never spent.
+      - name: Write geolang/.env
+        run: |
+          cat > geolang/.env <<EOF
+          XAI_API_KEY=${{ secrets.XAI_API_KEY || 'ci-dummy-key-not-real' }}
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          EOF
+
+      # compute_route, calculate_isochrones, geocode_place and batch_geocode try
+      # itinera and geokode before any third party, and both are built from this
+      - name: Download OSM extract for routing and geocoding
+        working-directory: viewtopia
+        run: |
+          scripts/fetch-osm-extract.sh \
+            https://download.geofabrik.de/europe/monaco-latest.osm.pbf \
+            data/region.osm.pbf
+
+      - name: Build platform images (tool sweep subset)
+        working-directory: viewtopia
+        run: |
+          docker compose -f docker-compose.platform.yml build \
+            ptolemy tiletopia geokode itinera geodukt sibyl geolang-api viewtopia
+
+      # itinera's entrypoint builds data/graph.bin from the extract on first start,
+      # so there is no separate graph-build step.
+      - name: Start the stack
+        working-directory: viewtopia
+        run: |
+          # geodukt runs as this uid so its sinks can write the bind-mounted
+          # checkout, which the runner owns rather than the compose default 1000
+          export DOCKER_UID="$(id -u)" DOCKER_GID="$(id -g)"
+          docker compose -f docker-compose.platform.yml down --remove-orphans
+          docker compose -f docker-compose.platform.yml up -d \
+            ptolemy tiletopia geokode itinera geodukt sibyl \
+            geolang-api geolang-executor viewtopia
+
+      - name: Wait for all services healthy
+        working-directory: viewtopia
+        run: |
+          # geolang-api only waits for the executor to start, not to be ready,
+          # and every tool in the sweep runs there
+          services="ptolemy tiletopia geokode itinera geodukt sibyl geolang-api geolang-executor"
+          deadline=$(( $(date +%s) + 600 ))   # itinera builds its routing graph on first boot
+          while :; do
+            pending=""
+            for s in $services; do
+              cid=$(docker compose -f docker-compose.platform.yml ps -q "$s")
+              st=$(docker inspect --format '{{.State.Health.Status}}' "$cid" 2>/dev/null || echo none)
+              [ "$st" = "healthy" ] || pending="$pending $s($st)"
+            done
+            # viewtopia has no healthcheck, so probe its port directly
+            curl -sf -o /dev/null http://localhost:5174/ || pending="$pending viewtopia(down)"
+            [ -z "$pending" ] && { echo "all healthy"; break; }
+            [ "$(date +%s)" -ge "$deadline" ] && { echo "TIMEOUT waiting for:$pending"; exit 1; }
+            echo "waiting for:$pending"; sleep 5
+          done
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # no moving v9 major tag yet, only the exact release
+      - uses: astral-sh/setup-uv@v9.0.0
+
+      - name: Run the tool sweep through the nginx origin
+        working-directory: geolang
+        run: |
+          PLATFORM_TOKEN="$(cd ../viewtopia && node -e '
+            import("./scripts/platform-token.mjs").then(({ mintToken }) =>
+              process.stdout.write(mintToken({ role: "editor", sub: "tool-sweep", ttlSec: 7200 }) ?? ""));
+          ')"
+          export PLATFORM_TOKEN
+          uv run --no-project --python 3.11 --with httpx \
+            python -m tool_sweep.runner \
+              --base-url http://localhost:5174/agent \
+              --results tool-sweep.jsonl
+
+      # uploaded whether or not the sweep passed: the per-tool records are the
+      # report, and a failed run is the one worth reading
+      - name: Upload sweep results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tool-sweep-results
+          path: geolang/tool-sweep.jsonl
+
+      - name: Dump service logs on failure
+        if: failure()
+        working-directory: viewtopia
+        run: docker compose -f docker-compose.platform.yml logs --no-color --tail=200

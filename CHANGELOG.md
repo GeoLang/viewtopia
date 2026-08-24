@@ -211,6 +211,17 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-24: **a nightly job runs every geolang tool against the real stack**.
+  `.github/workflows/platform-sweep.yml` boots the data plane plus geolang,
+  sibyl and geodukt at 06:00 UTC, mints an editor token from
+  `scripts/platform-token.mjs`, and runs geolang's `tool_sweep.runner` against
+  `http://localhost:5174/agent`, the same nginx origin the viewer uses, so the
+  sweep exercises the proxy path the product does. One `POST /tools/{name}` per
+  manifest entry, failing the job on any tool error and on any manifest tool
+  geolang has no sample arguments for. The per-tool JSONL is uploaded whether
+  the run passed or not, because a failed run is the one worth reading. Not a
+  per-push gate: geolang's own CI keeps the offline subset.
+
 - 2026-08-14: **collecta joins the platform: field data lands on the map**. The
   compose stack gains a collecta service (OpenRosa for ODK Collect plus its
   REST API) behind an nginx /collecta/ route whose 60m body limit lets photo
