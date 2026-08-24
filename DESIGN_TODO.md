@@ -414,18 +414,10 @@ owner call that this direction reverses.
       2026-08-24, each lands with tests through its real route. Settled
       decisions: geometry booleans come from the `geo` 0.33 workspace dep
       already in tiletopia-server (verify its Buffer/BooleanOps API against
-      docs.rs before use, no new dependency); the kriging solve is a local
-      dense Gaussian elimination, no linear-algebra crate; API keys use the
+      the vendored source before use, no new dependency); API keys use the
       existing SQLite layer, and the two current dead systems (in-memory
       `ApiKeyStore` demo seeds, uncalled plaintext `api_keys` table in db.rs)
-      collapse into one hashed store.
-      - [ ] **kriging with a real solve** (`geostatistics.rs`). Ordinary
-            kriging solves the (n+1) semivariogram system with a Lagrange
-            row, simple kriging solves the covariance system around
-            `known_mean`, universal kriging adds linear drift rows, so the
-            three methods stop running identical code. Real
-            `POST /api/v1/geostatistics/interpolate` taking samples, bounds,
-            resolution and method; the demo route stays but says it is a demo.
+      collapse into one hashed store. Kriging landed (tiletopia changelog).
       - [ ] **static maps render and return a real image** (`static_map.rs`).
             The route today returns JSON metadata and drops the bytes
             (`#[serde(skip)]`). Return image bytes with the right

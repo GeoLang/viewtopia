@@ -172,9 +172,12 @@ take effect with `nginx -s reload` instead of a force-recreate.
 
 - geodukt's container runs as uid 999 against a host-owned bind mount, so compose pins
   `user:` or every pipeline sink fails.
-- fenestra and tiletopia pin the `terrano` crate at tag `v0.1.0`, so terrano's multi-band
-  work does not reach them until a retag. terrano's single-band GeoTIFF output is
+- fenestra pins the `terrano` crate at tag `v0.1.0`, so terrano's multi-band
+  work does not reach it until a retag. terrano's single-band GeoTIFF output is
   byte-identical to before that work (golden fixture), which is what keeps the pin safe.
+  tiletopia tracks terrano's master branch: its terrain analysis (slope, aspect,
+  hillshade, hydrology, viewshed) and elevation reads come from there, so terrano
+  pushes before tiletopia builds.
 
 ### 2.3 Authorization model
 
