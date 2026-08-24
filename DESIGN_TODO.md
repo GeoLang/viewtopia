@@ -352,20 +352,24 @@ platform machinery, then the large islands. One exception to reconfirm when
 reached: Space-Time analysis rows sit under an earlier "do not build Gotham"
 owner call that this direction reverses.
 
-- [ ] **tiletopia has roughly 25 further modules that are `pub mod` and nothing
-      else**, each advertised: temporal versioning, CRDT editing, federation,
-      CI/CD validation, multi-tenant isolation, leader election, priority
-      queue/SLA, white-label branding, marketplace, data-residency geofencing,
-      field-level encryption, custom dashboards, AR/VR foveated rendering,
-      cinematic flythrough, digital-twin scripting, offline viewer export. Decide
-      per module: wire, or delete and drop the claim.
-
-- [ ] **tiletopia API keys reach only read routes.** Keys authenticate since
-      wave 1b, but every write stays JWT-only: feeding keys into
-      `require_editor` changes that middleware's contract, so it was left. A
-      follow-up if machine writers ever need keys. Key mint/revoke also does
-      not write to tiletopia's `audit.rs`, because nothing in the server
-      routes to that audit log yet, it is one of the pub-mod-only modules.
+- [~] **tiletopia pub-mod islands, owner calls 2026-08-24.** Wire now: `audit`
+      (write routes and API-key mint/revoke log to it) and `offline_export`.
+      Delete now: any island whose function already ships through a real
+      implementation, each verified against the code before deletion, census
+      candidates are `geoprocessing`, `geostatistics`, `stac`,
+      `terrain_analysis` (wave 1b wired the real routes), `versioning`
+      (ptolemy is the versioned backbone) and `dashboard` (viewtopia owns
+      dashboards). Everything else stays in place, parked, no blanket
+      deletion: crdt, tenant, collaboration, federation, whitelabel,
+      priority_queue, cluster, marketplace, metering, encryption, geofence,
+      arvr, flythrough, dynamic_raster, prediction, onnx_inference,
+      model_zoo, anomaly, measurement, clash_detection, cicd, reports,
+      retention, scripting, mobile, geocoding, isochrone, map_matching,
+      osm_buildings, multispectral, feature_service, cloud_store,
+      http_cache, indoor, stories, stories_api, scan_registration,
+      flight_planning, issue_tracking. The automated census over-counts:
+      fbx_reader, texture_image and the store/cache backends are live or
+      config-selected, so verify every row before acting on it.
 
 - [ ] **tiletopia textured native mesh tiling shipped 2026-08-24** (tiletopia
       changelog): mesh formats never touch mago now, so mago remains only for
@@ -378,24 +382,45 @@ owner call that this direction reverses.
       90 per tile crop; texture decode has no size cap of its own beyond the
       upload cap.
 
-- [ ] **viewtopia Space-Time Intelligence: four panel surfaces work.**
-      Entities, CSV ingest, track player, manual links. The Analysis tab
-      renders seven buttons with no `onClick`. Sixteen advertised rows have
-      no code at all. Seven more have a real algorithm and zero callers.
-      Classification and RBAC are absent. Docs now match. Do not build Gotham.
+- [ ] **viewtopia Space-Time: build the GeoTime core, owner call 2026-08-24.**
+      v1 is the space-time cube plus movement analytics, client-side, on the
+      existing deck.gl-over-MapLibre path (`useSpaceTimeDeckLayers` already
+      draws elevation = time), sized for analyst extracts (~100k track
+      points, downsample above with a visible note):
+      - the cube: pitched view, a sweep plane synced to TrackPlayer,
+        ground-projected track shadows, real time-window filtering (the
+        trail-duration control the layers ignore today).
+      - wire the six Analysis buttons to the algorithms that already exist
+        uncalled beside the panel (colocation, pattern-of-life with
+        anomalies, network metrics, behavioral clustering, predictive
+        location, data quality), each rendering into the cube and map, not
+        just a table. Add co-travel/following as an extension of the
+        colocation logic. Remove the Entity Resolution button, nothing is
+        behind it.
+      - the Gotham line holds: no ontology, CDR import, classification,
+        RBAC, or entity resolution. Trim the README/FEATURES lines still
+        claiming them. Geofencing UI and case management stay parked, types
+        intact. Follow-up recorded under Wait for demand: movement
+        analytics as geolang agent tools.
+      Runs after the bounded 2026-08-24 queue (island deletions, audit,
+      offline_export, ptolemy rule-engine deletion, jung LabelEngine
+      deletion).
 
-- [ ] **ptolemy's Esri-style topology rule engine does not exist.** 31 rule
-      variants are declared, nothing matches on them, stored rules are never read
-      back, and the only validator ignores its dataset argument and queries two
-      columns (`branch_id`, `is_deleted`) that `feature_versions` does not have,
-      so it always errors. No commit-time gate. (PostGIS Topology proper is real.)
+- [~] **ptolemy's Esri-style topology rule engine: delete it, owner call
+      2026-08-24.** 31 rule variants are declared, nothing matches on them,
+      stored rules are never read back, and the only validator ignores its
+      dataset argument and queries two columns (`branch_id`, `is_deleted`)
+      that `feature_versions` does not have, so it always errors. The fake
+      surface goes, PostGIS Topology proper stays, and commit-time topology
+      rules are recorded under Wait for demand.
 
 - [ ] **jung browser labels shipped 2026-08-24** (wasm `Renderer.add_font`,
       GeoJSON properties reach `{token}` labels in both front doors, jung
       changelog). Still open: jung-vello draws geometry only (text in a vello
       Scene is a second font pipeline), the front doors parse Point geometry
-      only, and `label.rs`'s old `LabelEngine` stays uncalled (no priority,
-      5x7 bitmap font); decide keep-disclosed or delete on its own.
+      only, and `label.rs`'s old `LabelEngine` (no priority, 5x7 bitmap
+      font) is decided 2026-08-24: delete it, `PriorityLabelEngine` is the
+      live path.
 
 ## Before any public deploy
 
@@ -625,6 +650,24 @@ Operator-facing deployment gaps:
 Parked until a real user, a real feed, or a real customer file exists. The
 thesis is "a team makes and analyzes a map together in the browser". Refuse
 feature-parity fights with ArcGIS, Felt, GEE, Palantir.
+
+- [ ] **ptolemy commit-time topology rules** (owner call 2026-08-24): the fake
+      rule engine is deleted; build a real one only when an Esri migration
+      customer needs rule validation at commit time.
+
+- [ ] **tiletopia API keys on write routes** (owner call 2026-08-24): keys stay
+      read-only until a machine writer exists. Feeding keys into
+      `require_editor` changes that middleware's contract. Mint/revoke audit
+      logging closes with the 2026-08-24 audit wiring, independent of this.
+
+- [ ] **native vector-to-3D-Tiles** (owner call 2026-08-24): mago stays for
+      GeoJSON/GeoPackage/KML as a subprocess, same call as tippecanoe. Build a
+      native extrusion tiler only if the jar/JRE cost or a real workload
+      demands it.
+
+- [ ] **movement analytics as geolang agent tools** (owner call 2026-08-24):
+      Space-Time v1 runs its analytics client-side; expose them to the agent
+      only after the cube proves they are worth exposing.
 
 - [ ] **collecta increment 3: push submissions into ptolemy** as versioned
       features, deliberately parked until the panel proves demand. Needs the
