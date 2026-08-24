@@ -98,6 +98,41 @@ domain. This slice closes the other Felt gaps.
       used. Felt's canvas annotation renderer stays not chased, recorded in
       DESIGN.md.
 
+## In progress: P0 items 4 and 9 slice, 2026-08-24
+
+Owner calls 2026-08-24: run_workflow gets a server-side planned-manifest gate
+(hash of a plan_workflow-validated manifest, not a viewer approval round trip,
+which is a recorded follow-up). The run-every-tool sweep is a nightly scheduled
+platform workflow like the panels suite, with a small offline subset kept in
+per-push CI. Item 5's demo-payload half is closed as verified below. On the
+facade lists (item 8 and Delete-do-not-wire) the owner's direction is wire for
+real over delete where the module earns it; a per-module proposal is the next
+task after this slice.
+
+- [ ] **planned-manifest gate in geolang.** plan_workflow records a hash of
+      each manifest it validated, run_workflow rejects a manifest that never
+      passed validation. Approval-click enforcement stays persona-level for
+      now and is the recorded follow-up.
+- [ ] **golden path runs one real tool.** The platform e2e invokes one
+      offline-capable tool through the real `POST /tools/{name}` route (no
+      LLM), then renders its output through the real agent-layer path with no
+      route mocks, closing P0 item 9's two uncovered steps. Explicit stack
+      shutdown stays CI-cleanup.
+- [ ] **nightly tool sweep.** A scheduled workflow starts the platform stack
+      and runs every advertised tool from `GET /tools` with maintained sample
+      arguments, failing on any tool error and on a manifest tool that has no
+      sweep arguments, so a new tool cannot ship unswept.
+- [ ] **stale tool docs.** geolang README and api_reference tool counts and
+      lists regenerated from the live manifest.
+
+Verified 2026-08-24 for item 5: no viewer-called route returns demo data. The
+viewer's elevation panels call open-elevation.com, not tiletopia's synthetic
+elevation; tiletopia's `/api/v1/demo/*` routes have no viewer caller; the only
+demo payload the viewer loads is the intentional first-run static file. Item 5
+therefore reduces to error-path UX and backend-absent tests. P0 item 9 is
+otherwise already covered by the platform e2e workflow (stack start, fixture
+import, auth, feature edit).
+
 ## Cross-repository audit, 2026-08-22
 
 These are verified advertised gaps found by reading every repository README,
