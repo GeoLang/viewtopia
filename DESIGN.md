@@ -400,6 +400,11 @@ map, plus a synced split view. Picking/draw/measure/agent-layers survive rendere
   MapLibre reads it, so Cesium, Leaflet and the minimap draw no basemap while one is
   selected rather than substituting a hosted raster. The archive is a browser File, so a
   reload and a project file both come back naming it and asking for the file again.
+- A server tileset (a large vector file built into PMTiles by tiletopia, served under
+  `/martin`) is an `ogcLayers` entry drawn by MapLibre only, the same rule as the local
+  PMTiles basemap: Cesium filters the type out and the layer UI says so. The import path
+  offers the server route for supported files and requires it over 50 MB
+  (`BROWSER_IMPORT_LIMIT_BYTES` in `src/features/tilesets/api.ts`).
 
 **Agent UI.** Chat panel plus a registered viewer command protocol. The agent emits commands
 (flyTo, addLayer, measure, deck layers, style-by-*, ~20 tool commands) that execute

@@ -65,6 +65,7 @@ async function openApp(page) {
   await page.addInitScript(
     (seed) => {
       localStorage.setItem('viewtopia-tour-done', '1');
+      localStorage.setItem('viewtopia-first-run', 'dismissed');
       localStorage.setItem('viewtopia_auth', JSON.stringify(seed.auth));
     },
     { auth: { user: { name: BROWSER_USER }, token } },

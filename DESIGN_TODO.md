@@ -37,7 +37,12 @@ Owner calls 2026-08-23: the AWS deploy stays parked. P0 item 1 is untouched, the
 account decision is still open, and the first deploy will be private with no
 domain. This slice closes the other Felt gaps.
 
-- [~] **large static uploads, tileset plan phases 2-5.** Server half shipped
+- [x] **large static uploads, tileset plan phases 2-5.** Shipped 2026-08-23,
+      both halves, see both changelogs. Tilesets draw in MapLibre only
+      (DESIGN.md renderer notes). Leftovers are tiletopia issues #17 (delete
+      does not kill a running build) and #18 (asset uploads over 2 MB are
+      rejected), and a drop of several oversize files offers only the first.
+      Server half detail:
       2026-08-23 (tiletopia changelog): upload, tippecanoe build job, registry,
       serving via /martin, contract as below with the 202 body
       `{job_id, tileset}` where job_id equals the tileset id and clients poll
@@ -64,7 +69,10 @@ domain. This slice closes the other Felt gaps.
       Leftovers: an overlay removed from the map leaves its project attachment
       behind (the delete route exists, nothing calls it), the save retry queue
       is in memory so only the open project pushes a stale cache after reload,
-      and dashboard writes are one PUT per edit, not debounced.
+      dashboard writes are one PUT per edit, not debounced, and the dashboard
+      create-and-add-widget flow lost its standalone e2e (dashboards need a
+      server project now), so that coverage exists only against the platform
+      stack and no spec exercises it yet.
       Original item: ptolemy gets
       `project_state(project_id, key, value jsonb, updated_at, updated_by)`
       with `GET/PUT /api/v1/projects/{id}/state/{key}`, viewer role reads,
@@ -77,7 +85,12 @@ domain. This slice closes the other Felt gaps.
       `project_id`. The dashboards store moves from the `viewtopia_dashboards`
       localStorage key to the `dashboards` state key, scoped per project.
 
-- [ ] **invite email and first-run guidance.** ptolemy sends the invitation
+- [x] **invite email and first-run guidance.** Shipped 2026-08-23, see both
+      changelogs. The first-run overlay also absorbed the WelcomeCard demo
+      offer, so one surface remains. Leftover: the overlay's three entry rows
+      are signposts naming where each control is, not buttons, because wiring
+      them means a shared opener for ProjectSwitcher's and LiveSessionControl's
+      modals. Original item: ptolemy sends the invitation
       link by email when SMTP is configured (`SMTP_URL` and `SMTP_FROM`
       env vars, both optional, unset keeps the copy-the-link flow) and the
       create-invitation body takes an optional recipient email. viewtopia's
