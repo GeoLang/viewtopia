@@ -39,17 +39,15 @@ domain. This slice closes the other Felt gaps.
 
 - [x] **large static uploads, tileset plan phases 2-5.** Shipped 2026-08-23,
       both halves, see both changelogs. Tilesets draw in MapLibre only
-      (DESIGN.md renderer notes). Leftovers are tiletopia issues #17 (delete
-      does not kill a running build) and #18 (asset uploads over 2 MB are
-      rejected), and a drop of several oversize files offers only the first.
-      Server half detail:
+      (DESIGN.md renderer notes). tiletopia #17 (a delete now kills the
+      running tippecanoe) and #18 (asset uploads stream to disk under the
+      same 4 GiB cap as tilesets, names checked before any path join) closed
+      2026-08-23. Leftover: a drop of several oversize files offers only the
+      first. Server half detail:
       2026-08-23 (tiletopia changelog): upload, tippecanoe build job, registry,
       serving via /martin, contract as below with the 202 body
       `{job_id, tileset}` where job_id equals the tileset id and clients poll
-      `GET /api/v1/tilesets/{id}`. Viewer half still open, plus two tickets:
-      no cancel route (a delete mid-build lets tippecanoe finish and clean up),
-      and `POST /api/v1/assets` still buffers uploads in memory under axum's
-      2 MB default, the same bug the tileset route fixed.
+      `GET /api/v1/tilesets/{id}`.
       Original item: Detail and settled
       decisions under **Vector tilesets for large static uploads** below.
       Contract for the viewer: `POST /api/v1/tilesets` multipart upload
