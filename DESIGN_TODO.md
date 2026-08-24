@@ -352,11 +352,6 @@ platform machinery, then the large islands. One exception to reconfirm when
 reached: Space-Time analysis rows sit under an earlier "do not build Gotham"
 owner call that this direction reverses.
 
-- [ ] **tiletopia's scheduler and webhooks test binaries duplicate their JWT
-      harness** (~60 lines each): every test binary needs its own JWT env
-      setup, copied rather than refactored while both were landing. Extract
-      into `tests/common/mod.rs`.
-
 - [ ] **tiletopia has roughly 25 further modules that are `pub mod` and nothing
       else**, each advertised: temporal versioning, CRDT editing, federation,
       CI/CD validation, multi-tenant isolation, leader election, priority
@@ -372,10 +367,16 @@ owner call that this direction reverses.
       not write to tiletopia's `audit.rs`, because nothing in the server
       routes to that audit log yet, it is one of the pub-mod-only modules.
 
-- [ ] **tiletopia native mesh tiler: textures and materials**, so mago-3d-tiler
-      can go. Until then the native path drops textures, GeoJSON/GeoPackage/KML
-      tile through mago only, and the FBX reader assumes y up rather than
-      reading the file's `GlobalSettings` UpAxis.
+- [ ] **tiletopia textured native mesh tiling shipped 2026-08-24** (tiletopia
+      changelog): mesh formats never touch mago now, so mago remains only for
+      GeoJSON/GeoPackage/KML, which the native tiler cannot take. Open owner
+      call: build a native vector-to-3D-Tiles path so the jar and JRE leave
+      the image, or keep mago for vector and say so. Recorded leftovers: FBX
+      applies UpAxis only (`UnitScaleFactor`, `FrontAxis`, `CoordAxis` are
+      not read) and still emits no normals; 16- and 32-bit texture pixel
+      formats degrade to untextured; a JPEG texture is re-encoded at quality
+      90 per tile crop; texture decode has no size cap of its own beyond the
+      upload cap.
 
 - [ ] **viewtopia Space-Time Intelligence: four panel surfaces work.**
       Entities, CSV ingest, track player, manual links. The Analysis tab
@@ -389,12 +390,12 @@ owner call that this direction reverses.
       columns (`branch_id`, `is_deleted`) that `feature_versions` does not have,
       so it always errors. No commit-time gate. (PostGIS Topology proper is real.)
 
-- [ ] **jung labels are CPU-path only.** The label pass runs in
-      `Renderer::render`; jung-wasm has no export that passes font bytes in,
-      so browser labels need one, and jung-vello draws geometry only (text in
-      a vello Scene is a second font pipeline). `label.rs`'s old
-      `LabelEngine` also stays uncalled (no priority, 5x7 bitmap font);
-      decide keep-disclosed or delete on its own.
+- [ ] **jung browser labels shipped 2026-08-24** (wasm `Renderer.add_font`,
+      GeoJSON properties reach `{token}` labels in both front doors, jung
+      changelog). Still open: jung-vello draws geometry only (text in a vello
+      Scene is a second font pipeline), the front doors parse Point geometry
+      only, and `label.rs`'s old `LabelEngine` stays uncalled (no priority,
+      5x7 bitmap font); decide keep-disclosed or delete on its own.
 
 ## Before any public deploy
 

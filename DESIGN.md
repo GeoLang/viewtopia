@@ -32,7 +32,7 @@ Maturity from source-level test declarations:
 |------|------|-------|------|
 | tiletopia | 3D tiles / terrain / COG | ~737 | Mature ✅ |
 | ptolemy | versioned PostGIS backbone | ~595 | Hardened ✅ |
-| jung | cartographic rendering library | 316 | Labels render on the default path (style text properties, priority collision, curved along lines, caller-supplied TTF); viewtopia does not use the wasm crate |
+| jung | cartographic rendering library | 324 | Labels render on the default path (style text properties, priority collision, curved along lines, caller-supplied TTF), in the browser via the wasm `Renderer.add_font`, and `{token}` labels read real GeoJSON properties; viewtopia does not use the wasm crate |
 | verne | foreign-format inventory + extractor (§2.7) | 233 | ✅ live-load CI against ptolemy |
 | geodukt / fluvius | ETL+workflow / spatial streams | ~240 / 187 | geodukt consumed; fluvius not deployed |
 | nubis / topoi | point cloud / geometry | 161 / 246 | nubis via geoplumb; topoi as viewer wasm |
