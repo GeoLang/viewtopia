@@ -357,15 +357,11 @@ owner call that this direction reverses.
       setup, copied rather than refactored while both were landing. Extract
       into `tests/common/mod.rs`.
 
-- [ ] **ptolemy webhook delivery, SSE, WebSocket events, background jobs, rate
-      limiting, audit-log writes and lock enforcement are seven separate dead
-      subsystems**, each advertised as done. `spawn_delivery_worker`,
-      `SseBroadcast::send`, `EventBus::publish`, `BackgroundJobs::spawn`,
-      `check_locks` and the audit writer all have zero callers; the rate-limit
-      middleware is never layered (and is a fixed-window counter, not a token
-      bucket, keyed on `X-Forwarded-For` with a `127.0.0.1` fallback so every
-      direct caller shares one bucket). Pick the two or three worth wiring and
-      delete the rest.
+- [~] **ptolemy events retention sweep** in the webhook delivery worker's
+      loop (PTOLEMY_EVENTS_RETENTION_DAYS, default 30, batched deletes of
+      settled deliveries and unreferenced events). In flight; the audit and
+      webhook wiring plus the five-subsystem deletion landed (ptolemy
+      changelog).
 
 - [ ] **tiletopia has roughly 25 further modules that are `pub mod` and nothing
       else**, each advertised: temporal versioning, CRDT editing, federation,

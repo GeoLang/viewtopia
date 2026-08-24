@@ -276,6 +276,16 @@ pgvector for the four similarity routes.
   schedules persisted in SQLite, a worker claiming due jobs each tick, and only
   actions with real entry points behind them (re-tile an asset, prune export files,
   prune settled job rows). Three consecutive failures disable a job.
+- ptolemy audits every mutating route from one middleware inside the write gate
+  (actor, method plus matched template, resource type, target id; refusals and reads
+  are not recorded, an audit failure never fails the user's write). Webhooks are an
+  outbox: delivery rows are inserted in the same transaction as the change (commit,
+  merge, branch create, schema change), claimed with SKIP LOCKED, HMAC-signed, five
+  attempts with capped exponential backoff, dead letters kept with their error.
+  Webhook management is instance-admin: a subscription redirects dataset content to
+  a caller-chosen URL. SSE, WS events, background jobs, the broken rate limiter and
+  lock enforcement are deleted; the `feature_locks` table from shipped migration 006
+  is orphaned (nothing reads or writes it).
 - collecta: forms carry a creator. Creating a form or submitting needs editor or admin, reading
   submissions is creator-or-admin, and form definitions are instance-readable so collectors can
   discover them. A form id cannot be taken over: the upsert carries the ownership test in the
