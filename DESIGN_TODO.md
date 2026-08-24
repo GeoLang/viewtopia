@@ -417,16 +417,8 @@ owner call that this direction reverses.
       the vendored source before use, no new dependency); API keys use the
       existing SQLite layer, and the two current dead systems (in-memory
       `ApiKeyStore` demo seeds, uncalled plaintext `api_keys` table in db.rs)
-      collapse into one hashed store. Kriging and geoprocessing landed
-      (tiletopia changelog).
-      - [ ] **static maps render and return a real image** (`static_map.rs`).
-            The route today returns JSON metadata and drops the bytes
-            (`#[serde(skip)]`). Return image bytes with the right
-            content-type; base layer from the wave 1 staged-DEM hillshade
-            where coverage exists, plain background elsewhere, honest 404/503
-            like elevation; WebP encoded as WebP, SVG as real vector markup,
-            PDF as a generated single-page PDF embedding the raster; delete
-            the five fabricated `available_styles()` entries.
+      collapse into one hashed store. Kriging, geoprocessing and static maps
+      landed (tiletopia changelog).
       - [ ] **API keys that authenticate** (`api_keys.rs`, `db.rs`). Admin
             routes to create (plaintext shown once, SHA-256 stored), list and
             revoke; an `X-Api-Key` extractor that resolves the hash, checks
