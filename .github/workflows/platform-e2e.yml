@@ -99,6 +99,8 @@ jobs:
           # geodukt runs as this uid so its sinks can write the bind-mounted
           # checkout, which the runner owns rather than the compose default 1000
           export DOCKER_UID="$(id -u)" DOCKER_GID="$(id -g)"
+          # the executor refuses to start without it, and compose defaults it empty
+          export GEOLANG_EXECUTOR_SECRET="$(openssl rand -hex 24)"
           docker compose -f docker-compose.platform.yml down --remove-orphans
           docker compose -f docker-compose.platform.yml up -d \
             ptolemy tiletopia geokode itinera agora sibyl geodukt geolang-api jupyter viewtopia
