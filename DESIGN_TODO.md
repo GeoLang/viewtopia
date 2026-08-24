@@ -389,14 +389,12 @@ owner call that this direction reverses.
       columns (`branch_id`, `is_deleted`) that `feature_versions` does not have,
       so it always errors. No commit-time gate. (PostGIS Topology proper is real.)
 
-- [~] **jung label stack onto the render path, print stack deleted.** Owner
-      calls 2026-08-24: wire label/label_priority/curved_label/text into
-      `Renderer::render` driven by the style's text properties (labels reach
-      jung-cli, jung-wasm and jung-vello's consumers; fenestra pins jung at
-      v0.1.0 and is unaffected); delete `print_layout` and `output` (redundant
-      with fenestra-printing and viewtopia's client-side print); the remaining
-      thematic modules (2525, maritime, heatmap, clustering, ...) stay as
-      disclosed library code awaiting demand. In flight.
+- [ ] **jung labels are CPU-path only.** The label pass runs in
+      `Renderer::render`; jung-wasm has no export that passes font bytes in,
+      so browser labels need one, and jung-vello draws geometry only (text in
+      a vello Scene is a second font pipeline). `label.rs`'s old
+      `LabelEngine` also stays uncalled (no priority, 5x7 bitmap font);
+      decide keep-disclosed or delete on its own.
 
 ## Before any public deploy
 
