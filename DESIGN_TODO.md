@@ -109,10 +109,6 @@ facade lists (item 8 and Delete-do-not-wire) the owner's direction is wire for
 real over delete where the module earns it; a per-module proposal is the next
 task after this slice.
 
-- [ ] **viewer approval round trip for run_workflow.** The planned-manifest
-      gate is server-side only: the viewer's approve click never reaches
-      geolang, so "planned" is enforced but "user approved" is still persona
-      text. Wire the approval into geolang and check it in run_workflow.
 - [ ] **geolang outputs have no delete route.** Every sweep and e2e run
       leaves files in the outputs volume forever.
 
@@ -155,10 +151,9 @@ ViewTopia, Ptolemy, Jung, TerraVista, Panoptes, and Geoplumb.
       feature-aware three-way merge, and a PostGIS working copy are not
       implemented. GeoJSON export does not carry feature geometry.
 
-- [ ] **GeoLang**: plan approval is persona text only. `run_workflow` does not
-      require a previously approved plan. The API also advertises tools whose
-      optional geospatial dependencies are absent from the client requirements,
-      so those tools fail when called in that environment.
+- [ ] **GeoLang**: the API advertises tools whose optional geospatial
+      dependencies are absent from the client requirements, so those tools fail
+      when called in that environment.
 
 - [ ] **GeoPlumb**: the server accepts only a small subset of the library
       operators. Raster and vector sources, focal and map algebra, reclassify,
@@ -326,9 +321,10 @@ sees the result. Each task needs source, integration, and failure-path tests.
 4. **Make the advertised agent tool set truthful and runnable.**
    Repositories: `geolang`, `sibyl`, `geodukt`, `viewtopia`. Closed 2026-08-24:
    all 39 tools pass the nightly sweep through the real HTTP path in CI
-   (externals included), run_workflow rejects unplanned manifests, and
-   manifest-derived doc tests stop the counts drifting. Viewer approval
-   round trip remains open above.
+   (externals included), run_workflow rejects a manifest that was not planned
+   and one the viewer's approve button never posted to
+   `/agent/workflow/approve`, and manifest-derived doc tests stop the counts
+   drifting.
 
 5. **Make the core map data path reliable under service failure.**
    Repositories: `viewtopia`, `ptolemy`, `tiletopia`, `fenestra`. Define which

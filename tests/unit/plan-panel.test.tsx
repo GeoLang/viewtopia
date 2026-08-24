@@ -133,14 +133,21 @@ const FAILED_JSON = {
 const toolResult = (text: string, report: unknown) =>
   `${text}\n__RUN__:${JSON.stringify(report)}`;
 
-const mockRun = (result: string) => {
-  const fetchMock = vi.fn(() =>
-    Promise.resolve(
-      new Response(JSON.stringify({ result }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }),
-    ),
+const json = (body: unknown, status = 200) =>
+  Promise.resolve(
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  );
+
+/**
+ * Approving is two posts: the approval geolang records, then the run. Both are
+ * answered here, so a test can assert the order they went out in.
+ */
+const mockRun = (result: string, approval: unknown = { approved: true, message: 'Approved.' }) => {
+  const fetchMock = vi.fn((url: string) =>
+    String(url).includes('/workflow/approve') ? json(approval) : json({ result }),
   );
   vi.stubGlobal('fetch', fetchMock);
   return fetchMock;
@@ -270,7 +277,7 @@ describe('PlanPanel', () => {
     expect(screen.getByTestId('plan-manifest-toggle')).toHaveTextContent('Hide manifest');
   });
 
-  it('approving posts the manifest verbatim with notify and renders the run report', async () => {
+  it('approving records the approval, then posts the manifest verbatim with notify', async () => {
     // the approved run happens outside the model's turn, so it carries the
     // user's own bearer rather than riding on the chat run's
     useAuthStore.setState({ loggedIn: true, token: 'jwt-abc', user: null });
@@ -280,7 +287,14 @@ describe('PlanPanel', () => {
     fireEvent.click(screen.getByTestId('plan-approve'));
 
     await waitFor(() => expect(screen.getByTestId('plan-run-result')).toBeInTheDocument());
-    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    // the order is the gate: run_workflow refuses a manifest with no approval
+    const [approveUrl, approveInit] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(approveUrl).toBe('/agent/workflow/approve');
+    expect(approveInit.method).toBe('POST');
+    expect(new Headers(approveInit.headers).get('Authorization')).toBe('Bearer jwt-abc');
+    expect(JSON.parse(String(approveInit.body))).toEqual({ manifest_toml: PLAN.manifest });
+
+    const [url, init] = fetchMock.mock.calls[1] as unknown as [string, RequestInit];
     expect(url).toBe('/agent/tools/run_workflow');
     expect(init.method).toBe('POST');
     expect(new Headers(init.headers).get('Authorization')).toBe('Bearer jwt-abc');
@@ -404,6 +418,43 @@ describe('PlanPanel', () => {
 
     expect(anchor.download).toBe('depot-catchment.toml');
     expect(click).toHaveBeenCalled();
+  });
+
+  it('a refused approval shows why and runs nothing', async () => {
+    const fetchMock = mockRun(toolResult(RUN_REPORT, RUN_JSON), {
+      approved: false,
+      message: 'ERROR: this manifest was never planned, so there is nothing to approve.',
+    });
+
+    renderPanel(messageId);
+    fireEvent.click(screen.getByTestId('plan-approve'));
+
+    await waitFor(() => expect(screen.getByTestId('plan-approval-error')).toBeInTheDocument());
+    expect(screen.getByTestId('plan-approval-error')).toHaveTextContent('never planned');
+    expect(fetchMock.mock.calls).toHaveLength(1);
+    expect(String(fetchMock.mock.calls[0][0])).toBe('/agent/workflow/approve');
+    // nothing ran, so the plan is still there to approve
+    expect(screen.getByTestId('plan-status')).toHaveTextContent('not run yet');
+    expect(screen.getByTestId('plan-approve')).toBeEnabled();
+    expect(screen.queryByTestId('plan-run-result')).not.toBeInTheDocument();
+    expect(useChatStore.getState().activeMessages()[0].planRun).toBeUndefined();
+  });
+
+  it('an approval the API refused outright says so and runs nothing', async () => {
+    const fetchMock = vi.fn((url: string) =>
+      String(url).includes('/workflow/approve')
+        ? json({ detail: 'missing bearer token' }, 401)
+        : json({ result: 'ran' }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderPanel(messageId);
+    fireEvent.click(screen.getByTestId('plan-approve'));
+
+    await waitFor(() => expect(screen.getByTestId('plan-approval-error')).toBeInTheDocument());
+    expect(screen.getByTestId('plan-approval-error')).toHaveTextContent('HTTP 401');
+    expect(fetchMock.mock.calls).toHaveLength(1);
+    expect(screen.getByTestId('plan-status')).toHaveTextContent('not run yet');
   });
 
   it('dismiss collapses the plan and leaves it re-openable', () => {

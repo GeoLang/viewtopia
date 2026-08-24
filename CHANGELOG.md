@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-24: **approving a plan records the approval before it runs**. The
+  approve button posts the plan's own manifest to `/agent/workflow/approve`
+  first, which is the only record geolang has that a person agreed, and only
+  then to `run_workflow`, which now refuses a manifest without one. A refused
+  approval shows its reason in the panel, runs nothing, and leaves the button
+  pressable.
+
 - 2026-08-24: **the platform e2e runs a real agent tool and draws its output**.
   `tests/e2e/agent-tool-run.spec.js` posts an inline point FeatureCollection to
   `/agent/upload`, calls `POST /agent/tools/voronoi` over the same nginx proxy

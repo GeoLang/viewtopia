@@ -298,8 +298,11 @@ the publisher's colour in `styleOverrides.color`. Contract details in geolang's
 
 **Plans are geodukt manifests.** The agent composes a geodukt TOML manifest as its execution
 plan: `plan_workflow` validates it, the viewer renders the steps with a validated badge, and
-approving posts the manifest verbatim to `run_workflow` with `notify` so the model's session
-learns the run happened. The manifest downloads with a copyable `geodukt run <file>.toml`,
+approving posts the manifest verbatim twice, to `/agent/workflow/approve` and then to
+`run_workflow` with `notify` so the model's session learns the run happened. The first post is
+the only record geolang has that a person agreed, and `run_workflow` refuses a manifest
+without one, so a model that calls it on its own gets an error instead of a run. A refused
+approval shows its reason in the panel and runs nothing. The manifest downloads with a copyable `geodukt run <file>.toml`,
 which reproduces the run exactly through the same executor, so no generated script can drift
 from what ran. A failed run still records its steps: `execute` returns progress alongside the
 error, so the record shows the steps that finished, the one that died with its own message,

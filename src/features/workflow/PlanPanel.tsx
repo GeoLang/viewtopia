@@ -14,6 +14,7 @@ import {
 import { useState } from 'react';
 import { useChatStore } from '../../store/chat';
 import {
+  approveWorkflow,
   downloadOutput,
   runWorkflow,
   stepText,
@@ -47,9 +48,10 @@ function outcomeLabel(step: RunStep): string {
 
 /**
  * A plan the agent proposed, in the chat transcript, with the approve action
- * that runs it. Approving posts the plan's own manifest, so what runs cannot
- * drift from what is on screen. Once it has run, each step row carries its
- * outcome and the outputs become download links.
+ * that runs it. Approving records the approval and then runs, both with the
+ * plan's own manifest, so what runs cannot drift from what is on screen. Once
+ * it has run, each step row carries its outcome and the outputs become download
+ * links.
  */
 export function PlanPanel({ messageId, plan }: { messageId: string; plan: WorkflowPlan }) {
   const { setPlanRun, addMessage } = useChatStore();
@@ -65,6 +67,7 @@ export function PlanPanel({ messageId, plan }: { messageId: string; plan: Workfl
   const [showManifest, setShowManifest] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [running, setRunning] = useState(false);
+  const [approvalError, setApprovalError] = useState('');
 
   const ran = Boolean(planRun || report);
   const failed = report
@@ -79,6 +82,15 @@ export function PlanPanel({ messageId, plan }: { messageId: string; plan: Workfl
 
   const approve = async () => {
     setRunning(true);
+    setApprovalError('');
+    // geolang has no other record that a person agreed, so a refused approval
+    // leaves the plan un-run and pressable again
+    const approval = await approveWorkflow(plan.manifest);
+    if (!approval.ok) {
+      setApprovalError(approval.error);
+      setRunning(false);
+      return;
+    }
     const run = await runWorkflow(plan.manifest);
     setRunning(false);
     setPlanRun(messageId, run.text, run.report);
@@ -246,6 +258,12 @@ export function PlanPanel({ messageId, plan }: { messageId: string; plan: Workfl
             Run {report.id} executed by geodukt (geo/proj).
           </Text>
         ) : null}
+
+        {approvalError && (
+          <Text size="xs" c="red.4" data-testid="plan-approval-error">
+            {approvalError}
+          </Text>
+        )}
 
         <Group gap={6}>
           {!ran && (

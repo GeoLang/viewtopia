@@ -3,9 +3,10 @@
  *
  * The agent validates a geodukt TOML manifest and the run streams it as an AG-UI
  * custom `plan` event (payload built by geolang's src/agents/tools/_geodukt.py,
- * plan_payload). Nothing has run at that point: approving the plan posts the
- * carried manifest back verbatim to geolang's run_workflow tool, which is the
- * only thing that executes it.
+ * plan_payload). Nothing has run at that point. Approving posts the carried
+ * manifest back verbatim twice: to the approval route, which is the only record
+ * geolang has that a person agreed, and then to the run_workflow tool, which
+ * refuses a manifest without one.
  */
 
 import { apiHeaders, authHeaders, noticeRefusal } from '../../lib/apiAuth';
@@ -136,6 +137,39 @@ export async function downloadOutput(path: string): Promise<boolean> {
   a.click();
   URL.revokeObjectURL(url);
   return true;
+}
+
+export interface WorkflowApproval {
+  ok: boolean;
+  /** Why it was refused, for the panel to show. Empty when it went through. */
+  error: string;
+}
+
+/**
+ * Record that the user approved this plan. run_workflow refuses a manifest with
+ * no approval, so this posts first and the run is skipped when it fails.
+ *
+ * The manifest goes back exactly as the plan carried it: geolang keys the
+ * approval to a digest of that text, and an edited one is refused.
+ */
+export async function approveWorkflow(manifest: string): Promise<WorkflowApproval> {
+  let body: { approved?: boolean; message?: string } | null = null;
+  try {
+    const res = await fetch('/agent/workflow/approve', {
+      method: 'POST',
+      headers: apiHeaders(),
+      body: JSON.stringify({ manifest_toml: manifest }),
+    });
+    if (!res.ok) {
+      noticeRefusal(res.status);
+      return { ok: false, error: `Could not approve the plan: HTTP ${res.status}` };
+    }
+    body = (await res.json()) as { approved?: boolean; message?: string };
+  } catch (e) {
+    return { ok: false, error: `Could not reach the approval: ${(e as Error).message}` };
+  }
+  if (body?.approved) return { ok: true, error: '' };
+  return { ok: false, error: body?.message || 'The plan was not approved.' };
 }
 
 /**
