@@ -352,16 +352,10 @@ platform machinery, then the large islands. One exception to reconfirm when
 reached: Space-Time analysis rows sit under an earlier "do not build Gotham"
 owner call that this direction reverses.
 
-- [ ] **tiletopia scheduler.** Cron/interval/one-shot enum, real cron parsing,
-      priority, retry, three GET routes. `spawn()` is called from nowhere,
-      `create_job` ignores cron and returns now plus one hour, the executor only
-      formats a log line, there is no create route, and `Scheduler::new()` seeds
-      three fabricated jobs with invented run counts of 28, 720 and 4. Nothing has
-      ever run a scheduled job. Replace or delete; do not start from it.
-
-- [ ] **tiletopia webhooks.** Real HMAC delivery with backoff in `process_pending`,
-      which nothing calls, seeded with two demo subscriptions carrying secrets
-      `whsec_demo_secret_1/2`, and read-only routes with no subscribe.
+- [ ] **tiletopia's scheduler and webhooks test binaries duplicate their JWT
+      harness** (~60 lines each): every test binary needs its own JWT env
+      setup, copied rather than refactored while both were landing. Extract
+      into `tests/common/mod.rs`.
 
 - [ ] **ptolemy webhook delivery, SSE, WebSocket events, background jobs, rate
       limiting, audit-log writes and lock enforcement are seven separate dead

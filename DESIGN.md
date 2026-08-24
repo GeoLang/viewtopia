@@ -265,9 +265,17 @@ pgvector for the four similarity routes.
   `TILETOPIA_STAC_API`, COG windows read `TILETOPIA_COG_SOURCES` through range requests,
   static maps render the server's DEM to PNG/JPEG/WebP/SVG/PDF, geostatistics solves the
   kriging systems (dense solve, capped samples and grid), geoprocessing runs geo's boolean
-  overlays with buffers in a local metric frame. Absent data answers 4xx/503, never an
-  invented payload. Still fake there: the scheduler, webhook delivery, and the STAC
-  collection list.
+  overlays with buffers in a local metric frame. The STAC collection list proxies the
+  same upstream as search. Absent data answers 4xx/503, never an invented payload.
+- tiletopia webhooks deliver for real: subscriptions in SQLite with mint-once `whsec_`
+  secrets, HMAC-SHA256 signed posts with bounded exponential backoff from a worker
+  started with the server, and the advertised event set equals what the code emits
+  (job.completed, job.failed, asset.deleted). The signature covers the body only, so
+  replay protection is the receiver's, deduped on the stable delivery id header.
+- tiletopia's scheduler runs real jobs: interval, one-shot and five-field UTC cron
+  schedules persisted in SQLite, a worker claiming due jobs each tick, and only
+  actions with real entry points behind them (re-tile an asset, prune export files,
+  prune settled job rows). Three consecutive failures disable a job.
 - collecta: forms carry a creator. Creating a form or submitting needs editor or admin, reading
   submissions is creator-or-admin, and form definitions are instance-readable so collectors can
   discover them. A form id cannot be taken over: the upsert carries the ownership test in the
