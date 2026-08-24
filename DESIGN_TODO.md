@@ -410,21 +410,12 @@ owner call that this direction reverses.
       cinematic flythrough, digital-twin scripting, offline viewer export. Decide
       per module: wire, or delete and drop the claim.
 
-- [~] **wave 1b: the four premium route groups wave 1 left fake.** Plan
-      2026-08-24, each lands with tests through its real route. Settled
-      decisions: geometry booleans come from the `geo` 0.33 workspace dep
-      already in tiletopia-server (verify its Buffer/BooleanOps API against
-      the vendored source before use, no new dependency); API keys use the
-      existing SQLite layer, and the two current dead systems (in-memory
-      `ApiKeyStore` demo seeds, uncalled plaintext `api_keys` table in db.rs)
-      collapse into one hashed store. Kriging, geoprocessing and static maps
-      landed (tiletopia changelog).
-      - [ ] **API keys that authenticate** (`api_keys.rs`, `db.rs`). Admin
-            routes to create (plaintext shown once, SHA-256 stored), list and
-            revoke; an `X-Api-Key` extractor that resolves the hash, checks
-            permissions and expiry, and feeds the existing token-bucket rate
-            limiter; at least the premium read routes accept a key as an
-            alternative to a JWT; demo seeds deleted.
+- [ ] **tiletopia API keys reach only read routes.** Keys authenticate since
+      wave 1b, but every write stays JWT-only: feeding keys into
+      `require_editor` changes that middleware's contract, so it was left. A
+      follow-up if machine writers ever need keys. Key mint/revoke also does
+      not write to tiletopia's `audit.rs`, because nothing in the server
+      routes to that audit log yet, it is one of the pub-mod-only modules.
 
 - [ ] **tiletopia-worker is a dead crate.** `tiletopia-server` and
       `tiletopia-cli` list it in Cargo.toml and never reference

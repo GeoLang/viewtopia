@@ -256,6 +256,18 @@ pgvector for the four similarity routes.
   The asset listing shows the caller's own assets plus ownerless legacy rows, admins all.
   Tiles stay public by asset id, which the CDN cache TTLs depend on, so the boundary protects
   metadata and writes rather than tile bytes.
+- tiletopia API keys are a second read credential beside the JWT: admin-minted (`ttk_` plus
+  32 random bytes, shown once, SHA-256 at rest in SQLite), scoped by permission to read/
+  terrain/analytics/export route classes, fed through a per-key token-bucket rate limit.
+  A key reaches no write, admin, or user-scoped route, and a request carrying `X-Api-Key`
+  is judged by the key alone, a bearer token in the same request adds nothing.
+- tiletopia's premium compute routes are real, not demo payloads: STAC search proxies
+  `TILETOPIA_STAC_API`, COG windows read `TILETOPIA_COG_SOURCES` through range requests,
+  static maps render the server's DEM to PNG/JPEG/WebP/SVG/PDF, geostatistics solves the
+  kriging systems (dense solve, capped samples and grid), geoprocessing runs geo's boolean
+  overlays with buffers in a local metric frame. Absent data answers 4xx/503, never an
+  invented payload. Still fake there: the scheduler, webhook delivery, and the STAC
+  collection list.
 - collecta: forms carry a creator. Creating a form or submitting needs editor or admin, reading
   submissions is creator-or-admin, and form definitions are instance-readable so collectors can
   discover them. A form id cannot be taken over: the upsert carries the ownership test in the
