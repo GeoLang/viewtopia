@@ -109,21 +109,29 @@ facade lists (item 8 and Delete-do-not-wire) the owner's direction is wire for
 real over delete where the module earns it; a per-module proposal is the next
 task after this slice.
 
-- [ ] **planned-manifest gate in geolang.** plan_workflow records a hash of
-      each manifest it validated, run_workflow rejects a manifest that never
-      passed validation. Approval-click enforcement stays persona-level for
-      now and is the recorded follow-up.
-- [ ] **golden path runs one real tool.** The platform e2e invokes one
-      offline-capable tool through the real `POST /tools/{name}` route (no
-      LLM), then renders its output through the real agent-layer path with no
-      route mocks, closing P0 item 9's two uncovered steps. Explicit stack
-      shutdown stays CI-cleanup.
-- [ ] **nightly tool sweep.** A scheduled workflow starts the platform stack
-      and runs every advertised tool from `GET /tools` with maintained sample
-      arguments, failing on any tool error and on a manifest tool that has no
-      sweep arguments, so a new tool cannot ship unswept.
-- [ ] **stale tool docs.** geolang README and api_reference tool counts and
-      lists regenerated from the live manifest.
+- [x] **planned-manifest gate in geolang.** Shipped 2026-08-24 (geolang
+      changelog). Viewer approval-click enforcement stays persona-level and is
+      the recorded follow-up. Live proof rides the first sweep CI run.
+- [x] **golden path runs one real tool.** Shipped 2026-08-24 (viewtopia
+      changelog): voronoi through the real `POST /tools/{name}` and its output
+      drawn with no route mocks. Also fixed: platform-e2e CI never set
+      `GEOLANG_EXECUTOR_SECRET`, so every earlier green run had a dead
+      executor nothing called. Leftover: geolang has no delete route for
+      outputs, so each run leaves two small files in the outputs volume.
+- [x] **nightly tool sweep.** Shipped 2026-08-24, 06:00 UTC workflow plus the
+      per-push offline subset and manifest-derived doc tests. The docs were
+      not stale (39 tools, verified against the loaded manifest). First
+      dispatch pending: it must prove the 14 external-network tools, the plan
+      gate live, and the workflow's own plumbing. External-service failures
+      currently turn the nightly red; downgrade to a warning if that proves
+      noisy.
+- [x] **QGIS tools crash the executor.** Found by the sweep's first local run
+      and fixed 2026-08-24 (geolang changelog): each QGIS tool built and tore
+      down its own QgsApplication, and a second init in one process is a
+      SIGSEGV, so whichever QGIS tool ran second killed the executor. One
+      process-level session in src/core now serves all four tools; pyqgis_api
+      also gained the missing sys.path bridge and its failures the ❌ prefix
+      it was hiding behind.
 
 Verified 2026-08-24 for item 5: no viewer-called route returns demo data. The
 viewer's elevation panels call open-elevation.com, not tiletopia's synthetic
