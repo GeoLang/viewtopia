@@ -140,6 +140,12 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-08-23: **an asset upload over 1 MB was 413'd by nginx before tiletopia
+  saw it.** `/tiles/v1/assets` gets its own location block, matching the one
+  vector tileset uploads already had: body size up to tiletopia's 4 GiB cap,
+  request buffering off so the progress bar tracks the real transfer, and a
+  600s read timeout.
+
 - 2026-08-21: notebooks IndexedDB access no longer throws when `indexedDB` is
   missing (jsdom / vitest). The all-panels test mounts NotebookPanel and that
   was failing CI on macos.
