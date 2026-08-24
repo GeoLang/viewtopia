@@ -115,13 +115,6 @@ task after this slice.
       text. Wire the approval into geolang and check it in run_workflow.
 - [ ] **geolang outputs have no delete route.** Every sweep and e2e run
       leaves files in the outputs volume forever.
-- [ ] **tiletopia stac::collections() is still fabricated** (three hardcoded
-      collections, invented item counts) beside the now-real /stac/search.
-      Real means deriving collections from actual stored assets, a design
-      decision not yet made.
-- [ ] **tiletopia COG window reads reopen the source per request**, a few
-      header reads of overhead each time. Cache open readers if the route
-      sees traffic.
 
 Verified 2026-08-24 for item 5: no viewer-called route returns demo data. The
 viewer's elevation panels call open-elevation.com, not tiletopia's synthetic
