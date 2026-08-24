@@ -372,19 +372,10 @@ owner call that this direction reverses.
       not write to tiletopia's `audit.rs`, because nothing in the server
       routes to that audit log yet, it is one of the pub-mod-only modules.
 
-- [ ] **tiletopia-worker is a dead crate.** `tiletopia-server` and
-      `tiletopia-cli` list it in Cargo.toml and never reference
-      `tiletopia_worker`. It is a second job runner over `read_point_cloud`,
-      `read_heightmap` and `read_mesh`. Delete it. Context: since 2026-08-22
-      the real job queue tiles point clouds natively, IFC natively, and
-      glTF, glb, OBJ, FBX and CityGML with mago-3d-tiler when
-      `TILETOPIA_MAGO_JAR` is set (Linux and Windows x64 only) or the native
-      mesh tiler without textures when it is not. GeoJSON, GeoPackage and KML
-      are mago only. DAE fails. photogrammetry.rs, imagery_tiler.rs,
-      bim_reader.rs and the vector readers are deleted. The FBX reader
-      assumes y up and does not read the file's `GlobalSettings` UpAxis. The
-      long-term plan is textures and materials through the native readers so
-      mago can go.
+- [ ] **tiletopia native mesh tiler: textures and materials**, so mago-3d-tiler
+      can go. Until then the native path drops textures, GeoJSON/GeoPackage/KML
+      tile through mago only, and the FBX reader assumes y up rather than
+      reading the file's `GlobalSettings` UpAxis.
 
 - [ ] **viewtopia Space-Time Intelligence: four panel surfaces work.**
       Entities, CSV ingest, track player, manual links. The Analysis tab
@@ -398,16 +389,14 @@ owner call that this direction reverses.
       columns (`branch_id`, `is_deleted`) that `feature_versions` does not have,
       so it always errors. No commit-time gate. (PostGIS Topology proper is real.)
 
-- [ ] **jung unused render modules** (labels, label priority, curved labels,
-      text/TTF, MIL-STD 2525, heatmap, print layout). Each is exported by a
-      `pub mod` line and tested in isolation; nothing on the render path calls
-      them. `print_layout` pulls in `output`, so the print stack is a closed
-      unused island rather than one module. The README already discloses it, so
-      only the code is open. jung-wasm is a different matter and is not a gap:
-      the crate exists, and jung's README already states that viewtopia does not
-      import it. jung is already in the v1 path: ptolemy's `GET /style` uses
-      `jung-esri` and terravista decodes tiles with `jung-mvt`. The open question
-      is whether the off-render-path `jung-core` modules earn their keep.
+- [~] **jung label stack onto the render path, print stack deleted.** Owner
+      calls 2026-08-24: wire label/label_priority/curved_label/text into
+      `Renderer::render` driven by the style's text properties (labels reach
+      jung-cli, jung-wasm and jung-vello's consumers; fenestra pins jung at
+      v0.1.0 and is unaffected); delete `print_layout` and `output` (redundant
+      with fenestra-printing and viewtopia's client-side print); the remaining
+      thematic modules (2525, maritime, heatmap, clustering, ...) stay as
+      disclosed library code awaiting demand. In flight.
 
 ## Before any public deploy
 
