@@ -9,8 +9,9 @@ import { platformAuthHeaders } from '../../scripts/platform-token.mjs';
  *   docker compose -f docker-compose.platform.yml up -d
  *   npx playwright test -c playwright.platform.config.js tests/e2e/analysis-smoke.spec.js
  *
- * tiletopia serves /api/v1/analysis/{viewshed,flood,terrain,solar}; elevation falls
- * back to a synthetic surface, so no tileset needs to be ingested first.
+ * tiletopia serves /api/v1/analysis/{viewshed,flood,terrain,solar} from the
+ * DEM the stack stages (staged tiles, then the SRTM cache); a box with no
+ * coverage is refused rather than answered from an invented surface.
  */
 
 const BBOX = [7.4, 43.72, 7.45, 43.75]; // small area near Monaco
@@ -43,7 +44,7 @@ test.describe('Terrain analysis — live platform stack', () => {
     await page.goto('/');
   });
 
-  test('viewshed returns a visible-area polygon', async ({ page }) => {
+  test('viewshed returns the visible cells as a multipolygon', async ({ page }) => {
     const r = await post(page, '/tiles/v1/analysis/viewshed', {
       observer: [7.42, 43.73],
       height_m: 2,
@@ -51,9 +52,12 @@ test.describe('Terrain analysis — live platform stack', () => {
     });
     expect(r.status).toBe(200);
     expect(r.json.type).toBe('FeatureCollection');
+    // ray-cast viewshed: one square per visible cell, so a MultiPolygon
+    expect(r.json.features.length).toBe(1);
     const geom = r.json.features[0].geometry;
-    expect(geom.type).toBe('Polygon');
-    expect(geom.coordinates[0].length).toBeGreaterThan(8);
+    expect(geom.type).toBe('MultiPolygon');
+    expect(geom.coordinates.length).toBeGreaterThanOrEqual(1);
+    expect(r.json.features[0].properties.visible_cells).toBeGreaterThan(0);
     expect(r.json.features[0].properties.visible_area_m2).toBeGreaterThan(0);
   });
 
