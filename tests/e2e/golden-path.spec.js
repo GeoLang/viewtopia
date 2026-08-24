@@ -12,7 +12,8 @@ import { platformAuthHeaders } from '../../scripts/platform-token.mjs';
  * Run: docker compose -f docker-compose.platform.yml up -d && npm run test:e2e:platform
  *
  * The agent NL->map step is intentionally omitted (it spends real LLM credits);
- * see DESIGN_TODO.md Track 1.
+ * see DESIGN_TODO.md Track 1. The tool run and its layer, which need no LLM, are
+ * in agent-tool-run.spec.js.
  */
 
 // Asset upload and delete are writes, so they need a token when the stack

@@ -6,6 +6,17 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-24: **the platform e2e runs a real agent tool and draws its output**.
+  `tests/e2e/agent-tool-run.spec.js` posts an inline point FeatureCollection to
+  `/agent/upload`, calls `POST /agent/tools/voronoi` over the same nginx proxy
+  the viewer uses, and asserts the run answers a result rather than a `❌`
+  string. The GPKG the tool names is then replayed through chat history, so
+  `renderUISpec` fetches it from the real `/agent/geojson/<file>` route with no
+  mock, and the test reads the MapLibre source back to check the four cells and
+  their labels are the tool's own. The tool call and the browser share one token
+  `sub`, because geolang scopes an output file to its caller. No LLM is
+  involved, so this costs nothing to run.
+
 - 2026-08-23: **a geometry edit commits like an attribute edit**. The Dataset
   Editor's Redraw geometry button arms the Draw machinery in the selected
   feature's shape family, and the finished shape replaces the feature's

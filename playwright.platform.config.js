@@ -12,6 +12,7 @@ export default defineConfig({
   testDir: 'tests/e2e',
   testMatch: [
     'golden-path.spec.js',
+    'agent-tool-run.spec.js',
     'live-session.spec.js',
     'realestate-smoke.spec.js',
     'dataset-editing.spec.js',
