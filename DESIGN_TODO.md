@@ -113,10 +113,6 @@ task after this slice.
       gate is server-side only: the viewer's approve click never reaches
       geolang, so "planned" is enforced but "user approved" is still persona
       text. Wire the approval into geolang and check it in run_workflow.
-- [ ] **prove the sweep's first CI run.** The 14 external-network tools, the
-      plan gate against a post-gate image, and the workflow's own plumbing
-      have never run in CI. If external-service downtime turns the nightly
-      red too often, downgrade external failures to a warning.
 - [ ] **geolang outputs have no delete route.** Every sweep and e2e run
       leaves files in the outputs volume forever.
 - [ ] **tiletopia stac::collections() is still fabricated** (three hardcoded
@@ -335,11 +331,11 @@ sees the result. Each task needs source, integration, and failure-path tests.
      all six 2D WKB types both ways.
 
 4. **Make the advertised agent tool set truthful and runnable.**
-   Repositories: `geolang`, `sibyl`, `geodukt`, `viewtopia`. Either package the
-   dependencies required by every advertised tool or remove unavailable tools
-   from the manifest. Run every remaining tool through the real HTTP or MCP
-   path, record failures, and make workflow execution reject a manifest that
-   has not passed the selected approval path.
+   Repositories: `geolang`, `sibyl`, `geodukt`, `viewtopia`. Closed 2026-08-24:
+   all 39 tools pass the nightly sweep through the real HTTP path in CI
+   (externals included), run_workflow rejects unplanned manifests, and
+   manifest-derived doc tests stop the counts drifting. Viewer approval
+   round trip remains open above.
 
 5. **Make the core map data path reliable under service failure.**
    Repositories: `viewtopia`, `ptolemy`, `tiletopia`, `fenestra`. Define which
@@ -368,10 +364,11 @@ sees the result. Each task needs source, integration, and failure-path tests.
    event delivery, and non-consumable Fenestra capabilities.
 
 9. **Make the release checks measure the product path.**
-   Repositories: all service repos plus `viewtopia`. Add one CI or harness job
-   that starts the minimum stack, imports a fixture, authenticates, edits a
-   feature, runs one agent tool, renders the result, and shuts the stack down.
-   Keep unit tests for library-only behavior separate from this acceptance path.
+   Repositories: all service repos plus `viewtopia`. Closed 2026-08-24: the
+   platform e2e starts the stack, imports a fixture, authenticates, edits a
+   feature, runs a real tool through `POST /tools/{name}` and draws its
+   output unmocked; shutdown stays CI cleanup. The nightly sweep covers the
+   full tool surface on top.
 
 ## Wire for real (owner call 2026-08-24, was "delete, do not wire")
 
