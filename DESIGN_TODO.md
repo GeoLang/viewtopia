@@ -410,17 +410,40 @@ owner call that this direction reverses.
       cinematic flythrough, digital-twin scripting, offline viewer export. Decide
       per module: wire, or delete and drop the claim.
 
-- [ ] **tiletopia premium routes return demo data or ignore input.** COG tile
-      offsets are fabricated with no HTTP client; STAC search ignores bbox,
-      datetime, collections and limit and returns one hardcoded item; static map
-      rendering fills a flat grey buffer and encodes WebP as JPEG and both PDF and
-      SVG as PNG; kriging is inverse-variogram weighting with no solve, and
-      Ordinary/Simple/Universal run identical code; geoprocessing buffer scales
-      vertices radially so a square stays a square, union is a convex hull;
-      terrain analysis has no aspect, watershed or flow accumulation and viewshed
-      has no ray casting; elevation always takes a synthetic sine fallback while
-      reporting `source: Srtm30m`; API-key management seeds three fake keys and
-      `get_by_hash` has zero callers, so a key cannot authenticate anything.
+- [~] **wave 1b: the four premium route groups wave 1 left fake.** Plan
+      2026-08-24, each lands with tests through its real route. Settled
+      decisions: geometry booleans come from the `geo` 0.33 workspace dep
+      already in tiletopia-server (verify its Buffer/BooleanOps API against
+      docs.rs before use, no new dependency); the kriging solve is a local
+      dense Gaussian elimination, no linear-algebra crate; API keys use the
+      existing SQLite layer, and the two current dead systems (in-memory
+      `ApiKeyStore` demo seeds, uncalled plaintext `api_keys` table in db.rs)
+      collapse into one hashed store.
+      - [ ] **kriging with a real solve** (`geostatistics.rs`). Ordinary
+            kriging solves the (n+1) semivariogram system with a Lagrange
+            row, simple kriging solves the covariance system around
+            `known_mean`, universal kriging adds linear drift rows, so the
+            three methods stop running identical code. Real
+            `POST /api/v1/geostatistics/interpolate` taking samples, bounds,
+            resolution and method; the demo route stays but says it is a demo.
+      - [ ] **static maps render and return a real image** (`static_map.rs`).
+            The route today returns JSON metadata and drops the bytes
+            (`#[serde(skip)]`). Return image bytes with the right
+            content-type; base layer from the wave 1 staged-DEM hillshade
+            where coverage exists, plain background elsewhere, honest 404/503
+            like elevation; WebP encoded as WebP, SVG as real vector markup,
+            PDF as a generated single-page PDF embedding the raster; delete
+            the five fabricated `available_styles()` entries.
+      - [ ] **geoprocessing on real geometry** (`geoprocessing.rs`). Buffer,
+            union, intersection, difference through `geo` booleans in a local
+            metric projection instead of radial vertex scaling and convex
+            hulls. Real `POST /api/v1/geoprocessing/run` taking GeoJSON.
+      - [ ] **API keys that authenticate** (`api_keys.rs`, `db.rs`). Admin
+            routes to create (plaintext shown once, SHA-256 stored), list and
+            revoke; an `X-Api-Key` extractor that resolves the hash, checks
+            permissions and expiry, and feeds the existing token-bucket rate
+            limiter; at least the premium read routes accept a key as an
+            alternative to a JWT; demo seeds deleted.
 
 - [ ] **tiletopia-worker is a dead crate.** `tiletopia-server` and
       `tiletopia-cli` list it in Cargo.toml and never reference
