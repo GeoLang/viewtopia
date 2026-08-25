@@ -24,6 +24,7 @@ export default defineConfig({
     'tileset-import.spec.js',
     'digital-twin.spec.js',
     'digital-twin-3d.spec.js',
+    'digital-twin-scenario.spec.js',
   ],
   timeout: 30000,
   use: {
