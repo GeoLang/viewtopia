@@ -1,6 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { Cesium3DTileStyle, type Cesium3DTileset } from 'cesium';
-import { useAssetStateStore, colorForAsset, type AssetState } from '../live/assetState';
+import {
+  useAssetStateStore,
+  colorForAsset,
+  visibleAssets,
+  type AssetState,
+} from '../live/assetState';
 import { useLiveStore } from '../live/liveStore';
 import { ASSET_ID_PROPERTY, ASSET_RULE_ID, type AssetRule } from '../live/types';
 import { useTiles3dLayerStore } from '../store/tiles3dLayers';
@@ -52,7 +57,7 @@ function restore(styled: StyledTileset | null): void {
  */
 export function useAssetColorsCesium() {
   const rule = useLiveStore((state) => state.document.assets[ASSET_RULE_ID]);
-  const assets = useAssetStateStore((state) => state.assets);
+  const assets = useAssetStateStore(visibleAssets);
   const loaded = useTiles3dLayerStore((state) => state.loaded);
   const styledRef = useRef<StyledTileset | null>(null);
 

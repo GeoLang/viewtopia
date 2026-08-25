@@ -11,7 +11,7 @@ import { IconClick } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { useFeaturePickerStore, type FeatureProp } from '../../store/featurePicker';
 import { useColumnLabels } from '../../store/datasetSchemas';
-import { useAssetStateStore } from '../../live/assetState';
+import { useAssetStateStore, visibleAssets } from '../../live/assetState';
 import { ASSET_ID_PROPERTY } from '../../live/types';
 
 function pickedAssetId(selected: FeatureProp[] | null): string | null {
@@ -20,11 +20,13 @@ function pickedAssetId(selected: FeatureProp[] | null): string | null {
 
 /** Readings the feed keeps sending, so the section follows them without a second click. */
 function AssetReadings({ assetId }: { assetId: string }) {
-  const asset = useAssetStateStore((s) => s.assets[assetId]);
+  const asset = useAssetStateStore((s) => visibleAssets(s)[assetId]);
+  const historyAt = useAssetStateStore((s) => s.historyAt);
   if (!asset) return null;
+  const shownAt = historyAt === null ? '' : ` at ${new Date(historyAt).toLocaleTimeString()}`;
   return (
     <Stack gap={4} data-testid="asset-live">
-      <Divider label="Live" labelPosition="left" />
+      <Divider label={historyAt === null ? 'Live' : 'History'} labelPosition="left" />
       <Table withRowBorders={false} verticalSpacing={2} fz="xs">
         <Table.Tbody>
           {Object.entries(asset.values).map(([kind, reading]) => (
@@ -45,6 +47,7 @@ function AssetReadings({ assetId }: { assetId: string }) {
               data-testid="asset-online"
             >
               {asset.online ? 'online' : 'offline'}
+              {shownAt}
             </Table.Td>
           </Table.Tr>
         </Table.Tbody>

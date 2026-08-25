@@ -1,7 +1,12 @@
 import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import type maplibregl from 'maplibre-gl';
-import { useAssetStateStore, colorForAsset, type AssetState } from '../live/assetState';
+import {
+  useAssetStateStore,
+  colorForAsset,
+  visibleAssets,
+  type AssetState,
+} from '../live/assetState';
 import { useLiveStore } from '../live/liveStore';
 import { ASSET_ID_PROPERTY, ASSET_RULE_ID, type AssetRule } from '../live/types';
 
@@ -80,7 +85,7 @@ function restorePaint(map: maplibregl.Map, painted: PaintedLayers): void {
  */
 export function useAssetColorsMapLibre(mapRef: MutableRefObject<maplibregl.Map | null>) {
   const rule = useLiveStore((state) => state.document.assets[ASSET_RULE_ID]);
-  const assets = useAssetStateStore((state) => state.assets);
+  const assets = useAssetStateStore(visibleAssets);
   const map = mapRef.current;
   const paintedRef = useRef<PaintedLayers>(new Map());
 

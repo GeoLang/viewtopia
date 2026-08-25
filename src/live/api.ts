@@ -1,6 +1,12 @@
 import { apiHeaders, noticeRefusal } from '../lib/apiAuth';
 import { isUnreachableStatus, unreachableMessage } from '../offline/backends';
-import type { LiveDocument, LiveDocumentSummary, LiveLinkResolution, LiveRole } from './types';
+import type {
+  AssetSnapshot,
+  LiveDocument,
+  LiveDocumentSummary,
+  LiveLinkResolution,
+  LiveRole,
+} from './types';
 
 const AGORA_BASE = '/agora';
 
@@ -192,6 +198,14 @@ export async function deleteFeed(documentId: string, feedId: string): Promise<vo
   await agoraFetch(`${feedsPath(documentId)}/${encodeURIComponent(feedId)}`, {
     method: 'DELETE',
   });
+}
+
+/** Every asset's state at a past moment, read back from agora's readings table. */
+export async function assetsAt(documentId: string, at: string): Promise<AssetSnapshot[]> {
+  const { assets } = await agoraRequest<{ assets: AssetSnapshot[] }>(
+    `/documents/${encodeURIComponent(documentId)}/assets/at?t=${encodeURIComponent(at)}`,
+  );
+  return assets;
 }
 
 export interface LiveNotification {

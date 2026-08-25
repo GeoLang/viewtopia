@@ -40,6 +40,7 @@ import { MapCommentsOverlay } from '../live/MapCommentsOverlay';
 import { CesiumNavControl } from './CesiumNavControl';
 import { Minimap } from './Minimap';
 import { CoordReadout } from './CoordReadout';
+import { AssetTimeBar } from '../live/AssetTimeBar';
 import { setPanelDockElement } from './PanelCard';
 import { ContextMenu } from './ContextMenu';
 import { BasemapRendererControl } from './BasemapRendererControl';
@@ -379,6 +380,7 @@ export function ViewerArea() {
       <BasemapRendererControl />
       <Minimap />
       <CoordReadout />
+      <AssetTimeBar />
       <ContextMenu />
 
       {/* right-anchored PanelCards portal in here and stack without collisions */}

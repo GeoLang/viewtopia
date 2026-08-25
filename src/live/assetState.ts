@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type {
   AssetBreakpoint,
   AssetRule,
+  AssetSnapshot,
   ServerAssetsMessage,
   ServerLivenessMessage,
   ServerReadingsMessage,
@@ -25,7 +26,12 @@ export type AssetMessage = ServerReadingsMessage | ServerAssetsMessage | ServerL
 
 interface AssetStateStore {
   assets: Record<string, AssetState>;
+  /** the past moment the map is showing, null while it follows the live feed */
+  historyAt: string | null;
+  history: Record<string, AssetState> | null;
   receive: (message: AssetMessage) => void;
+  showHistory: (at: string, assets: AssetSnapshot[]) => void;
+  showLive: () => void;
   clear: () => void;
 }
 
@@ -34,25 +40,38 @@ function blankAsset(feed = ''): AssetState {
   return { feed, online: true, values: {} };
 }
 
+function assetsFromSnapshots(snapshots: AssetSnapshot[]): Record<string, AssetState> {
+  return Object.fromEntries(
+    snapshots.map((snapshot) => [
+      snapshot.asset,
+      {
+        feed: snapshot.feed,
+        online: snapshot.online,
+        values: Object.fromEntries(
+          snapshot.values.map((value) => [value.kind, { value: value.value, at: value.at }]),
+        ),
+      },
+    ]),
+  );
+}
+
+/**
+ * What the map and the inspector show: the past moment while the scrubber holds
+ * one, otherwise whatever the feed last sent. Live frames keep landing in
+ * `assets` either way, so going back to live needs no request.
+ */
+export function visibleAssets(state: AssetStateStore): Record<string, AssetState> {
+  return state.historyAt !== null && state.history ? state.history : state.assets;
+}
+
 export const useAssetStateStore = create<AssetStateStore>((set) => ({
   assets: {},
+  historyAt: null,
+  history: null,
 
   receive: (message) => {
     if (message.type === 'assets') {
-      set({
-        assets: Object.fromEntries(
-          message.assets.map((asset) => [
-            asset.asset,
-            {
-              feed: asset.feed,
-              online: asset.online,
-              values: Object.fromEntries(
-                asset.values.map((value) => [value.kind, { value: value.value, at: value.at }]),
-              ),
-            },
-          ]),
-        ),
-      });
+      set({ assets: assetsFromSnapshots(message.assets) });
       return;
     }
     if (message.type === 'readings') {
@@ -81,7 +100,11 @@ export const useAssetStateStore = create<AssetStateStore>((set) => ({
     });
   },
 
-  clear: () => set({ assets: {} }),
+  showHistory: (at, assets) => set({ historyAt: at, history: assetsFromSnapshots(assets) }),
+
+  showLive: () => set({ historyAt: null, history: null }),
+
+  clear: () => set({ assets: {}, historyAt: null, history: null }),
 }));
 
 function ascendingByValue(breakpoints: AssetBreakpoint[]): AssetBreakpoint[] {
