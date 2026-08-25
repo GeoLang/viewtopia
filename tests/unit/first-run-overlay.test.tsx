@@ -3,10 +3,12 @@ import '@testing-library/jest-dom/vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import { FirstRunOverlay } from '../../src/onboarding/FirstRunOverlay';
+import { useEntryPointStore } from '../../src/onboarding/entryPoints';
 import { FIRST_RUN_DISMISSED_KEY, firstRunVisible } from '../../src/onboarding/firstRun';
 import { useLiveStore } from '../../src/live/liveStore';
 import { useProjectsStore } from '../../src/projects/projectsStore';
 import { useAgentLayerStore } from '../../src/store/agentLayers';
+import { useAppStore } from '../../src/store/app';
 
 function draw(): void {
   render(
@@ -39,6 +41,8 @@ describe('first run guidance', () => {
     useAgentLayerStore.setState({ layers: [] });
     useProjectsStore.setState({ items: [], activeProjectId: null, loading: false });
     useLiveStore.setState({ documentId: null });
+    useEntryPointStore.setState({ requested: null });
+    useAppStore.setState({ activePanel: null });
   });
 
   afterEach(() => {
@@ -47,12 +51,35 @@ describe('first run guidance', () => {
     localStorage.removeItem(FIRST_RUN_DISMISSED_KEY);
   });
 
-  it('shows the three entry actions on a fresh profile', () => {
+  it('shows the three entry actions on a fresh profile, each one a button', () => {
     draw();
     expect(screen.getByTestId('first-run-overlay')).toBeInTheDocument();
-    expect(screen.getByText('Import data')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Import data' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create or open a project' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start a live session' })).toBeInTheDocument();
     expect(screen.getByText('Create or open a project')).toBeInTheDocument();
-    expect(screen.getByText('Start a live session')).toBeInTheDocument();
+  });
+
+  it('opens the import panel and dismisses itself on the import row', () => {
+    draw();
+    fireEvent.click(screen.getByTestId('first-run-import'));
+    expect(screen.queryByTestId('first-run-overlay')).not.toBeInTheDocument();
+    expect(useAppStore.getState().activePanel).toBe('import');
+    expect(localStorage.getItem(FIRST_RUN_DISMISSED_KEY)).not.toBeNull();
+  });
+
+  it('asks for the create-project entry point on the project row', () => {
+    draw();
+    fireEvent.click(screen.getByTestId('first-run-project'));
+    expect(screen.queryByTestId('first-run-overlay')).not.toBeInTheDocument();
+    expect(useEntryPointStore.getState().requested).toBe('create-project');
+  });
+
+  it('asks for the live-session entry point on the live row', () => {
+    draw();
+    fireEvent.click(screen.getByTestId('first-run-live'));
+    expect(screen.queryByTestId('first-run-overlay')).not.toBeInTheDocument();
+    expect(useEntryPointStore.getState().requested).toBe('live-session');
   });
 
   it('stays gone after one dismissal', () => {

@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Button, Group, Paper, Stack, Text, ThemeIcon } from '@mantine/core';
+import { Button, Group, Paper, Stack, Text, ThemeIcon, UnstyledButton } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconBroadcast, IconFileImport, IconFolders } from '@tabler/icons-react';
 import { useLiveStore } from '../live/liveStore';
 import { useProjectsStore } from '../projects/projectsStore';
 import { useAgentLayerStore } from '../store/agentLayers';
+import { useAppStore } from '../store/app';
 import { useOgcLayerStore } from '../store/ogcLayers';
 import { useTourStore } from '../store/tour';
+import { useEntryPointStore } from './entryPoints';
 import { dismissFirstRun, firstRunDismissed, firstRunVisible, returningVisitor } from './firstRun';
 
 const DEMO_DATASET_URL = '/demo/sf-landmarks.geojson';
@@ -16,16 +18,22 @@ const ENTRY_ACTIONS = [
     icon: IconFileImport,
     title: 'Import data',
     detail: 'Drop a GeoJSON, shapefile, FlatGeobuf, CSV or image anywhere on the map.',
+    testId: 'first-run-import',
+    act: () => useAppStore.getState().setActivePanel('import'),
   },
   {
     icon: IconFolders,
     title: 'Create or open a project',
     detail: 'The project menu in the header keeps a map and its members together.',
+    testId: 'first-run-project',
+    act: () => useEntryPointStore.getState().request('create-project'),
   },
   {
     icon: IconBroadcast,
     title: 'Start a live session',
     detail: 'The broadcast button in the header shares this map with others as you edit.',
+    testId: 'first-run-live',
+    act: () => useEntryPointStore.getState().request('live-session'),
   },
 ] as const;
 
@@ -99,15 +107,25 @@ export function FirstRunOverlay() {
       <Stack gap="md">
         <Text fw={600} c="white">Three ways to start</Text>
         {ENTRY_ACTIONS.map((action) => (
-          <Group key={action.title} gap="sm" wrap="nowrap" align="flex-start">
-            <ThemeIcon size="md" radius="sm" variant="light" color="violet">
-              <action.icon size={16} />
-            </ThemeIcon>
-            <Stack gap={2}>
-              <Text size="sm" c="white">{action.title}</Text>
-              <Text size="xs" c="dimmed">{action.detail}</Text>
-            </Stack>
-          </Group>
+          <UnstyledButton
+            key={action.title}
+            aria-label={action.title}
+            data-testid={action.testId}
+            onClick={() => {
+              dismiss();
+              action.act();
+            }}
+          >
+            <Group gap="sm" wrap="nowrap" align="flex-start">
+              <ThemeIcon size="md" radius="sm" variant="light" color="violet">
+                <action.icon size={16} />
+              </ThemeIcon>
+              <Stack gap={2}>
+                <Text size="sm" c="white">{action.title}</Text>
+                <Text size="xs" c="dimmed">{action.detail}</Text>
+              </Stack>
+            </Group>
+          </UnstyledButton>
         ))}
         <Group justify="space-between">
           <Button size="xs" variant="light" color="violet" onClick={loadDemoAndTour}>

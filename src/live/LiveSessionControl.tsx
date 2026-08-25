@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActionIcon,
   Badge,
@@ -13,6 +13,7 @@ import {
 } from '@mantine/core';
 import { IconBroadcast, IconLogout, IconShare } from '@tabler/icons-react';
 import { useAuthStore } from '../features/auth/store';
+import { useEntryPointStore } from '../onboarding/entryPoints';
 import { useProjectsStore } from '../projects/projectsStore';
 import { agoraErrorText, createLiveDocument, listLiveDocuments } from './api';
 import { captureStateForNewDocument } from './documentBridge';
@@ -31,6 +32,7 @@ export function LiveSessionControl() {
   const connect = useLiveStore((s) => s.connect);
   const disconnect = useLiveStore((s) => s.disconnect);
   const signedIn = useAuthStore((s) => s.token) !== null;
+  const requestedEntryPoint = useEntryPointStore((state) => state.requested);
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -39,7 +41,7 @@ export function LiveSessionControl() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  const openPicker = () => {
+  const openPicker = useCallback(() => {
     setPickerOpen(true);
     setError('');
     setBusy(true);
@@ -49,7 +51,14 @@ export function LiveSessionControl() {
         setError(agoraErrorText(failure, 'Could not load your live maps.'));
       })
       .finally(() => setBusy(false));
-  };
+  }, []);
+
+  useEffect(() => {
+    if (requestedEntryPoint !== 'live-session') return;
+    useEntryPointStore.getState().consume('live-session');
+    if (documentId) return;
+    openPicker();
+  }, [requestedEntryPoint, documentId, openPicker]);
 
   const startSession = async () => {
     setBusy(true);

@@ -28,6 +28,7 @@ import {
 } from '@tabler/icons-react';
 import { modals } from '@mantine/modals';
 import { useAuthStore } from '../features/auth/store';
+import { useEntryPointStore } from '../onboarding/entryPoints';
 import { getCapabilities, type InvitationEmailDelivery } from './api';
 import { ProjectDatasetsModal } from './ProjectDatasetsModal';
 import { useProjectsStore } from './projectsStore';
@@ -84,7 +85,10 @@ export function ProjectSwitcher() {
     remove: removeWorkspace,
   } = useWorkspacesStore();
 
+  const requestedEntryPoint = useEntryPointStore((state) => state.requested);
+
   const [metadataModal, setMetadataModal] = useState<MetadataModal>(null);
+  const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [datasetsModalOpen, setDatasetsModalOpen] = useState(false);
   const [name, setName] = useState('');
@@ -118,6 +122,22 @@ export function ProjectSwitcher() {
       reportFailure('Could not load projects', failure);
     });
   }, [authToken, loadProjects, loadWorkspaces]);
+
+  useEffect(() => {
+    if (requestedEntryPoint !== 'create-project' || !signedIn) return;
+    // a request that arrives before the first load finishes would see no workspace
+    if (useWorkspacesStore.getState().loading) return;
+    useEntryPointStore.getState().consume('create-project');
+    const workspace = workspaces.find((candidate) => candidate.id === activeWorkspaceId);
+    if (canEdit(workspace?.role)) {
+      setName('');
+      setDescription('');
+      setMetadataModal('create-project');
+      return;
+    }
+    // the menu is where the missing New Project entry would have been
+    setProjectMenuOpen(true);
+  }, [requestedEntryPoint, signedIn, workspaces, activeWorkspaceId]);
 
   if (!signedIn) return null;
 
@@ -364,7 +384,7 @@ export function ProjectSwitcher() {
           </Menu.Dropdown>
         </Menu>
 
-        <Menu shadow="md" width={240}>
+        <Menu shadow="md" width={240} opened={projectMenuOpen} onChange={setProjectMenuOpen}>
           <Menu.Target>
             <Button variant="light" size="xs" leftSection={<IconFolder size={14} />} rightSection={<IconChevronDown size={14} />}>
               {activeProject?.name ?? 'Select Project'}
