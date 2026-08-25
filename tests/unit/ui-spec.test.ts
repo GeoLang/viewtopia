@@ -109,6 +109,23 @@ describe('renderUISpec', () => {
     expect(notice.message).toContain('belong to the account that ran them');
   });
 
+  it('leaves the globe alone when the agent emits a map with no layers', async () => {
+    const existing = {
+      id: 'kept',
+      name: 'Flood risk',
+      color: '#3388ff',
+      geojson: { type: 'FeatureCollection' as const, features: [] },
+    };
+    useAgentLayerStore.setState({ layers: [existing], generation: 4 });
+    vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('not expected'))));
+
+    await renderUISpec({ type: 'map', layers: [], center: [2.35, 48.85], zoom: 12 });
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(useAgentLayerStore.getState().layers).toEqual([existing]);
+    expect(useAgentLayerStore.getState().generation).toBe(4);
+  });
+
   it('keeps the source path on the layer it puts in the store', async () => {
     vi.stubGlobal(
       'fetch',

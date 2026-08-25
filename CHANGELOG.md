@@ -214,6 +214,11 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-08-25: **a map spec with no layers no longer clears the globe.** geolang
+  now answers an `emit_ui_spec` call with nothing to draw with an empty map
+  spec rather than an error, and the viewer used to hand that empty list to the
+  agent-layer store, dropping whatever the previous answer had put on the
+  globe. `renderUISpec` leaves the store alone when the spec names no layer.
 - 2026-08-23: **an asset upload over 1 MB was 413'd by nginx before tiletopia
   saw it.** `/tiles/v1/assets` gets its own location block, matching the one
   vector tileset uploads already had: body size up to tiletopia's 4 GiB cap,

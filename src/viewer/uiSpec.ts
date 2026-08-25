@@ -47,6 +47,8 @@ export interface UiSpec {
  */
 export async function renderUISpec(spec: UiSpec): Promise<void> {
   if (!spec || (spec.type !== 'map' && spec.ui_type !== 'map')) return;
+  // the agent had nothing to draw, which is not a reason to clear the globe
+  if (!spec.layers?.length) return;
 
   // The agent's map output is a globe layer set. Every globe renderer draws from
   // the agent-layer store, so whichever one is active is left alone.
