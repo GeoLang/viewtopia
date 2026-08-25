@@ -320,6 +320,8 @@ export function useDrawMapLibre(
     };
 
     const erase = () => {
+      // getLayer reads a style the map drops during a basemap swap and on remove
+      if (!map.getStyle()) return;
       if (map.getLayer(VERTEX_LAYER)) map.removeLayer(VERTEX_LAYER);
       if (map.getSource(VERTEX_SRC)) map.removeSource(VERTEX_SRC);
     };
@@ -333,7 +335,7 @@ export function useDrawMapLibre(
     };
 
     const onMouseDown = (e: maplibregl.MapMouseEvent) => {
-      if (!useDrawStore.getState().vertexEdit || !map.getLayer(VERTEX_LAYER)) return;
+      if (!useDrawStore.getState().vertexEdit || !map.getStyle() || !map.getLayer(VERTEX_LAYER)) return;
       const hit = map.queryRenderedFeatures(e.point, { layers: [VERTEX_LAYER] })[0];
       if (!hit) return;
       e.preventDefault();
