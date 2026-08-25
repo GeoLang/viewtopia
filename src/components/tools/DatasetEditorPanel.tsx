@@ -6,6 +6,7 @@ import {
   IconRefresh,
   IconCloudUpload,
   IconPencil,
+  IconVectorTriangle,
 } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { useDrawStore, drawnFeatureGeometry, type DrawMode } from '../../store/draw';
@@ -104,6 +105,9 @@ export function DatasetEditorPanel({ onClose }: { onClose: () => void }) {
   const redrawBaseline = useRef(0);
   /** unmount must clear the draw mode only when this panel set it */
   const redrawingRef = useRef(false);
+  /** true while the map is showing this feature's vertices as drag handles */
+  const [editingVertices, setEditingVertices] = useState(false);
+  const editingVerticesRef = useRef(false);
 
   const selected = features.find((f) => f.id === selectedId) ?? null;
 
@@ -114,7 +118,19 @@ export function DatasetEditorPanel({ onClose }: { onClose: () => void }) {
     setRedrawing(false);
   }, []);
 
-  useEffect(() => stopRedraw, [stopRedraw]);
+  const stopVertexEdit = useCallback(() => {
+    if (!editingVerticesRef.current) return;
+    editingVerticesRef.current = false;
+    useDrawStore.getState().stopVertexEdit();
+    setEditingVertices(false);
+  }, []);
+
+  const stopEditing = useCallback(() => {
+    stopRedraw();
+    stopVertexEdit();
+  }, [stopRedraw, stopVertexEdit]);
+
+  useEffect(() => stopEditing, [stopEditing]);
 
   useEffect(() => onSyncStateChange((state) => {
     setPending(state.pendingCount);
@@ -137,7 +153,7 @@ export function DatasetEditorPanel({ onClose }: { onClose: () => void }) {
   }, [datasetId]);
 
   const loadFeatures = useCallback(async (branch: string) => {
-    stopRedraw();
+    stopEditing();
     setError(null);
     setSelectedId(null);
     setRows([]);
@@ -148,14 +164,14 @@ export function DatasetEditorPanel({ onClose }: { onClose: () => void }) {
       setFeatures([]);
       setError(message(err));
     }
-  }, [stopRedraw]);
+  }, [stopEditing]);
 
   useEffect(() => {
     if (branchId) void loadFeatures(branchId);
   }, [branchId, loadFeatures]);
 
   function select(feature: BranchFeature) {
-    stopRedraw();
+    stopEditing();
     setSelectedId(feature.id);
     setRows(rowsFromProperties(feature.properties));
     setOpenedAs(asVersion(feature));
@@ -175,22 +191,38 @@ export function DatasetEditorPanel({ onClose }: { onClose: () => void }) {
 
   function startRedraw() {
     if (!selected?.geometry) return;
+    stopVertexEdit();
     redrawBaseline.current = useDrawStore.getState().features.length;
     redrawingRef.current = true;
     useDrawStore.getState().setMode(redrawModeFor(selected.geometry));
     setRedrawing(true);
   }
 
-  const applyRedraw = useCallback(
-    (drawn: GeoJSON.Geometry) => {
-      if (!branchId || !selected?.geometry) return;
-      const geometry = matchGeometryFamily(drawn, selected.geometry);
+  function startVertexEditing() {
+    if (!selected?.geometry) return;
+    stopRedraw();
+    editingVerticesRef.current = true;
+    useDrawStore.getState().startVertexEdit(selected.geometry);
+    setEditingVertices(true);
+  }
+
+  const saveGeometry = useCallback(
+    (geometry: GeoJSON.Geometry) => {
+      if (!branchId || !selected) return;
       setFeatures((current) =>
         current.map((f) => (f.id === selected.id ? { ...f, geometry } : f)),
       );
       void queueFeatureUpdate(branchId, { ...asVersion(selected), geometry }, openedAs);
     },
     [branchId, selected, openedAs],
+  );
+
+  const applyRedraw = useCallback(
+    (drawn: GeoJSON.Geometry) => {
+      if (!selected?.geometry) return;
+      saveGeometry(matchGeometryFamily(drawn, selected.geometry));
+    },
+    [selected, saveGeometry],
   );
 
   // take the shape the Draw machinery finishes as the replacement geometry
@@ -207,6 +239,16 @@ export function DatasetEditorPanel({ onClose }: { onClose: () => void }) {
     });
     return unsubscribe;
   }, [redrawing, applyRedraw, stopRedraw]);
+
+  // every released drag is one saved geometry
+  useEffect(() => {
+    if (!editingVertices) return;
+    return useDrawStore.subscribe((state, previous) => {
+      const geometry = state.vertexEdit?.geometry;
+      if (!geometry || geometry === previous.vertexEdit?.geometry) return;
+      saveGeometry(geometry);
+    });
+  }, [editingVertices, saveGeometry]);
 
   /**
    * Commit the queue, then take the branch's answer as the new ancestor, or the
@@ -320,7 +362,7 @@ export function DatasetEditorPanel({ onClose }: { onClose: () => void }) {
             <ScrollArea.Autosize mah={200}>
               <PropertyRows rows={rows} onChange={edit} color={PANEL_COLOR} />
             </ScrollArea.Autosize>
-            {redrawing ? (
+            {redrawing && (
               <>
                 <Text size="xs" c="green">
                   Draw the replacement on the map. A line or polygon finishes on
@@ -330,18 +372,48 @@ export function DatasetEditorPanel({ onClose }: { onClose: () => void }) {
                   Cancel redraw
                 </Button>
               </>
-            ) : (
-              <Button
-                size="xs"
-                variant="light"
-                color={PANEL_COLOR}
-                data-testid="dataset-editor-redraw"
-                leftSection={<IconPencil size={12} />}
-                disabled={!selected.geometry}
-                onClick={startRedraw}
-              >
-                Redraw geometry
-              </Button>
+            )}
+            {editingVertices && (
+              <>
+                <Text size="xs" c="green">
+                  Drag a handle on the map. Each vertex is saved when you let go.
+                </Text>
+                <Button
+                  size="xs"
+                  variant="subtle"
+                  color="gray"
+                  data-testid="dataset-editor-vertices-done"
+                  onClick={stopVertexEdit}
+                >
+                  Done
+                </Button>
+              </>
+            )}
+            {!redrawing && !editingVertices && (
+              <Group gap={4} grow>
+                <Button
+                  size="xs"
+                  variant="light"
+                  color={PANEL_COLOR}
+                  data-testid="dataset-editor-redraw"
+                  leftSection={<IconPencil size={12} />}
+                  disabled={!selected.geometry}
+                  onClick={startRedraw}
+                >
+                  Redraw geometry
+                </Button>
+                <Button
+                  size="xs"
+                  variant="light"
+                  color={PANEL_COLOR}
+                  data-testid="dataset-editor-edit-vertices"
+                  leftSection={<IconVectorTriangle size={12} />}
+                  disabled={!selected.geometry}
+                  onClick={startVertexEditing}
+                >
+                  Edit vertices
+                </Button>
+              </Group>
             )}
           </>
         )}

@@ -131,7 +131,7 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 | **SQL** | Run DuckDB SQL over imported and attached data, draw the result on the map, export CSV or Parquet |
 | **Layer Manager** | Reorder, toggle visibility, opacity, remove |
 | **GeoJSON Editor** | Edit the properties of shapes drawn in this browser |
-| **Dataset Editor** | Pick a Ptolemy dataset and branch, edit a feature's properties, and commit them to the branch |
+| **Dataset Editor** | Pick a Ptolemy dataset and branch, edit a feature's properties, redraw its geometry or drag single vertices, and commit to the branch |
 
 ### Visualization
 | Feature | Description |

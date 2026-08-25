@@ -505,6 +505,12 @@ map, plus a synced split view. Picking/draw/measure/agent-layers survive rendere
   offers the server route for supported files and requires it over 50 MB
   (`BROWSER_IMPORT_LIMIT_BYTES` in `src/features/tilesets/api.ts`).
 
+**Editing a branch feature.** The Dataset Editor edits properties, redraws a whole geometry
+through the draw tool, and moves one vertex at a time by dragging handles the map draws over
+the open feature, with every released drag queued as one update against the version the row
+was opened at. Its WKB codec reads Z, M and GeometryCollection geometries, keeping Z and
+dropping M, so a feature ptolemy holds in any of those forms is still selectable and editable.
+
 **Which service answers for a layer.** Every layer type in the viewer is served by one
 service, reached at one prefix (§2.2 says what each service is):
 

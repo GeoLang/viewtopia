@@ -6,6 +6,17 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-25: **a feature's geometry is editable at the vertex, and no WKB type
+  keeps a feature out of the editor**. Selecting a feature in the Dataset
+  Editor and pressing "Edit vertices" puts a draggable handle on every vertex,
+  on both MapLibre and Cesium, and each released drag queues one update against
+  the version the row was opened at, so a corner moves without redrawing the
+  shape. Moving a polygon ring's first vertex moves its closing vertex with it,
+  and a position that carried an elevation keeps it. The WKB codec now reads
+  ISO Z, M and ZM type codes, the EWKB flag bits, an embedded SRID and
+  GeometryCollection, keeping Z as the third ordinate and dropping M, and
+  writes Z back for a geometry that has it. Features in those forms used to
+  decode as null, which left them unselectable and unredrawable.
 - 2026-08-25: **a project's datasets are managed from the Project menu**.
   Manage Datasets, shown to editors and owners, lists every readable dataset
   with Attach on the ones in no project and Detach on the ones in this one,

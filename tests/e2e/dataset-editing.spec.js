@@ -129,12 +129,16 @@ const VIEW = { lon: 7.425, lat: 43.735, zoom: 13 };
 const CLICK_AT = { x: 240, y: 180 };
 
 async function seedPointDataset(token, name, features) {
+  return seedDataset(token, name, 'point', features);
+}
+
+async function seedDataset(token, name, geometryType, features) {
   const dataset = await ptolemy('/datasets', token, {
     method: 'POST',
     body: JSON.stringify({
       name,
       srid: 4326,
-      geometry_type: 'point',
+      geometry_type: geometryType,
       created_by: BROWSER_USER,
     }),
   });
@@ -273,5 +277,113 @@ test.describe('the draw panel inserts shapes into a branch', () => {
     );
     expect(Math.abs(point.lng - expected.lng)).toBeLessThan(0.001);
     expect(Math.abs(point.lat - expected.lat)).toBeLessThan(0.001);
+  });
+});
+
+/** Half the seeded square's width, about 58 px across at VIEW.zoom. */
+const SQUARE_HALF_DEGREES = 0.01;
+const DRAG_BY = { x: 60, y: -40 };
+
+function seededSquare() {
+  const west = VIEW.lon - SQUARE_HALF_DEGREES;
+  const east = VIEW.lon + SQUARE_HALF_DEGREES;
+  const south = VIEW.lat - SQUARE_HALF_DEGREES;
+  const north = VIEW.lat + SQUARE_HALF_DEGREES;
+  return [
+    [west, south],
+    [east, south],
+    [east, north],
+    [west, north],
+    [west, south],
+  ];
+}
+
+/** The exterior ring of a 2D WKB polygon: order, type, ring count, point count. */
+function wkbPolygonRing(hex) {
+  const buffer = Buffer.from(hex, 'hex');
+  const count = buffer.readUInt32LE(9);
+  const ring = [];
+  for (let i = 0; i < count; i++) {
+    ring.push({
+      lng: buffer.readDoubleLE(13 + i * 16),
+      lat: buffer.readDoubleLE(21 + i * 16),
+    });
+  }
+  return ring;
+}
+
+test.describe('the dataset editor commits a vertex drag', () => {
+  test('a dragged vertex is what the next session reads', async ({ page }) => {
+    test.setTimeout(120_000);
+    const token = mintToken({ role: 'admin', sub: BROWSER_USER });
+    expect(token, 'PLATFORM_JWT_SECRET is not set, so no authenticated edit is possible').toBeTruthy();
+
+    const datasetName = `vertex-e2e-${Date.now()}`;
+    const ring = seededSquare();
+    const { branchId } = await seedDataset(token, datasetName, 'polygon', [
+      {
+        type: 'Feature',
+        geometry: { type: 'Polygon', coordinates: [ring] },
+        properties: { name: 'corner lot' },
+      },
+    ]);
+    const listed = await ptolemy(`/branches/${branchId}/features`, token);
+    const featureId = listed.json.features[0].id;
+
+    await signIn(page, token);
+    await mapReady(page);
+
+    await page.getByRole('button', { name: 'Actions' }).click();
+    await page.locator(MENU_ITEM).filter({ hasText: 'Dataset Editor' }).first().click();
+    await page.getByPlaceholder('Pick a dataset').click();
+    await page.getByRole('option', { name: datasetName }).click();
+    await expect(page.getByTestId('dataset-editor-feature')).toHaveCount(1);
+    await page.getByTestId('dataset-editor-feature').click();
+    await page.getByTestId('dataset-editor-edit-vertices').click();
+
+    // the north-west corner, left of centre and clear of the panel dock
+    const corner = ring[3];
+    const start = await page.evaluate((position) => {
+      const point = window.__viewtopiaMap.project(position);
+      return { x: Math.round(point.x), y: Math.round(point.y) };
+    }, corner);
+    const target = { x: start.x + DRAG_BY.x, y: start.y + DRAG_BY.y };
+    // the camera holds still through the drag, so this is where the corner lands
+    const expected = await page.evaluate((at) => {
+      const position = window.__viewtopiaMap.unproject([at.x, at.y]);
+      return { lng: position.lng, lat: position.lat };
+    }, target);
+
+    const canvas = await page.locator('#maplibre-container canvas').first().boundingBox();
+    await page.mouse.move(canvas.x + start.x, canvas.y + start.y);
+    await page.mouse.down();
+    await page.mouse.move(canvas.x + target.x, canvas.y + target.y, { steps: 8 });
+    await page.mouse.up();
+
+    await expect(page.getByTestId('dataset-editor-commit')).toBeEnabled();
+    await page.getByTestId('dataset-editor-commit').click();
+    await expect(page.getByTestId('dataset-editor-commit')).toBeDisabled();
+
+    // a session that never saw the browser reads the moved corner back
+    await expect
+      .poll(async () => {
+        const read = await ptolemy(`/branches/${branchId}/features/${featureId}`, token);
+        const saved = wkbPolygonRing(read.json?.geometry_wkb_hex ?? '');
+        return saved.some(
+          (position) =>
+            Math.abs(position.lng - expected.lng) < 0.0005 &&
+            Math.abs(position.lat - expected.lat) < 0.0005,
+        );
+      }, { timeout: 20_000 })
+      .toBe(true);
+
+    // the three corners nobody touched stayed put
+    const read = await ptolemy(`/branches/${branchId}/features/${featureId}`, token);
+    const saved = wkbPolygonRing(read.json.geometry_wkb_hex);
+    expect(saved).toHaveLength(ring.length);
+    for (const index of [0, 1, 2]) {
+      expect(Math.abs(saved[index].lng - ring[index][0])).toBeLessThan(0.000001);
+      expect(Math.abs(saved[index].lat - ring[index][1])).toBeLessThan(0.000001);
+    }
   });
 });

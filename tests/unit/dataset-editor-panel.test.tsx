@@ -98,7 +98,7 @@ function open() {
 beforeEach(() => {
   sync.queueFeatureUpdate.mockClear();
   sync.syncNow.mockClear();
-  useDrawStore.setState({ mode: null, features: [], pending: [] });
+  useDrawStore.setState({ mode: null, features: [], pending: [], vertexEdit: null });
   serve();
 });
 afterEach(() => {
@@ -228,6 +228,63 @@ describe('the dataset editor edits a ptolemy branch', () => {
       type: 'GeometryCollection',
       geometries: [{ type: 'Point', coordinates: [1, 2] }],
     });
+  });
+
+  it('queues every vertex the map moves', async () => {
+    open();
+    fireEvent.click(await screen.findByPlaceholderText('Pick a dataset'));
+    fireEvent.click(await screen.findByText('parcels'));
+    fireEvent.click(await screen.findByText('lot 4'));
+
+    fireEvent.click(await screen.findByTestId('dataset-editor-edit-vertices'));
+    expect(useDrawStore.getState().vertexEdit).toEqual({
+      geometry: { type: 'Point', coordinates: [1, 2] },
+    });
+    // a redraw cannot start while the handles are up
+    expect(screen.queryByTestId('dataset-editor-redraw')).toBeNull();
+
+    // the released drag the map hook would deliver
+    act(() => {
+      useDrawStore.getState().moveVertex([], [5, 6]);
+    });
+
+    await waitFor(() => expect(sync.queueFeatureUpdate).toHaveBeenCalled());
+    const [branchId, ours, base] = sync.queueFeatureUpdate.mock.calls[0];
+    expect(branchId).toBe(BRANCH_ID);
+    expect(ours.id).toBe(FEATURE_ID);
+    expect(ours.geometry).toEqual({ type: 'Point', coordinates: [5, 6] });
+    expect(ours.properties).toEqual({ name: 'lot 4', acres: 12.5 });
+    expect(base.geometry).toEqual({ type: 'Point', coordinates: [1, 2] });
+
+    act(() => {
+      useDrawStore.getState().moveVertex([], [7, 8]);
+    });
+
+    await waitFor(() => expect(sync.queueFeatureUpdate).toHaveBeenCalledTimes(2));
+    const [, second, secondBase] = sync.queueFeatureUpdate.mock.calls[1];
+    expect(second.geometry).toEqual({ type: 'Point', coordinates: [7, 8] });
+    // the ancestor stays what the branch held, not this browser's last drag
+    expect(secondBase.geometry).toEqual({ type: 'Point', coordinates: [1, 2] });
+  });
+
+  it('gives up the handles when the selection changes', async () => {
+    open();
+    fireEvent.click(await screen.findByPlaceholderText('Pick a dataset'));
+    fireEvent.click(await screen.findByText('parcels'));
+    fireEvent.click(await screen.findByText('lot 4'));
+
+    fireEvent.click(await screen.findByTestId('dataset-editor-edit-vertices'));
+    fireEvent.click(screen.getByText('lot 4'));
+    expect(useDrawStore.getState().vertexEdit).toBeNull();
+    expect(await screen.findByTestId('dataset-editor-redraw')).toBeInTheDocument();
+
+    // a move nobody is listening for queues nothing
+    act(() => {
+      useDrawStore.getState().startVertexEdit({ type: 'Point', coordinates: [1, 2] });
+      useDrawStore.getState().moveVertex([], [5, 6]);
+    });
+    await act(async () => {});
+    expect(sync.queueFeatureUpdate).not.toHaveBeenCalled();
   });
 
   it('drops the capture when the selection changes mid-redraw', async () => {
