@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => ({
-  maps: new Map<string, { id: string; map: unknown; unpushed?: boolean }>(),
+  maps: new Map<
+    string,
+    { id: string; map: unknown; unpushed?: boolean; droppedAttachmentIds?: string[] }
+  >(),
 }));
 
 const api = vi.hoisted(() => ({
@@ -18,9 +21,16 @@ vi.mock('../../src/offline/db', () => ({
   projectMaps: {
     getAll: vi.fn(async () => [...state.maps.values()]),
     get: vi.fn(async (id: string) => state.maps.get(id)),
-    put: vi.fn(async (entry: { id: string; map: unknown; unpushed?: boolean }) => {
-      state.maps.set(entry.id, entry);
-    }),
+    put: vi.fn(
+      async (entry: {
+        id: string;
+        map: unknown;
+        unpushed?: boolean;
+        droppedAttachmentIds?: string[];
+      }) => {
+        state.maps.set(entry.id, entry);
+      },
+    ),
     remove: vi.fn(async (id: string) => {
       state.maps.delete(id);
     }),
@@ -358,6 +368,46 @@ describe('the attachment behind an overlay that was removed', () => {
     await saveProjectMap(PROJECT, 'Venice');
 
     expect(api.deleteProjectAttachment).not.toHaveBeenCalled();
+  });
+
+  it('is deleted on the retry after the server refused the snapshot that dropped it', async () => {
+    api.putProjectState.mockRejectedValueOnce(new Error('offline'));
+    state.maps.set(PROJECT, { id: PROJECT, map: withOverlay('2026-08-23T10:00:00Z') });
+
+    await saveProjectMap(PROJECT, 'Venice');
+    expect(api.deleteProjectAttachment).not.toHaveBeenCalled();
+
+    await pushUnsavedMaps();
+
+    expect(api.deleteProjectAttachment).toHaveBeenCalledWith('attachment-1');
+    expect(state.maps.get(PROJECT)?.droppedAttachmentIds).toEqual([]);
+  });
+
+  it('is deleted on the retry a later save makes, across a second refused push', async () => {
+    api.putProjectState.mockRejectedValue(new Error('offline'));
+    state.maps.set(PROJECT, { id: PROJECT, map: withOverlay('2026-08-23T10:00:00Z') });
+
+    await saveProjectMap(PROJECT, 'Venice');
+    useAgentLayerStore.getState().addLayer(canals);
+    await saveProjectMap(PROJECT, 'Venice');
+    expect(api.deleteProjectAttachment).not.toHaveBeenCalled();
+
+    api.putProjectState.mockResolvedValue(undefined);
+    await pushUnsavedMaps();
+
+    expect(api.deleteProjectAttachment).toHaveBeenCalledWith('attachment-1');
+  });
+
+  it('stays when the overlay is drawn again before the retry goes through', async () => {
+    api.putProjectState.mockRejectedValueOnce(new Error('offline'));
+    state.maps.set(PROJECT, { id: PROJECT, map: withOverlay('2026-08-23T10:00:00Z') });
+
+    await saveProjectMap(PROJECT, 'Venice');
+    useAgentLayerStore.getState().addRasterLayer({ ...sitePlan, url: 'data:image/png;base64,AA' });
+    await saveProjectMap(PROJECT, 'Venice');
+
+    expect(api.deleteProjectAttachment).not.toHaveBeenCalled();
+    expect(state.maps.get(PROJECT)?.droppedAttachmentIds).toEqual([]);
   });
 });
 

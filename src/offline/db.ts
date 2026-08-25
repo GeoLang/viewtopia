@@ -408,6 +408,8 @@ export interface ProjectMap {
   map: ViewtopiaProject;
   /** the server has not taken this snapshot yet, so it is waiting for a retry */
   unpushed: boolean;
+  /** overlays removed since the server last took a snapshot, deleted once it does */
+  droppedAttachmentIds?: string[];
 }
 
 export const projectMaps = {

@@ -222,6 +222,13 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-08-25: **an attachment dropped by a save the server refused is still
+  deleted on the retry.** The cached map record now carries the attachment ids
+  the last accepted snapshot may still name and the current one does not, so
+  the retry from a later change, the online event or the next start deletes
+  them once the PUT succeeds. Before this the retry had no earlier snapshot to
+  compare against and the attachment stayed in ptolemy. An overlay drawn again
+  before the retry goes through leaves the list.
 - 2026-08-25: **the first-run overlay's three entry rows do what they say.**
   Each row is a button now. Import data dismisses the overlay and opens the
   `import` tool panel, the project row opens the New Project modal in the

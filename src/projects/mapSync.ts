@@ -8,7 +8,7 @@
  * again on the next change, the next project switch, when the browser says it
  * is online, or when the app starts again after a reload.
  */
-import { projectMaps } from '../offline/db';
+import { projectMaps, type ProjectMap } from '../offline/db';
 import {
   applyProject,
   serializeProject,
@@ -59,7 +59,8 @@ export function newerSnapshot(
  * reach, so it goes up here.
  */
 export async function loadProjectMap(projectId: string): Promise<void> {
-  const cached = (await projectMaps.get(projectId))?.map;
+  const cachedEntry = await projectMaps.get(projectId);
+  const cached = cachedEntry?.map;
   let server: ViewtopiaProject | undefined;
   try {
     server = (await getProjectState<ViewtopiaProject>(projectId, MAP_STATE_KEY))?.value;
@@ -72,7 +73,7 @@ export async function loadProjectMap(projectId: string): Promise<void> {
   if (winner === server) {
     await projectMaps.put({ id: projectId, map: winner, unpushed: false });
   } else {
-    await pushMap(projectId, winner);
+    await pushMap({ ...cachedEntry, id: projectId, map: winner, unpushed: true });
   }
   applyProject(winner, projectId);
 }
@@ -86,10 +87,16 @@ export async function saveProjectMap(projectId: string, name: string): Promise<v
     console.warn('could not upload an overlay bitmap', failure);
   });
   const map = serializeProject(name);
-  const previous = (await projectMaps.get(projectId))?.map;
+  const previous = await projectMaps.get(projectId);
+  const entry = {
+    id: projectId,
+    map,
+    unpushed: true,
+    droppedAttachmentIds: droppedAttachmentIds(previous, map),
+  };
   // cache first, so a push that hangs or fails cannot lose what is on screen
-  await projectMaps.put({ id: projectId, map, unpushed: true });
-  await pushMap(projectId, map, previous);
+  await projectMaps.put(entry);
+  await pushMap(entry);
 }
 
 function overlayAttachmentIds(snapshot: ViewtopiaProject | undefined): string[] {
@@ -97,43 +104,49 @@ function overlayAttachmentIds(snapshot: ViewtopiaProject | undefined): string[] 
 }
 
 /**
+ * Attachments the server's snapshot may still name and this one does not:
+ * what the last save left waiting, plus what the cached map drew and this map
+ * dropped. Kept on the record because a retry has no earlier snapshot to diff.
+ */
+function droppedAttachmentIds(previous: ProjectMap | undefined, map: ViewtopiaProject): string[] {
+  const kept = new Set(overlayAttachmentIds(map));
+  const candidates = new Set([
+    ...(previous?.droppedAttachmentIds ?? []),
+    ...overlayAttachmentIds(previous?.map),
+  ]);
+  return [...candidates].filter((attachmentId) => !kept.has(attachmentId));
+}
+
+/**
  * Drop the ptolemy attachments the map has stopped drawing. Only after the
  * server took the snapshot that stopped naming them, so another member never
  * reads a snapshot pointing at an attachment that is already gone.
  */
-async function deleteDroppedAttachments(
-  previous: ViewtopiaProject | undefined,
-  map: ViewtopiaProject,
-): Promise<void> {
-  const kept = new Set(overlayAttachmentIds(map));
-  for (const attachmentId of overlayAttachmentIds(previous)) {
-    if (kept.has(attachmentId)) continue;
+async function deleteDroppedAttachments(attachmentIds: string[]): Promise<void> {
+  for (const attachmentId of attachmentIds) {
     await deleteProjectAttachment(attachmentId).catch((failure: unknown) => {
       console.warn('could not delete the attachment behind a removed overlay', failure);
     });
   }
 }
 
-async function pushMap(
-  projectId: string,
-  map: ViewtopiaProject,
-  previous?: ViewtopiaProject,
-): Promise<void> {
-  let pushed = true;
+async function pushMap(entry: ProjectMap): Promise<void> {
+  const dropped = entry.droppedAttachmentIds ?? [];
   try {
-    await putProjectState(projectId, MAP_STATE_KEY, map);
+    await putProjectState(entry.id, MAP_STATE_KEY, entry.map);
   } catch (failure) {
-    pushed = false;
     console.warn('could not save the project map to the server', failure);
+    await projectMaps.put({ ...entry, unpushed: true, droppedAttachmentIds: dropped });
+    return;
   }
-  await projectMaps.put({ id: projectId, map, unpushed: !pushed });
-  if (pushed) await deleteDroppedAttachments(previous, map);
+  await projectMaps.put({ ...entry, unpushed: false, droppedAttachmentIds: [] });
+  await deleteDroppedAttachments(dropped);
 }
 
 async function pushEveryUnsavedMap(): Promise<void> {
   const cached = await projectMaps.getAll();
   for (const entry of cached) {
-    if (entry.unpushed) await pushMap(entry.id, entry.map);
+    if (entry.unpushed) await pushMap(entry);
   }
 }
 
