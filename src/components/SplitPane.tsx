@@ -34,9 +34,9 @@ export function SplitPane({
   const maplibreRef = useMapLibre({ containerId: maplibreId, pane, paneIndex: index });
   const leafletRef = useLeaflet({ containerId: leafletId, pane, paneIndex: index });
 
-  useAgentLayersCesium(cesiumRef);
-  useAgentLayersMapLibre(maplibreRef);
-  useAgentLayersLeaflet(leafletRef);
+  useAgentLayersCesium(cesiumRef, index);
+  useAgentLayersMapLibre(maplibreRef, index);
+  useAgentLayersLeaflet(leafletRef, index);
   useAssetColorsMapLibre(maplibreRef);
 
   // the pane's own renderer switch reveals a container that was display:none,

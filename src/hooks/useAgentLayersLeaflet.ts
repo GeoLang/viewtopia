@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import L from 'leaflet';
 import {
@@ -14,6 +14,7 @@ import {
   simplestyleColor,
   simplestyleNumber,
 } from '../features/symbology/symbology';
+import { usePaneHiddenLayerIds, VIEWER_PANE } from '../store/splitView';
 import { agentLayersBounds } from './agentLayerBounds';
 import { bboxOfCorners } from '../overlay/georeference';
 
@@ -22,13 +23,22 @@ import { bboxOfCorners } from '../overlay/georeference';
  * or a compare pane, so the set stays on screen when the user switches away
  * from a globe renderer. useLeaflet swaps the instance whenever the tab or the
  * pane's renderer changes, and renders again when it does, so every effect
- * keys on the instance and re-adds everything against the fresh one.
+ * keys on the instance and re-adds everything against the fresh one. Layers
+ * this pane hides are left out of it.
  */
-export function useAgentLayersLeaflet(mapRef: MutableRefObject<L.Map | null>) {
+export function useAgentLayersLeaflet(
+  mapRef: MutableRefObject<L.Map | null>,
+  paneIndex = VIEWER_PANE,
+) {
   const layers = useAgentLayerStore((s) => s.layers);
   const rasterLayers = useAgentLayerStore((s) => s.rasterLayers);
   const markers = useAgentLayerStore((s) => s.markers);
   const generation = useAgentLayerStore((s) => s.generation);
+  const hiddenLayerIds = usePaneHiddenLayerIds(paneIndex);
+  const paneLayers = useMemo(
+    () => visibleLayers(layers).filter((layer) => !hiddenLayerIds.includes(layer.id)),
+    [layers, hiddenLayerIds],
+  );
   const map = mapRef.current;
   const framedRef = useRef(-1);
 
@@ -79,7 +89,7 @@ export function useAgentLayersLeaflet(mapRef: MutableRefObject<L.Map | null>) {
   useEffect(() => {
     if (!map) return;
 
-    const drawn = visibleLayers(layers).map((layer) => {
+    const drawn = paneLayers.map((layer) => {
       const style = layerStyle(layer);
       const color = layerColor(layer);
       const object = L.geoJSON(layer.geojson, {
@@ -118,7 +128,7 @@ export function useAgentLayersLeaflet(mapRef: MutableRefObject<L.Map | null>) {
     map.on('zoomend', showForZoom);
 
     // Frame only when a new spec arrives, never on a plain map swap.
-    const bounds = agentLayersBounds(visibleLayers(layers));
+    const bounds = agentLayersBounds(paneLayers);
     if (bounds && framedRef.current !== generation) {
       framedRef.current = generation;
       map.fitBounds(
@@ -136,5 +146,5 @@ export function useAgentLayersLeaflet(mapRef: MutableRefObject<L.Map | null>) {
       // remove() is a no-op once the layer is detached
       for (const { object } of drawn) object.remove();
     };
-  }, [layers, generation, map]);
+  }, [paneLayers, generation, map]);
 }

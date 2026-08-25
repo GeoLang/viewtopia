@@ -15,10 +15,15 @@ export function asPaneRenderer(value: unknown): PaneRenderer | null {
   return value === 'leaflet' ? 'leaflet' : asRenderer(value);
 }
 
-/** What one pane draws: its own renderer and its own basemap. */
+/** What one pane draws: its own renderer, its own basemap, and what it leaves out. */
 export interface Pane {
   renderer: PaneRenderer;
   basemap: Basemap;
+  /**
+   * Agent layers this pane does not draw, so two panes showing the same
+   * document can each draw one branch of it. Absent is the same as none.
+   */
+  hiddenLayerIds?: string[];
 }
 
 /**
@@ -108,6 +113,11 @@ interface SplitViewState {
    * renderer resizing. Null is the plain half-and-half split.
    */
   swipeAt: number | null;
+  /**
+   * What the viewer pane leaves out. The viewer's renderer and basemap live in
+   * the app store, so its hidden ids have nowhere on `Pane` to sit either.
+   */
+  viewerHiddenLayerIds: string[];
   setActive: (v: boolean) => void;
   setComparePanes: (panes: Pane[]) => void;
   setLayout: (layout: SplitLayout) => void;
@@ -115,6 +125,8 @@ interface SplitViewState {
   setPaneRenderer: (index: number, r: PaneRenderer) => void;
   setPaneBasemap: (index: number, b: Basemap) => void;
   setSwipeAt: (v: number | null) => void;
+  hideLayerInPane: (index: number, layerId: string) => void;
+  showLayerInPane: (index: number, layerId: string) => void;
 }
 
 /** Rewrite one compare pane, addressed by its pane index. */
@@ -122,11 +134,29 @@ function withPane(panes: Pane[], index: number, change: Partial<Pane>): Pane[] {
   return panes.map((pane, i) => (i === index - 1 ? { ...pane, ...change } : pane));
 }
 
+/** One shared empty list, so a pane that hides nothing keeps a stable selector value. */
+const NO_HIDDEN_LAYERS: string[] = [];
+
+function paneHiddenLayerIds(state: SplitViewState, index: number): string[] {
+  if (index === VIEWER_PANE) return state.viewerHiddenLayerIds;
+  return state.comparePanes[index - 1]?.hiddenLayerIds ?? NO_HIDDEN_LAYERS;
+}
+
+function writeHiddenLayerIds(
+  state: SplitViewState,
+  index: number,
+  hiddenLayerIds: string[],
+): Partial<SplitViewState> {
+  if (index === VIEWER_PANE) return { viewerHiddenLayerIds: hiddenLayerIds };
+  return { comparePanes: withPane(state.comparePanes, index, { hiddenLayerIds }) };
+}
+
 export const useSplitViewStore = create<SplitViewState>((set) => ({
   active: false,
   comparePanes: DEFAULT_COMPARE_PANES,
   activePane: VIEWER_PANE,
   swipeAt: null,
+  viewerHiddenLayerIds: NO_HIDDEN_LAYERS,
   // closing the split leaves one pane, so the styling controls go back to it
   setActive: (active) => set((s) => ({ active, activePane: active ? s.activePane : VIEWER_PANE })),
   setComparePanes: (comparePanes) =>
@@ -153,7 +183,28 @@ export const useSplitViewStore = create<SplitViewState>((set) => ({
     set((s) => ({ comparePanes: withPane(s.comparePanes, index, { basemap }) }));
   },
   setSwipeAt: (swipeAt) => set({ swipeAt }),
+  hideLayerInPane: (index, layerId) =>
+    set((s) => {
+      const hidden = paneHiddenLayerIds(s, index);
+      if (hidden.includes(layerId)) return {};
+      return writeHiddenLayerIds(s, index, [...hidden, layerId]);
+    }),
+  showLayerInPane: (index, layerId) =>
+    set((s) => {
+      const hidden = paneHiddenLayerIds(s, index);
+      if (!hidden.includes(layerId)) return {};
+      return writeHiddenLayerIds(
+        s,
+        index,
+        hidden.filter((id) => id !== layerId),
+      );
+    }),
 }));
+
+/** The layer ids one pane leaves out, whether it is the viewer or a compare pane. */
+export function usePaneHiddenLayerIds(index: number): string[] {
+  return useSplitViewStore((s) => paneHiddenLayerIds(s, index));
+}
 
 /** Every pane, viewer first, indexed the way the pane setters are. */
 export function usePanes(): Pane[] {

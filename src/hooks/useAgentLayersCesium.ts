@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import {
   Cartesian2,
@@ -21,6 +21,7 @@ import {
   visibleLayers,
   type AgentLayer,
 } from '../store/agentLayers';
+import { usePaneHiddenLayerIds, VIEWER_PANE } from '../store/splitView';
 import { cameraZoom } from './cameraSync';
 import { bboxOfCorners, cornersAxisAligned } from '../overlay/georeference';
 import { OVERLAY_ENTITY_PREFIX, quadOverlayEntity } from '../overlay/cesiumQuad';
@@ -32,13 +33,22 @@ const MARKER_PREFIX = 'agent-marker-';
  * Draws the agent's ui_spec layers and markers on a Cesium viewer, the viewer
  * pane or a compare pane. useCesium swaps the instance whenever the tab or the
  * pane's renderer changes, and renders again when it does, so every effect keys
- * on the instance and re-applies against the fresh one.
+ * on the instance and re-applies against the fresh one. Layers this pane hides
+ * are left out of it.
  */
-export function useAgentLayersCesium(viewerRef: MutableRefObject<Viewer | null>) {
+export function useAgentLayersCesium(
+  viewerRef: MutableRefObject<Viewer | null>,
+  paneIndex = VIEWER_PANE,
+) {
   const layers = useAgentLayerStore((s) => s.layers);
   const rasterLayers = useAgentLayerStore((s) => s.rasterLayers);
   const markers = useAgentLayerStore((s) => s.markers);
   const generation = useAgentLayerStore((s) => s.generation);
+  const hiddenLayerIds = usePaneHiddenLayerIds(paneIndex);
+  const paneLayers = useMemo(
+    () => visibleLayers(layers).filter((layer) => !hiddenLayerIds.includes(layer.id)),
+    [layers, hiddenLayerIds],
+  );
   const viewer = viewerRef.current;
   const framedRef = useRef(-1);
 
@@ -130,7 +140,7 @@ export function useAgentLayersCesium(viewerRef: MutableRefObject<Viewer | null>)
       }
 
       let last: GeoJsonDataSource | undefined;
-      for (const layer of visibleLayers(layers)) {
+      for (const layer of paneLayers) {
         const style = layerStyle(layer);
         const color = Color.fromCssColorString(layerColor(layer));
         const ds = await GeoJsonDataSource.load(layer.geojson, {
@@ -169,5 +179,5 @@ export function useAgentLayersCesium(viewerRef: MutableRefObject<Viewer | null>)
       viewer.camera.changed.removeEventListener(showForZoom);
       viewer.camera.moveEnd.removeEventListener(showForZoom);
     };
-  }, [layers, generation, viewer]);
+  }, [paneLayers, generation, viewer]);
 }

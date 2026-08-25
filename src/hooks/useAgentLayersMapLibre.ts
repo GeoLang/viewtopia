@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import maplibregl from 'maplibre-gl';
 import type { ExpressionSpecification } from 'maplibre-gl';
@@ -10,6 +10,7 @@ import {
   ZOOM_LIMITS,
   type AgentMarker,
 } from '../store/agentLayers';
+import { usePaneHiddenLayerIds, VIEWER_PANE } from '../store/splitView';
 import { MARKER_RADIUS_KEY, POINT_RADIUS } from '../features/symbology/symbology';
 import { agentLayersBounds } from './agentLayerBounds';
 
@@ -50,13 +51,21 @@ export function markerElement(m: AgentMarker): HTMLElement {
  * a compare pane, so switching renderers keeps them. useMapLibre swaps the
  * instance whenever the tab or the pane's renderer changes, and renders again
  * when it does, so every effect keys on the instance and re-adds everything
- * against the fresh one.
+ * against the fresh one. Layers this pane hides are left out of it.
  */
-export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map | null>) {
+export function useAgentLayersMapLibre(
+  mapRef: MutableRefObject<maplibregl.Map | null>,
+  paneIndex = VIEWER_PANE,
+) {
   const layers = useAgentLayerStore((s) => s.layers);
   const rasterLayers = useAgentLayerStore((s) => s.rasterLayers);
   const markers = useAgentLayerStore((s) => s.markers);
   const generation = useAgentLayerStore((s) => s.generation);
+  const hiddenLayerIds = usePaneHiddenLayerIds(paneIndex);
+  const paneLayers = useMemo(
+    () => visibleLayers(layers).filter((layer) => !hiddenLayerIds.includes(layer.id)),
+    [layers, hiddenLayerIds],
+  );
   const map = mapRef.current;
   const framedRef = useRef(-1);
 
@@ -104,7 +113,7 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
         });
       }
 
-      for (const layer of visibleLayers(layers)) {
+      for (const layer of paneLayers) {
         const src = `${PREFIX}${layer.id}`;
         const style = layerStyle(layer);
         const color = layerColor(layer);
@@ -157,7 +166,7 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
         });
       }
 
-      const bounds = agentLayersBounds(visibleLayers(layers));
+      const bounds = agentLayersBounds(paneLayers);
       if (bounds && framedRef.current !== generation) {
         framedRef.current = generation;
         map.fitBounds(bounds, { padding: 60, maxZoom: 17, duration: 0 });
@@ -172,7 +181,7 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
       if (!map.isStyleLoaded()) return;
       const sources = Object.keys(map.getStyle()?.sources ?? {});
       const missing =
-        visibleLayers(layers).some((layer) => !sources.includes(`${PREFIX}${layer.id}`)) ||
+        paneLayers.some((layer) => !sources.includes(`${PREFIX}${layer.id}`)) ||
         rasterLayers.some(
           (layer) => layer.visible && !sources.includes(`${RASTER_PREFIX}${layer.id}`),
         );
@@ -189,5 +198,5 @@ export function useAgentLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map |
       map.off('styledata', reapplyIfDropped);
       map.off('idle', reapplyIfDropped);
     };
-  }, [layers, rasterLayers, generation, map]);
+  }, [paneLayers, rasterLayers, generation, map]);
 }
