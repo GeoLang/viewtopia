@@ -110,10 +110,8 @@ other documents citing "P0 item 5" still land on the right one.
    Repositories: `agora`, `viewtopia`, `tiletopia`, `ptolemy`, `geolang`.
    Owner call 2026-08-25, plan under **Digital twin** in the plans section.
    Fluvius is out of this path and comes back later as a rules consumer of
-   agora's readings stream. Until the first slice lands, keep fleet, sensor,
-   and incident pages labelled as configured integrations.
-   - [ ] Slice 1, feed on the 2D asset layer: agora feed token, ingest route,
-     readings table, fan-out, stale rule, threshold recolor, e2e producer.
+   agora's readings stream. Slice 1 (feed on the 2D asset layer) shipped
+   2026-08-25, see the viewtopia and agora changelogs.
    - [ ] Slice 2, tile binding: `asset_id` from IFC GlobalId into the tiles,
      pick resolves to the ptolemy asset, recolor moves to the tile feature.
    - [ ] Slice 3, scrubber over the readings table.
