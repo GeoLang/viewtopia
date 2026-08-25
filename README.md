@@ -236,6 +236,13 @@ inputs.
 | **Backend** | Connects to tiletopia's `/api/v1/realtime/{room}` ephemeral relay |
 | **Cursors and camera-follow** | Not here: start a live session, then click a peer avatar in the header |
 
+The Live panel, reached from the share button of a live map, also manages the
+map's sensor feeds and its asset rule. Creating a feed gives you a token, shown
+once, that a producer sends readings with; the asset rule names the layer, the
+reading kind and a colour per threshold, and every member's map recolours the
+matching features as readings arrive. Inspect shows the clicked asset's latest
+value per kind and whether it is still reporting.
+
 ---
 
 ## Requirements

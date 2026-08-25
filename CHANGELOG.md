@@ -6,6 +6,21 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-25: **live asset readings recolour the map and fill the inspector**.
+  The share dialog of a live map grows a Feeds section: an editor creates a feed
+  with a name and an expected interval, copies the token it answers with once,
+  and a producer sends `readings` frames into `/agora/feeds/ws` with it. Agora
+  fans each reading out over the document websocket, and the browser holds them
+  outside the document, so nothing about a reading is an op. An "Asset rule"
+  form saves one `assets/rule` op naming the asset layer, the reading kind,
+  breakpoints as `value:color`, and a default and offline colour, and the
+  matching features on the 2D map take the colour of the last breakpoint at or
+  below their latest reading, the offline colour once agora has missed three
+  intervals from that asset. Clicking one with Inspect on shows every kind's
+  latest value with its time, and whether the asset is online, following the
+  feed without a second click. `scripts/seed-twin.mjs` writes the twelve-asset
+  demo (ptolemy dataset, live document, layer, rule and feed) and
+  `tests/e2e/digital-twin.spec.js` drives it from a node producer.
 - 2026-08-25: **field data publishes into a ptolemy dataset from the Field Data
   panel**. Publish, next to the form picker, posts to collecta's
   `/collecta/api/v1/forms/{id}/publish`, then draws the dataset branch it

@@ -106,6 +106,23 @@ setting `originalEvent` on a real gesture. Undo is per-user inverse ops. Feature
 op types on the same session routed to ptolemy, which stays the feature
 authority. Phoenix/Elixir was considered and rejected, the stack stays Rust.
 
+A document also carries live asset readings. An editor creates a feed on the
+document (`POST /agora/documents/{id}/feeds`, a name and an expected interval)
+and gets a token back once; a producer opens `/agora/feeds/ws` with that token
+as the bearer subprotocol and sends `readings` frames of `{asset, kind, value,
+at}`. Agora writes them to a readings table and fans each one out over the map
+document's websocket, so every member sees the same values, and marks an asset
+offline after three missed intervals with a `liveness` frame. A join gets an
+`assets` frame of current state after the snapshot, so a member who just opened
+the map needs no replay, and `GET /documents/{id}/assets/at?t=` answers for a
+past moment. The readings never enter the document: the client holds them in
+`src/live/assetState.ts` and only the threshold rule is document state, one
+`assets/rule` op naming a layer, a reading kind, breakpoints with a colour each,
+and a default and offline colour. `useAssetColorsMapLibre` turns that rule and
+the store into one `match` expression on the feature's `asset_id` and sets it as
+the layer's colour paint, leaving the agent layer's own features and colour
+alone, and the inspector shows the picked asset's latest value per kind.
+
 ### 2.1 Platform topology
 
 The shipping unit is `docker-compose.platform.yml`, all fronted by ViewTopia's nginx on
