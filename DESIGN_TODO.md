@@ -146,12 +146,6 @@ this direction reverses.
       token claim names an org. The peer address, the created id and the
       stories, portal, catalog and users-me rows landed 2026-08-25.
 
-- [ ] **tiletopia stories have no access check.** `story_routes()` has no
-      role gate and no ownership check: any valid token, a viewer included,
-      updates or deletes any story by id, and `delete_story` answers 204 for
-      an id that never existed. `portal_routes` checks ownership and is the
-      pattern.
-
 - [ ] **tiletopia offline export bundle.** The bundle is fully offline only
       when `TILETOPIA_CESIUM_DIR` names a CesiumJS build, and otherwise says
       so in a banner, so an image that ships without one has no offline
