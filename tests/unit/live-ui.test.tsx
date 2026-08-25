@@ -4,6 +4,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { MantineProvider } from '@mantine/core';
 import type { ReactNode } from 'react';
 import { useAuthStore } from '../../src/features/auth/store';
+import { AssetTimeBar } from '../../src/live/AssetTimeBar';
+import { useAssetStateStore } from '../../src/live/assetState';
 import type { LiveMember } from '../../src/live/api';
 import { joinLiveFromToken } from '../../src/live/joinFromLink';
 import { LivePeers } from '../../src/live/LivePeers';
@@ -11,6 +13,7 @@ import { LiveSessionControl } from '../../src/live/LiveSessionControl';
 import { LiveShareDialog } from '../../src/live/LiveShareDialog';
 import { MapPresence } from '../../src/live/MapPresence';
 import { useLiveStore } from '../../src/live/liveStore';
+import { emptyLiveDocument, type AssetRule } from '../../src/live/types';
 import { useAppStore } from '../../src/store/app';
 import { setActiveMapLibre } from '../../src/viewer/registry';
 import { FakeAgoraServer } from './stubs/fakeAgoraServer';
@@ -366,5 +369,106 @@ describe('live session ui', () => {
       </MantineProvider>,
     );
     expect([...handlers.keys()].sort()).toEqual(['mousemove', 'mouseout']);
+  });
+
+  describe('the asset time bar', () => {
+    const AT = '2026-08-25T09:00:00.000Z';
+    const LATER = '2026-08-25T09:30:00.000Z';
+
+    const RULE: AssetRule = {
+      layerId: 'twin-assets',
+      kind: 'temperature',
+      breakpoints: [{ value: 0, color: '#2ecc71' }],
+      defaultColor: '#95a5a6',
+      offlineColor: '#7f8c8d',
+    };
+
+    const snapshotAt = (value: number) => ({
+      assets: [
+        {
+          asset: 'TWIN-03',
+          feed: 'feed-1',
+          online: true,
+          values: [{ kind: 'temperature', value, at: AT }],
+        },
+      ],
+    });
+
+    const historyCalls = () =>
+      fetchMock.mock.calls.filter(([url]) => String(url).includes('/assets/at?t='));
+
+    const drawBarWithRule = () => {
+      useLiveStore.setState({
+        documentId: 'doc-1',
+        role: 'edit',
+        document: { ...emptyLiveDocument(), assets: { rule: RULE } },
+      });
+      draw(<AssetTimeBar />);
+    };
+
+    const typeMoment = (moment: string) =>
+      fireEvent.change(screen.getByTestId('asset-time-input'), { target: { value: moment } });
+
+    beforeEach(() => {
+      useAssetStateStore.getState().clear();
+    });
+
+    it('stays out of the way until a live document carries the rule', () => {
+      useLiveStore.setState({ documentId: 'doc-1', document: emptyLiveDocument() });
+      draw(<AssetTimeBar />);
+      expect(screen.queryByTestId('asset-time-bar')).not.toBeInTheDocument();
+
+      act(() => {
+        useLiveStore.setState({
+          document: { ...emptyLiveDocument(), assets: { rule: RULE } },
+        });
+      });
+      expect(screen.getByTestId('asset-time-bar')).toBeInTheDocument();
+    });
+
+    it('asks once for the moment the typing settled on, and goes back to live', async () => {
+      drawBarWithRule();
+      fetchMock.mockResolvedValueOnce(jsonResponse(snapshotAt(21)));
+
+      typeMoment(AT);
+      typeMoment(LATER);
+
+      await waitFor(() => expect(useAssetStateStore.getState().historyAt).toBe(LATER));
+      expect(historyCalls()).toHaveLength(1);
+      expect(historyCalls()[0][0]).toBe(
+        `/agora/documents/doc-1/assets/at?t=${encodeURIComponent(LATER)}`,
+      );
+      expect(screen.getByTestId('asset-time-label')).toHaveTextContent(
+        new Date(LATER).toLocaleString(),
+      );
+
+      fireEvent.click(screen.getByTestId('asset-time-live'));
+      expect(useAssetStateStore.getState().historyAt).toBeNull();
+      expect(screen.getByTestId('asset-time-label')).toHaveTextContent('Live');
+    });
+
+    it('drops an answer to a moment that is no longer the one asked for', async () => {
+      drawBarWithRule();
+      const answers: Array<(response: Response) => void> = [];
+      fetchMock.mockImplementation(
+        () => new Promise<Response>((resolve) => answers.push(resolve)),
+      );
+
+      typeMoment(AT);
+      await waitFor(() => expect(historyCalls()).toHaveLength(1));
+      typeMoment(LATER);
+      await waitFor(() => expect(historyCalls()).toHaveLength(2));
+
+      answers[1](jsonResponse(snapshotAt(31)));
+      await waitFor(() => expect(useAssetStateStore.getState().historyAt).toBe(LATER));
+
+      // the first moment answers last, and the map must not fall back to it
+      answers[0](jsonResponse(snapshotAt(21)));
+      await act(async () => {
+        await new Promise((settle) => setTimeout(settle, 0));
+      });
+      expect(useAssetStateStore.getState().historyAt).toBe(LATER);
+      expect(useAssetStateStore.getState().history?.['TWIN-03'].values.temperature.value).toBe(31);
+    });
   });
 });

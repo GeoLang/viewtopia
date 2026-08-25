@@ -4,6 +4,7 @@ import {
   useAssetStateStore,
   colorForAsset,
   parseBreakpoints,
+  visibleAssets,
   type AssetState,
 } from '../../src/live/assetState';
 import { useLiveStore } from '../../src/live/liveStore';
@@ -157,6 +158,70 @@ describe('the asset state store', () => {
   });
 });
 
+describe('the asset store showing a past moment', () => {
+  const PAST = '2026-08-25T09:00:00.000Z';
+
+  const snapshot = (value: number, online = true) => ({
+    asset: 'TWIN-03',
+    feed: 'feed-1',
+    online,
+    values: [{ kind: 'temperature', value, at: PAST }],
+  });
+
+  beforeEach(() => {
+    useAssetStateStore.getState().clear();
+  });
+
+  it('shows the past assets, then the live ones again', () => {
+    useAssetStateStore.setState({ assets: { 'TWIN-03': asset() } });
+    useAssetStateStore.getState().showHistory(PAST, [snapshot(31, false)]);
+
+    const held = useAssetStateStore.getState();
+    expect(held.historyAt).toBe(PAST);
+    expect(visibleAssets(held)['TWIN-03']).toEqual({
+      feed: 'feed-1',
+      online: false,
+      values: { temperature: { value: 31, at: PAST } },
+    });
+    // the live map is still underneath, untouched
+    expect(held.assets['TWIN-03']).toEqual(asset());
+
+    useAssetStateStore.getState().showLive();
+    expect(useAssetStateStore.getState().historyAt).toBeNull();
+    expect(visibleAssets(useAssetStateStore.getState())['TWIN-03']).toEqual(asset());
+  });
+
+  it('keeps showing the past moment while live frames land', () => {
+    useAssetStateStore.getState().showHistory(PAST, [snapshot(31)]);
+    const receive = useAssetStateStore.getState().receive;
+    receive({
+      type: 'readings',
+      feed: 'feed-1',
+      readings: [{ asset: 'TWIN-03', kind: 'temperature', value: 12, at: AT }],
+    });
+    receive({ type: 'liveness', asset: 'TWIN-03', online: false, at: AT });
+    receive({
+      type: 'assets',
+      assets: [{ asset: 'TWIN-03', feed: 'feed-1', online: true, values: [] }],
+    });
+
+    const held = useAssetStateStore.getState();
+    expect(held.historyAt).toBe(PAST);
+    expect(visibleAssets(held)['TWIN-03'].values.temperature.value).toBe(31);
+    // the rejoin frame replaced the live map only
+    expect(held.assets['TWIN-03'].values).toEqual({});
+  });
+
+  it('goes back to live on clear', () => {
+    useAssetStateStore.getState().showHistory(PAST, [snapshot(31)]);
+    useAssetStateStore.getState().clear();
+    const held = useAssetStateStore.getState();
+    expect(held.historyAt).toBeNull();
+    expect(held.history).toBeNull();
+    expect(held.assets).toEqual({});
+  });
+});
+
 describe('the live store forwards the asset frames', () => {
   beforeEach(() => {
     useAssetStateStore.getState().clear();
@@ -293,6 +358,40 @@ describe('useAssetColorsMapLibre', () => {
       ['get', 'asset_id'],
       'TWIN-03',
       '#2ecc71',
+      ORIGINAL_CIRCLE_COLOR,
+    ]);
+  });
+
+  it('paints the past moment while the scrubber holds one', () => {
+    const paint = { [CIRCLE_LAYER]: { 'circle-color': ORIGINAL_CIRCLE_COLOR } };
+    const map = fakeMap(paint);
+    useAssetStateStore.setState({
+      assets: { 'TWIN-03': asset({ values: { temperature: { value: 31, at: AT } } }) },
+    });
+    useLiveStore.setState({ document: { ...emptyLiveDocument(), assets: { rule: RULE } } });
+    const view = mount(map);
+
+    act(() => {
+      useAssetStateStore.getState().showHistory('2026-08-25T09:00:00.000Z', [
+        { asset: 'TWIN-03', feed: 'feed-1', online: true, values: [{ kind: 'temperature', value: 21, at: AT }] },
+      ]);
+    });
+    view.rerender();
+    expect(paint[CIRCLE_LAYER]['circle-color']).toEqual([
+      'match',
+      ['get', 'asset_id'],
+      'TWIN-03',
+      '#2ecc71',
+      ORIGINAL_CIRCLE_COLOR,
+    ]);
+
+    act(() => useAssetStateStore.getState().showLive());
+    view.rerender();
+    expect(paint[CIRCLE_LAYER]['circle-color']).toEqual([
+      'match',
+      ['get', 'asset_id'],
+      'TWIN-03',
+      '#e74c3c',
       ORIGINAL_CIRCLE_COLOR,
     ]);
   });

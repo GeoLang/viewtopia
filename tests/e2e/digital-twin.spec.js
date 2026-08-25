@@ -209,5 +209,21 @@ test.describe('digital twin — live platform stack', () => {
     expect(watched, `${WATCHED_ASSET} has no reading at ${beforeHotReading}`).toBeTruthy();
     const temperature = watched.values.find((value) => value.kind === 'temperature');
     expect(temperature.value).toBeLessThan(25);
+
+    // the scrubber puts that same moment on the map, while the feed keeps running
+    await page.getByTestId('asset-time-input').fill(beforeHotReading);
+    await expectAssetColor(page, WATCHED_ASSET, COOL_COLOR, 15_000);
+    const shownTime = await page.evaluate(
+      (moment) => new Date(moment).toLocaleString(),
+      beforeHotReading,
+    );
+    await expect(page.getByTestId('asset-time-label')).toHaveText(shownTime);
+    await expect(page.getByTestId('asset-reading-temperature')).toContainText(
+      String(COOL_TEMPERATURE),
+    );
+
+    await page.getByTestId('asset-time-live').click();
+    await expectAssetColor(page, WATCHED_ASSET, HOT_COLOR, 15_000);
+    await expect(page.getByTestId('asset-time-label')).toHaveText('Live');
   });
 });

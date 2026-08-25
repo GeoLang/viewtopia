@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, renderHook } from '@testing-library/react';
 import { startDocumentBridge } from '../../src/live/documentBridge';
 import { useLiveStore } from '../../src/live/liveStore';
 import { emptyLiveDocument, type LiveLayerEntry } from '../../src/live/types';
 import { assetFeatureProperties, withAssetProperties } from '../../src/live/assetFeatures';
-import { assetColorConditions } from '../../src/hooks/useAssetColorsCesium';
+import { assetColorConditions, useAssetColorsCesium } from '../../src/hooks/useAssetColorsCesium';
+import { useAssetStateStore } from '../../src/live/assetState';
 import type { AssetState } from '../../src/live/assetState';
 import type { AssetRule } from '../../src/live/types';
 import { useAgentLayerStore } from '../../src/store/agentLayers';
@@ -100,6 +102,45 @@ describe('assetColorConditions', () => {
 
   it('paints a tile feature white when the tileset had no colour of its own', () => {
     expect(assetColorConditions(RULE, {})).toEqual([['true', 'color("white")']]);
+  });
+});
+
+describe('useAssetColorsCesium', () => {
+  const PAST = '2026-08-25T09:00:00.000Z';
+
+  beforeEach(() => {
+    cleanup();
+    useAssetStateStore.getState().clear();
+    useTiles3dLayerStore.setState({ layers: [], loaded: {} });
+    useLiveStore.setState({ document: { ...emptyLiveDocument(), assets: { rule: RULE } } });
+  });
+
+  /** The colours the hook wrote onto the tileset, asset by asset. */
+  const painted = (tileset: { style?: unknown }) =>
+    ((tileset.style as { style: { color: { conditions: string[][] } } }).style.color.conditions);
+
+  it('styles the tile features from the past moment, then from the feed again', () => {
+    const tileset = { isDestroyed: () => false, style: undefined } as never;
+    useTiles3dLayerStore.getState().setLoaded('twin-model', tileset);
+    useAssetStateStore.setState({
+      assets: { 'BOX-01': asset({ values: { temperature: { value: 31, at: AT } } }) },
+    });
+    const view = renderHook(() => useAssetColorsCesium());
+    expect(painted(tileset)[0]).toEqual([`\${asset_id} === "BOX-01"`, 'color("#e74c3c")']);
+
+    act(() => {
+      useAssetStateStore
+        .getState()
+        .showHistory(PAST, [
+          { asset: 'BOX-01', feed: 'feed-1', online: true, values: [{ kind: 'temperature', value: 21, at: PAST }] },
+        ]);
+    });
+    view.rerender();
+    expect(painted(tileset)[0]).toEqual([`\${asset_id} === "BOX-01"`, 'color("#2ecc71")']);
+
+    act(() => useAssetStateStore.getState().showLive());
+    view.rerender();
+    expect(painted(tileset)[0]).toEqual([`\${asset_id} === "BOX-01"`, 'color("#e74c3c")']);
   });
 });
 
