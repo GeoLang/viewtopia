@@ -142,6 +142,44 @@ export interface LiveComment {
   mentions?: LiveCommentMention[];
 }
 
+/** One colour, and the reading value at or above which it applies. */
+export interface AssetBreakpoint {
+  value: number;
+  color: string;
+}
+
+/**
+ * How the map colours the assets on one layer. The colour for a reading is the
+ * last breakpoint in ascending order whose value is at or below it, and
+ * `defaultColor` covers a reading below every breakpoint or no reading at all.
+ */
+export interface AssetRule {
+  layerId: string;
+  kind: string;
+  breakpoints: AssetBreakpoint[];
+  defaultColor: string;
+  offlineColor: string;
+}
+
+/** The document holds one rule, under this id. */
+export const ASSET_RULE_ID = 'rule';
+
+/** One value a feed sent for one asset. */
+export interface AssetReading {
+  asset: string;
+  kind: string;
+  value: number;
+  at: string;
+}
+
+/** Everything agora holds for one asset right now. */
+export interface AssetSnapshot {
+  asset: string;
+  feed: string;
+  online: boolean;
+  values: { kind: string; value: number; at: string }[];
+}
+
 export interface LiveDocumentMeta {
   name: string;
 }
@@ -152,6 +190,7 @@ export interface LiveDocument {
   annotations: Record<string, LiveAnnotation>;
   bookmarks: Record<string, LiveBookmark>;
   comments: Record<string, LiveComment>;
+  assets: Record<string, AssetRule>;
 }
 
 export const DOCUMENT_NAMESPACES = [
@@ -160,6 +199,7 @@ export const DOCUMENT_NAMESPACES = [
   'annotations',
   'bookmarks',
   'comments',
+  'assets',
 ] as const;
 
 export type DocumentNamespace = (typeof DOCUMENT_NAMESPACES)[number];
@@ -270,6 +310,27 @@ export interface ServerPresenceMessage extends LivePresence {
   actor: string;
 }
 
+/** Readings a feed just sent, fanned out to everyone holding the document. */
+export interface ServerReadingsMessage {
+  type: 'readings';
+  feed: string;
+  readings: AssetReading[];
+}
+
+/** Every asset's current state, sent once per join after the snapshot. */
+export interface ServerAssetsMessage {
+  type: 'assets';
+  assets: AssetSnapshot[];
+}
+
+/** An asset went quiet for three feed intervals, or started answering again. */
+export interface ServerLivenessMessage {
+  type: 'liveness';
+  asset: string;
+  online: boolean;
+  at: string;
+}
+
 export type ServerMessage =
   | ServerSnapshotMessage
   | ServerOperationMessage
@@ -277,7 +338,10 @@ export type ServerMessage =
   | ServerAckMessage
   | ServerPeersMessage
   | ServerErrorMessage
-  | ServerPresenceMessage;
+  | ServerPresenceMessage
+  | ServerReadingsMessage
+  | ServerAssetsMessage
+  | ServerLivenessMessage;
 
 export interface LiveDocumentSummary {
   id: string;
@@ -291,7 +355,7 @@ export interface LiveLinkResolution {
 }
 
 export function emptyLiveDocument(name = ''): LiveDocument {
-  return { meta: { name }, layers: {}, annotations: {}, bookmarks: {}, comments: {} };
+  return { meta: { name }, layers: {}, annotations: {}, bookmarks: {}, comments: {}, assets: {} };
 }
 
 export function documentKey(namespace: DocumentNamespace, id: string): string {
@@ -334,6 +398,8 @@ export function readDocumentKey(document: LiveDocument, key: string): unknown {
       return document.bookmarks[parsed.id] ?? null;
     case 'comments':
       return document.comments[parsed.id] ?? null;
+    case 'assets':
+      return document.assets[parsed.id] ?? null;
   }
 }
 
@@ -367,6 +433,11 @@ export function applyDocumentKey(
       return {
         ...document,
         comments: withEntry(document.comments, parsed.id, value as LiveComment | null),
+      };
+    case 'assets':
+      return {
+        ...document,
+        assets: withEntry(document.assets, parsed.id, value as AssetRule | null),
       };
   }
 }

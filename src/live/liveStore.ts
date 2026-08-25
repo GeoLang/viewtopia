@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getAuthToken } from '../features/auth/store';
+import { useAssetStateStore } from './assetState';
 import { nextReversal, operationsFor, stepFor, type HistoryStep } from './history';
 import { LiveSocket, type LiveConnectionState } from './socket';
 import {
@@ -152,6 +153,7 @@ export const useLiveStore = create<LiveState>((set, get) => ({
     if (bearer === null) return;
     if (get().documentId !== null) get().disconnect();
     clientSeqCounter = 0;
+    useAssetStateStore.getState().clear();
     set({
       documentId,
       role,
@@ -194,6 +196,7 @@ export const useLiveStore = create<LiveState>((set, get) => ({
     dropPresence();
     socket?.close();
     socket = null;
+    useAssetStateStore.getState().clear();
     set({
       connection: 'idle',
       documentId: null,
@@ -341,6 +344,11 @@ export const useLiveStore = create<LiveState>((set, get) => ({
         return;
       case 'error':
         set({ error: message.reason });
+        return;
+      case 'readings':
+      case 'assets':
+      case 'liveness':
+        useAssetStateStore.getState().receive(message);
         return;
     }
   },
