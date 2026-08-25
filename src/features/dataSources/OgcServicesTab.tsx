@@ -11,6 +11,7 @@ import {
 import { IconX, IconPlus } from '@tabler/icons-react';
 import { useState } from 'react';
 import { loadPmtilesLayer, loadWfsLayer, type OGCLayer, type OGCType } from '../../store/ogcLayers';
+import { LayerLoadError } from '../../components/layers/LayerLoadError';
 
 interface OgcServicesTabProps {
   layers: OGCLayer[];
@@ -143,6 +144,7 @@ export function OgcServicesTab({ layers, onAdd, onRemove }: OgcServicesTabProps)
                 </Text>
               </Stack>
               <Group gap={4}>
+                <LayerLoadError layerId={layer.id} layerName={layer.name} />
                 <Badge size="xs" variant="light">
                   {layer.type.toUpperCase()}
                 </Badge>

@@ -4,8 +4,9 @@ import { IconRefresh } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useOgcLayerStore } from '../../store/ogcLayers';
 import { useAuthStore } from '../auth/store';
-import { useTilesetStore } from './store';
+import { tilesetLayerId, useTilesetStore } from './store';
 import { formatBytes, type Tileset, type TilesetStatus } from './api';
+import { LayerLoadError } from '../../components/layers/LayerLoadError';
 
 const STATUS_COLOR: Record<TilesetStatus, string> = {
   building: 'yellow',
@@ -63,9 +64,12 @@ function TilesetRow({ tileset }: { tileset: Tileset }) {
             {tileset.status === 'ready' && ` · ${formatBytes(tileset.size_bytes)}`}
           </Text>
         </Stack>
-        <Badge size="xs" variant="light" color={STATUS_COLOR[tileset.status]}>
-          {tileset.status}
-        </Badge>
+        <Group gap={4} wrap="nowrap">
+          <LayerLoadError layerId={tilesetLayerId(tileset.id)} layerName={tileset.name} />
+          <Badge size="xs" variant="light" color={STATUS_COLOR[tileset.status]}>
+            {tileset.status}
+          </Badge>
+        </Group>
       </Group>
 
       {tileset.status === 'failed' && tileset.error && (
@@ -99,7 +103,7 @@ function TilesetRow({ tileset }: { tileset: Tileset }) {
               size="compact-xs"
               variant="subtle"
               color="gray"
-              onClick={() => removeLayer(`tileset-${tileset.id}`)}
+              onClick={() => removeLayer(tilesetLayerId(tileset.id))}
             >
               Remove layer
             </Button>

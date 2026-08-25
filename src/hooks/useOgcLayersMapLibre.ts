@@ -10,9 +10,34 @@ import {
   type OGCLayer,
 } from '../store/ogcLayers';
 import { useAppStore } from '../store/app';
+import { useLayerLoadErrorStore } from '../store/layerLoadErrors';
 import { addPmtilesLayers, addVectorTileStyleLayers } from '../features/pmtiles/mapLayers';
 
 const PREFIX = 'ogc-layer-';
+
+const TILE_REQUEST_FAILED = 'tile request failed';
+
+/**
+ * What to say about a failed tile request. MapLibre throws an AJAXError with the
+ * response status, which is the only part a reader can act on.
+ */
+export function tileErrorMessage(error: unknown): string {
+  const { status, message } = (error ?? {}) as { status?: unknown; message?: unknown };
+  if (typeof status === 'number') return `tiles unavailable (${status})`;
+  if (typeof message === 'string' && message) return message;
+  return TILE_REQUEST_FAILED;
+}
+
+/**
+ * The OGC layer a map event is about, or null for anything else on the map. The
+ * source id is bubbled onto every source event by the style, error events
+ * included, though only the source data events declare it in the types.
+ */
+function ogcLayerIdOf(event: unknown): string | null {
+  const { sourceId } = (event ?? {}) as { sourceId?: unknown };
+  if (typeof sourceId !== 'string' || !sourceId.startsWith(PREFIX)) return null;
+  return sourceId.slice(PREFIX.length);
+}
 
 function addOgcPmtilesLayers(map: maplibregl.Map, layer: OGCLayer, id: string): void {
   if (!layer.pmtiles) return;
@@ -46,6 +71,7 @@ export function useOgcLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map | n
   const layers = useOgcLayerStore((s) => s.layers);
   const renderer = useAppStore((s) => s.renderer);
   const activeTab = useAppStore((s) => s.activeTab);
+  const reloadRequests = useLayerLoadErrorStore((s) => s.reloadRequests);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -100,13 +126,32 @@ export function useOgcLayersMapLibre(mapRef: MutableRefObject<maplibregl.Map | n
       if (drawable.some((layer) => !sources.includes(`${PREFIX}${layer.id}`))) apply();
     };
 
+    const onError = (event: maplibregl.ErrorEvent) => {
+      const layerId = ogcLayerIdOf(event);
+      if (!layerId) return;
+      useLayerLoadErrorStore.getState().setError(layerId, tileErrorMessage(event.error));
+    };
+
+    // a tile is on the event only once it came back, so this is the one
+    // source event that proves the layer can be fetched
+    const onSourceData = (event: maplibregl.MapSourceDataEvent) => {
+      if (!event.tile) return;
+      const layerId = ogcLayerIdOf(event);
+      if (!layerId) return;
+      useLayerLoadErrorStore.getState().clearError(layerId);
+    };
+
     if (map.isStyleLoaded()) apply();
     else map.on('load', apply);
     map.on('idle', reapplyIfDropped);
+    map.on('error', onError);
+    map.on('sourcedata', onSourceData);
 
     return () => {
       map.off('load', apply);
       map.off('idle', reapplyIfDropped);
+      map.off('error', onError);
+      map.off('sourcedata', onSourceData);
     };
-  }, [layers, mapRef, renderer, activeTab]);
+  }, [layers, mapRef, renderer, activeTab, reloadRequests]);
 }

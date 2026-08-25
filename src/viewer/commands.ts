@@ -21,6 +21,7 @@ import {
 import { HexagonLayer, ScreenGridLayer } from '@deck.gl/aggregation-layers';
 import { ArcLayer, ScatterplotLayer } from '@deck.gl/layers';
 import type { Layer } from '@deck.gl/core';
+import { notifications } from '@mantine/notifications';
 import { getActiveCesiumViewer, getActiveMapLibre } from './registry';
 import { setSharedCamera } from '../hooks/sharedCamera';
 import { runSqlQuery } from '../duckdb/sqlCommand';
@@ -175,6 +176,13 @@ const handlers: Record<string, Handler> = {
       await viewer.flyTo(tileset);
     } catch (e) {
       console.error('load_tileset: failed', e);
+      // the command draws a Cesium primitive and no Layers panel row, so there
+      // is no row to carry the reason
+      notifications.show({
+        title: 'Could not load tileset',
+        message: e instanceof Error ? e.message : 'the tileset did not load',
+        color: 'red',
+      });
     }
   },
 

@@ -21,6 +21,7 @@ import {
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { PanelCard, PanelHeader } from '../PanelCard';
+import { LayerLoadError } from './LayerLoadError';
 import { downloadOutput } from '../../features/workflow/plan';
 import {
   layerStyle,
@@ -117,6 +118,7 @@ function AgentLayerRow({
           </Text>
         </Group>
         <Group gap={4} wrap="nowrap">
+          <LayerLoadError layerId={layer.id} layerName={layer.name} />
           <Badge size="xs" variant="light" color="gray">
             agent
           </Badge>
@@ -252,9 +254,12 @@ function RasterLayerRow({
             {layer.name}
           </Text>
         </Group>
-        <Badge size="xs" variant="light" color="gray">
-          raster
-        </Badge>
+        <Group gap={4} wrap="nowrap">
+          <LayerLoadError layerId={layer.id} layerName={layer.name} />
+          <Badge size="xs" variant="light" color="gray">
+            raster
+          </Badge>
+        </Group>
       </Group>
 
       {expanded && (
@@ -397,9 +402,12 @@ export function LayerManager({ layers, onRemove, onClose }: LayerManagerProps) {
                     {layer.name}
                   </Text>
                 </Group>
-                <Badge size="xs" variant="light" color="gray">
-                  {layer.type}
-                </Badge>
+                <Group gap={4} wrap="nowrap">
+                  <LayerLoadError layerId={layer.id} layerName={layer.name} />
+                  <Badge size="xs" variant="light" color="gray">
+                    {layer.type}
+                  </Badge>
+                </Group>
               </Group>
 
               {expandedId === layer.id && (

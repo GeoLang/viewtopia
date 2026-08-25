@@ -11,6 +11,11 @@ import {
   type Tileset,
 } from './api';
 
+/** The id the archive's map layer and its panel row are both found under. */
+export function tilesetLayerId(tilesetId: string): string {
+  return `tileset-${tilesetId}`;
+}
+
 interface TilesetState {
   /** A file the user was offered the tileset route for, waiting on an answer. */
   offered: File | null;
@@ -123,7 +128,7 @@ export const useTilesetStore = create<TilesetState>((set, get) => ({
     if (current.status !== 'ready') throw new Error(`${current.name} is ${current.status}`);
     const { url, source } = await readTileset(current);
     useOgcLayerStore.getState().putLayer({
-      id: `tileset-${current.id}`,
+      id: tilesetLayerId(current.id),
       name: current.name,
       type: 'tileset',
       url,
