@@ -14,6 +14,7 @@ import { useSpaceTimeTracks } from '../hooks/useSpaceTimeTracks';
 import { useSpaceTimeDeckLayers } from '../hooks/useSpaceTimeDeckLayers';
 import { useSpaceTimeCesium } from '../hooks/useSpaceTimeCesium';
 import { useSpaceTimeCubeCamera } from '../hooks/useSpaceTimeCubeCamera';
+import { useSpaceTimeAnalysisDeckLayers } from '../hooks/useSpaceTimeAnalysisDeckLayers';
 import { useBuildingsCesium } from '../hooks/useBuildingsCesium';
 import { useBuildingsMapLibre } from '../hooks/useBuildingsMapLibre';
 import { useHeatmapsMapLibre } from '../hooks/useHeatmapsMapLibre';
@@ -122,6 +123,7 @@ export function ViewerArea() {
   useSpaceTimeDeckLayers();
   useSpaceTimeCesium(cesiumRef);
   useSpaceTimeCubeCamera(maplibreRef);
+  useSpaceTimeAnalysisDeckLayers();
 
   // Render OSM buildings on all 3D renderers (maplibre draws its own
   // fill-extrusions; a deck copy would z-fight with them)

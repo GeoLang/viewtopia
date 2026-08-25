@@ -8,6 +8,7 @@ import type {
   Case,
   TimeRange,
 } from './types';
+import type { AnalysisKind, AnalysisResult } from './analysis/run';
 
 interface SpaceTimeState {
   // Data
@@ -34,6 +35,13 @@ interface SpaceTimeState {
   flyToTarget: { lng: number; lat: number; zoom?: number } | null;
   /** Result of the last CSV import; stays until the next import or a panel close. */
   importStatus: string | null;
+
+  // Analysis
+  /** Result of the last analysis run; also what the analysis deck layers draw. */
+  analysisResult: AnalysisResult | null;
+  /** The analysis currently in the worker, so its button can show progress. */
+  analysisRunning: AnalysisKind | null;
+  analysisError: string | null;
 
   // Entity CRUD
   addEntity: (entity: Entity) => void;
@@ -68,6 +76,12 @@ interface SpaceTimeState {
   setTrailDuration: (d: number) => void;
   setPlaybackSpeed: (s: number) => void;
 
+  // Analysis
+  startAnalysis: (kind: AnalysisKind) => void;
+  finishAnalysis: (result: AnalysisResult) => void;
+  failAnalysis: (message: string) => void;
+  clearAnalysis: () => void;
+
   // UI
   toggleCubeView: () => void;
   togglePanel: () => void;
@@ -97,6 +111,10 @@ export const useSpaceTimeStore = create<SpaceTimeState>((set) => ({
   selectedEntityId: null,
   flyToTarget: null,
   importStatus: null,
+
+  analysisResult: null,
+  analysisRunning: null,
+  analysisError: null,
 
   addEntity: (entity) =>
     set((s) => {
@@ -147,6 +165,12 @@ export const useSpaceTimeStore = create<SpaceTimeState>((set) => ({
   setPlaying: (playing) => set({ playing }),
   setTrailDuration: (trailDuration) => set({ trailDuration }),
   setPlaybackSpeed: (playbackSpeed) => set({ playbackSpeed }),
+
+  startAnalysis: (analysisRunning) =>
+    set({ analysisRunning, analysisError: null, analysisResult: null }),
+  finishAnalysis: (analysisResult) => set({ analysisResult, analysisRunning: null }),
+  failAnalysis: (analysisError) => set({ analysisError, analysisRunning: null }),
+  clearAnalysis: () => set({ analysisResult: null, analysisError: null }),
 
   toggleCubeView: () => set((s) => ({ cubeView: !s.cubeView })),
 

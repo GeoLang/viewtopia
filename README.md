@@ -56,16 +56,19 @@ calls. Several surfaces are local-only or depend on configured services:
 | **Charts** | Histogram, scatter, and time series |
 
 ### Space-Time Intelligence
-The panel tracks entities and their positions over time. Classification, RBAC and Gotham-class analysis are not in this product.
+The panel tracks entities and their positions over time.
 
 | Feature | Description |
 |---------|-------------|
 | **Entity Management** | Create, list and select entities (person/vehicle/device) |
-| **CSV ingest** | Drop or browse a CSV with name, lat, lng, timestamp columns |
-| **Track Visualization** | Time scrubber and play/pause over imported positions |
+| **CSV ingest** | Drop or browse a CSV with name, lat, lng, timestamp columns. Imports above 100k points are strided down and the count is reported |
+| **Track Visualization** | Time scrubber and play/pause over imported positions, with a trailing time window |
+| **Space-time cube** | Toggle a pitched camera where height is time, with a sweep plane at the playhead and ground shadows under each track |
 | **Manual Linking** | Dialog for analyst-created entity relationships |
 
-The Analysis tab draws seven buttons with no handlers. Colocation, pattern-of-life, network metrics, clustering, prediction and data-quality functions exist as library code. Nothing in the panel calls them. Co-travel, geofencing UI, ontology, entity resolution, CDR import, case management and classification/RBAC have no UI.
+The Analysis tab runs seven analyses in a worker and draws each result on the map and in the cube: colocation (meeting markers), co-travel (paired track segments over a sustained window), pattern-of-life (dwell rings and off-pattern events), network metrics (ranked entity list), behavioral clustering (tracks recolored by cluster), predictive location (ghost marker and projected path), and data quality (issues marked at their events).
+
+Not implemented: ontology, CDR import, entity resolution, geofencing UI, case management, and classification/RBAC.
 
 ### Plugin System
 | Feature | Description |
@@ -736,7 +739,7 @@ scripts/clone-geolang.sh  [DIR]   # macOS/Linux/Git-Bash
 - **Frontend:** Vite, React + Mantine UI, CesiumJS, deck.gl, MapLibre GL, Leaflet, Apache Arrow
 - **Backend:** [GeoLang](https://github.com/GeoLang/tiletopia) (Rust) + [GeoLang](https://github.com/GeoLang/geolang) (Python)
 - **AI:** sibyl agent loop (Rust) plus the viewer's spatial tool subset
-- **Analysis:** space-time entity tracks and colocation in the Analysis tab, plus the charts and SQL workspace
+- **Analysis:** space-time entity tracks, the space-time cube, and the seven Analysis tab analyses, plus the charts and SQL workspace
 - **Deploy:** Docker Compose, Helm, Terraform
 
 ---

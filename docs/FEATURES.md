@@ -13,6 +13,11 @@ and the source paths named by those documents.
 - Local raster tools, geometry tools, overlays, imports, and exports.
 - DuckDB-WASM spatial queries from notebooks and the `sql_query` viewer command.
 - Entity creation, CSV ingest, track playback, and manual Space-Time links.
+- The Space-Time cube: a pitched camera where height is time, a sweep plane at
+  the playhead, ground shadows, and a trailing time window over the tracks.
+- Seven Space-Time analyses run from the Analysis tab in a worker, each drawing
+  its result on the map: colocation, co-travel, pattern-of-life, network
+  metrics, behavioral clustering, predictive location, and data quality.
 - Build-time plugin discovery with 20 built-in plugins.
 - Portal item requests with an API path and local fallback.
 - Dashboard widgets stored in localStorage.
@@ -40,8 +45,6 @@ and the source paths named by those documents.
 - The conflict merge code supports a narrow operation shape. The resolver is
   not mounted, and the platform sync path does not queue the feature operations
   it expects.
-- Space-Time Analysis buttons render without handlers. The algorithms they name
-  are not reachable from that panel.
 - Vertical plugins read configured service datasets or demo data. They do not
   provide those datasets.
 - LiveKit voice and video require a configured URL and a token.
@@ -51,7 +54,8 @@ and the source paths named by those documents.
 ## Not implemented in ViewTopia
 
 - Space-Time classification, RBAC, ontology, CDR import, entity resolution,
-  geofencing UI, and case management.
+  geofencing UI, and case management. Entity resolution has no algorithm and no
+  button; the rest have library code or types but no reachable UI.
 - Returning DuckDB result rows to the agent for follow-up reasoning.
 - A standalone SQL workbench panel. The notebook and agent SQL paths are
   implemented.

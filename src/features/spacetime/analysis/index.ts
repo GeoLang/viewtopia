@@ -1,5 +1,15 @@
 export { haversineM } from './geo';
 export { detectColocations, type ColocationEvent, type ColocationOptions } from './colocation';
+export { detectCoTravel, type CoTravelRun, type CoTravelOptions } from './co-travel';
+export {
+  runAnalysis,
+  type AnalysisKind,
+  type AnalysisInput,
+  type AnalysisResult,
+  type AnalysisRow,
+  type AnalysisPoint,
+  type AnalysisPath,
+} from './run';
 export {
   detectFrequentLocations,
   computeDailyPattern,

@@ -445,6 +445,39 @@ test.describe('local tool panels (batch 2)', () => {
     );
   });
 
+  test('space-time: colocation lists its meetings and marks them on the map', async ({ page }) => {
+    await page.goto(REACT_URL);
+    await page.getByRole('button', { name: 'Basemap & renderer' }).click();
+    await page.getByRole('textbox', { name: 'Renderer' }).click();
+    await page.getByRole('option', { name: 'MapLibre' }).click();
+    await expect(page.locator('#maplibre-container canvas').first()).toBeVisible({ timeout: 15000 });
+    await page.waitForFunction(() => window.__viewtopiaMap?.isStyleLoaded(), null, { timeout: STYLE_LOAD_TIMEOUT });
+
+    await page.getByRole('button', { name: 'Analysis' }).click();
+    await page.getByRole('menuitem', { name: 'Space-Time' }).click();
+
+    const panel = page
+      .locator('main > [class*="mantine-Paper-root"]')
+      .filter({ hasText: 'Space-Time Intelligence' });
+    await panel
+      .locator('input[type="file"]')
+      .setInputFiles(path.resolve(__dirname, '../fixtures/colocated-tracks.csv'));
+    await expect(panel.getByText('Imported 2 entities, 12 positions')).toBeVisible();
+
+    await panel.getByRole('tab', { name: 'Analysis' }).click();
+    await panel.getByRole('button', { name: 'Colocation Detection' }).click();
+
+    const results = panel.getByTestId('spacetime-analysis-results');
+    await expect(results.getByText('6 meetings')).toBeVisible();
+    await expect(results.getByTestId('spacetime-analysis-row').first()).toContainText('Dana + Eli');
+
+    await page.waitForFunction(
+      () => window.__viewtopiaDeck?.props.layers.some((l) => l.id === 'spacetime-analysis-points'),
+      null,
+      { timeout: 10000 },
+    );
+  });
+
   test('vector tiles: adds an MVT source+layer to the live MapLibre map', async ({ page }) => {
     // The tile host below does not exist. Serve an empty tile body (a valid
     // zero-field protobuf, i.e. a tile with no layers) so MapLibre walks its real

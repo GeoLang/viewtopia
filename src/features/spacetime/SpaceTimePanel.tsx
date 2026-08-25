@@ -23,10 +23,22 @@ import {
 import { PanelCard, PanelHeader } from '../../components/PanelCard';
 import { useSpaceTimeStore } from './store';
 import { downsampleTracks } from './cube';
+import { requestAnalysis } from './analysis/engine';
+import type { AnalysisKind } from './analysis/run';
 import { EntityList } from './components/EntityList';
 import { TrackPlayer } from './components/TrackPlayer';
 import { CreateLinkDialog } from './components/CreateLinkDialog';
 import type { Entity, Track } from './types';
+
+const ANALYSIS_BUTTONS: { kind: AnalysisKind; label: string }[] = [
+  { kind: 'colocation', label: 'Colocation Detection' },
+  { kind: 'cotravel', label: 'Co-Travel Detection' },
+  { kind: 'pattern', label: 'Pattern-of-Life' },
+  { kind: 'network', label: 'Network Metrics' },
+  { kind: 'clustering', label: 'Behavioral Clustering' },
+  { kind: 'prediction', label: 'Predictive Location' },
+  { kind: 'quality', label: 'Data Quality Check' },
+];
 
 export function SpaceTimePanel() {
   const { panelOpen, togglePanel, entities, tracks, links, addEntity, addTrack, setTimeRange, flyTo } =
@@ -36,11 +48,40 @@ export function SpaceTimePanel() {
   const setCurrentTime = useSpaceTimeStore((s) => s.setCurrentTime);
   const cubeView = useSpaceTimeStore((s) => s.cubeView);
   const toggleCubeView = useSpaceTimeStore((s) => s.toggleCubeView);
+  const analysisResult = useSpaceTimeStore((s) => s.analysisResult);
+  const analysisRunning = useSpaceTimeStore((s) => s.analysisRunning);
+  const analysisError = useSpaceTimeStore((s) => s.analysisError);
+  const startAnalysis = useSpaceTimeStore((s) => s.startAnalysis);
+  const finishAnalysis = useSpaceTimeStore((s) => s.finishAnalysis);
+  const failAnalysis = useSpaceTimeStore((s) => s.failAnalysis);
+  const clearAnalysis = useSpaceTimeStore((s) => s.clearAnalysis);
+
+  const runAnalysisKind = useCallback(
+    async (kind: AnalysisKind) => {
+      startAnalysis(kind);
+      const state = useSpaceTimeStore.getState();
+      try {
+        finishAnalysis(
+          await requestAnalysis(kind, {
+            tracks: state.tracks,
+            links: state.links,
+            entities: [...state.entities.values()].map((e) => ({ id: e.id, name: e.name })),
+            timeRange: state.timeRange,
+          }),
+        );
+      } catch (error) {
+        failAnalysis((error as Error).message);
+      }
+    },
+    [startAnalysis, finishAnalysis, failAnalysis],
+  );
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleCsvFile = useCallback((file: File) => {
     setImportStatus(null);
+    // the old result points at entity ids this import replaces
+    clearAnalysis();
     if (!file.name.endsWith('.csv')) {
       setImportStatus('Only CSV files are supported');
       return;
@@ -162,7 +203,7 @@ export function SpaceTimePanel() {
       );
     };
     reader.readAsText(file);
-  }, [addEntity, addTrack, setTimeRange, setCurrentTime, flyTo, setImportStatus]);
+  }, [addEntity, addTrack, setTimeRange, setCurrentTime, flyTo, setImportStatus, clearAnalysis]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -318,27 +359,67 @@ export function SpaceTimePanel() {
 
         <Tabs.Panel value="analysis" p="xs">
           <Stack gap="xs">
-            <Button size="xs" variant="light" color="violet" fullWidth>
-              Colocation Detection
-            </Button>
-            <Button size="xs" variant="light" color="violet" fullWidth>
-              Pattern-of-Life
-            </Button>
-            <Button size="xs" variant="light" color="violet" fullWidth>
-              Network Metrics
-            </Button>
-            <Button size="xs" variant="light" color="violet" fullWidth>
-              Behavioral Clustering
-            </Button>
-            <Button size="xs" variant="light" color="violet" fullWidth>
-              Predictive Location
-            </Button>
-            <Button size="xs" variant="light" color="violet" fullWidth>
-              Entity Resolution
-            </Button>
-            <Button size="xs" variant="light" color="violet" fullWidth>
-              Data Quality Check
-            </Button>
+            {tracks.length === 0 && (
+              <Text size="xs" c="dimmed" ta="center">
+                Import track data to run an analysis
+              </Text>
+            )}
+            {ANALYSIS_BUTTONS.map(({ kind, label }) => (
+              <Button
+                key={kind}
+                size="xs"
+                variant="light"
+                color="violet"
+                fullWidth
+                disabled={tracks.length === 0 || analysisRunning !== null}
+                loading={analysisRunning === kind}
+                onClick={() => runAnalysisKind(kind)}
+              >
+                {label}
+              </Button>
+            ))}
+
+            {analysisError && (
+              <Text size="xs" c="red" data-testid="spacetime-analysis-error">
+                {analysisError}
+              </Text>
+            )}
+
+            {analysisResult && (
+              <Stack gap={4} data-testid="spacetime-analysis-results">
+                <Group justify="space-between" wrap="nowrap">
+                  <Text size="xs" c="violet">
+                    {analysisResult.title}
+                  </Text>
+                  <Button
+                    size="compact-xs"
+                    variant="subtle"
+                    color="gray"
+                    onClick={clearAnalysis}
+                  >
+                    Clear
+                  </Button>
+                </Group>
+                <ScrollArea mah={240}>
+                  {analysisResult.rows.map((row) => (
+                    <Box
+                      key={row.id}
+                      p={6}
+                      mb={4}
+                      data-testid="spacetime-analysis-row"
+                      style={{ background: 'var(--mantine-color-dark-6)', borderRadius: 4 }}
+                    >
+                      <Text size="xs" c="white">
+                        {row.label}
+                      </Text>
+                      <Text size="xs" c="dimmed">
+                        {row.detail}
+                      </Text>
+                    </Box>
+                  ))}
+                </ScrollArea>
+              </Stack>
+            )}
           </Stack>
         </Tabs.Panel>
       </Tabs>
