@@ -38,6 +38,9 @@ vi.mock('../../src/features/auth/store', () => ({
   endRefusedSession: () => {},
 }));
 
+const shownNotifications = vi.hoisted(() => vi.fn());
+vi.mock('@mantine/notifications', () => ({ notifications: { show: shownNotifications } }));
+
 import {
   queueFeatureUpdate,
   applyConflictResolutions,
@@ -48,7 +51,9 @@ import {
 
 const BRANCH_ID = '11111111-1111-1111-1111-111111111111';
 const FEATURE_ID = '22222222-2222-2222-2222-222222222222';
+const SECOND_FEATURE_ID = '33333333-3333-3333-3333-333333333333';
 const OP_ID = `feature-update-${FEATURE_ID}`;
+const SECOND_OP_ID = `feature-update-${SECOND_FEATURE_ID}`;
 const POINT: GeoJSON.Geometry = { type: 'Point', coordinates: [1, 2] };
 // what geojsonToWkbHex writes for POINT
 const POINT_HEX = '0101000000000000000000f03f0000000000000040';
@@ -96,10 +101,40 @@ function serveBranch(head: Record<string, unknown> | null) {
 
 const commits = (calls: Call[]) => calls.filter((c) => c.method === 'POST');
 
+/** ptolemy holding nothing at the head and answering every commit with a failure. */
+function refuseCommits(status: number, body: string) {
+  const calls: Call[] = [];
+  const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+    calls.push({
+      url,
+      method: init?.method ?? 'GET',
+      authorization: new Headers(init?.headers).get('Authorization'),
+      body: init?.body ? JSON.parse(init.body as string) : undefined,
+    });
+    if (!init?.method || init.method === 'GET') {
+      return { ok: false, status: 404, statusText: 'Not Found' } as Response;
+    }
+    return { ok: false, status, text: async () => body } as unknown as Response;
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  return { calls };
+}
+
+async function queueEdit(featureId = FEATURE_ID) {
+  await queueFeatureUpdate(BRANCH_ID, { id: featureId, properties: { name: 'mine' } }, null);
+}
+
+/** two queued edits, so a sync that stops at the first one is visible */
+async function queueTwoEdits() {
+  await queueEdit();
+  await queueEdit(SECOND_FEATURE_ID);
+}
+
 beforeEach(async () => {
   db.ops.clear();
   await discardPending();
   vi.unstubAllGlobals();
+  shownNotifications.mockClear();
 });
 
 describe('a queued edit commits to its ptolemy branch', () => {
@@ -220,22 +255,93 @@ describe('a queued edit commits to its ptolemy branch', () => {
     expect(db.ops.size).toBe(0);
   });
 
-  it('keeps the op queued when the commit fails', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (_url: string, init?: RequestInit) =>
-        (!init?.method
-          ? { ok: false, status: 404, statusText: 'Not Found' }
-          : { ok: false, status: 500, statusText: 'Internal Server Error' }) as Response,
-      ),
-    );
+  it('keeps the op queued when the commit fails, and tries the rest of the queue', async () => {
+    refuseCommits(500, 'commit failed');
 
-    await queueFeatureUpdate(BRANCH_ID, { id: FEATURE_ID, properties: { name: 'mine' } }, null);
+    await queueTwoEdits();
     await syncNow();
 
-    expect(db.ops.size).toBe(1);
+    expect(db.ops.size).toBe(2);
     expect(db.ops.get(OP_ID)!.attempts).toBe(1);
+    expect(db.ops.get(SECOND_OP_ID)!.attempts).toBe(1);
     expect(getSyncState().status).toBe('error');
+  });
+});
+
+describe('a refused commit is shown once and never retried', () => {
+  it('drops a 403 from the queue and reports the reason the server gave', async () => {
+    const { calls } = refuseCommits(403, 'you are a reader on branch main');
+
+    await queueEdit();
+    await syncNow();
+
+    expect(commits(calls)).toHaveLength(1);
+    expect(db.ops.size).toBe(0);
+    expect(shownNotifications).toHaveBeenCalledTimes(1);
+    expect(shownNotifications).toHaveBeenCalledWith({
+      title: 'Edit refused',
+      message: 'you are a reader on branch main',
+      color: 'red',
+    });
+
+    const state = getSyncState();
+    expect(state.status).toBe('idle');
+    expect(state.pendingCount).toBe(0);
+    expect(state.lastError).toBe('you are a reader on branch main');
+
+    // gone from the queue, so a later sync sends nothing
+    await syncNow();
+    expect(commits(calls)).toHaveLength(1);
+  });
+
+  it('names the missing access itself when the server sent no reason', async () => {
+    refuseCommits(401, '');
+
+    await queueEdit();
+    await syncNow();
+
+    expect(shownNotifications).toHaveBeenCalledWith({
+      title: 'Edit refused',
+      message: 'you do not have write access to this branch',
+      color: 'red',
+    });
+    expect(db.ops.size).toBe(0);
+    expect(getSyncState().lastError).toBe('you do not have write access to this branch');
+  });
+
+  it('keeps a 503 queued and stops the sync there', async () => {
+    refuseCommits(503, 'upstream unavailable');
+
+    await queueTwoEdits();
+    await syncNow();
+
+    expect(db.ops.size).toBe(2);
+    expect(db.ops.get(OP_ID)!.attempts).toBe(1);
+    // the second op was never reached, the sync stopped on the unreachable server
+    expect(db.ops.get(SECOND_OP_ID)!.attempts).toBe(0);
+    expect(getSyncState().status).toBe('error');
+    expect(shownNotifications).not.toHaveBeenCalled();
+  });
+
+  it('stops the sync when a request never got a response', async () => {
+    let requests = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        requests += 1;
+        // Safari's wording for a dropped request, which names neither fetch nor a status
+        throw new TypeError('Load failed');
+      }),
+    );
+
+    await queueTwoEdits();
+    await syncNow();
+
+    expect(requests).toBe(1);
+    expect(db.ops.size).toBe(2);
+    expect(db.ops.get(SECOND_OP_ID)!.attempts).toBe(0);
+    expect(getSyncState().status).toBe('error');
+    expect(shownNotifications).not.toHaveBeenCalled();
   });
 });
 

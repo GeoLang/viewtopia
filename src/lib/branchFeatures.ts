@@ -5,10 +5,13 @@
 // attributes out of a branch and drop the geometry column, so a panel that wants
 // to draw a row joins it back from /branches/{id}/features on the same feature id.
 
+import { PtolemyRequestError } from '../projects/api';
 import { apiHeaders, noticeRefusal } from './apiAuth';
 import { geojsonToWkbHex, wkbHexToGeojson } from './wkb';
 
 const API = '/api/v1';
+/** the status of a request that never got a response */
+const NO_RESPONSE = 0;
 
 export interface BranchFeature {
   id: string;
@@ -36,15 +39,33 @@ function decode(hex: string): GeoJSON.Geometry | null {
   }
 }
 
+function methodOf(init?: RequestInit): string {
+  return init?.method ?? 'GET';
+}
+
 async function request(path: string, init?: RequestInit): Promise<Response> {
-  const res = await fetch(`${API}${path}`, { ...init, headers: apiHeaders(init?.headers) });
+  let res: Response;
+  try {
+    res = await fetch(`${API}${path}`, { ...init, headers: apiHeaders(init?.headers) });
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    throw new PtolemyRequestError(NO_RESPONSE, reason, methodOf(init), path);
+  }
   if (!res.ok) noticeRefusal(res.status);
   return res;
 }
 
+async function requestError(
+  res: Response,
+  path: string,
+  init?: RequestInit,
+): Promise<PtolemyRequestError> {
+  return new PtolemyRequestError(res.status, await res.text(), methodOf(init), path);
+}
+
 async function requestOk(path: string, init?: RequestInit): Promise<Response> {
   const res = await request(path, init);
-  if (!res.ok) throw new Error(`${path} failed: ${res.status} ${res.statusText}`);
+  if (!res.ok) throw await requestError(res, path, init);
   return res;
 }
 
@@ -98,13 +119,10 @@ export async function fetchBranchFeature(
   branchId: string,
   featureId: string,
 ): Promise<BranchFeature | null> {
-  const res = await request(`/branches/${branchId}/features/${featureId}`);
+  const path = `/branches/${branchId}/features/${featureId}`;
+  const res = await request(path);
   if (res.status === 404) return null;
-  if (!res.ok) {
-    throw new Error(
-      `/branches/${branchId}/features/${featureId} failed: ${res.status} ${res.statusText}`,
-    );
-  }
+  if (!res.ok) throw await requestError(res, path);
   const body = (await res.json()) as {
     feature_id: string;
     geometry_wkb_hex: string;

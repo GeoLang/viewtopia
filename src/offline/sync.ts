@@ -7,9 +7,12 @@
  * op and asks the user which side wins.
  */
 
+import { notifications } from '@mantine/notifications';
 import { hasIndexedDb, pendingOps, type PendingOperation } from './db';
+import { isUnreachableStatus } from './backends';
 import { isOnline } from './network';
 import { commitFeatureUpdate, fetchBranchFeature } from '../lib/branchFeatures';
+import { PtolemyRequestError } from '../projects/api';
 import {
   threeWayMerge,
   type ConflictResolution,
@@ -187,6 +190,7 @@ export async function syncNow(): Promise<void> {
   ops.sort((a, b) => a.createdAt - b.createdAt);
 
   let allSucceeded = true;
+  let refusal: string | null = null;
   const conflicts: MergeConflict[] = [];
 
   for (const op of ops) {
@@ -197,6 +201,15 @@ export async function syncNow(): Promise<void> {
       if (err instanceof UnsendableError) {
         console.warn(`[sync] discarding ${op.id}: ${err.message}`);
         await pendingOps.remove(op.id);
+        continue;
+      }
+      const refusedWith = refusalMessage(err);
+      if (refusedWith) {
+        // the server will refuse it again, so drop it instead of counting an attempt
+        await pendingOps.remove(op.id);
+        notifications.show({ title: 'Edit refused', message: refusedWith, color: 'red' });
+        refusal = refusedWith;
+        setState({ lastError: refusedWith });
         continue;
       }
       allSucceeded = false;
@@ -226,7 +239,7 @@ export async function syncNow(): Promise<void> {
     status: statusAfterSync(conflicts.length, allSucceeded),
     pendingCount: remaining,
     lastSyncAt: allSucceeded ? Date.now() : syncState.lastSyncAt,
-    lastError: allSucceeded ? null : syncState.lastError,
+    lastError: allSucceeded ? refusal : syncState.lastError,
     conflicts,
   });
 
@@ -284,17 +297,17 @@ export class ConflictError extends Error {
 class UnsendableError extends Error {}
 
 function isTransientError(err: unknown): boolean {
-  if (err instanceof Error) {
-    return (
-      err.message.includes('fetch') ||
-      err.message.includes('network') ||
-      err.message.includes('ECONNREFUSED') ||
-      err.message.includes('503') ||
-      err.message.includes('502') ||
-      err.message.includes('504')
-    );
-  }
-  return false;
+  return err instanceof PtolemyRequestError && isUnreachableStatus(err.status);
+}
+
+const REFUSAL_STATUSES = new Set([401, 403]);
+const NO_WRITE_ACCESS = 'you do not have write access to this branch';
+
+/** Why the server refused the commit outright, or null when it did not. */
+function refusalMessage(err: unknown): string | null {
+  if (!(err instanceof PtolemyRequestError)) return null;
+  if (!REFUSAL_STATUSES.has(err.status)) return null;
+  return err.responseText.trim() || NO_WRITE_ACCESS;
 }
 
 // ─── Auto-sync on reconnect ─────────────────────────────────────────

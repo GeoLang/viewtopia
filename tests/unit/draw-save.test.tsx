@@ -134,7 +134,7 @@ describe('the draw panel commits drawn shapes to a branch', () => {
         if (url.endsWith(`/datasets/${DATASET_ID}/branches`)) {
           return { ok: true, json: async () => [{ id: BRANCH_ID, name: 'main' }] } as Response;
         }
-        return { ok: false, status: 403, statusText: 'Forbidden' } as Response;
+        return { ok: false, status: 403, text: async () => 'Forbidden' } as unknown as Response;
       }),
     );
     open();
