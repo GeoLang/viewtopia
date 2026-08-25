@@ -132,6 +132,7 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 | **Layer Manager** | Reorder, toggle visibility, opacity, remove |
 | **GeoJSON Editor** | Edit the properties of shapes drawn in this browser |
 | **Dataset Editor** | Pick a Ptolemy dataset and branch, edit a feature's properties, redraw its geometry or drag single vertices, and commit to the branch |
+| **Scenario** | Draw a base branch and a scenario branch one per split-view pane, with each side's buffered coverage area and the difference between them |
 
 ### Visualization
 | Feature | Description |

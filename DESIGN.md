@@ -500,7 +500,7 @@ map, plus a synced split view. Picking/draw/measure/agent-layers survive rendere
   radius/intensity/weight → `heatmap-*` paint mapping, `useHeatmapsMapLibre` re-adds the layers
   after a basemap swap, and both the Heatmap panel and `add_heatmap` go through it. ScreenGrid
   keeps its deck layer and says so when asked for on the globe.
-- Split view panes are a list of `{renderer, basemap}` entries, the viewer itself being pane 0
+- Split view panes are a list of `{renderer, basemap, hiddenLayerIds}` entries, the viewer itself being pane 0
   in the app store, each pane with its own basemap picker, all driven by one shared-camera hub
   with a re-entrancy guard and a subscribe-time snap, with clean teardown so the WebGL context
   limit holds. The layout is two panes across or a 2x2 grid, derived from how many panes there
@@ -509,7 +509,10 @@ map, plus a synced split view. Picking/draw/measure/agent-layers survive rendere
   on the raster approximation of a vector basemap; the viewer pane stays a globe because the
   tool bindings assume one. Clicking a pane makes it the active one, which is what the
   map-corner basemap and renderer pickers style, and only the UI keeps Cesium to one pane: the
-  option is closed wherever another pane holds it.
+  option is closed wherever another pane holds it. A pane's `hiddenLayerIds` is
+  what lets two panes draw different things: every agent-layer hook skips a layer
+  its own pane hides, which is how the Scenario panel puts a base branch on one
+  side and a scenario branch on the other.
 - Agent layers reach a pane by subscription, not by effect ordering: `useLeaflet`, `useMapLibre`
   and `useCesium` publish the instance they build as state, and the three `useAgentLayers*`
   hooks key every effect on that instance rather than on the app-level renderer and tab. A pane

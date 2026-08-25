@@ -6,6 +6,19 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-25: **a scenario branch is compared against its base, side by side**.
+  A Scenario panel picks a ptolemy dataset, a base branch and a scenario branch,
+  makes a new scenario from the base where there is none, and draws each branch
+  as its own layer in the split view: the base in the left pane, the scenario in
+  the right, because a pane now carries a list of layer ids it leaves out and
+  all three agent-layer hooks skip them. Each side shows its feature count and
+  the area of the union of buffers around its features, from
+  `GET /api/v1/branches/{id}/analytics/coverage?distance=`, with the difference
+  as a signed area and percentage. Recompute re-reads both branches after an
+  edit in the Dataset Editor, and Stop comparing takes both layers off and puts
+  the split view back. Either side may name a past moment, which draws that
+  branch through `/features/at`. `tests/e2e/digital-twin-scenario.spec.js`
+  drives the whole path against the platform stack.
 - 2026-08-25: **a scrubber shows every asset as it was at a past moment**. A
   live map carrying an asset rule grows a bar along the bottom: a window of 1h
   to 30d, a slider over it, a box taking an exact time, and a Live button. A

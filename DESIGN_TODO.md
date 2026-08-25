@@ -111,11 +111,10 @@ other documents citing "P0 item 5" still land on the right one.
    Owner call 2026-08-25, plan under **Digital twin** in the plans section.
    Fluvius is out of this path and comes back later as a rules consumer of
    agora's readings stream. Slices 1 (feed on the 2D asset layer), 2 (tile
-   binding), 3 (scrubber over the readings table) and 5 (the `asset_readings`
-   agent tool, reachable from the viewer's chat) shipped 2026-08-25, see the
-   viewtopia, agora, tiletopia, geolang and sibyl changelogs.
-   - [ ] Slice 4, scenario compare: master and a branch in split view with a
-     coverage number per side.
+   binding), 3 (scrubber over the readings table), 4 (scenario compare) and 5
+   (the `asset_readings` agent tool, reachable from the viewer's chat) shipped
+   2026-08-25, see the viewtopia, agora, tiletopia, geolang and sibyl
+   changelogs.
 
 ## Wire for real
 
