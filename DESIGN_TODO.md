@@ -20,19 +20,6 @@
 
 ## Do next
 
-### In flight, 2026-08-25
-
-Five threads started together. Each is done when its tests pass through the
-real route and its per-repo CHANGELOG has the entry. Owner rule: no commits by
-the agents, the owner reviews and commits.
-
-- [~] **viewtopia panels flake.** Scheduled "Platform panels (per-panel
-      functional)" fails on two analysis-2 tests: the browser hangs on
-      `newContext` after a Statistics deck.gl test. Done when the cause is
-      named from the run logs and fixed in the test or the app, never by a
-      retry, a worker cap or a longer timeout.
-
-
 Pick one: an open row under **P0 path to the intended product** below, one
 module at a time from the **Wire for real** list, or a hosting decision under
 **Before any public deploy**.

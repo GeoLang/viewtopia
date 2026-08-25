@@ -92,6 +92,8 @@ export function SpatialStatsPanel({ onClose }: { onClose: () => void }) {
         getElevationWeight: (d) => gridWeight(d, weightProperty),
         elevationAggregation: agg,
         cellSize,
+        // gpu aggregation allocates a bin for every cell in the data extent
+        gpuAggregation: false,
         extruded: true,
         pickable: true,
       }),

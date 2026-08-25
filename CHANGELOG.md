@@ -222,6 +222,14 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-08-25: **the Statistics grid no longer stalls the browser's GPU
+  process.** The panel's deck.gl `GridLayer` used GPU aggregation, which
+  allocates one bin for every cell in the data extent, so points in two
+  distant clusters at a small cell size meant millions of bins. Under
+  SwiftShader that left the GPU process spinning after the page closed and the
+  next `browser.newContext` in the panels e2e never returned, which is the
+  flake on the two analysis-2 tests in every scheduled run since 08-16.
+  The layer now aggregates on the CPU, which bins only the occupied cells.
 - 2026-08-25: **a map spec with no layers no longer clears the globe.** geolang
   now answers an `emit_ui_spec` call with nothing to draw with an empty map
   spec rather than an error, and the viewer used to hand that empty list to the
