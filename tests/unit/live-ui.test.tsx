@@ -34,10 +34,14 @@ function documentDetail(members: LiveMember[]) {
   return { id: 'doc-1', name: 'Coastline', members };
 }
 
-/** An editor already in the document, which is what unlocks the members section. */
+/**
+ * An editor already in the document, which is what unlocks the members and
+ * feeds sections. Both read on open, members first.
+ */
 function drawShareDialogAsEditor(members: LiveMember[]) {
   useLiveStore.setState({ documentId: 'doc-1', role: 'edit' });
   fetchMock.mockResolvedValueOnce(jsonResponse(documentDetail(members)));
+  fetchMock.mockResolvedValueOnce(jsonResponse([]));
   draw(<LiveShareDialog documentId="doc-1" opened onClose={() => {}} />);
 }
 
@@ -274,7 +278,8 @@ describe('live session ui', () => {
     const put = requestTo('/agora/documents/doc-1/members/grace');
     expect(put.method).toBe('PUT');
     expect(put.body).toBe(JSON.stringify({ role: 'edit' }));
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    // the members read, the feeds read, the PUT, and the members read again
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
   it('removes a member and reloads the list', async () => {

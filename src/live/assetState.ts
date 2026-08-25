@@ -108,9 +108,12 @@ export function parseBreakpoints(text: string): AssetBreakpoint[] {
   for (const entry of text.split(',')) {
     const separator = entry.lastIndexOf(':');
     if (separator < 0) continue;
-    const value = Number(entry.slice(0, separator).trim());
+    const text = entry.slice(0, separator).trim();
     const color = entry.slice(separator + 1).trim();
-    if (!Number.isFinite(value) || color.length === 0) continue;
+    // Number('') is 0, so an entry with no value would read as a zero breakpoint
+    if (text.length === 0 || color.length === 0) continue;
+    const value = Number(text);
+    if (!Number.isFinite(value)) continue;
     breakpoints.push({ value, color });
   }
   return ascendingByValue(breakpoints);
