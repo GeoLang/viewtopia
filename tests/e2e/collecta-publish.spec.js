@@ -17,7 +17,8 @@ import { mintToken } from '../../scripts/platform-token.mjs';
 
 const COLLECTA = 'http://localhost:5174/collecta/api/v1';
 const PTOLEMY = 'http://localhost:3000/api/v1';
-const BROWSER_USER = 'collecta-publish-e2e';
+// collecta reads the subject as its own user id, so it has to be a uuid
+const BROWSER_USER = randomUUID();
 const SITE = { latitude: 43.735, longitude: 7.425 };
 
 const MENU_ITEM = '[class*="mantine-Menu-dropdown"] [class*="mantine-Menu-item"]';
