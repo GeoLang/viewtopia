@@ -32,6 +32,12 @@ const CIRCLE_LAYER = 'agent-layer-twin-assets-circle';
 
 const PRODUCER_INTERVAL_MS = 1000;
 
+/** Close enough that the picked asset's neighbours are hundreds of pixels away. */
+const ASSET_PICK_ZOOM = 19;
+
+/** Room for the readings table to tell the cool reading from the hot one. */
+const READING_GAP_MS = 250;
+
 /** Agora marks an asset offline after three missed 2s intervals. */
 const OFFLINE_TIMEOUT_MS = 10_000;
 
@@ -116,7 +122,10 @@ test.describe('digital twin — live platform stack', () => {
     await expectAssetColor(page, WATCHED_ASSET, COOL_COLOR, 30_000);
     expect(producer.errors).toEqual([]);
 
+    // the history query below asks for a moment strictly between two readings,
+    // and without this both would carry the same millisecond
     const beforeHotReading = new Date().toISOString();
+    await page.waitForTimeout(READING_GAP_MS);
 
     temperatures.set(WATCHED_ASSET, HOT_TEMPERATURE);
     producer.send([
@@ -128,20 +137,46 @@ test.describe('digital twin — live platform stack', () => {
     await page.getByRole('button', { name: 'Inspect' }).click();
     await expect(page.getByLabel('Click a feature to inspect')).toBeChecked();
 
-    const clickPoint = await page.evaluate(
-      ([sourceId, assetId]) => {
+    // the assets sit ~40m apart, so put this one alone under the cursor before
+    // clicking rather than trusting whatever zoom the layer was framed at
+    const centred = await page.evaluate(
+      ([sourceId, assetId, zoom]) => {
         const map = window.__viewtopiaMap;
         const feature = map
           .querySourceFeatures(sourceId)
           .find((candidate) => candidate.properties.asset_id === assetId);
-        if (!feature) return null;
-        const point = map.project(feature.geometry.coordinates);
-        return { x: point.x, y: point.y };
+        if (!feature) return false;
+        map.jumpTo({ center: feature.geometry.coordinates, zoom });
+        return true;
       },
-      ['agent-layer-twin-assets', WATCHED_ASSET],
+      ['agent-layer-twin-assets', WATCHED_ASSET, ASSET_PICK_ZOOM],
     );
-    expect(clickPoint, `${WATCHED_ASSET} is not drawn on screen`).toBeTruthy();
+    expect(centred, `${WATCHED_ASSET} is not in the layer source`).toBe(true);
+
+    // the click reads rendered features, which the jump above has to redraw first
+    const clickPoint = await page
+      .waitForFunction(
+        ([layerId, assetId]) => {
+          const map = window.__viewtopiaMap;
+          const feature = map
+            .queryRenderedFeatures({ layers: [layerId] })
+            .find((candidate) => candidate.properties.asset_id === assetId);
+          if (!feature) return null;
+          const point = map.project(feature.geometry.coordinates);
+          // project answers in canvas pixels and the mouse takes viewport ones
+          const canvas = map.getCanvas().getBoundingClientRect();
+          return { x: point.x + canvas.x, y: point.y + canvas.y };
+        },
+        [CIRCLE_LAYER, WATCHED_ASSET],
+        { timeout: 30_000 },
+      )
+      .then((handle) => handle.jsonValue());
     await page.mouse.click(clickPoint.x, clickPoint.y);
+
+    // the properties name the asset, so this says the click reached the right one
+    await expect(
+      page.locator('div').filter({ hasText: /^Feature Info/ }).first(),
+    ).toContainText(WATCHED_ASSET);
 
     await expect(page.getByTestId('asset-reading-temperature')).toContainText(
       String(HOT_TEMPERATURE),
