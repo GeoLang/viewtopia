@@ -68,6 +68,9 @@ jobs:
       - name: Checkout geodukt
         uses: actions/checkout@v4
         with: { repository: GeoLang/geodukt, path: geodukt }
+      - name: Checkout collecta
+        uses: actions/checkout@v4
+        with: { repository: GeoLang/collecta, path: collecta }
 
       # sibyl treats an empty key as unset and refuses to start against the
       # cloud base, so an absent secret must fall back to a non-empty dummy
