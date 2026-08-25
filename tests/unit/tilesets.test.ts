@@ -136,6 +136,7 @@ describe('tileset upload and poll', () => {
     });
     useOgcLayerStore.setState({ layers: [] });
     useTilesetStore.setState({
+      queue: [],
       offered: null,
       browserFallback: null,
       uploadFraction: null,
@@ -241,6 +242,7 @@ describe('tileset store', () => {
     });
     useOgcLayerStore.setState({ layers: [] });
     useTilesetStore.setState({
+      queue: [],
       offered: null,
       browserFallback: null,
       uploadFraction: null,

@@ -9,6 +9,7 @@ import { BROWSER_IMPORT_LIMIT_BYTES, formatBytes, tooLargeForBrowser } from './a
  */
 export function TilesetOffer() {
   const offered = useTilesetStore((s) => s.offered);
+  const waiting = useTilesetStore((s) => s.queue.length);
   const uploadFraction = useTilesetStore((s) => s.uploadFraction);
   const building = useTilesetStore((s) => s.building);
   const buildError = useTilesetStore((s) => s.buildError);
@@ -29,6 +30,11 @@ export function TilesetOffer() {
       closeOnClickOutside={!running}
     >
       <Stack gap="sm" data-testid="tileset-offer">
+        {waiting > 1 && (
+          <Text size="xs" c="dimmed" data-testid="tileset-offer-position">
+            1 of {waiting}
+          </Text>
+        )}
         <Text size="sm">
           {offered.name} — {formatBytes(offered.size)}
         </Text>

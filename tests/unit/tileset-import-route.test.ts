@@ -23,7 +23,7 @@ function geojsonFile(name: string, size: number): File {
 
 describe('import routing at the browser size limit', () => {
   beforeEach(() => {
-    useTilesetStore.setState({ offered: null, browserFallback: null });
+    useTilesetStore.setState({ queue: [], offered: null, browserFallback: null });
   });
 
   it('offers the server tileset instead of parsing a file past the limit', async () => {

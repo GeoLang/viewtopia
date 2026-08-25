@@ -118,16 +118,11 @@ export async function importFiles(
       tilesetFormat(f.name) &&
       (tooLargeForBrowser(f) || !ALL_IMPORT_FORMATS.includes(extOf(f.name))),
   );
-  if (forServer.length) {
-    const [first, ...deferred] = forServer;
-    const readable = ALL_IMPORT_FORMATS.includes(extOf(first.name));
+  for (const file of forServer) {
+    const readable = ALL_IMPORT_FORMATS.includes(extOf(file.name));
     useTilesetStore
       .getState()
-      .offer(first, readable ? () => void runImport([first], onImport, onStatus) : undefined);
-    // one offer at a time, so the rest of a batch is left for the user to bring back
-    for (const file of deferred) {
-      onStatus({ text: `${file.name}: build it into a tileset on its own`, failed: true });
-    }
+      .offer(file, readable ? () => void runImport([file], onImport, onStatus) : undefined);
   }
   const forBrowser = files.filter((f) => !forServer.includes(f));
   if (forBrowser.length) await runImport(forBrowser, onImport, onStatus);

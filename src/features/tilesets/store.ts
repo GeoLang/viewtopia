@@ -16,13 +16,21 @@ export function tilesetLayerId(tilesetId: string): string {
   return `tileset-${tilesetId}`;
 }
 
-interface TilesetState {
-  /** A file the user was offered the tileset route for, waiting on an answer. */
-  offered: File | null;
+export interface OfferedFile {
+  file: File;
   /**
-   * Parse the offered file in the tab after all. Unset when the file came from
-   * the deliberate "build a tileset" pick rather than from an ordinary import.
+   * Parse the file in the tab after all. Unset when the file came from the
+   * deliberate "build a tileset" pick rather than from an ordinary import.
    */
+  browserFallback: (() => void) | null;
+}
+
+interface TilesetState {
+  /** Files awaiting an answer, oldest first. The head is what the modal shows. */
+  queue: OfferedFile[];
+  /** The head file, kept as its own field so the modal can select it. */
+  offered: File | null;
+  /** The head's browser fallback. */
   browserFallback: (() => void) | null;
   /** How much of the offered file has gone up, unset while nothing is uploading. */
   uploadFraction: number | null;
@@ -35,7 +43,9 @@ interface TilesetState {
   listing: boolean;
   listError: string | null;
 
+  /** Put a file at the back of the queue, waiting on its own answer. */
   offer: (file: File, browserFallback?: () => void) => void;
+  /** Answer the head with no, and show the next file. */
   dismissOffer: () => void;
   /** Upload the offered file, wait for the build, and draw the result. */
   build: () => Promise<void>;
@@ -49,7 +59,21 @@ function reason(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback;
 }
 
+/** The queue with a new head, and the head's progress and error started over. */
+function withHead(queue: OfferedFile[]) {
+  const head = queue[0] ?? null;
+  return {
+    queue,
+    offered: head?.file ?? null,
+    browserFallback: head?.browserFallback ?? null,
+    uploadFraction: null,
+    building: null,
+    buildError: null,
+  };
+}
+
 export const useTilesetStore = create<TilesetState>((set, get) => ({
+  queue: [],
   offered: null,
   browserFallback: null,
   uploadFraction: null,
@@ -60,22 +84,13 @@ export const useTilesetStore = create<TilesetState>((set, get) => ({
   listError: null,
 
   offer: (file, browserFallback) =>
-    set({
-      offered: file,
-      browserFallback: browserFallback ?? null,
-      uploadFraction: null,
-      building: null,
-      buildError: null,
+    set((s) => {
+      const queue = [...s.queue, { file, browserFallback: browserFallback ?? null }];
+      // an appended file leaves the head alone, so its upload keeps running
+      return s.queue.length ? { queue } : withHead(queue);
     }),
 
-  dismissOffer: () =>
-    set({
-      offered: null,
-      browserFallback: null,
-      uploadFraction: null,
-      building: null,
-      buildError: null,
-    }),
+  dismissOffer: () => set((s) => withHead(s.queue.slice(1))),
 
   build: async () => {
     const file = get().offered;
@@ -91,7 +106,7 @@ export const useTilesetStore = create<TilesetState>((set, get) => ({
         return;
       }
       await get().addLayer(built);
-      set({ offered: null, browserFallback: null, uploadFraction: null, building: null });
+      set((s) => withHead(s.queue.slice(1)));
     } catch (err) {
       set({ buildError: reason(err, 'the tileset could not be built'), uploadFraction: null });
     }
