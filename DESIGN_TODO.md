@@ -26,15 +26,27 @@ Five threads started together. Each is done when its tests pass through the
 real route and its per-repo CHANGELOG has the entry. Owner rule: no commits by
 the agents, the owner reviews and commits.
 
-- [~] **tiletopia offline export bundle.** `export.rs` reads
-      `TILETOPIA_CESIUM_DIR`. Done when a bundle is fully offline out of the
-      published image: either the Dockerfile ships a CesiumJS build at that
-      path, or the export refuses with a clear error when the dir is unset
-      instead of shipping a banner. Test through `POST /api/v1/exports`.
-- [~] **jung text.** jung-vello draws geometry only. Done when a text symbolizer
-      in the style renders a label into the vello Scene, with a font loaded
-      from a path the caller passes. One test that renders a label and finds
-      non-background pixels where it was placed.
+- [~] **field to shared map: collecta publishes a form into a ptolemy dataset.**
+      Decided 2026-08-25: on-demand, the caller's own bearer is forwarded to
+      ptolemy, no stored credential. collecta-server gets
+      `POST /api/v1/forms/{id}/publish` (creator or admin). The first call
+      creates one ptolemy dataset per form at `COLLECTA_PTOLEMY_URL`, geometry
+      type from the form's first geo field, attributes from the other fields,
+      media fields as collecta attachment URLs, and records the dataset and
+      branch ids on the form. Every call commits the submissions not yet
+      published in batches with the submission id as the feature id and
+      records which ids went. A form with no geo field uses `device_location`,
+      a submission with neither is skipped and counted. Response
+      `{dataset_id, branch_id, published, skipped, total_published}`. Tests
+      against an in-process fake ptolemy: first publish creates and commits,
+      second sends only new ids, a rerun after a failed batch does not
+      duplicate. viewtopia's Field Data panel gets a Publish button that calls
+      it and then loads the dataset through the `ptolemy-branch-{id}` layer
+      path, with a platform e2e: submit, publish, feature in ptolemy and on
+      the map. Left out of v1, as rows to add when it lands: automatic push on
+      submission (needs a service credential), edits to published submissions
+      (collecta has no submission `updated_at`), live refresh for other
+      viewers (dataset layers are pull-based).
 - [~] **viewtopia panels flake.** Scheduled "Platform panels (per-panel
       functional)" fails on two analysis-2 tests: the browser hangs on
       `newContext` after a Statistics deck.gl test. Done when the cause is
@@ -164,11 +176,6 @@ machinery, then the large islands. One exception to reconfirm when reached:
 the Space-Time rows sit under an earlier "do not build Gotham" owner call that
 this direction reverses.
 
-- [ ] **tiletopia offline export bundle.** The bundle is fully offline only
-      when `TILETOPIA_CESIUM_DIR` names a CesiumJS build, and otherwise says
-      so in a banner, so an image that ships without one has no offline
-      viewer.
-
 - [ ] **tiletopia modules still parked, no blanket deletion.** Each needs its
       own owner call: temporal, crdt, tenant, collaboration, federation,
       whitelabel, priority_queue, cluster, marketplace, metering, encryption,
@@ -197,9 +204,6 @@ this direction reverses.
 - [ ] **Space-Time geofencing UI and case management.** The library code and
       types exist with no UI behind them, parked. Network metrics render as a
       list rather than a graph.
-
-- [ ] **jung text gap.** jung-vello draws geometry only: text in a vello
-      Scene needs a second font pipeline.
 
 ## Before any public deploy
 
@@ -447,12 +451,6 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
 - [ ] **movement analytics as geolang agent tools** (owner call 2026-08-24):
       Space-Time v1 runs its analytics client-side; expose them to the agent
       only after the cube proves they are worth exposing.
-
-- [ ] **collecta increment 3: push submissions into ptolemy** as versioned
-      features, deliberately parked until the panel proves demand. Needs the
-      form-schema-to-dataset mapping, incremental sync off collecta's
-      cursor, and a decision on who owns the bridge (an exporter in collecta
-      versus a puller elsewhere).
 
 - [ ] **a tile builder of our own** (owner call 2026-08-23, against): the hard
       parts are feature dropping per zoom, a tile size budget that only settles
