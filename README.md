@@ -121,7 +121,7 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 ### Data & Layers
 | Feature | Description |
 |---------|-------------|
-| **Asset Catalogue** | Browse TileTopia tilesets and load with one click |
+| **Asset Catalogue** | Browse TileTopia tilesets, and add one to the globe as a layer with a row of its own. In a live map every member loads it too |
 | **Cesium Ion** | Connect your Ion account and load assets |
 | **OGC Layers** | Import WMS, WMTS, WFS, and XYZ tile services |
 | **Image Overlay** | Drop a site plan image or PDF, place it by world file + `.prj` (projicio wasm) or two clicks, keep it as a layer |
@@ -240,8 +240,11 @@ The Live panel, reached from the share button of a live map, also manages the
 map's sensor feeds and its asset rule. Creating a feed gives you a token, shown
 once, that a producer sends readings with; the asset rule names the layer, the
 reading kind and a colour per threshold, and every member's map recolours the
-matching features as readings arrive. Inspect shows the clicked asset's latest
-value per kind and whether it is still reporting.
+matching features as readings arrive. The layer can be a 3D tileset, in which
+case the tile features carrying the same `asset_id` take the colour. Inspect
+shows the clicked asset's latest value per kind and whether it is still
+reporting, and a picked tile feature also shows the attributes of the ptolemy
+asset it stands for.
 
 ---
 

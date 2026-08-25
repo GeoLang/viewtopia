@@ -76,8 +76,9 @@ instance. A document is the map composition, not the feature data: the layer
 list (order as base62 fractional indexes, visibility, opacity, style overrides,
 layers referenced by id, with a `source` for data that must travel: inline
 GeoJSON under the op cap, a URL peers fetch, for an image overlay its four
-corners plus an agora attachment url holding the bitmap, or for an OGC service
-the handle every member requests for themselves), annotations, camera
+corners plus an agora attachment url holding the bitmap, for an OGC service
+the handle every member requests for themselves, or for a 3D model the
+tileset.json url every member loads), annotations, camera
 bookmarks,
 metadata and members. Concurrency is server-ordered ops with last-writer-wins
 per key, no CRDT: the server assigns a monotonic sequence per document,
@@ -121,7 +122,11 @@ past moment. The readings never enter the document: the client holds them in
 and a default and offline colour. `useAssetColorsMapLibre` turns that rule and
 the store into one `match` expression on the feature's `asset_id` and sets it as
 the layer's colour paint, leaving the agent layer's own features and colour
-alone, and the inspector shows the picked asset's latest value per kind.
+alone, and the inspector shows the picked asset's latest value per kind. A rule
+naming a 3D tileset layer instead becomes a `Cesium3DTileStyle` over the same
+asset ids, `useAssetColorsCesium` applying it to the tileset the layer store
+holds, and a picked tile feature shows the matching ptolemy feature's attributes
+beside its own.
 
 ### 2.1 Platform topology
 

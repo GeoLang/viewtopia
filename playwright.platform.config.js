@@ -23,6 +23,7 @@ export default defineConfig({
     'project-datasets.spec.js',
     'tileset-import.spec.js',
     'digital-twin.spec.js',
+    'digital-twin-3d.spec.js',
   ],
   timeout: 30000,
   use: {

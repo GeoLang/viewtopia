@@ -6,6 +6,20 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-25: **a 3D tileset is a layer of the map, and the asset rule colours
+  its tile features**. Add to globe in the Assets panel, the agent's
+  `load_tileset` and a live document all go through one layer store, so the
+  model gets a Layers panel row with a switch and a remove, and every member of
+  a live map loads the same tileset.json for themselves rather than one browser
+  holding a primitive nobody else has. The asset rule accepts a tileset layer:
+  it becomes a `Cesium3DTileStyle` with one colour condition per asset the
+  readings store knows, matched on the tile feature's `asset_id`, and the
+  tileset's own style comes back when the rule goes. Clicking a tile feature
+  with Inspect on shows the ptolemy asset's attributes under the tile's own and
+  the same live readings the 2D pick shows, because both key on `asset_id`.
+  `scripts/seed-twin.mjs` takes a tileset url and the ids the tiles carry, and
+  `tests/e2e/digital-twin-3d.spec.js` drives the whole path from an IFC of
+  twelve boxes.
 - 2026-08-25: **live asset readings recolour the map and fill the inspector**.
   The share dialog of a live map grows a Feeds section: an editor creates a feed
   with a name and an expected interval, copies the token it answers with once,
