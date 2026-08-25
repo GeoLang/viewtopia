@@ -42,10 +42,12 @@ const DATASET_ID = 'ds-1';
 const BRANCH_ID = 'br-1';
 const FEATURE_ID = 'ft-1';
 const POINT_HEX = '0101000000000000000000f03f0000000000000040';
+/** GEOMETRYCOLLECTION(POINT(1 2)), a type the codec used to refuse */
+const COLLECTION_HEX = `010700000001000000${POINT_HEX}`;
 
 const committed = { name: 'lot 5', acres: 12.5 };
 
-function serve() {
+function serve(hex = POINT_HEX) {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string) => {
@@ -61,7 +63,7 @@ function serve() {
           status: 200,
           json: async () => ({
             feature_id: FEATURE_ID,
-            geometry_wkb_hex: POINT_HEX,
+            geometry_wkb_hex: hex,
             properties: committed,
           }),
         } as Response;
@@ -73,7 +75,7 @@ function serve() {
             features: [
               {
                 id: FEATURE_ID,
-                geometry_wkb: [...Buffer.from(POINT_HEX, 'hex')],
+                geometry_wkb: [...Buffer.from(hex, 'hex')],
                 properties: { name: 'lot 4', acres: 12.5 },
               },
             ],
@@ -196,6 +198,36 @@ describe('the dataset editor edits a ptolemy branch', () => {
     // the capture shape never stays a drawn feature and the mode is released
     expect(useDrawStore.getState().features).toHaveLength(0);
     expect(useDrawStore.getState().mode).toBeNull();
+  });
+
+  it('redraws a feature whose geometry is a collection', async () => {
+    serve(COLLECTION_HEX);
+    open();
+    fireEvent.click(await screen.findByPlaceholderText('Pick a dataset'));
+    fireEvent.click(await screen.findByText('parcels'));
+    fireEvent.click(await screen.findByText('lot 4'));
+
+    const redraw = await screen.findByTestId('dataset-editor-redraw');
+    expect(redraw).toBeEnabled();
+    fireEvent.click(redraw);
+    // the collection's first member decides the draw mode
+    expect(useDrawStore.getState().mode).toBe('point');
+
+    act(() => {
+      useDrawStore.getState().addPendingPoint(9, 8);
+      useDrawStore.getState().finishFeature();
+    });
+
+    await waitFor(() => expect(sync.queueFeatureUpdate).toHaveBeenCalled());
+    const [, ours, base] = sync.queueFeatureUpdate.mock.calls[0];
+    expect(ours.geometry).toEqual({
+      type: 'GeometryCollection',
+      geometries: [{ type: 'Point', coordinates: [9, 8] }],
+    });
+    expect(base.geometry).toEqual({
+      type: 'GeometryCollection',
+      geometries: [{ type: 'Point', coordinates: [1, 2] }],
+    });
   });
 
   it('drops the capture when the selection changes mid-redraw', async () => {

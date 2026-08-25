@@ -34,7 +34,7 @@ function decode(hex: string): GeoJSON.Geometry | null {
   try {
     return wkbHexToGeojson(hex);
   } catch {
-    // wkb.ts covers Point, Polygon and MultiPolygon only
+    // curve types and truncated bytes have no GeoJSON here
     return null;
   }
 }

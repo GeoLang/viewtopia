@@ -56,6 +56,10 @@ function redrawModeFor(geometry: GeoJSON.Geometry): DrawMode {
     case 'LineString':
     case 'MultiLineString':
       return 'line';
+    case 'GeometryCollection': {
+      const first = geometry.geometries[0];
+      return first ? redrawModeFor(first) : 'polygon';
+    }
     default:
       return 'polygon';
   }
@@ -66,6 +70,9 @@ function matchGeometryFamily(
   drawn: GeoJSON.Geometry,
   previous: GeoJSON.Geometry,
 ): GeoJSON.Geometry {
+  if (previous.type === 'GeometryCollection') {
+    return { type: 'GeometryCollection', geometries: [drawn] };
+  }
   if (previous.type === 'MultiPoint' && drawn.type === 'Point') {
     return { type: 'MultiPoint', coordinates: [drawn.coordinates] };
   }
