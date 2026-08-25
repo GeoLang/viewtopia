@@ -53,7 +53,7 @@ ViewTopia, Ptolemy, Jung, TerraVista, Panoptes, and Geoplumb.
       Ptolemy integration, recursive repeat validation, or local expression
       evaluation. Conditions pass through to ODK Collect only.
 
-- [ ] **Fenestra**: capabilities documents are not client-consumable. SLD
+- [ ] **Fenestra**: SLD
       filters, scale bounds, text, and later symbolizers are not applied. The
       OGC API Features item route, OpenAPI output, links, MVT endpoint, and the
       Inspire, geofence, cascade, and printing crates are not complete server
@@ -124,27 +124,12 @@ other documents citing "P0 item 5" still land on the right one.
    - [ ] Prove the public route set with service health checks and one
      authenticated browser session.
 
-3. **Complete one real shared editing path.**
-   Repositories: `viewtopia`, `ptolemy`.
-   - [ ] Edit geometry at the vertex. The Dataset Editor redraws a whole
-     geometry and has no way to move one vertex.
-   - [ ] Redraw a feature whose WKB type `src/lib/wkb.ts` refuses (Z/M
-     coordinates, GeometryCollection). Those features cannot be redrawn at all.
-
 6. **Choose and complete one live feed path.**
    Repositories: `fluvius`, `agora`, `viewtopia`, with `collecta` if field data
    is the source. The smallest useful target is one WebSocket feed that enters
    the platform, is permission checked, appears in a shared layer, reconnects,
    and records a clear offline state. Until that exists, keep fleet, sensor,
    and incident pages labelled as configured integrations.
-
-8. **Remove or finish the highest-risk facade routes.**
-   Repositories: `tiletopia`, `ptolemy`, `fenestra`. For each route exposed to
-   the viewer, choose a real implementation with an integration test or delete
-   the route and its documentation claim. tiletopia's COG offsets, STAC
-   results, elevation and API keys and ptolemy's event delivery are real since
-   2026-08-24. Left: Fenestra capabilities, which GDAL cannot consume (WFS has
-   no DescribeFeatureType, no layer has a bounding box).
 
 ## Wire for real
 
@@ -199,9 +184,8 @@ this direction reverses.
       types exist with no UI behind them, parked. Network metrics render as a
       list rather than a graph.
 
-- [ ] **jung text and geometry gaps.** jung-vello draws geometry only: text in
-      a vello Scene needs a second font pipeline. Both front doors parse Point
-      geometry only.
+- [ ] **jung text gap.** jung-vello draws geometry only: text in a vello
+      Scene needs a second font pipeline.
 
 ## Before any public deploy
 
