@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => ({
-  maps: new Map<string, { id: string; map: unknown }>(),
+  maps: new Map<string, { id: string; map: unknown; unpushed?: boolean }>(),
 }));
 
 const api = vi.hoisted(() => ({
@@ -9,18 +9,23 @@ const api = vi.hoisted(() => ({
   putProjectState: vi.fn(),
   uploadProjectAttachment: vi.fn(),
   getProjectAttachmentDataUrl: vi.fn(),
+  deleteProjectAttachment: vi.fn(),
 }));
 
 vi.mock('../../src/projects/api', () => api);
 
 vi.mock('../../src/offline/db', () => ({
   projectMaps: {
+    getAll: vi.fn(async () => [...state.maps.values()]),
     get: vi.fn(async (id: string) => state.maps.get(id)),
-    put: vi.fn(async (entry: { id: string; map: unknown }) => {
+    put: vi.fn(async (entry: { id: string; map: unknown; unpushed?: boolean }) => {
       state.maps.set(entry.id, entry);
     }),
     remove: vi.fn(async (id: string) => {
       state.maps.delete(id);
+    }),
+    clear: vi.fn(async () => {
+      state.maps.clear();
     }),
   },
   overlayImages: {
@@ -40,7 +45,7 @@ import {
   MAP_STATE_KEY,
   SAVE_DEBOUNCE_MS,
 } from '../../src/projects/mapSync';
-import type { ViewtopiaProject } from '../../src/features/project/projectFile';
+import type { ImageOverlayEntry, ViewtopiaProject } from '../../src/features/project/projectFile';
 import { useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers';
 import { useAppStore } from '../../src/store/app';
 import { useOgcLayerStore } from '../../src/store/ogcLayers';
@@ -79,6 +84,24 @@ const canals: AgentLayer = {
   },
 };
 
+const sitePlan: ImageOverlayEntry = {
+  id: 'site-plan',
+  name: 'Site plan',
+  attachmentId: 'attachment-1',
+  corners: [
+    [12.3, 45.5],
+    [12.4, 45.5],
+    [12.4, 45.4],
+    [12.3, 45.4],
+  ],
+  opacity: 1,
+  visible: true,
+};
+
+function withOverlay(savedAt: string): ViewtopiaProject {
+  return { ...snapshot(savedAt), imageOverlays: [sitePlan] };
+}
+
 /** Every watcher a test started, stopped even when the test failed first. */
 let stopWatching: (() => void) | null = null;
 
@@ -95,6 +118,7 @@ beforeEach(() => {
   forgetUnsavedMaps();
   api.getProjectState.mockResolvedValue(null);
   api.putProjectState.mockResolvedValue(undefined);
+  api.deleteProjectAttachment.mockResolvedValue(undefined);
   useAppStore.setState({ renderer: 'maplibre', basemap: 'liberty', layers: [] });
   useAgentLayerStore.setState({ layers: [], rasterLayers: [], markers: [], generation: 0 });
   useOgcLayerStore.setState({ layers: [] });
@@ -303,6 +327,63 @@ describe('a save the server refused', () => {
     await pushUnsavedMaps();
 
     expect(api.putProjectState).toHaveBeenCalledOnce();
+  });
+});
+
+describe('the attachment behind an overlay that was removed', () => {
+  it('is deleted once the server has taken the snapshot that drops it', async () => {
+    state.maps.set(PROJECT, { id: PROJECT, map: withOverlay('2026-08-23T10:00:00Z') });
+
+    await saveProjectMap(PROJECT, 'Venice');
+
+    expect(api.deleteProjectAttachment).toHaveBeenCalledWith('attachment-1');
+    const [saved] = api.putProjectState.mock.invocationCallOrder;
+    const [deleted] = api.deleteProjectAttachment.mock.invocationCallOrder;
+    expect(deleted).toBeGreaterThan(saved);
+  });
+
+  it('stays while the server has not taken that snapshot', async () => {
+    api.putProjectState.mockRejectedValue(new Error('offline'));
+    state.maps.set(PROJECT, { id: PROJECT, map: withOverlay('2026-08-23T10:00:00Z') });
+
+    await saveProjectMap(PROJECT, 'Venice');
+
+    expect(api.deleteProjectAttachment).not.toHaveBeenCalled();
+  });
+
+  it('stays while the map still draws the overlay', async () => {
+    state.maps.set(PROJECT, { id: PROJECT, map: withOverlay('2026-08-23T10:00:00Z') });
+    useAgentLayerStore.getState().addRasterLayer({ ...sitePlan, url: 'data:image/png;base64,AA' });
+
+    await saveProjectMap(PROJECT, 'Venice');
+
+    expect(api.deleteProjectAttachment).not.toHaveBeenCalled();
+  });
+});
+
+describe('a cached map a previous session left unpushed', () => {
+  it('goes up when watching starts, for a project that is not the open one', async () => {
+    const stale = snapshot('2026-08-23T09:00:00Z', [canals]);
+    state.maps.set('project-2', { id: 'project-2', map: stale, unpushed: true });
+
+    watch(activeProject);
+    await vi.runAllTimersAsync();
+
+    expect(api.putProjectState).toHaveBeenCalledWith('project-2', MAP_STATE_KEY, stale);
+    expect(state.maps.get('project-2')?.unpushed).toBe(false);
+  });
+
+  it('is left alone when the server already took it', async () => {
+    state.maps.set(PROJECT, {
+      id: PROJECT,
+      map: snapshot('2026-08-23T09:00:00Z'),
+      unpushed: false,
+    });
+
+    watch(activeProject);
+    await vi.runAllTimersAsync();
+
+    expect(api.putProjectState).not.toHaveBeenCalled();
   });
 });
 

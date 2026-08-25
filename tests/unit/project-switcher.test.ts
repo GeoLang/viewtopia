@@ -21,6 +21,7 @@ vi.mock('../../src/projects/api', () => api);
 
 vi.mock('../../src/offline/db', () => ({
   projectMaps: {
+    getAll: vi.fn(async () => [...state.maps.values()]),
     get: vi.fn(async (id: string) => state.maps.get(id)),
     put: vi.fn(async (entry: { id: string }) => {
       state.maps.set(entry.id, entry);

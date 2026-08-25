@@ -34,7 +34,7 @@ const branchFeatures = vi.hoisted(() => ({ fetchDatasets: vi.fn() }));
 vi.mock('../../src/lib/branchFeatures', () => branchFeatures);
 
 vi.mock('../../src/offline/db', () => ({
-  projectMaps: { get: vi.fn(), put: vi.fn(), remove: vi.fn() },
+  projectMaps: { getAll: vi.fn(async () => []), get: vi.fn(), put: vi.fn(), remove: vi.fn() },
 }));
 
 import { ProjectSwitcher } from '../../src/projects/ProjectSwitcher';

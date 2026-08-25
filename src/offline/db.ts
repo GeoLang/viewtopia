@@ -406,10 +406,14 @@ import type { ViewtopiaProject } from '../features/project/projectFile';
 export interface ProjectMap {
   id: string;
   map: ViewtopiaProject;
+  /** the server has not taken this snapshot yet, so it is waiting for a retry */
+  unpushed: boolean;
 }
 
 export const projectMaps = {
+  getAll: () => getAll<ProjectMap>('projectMaps'),
   get: (id: string) => getById<ProjectMap>('projectMaps', id),
   put: (entry: ProjectMap) => put('projectMaps', entry),
   remove: (id: string) => remove('projectMaps', id),
+  clear: () => clear('projectMaps'),
 };

@@ -4,8 +4,9 @@
  * The snapshot is the same `ViewtopiaProject` a saved project file holds, kept
  * under the project's `map` state key in ptolemy. IndexedDB keeps a copy as the
  * offline cache: on load the newer `savedAt` of the two wins, and a save the
- * network refused is pushed again on the next change, the next project switch,
- * or when the browser says it is online.
+ * network refused leaves `unpushed` set on the cached record, so it goes up
+ * again on the next change, the next project switch, when the browser says it
+ * is online, or when the app starts again after a reload.
  */
 import { projectMaps } from '../offline/db';
 import {
@@ -19,17 +20,15 @@ import { useAgentLayerStore } from '../store/agentLayers';
 import { useOgcLayerStore } from '../store/ogcLayers';
 import { useSplitViewStore } from '../store/splitView';
 import { subscribeSharedCamera } from '../hooks/sharedCamera';
-import { getProjectState, putProjectState } from './api';
+import { deleteProjectAttachment, getProjectState, putProjectState } from './api';
 
 export const MAP_STATE_KEY = 'map';
 
 /** How long the map sits still before it goes to the server. */
 export const SAVE_DEBOUNCE_MS = 4000;
 
-/** Projects whose cached map the server has not accepted yet. */
-const unpushed = new Set<string>();
-
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
+let unsavedMapSweep: Promise<void> | null = null;
 
 /** When either side has no snapshot, or a `savedAt` that is not a date. */
 function savedAtMillis(snapshot: ViewtopiaProject | undefined): number {
@@ -57,8 +56,7 @@ export function newerSnapshot(
  * switching into a fresh one never throws work away.
  *
  * A cache that wins is a save this browser made while the server was out of
- * reach, so it goes up here. That is the only thing that recovers a change made
- * offline and then reloaded, because the retry queue does not survive a reload.
+ * reach, so it goes up here.
  */
 export async function loadProjectMap(projectId: string): Promise<void> {
   const cached = (await projectMaps.get(projectId))?.map;
@@ -72,7 +70,7 @@ export async function loadProjectMap(projectId: string): Promise<void> {
   const winner = newerSnapshot(cached, server);
   if (!winner) return;
   if (winner === server) {
-    await projectMaps.put({ id: projectId, map: winner });
+    await projectMaps.put({ id: projectId, map: winner, unpushed: false });
   } else {
     await pushMap(projectId, winner);
   }
@@ -88,35 +86,69 @@ export async function saveProjectMap(projectId: string, name: string): Promise<v
     console.warn('could not upload an overlay bitmap', failure);
   });
   const map = serializeProject(name);
-  await projectMaps.put({ id: projectId, map });
-  await pushMap(projectId, map);
+  const previous = (await projectMaps.get(projectId))?.map;
+  // cache first, so a push that hangs or fails cannot lose what is on screen
+  await projectMaps.put({ id: projectId, map, unpushed: true });
+  await pushMap(projectId, map, previous);
 }
 
-async function pushMap(projectId: string, map: ViewtopiaProject): Promise<void> {
+function overlayAttachmentIds(snapshot: ViewtopiaProject | undefined): string[] {
+  return (snapshot?.imageOverlays ?? []).flatMap((overlay) => overlay.attachmentId ?? []);
+}
+
+/**
+ * Drop the ptolemy attachments the map has stopped drawing. Only after the
+ * server took the snapshot that stopped naming them, so another member never
+ * reads a snapshot pointing at an attachment that is already gone.
+ */
+async function deleteDroppedAttachments(
+  previous: ViewtopiaProject | undefined,
+  map: ViewtopiaProject,
+): Promise<void> {
+  const kept = new Set(overlayAttachmentIds(map));
+  for (const attachmentId of overlayAttachmentIds(previous)) {
+    if (kept.has(attachmentId)) continue;
+    await deleteProjectAttachment(attachmentId).catch((failure: unknown) => {
+      console.warn('could not delete the attachment behind a removed overlay', failure);
+    });
+  }
+}
+
+async function pushMap(
+  projectId: string,
+  map: ViewtopiaProject,
+  previous?: ViewtopiaProject,
+): Promise<void> {
+  let pushed = true;
   try {
     await putProjectState(projectId, MAP_STATE_KEY, map);
-    unpushed.delete(projectId);
   } catch (failure) {
-    unpushed.add(projectId);
+    pushed = false;
     console.warn('could not save the project map to the server', failure);
+  }
+  await projectMaps.put({ id: projectId, map, unpushed: !pushed });
+  if (pushed) await deleteDroppedAttachments(previous, map);
+}
+
+async function pushEveryUnsavedMap(): Promise<void> {
+  const cached = await projectMaps.getAll();
+  for (const entry of cached) {
+    if (entry.unpushed) await pushMap(entry.id, entry.map);
   }
 }
 
 /** Push every cached map the server has not accepted yet. */
-export async function pushUnsavedMaps(): Promise<void> {
-  for (const projectId of [...unpushed]) {
-    const cached = await projectMaps.get(projectId);
-    if (!cached) {
-      unpushed.delete(projectId);
-      continue;
-    }
-    await pushMap(projectId, cached.map);
-  }
+export function pushUnsavedMaps(): Promise<void> {
+  // two sweeps at once would each read the flag and push the same snapshot
+  unsavedMapSweep ??= pushEveryUnsavedMap().finally(() => {
+    unsavedMapSweep = null;
+  });
+  return unsavedMapSweep;
 }
 
 /** For a test that needs the queue empty before it starts. */
 export function forgetUnsavedMaps(): void {
-  unpushed.clear();
+  void projectMaps.clear();
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = null;
 }
@@ -142,10 +174,14 @@ export function scheduleMapSave(activeProject: () => { id: string; name: string 
  * Watch everything `serializeProject` reads and start the debounce when any of
  * it changes. Returns the unsubscribe, which only a test uses: the app starts
  * this once and keeps it for the session.
+ *
+ * Starting also pushes every cached map a previous session left unpushed, which
+ * is what carries a change made offline across a reload.
  */
 export function watchMapForSaving(
   activeProject: () => { id: string; name: string } | null,
 ): () => void {
+  void pushUnsavedMaps();
   const onChange = () => scheduleMapSave(activeProject);
   const stops = [
     useAppStore.subscribe(onChange),

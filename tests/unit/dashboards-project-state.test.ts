@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const api = vi.hoisted(() => ({
   getProjectState: vi.fn(),
@@ -7,7 +7,10 @@ const api = vi.hoisted(() => ({
 
 vi.mock('../../src/projects/api', () => api);
 
-import { useDashboardsStore } from '../../src/features/dashboards/store';
+import {
+  DASHBOARD_SAVE_DEBOUNCE_MS,
+  useDashboardsStore,
+} from '../../src/features/dashboards/store';
 import { useProjectsStore } from '../../src/projects/projectsStore';
 import type { Dashboard } from '../../src/features/dashboards/types';
 
@@ -49,16 +52,27 @@ function activate(projectId: string | null): void {
 
 /** The store's refresh is fire-and-forget, so a test waits for its round trip. */
 function settled(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 0));
+  return vi.advanceTimersByTimeAsync(0);
+}
+
+/** Wait out the debounce and let the write that follows it go. */
+function saved(): Promise<void> {
+  return vi.advanceTimersByTimeAsync(DASHBOARD_SAVE_DEBOUNCE_MS);
 }
 
 beforeEach(() => {
+  vi.useFakeTimers();
   vi.clearAllMocks();
   localStorage.clear();
   api.getProjectState.mockResolvedValue(null);
   api.putProjectState.mockResolvedValue(undefined);
   useDashboardsStore.setState({ dashboards: [], activeId: null, projectId: null });
   activate(PROJECT);
+});
+
+afterEach(() => {
+  vi.clearAllTimers();
+  vi.useRealTimers();
 });
 
 describe('dashboards belong to the active project', () => {
@@ -81,6 +95,7 @@ describe('dashboards belong to the active project', () => {
     await settled();
 
     useDashboardsStore.getState().create();
+    await saved();
 
     expect(api.putProjectState).toHaveBeenCalledWith(PROJECT, STATE_KEY, expect.any(Array));
     const [, , written] = api.putProjectState.mock.calls.at(-1) as [string, string, Dashboard[]];
@@ -96,6 +111,7 @@ describe('dashboards belong to the active project', () => {
 
     expect(api.getProjectState).not.toHaveBeenCalled();
     useDashboardsStore.getState().create();
+    await saved();
     expect(api.putProjectState).not.toHaveBeenCalled();
     expect(useDashboardsStore.getState().dashboards).toEqual([]);
   });
@@ -107,6 +123,63 @@ describe('dashboards belong to the active project', () => {
     await settled();
 
     expect(useDashboardsStore.getState().dashboards).toEqual([]);
+  });
+});
+
+describe('edits wait for the editing to stop', () => {
+  it('send one write however many edits land inside the wait', async () => {
+    useDashboardsStore.getState().refresh();
+    await settled();
+
+    useDashboardsStore.getState().create();
+    useDashboardsStore.getState().renameActive('Fleet');
+    useDashboardsStore.getState().addWidget('gauge');
+    expect(api.putProjectState).not.toHaveBeenCalled();
+
+    await saved();
+
+    expect(api.putProjectState).toHaveBeenCalledOnce();
+    const [, , written] = api.putProjectState.mock.calls[0] as [string, string, Dashboard[]];
+    expect(written).toHaveLength(1);
+    expect(written[0].title).toBe('Fleet');
+    expect(written[0].widgets.map((widget) => widget.type)).toEqual(['gauge']);
+  });
+
+  it('restart the wait, so an edit stream writes only after it stops', async () => {
+    useDashboardsStore.getState().refresh();
+    await settled();
+
+    useDashboardsStore.getState().create();
+    await vi.advanceTimersByTimeAsync(DASHBOARD_SAVE_DEBOUNCE_MS - 1);
+    useDashboardsStore.getState().renameActive('Fleet');
+    await vi.advanceTimersByTimeAsync(DASHBOARD_SAVE_DEBOUNCE_MS - 1);
+
+    expect(api.putProjectState).not.toHaveBeenCalled();
+  });
+
+  it('go up before another project loads', async () => {
+    useDashboardsStore.getState().refresh();
+    await settled();
+    useDashboardsStore.getState().create();
+
+    activate('project-2');
+    useDashboardsStore.getState().refresh();
+
+    expect(api.putProjectState).toHaveBeenCalledWith(PROJECT, STATE_KEY, expect.any(Array));
+    await settled();
+    expect(api.getProjectState).toHaveBeenLastCalledWith('project-2', STATE_KEY);
+  });
+
+  it('are dropped when the project closes', async () => {
+    useDashboardsStore.getState().refresh();
+    await settled();
+    useDashboardsStore.getState().create();
+
+    activate(null);
+    useDashboardsStore.getState().refresh();
+    await saved();
+
+    expect(api.putProjectState).not.toHaveBeenCalled();
   });
 });
 

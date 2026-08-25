@@ -16,7 +16,7 @@ const api = vi.hoisted(() => ({
 vi.mock('../../src/projects/api', () => api);
 
 vi.mock('../../src/offline/db', () => ({
-  projectMaps: { get: vi.fn(), put: vi.fn(), remove: vi.fn() },
+  projectMaps: { getAll: vi.fn(async () => []), get: vi.fn(), put: vi.fn(), remove: vi.fn() },
 }));
 
 import { useProjectsStore } from '../../src/projects/projectsStore';

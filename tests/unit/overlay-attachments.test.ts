@@ -16,7 +16,7 @@ vi.mock('../../src/offline/db', () => ({
       cache.set(image.id, image);
     }),
   },
-  projectMaps: { get: vi.fn(), put: vi.fn(), remove: vi.fn() },
+  projectMaps: { getAll: vi.fn(async () => []), get: vi.fn(), put: vi.fn(), remove: vi.fn() },
 }));
 
 import {

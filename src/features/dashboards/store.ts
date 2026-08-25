@@ -14,6 +14,9 @@ import type { Dashboard, WidgetType } from './types';
 const STATE_KEY = 'dashboards';
 const LEGACY_LOCAL_KEY = 'viewtopia_dashboards';
 
+/** How long the dashboards sit still before they go to the project. */
+export const DASHBOARD_SAVE_DEBOUNCE_MS = 1000;
+
 function defaultConfig(type: WidgetType): Record<string, unknown> {
   switch (type) {
     case 'indicator':
@@ -68,18 +71,39 @@ interface DashboardsState {
 }
 
 export const useDashboardsStore = create<DashboardsState>((set, get) => {
+  let saveTimer: ReturnType<typeof setTimeout> | null = null;
+  let waiting: { projectId: string; dashboards: Dashboard[] } | null = null;
+
+  function stopWaiting(): void {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = null;
+    waiting = null;
+  }
+
+  function sendWaiting(): void {
+    const write = waiting;
+    stopWaiting();
+    if (!write) return;
+    void putProjectState(write.projectId, STATE_KEY, write.dashboards).catch(
+      (failure: unknown) => {
+        console.warn('could not save the dashboards to the project', failure);
+      },
+    );
+  }
+
   /**
-   * Mirror the dashboards into state and send them to the project. With no
-   * project open there is nowhere to put them, so the edit is refused rather
-   * than held in a browser that would lose it on the next reload.
+   * Mirror the dashboards into state and send them to the project once the
+   * editing stops, so dragging a widget is one write and not one per frame.
+   * With no project open there is nowhere to put them, so the edit is refused
+   * rather than held in a browser that would lose it on the next reload.
    */
   function commit(dashboards: Dashboard[]) {
     const { projectId } = get();
     if (!projectId) return;
     set({ dashboards });
-    void putProjectState(projectId, STATE_KEY, dashboards).catch((failure: unknown) => {
-      console.warn('could not save the dashboards to the project', failure);
-    });
+    if (saveTimer) clearTimeout(saveTimer);
+    waiting = { projectId, dashboards };
+    saveTimer = setTimeout(sendWaiting, DASHBOARD_SAVE_DEBOUNCE_MS);
   }
 
   async function load(projectId: string) {
@@ -106,9 +130,11 @@ export const useDashboardsStore = create<DashboardsState>((set, get) => {
     refresh: () => {
       const project = useProjectsStore.getState().getActive();
       if (!project) {
+        stopWaiting();
         set({ projectId: null, dashboards: [], activeId: null });
         return;
       }
+      sendWaiting();
       void load(project.id).catch((failure: unknown) => {
         console.warn('could not read the dashboards from the project', failure);
         set({ projectId: project.id, dashboards: [] });

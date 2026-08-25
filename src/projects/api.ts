@@ -384,6 +384,11 @@ export async function uploadProjectAttachment(
   return created.id;
 }
 
+/** ptolemy files attachments by id alone, so the delete route names no project. */
+export function deleteProjectAttachment(attachmentId: string): Promise<Response> {
+  return ptolemyFetch(`/attachments/${encodeURIComponent(attachmentId)}`, { method: 'DELETE' });
+}
+
 export async function getProjectAttachmentDataUrl(
   projectId: string,
   attachmentId: string,
