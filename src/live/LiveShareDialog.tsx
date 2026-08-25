@@ -7,30 +7,46 @@ import {
   Group,
   Modal,
   SegmentedControl,
+  Select,
   Stack,
   Text,
   TextInput,
 } from '@mantine/core';
 import { IconTrash } from '@tabler/icons-react';
 import { cameraHashFragment } from '../hooks/useShareLinkHash';
+import { useAgentLayerStore } from '../store/agentLayers';
 import { useAppStore } from '../store/app';
 import {
   agoraErrorText,
+  createFeed,
   createShareLink,
+  deleteFeed,
   embedSnippet,
   fetchLiveDocument,
+  listFeeds,
   removeLiveMember,
   setLiveMember,
   shareLinkUrl,
+  type LiveFeed,
   type LiveMember,
 } from './api';
+import { formatBreakpoints, parseBreakpoints } from './assetState';
 import { useLiveStore } from './liveStore';
-import type { LiveRole } from './types';
+import { ASSET_RULE_ID, documentKey, type LiveRole } from './types';
 
 const MEMBER_ROLE_CHOICES = [
   { value: 'view', label: 'View' },
   { value: 'edit', label: 'Edit' },
 ];
+
+/** What a new feed suggests, matching how often a sensor usually reports. */
+const DEFAULT_FEED_INTERVAL_SECONDS = 10;
+
+/** The colour an asset with no reading in range gets until the rule says otherwise. */
+const FALLBACK_ASSET_COLOR = '#95a5a6';
+
+/** The colour an asset agora has stopped hearing from gets. */
+const FALLBACK_OFFLINE_COLOR = '#7f8c8d';
 
 export function LiveShareDialog({
   documentId,
@@ -54,6 +70,19 @@ export function LiveShareDialog({
   const [addError, setAddError] = useState('');
   const [adding, setAdding] = useState(false);
 
+  const [feeds, setFeeds] = useState<LiveFeed[]>([]);
+  const [feedError, setFeedError] = useState('');
+  const [feedName, setFeedName] = useState('');
+  const [feedInterval, setFeedInterval] = useState(String(DEFAULT_FEED_INTERVAL_SECONDS));
+  const [feedToken, setFeedToken] = useState('');
+  const [creatingFeed, setCreatingFeed] = useState(false);
+
+  const [ruleLayerId, setRuleLayerId] = useState('');
+  const [ruleKind, setRuleKind] = useState('');
+  const [ruleBreakpoints, setRuleBreakpoints] = useState('');
+  const [ruleDefaultColor, setRuleDefaultColor] = useState(FALLBACK_ASSET_COLOR);
+  const [ruleOfflineColor, setRuleOfflineColor] = useState(FALLBACK_OFFLINE_COLOR);
+
   // a share link guest holds a session token these routes reject, so they get
   // no members section at all, signed in to the platform or not. the role only
   // describes the document the store is connected to, so it answers for nothing
@@ -61,7 +90,10 @@ export function LiveShareDialog({
   const guest = useLiveStore((state) => state.guest);
   const liveDocumentId = useLiveStore((state) => state.documentId);
   const liveRole = useLiveStore((state) => state.role);
-  const canManageMembers = !guest && liveDocumentId === documentId && liveRole === 'edit';
+  const canManageDocument = !guest && liveDocumentId === documentId && liveRole === 'edit';
+
+  const agentLayers = useAgentLayerStore((state) => state.layers);
+  const rule = useLiveStore((state) => state.document.assets[ASSET_RULE_ID]);
 
   const renderer = useAppStore((state) => state.renderer);
 
@@ -92,9 +124,9 @@ export function LiveShareDialog({
   }, [documentId]);
 
   useEffect(() => {
-    if (!opened || !canManageMembers) return;
+    if (!opened || !canManageDocument) return;
     void refreshMembers();
-  }, [opened, canManageMembers, refreshMembers]);
+  }, [opened, canManageDocument, refreshMembers]);
 
   const changeMemberRole = async (userId: string, next: LiveRole) => {
     setBusyMember(userId);
@@ -120,6 +152,71 @@ export function LiveShareDialog({
     } finally {
       setBusyMember('');
     }
+  };
+
+  const refreshFeeds = useCallback(async () => {
+    try {
+      setFeeds(await listFeeds(documentId));
+      setFeedError('');
+    } catch (failure) {
+      setFeeds([]);
+      setFeedError(agoraErrorText(failure, 'Could not load the feeds.'));
+    }
+  }, [documentId]);
+
+  useEffect(() => {
+    if (!opened || !canManageDocument) return;
+    void refreshFeeds();
+  }, [opened, canManageDocument, refreshFeeds]);
+
+  // the rule form opens on what the document already says, so a change edits
+  // the rule rather than replacing it from blank fields
+  useEffect(() => {
+    if (!opened) return;
+    setRuleLayerId(rule?.layerId ?? '');
+    setRuleKind(rule?.kind ?? '');
+    setRuleBreakpoints(rule ? formatBreakpoints(rule.breakpoints) : '');
+    setRuleDefaultColor(rule?.defaultColor ?? FALLBACK_ASSET_COLOR);
+    setRuleOfflineColor(rule?.offlineColor ?? FALLBACK_OFFLINE_COLOR);
+  }, [opened, rule]);
+
+  const addFeed = async () => {
+    const name = feedName.trim();
+    const intervalSeconds = Number(feedInterval);
+    if (!name || !Number.isFinite(intervalSeconds) || intervalSeconds <= 0) return;
+    setCreatingFeed(true);
+    setFeedError('');
+    try {
+      const created = await createFeed(documentId, name, intervalSeconds);
+      setFeedToken(created.token);
+      setFeedName('');
+      await refreshFeeds();
+    } catch (failure) {
+      setFeedError(agoraErrorText(failure, 'Could not create the feed.'));
+    } finally {
+      setCreatingFeed(false);
+    }
+  };
+
+  const removeFeed = async (feedId: string) => {
+    setFeedError('');
+    try {
+      await deleteFeed(documentId, feedId);
+      await refreshFeeds();
+    } catch (failure) {
+      setFeedError(agoraErrorText(failure, 'Could not delete that feed.'));
+    }
+  };
+
+  const saveAssetRule = () => {
+    if (!ruleLayerId || !ruleKind.trim()) return;
+    useLiveStore.getState().sendOperation(documentKey('assets', ASSET_RULE_ID), {
+      layerId: ruleLayerId,
+      kind: ruleKind.trim(),
+      breakpoints: parseBreakpoints(ruleBreakpoints),
+      defaultColor: ruleDefaultColor,
+      offlineColor: ruleOfflineColor,
+    });
   };
 
   const addMember = async () => {
@@ -208,7 +305,7 @@ export function LiveShareDialog({
           Anyone with the link joins this document. View links cannot edit.
         </Text>
 
-        {canManageMembers && (
+        {canManageDocument && (
           <Stack gap="xs" data-testid="live-members">
             <Divider label="Members" labelPosition="left" />
             {members.map((member) => (
@@ -287,6 +384,148 @@ export function LiveShareDialog({
             )}
             <Text size="xs" c="dimmed">
               Type the exact platform user id. There is no directory to search.
+            </Text>
+          </Stack>
+        )}
+
+        {canManageDocument && (
+          <Stack gap="xs" data-testid="live-feeds">
+            <Divider label="Feeds" labelPosition="left" />
+            {feeds.map((feed) => (
+              <Group key={feed.id} gap="xs" wrap="nowrap" justify="space-between">
+                <Text size="xs" c="white" truncate flex={1}>
+                  {feed.name}
+                </Text>
+                <Text size="xs" c="dimmed">
+                  every {feed.intervalSeconds}s
+                </Text>
+                <ActionIcon
+                  size="sm"
+                  variant="subtle"
+                  color="red"
+                  aria-label={`Delete ${feed.name}`}
+                  data-testid={`feed-delete-${feed.id}`}
+                  onClick={() => void removeFeed(feed.id)}
+                >
+                  <IconTrash size={14} />
+                </ActionIcon>
+              </Group>
+            ))}
+            {feeds.length === 0 && !feedError && (
+              <Text size="xs" c="dimmed">
+                No feeds yet.
+              </Text>
+            )}
+            {feedError && (
+              <Text size="xs" c="red" data-testid="feed-error">
+                {feedError}
+              </Text>
+            )}
+
+            <Group gap="xs" wrap="nowrap">
+              <TextInput
+                size="xs"
+                flex={1}
+                placeholder="Feed name…"
+                value={feedName}
+                onChange={(event) => setFeedName(event.currentTarget.value)}
+                data-testid="feed-name"
+              />
+              <TextInput
+                size="xs"
+                w={70}
+                aria-label="Interval in seconds"
+                value={feedInterval}
+                onChange={(event) => setFeedInterval(event.currentTarget.value)}
+                data-testid="feed-interval"
+              />
+              <Button
+                size="xs"
+                variant="light"
+                color="violet"
+                loading={creatingFeed}
+                onClick={() => void addFeed()}
+                data-testid="feed-create"
+              >
+                Add
+              </Button>
+            </Group>
+            {feedToken && (
+              <Group gap="xs" wrap="nowrap">
+                <TextInput
+                  size="xs"
+                  flex={1}
+                  readOnly
+                  value={feedToken}
+                  aria-label="Feed token"
+                  data-testid="feed-token"
+                />
+                <CopyButton value={feedToken}>
+                  {({ copied, copy }) => (
+                    <Button size="xs" variant="light" onClick={copy}>
+                      {copied ? 'Copied' : 'Copy'}
+                    </Button>
+                  )}
+                </CopyButton>
+              </Group>
+            )}
+            <Text size="xs" c="dimmed">
+              The token is shown once. A producer sends readings with it and
+              nothing else can read it back.
+            </Text>
+
+            <Divider label="Asset rule" labelPosition="left" />
+            <Select
+              size="xs"
+              placeholder="Asset layer"
+              value={ruleLayerId || null}
+              onChange={(next) => setRuleLayerId(next ?? '')}
+              data={agentLayers.map((layer) => ({ value: layer.id, label: layer.name }))}
+              data-testid="asset-rule-layer"
+            />
+            <TextInput
+              size="xs"
+              placeholder="Reading kind, e.g. temperature"
+              value={ruleKind}
+              onChange={(event) => setRuleKind(event.currentTarget.value)}
+              data-testid="asset-rule-kind"
+            />
+            <TextInput
+              size="xs"
+              placeholder="0:#2ecc71, 25:#f1c40f, 30:#e74c3c"
+              value={ruleBreakpoints}
+              onChange={(event) => setRuleBreakpoints(event.currentTarget.value)}
+              data-testid="asset-rule-breakpoints"
+            />
+            <Group gap="xs" wrap="nowrap">
+              <TextInput
+                size="xs"
+                flex={1}
+                aria-label="Default colour"
+                value={ruleDefaultColor}
+                onChange={(event) => setRuleDefaultColor(event.currentTarget.value)}
+                data-testid="asset-rule-default"
+              />
+              <TextInput
+                size="xs"
+                flex={1}
+                aria-label="Offline colour"
+                value={ruleOfflineColor}
+                onChange={(event) => setRuleOfflineColor(event.currentTarget.value)}
+                data-testid="asset-rule-offline"
+              />
+              <Button
+                size="xs"
+                variant="light"
+                color="violet"
+                onClick={saveAssetRule}
+                data-testid="asset-rule-save"
+              >
+                Save
+              </Button>
+            </Group>
+            <Text size="xs" c="dimmed">
+              A reading takes the colour of the last breakpoint at or below it.
             </Text>
           </Stack>
         )}

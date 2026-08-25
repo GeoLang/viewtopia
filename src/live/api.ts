@@ -152,6 +152,48 @@ export function resolveShareLink(token: string): Promise<LiveLinkResolution> {
   return agoraRequest(`/links/${encodeURIComponent(token)}`);
 }
 
+/** A producer allowed to send readings into this document. */
+export interface LiveFeed {
+  id: string;
+  name: string;
+  intervalSeconds: number;
+  createdBy: string;
+  createdAt: string;
+}
+
+/** A new feed, plus the token that opens the ingest socket. Agora shows it once. */
+export interface LiveFeedWithToken {
+  id: string;
+  name: string;
+  intervalSeconds: number;
+  token: string;
+}
+
+function feedsPath(documentId: string): string {
+  return `/documents/${encodeURIComponent(documentId)}/feeds`;
+}
+
+export function listFeeds(documentId: string): Promise<LiveFeed[]> {
+  return agoraRequest(feedsPath(documentId));
+}
+
+export function createFeed(
+  documentId: string,
+  name: string,
+  intervalSeconds: number,
+): Promise<LiveFeedWithToken> {
+  return agoraRequest(feedsPath(documentId), {
+    method: 'POST',
+    body: JSON.stringify({ name, intervalSeconds }),
+  });
+}
+
+export async function deleteFeed(documentId: string, feedId: string): Promise<void> {
+  await agoraFetch(`${feedsPath(documentId)}/${encodeURIComponent(feedId)}`, {
+    method: 'DELETE',
+  });
+}
+
 export interface LiveNotification {
   id: string;
   docId: string;
