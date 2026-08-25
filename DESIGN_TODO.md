@@ -20,9 +20,9 @@
 
 ## Do next
 
-Pick one of three: the four slices under P0 item 5, one module at a time from
-the **Wire for real** list below, or a hosting decision under **Before any
-public deploy**.
+Pick one: an open row under **P0 path to the intended product** below, one
+module at a time from the **Wire for real** list, or a hosting decision under
+**Before any public deploy**.
 
 ## Felt gap leftovers
 
@@ -136,37 +136,6 @@ other documents citing "P0 item 5" still land on the right one.
      geometry and has no way to move one vertex.
    - [ ] Redraw a feature whose WKB type `src/lib/wkb.ts` refuses (Z/M
      coordinates, GeometryCollection). Those features cannot be redrawn at all.
-
-5. **Make the core map data path reliable under service failure.**
-   Repositories: `viewtopia`, `ptolemy`, `tiletopia`, `fenestra`. Define which
-   service owns each layer type, return explicit errors when a backend is absent,
-   and prove load, refresh, and permission failure in the browser. What is left
-   is error-path UX and backend-absent tests in the browser.
-
-   Four slices, all in viewtopia:
-   - [ ] **reachability**: probe all four services (`/api/v1/health`,
-         `/tiles/v1/health`, `/agora/health`, `/agent/health`, each rewritten
-         by `deploy/nginx-platform.conf`), keep per-service up/down in the app
-         store, show the down ones by name in the header `OfflineIndicator`,
-         and make the ptolemy, tiletopia, agora and chat-run clients say
-         "<service> is unreachable" for status 0/502/503/504 through one
-         helper instead of the browser's text.
-   - [ ] **per-layer load errors**: one `layerLoadErrors` store keyed by layer
-         id, written by a single MapLibre `error`/`sourcedata` listener for
-         `ogc-layer-*` sources and by the Cesium `Cesium3DTileset.fromUrl`
-         rejection, shown as a red badge with the message and a Retry button
-         on the Layers panel row, cleared when the source loads again.
-   - [ ] **permission failure in sync**: a 401/403 on a queued commit is
-         dropped from the queue with a notification naming the refusal,
-         never retried; transient is decided from the HTTP status, not
-         from substrings of the message.
-   - [ ] **proof**: `tests/e2e/backend-absent.spec.js` under
-         `playwright.react.config.js` (Vite, no stack, `page.route` answers
-         the four prefixes) covering boot with every service down, a tileset
-         layer whose tiles answer 503 then recover on Retry, and a commit
-         answered 403 shown once and not retried, plus a service-per-layer
-         table in DESIGN.md. Fenestra is reached only through `/ogc` and the
-         SLD import, so it gets a table row and nothing else in this slice.
 
 6. **Choose and complete one live feed path.**
    Repositories: `fluvius`, `agora`, `viewtopia`, with `collecta` if field data
@@ -350,6 +319,17 @@ Operator-facing deployment gaps:
       - `PTOLEMY_EXTERNAL_DATABASE_URL`, if set, needs the same two parameters.
       - assumes the deployment reaches RDS directly rather than through RDS
         Proxy, which uses ACM certificates and would not need this bundle.
+
+- [ ] **sibyl sessions have no owner.** Sessions carry no subject, and geolang's
+      `/sessions` gateway routes (list, switch, rename, delete) and the
+      `thread_id` a caller names on `POST /tools/{name}`, `/upload` and `/draw`
+      accept any session id from any platform-authenticated caller, so one user
+      can enumerate, rename, delete or append text into another user's session,
+      and appended text lands in that session's model context. Fix in sibyl: a
+      subject column on the session row, set from the bearer's `sub` at creation
+      and filtered on in every `/sessions/*` route and on the message append. A
+      geolang-side map of session id to subject is the cheaper stopgap but leaves
+      sibyl's own API open.
 
 - [ ] **in-region deployment**: cold pulls are bound by the residential
       link to us-west-2. Serving next to the data is the remaining latency

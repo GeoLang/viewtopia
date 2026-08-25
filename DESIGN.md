@@ -503,6 +503,26 @@ map, plus a synced split view. Picking/draw/measure/agent-layers survive rendere
   offers the server route for supported files and requires it over 50 MB
   (`BROWSER_IMPORT_LIMIT_BYTES` in `src/features/tilesets/api.ts`).
 
+**Which service answers for a layer.** Every layer type in the viewer is served by one
+service, reached at one prefix (§2.2 says what each service is):
+
+| Layer or panel data | Service | Route |
+|---|---|---|
+| datasets, branches, features, projects, workspaces | ptolemy | `/api/v1/*` |
+| server tilesets and their `/martin` vector tiles, PMTiles exports, terrain bundles, 3D Tiles assets | tiletopia | `/tiles/v1/*`, `/martin/*` |
+| live documents, comments, presence | agora | `/agora/*`, the `/agora/ws` socket |
+| agent layers and tool outputs | geolang | `/agent/geojson/*` |
+| WMS, WFS and WMTS the platform serves | fenestra | `/ogc/*`, which the viewer asks itself only for SLD conversion (`/ogc/sld/symbology`) |
+| a WMS, WFS, WMTS, XYZ or PMTiles URL the user typed | whichever host that URL names | as typed |
+| basemaps | the configured tile host (`src/hooks/basemapTiles.ts`) | as configured |
+| elevation profiles and cross sections | open-elevation.com | `/api/v1/lookup` |
+
+A layer that cannot load says which of those failed. Every client names the service on
+status 0, 502, 503 and 504 ("<service> is unreachable"), a layer that failed carries the
+reason and a Retry on its own row in the Layers, Data Sources and tileset lists, a commit
+the server refuses is dropped from the sync queue and shown once rather than retried, and
+the header lists the services that answered no health probe.
+
 **Agent UI.** Chat panel plus a registered viewer command protocol. The agent emits commands
 (flyTo, addLayer, measure, deck layers, style-by-*, ~20 tool commands) that execute
 client-side, and the agent side is geolang's `viewer_control` tool. Chat replay and markers

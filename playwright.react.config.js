@@ -16,6 +16,7 @@ export default defineConfig({
     'default-boot.spec.js',
     'embed-messaging.spec.js',
     'overlay-import.spec.js',
+    'backend-absent.spec.js',
   ],
   // cesium on swiftshader runs the heaviest tests here at 40-44s on a loaded
   // box, and the specs' own 30-60s waits only report anything under a larger

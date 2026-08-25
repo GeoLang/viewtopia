@@ -23,6 +23,20 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-24: **a service that is down says which one it is**. The header names
+  every platform service whose health probe went unanswered, one line per
+  service in the sync popover and a "<service> is unreachable" wherever a
+  ptolemy, tiletopia, agora or agent call fails with no reply or a gateway
+  status. A layer whose tiles fail shows the reason on its own row in the
+  Layers, Data Sources and tileset lists with a Retry that asks for the tiles
+  again where the user already is. An edit the server refuses is shown once and
+  dropped from the sync queue instead of being retried against a branch the
+  user cannot write. `tests/e2e/backend-absent.spec.js` proves all of it in the
+  browser with every backend prefix answered by the test: boot with four
+  services down, an XYZ layer answering 503 and recovering on Retry, a commit
+  answered 403, and a chat send with the agent gone. DESIGN.md now says which
+  service answers for each layer type.
+
 - 2026-08-24: **approving a plan records the approval before it runs**. The
   approve button posts the plan's own manifest to `/agent/workflow/approve`
   first, which is the only record geolang has that a person agreed, and only
