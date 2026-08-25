@@ -16,11 +16,11 @@ import { serveBasemapsLocally } from './local-basemap';
  * in a bug report, not here.
  */
 const ALLOWED = [
-  // backend discovery probes these on boot, and the terrain panel asks for the
-  // bundle list on mount; with no platform stack running (this suite starts
-  // none) the dev proxy answers 500, and running without a backend is a
-  // supported state, not an app error
-  /Failed to load resource.*\/(tiles\/v1\/(health|terrain\/bundles)|agent\/health)/,
+  // backend discovery probes all four services on boot, and the terrain panel
+  // asks for the bundle list on mount; with no platform stack running (this
+  // suite starts none) the dev proxy answers 500, and running without a backend
+  // is a supported state, not an app error
+  /Failed to load resource.*\/(api\/v1\/health|tiles\/v1\/(health|terrain\/bundles)|agora\/health|agent\/health)/,
 ];
 
 /** Per-page allowances, for a test that drives a failure on purpose. */

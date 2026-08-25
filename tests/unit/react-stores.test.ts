@@ -24,11 +24,25 @@ describe('app store', () => {
     expect(useAppStore.getState().renderer).toBe('maplibre');
   });
 
-  it('sets backend status', () => {
+  it('sets one backend status without disturbing the others', () => {
     const { setBackendStatus } = useAppStore.getState();
-    setBackendStatus(true, false);
-    expect(useAppStore.getState().tiletopiaOnline).toBe(true);
-    expect(useAppStore.getState().geolangOnline).toBe(false);
+    expect(useAppStore.getState().backendStatus.ptolemy).toBe('unknown');
+    setBackendStatus('tiletopia', 'up');
+    setBackendStatus('geolang', 'down');
+    expect(useAppStore.getState().backendStatus).toEqual({
+      ptolemy: 'unknown',
+      tiletopia: 'up',
+      agora: 'unknown',
+      geolang: 'down',
+    });
+  });
+
+  // a service that was down when the tab closed must not read as down on the
+  // next boot, before anything has been probed
+  it('does not persist backend status', () => {
+    useAppStore.getState().setBackendStatus('agora', 'down');
+    const persisted = JSON.parse(localStorage.getItem('viewtopia-app') ?? '{}');
+    expect(persisted.state).not.toHaveProperty('backendStatus');
   });
 });
 

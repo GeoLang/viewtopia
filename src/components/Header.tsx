@@ -18,7 +18,6 @@ import { ProjectSwitcher } from '../projects/ProjectSwitcher';
 import { AuthControl } from '../features/auth/AuthControl';
 import { LiveSessionControl } from '../live/LiveSessionControl';
 import { NotificationsBell } from '../live/NotificationsBell';
-import { BackendStatus } from './BackendStatus';
 import { ViewerToolbar } from './ViewerToolbar';
 
 export function Header() {
@@ -49,7 +48,6 @@ export function Header() {
 
       <Group gap="xs" wrap="nowrap" ml="auto">
         {!isMobile && <OfflineIndicator />}
-        {!isMobile && <BackendStatus />}
 
         {!isMobile && !viewOnly && (
           <Tooltip label={navOpened ? 'Hide chat (Ctrl+B)' : 'Show chat (Ctrl+B)'}>

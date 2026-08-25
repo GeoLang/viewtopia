@@ -1,7 +1,11 @@
 import { apiHeaders, noticeRefusal } from '../lib/apiAuth';
+import { isUnreachableStatus, unreachableMessage } from '../offline/backends';
 import type { LiveDocument, LiveDocumentSummary, LiveLinkResolution, LiveRole } from './types';
 
 const AGORA_BASE = '/agora';
+
+/** what a call that never reached agora is reported as */
+const NO_RESPONSE = 0;
 
 export interface LiveMember {
   userId: string;
@@ -21,7 +25,7 @@ export class AgoraRequestError extends Error {
   status: number;
   reason: string;
   constructor(status: number, reason: string, message: string) {
-    super(message);
+    super(isUnreachableStatus(status) ? unreachableMessage('agora', status) : message);
     this.status = status;
     this.reason = reason;
   }
@@ -29,6 +33,9 @@ export class AgoraRequestError extends Error {
 
 /** What the UI shows for a failed call: the fallback, plus agora's own reason when it gave one. */
 export function agoraErrorText(failure: unknown, fallback: string): string {
+  if (failure instanceof AgoraRequestError && isUnreachableStatus(failure.status)) {
+    return failure.message;
+  }
   if (failure instanceof AgoraRequestError && failure.reason) {
     return `${fallback}: ${failure.reason}`;
   }
@@ -43,10 +50,16 @@ async function refusalReason(response: Response): Promise<string> {
 }
 
 async function agoraFetch(path: string, init?: RequestInit): Promise<Response> {
-  const response = await fetch(`${AGORA_BASE}${path}`, {
-    ...init,
-    headers: apiHeaders(init?.headers),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${AGORA_BASE}${path}`, {
+      ...init,
+      headers: apiHeaders(init?.headers),
+    });
+  } catch {
+    // nothing answered, so agora gave no reason of its own
+    throw new AgoraRequestError(NO_RESPONSE, '', unreachableMessage('agora', NO_RESPONSE));
+  }
   if (response.ok) return response;
   noticeRefusal(response.status);
   const failure = `agora ${init?.method ?? 'GET'} ${path} failed with ${response.status}`;

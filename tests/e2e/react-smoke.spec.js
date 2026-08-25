@@ -10,10 +10,11 @@ import { MENU_ITEM } from './panel-helpers';
  *
  * Run: npm run test:e2e:react   (serves the app on :5175 via Vite)
  *
- * NOTE: served standalone (no platform backend), so backend probes like
- * /api/health and /agent/health return 500 and /manifest.json 404 — those are
- * expected network failures, NOT runtime errors. The gate is uncaught JS
- * exceptions (page `pageerror`), which must stay empty.
+ * NOTE: served standalone (no platform backend), so the four backend probes
+ * (/api/v1/health, /tiles/v1/health, /agora/health, /agent/health) return 500
+ * and /manifest.json 404 — those are expected network failures, NOT runtime
+ * errors. The gate is uncaught JS exceptions (page `pageerror`), which must
+ * stay empty.
  */
 
 const REACT_URL = '/';

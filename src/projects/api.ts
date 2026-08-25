@@ -1,4 +1,5 @@
 import { apiHeaders, noticeRefusal } from '../lib/apiAuth';
+import { isUnreachableStatus, unreachableMessage } from '../offline/backends';
 import type { Member, Project, Role, ShareInvite, Workspace } from './types';
 
 const API_BASE = '/api/v1';
@@ -60,7 +61,11 @@ export class PtolemyRequestError extends Error {
   responseText: string;
 
   constructor(status: number, responseText: string, method: string, path: string) {
-    super(`ptolemy ${method} ${path} failed with ${status}: ${responseText || 'no response body'}`);
+    super(
+      isUnreachableStatus(status)
+        ? unreachableMessage('ptolemy', status)
+        : `ptolemy ${method} ${path} failed with ${status}: ${responseText || 'no response body'}`,
+    );
     this.status = status;
     this.responseText = responseText;
   }

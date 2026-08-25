@@ -4,10 +4,14 @@
 // /tiles/* and passes /martin/* through unchanged.
 
 import { authHeaders, noticeRefusal } from '../../lib/apiAuth';
+import { isUnreachableStatus, unreachableMessage } from '../../offline/backends';
 import type { TilesetSource } from '../../store/ogcLayers';
 
 const TILESETS_URL = '/tiles/v1/tilesets';
 const MARTIN_URL = '/martin';
+
+/** what an upload that never reached the server is reported as */
+const NO_RESPONSE = 0;
 
 /**
  * Above this a vector file goes to the server instead of into the browser. Held
@@ -85,6 +89,9 @@ export function martinRequest(url: string): { url: string; headers?: Record<stri
 
 async function readError(response: Response, fallback: string): Promise<never> {
   noticeRefusal(response.status);
+  if (isUnreachableStatus(response.status)) {
+    throw new Error(unreachableMessage('tiletopia', response.status));
+  }
   const body = await response.text().catch(() => '');
   throw new Error(body.trim() || `${fallback} (HTTP ${response.status})`);
 }
@@ -133,9 +140,13 @@ export function uploadTileset(
     request.upload.onprogress = (event) => {
       if (event.lengthComputable) onProgress(event.loaded / event.total);
     };
-    request.onerror = () => reject(new Error('the upload could not reach the server'));
+    request.onerror = () => reject(new Error(unreachableMessage('tiletopia', NO_RESPONSE)));
     request.onload = () => {
       noticeRefusal(request.status);
+      if (isUnreachableStatus(request.status)) {
+        reject(new Error(unreachableMessage('tiletopia', request.status)));
+        return;
+      }
       if (request.status < 200 || request.status >= 300) {
         reject(new Error(request.responseText.trim() || `upload failed (HTTP ${request.status})`));
         return;

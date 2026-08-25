@@ -304,10 +304,12 @@ describe('tileset store', () => {
     expect(useTilesetStore.getState().listError).toBeNull();
   });
 
+  // a 502/503/504 reads as "tiletopia (tiles) is unreachable" instead, covered
+  // in backend-unreachable.test.ts
   it('keeps the reason a listing failed', async () => {
-    fetchMock.mockResolvedValueOnce(new Response('tiletopia is down', { status: 502 }));
+    fetchMock.mockResolvedValueOnce(new Response('the registry is unreadable', { status: 500 }));
     await useTilesetStore.getState().refresh();
-    expect(useTilesetStore.getState().listError).toBe('tiletopia is down');
+    expect(useTilesetStore.getState().listError).toBe('the registry is unreadable');
   });
 
   it('uploads, waits out the build, and draws what came back', async () => {

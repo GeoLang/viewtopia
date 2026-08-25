@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { BackendName } from '../offline/backends';
 import type { CameraState } from './cameraViews';
 import {
   DEFAULT_BASEMAP,
@@ -7,6 +8,9 @@ import {
   type CustomBasemap,
   type LocalBasemap,
 } from '../hooks/basemapTiles';
+
+/** 'unknown' until the first probe of that service answers. */
+export type BackendStatus = 'unknown' | 'up' | 'down';
 
 export type ViewerTab = 'globe' | 'map';
 export type Renderer = 'cesium' | 'maplibre';
@@ -184,9 +188,8 @@ interface AppState {
   forgetPanelPlacement: (cardId: string) => void;
 
   // Backends
-  tiletopiaOnline: boolean;
-  geolangOnline: boolean;
-  setBackendStatus: (tt: boolean, gl: boolean) => void;
+  backendStatus: Record<BackendName, BackendStatus>;
+  setBackendStatus: (name: BackendName, status: Exclude<BackendStatus, 'unknown'>) => void;
 
   // Layers
   layers: LayerItem[];
@@ -229,6 +232,13 @@ const DEFAULT_SETTINGS: Settings = {
   pluginRegistryUrl: '',
   cesiumIonToken: '',
   googleMapsApiKey: '',
+};
+
+const UNPROBED_BACKENDS: Record<BackendName, BackendStatus> = {
+  ptolemy: 'unknown',
+  tiletopia: 'unknown',
+  agora: 'unknown',
+  geolang: 'unknown',
 };
 
 /**
@@ -300,10 +310,9 @@ export const useAppStore = create<AppState>()(
           return { panelPlacements };
         }),
 
-      tiletopiaOnline: false,
-      geolangOnline: false,
-      setBackendStatus: (tiletopiaOnline, geolangOnline) =>
-        set({ tiletopiaOnline, geolangOnline }),
+      backendStatus: UNPROBED_BACKENDS,
+      setBackendStatus: (name, status) =>
+        set((s) => ({ backendStatus: { ...s.backendStatus, [name]: status } })),
 
       // Layers
       layers: [],

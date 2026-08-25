@@ -4,9 +4,28 @@ import type { Message } from '@ag-ui/core';
 import type { WorkflowPlan, WorkflowRunReport } from '../features/workflow/plan';
 import { ensureBackendSession } from '../lib/agentSessions';
 import { authHeaders } from '../lib/apiAuth';
+import { isUnreachableStatus, unreachableMessage } from '../offline/backends';
 import { useChatStore } from '../store/chat';
 import { executeViewerCommand, type ViewerCommand } from '../viewer/commands';
 import { renderUISpec, type UiSpec } from '../viewer/uiSpec';
+
+/** a run whose request never got a reply, so there is no status to name */
+const NO_RESPONSE = 0;
+
+/**
+ * The AG-UI client puts the HTTP status on the error it throws for a refused
+ * run (`HTTP 503: ...`, with `status`), and lets fetch's own TypeError through
+ * when nothing answered at all. Null for anything else, which keeps its text.
+ */
+export function unreachableRunError(failure: unknown): string | null {
+  if (!(failure instanceof Error)) return null;
+  const { status } = failure as Error & { status?: unknown };
+  if (typeof status === 'number' && isUnreachableStatus(status)) {
+    return unreachableMessage('geolang', status);
+  }
+  if (failure instanceof TypeError) return unreachableMessage('geolang', NO_RESPONSE);
+  return null;
+}
 
 /** Store setters the AG-UI subscriber writes through, so it can be tested in isolation. */
 interface AgUiHandlers {
@@ -145,7 +164,7 @@ export function useSSE() {
         // red block, the partial reply just stays as it is
         const message = (err as Error).message ?? String(err);
         if ((err as Error).name !== 'AbortError' && !/abort/i.test(message)) {
-          setLastError(message);
+          setLastError(unreachableRunError(err) ?? message);
         }
       } finally {
         setStreaming(false);

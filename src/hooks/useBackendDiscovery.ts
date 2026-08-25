@@ -1,8 +1,13 @@
 import { useEffect } from 'react';
+import { BACKENDS, type BackendName } from '../offline/backends';
 import { useAppStore } from '../store/app';
 
+const PROBE_TIMEOUT_MS = 3000;
+const PROBE_INTERVAL_MS = 30_000;
+
 /**
- * Probes backend health on mount and periodically.
+ * Probes every platform service's health route on mount, every 30 seconds, and
+ * whenever the browser says the network came back.
  */
 export function useBackendDiscovery() {
   const setBackendStatus = useAppStore((s) => s.setBackendStatus);
@@ -10,32 +15,32 @@ export function useBackendDiscovery() {
   useEffect(() => {
     let mounted = true;
 
-    const probe = async () => {
-      let tt = false;
-      let gl = false;
-
-      try {
-        const res = await fetch('/tiles/v1/health', { signal: AbortSignal.timeout(3000) });
-        tt = res.ok;
-      } catch {
-        /* offline */
-      }
-
-      try {
-        const res = await fetch('/agent/health', { signal: AbortSignal.timeout(3000) });
-        gl = res.ok;
-      } catch {
-        /* offline */
-      }
-
-      if (mounted) setBackendStatus(tt, gl);
+    const probeAll = async () => {
+      const names = Object.keys(BACKENDS) as BackendName[];
+      await Promise.all(
+        names.map(async (name) => {
+          let up = false;
+          try {
+            const res = await fetch(BACKENDS[name].healthPath, {
+              signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+            });
+            up = res.ok;
+          } catch {
+            up = false;
+          }
+          if (mounted) setBackendStatus(name, up ? 'up' : 'down');
+        }),
+      );
     };
 
-    probe();
-    const interval = setInterval(probe, 30_000);
+    void probeAll();
+    const interval = setInterval(() => void probeAll(), PROBE_INTERVAL_MS);
+    const onOnline = () => void probeAll();
+    window.addEventListener('online', onOnline);
     return () => {
       mounted = false;
       clearInterval(interval);
+      window.removeEventListener('online', onOnline);
     };
   }, [setBackendStatus]);
 }

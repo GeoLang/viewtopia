@@ -8,14 +8,32 @@ import { ActionIcon, Badge, Group, Popover, Stack, Text, Button, Progress } from
 import { IconCloud, IconCloudOff, IconGitMerge, IconRefresh } from '@tabler/icons-react';
 import { useOnlineStatus, useSyncStatus } from './hooks';
 import { ConflictResolver } from './ConflictResolver';
+import { BACKENDS, unreachableMessage, type BackendName } from './backends';
+import { useAppStore } from '../store/app';
 
-function statusColor(online: boolean, pendingCount: number, conflictCount: number): string {
+/** status 0 reads as the plain "<label> is unreachable", with no code after it */
+const NO_RESPONSE = 0;
+
+function statusColor(
+  online: boolean,
+  pendingCount: number,
+  conflictCount: number,
+  downCount: number,
+): string {
+  if (downCount > 0) return 'red';
   if (conflictCount > 0) return 'orange';
   if (!online) return 'red';
   return pendingCount > 0 ? 'yellow' : 'green';
 }
 
-function statusLabel(online: boolean, pendingCount: number, conflictCount: number): string {
+function statusLabel(
+  online: boolean,
+  pendingCount: number,
+  conflictCount: number,
+  down: BackendName[],
+): string {
+  if (down.length === 1) return `${BACKENDS[down[0]].label} down`;
+  if (down.length > 1) return `${down.length} services down`;
   if (conflictCount > 0) return `${conflictCount} conflict${conflictCount > 1 ? 's' : ''}`;
   if (!online) return 'Offline';
   return pendingCount > 0 ? `${pendingCount} pending` : 'Online';
@@ -23,6 +41,10 @@ function statusLabel(online: boolean, pendingCount: number, conflictCount: numbe
 
 export function OfflineIndicator() {
   const online = useOnlineStatus();
+  const backendStatus = useAppStore((s) => s.backendStatus);
+  const down = (Object.keys(BACKENDS) as BackendName[]).filter(
+    (name) => backendStatus[name] === 'down',
+  );
   const {
     status,
     pendingCount,
@@ -36,9 +58,9 @@ export function OfflineIndicator() {
   } = useSyncStatus();
   const [resolverOpen, setResolverOpen] = useState(false);
 
-  const color = statusColor(online, pendingCount, conflicts.length);
+  const color = statusColor(online, pendingCount, conflicts.length, down.length);
   const icon = online ? <IconCloud size={16} /> : <IconCloudOff size={16} />;
-  const label = statusLabel(online, pendingCount, conflicts.length);
+  const label = statusLabel(online, pendingCount, conflicts.length, down);
 
   return (
     <>
@@ -48,7 +70,7 @@ export function OfflineIndicator() {
             <ActionIcon aria-label="Sync status" size="sm" variant="subtle" color={color}>
               {icon}
             </ActionIcon>
-            {(!online || pendingCount > 0 || conflicts.length > 0) && (
+            {(!online || pendingCount > 0 || conflicts.length > 0 || down.length > 0) && (
               <Badge size="xs" color={color} variant="light">
                 {label}
               </Badge>
@@ -63,6 +85,16 @@ export function OfflineIndicator() {
               </Text>
               {status === 'syncing' && <Badge size="xs" color="blue">Syncing…</Badge>}
             </Group>
+
+            {down.length > 0 && (
+              <Stack gap={2} data-testid="backend-status">
+                {down.map((name) => (
+                  <Text key={name} size="xs" c="red" data-testid="backend-down">
+                    {unreachableMessage(name, NO_RESPONSE)}
+                  </Text>
+                ))}
+              </Stack>
+            )}
 
             {conflicts.length > 0 && (
               <>
