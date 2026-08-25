@@ -20,6 +20,7 @@ import { useBuildingsMapLibre } from '../hooks/useBuildingsMapLibre';
 import { useHeatmapsMapLibre } from '../hooks/useHeatmapsMapLibre';
 import { useAgentLayersCesium } from '../hooks/useAgentLayersCesium';
 import { useAgentLayersMapLibre } from '../hooks/useAgentLayersMapLibre';
+import { useAssetColorsMapLibre } from '../hooks/useAssetColorsMapLibre';
 import { useAgentLayersLeaflet } from '../hooks/useAgentLayersLeaflet';
 import { useOgcLayersCesium } from '../hooks/useOgcLayersCesium';
 import { useOgcLayersMapLibre } from '../hooks/useOgcLayersMapLibre';
@@ -138,6 +139,10 @@ export function ViewerArea() {
   useAgentLayersCesium(cesiumRef);
   useAgentLayersMapLibre(maplibreRef);
   useAgentLayersLeaflet(leafletRef);
+
+  // The live document's threshold rule repaints the asset layer the agent hook
+  // just drew, so it runs after it.
+  useAssetColorsMapLibre(maplibreRef);
 
   // OGC/XYZ services the user added (raster imagery; no deck.gl equivalent)
   useOgcLayersCesium(cesiumRef);

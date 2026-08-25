@@ -4,6 +4,7 @@ import { useMapLibre } from '../hooks/useMapLibre';
 import { useLeaflet } from '../hooks/useLeaflet';
 import { useAgentLayersCesium } from '../hooks/useAgentLayersCesium';
 import { useAgentLayersMapLibre } from '../hooks/useAgentLayersMapLibre';
+import { useAssetColorsMapLibre } from '../hooks/useAssetColorsMapLibre';
 import { useAgentLayersLeaflet } from '../hooks/useAgentLayersLeaflet';
 import type { Pane, SplitLayout } from '../store/splitView';
 
@@ -36,6 +37,7 @@ export function SplitPane({
   useAgentLayersCesium(cesiumRef);
   useAgentLayersMapLibre(maplibreRef);
   useAgentLayersLeaflet(leafletRef);
+  useAssetColorsMapLibre(maplibreRef);
 
   // the pane's own renderer switch reveals a container that was display:none,
   // and every layout change resizes the box this pane sits in
