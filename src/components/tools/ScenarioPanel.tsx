@@ -190,6 +190,9 @@ export function ScenarioPanel({ onClose }: { onClose: () => void }) {
       });
       return;
     }
+    // a second compare would otherwise leave the first pair's layers drawn and
+    // its ids hidden, with no button left to clear them
+    stop();
     setBusy(true);
     try {
       await load(baseId, scenarioId);

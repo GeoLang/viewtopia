@@ -39,9 +39,11 @@ Element.prototype.scrollIntoView = vi.fn();
 const DATASET = { id: 'd1', name: 'twin-assets', project_id: null, visibility: 'private' };
 const BASE_BRANCH = { id: 'b-main', name: 'main' };
 const SCENARIO_BRANCH = { id: 'b-sensors', name: 'more sensors' };
+const OTHER_BRANCH = { id: 'b-fewer', name: 'fewer sensors' };
 
 const BASE_LAYER = `ptolemy-branch-${BASE_BRANCH.id}`;
 const SCENARIO_LAYER = `ptolemy-branch-${SCENARIO_BRANCH.id}`;
+const OTHER_LAYER = `ptolemy-branch-${OTHER_BRANCH.id}`;
 
 /** point (1 2) as ptolemy hands geometry back on /features */
 const POINT_WKB_HEX = '0101000000000000000000f03f0000000000000040';
@@ -57,6 +59,7 @@ function feature(id: string) {
 const COVERAGE = {
   [BASE_BRANCH.id]: { feature_count: 3, distance_meters: 100, coverage_sq_meters: 31_000 },
   [SCENARIO_BRANCH.id]: { feature_count: 4, distance_meters: 100, coverage_sq_meters: 62_000 },
+  [OTHER_BRANCH.id]: { feature_count: 2, distance_meters: 100, coverage_sq_meters: 20_000 },
 };
 
 function answer(body: unknown): Response {
@@ -66,22 +69,23 @@ function answer(body: unknown): Response {
   });
 }
 
+/** Every path the fake ptolemy below was asked for, newest last. */
+const asked: string[] = [];
+
 /** Enough of ptolemy for one compare: datasets, branches, features, coverage. */
 function fakePtolemy(input: RequestInfo | URL): Promise<Response> {
   const url = String(input);
+  asked.push(url);
   if (url.endsWith('/api/v1/datasets')) return Promise.resolve(answer([DATASET]));
   if (url.endsWith(`/datasets/${DATASET.id}/branches`)) {
-    return Promise.resolve(answer([BASE_BRANCH, SCENARIO_BRANCH]));
+    return Promise.resolve(answer([BASE_BRANCH, SCENARIO_BRANCH, OTHER_BRANCH]));
   }
   const features = /\/branches\/([^/]+)\/features\?/.exec(url);
   if (features) {
     return Promise.resolve(answer({ features: [feature(`${features[1]}-a`)] }));
   }
-  const coverage = /\/branches\/([^/]+)\/analytics\/coverage\?distance=(\d+)/.exec(url);
-  if (coverage) {
-    expect(coverage[2]).toBe('100');
-    return Promise.resolve(answer(COVERAGE[coverage[1]]));
-  }
+  const coverage = /\/branches\/([^/]+)\/analytics\/coverage\?distance=\d+/.exec(url);
+  if (coverage) return Promise.resolve(answer(COVERAGE[coverage[1]]));
   throw new Error(`nothing fake answers ${url}`);
 }
 
@@ -236,6 +240,7 @@ describe('useAgentLayersMapLibre with a pane index', () => {
 describe('the scenario panel', () => {
   beforeEach(() => {
     cleanup();
+    asked.length = 0;
     vi.stubGlobal('fetch', vi.fn(fakePtolemy));
     useAgentLayerStore.setState({ layers: [], rasterLayers: [], markers: [], generation: 0 });
     useAppStore.setState({ layers: [] });
@@ -284,6 +289,9 @@ describe('the scenario panel', () => {
     );
     expect(screen.getByTestId('scenario-branch-coverage')).toHaveTextContent('4 features, 6.20 ha');
     expect(screen.getByTestId('scenario-difference')).toHaveTextContent('+3.10 ha (+100.0%)');
+    expect(asked).toContain(
+      `/api/v1/branches/${SCENARIO_BRANCH.id}/analytics/coverage?distance=100`,
+    );
 
     const drawn = useAgentLayerStore.getState().layers.map((layer) => layer.id);
     expect(drawn).toEqual([BASE_LAYER, SCENARIO_LAYER]);
@@ -300,6 +308,27 @@ describe('the scenario panel', () => {
     expect(stopped.viewerHiddenLayerIds).toEqual([]);
     expect(stopped.comparePanes[0].hiddenLayerIds ?? []).toEqual([]);
     expect(screen.queryByTestId('scenario-base-coverage')).toBeNull();
+  });
+
+  it('drops the first pair when a second compare starts', async () => {
+    panel();
+
+    await pick('scenario-dataset', DATASET.name);
+    await pick('scenario-branch', SCENARIO_BRANCH.name);
+    fireEvent.click(screen.getByTestId('scenario-compare'));
+    await waitFor(() => screen.getByTestId('scenario-base-coverage'));
+
+    await pick('scenario-branch', OTHER_BRANCH.name);
+    fireEvent.click(screen.getByTestId('scenario-compare'));
+
+    await waitFor(() =>
+      expect(useAgentLayerStore.getState().layers.map((layer) => layer.id)).toEqual([
+        BASE_LAYER,
+        OTHER_LAYER,
+      ]),
+    );
+    expect(useSplitViewStore.getState().viewerHiddenLayerIds).toEqual([OTHER_LAYER]);
+    expect(useSplitViewStore.getState().comparePanes[0].hiddenLayerIds).toEqual([BASE_LAYER]);
   });
 
   it('refuses to compare a branch with itself', async () => {
