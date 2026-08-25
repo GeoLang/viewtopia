@@ -164,6 +164,7 @@ export function TrackPlayer() {
               size="xs"
               w={80}
               data={[
+                { value: '0', label: 'All' },
                 { value: '900000', label: '15m' },
                 { value: '3600000', label: '1h' },
                 { value: '14400000', label: '4h' },

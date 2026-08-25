@@ -416,6 +416,35 @@ test.describe('local tool panels (batch 2)', () => {
     }
   });
 
+  test('space-time: cube view pitches the map and draws the sweep plane', async ({ page }) => {
+    await page.goto(REACT_URL);
+    await page.getByRole('button', { name: 'Basemap & renderer' }).click();
+    await page.getByRole('textbox', { name: 'Renderer' }).click();
+    await page.getByRole('option', { name: 'MapLibre' }).click();
+    await expect(page.locator('#maplibre-container canvas').first()).toBeVisible({ timeout: 15000 });
+    await page.waitForFunction(() => window.__viewtopiaMap?.isStyleLoaded(), null, { timeout: STYLE_LOAD_TIMEOUT });
+
+    await page.getByRole('button', { name: 'Analysis' }).click();
+    await page.getByRole('menuitem', { name: 'Space-Time' }).click();
+
+    const panel = page
+      .locator('main > [class*="mantine-Paper-root"]')
+      .filter({ hasText: 'Space-Time Intelligence' });
+    await panel
+      .locator('input[type="file"]')
+      .setInputFiles(path.resolve(__dirname, '../fixtures/sample-tracks.csv'));
+    await expect(panel.getByText('Imported 3 entities, 15 positions')).toBeVisible();
+
+    await panel.getByRole('button', { name: 'Toggle cube view' }).click();
+
+    await page.waitForFunction(() => window.__viewtopiaMap.getPitch() > 55, null, { timeout: 10000 });
+    await page.waitForFunction(
+      () => window.__viewtopiaDeck?.props.layers.some((l) => l.id === 'spacetime-sweep-plane'),
+      null,
+      { timeout: 10000 },
+    );
+  });
+
   test('vector tiles: adds an MVT source+layer to the live MapLibre map', async ({ page }) => {
     // The tile host below does not exist. Serve an empty tile body (a valid
     // zero-field protobuf, i.e. a tile with no layers) so MapLibre walks its real

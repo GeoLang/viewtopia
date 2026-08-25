@@ -22,11 +22,14 @@ interface SpaceTimeState {
   timeRange: TimeRange;
   currentTime: number;
   playing: boolean;
+  /** Length of the trailing time window in ms; 0 draws every event. */
   trailDuration: number;
   playbackSpeed: number;
 
   // UI state
   panelOpen: boolean;
+  /** Cube view: the camera is pitched and the sweep plane and ground shadows draw. */
+  cubeView: boolean;
   selectedEntityId: string | null;
   flyToTarget: { lng: number; lat: number; zoom?: number } | null;
   /** Result of the last CSV import; stays until the next import or a panel close. */
@@ -66,6 +69,7 @@ interface SpaceTimeState {
   setPlaybackSpeed: (s: number) => void;
 
   // UI
+  toggleCubeView: () => void;
   togglePanel: () => void;
   closePanel: () => void;
   setImportStatus: (status: string | null) => void;
@@ -85,10 +89,11 @@ export const useSpaceTimeStore = create<SpaceTimeState>((set) => ({
   timeRange: { min: 0, max: 0 },
   currentTime: 0,
   playing: false,
-  trailDuration: 3600_000,
+  trailDuration: 0,
   playbackSpeed: 1,
 
   panelOpen: false,
+  cubeView: false,
   selectedEntityId: null,
   flyToTarget: null,
   importStatus: null,
@@ -142,6 +147,8 @@ export const useSpaceTimeStore = create<SpaceTimeState>((set) => ({
   setPlaying: (playing) => set({ playing }),
   setTrailDuration: (trailDuration) => set({ trailDuration }),
   setPlaybackSpeed: (playbackSpeed) => set({ playbackSpeed }),
+
+  toggleCubeView: () => set((s) => ({ cubeView: !s.cubeView })),
 
   // closing drops the import summary, so a reopened panel starts clean
   togglePanel: () =>

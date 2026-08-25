@@ -36,6 +36,7 @@ export interface SpaceTimeEvent {
 export interface Track {
   id: string;
   entityId: string;
+  /** sorted by timestamp; the window and playhead lookups binary-search it */
   events: SpaceTimeEvent[];
 }
 

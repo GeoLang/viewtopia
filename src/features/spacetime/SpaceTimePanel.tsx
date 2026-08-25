@@ -8,6 +8,8 @@ import {
   ScrollArea,
   Badge,
   Box,
+  ActionIcon,
+  Tooltip,
 } from '@mantine/core';
 import {
   IconClock,
@@ -16,19 +18,24 @@ import {
   IconChartBar,
   IconUpload,
   IconFileTypeCsv,
+  IconCube,
 } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../../components/PanelCard';
 import { useSpaceTimeStore } from './store';
+import { downsampleTracks } from './cube';
 import { EntityList } from './components/EntityList';
 import { TrackPlayer } from './components/TrackPlayer';
 import { CreateLinkDialog } from './components/CreateLinkDialog';
-import type { Entity } from './types';
+import type { Entity, Track } from './types';
 
 export function SpaceTimePanel() {
   const { panelOpen, togglePanel, entities, tracks, links, addEntity, addTrack, setTimeRange, flyTo } =
     useSpaceTimeStore();
   const importStatus = useSpaceTimeStore((s) => s.importStatus);
   const setImportStatus = useSpaceTimeStore((s) => s.setImportStatus);
+  const setCurrentTime = useSpaceTimeStore((s) => s.setCurrentTime);
+  const cubeView = useSpaceTimeStore((s) => s.cubeView);
+  const toggleCubeView = useSpaceTimeStore((s) => s.toggleCubeView);
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -93,6 +100,7 @@ export function SpaceTimePanel() {
 
       // Create entities and tracks
       let entityCount = 0;
+      const builtTracks: Track[] = [];
       for (const [name, rows] of entityRows) {
         const entityId = crypto.randomUUID();
         const kind = (rows[0].kind || 'person') as Entity['kind'];
@@ -121,13 +129,18 @@ export function SpaceTimePanel() {
           }));
 
         if (events.length > 0) {
-          addTrack({ id: crypto.randomUUID(), entityId, events });
+          builtTracks.push({ id: crypto.randomUUID(), entityId, events });
         }
       }
+
+      const { tracks: importedTracks, kept, dropped } = downsampleTracks(builtTracks);
+      for (const track of importedTracks) addTrack(track);
 
       // Set time range if we have temporal data
       if (minTime < Infinity && maxTime > -Infinity) {
         setTimeRange({ min: minTime, max: maxTime });
+        // a trail window ending at the default 0 would show nothing
+        setCurrentTime(minTime);
       }
 
       // Fly to bounding box center
@@ -142,10 +155,14 @@ export function SpaceTimePanel() {
         flyTo(centerLng, centerLat, zoom);
       }
 
-      setImportStatus(`Imported ${entityCount} entities, ${allLats.length} positions`);
+      setImportStatus(
+        dropped > 0
+          ? `Imported ${entityCount} entities, ${kept} positions (downsampled, ${dropped} dropped)`
+          : `Imported ${entityCount} entities, ${kept} positions`,
+      );
     };
     reader.readAsText(file);
-  }, [addEntity, addTrack, setTimeRange, flyTo, setImportStatus]);
+  }, [addEntity, addTrack, setTimeRange, setCurrentTime, flyTo, setImportStatus]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -180,6 +197,18 @@ export function SpaceTimePanel() {
             <Badge size="xs" variant="light" color="blue">
               {tracks.length} tracks
             </Badge>
+            <Tooltip label={cubeView ? 'Leave cube view' : 'Cube view'} withArrow>
+              <ActionIcon
+                size="sm"
+                variant={cubeView ? 'filled' : 'subtle'}
+                color="violet"
+                aria-label="Toggle cube view"
+                data-active={cubeView ? '' : undefined}
+                onClick={toggleCubeView}
+              >
+                <IconCube size={14} />
+              </ActionIcon>
+            </Tooltip>
           </>
         }
       />
