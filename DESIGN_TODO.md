@@ -352,10 +352,18 @@ platform machinery, then the large islands. One exception to reconfirm when
 reached: Space-Time analysis rows sit under an earlier "do not build Gotham"
 owner call that this direction reverses.
 
-- [~] **tiletopia pub-mod islands, owner calls 2026-08-24.** Wire now: `audit`
-      (write routes and API-key mint/revoke log to it) and `offline_export`.
-      Delete now: any island whose function already ships through a real
-      implementation, each verified against the code before deletion, census
+- [ ] **tiletopia pub-mod islands, owner calls 2026-08-24.** Done 2026-08-24
+      (tiletopia changelog): `audit` and `offline_export` are wired for real,
+      `versioning.rs` and `dashboard.rs` are deleted. Leftovers from the
+      wiring: audit rows carry no `org_id` (no org claim exists) or
+      `ip_address` (no connect-info), a create records an empty
+      `resource_id`, and stories/portal/catalog/users-me mutations are
+      unaudited (one `AUDITED_ROUTES` row each); the offline bundle is fully
+      offline only when `TILETOPIA_CESIUM_DIR` names a CesiumJS build,
+      otherwise the page says so in a banner; `ExportStatus::Expired` and
+      `expires_at` still drive nothing.
+      Original verification record: delete only what duplicates a real
+      implementation, census
       candidates were verified 2026-08-24 and mostly cleared: geoprocessing,
       geostatistics, stac and terrain_analysis ARE the live implementations
       the premium routes call, they stay. Deleted: `versioning.rs` (asset
