@@ -124,24 +124,6 @@ other documents citing "P0 item 5" still land on the right one.
    - [ ] Prove the public route set with service health checks and one
      authenticated browser session.
 
-2. **Make project and workspace state server-backed.**
-   Repositories: `viewtopia`, `ptolemy`.
-   - [ ] Give ViewTopia a dataset attach and detach surface for the active
-     project. The ptolemy API path exists and its tests cover it, nothing in
-     the viewer calls it.
-     Plan (2026-08-25): a "Manage Datasets" item in the Project menu for
-     editors and owners opens `src/projects/ProjectDatasetsModal.tsx`. It lists
-     `GET /api/v1/datasets` (the existing `fetchDatasets` in
-     `src/lib/branchFeatures.ts`, widened to carry `project_id` and
-     `visibility`), with Attach on unattached datasets, Detach on the active
-     project's, and a label on datasets in another project. Attach and detach
-     are `attachDataset` and `detachDataset` in `src/projects/api.ts` over
-     `PUT`/`DELETE /api/v1/datasets/{id}/project`. Refusals surface as
-     notifications. Tests: api unit tests with the 403 path, switcher UI test
-     for role visibility and a refused attach, and a platform e2e
-     `tests/e2e/project-datasets.spec.js` that attaches, reads `project_id`
-     and `visibility` back from ptolemy, and detaches.
-
 3. **Complete one real shared editing path.**
    Repositories: `viewtopia`, `ptolemy`.
    - [ ] Edit geometry at the vertex. The Dataset Editor redraws a whole
@@ -159,9 +141,10 @@ other documents citing "P0 item 5" still land on the right one.
 8. **Remove or finish the highest-risk facade routes.**
    Repositories: `tiletopia`, `ptolemy`, `fenestra`. For each route exposed to
    the viewer, choose a real implementation with an integration test or delete
-   the route and its documentation claim. Start with fabricated COG offsets,
-   hardcoded STAC results, synthetic elevation, fake API keys, dead Ptolemy
-   event delivery, and non-consumable Fenestra capabilities.
+   the route and its documentation claim. tiletopia's COG offsets, STAC
+   results, elevation and API keys and ptolemy's event delivery are real since
+   2026-08-24. Left: Fenestra capabilities, which GDAL cannot consume (WFS has
+   no DescribeFeatureType, no layer has a bounding box).
 
 ## Wire for real
 
