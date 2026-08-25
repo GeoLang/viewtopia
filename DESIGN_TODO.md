@@ -315,6 +315,39 @@ sees the result. Each task needs source, integration, and failure-path tests.
    file is intentional), so what is left is error-path UX and backend-absent
    tests in the browser.
 
+   Plan 2026-08-24, from the code as it stands. Today `useBackendDiscovery`
+   probes tiletopia and geolang only and the two flags it writes to the app
+   store are read by nothing, ptolemy and agora are never probed, a failed
+   tile request on a `/martin` or PMTiles or 3D Tiles layer reaches no
+   listener (only TimelapsePanel listens to MapLibre `error`), so the layer
+   goes blank with no message, a network failure surfaces as the browser's
+   "Failed to fetch" text in the project switcher toast, and the sync engine
+   treats a 403 on a commit as a retryable failure, retries it five times,
+   then gives up with a `console.warn`. Four slices, all in viewtopia:
+   - [ ] **reachability**: probe all four services (`/api/v1/health`,
+         `/tiles/v1/health`, `/agora/health`, `/agent/health`, each rewritten
+         by `deploy/nginx-platform.conf`), keep per-service up/down in the app
+         store, show the down ones by name in the header `OfflineIndicator`,
+         and make the ptolemy, tiletopia, agora and chat-run clients say
+         "<service> is unreachable" for status 0/502/503/504 through one
+         helper instead of the browser's text.
+   - [ ] **per-layer load errors**: one `layerLoadErrors` store keyed by layer
+         id, written by a single MapLibre `error`/`sourcedata` listener for
+         `ogc-layer-*` sources and by the Cesium `Cesium3DTileset.fromUrl`
+         rejection, shown as a red badge with the message and a Retry button
+         on the Layers panel row, cleared when the source loads again.
+   - [ ] **permission failure in sync**: a 401/403 on a queued commit is
+         dropped from the queue with a notification naming the refusal,
+         never retried; transient is decided from the HTTP status, not
+         from substrings of the message.
+   - [ ] **proof**: `tests/e2e/backend-absent.spec.js` under
+         `playwright.react.config.js` (Vite, no stack, `page.route` answers
+         the four prefixes) covering boot with every service down, a tileset
+         layer whose tiles answer 503 then recover on Retry, and a commit
+         answered 403 shown once and not retried, plus a service-per-layer
+         table in DESIGN.md. Fenestra is reached only through `/ogc` and the
+         SLD import, so it gets a table row and nothing else in this slice.
+
 6. **Choose and complete one live feed path.**
    Repositories: `fluvius`, `agora`, `viewtopia`, with `collecta` if field data
    is the source. The smallest useful target is one WebSocket feed that enters
