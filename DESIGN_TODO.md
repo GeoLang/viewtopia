@@ -142,18 +142,20 @@ machinery, then the large islands. One exception to reconfirm when reached:
 the Space-Time rows sit under an earlier "do not build Gotham" owner call that
 this direction reverses.
 
-- [ ] **tiletopia audit gaps.** An audit row carries no `org_id`, because no
-      token claim names an org, and no `ip_address`, because the middleware has
-      no connect-info. A create records an empty `resource_id`, since the
-      handler picks the id after the middleware ran. The stories, portal,
-      catalog and users-me mutations are unaudited, one `AUDITED_ROUTES` row
-      each.
+- [ ] **tiletopia audit org_id.** An audit row carries no `org_id`, because no
+      token claim names an org. The peer address, the created id and the
+      stories, portal, catalog and users-me rows landed 2026-08-25.
 
-- [ ] **tiletopia offline export leftovers.** `ExportStatus::Expired` and
-      `expires_at` drive nothing: no sweep retires an expired export and no
-      route refuses one. The bundle is fully offline only when
-      `TILETOPIA_CESIUM_DIR` names a CesiumJS build, and otherwise says so in a
-      banner, so an image that ships without one has no offline viewer.
+- [ ] **tiletopia stories have no access check.** `story_routes()` has no
+      role gate and no ownership check: any valid token, a viewer included,
+      updates or deletes any story by id, and `delete_story` answers 204 for
+      an id that never existed. `portal_routes` checks ownership and is the
+      pattern.
+
+- [ ] **tiletopia offline export bundle.** The bundle is fully offline only
+      when `TILETOPIA_CESIUM_DIR` names a CesiumJS build, and otherwise says
+      so in a banner, so an image that ships without one has no offline
+      viewer.
 
 - [ ] **tiletopia modules still parked, no blanket deletion.** Each needs its
       own owner call: temporal, crdt, tenant, collaboration, federation,
