@@ -6,6 +6,15 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-25: **a scrubber shows every asset as it was at a past moment**. A
+  live map carrying an asset rule grows a bar along the bottom: a window of 1h
+  to 30d, a slider over it, a box taking an exact time, and a Live button. A
+  drag or a keystroke settles for 200 ms, then asks
+  `GET /agora/documents/{id}/assets/at?t=`, and the answer goes to the asset
+  store beside the live state rather than over it, so the 2D layer, the tileset
+  style and the inspector all paint that moment while readings keep arriving
+  underneath and Live goes back to them with no request. An answer to a moment
+  that is no longer the one asked for is dropped, so a slow one cannot win.
 - 2026-08-25: **a 3D tileset is a layer of the map, and the asset rule colours
   its tile features**. Add to globe in the Assets panel, the agent's
   `load_tileset` and a live document all go through one layer store, so the

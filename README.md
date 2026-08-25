@@ -244,7 +244,9 @@ matching features as readings arrive. The layer can be a 3D tileset, in which
 case the tile features carrying the same `asset_id` take the colour. Inspect
 shows the clicked asset's latest value per kind and whether it is still
 reporting, and a picked tile feature also shows the attributes of the ptolemy
-asset it stands for.
+asset it stands for. The bar along the bottom of a live map with a rule scrubs
+back: pick a window, drag the slider or type a time, and every asset takes the
+colour and values it had then until you press Live.
 
 ---
 

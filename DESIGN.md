@@ -126,7 +126,10 @@ alone, and the inspector shows the picked asset's latest value per kind. A rule
 naming a 3D tileset layer instead becomes a `Cesium3DTileStyle` over the same
 asset ids, `useAssetColorsCesium` applying it to the tileset the layer store
 holds, and a picked tile feature shows the matching ptolemy feature's attributes
-beside its own.
+beside its own. The bottom bar `src/live/AssetTimeBar.tsx` asks `assets/at` for
+one past moment, and the store holds that answer beside the live map so both
+renderers and the inspector paint the past until Live is pressed, while the feed
+keeps updating what Live goes back to.
 
 ### 2.1 Platform topology
 
