@@ -19,6 +19,7 @@ export default defineConfig({
     'map-comment-pins.spec.js',
     'analysis-smoke.spec.js',
     'project-map-state.spec.js',
+    'project-datasets.spec.js',
     'tileset-import.spec.js',
   ],
   timeout: 30000,

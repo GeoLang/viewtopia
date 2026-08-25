@@ -18,6 +18,7 @@ import {
   IconCheck,
   IconChevronDown,
   IconCopy,
+  IconDatabase,
   IconFolder,
   IconFolderPlus,
   IconPencil,
@@ -26,10 +27,11 @@ import {
   IconUsers,
 } from '@tabler/icons-react';
 import { modals } from '@mantine/modals';
-import { notifications } from '@mantine/notifications';
 import { useAuthStore } from '../features/auth/store';
 import { getCapabilities, type InvitationEmailDelivery } from './api';
+import { ProjectDatasetsModal } from './ProjectDatasetsModal';
 import { useProjectsStore } from './projectsStore';
+import { currentSession, reportFailure } from './requestFeedback';
 import {
   addMember,
   generateShareLink,
@@ -59,18 +61,6 @@ function canEdit(role: Role | undefined): boolean {
   return role === 'owner' || role === 'editor';
 }
 
-function reportFailure(title: string, failure: unknown): void {
-  notifications.show({
-    title,
-    message: failure instanceof Error ? failure.message : 'The request failed.',
-    color: 'red',
-  });
-}
-
-function currentSession(token: string | null): boolean {
-  return token !== null && useAuthStore.getState().token === token;
-}
-
 export function ProjectSwitcher() {
   const signedIn = useAuthStore((state) => state.loggedIn);
   const authToken = useAuthStore((state) => state.token);
@@ -96,6 +86,7 @@ export function ProjectSwitcher() {
 
   const [metadataModal, setMetadataModal] = useState<MetadataModal>(null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [datasetsModalOpen, setDatasetsModalOpen] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [memberUserId, setMemberUserId] = useState('');
@@ -119,6 +110,7 @@ export function ProjectSwitcher() {
     setEmailDelivery(null);
     setShareLoading(false);
     setShareModalOpen(false);
+    setDatasetsModalOpen(false);
     setMetadataModal(null);
     if (!authToken) return;
 
@@ -418,6 +410,11 @@ export function ProjectSwitcher() {
                 Edit Project
               </Menu.Item>
             )}
+            {activeProject && canEditProject && (
+              <Menu.Item leftSection={<IconDatabase size={14} />} onClick={() => setDatasetsModalOpen(true)}>
+                Manage Datasets
+              </Menu.Item>
+            )}
             {activeProject && ownsProject && (
               <>
                 <Menu.Item leftSection={<IconShare size={14} />} onClick={openSharing}>
@@ -541,6 +538,15 @@ export function ProjectSwitcher() {
           {!shareLoading && members.length === 0 && invitations.length === 0 && <Text size="sm" c="dimmed"><IconUsers size={14} /> No members or pending invites.</Text>}
         </Stack>
       </Modal>
+
+      {activeProject && (
+        <ProjectDatasetsModal
+          opened={datasetsModalOpen}
+          onClose={() => setDatasetsModalOpen(false)}
+          projectId={activeProject.id}
+          projectName={activeProject.name}
+        />
+      )}
     </>
   );
 }

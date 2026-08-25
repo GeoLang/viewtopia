@@ -262,6 +262,41 @@ export function acceptInvitation(token: string): Promise<InvitationAcceptance> {
   });
 }
 
+// ─── Project datasets ────────────────────────────────────────────────
+
+export interface DatasetProjectAttachment {
+  datasetId: string;
+  projectId: string | null;
+}
+
+interface DatasetProjectResponse {
+  dataset_id: string;
+  project_id: string | null;
+}
+
+function datasetProjectPath(datasetId: string): string {
+  return `/datasets/${encodeURIComponent(datasetId)}/project`;
+}
+
+function toDatasetProject(response: DatasetProjectResponse): DatasetProjectAttachment {
+  return { datasetId: response.dataset_id, projectId: response.project_id };
+}
+
+/** Needs admin on the dataset and editor or owner on the project. Turns the dataset private. */
+export async function attachDataset(datasetId: string, projectId: string): Promise<DatasetProjectAttachment> {
+  return toDatasetProject(await ptolemyRequest<DatasetProjectResponse>(datasetProjectPath(datasetId), {
+    method: 'PUT',
+    body: JSON.stringify({ project_id: projectId }),
+  }));
+}
+
+/** Leaves the dataset private, so losing project access does not publish it. */
+export async function detachDataset(datasetId: string): Promise<DatasetProjectAttachment> {
+  return toDatasetProject(await ptolemyRequest<DatasetProjectResponse>(datasetProjectPath(datasetId), {
+    method: 'DELETE',
+  }));
+}
+
 // ─── Project state ───────────────────────────────────────────────────
 
 const NOT_FOUND = 404;

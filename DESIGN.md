@@ -279,7 +279,9 @@ in the same one-owner CHECK, which is what carries overlay bitmaps.
 `project_id`. Attaching one needs dataset admin plus project editor or owner and makes the
 dataset private, detaching never makes it public again, and the read, write and admin checks take
 the max of the explicit grants and the project role, mapping viewer to read, editor to write and
-owner to admin. An agora document carries the same nullable `project_id`, set at creation or by a
+owner to admin. ViewTopia's Project menu offers Manage Datasets to editors and owners, listing
+every readable dataset with Attach on the ones in no project and Detach on the ones in this one.
+An agora document carries the same nullable `project_id`, set at creation or by a
 document editor, and access to a project-linked document is the max of its members row and the
 project role, mapping viewer to view and both editor and owner to edit. agora resolves that role
 by calling ptolemy `GET /api/v1/projects/{id}` with the caller's own bearer, cached 30 seconds per

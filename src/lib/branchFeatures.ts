@@ -74,9 +74,14 @@ export interface NamedRecord {
   name: string;
 }
 
-export async function fetchDatasets(): Promise<NamedRecord[]> {
+export interface DatasetRecord extends NamedRecord {
+  project_id: string | null;
+  visibility: 'public' | 'private';
+}
+
+export async function fetchDatasets(): Promise<DatasetRecord[]> {
   const res = await requestOk('/datasets');
-  return (await res.json()) as NamedRecord[];
+  return (await res.json()) as DatasetRecord[];
 }
 
 export async function fetchBranches(datasetId: string): Promise<NamedRecord[]> {

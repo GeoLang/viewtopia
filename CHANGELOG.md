@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-25: **a project's datasets are managed from the Project menu**.
+  Manage Datasets, shown to editors and owners, lists every readable dataset
+  with Attach on the ones in no project and Detach on the ones in this one,
+  over ptolemy's `PUT`/`DELETE /api/v1/datasets/{id}/project`. Attaching makes
+  the dataset private to the project's members, detaching leaves it private,
+  and a refusal is shown as a notification with the modal still open.
+
 - 2026-08-24: **the Space-Time panel grew its GeoTime core**. A cube view
   toggle pitches the map so time reads as height over the existing
   elevation-equals-time deck.gl layers, with a sweep plane at the playhead,

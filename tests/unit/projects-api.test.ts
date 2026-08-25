@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from '../../src/features/auth/store';
-import { createProject, listWorkspaces, type PtolemyRequestError } from '../../src/projects/api';
+import {
+  attachDataset,
+  createProject,
+  detachDataset,
+  listWorkspaces,
+  PtolemyRequestError,
+} from '../../src/projects/api';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -78,6 +84,52 @@ describe('Ptolemy project API', () => {
     await expect(listWorkspaces()).rejects.toMatchObject<PtolemyRequestError>({
       status: 403,
       responseText: 'workspace membership required',
+    });
+  });
+
+  it('attaches a dataset to a project and maps the answer', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({
+      dataset_id: 'dataset-1',
+      project_id: 'project-1',
+    }));
+
+    await expect(attachDataset('dataset-1', 'project-1')).resolves.toEqual({
+      datasetId: 'dataset-1',
+      projectId: 'project-1',
+    });
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/api/v1/datasets/dataset-1/project');
+    expect(init.method).toBe('PUT');
+    expect(init.body).toBe(JSON.stringify({ project_id: 'project-1' }));
+    expect(new Headers(init.headers).get('Authorization')).toBe('Bearer jwt-abc');
+  });
+
+  it('detaches a dataset without a body and reports the empty project', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({
+      dataset_id: 'dataset-1',
+      project_id: null,
+    }));
+
+    await expect(detachDataset('dataset-1')).resolves.toEqual({
+      datasetId: 'dataset-1',
+      projectId: null,
+    });
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/api/v1/datasets/dataset-1/project');
+    expect(init.method).toBe('DELETE');
+    expect(init.body).toBeUndefined();
+  });
+
+  it('rejects a refused attach with the status the server sent', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('project editor required', { status: 403 }));
+
+    const refusal = attachDataset('dataset-1', 'project-1');
+    await expect(refusal).rejects.toBeInstanceOf(PtolemyRequestError);
+    await expect(refusal).rejects.toMatchObject<PtolemyRequestError>({
+      status: 403,
+      responseText: 'project editor required',
     });
   });
 });
