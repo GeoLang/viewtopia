@@ -10,6 +10,8 @@ import { apiHeaders, noticeRefusal } from './apiAuth';
 import { geojsonToWkbHex, wkbHexToGeojson } from './wkb';
 
 const API = '/api/v1';
+/** who ptolemy records as the author of everything the viewer writes */
+const BRANCH_AUTHOR = 'viewtopia';
 /** the status of a request that never got a response */
 const NO_RESPONSE = 0;
 
@@ -37,6 +39,27 @@ function decode(hex: string): GeoJSON.Geometry | null {
     // curve types and truncated bytes have no GeoJSON here
     return null;
   }
+}
+
+/** `{`, the first byte of the GeoJSON text /features/at puts in `geometry_wkb`. */
+const GEOJSON_TEXT_FIRST_BYTE = 0x7b;
+
+function geometryOf(bytes: number[] | undefined): GeoJSON.Geometry | null {
+  if (!bytes?.length) return null;
+  if (bytes[0] !== GEOJSON_TEXT_FIRST_BYTE) return decode(toHex(bytes));
+  try {
+    return JSON.parse(new TextDecoder().decode(Uint8Array.from(bytes))) as GeoJSON.Geometry;
+  } catch {
+    return null;
+  }
+}
+
+function toBranchFeature(raw: RawFeature): BranchFeature {
+  return {
+    id: raw.id,
+    properties: raw.properties ?? {},
+    geometry: geometryOf(raw.geometry_wkb),
+  };
 }
 
 function methodOf(init?: RequestInit): string {
@@ -89,9 +112,18 @@ export async function fetchBranches(datasetId: string): Promise<NamedRecord[]> {
   return (await res.json()) as NamedRecord[];
 }
 
+const BRANCH_LAYER_PREFIX = 'ptolemy-branch-';
+
 /** The map layer one branch's features are drawn in. */
 export function branchLayerId(branchId: string): string {
-  return `ptolemy-branch-${branchId}`;
+  return `${BRANCH_LAYER_PREFIX}${branchId}`;
+}
+
+/** The branch a layer draws, or null when the layer is not a branch's. */
+export function branchIdOfLayer(layerId: string): string | null {
+  return layerId.startsWith(BRANCH_LAYER_PREFIX)
+    ? layerId.slice(BRANCH_LAYER_PREFIX.length)
+    : null;
 }
 
 export async function fetchBranchFeatures(
@@ -100,11 +132,53 @@ export async function fetchBranchFeatures(
 ): Promise<BranchFeature[]> {
   const res = await requestOk(`/branches/${branchId}/features?limit=${limit}`);
   const page = (await res.json()) as { features: RawFeature[] };
-  return page.features.map((f) => ({
-    id: f.id,
-    properties: f.properties ?? {},
-    geometry: f.geometry_wkb?.length ? decode(toHex(f.geometry_wkb)) : null,
-  }));
+  return page.features.map(toBranchFeature);
+}
+
+/** The branch as it stood at an RFC 3339 moment, rather than at its head. */
+export async function fetchBranchFeaturesAt(
+  branchId: string,
+  at: string,
+  limit = 500,
+): Promise<BranchFeature[]> {
+  const query = `at=${encodeURIComponent(at)}&limit=${limit}`;
+  const res = await requestOk(`/branches/${branchId}/features/at?${query}`);
+  const page = (await res.json()) as { features: RawFeature[] };
+  return page.features.map(toBranchFeature);
+}
+
+/** A new branch of the dataset, forked from an existing one. */
+export async function createBranch(
+  datasetId: string,
+  name: string,
+  forkFromBranchId: string,
+): Promise<NamedRecord> {
+  const res = await requestOk(`/datasets/${datasetId}/branches`, {
+    method: 'POST',
+    body: JSON.stringify({
+      name,
+      created_by: BRANCH_AUTHOR,
+      fork_from_branch: forkFromBranchId,
+    }),
+  });
+  return (await res.json()) as NamedRecord;
+}
+
+/** How much ground the branch's live features cover once buffered by a distance. */
+export interface BranchCoverage {
+  featureCount: number;
+  squareMeters: number;
+}
+
+export async function fetchBranchCoverage(
+  branchId: string,
+  distanceMeters: number,
+): Promise<BranchCoverage> {
+  const res = await requestOk(
+    `/branches/${branchId}/analytics/coverage?distance=${distanceMeters}`,
+  );
+  const body = (await res.json()) as { feature_count: number; coverage_sq_meters: number };
+  return { featureCount: body.feature_count, squareMeters: body.coverage_sq_meters };
 }
 
 /** The branch's features as a layer's GeoJSON, without the ones that have no geometry. */
@@ -177,7 +251,7 @@ export async function commitFeatureInserts(
     method: 'POST',
     body: JSON.stringify({
       message,
-      author: 'viewtopia',
+      author: BRANCH_AUTHOR,
       operations: inserts.map((insert) => ({
         type: 'insert',
         feature_id: insert.id,
@@ -202,7 +276,7 @@ export async function commitFeatureUpdate(
     method: 'POST',
     body: JSON.stringify({
       message: `edit feature ${featureId}`,
-      author: 'viewtopia',
+      author: BRANCH_AUTHOR,
       operations: [
         {
           type: 'update',

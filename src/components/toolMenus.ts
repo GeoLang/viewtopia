@@ -1,6 +1,7 @@
 import type { Icon } from '@tabler/icons-react';
 import {
   IconAccessible,
+  IconArrowsSplit2,
   IconBook,
   IconBookmark,
   IconBox,
@@ -85,6 +86,7 @@ export const ACTIONS_MENU: ToolMenuItem[][] = [
     { panel: 'buildings', label: 'Buildings', icon: IconBuildingSkyscraper },
     { panel: 'geojsonEditor', label: 'GeoJSON Editor', icon: IconVectorTriangle },
     { panel: 'datasetEditor', label: 'Dataset Editor', icon: IconDatabaseEdit, keywords: ['ptolemy', 'branch', 'features', 'attributes'] },
+    { panel: 'scenario', label: 'Scenario', icon: IconArrowsSplit2, keywords: ['ptolemy', 'branch', 'compare', 'coverage'] },
     { panel: 'styleEditor', label: 'Style Editor', icon: IconPalette },
   ],
 ];

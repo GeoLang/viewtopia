@@ -9,6 +9,7 @@ import { MeasurementPanel } from './tools/MeasurementPanel';
 import { FeaturePickerPanel } from './tools/FeaturePickerPanel';
 import { GeoJsonEditorPanel } from './tools/GeoJsonEditorPanel';
 import { DatasetEditorPanel } from './tools/DatasetEditorPanel';
+import { ScenarioPanel } from './tools/ScenarioPanel';
 import { StyleEditorPanel } from './tools/StyleEditorPanel';
 import { PortalPanel } from '../features/portal/PortalPanel';
 import { StacBrowserPanel } from '../features/stac/StacBrowserPanel';
@@ -143,6 +144,8 @@ export function ToolPanels() {
       return <GeoJsonEditorPanel onClose={close} />;
     case 'datasetEditor':
       return <DatasetEditorPanel onClose={close} />;
+    case 'scenario':
+      return <ScenarioPanel onClose={close} />;
     case 'styleEditor':
       return <StyleEditorPanel onClose={close} />;
     case 'portal':

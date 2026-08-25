@@ -92,6 +92,7 @@ export type ToolPanel =
   | 'featurePicker'
   | 'geojsonEditor'
   | 'datasetEditor'
+  | 'scenario'
   | 'styleEditor'
   | 'portal'
   | 'stacBrowser'
