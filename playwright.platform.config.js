@@ -22,6 +22,7 @@ export default defineConfig({
     'project-map-state.spec.js',
     'project-datasets.spec.js',
     'tileset-import.spec.js',
+    'digital-twin.spec.js',
   ],
   timeout: 30000,
   use: {
