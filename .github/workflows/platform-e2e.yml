@@ -85,11 +85,24 @@ jobs:
             https://download.geofabrik.de/europe/monaco-latest.osm.pbf \
             data/region.osm.pbf
 
+      # the geolang image installs QGIS from qgis.org, which goes 503 for hours
+      # at a time. its layers are cached across runs so an outage only bites
+      # when the Dockerfile changed. compose reuses the loaded tag on `up`.
+      - uses: docker/setup-buildx-action@v4
+      - name: Build the geolang image with a layer cache
+        uses: docker/build-push-action@v7
+        with:
+          context: geolang
+          load: true
+          tags: geolang-platform:latest
+          cache-from: type=gha,scope=geolang-platform
+          cache-to: type=gha,scope=geolang-platform,mode=max
+
       - name: Build platform images (golden-path subset)
         working-directory: viewtopia
         run: |
           docker compose -f docker-compose.platform.yml build \
-            ptolemy tiletopia geokode itinera agora geolang-api sibyl geodukt viewtopia
+            ptolemy tiletopia geokode itinera agora sibyl geodukt viewtopia
 
       # itinera's entrypoint builds data/graph.bin from the extract on first start,
       # so there is no separate graph-build step.
