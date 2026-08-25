@@ -164,7 +164,8 @@ ViewTopia, Ptolemy, Jung, TerraVista, Panoptes, and Geoplumb.
       invite links. Per-project map snapshots and overlay files remain
       browser-local. Project roles are not yet propagated to Ptolemy dataset
       grants or Agora document members. Dashboards are localStorage-only.
-      Space-Time Analysis buttons have no handlers, and vertical plugins depend
+      Space-Time analysis shipped 2026-08-24 (cube + seven wired analyses,
+      viewtopia changelog). Vertical plugins depend
       on configured datasets. LiveKit requires an external URL and token.
 
 ## P0 path to the intended product, 2026-08-22
@@ -394,29 +395,15 @@ owner call that this direction reverses.
       90 per tile crop; texture decode has no size cap of its own beyond the
       upload cap.
 
-- [ ] **viewtopia Space-Time: build the GeoTime core, owner call 2026-08-24.**
-      v1 is the space-time cube plus movement analytics, client-side, on the
-      existing deck.gl-over-MapLibre path (`useSpaceTimeDeckLayers` already
-      draws elevation = time), sized for analyst extracts (~100k track
-      points, downsample above with a visible note):
-      - the cube: pitched view, a sweep plane synced to TrackPlayer,
-        ground-projected track shadows, real time-window filtering (the
-        trail-duration control the layers ignore today).
-      - wire the six Analysis buttons to the algorithms that already exist
-        uncalled beside the panel (colocation, pattern-of-life with
-        anomalies, network metrics, behavioral clustering, predictive
-        location, data quality), each rendering into the cube and map, not
-        just a table. Add co-travel/following as an extension of the
-        colocation logic. Remove the Entity Resolution button, nothing is
-        behind it.
-      - the Gotham line holds: no ontology, CDR import, classification,
-        RBAC, or entity resolution. Trim the README/FEATURES lines still
-        claiming them. Geofencing UI and case management stay parked, types
-        intact. Follow-up recorded under Wait for demand: movement
-        analytics as geolang agent tools.
-      Runs after the bounded 2026-08-24 queue (island deletions, audit,
-      offline_export, ptolemy rule-engine deletion, jung LabelEngine
-      deletion).
+- [ ] **viewtopia Space-Time GeoTime core shipped 2026-08-24** (viewtopia
+      changelog): cube view, sweep plane, shadows, real trail window, 100k
+      import cap with stride downsampling, seven analyses wired through a
+      worker including new co-travel, Entity Resolution button removed,
+      docs truthful. The Gotham line holds: no ontology, CDR import,
+      classification, RBAC, or entity resolution. Still open here:
+      geofencing UI and case management (library code and types exist, no
+      UI, parked), network metrics render as a list only, and movement
+      analytics as geolang agent tools sits under Wait for demand.
 
 - [~] **ptolemy's Esri-style topology rule engine: delete it, owner call
       2026-08-24.** 31 rule variants are declared, nothing matches on them,

@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- 2026-08-24: **the Space-Time panel grew its GeoTime core**. A cube view
+  toggle pitches the map so time reads as height over the existing
+  elevation-equals-time deck.gl layers, with a sweep plane at the playhead,
+  ground-projected track shadows, and a trail window that now actually
+  filters (the control existed and did nothing). CSV import downsamples
+  above 100k track points by uniform stride, keeping each track's endpoint,
+  and says how much it dropped. The seven Analysis buttons run their
+  already-written algorithms for real through a worker (colocation,
+  pattern-of-life with anomalies, network metrics, behavioral clustering,
+  predictive location, data quality, and new co-travel detection built on
+  sustained colocation runs), each drawing into the cube and map plus a
+  result list. The Entity Resolution button is gone, nothing implements it.
+  Ontology, CDR import, classification, RBAC, geofencing UI and case
+  management stay not implemented and the README/FEATURES say so plainly.
+
 ### Changed
 
 - 2026-08-24: **approving a plan records the approval before it runs**. The
