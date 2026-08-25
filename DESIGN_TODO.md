@@ -356,11 +356,15 @@ owner call that this direction reverses.
       (write routes and API-key mint/revoke log to it) and `offline_export`.
       Delete now: any island whose function already ships through a real
       implementation, each verified against the code before deletion, census
-      candidates are `geoprocessing`, `geostatistics`, `stac`,
-      `terrain_analysis` (wave 1b wired the real routes), `versioning`
-      (ptolemy is the versioned backbone) and `dashboard` (viewtopia owns
-      dashboards). Everything else stays in place, parked, no blanket
-      deletion: crdt, tenant, collaboration, federation, whitelabel,
+      candidates were verified 2026-08-24 and mostly cleared: geoprocessing,
+      geostatistics, stac and terrain_analysis ARE the live implementations
+      the premium routes call, they stay. Deleted: `versioning.rs` (asset
+      version control, one route serving demo data, ptolemy is the versioned
+      backbone) and `dashboard.rs` (no routes, viewtopia owns dashboards).
+      Note `temporal.rs` ("temporal versioning" in the docs disclosure list)
+      is a different module and stays parked. Everything else stays in
+      place, parked, no blanket deletion: temporal, crdt, tenant,
+      collaboration, federation, whitelabel,
       priority_queue, cluster, marketplace, metering, encryption, geofence,
       arvr, flythrough, dynamic_raster, prediction, onnx_inference,
       model_zoo, anomaly, measurement, clash_detection, cicd, reports,
