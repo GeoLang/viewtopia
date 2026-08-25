@@ -142,9 +142,11 @@ machinery, then the large islands. One exception to reconfirm when reached:
 the Space-Time rows sit under an earlier "do not build Gotham" owner call that
 this direction reverses.
 
-- [ ] **tiletopia audit org_id.** An audit row carries no `org_id`, because no
-      token claim names an org. The peer address, the created id and the
-      stories, portal, catalog and users-me rows landed 2026-08-25.
+- [ ] **tiletopia org membership.** `POST /api/v1/orgs` creates an
+      organization and no route puts a user in one, so `users.org_id` and the
+      audit row's `org_id` that reads it are only ever set by a direct database
+      write. `PUT /api/v1/admin/users/{id}/role` is the pattern for an admin
+      setting a user's org.
 
 - [ ] **tiletopia offline export bundle.** The bundle is fully offline only
       when `TILETOPIA_CESIUM_DIR` names a CesiumJS build, and otherwise says
