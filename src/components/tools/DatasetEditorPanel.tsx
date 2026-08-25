@@ -11,6 +11,7 @@ import {
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { useDrawStore, drawnFeatureGeometry, type DrawMode } from '../../store/draw';
 import {
+  branchFeatureCollection,
   branchLayerId,
   fetchBranches,
   fetchBranchFeature,
@@ -266,23 +267,12 @@ export function DatasetEditorPanel({ onClose }: { onClose: () => void }) {
 
   function showOnMap() {
     if (!branchId) return;
-    const drawable = features.filter((f) => f.geometry);
-    if (drawable.length === 0) {
+    const collection = branchFeatureCollection(features);
+    if (collection.features.length === 0) {
       setError('no feature on this branch has a geometry ViewTopia can draw');
       return;
     }
-    addGeoJsonLayer(
-      branchLayerId(branchId),
-      {
-        type: 'FeatureCollection',
-        features: drawable.map((f) => ({
-          type: 'Feature',
-          geometry: f.geometry,
-          properties: f.properties,
-        })),
-      },
-      LAYER_STYLE,
-    );
+    addGeoJsonLayer(branchLayerId(branchId), collection, LAYER_STYLE);
   }
 
   return (

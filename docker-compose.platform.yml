@@ -209,6 +209,8 @@ services:
     environment:
       COLLECTA_JWT_SECRET: ${PLATFORM_JWT_SECRET:-}
       COLLECTA_BASE_URL: ${COLLECTA_BASE_URL:-http://localhost:5174/collecta}
+      # where publishing a form writes its dataset; unset answers 503
+      COLLECTA_PTOLEMY_URL: http://ptolemy:3000
       RUST_LOG: info
     volumes:
       - collecta-data:/data

@@ -10,7 +10,13 @@ import {
   Stack,
   Text,
 } from '@mantine/core';
-import { IconClipboardList, IconPaperclip, IconRefresh } from '@tabler/icons-react';
+import { notifications } from '@mantine/notifications';
+import {
+  IconClipboardList,
+  IconCloudUpload,
+  IconPaperclip,
+  IconRefresh,
+} from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { useAgentLayerStore } from '../../store/agentLayers';
 import { getAuthToken } from '../../features/auth/store';
@@ -19,15 +25,29 @@ import {
   attachmentObjectUrl,
   listForms,
   loadSubmissions,
+  publishForm,
   type CollectaForm,
+  type PublishResult,
   type SubmissionInfo,
 } from '../../lib/collecta';
+import {
+  branchFeatureCollection,
+  branchLayerId,
+  fetchBranchFeatures,
+} from '../../lib/branchFeatures';
+import { addGeoJsonLayer } from '../../lib/mapLayers';
 
 const SUBMISSIONS_LAYER = 'collecta-submissions';
 const LAYER_COLOR = '#0ca678';
+const PUBLISHED_LAYER_STYLE = { color: '#4c6ef5', lineWidth: 2, filled: true, stroked: true };
+const PUBLISH_FAILED = 'Publish failed';
 
 function message(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
+}
+
+function plural(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? '' : 's'}`;
 }
 
 function when(submission: SubmissionInfo): string {
@@ -43,6 +63,8 @@ export function CollectaPanel({ onClose }: { onClose: () => void }) {
   const [needsSignIn, setNeedsSignIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submissions, setSubmissions] = useState<SubmissionInfo[] | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [published, setPublished] = useState<PublishResult | null>(null);
   // attachment id -> object URL of fetched bytes, shown inline when an image
   const [previews, setPreviews] = useState<Record<string, string>>({});
   const previewsRef = useRef(previews);
@@ -85,6 +107,7 @@ export function CollectaPanel({ onClose }: { onClose: () => void }) {
   const pickForm = async (id: string | null) => {
     setFormId(id);
     setSubmissions(null);
+    setPublished(null);
     setError(null);
     if (!id) {
       useAgentLayerStore.getState().removeLayer(SUBMISSIONS_LAYER);
@@ -106,6 +129,30 @@ export function CollectaPanel({ onClose }: { onClose: () => void }) {
       useAgentLayerStore.getState().removeLayer(SUBMISSIONS_LAYER);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const publish = async () => {
+    if (!formId) return;
+    setPublishing(true);
+    try {
+      const result = await publishForm(formId);
+      setPublished(result);
+      const features = await fetchBranchFeatures(result.branchId);
+      addGeoJsonLayer(
+        branchLayerId(result.branchId),
+        branchFeatureCollection(features),
+        PUBLISHED_LAYER_STYLE,
+      );
+      notifications.show({
+        title: 'Published to Ptolemy',
+        message: `Published ${plural(result.published, 'submission')}, ${result.skipped} skipped`,
+        color: 'teal',
+      });
+    } catch (e) {
+      notifications.show({ title: PUBLISH_FAILED, message: message(e), color: 'red' });
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -171,14 +218,33 @@ export function CollectaPanel({ onClose }: { onClose: () => void }) {
             {submissions && (
               <Group gap="xs" data-testid="collecta-counts">
                 <Badge size="xs" variant="light" color="teal">
-                  {submissions.length} submission{submissions.length === 1 ? '' : 's'}
+                  {plural(submissions.length, 'submission')}
                 </Badge>
                 {located < submissions.length && (
                   <Badge size="xs" variant="light" color="gray">
                     {submissions.length - located} without location
                   </Badge>
                 )}
+                {published && (
+                  <Badge size="xs" variant="light" color="indigo" data-testid="collecta-published">
+                    {published.totalPublished} in dataset
+                  </Badge>
+                )}
               </Group>
+            )}
+
+            {formId && (
+              <Button
+                size="xs"
+                variant="light"
+                leftSection={<IconCloudUpload size={14} />}
+                loading={publishing}
+                disabled={publishing}
+                onClick={() => void publish()}
+                data-testid="collecta-publish"
+              >
+                {published ? 'Publish again' : 'Publish'}
+              </Button>
             )}
 
             {submissions && submissions.length === 0 && (

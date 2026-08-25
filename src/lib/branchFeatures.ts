@@ -107,6 +107,26 @@ export async function fetchBranchFeatures(
   }));
 }
 
+/** The branch's features as a layer's GeoJSON, without the ones that have no geometry. */
+export function branchFeatureCollection(
+  features: BranchFeature[],
+): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: features.flatMap((feature) =>
+      feature.geometry
+        ? [
+            {
+              type: 'Feature' as const,
+              geometry: feature.geometry,
+              properties: feature.properties,
+            },
+          ]
+        : [],
+    ),
+  };
+}
+
 /** feature id -> geometry, skipping features whose WKB type wkb.ts doesn't decode. */
 export async function fetchBranchGeometry(
   branchId: string,

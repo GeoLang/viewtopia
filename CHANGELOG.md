@@ -6,6 +6,14 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-25: **field data publishes into a ptolemy dataset from the Field Data
+  panel**. Publish, next to the form picker, posts to collecta's
+  `/collecta/api/v1/forms/{id}/publish`, then draws the dataset branch it
+  answers with as the `ptolemy-branch-{id}` layer, so the submissions are on
+  the globe as ptolemy features under their own submission ids. The
+  notification says how many were published and how many were already there,
+  and the button stays for a repeat publish, which writes only what is new.
+  A refusal from collecta or ptolemy is shown as its own message.
 - 2026-08-25: **a feature's geometry is editable at the vertex, and no WKB type
   keeps a feature out of the editor**. Selecting a feature in the Dataset
   Editor and pressing "Edit vertices" puts a draggable handle on every vertex,

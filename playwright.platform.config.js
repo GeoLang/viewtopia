@@ -16,6 +16,7 @@ export default defineConfig({
     'live-session.spec.js',
     'realestate-smoke.spec.js',
     'dataset-editing.spec.js',
+    'collecta-publish.spec.js',
     'map-comment-pins.spec.js',
     'analysis-smoke.spec.js',
     'project-map-state.spec.js',

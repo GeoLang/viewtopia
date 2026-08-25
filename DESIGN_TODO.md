@@ -26,27 +26,6 @@ Five threads started together. Each is done when its tests pass through the
 real route and its per-repo CHANGELOG has the entry. Owner rule: no commits by
 the agents, the owner reviews and commits.
 
-- [~] **field to shared map: collecta publishes a form into a ptolemy dataset.**
-      Decided 2026-08-25: on-demand, the caller's own bearer is forwarded to
-      ptolemy, no stored credential. collecta-server gets
-      `POST /api/v1/forms/{id}/publish` (creator or admin). The first call
-      creates one ptolemy dataset per form at `COLLECTA_PTOLEMY_URL`, geometry
-      type from the form's first geo field, attributes from the other fields,
-      media fields as collecta attachment URLs, and records the dataset and
-      branch ids on the form. Every call commits the submissions not yet
-      published in batches with the submission id as the feature id and
-      records which ids went. A form with no geo field uses `device_location`,
-      a submission with neither is skipped and counted. Response
-      `{dataset_id, branch_id, published, skipped, total_published}`. Tests
-      against an in-process fake ptolemy: first publish creates and commits,
-      second sends only new ids, a rerun after a failed batch does not
-      duplicate. viewtopia's Field Data panel gets a Publish button that calls
-      it and then loads the dataset through the `ptolemy-branch-{id}` layer
-      path, with a platform e2e: submit, publish, feature in ptolemy and on
-      the map. Left out of v1, as rows to add when it lands: automatic push on
-      submission (needs a service credential), edits to published submissions
-      (collecta has no submission `updated_at`), live refresh for other
-      viewers (dataset layers are pull-based).
 - [~] **viewtopia panels flake.** Scheduled "Platform panels (per-panel
       functional)" fails on two analysis-2 tests: the browser hangs on
       `newContext` after a Statistics deck.gl test. Done when the cause is
@@ -434,6 +413,14 @@ Operator-facing deployment gaps:
 Parked until a real user, a real feed, or a real customer file exists. The
 thesis is "a team makes and analyzes a map together in the browser". Refuse
 feature-parity fights with ArcGIS, Felt, GEE, Palantir.
+
+- [ ] **collecta publish follow-ups.** `POST /api/v1/forms/{id}/publish`
+      landed 2026-08-25 as on-demand with the caller's token. Not built:
+      automatic push on every submission (needs a service credential collecta
+      would hold, and a call on who owns the datasets), republishing a
+      submission edited after publish (collecta has no submission
+      `updated_at`), and live refresh of the published layer for other viewers
+      (dataset layers are pull-based).
 
 - [ ] **ptolemy commit-time topology rules** (owner call 2026-08-24): build a
       real rule engine only when an Esri migration customer needs rule

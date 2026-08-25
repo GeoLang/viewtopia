@@ -250,3 +250,39 @@ export async function loadSubmissions(formId: string): Promise<SubmissionLayer> 
   ]);
   return submissionsToGeoJson(geoFieldOrder(form), submissions);
 }
+
+/** What collecta wrote into ptolemy for one form, and where it put it. */
+export interface PublishResult {
+  datasetId: string;
+  branchId: string;
+  published: number;
+  skipped: number;
+  totalPublished: number;
+}
+
+const UNREADABLE_PUBLISH = 'The publish reply named no dataset branch.';
+
+function count(raw: unknown): number {
+  return typeof raw === 'number' ? raw : 0;
+}
+
+/**
+ * Copy the form's submissions into a ptolemy dataset. Repeat calls publish only
+ * what is new, so `skipped` counts the submissions already there.
+ */
+export async function publishForm(formId: string): Promise<PublishResult> {
+  const res = await request(`${API}/forms/${encodeURIComponent(formId)}/publish`, {
+    method: 'POST',
+  });
+  const body = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+  if (typeof body?.dataset_id !== 'string' || typeof body.branch_id !== 'string') {
+    throw new CollectaError(res.status, UNREADABLE_PUBLISH);
+  }
+  return {
+    datasetId: body.dataset_id,
+    branchId: body.branch_id,
+    published: count(body.published),
+    skipped: count(body.skipped),
+    totalPublished: count(body.total_published),
+  };
+}

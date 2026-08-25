@@ -37,7 +37,7 @@ Maturity from source-level test declarations:
 | geodukt / fluvius | ETL+workflow / spatial streams | ~240 / 187 | geodukt consumed; fluvius not deployed |
 | nubis / topoi | point cloud / geometry | 161 / 246 | nubis via geoplumb; topoi as viewer wasm |
 | terravista | mobile SDK | 130 Rust | Android fetches and draws (Canvas); Metal/Vulkan is v0.3 ⚠️ |
-| collecta | field collection | 117 | OpenRosa + attachments + Field Data panel |
+| collecta | field collection | 117 | OpenRosa + attachments + Field Data panel, which publishes a form into a ptolemy dataset |
 | projicio / sibyl | CRS / agent loop (§2.4) | 198 / 87 | ✅ |
 | terrano / fenestra | raster / OGC gateway (WMS/WFS/WMTS/WCS/OGC API) | 140 / 98 | ✅ |
 | geokode / geogit / itinera | geocode / geo VCS / routing | 75 / 73 / 84 | geogit is CLI-only, not in the viewer |
