@@ -102,7 +102,7 @@ jobs:
         working-directory: viewtopia
         run: |
           docker compose -f docker-compose.platform.yml build \
-            ptolemy tiletopia geokode itinera agora sibyl geodukt viewtopia
+            ptolemy tiletopia geokode itinera agora sibyl geodukt collecta viewtopia
 
       # itinera's entrypoint builds data/graph.bin from the extract on first start,
       # so there is no separate graph-build step.
@@ -116,14 +116,14 @@ jobs:
           export GEOLANG_EXECUTOR_SECRET="$(openssl rand -hex 24)"
           docker compose -f docker-compose.platform.yml down --remove-orphans
           docker compose -f docker-compose.platform.yml up -d \
-            ptolemy tiletopia geokode itinera agora sibyl geodukt geolang-api jupyter viewtopia
+            ptolemy tiletopia geokode itinera agora sibyl geodukt collecta geolang-api jupyter viewtopia
 
       - name: Wait for all services healthy
         working-directory: viewtopia
         run: |
           # geolang-api only waits for the executor to start, not to be ready,
           # and the tool-run spec calls a tool that runs there
-          services="ptolemy tiletopia geokode itinera agora sibyl geodukt geolang-api geolang-executor jupyter"
+          services="ptolemy tiletopia geokode itinera agora sibyl geodukt collecta geolang-api geolang-executor jupyter"
           deadline=$(( $(date +%s) + 600 ))
           while :; do
             pending=""
