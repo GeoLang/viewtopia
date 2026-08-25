@@ -23,6 +23,13 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-24: **a plan run names the chat session its report goes to**. The
+  approve button's `run_workflow` call sends the viewer session's sibyl id as
+  `thread_id`, so geolang appends the run report to that session and to no
+  other. Before this geolang wrote to whichever sibyl session was active
+  process-wide, which is how another caller's upload notes ended up in a
+  person's chat.
+
 - 2026-08-24: **a service that is down says which one it is**. The header names
   every platform service whose health probe went unanswered, one line per
   service in the sync popover and a "<service> is unreachable" wherever a
