@@ -340,6 +340,12 @@ test.describe('the dataset editor commits a vertex drag', () => {
     await expect(page.getByTestId('dataset-editor-feature')).toHaveCount(1);
     await page.getByTestId('dataset-editor-feature').click();
     await page.getByTestId('dataset-editor-edit-vertices').click();
+    // the handles land once the map goes idle, drag only after one is on screen
+    await page.waitForFunction(
+      () => window.__viewtopiaMap.queryRenderedFeatures({ layers: ['draw-vertex-handles'] }).length > 0,
+      null,
+      { timeout: 30_000 },
+    );
 
     // the north-west corner, left of centre and clear of the panel dock
     const corner = ring[3];

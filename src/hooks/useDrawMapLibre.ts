@@ -277,6 +277,7 @@ export function useDrawMapLibre(
     if (!map) return;
 
     let draggingPath: number[] | null = null;
+    let disposed = false;
     let rendered: GeoJSON.Geometry | null = null;
 
     const handles = (geometry: GeoJSON.Geometry): GeoJSON.FeatureCollection => ({
@@ -294,7 +295,16 @@ export function useDrawMapLibre(
         src.setData(handles(geometry));
         return;
       }
-      if (!map.isStyleLoaded()) return;
+      // isStyleLoaded is false while any source still has tiles in flight, so
+      // wait for idle and draw whatever the store holds by then
+      if (!map.isStyleLoaded()) {
+        map.once('idle', () => {
+          if (disposed) return;
+          const current = useDrawStore.getState().vertexEdit?.geometry;
+          if (current) draw(current);
+        });
+        return;
+      }
       map.addSource(VERTEX_SRC, { type: 'geojson', data: handles(geometry) });
       map.addLayer({
         id: VERTEX_LAYER,
@@ -355,6 +365,7 @@ export function useDrawMapLibre(
     const unsub = useDrawStore.subscribe(sync);
 
     return () => {
+      disposed = true;
       unsub();
       map.off('mousedown', onMouseDown);
       map.off('mousemove', onMouseMove);
