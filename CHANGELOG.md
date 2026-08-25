@@ -222,6 +222,38 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-08-25: **the first-run overlay's three entry rows do what they say.**
+  Each row is a button now. Import data dismisses the overlay and opens the
+  `import` tool panel, the project row opens the New Project modal in the
+  project switcher, and the live row opens the live map picker. The two header
+  controls read the request from a new `onboarding/entryPoints` store, so a
+  click before the switcher has loaded its workspaces still lands, and a
+  request from a workspace the user cannot create in opens the project menu
+  instead. A live-session request while a live map is already open does
+  nothing.
+
+- 2026-08-25: **a removed image overlay takes its ptolemy attachment with it,
+  the map retry queue survives a reload, and dashboard edits are one write.**
+  After the server takes a map snapshot, `mapSync` compares it with the one it
+  replaced and calls the new `deleteProjectAttachment` for every attachment id
+  the map has stopped naming, so removing an overlay from the layer manager,
+  the overlay panel or a live-sync edit clears the file behind it, and only
+  once the snapshot that drops it is on the server. The retry queue moved from
+  a Set in memory onto an `unpushed` flag on the cached `projectMaps` record,
+  and every flagged record is pushed when the app starts watching the map, so
+  a reload sends up each project's stale cache and not only the open one.
+  Dashboard edits now wait a second and go up as one `putProjectState`, sent
+  early when another project loads and dropped when the project closes, where
+  each edit used to be its own PUT.
+- 2026-08-25: **an oversize drop offers the tileset route for every file, not
+  just the first.** `useTilesetStore` held one `offered` file, so a drop of
+  several files past `BROWSER_IMPORT_LIMIT_BYTES` offered the first and told
+  the rest to be brought back one at a time. The store now keeps a queue,
+  `importFiles` appends every server-bound file in drop order with its own
+  browser fallback, and the modal shows the head with a "1 of N" line while
+  more wait. Cancel, "Load in the browser anyway" and a finished build each
+  answer the head and bring up the next file. A failed build keeps the head
+  with its error, as before.
 - 2026-08-25: **the Statistics grid no longer stalls the browser's GPU
   process.** The panel's deck.gl `GridLayer` used GPU aggregation, which
   allocates one bin for every cell in the data extent, so points in two

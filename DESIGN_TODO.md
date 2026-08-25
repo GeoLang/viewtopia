@@ -24,24 +24,6 @@ Pick one: an open row under **P0 path to the intended product** below, one
 module at a time from the **Wire for real** list, or a hosting decision under
 **Before any public deploy**.
 
-## Felt gap leftovers
-
-- [ ] **an oversize multi-file drop offers the tileset route for the first file
-      only.** Dropping several files over `BROWSER_IMPORT_LIMIT_BYTES` at once
-      should offer every one of them.
-
-- [ ] **project map state leftovers.** Removing an overlay from the map leaves
-      its ptolemy project attachment behind: the delete route exists and
-      nothing calls it. The save retry queue is in memory, so after a reload
-      only the open project pushes its stale cache. Dashboard writes are one
-      PUT per edit rather than debounced. The dashboard create-and-add-widget
-      flow has no standalone e2e, since a dashboard needs a server project, so
-      that path is covered only against the platform stack.
-
-- [ ] **the first-run overlay's three entry rows are signposts, not buttons.**
-      Wiring them needs one shared opener for ProjectSwitcher's and
-      LiveSessionControl's modals.
-
 ## Cross-repository audit, 2026-08-22
 
 These are verified advertised gaps found by reading every repository README,
@@ -283,17 +265,6 @@ Operator-facing deployment gaps:
       - assumes the deployment reaches RDS directly rather than through RDS
         Proxy, which uses ACM certificates and would not need this bundle.
 
-- [ ] **sibyl sessions have no owner.** Sessions carry no subject, and geolang's
-      `/sessions` gateway routes (list, switch, rename, delete) and the
-      `thread_id` a caller names on `POST /tools/{name}`, `/upload` and `/draw`
-      accept any session id from any platform-authenticated caller, so one user
-      can enumerate, rename, delete or append text into another user's session,
-      and appended text lands in that session's model context. Fix in sibyl: a
-      subject column on the session row, set from the bearer's `sub` at creation
-      and filtered on in every `/sessions/*` route and on the message append. A
-      geolang-side map of session id to subject is the cheaper stopgap but leaves
-      sibyl's own API open.
-
 - [ ] **in-region deployment**: cold pulls are bound by the residential
       link to us-west-2. Serving next to the data is the remaining latency
       lever; blocked on an AWS account decision (2026-08-05).
@@ -400,6 +371,10 @@ Operator-facing deployment gaps:
 Parked until a real user, a real feed, or a real customer file exists. The
 thesis is "a team makes and analyzes a map together in the browser". Refuse
 feature-parity fights with ArcGIS, Felt, GEE, Palantir.
+
+- [ ] **a standalone e2e for creating a dashboard and adding a widget.** A
+      dashboard needs a server project, so that path is covered only against
+      the platform stack.
 
 - [ ] **collecta publish follow-ups.** `POST /api/v1/forms/{id}/publish`
       landed 2026-08-25 as on-demand with the caller's token. Not built:
