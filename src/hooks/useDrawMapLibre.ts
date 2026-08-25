@@ -1,7 +1,13 @@
 import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import type maplibregl from 'maplibre-gl';
-import { useDrawStore, type DrawMode, type DrawnFeature } from '../store/draw';
+import {
+  useDrawStore,
+  geometryVertices,
+  geometryWithMovedVertex,
+  type DrawMode,
+  type DrawnFeature,
+} from '../store/draw';
 import { useAppStore } from '../store/app';
 
 const SRC = 'draw-features';
@@ -11,6 +17,8 @@ const FILL_LAYER = 'draw-fills';
 const POINT_LAYER = 'draw-points';
 const PENDING_LINE = 'draw-pending-line';
 const PENDING_POINT = 'draw-pending-pts';
+const VERTEX_SRC = 'draw-vertex-edit';
+const VERTEX_LAYER = 'draw-vertex-handles';
 
 function featuresToGeoJSON(features: DrawnFeature[]): GeoJSON.FeatureCollection {
   const geoFeatures: GeoJSON.Feature[] = [];
@@ -260,6 +268,99 @@ export function useDrawMapLibre(
     return () => {
       unsub();
       map.off('load', render);
+    };
+  }, [mapRef, renderer, activeTab]);
+
+  // One draggable handle per vertex while the Dataset Editor holds a geometry open
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    let draggingPath: number[] | null = null;
+    let rendered: GeoJSON.Geometry | null = null;
+
+    const handles = (geometry: GeoJSON.Geometry): GeoJSON.FeatureCollection => ({
+      type: 'FeatureCollection',
+      features: geometryVertices(geometry).map((vertex) => ({
+        type: 'Feature',
+        properties: { path: JSON.stringify(vertex.path) },
+        geometry: { type: 'Point', coordinates: vertex.position },
+      })),
+    });
+
+    const draw = (geometry: GeoJSON.Geometry) => {
+      const src = map.getSource(VERTEX_SRC) as maplibregl.GeoJSONSource | undefined;
+      if (src) {
+        src.setData(handles(geometry));
+        return;
+      }
+      if (!map.isStyleLoaded()) return;
+      map.addSource(VERTEX_SRC, { type: 'geojson', data: handles(geometry) });
+      map.addLayer({
+        id: VERTEX_LAYER,
+        type: 'circle',
+        source: VERTEX_SRC,
+        paint: {
+          'circle-radius': 6,
+          'circle-color': '#ffffff',
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#20c997',
+        },
+      });
+    };
+
+    const erase = () => {
+      if (map.getLayer(VERTEX_LAYER)) map.removeLayer(VERTEX_LAYER);
+      if (map.getSource(VERTEX_SRC)) map.removeSource(VERTEX_SRC);
+    };
+
+    const sync = (state: { vertexEdit: { geometry: GeoJSON.Geometry } | null }) => {
+      const geometry = state.vertexEdit?.geometry ?? null;
+      if (geometry === rendered) return;
+      rendered = geometry;
+      if (geometry) draw(geometry);
+      else erase();
+    };
+
+    const onMouseDown = (e: maplibregl.MapMouseEvent) => {
+      if (!useDrawStore.getState().vertexEdit || !map.getLayer(VERTEX_LAYER)) return;
+      const hit = map.queryRenderedFeatures(e.point, { layers: [VERTEX_LAYER] })[0];
+      if (!hit) return;
+      e.preventDefault();
+      draggingPath = JSON.parse(String(hit.properties?.path));
+      map.dragPan.disable();
+    };
+
+    // the drag preview moves the handles only, the store hears one move on release
+    const onMouseMove = (e: maplibregl.MapMouseEvent) => {
+      const edit = useDrawStore.getState().vertexEdit;
+      if (!draggingPath || !edit) return;
+      const src = map.getSource(VERTEX_SRC) as maplibregl.GeoJSONSource | undefined;
+      if (!src) return;
+      src.setData(handles(geometryWithMovedVertex(edit.geometry, draggingPath, [e.lngLat.lng, e.lngLat.lat])));
+    };
+
+    const onMouseUp = (e: maplibregl.MapMouseEvent) => {
+      if (!draggingPath) return;
+      const path = draggingPath;
+      draggingPath = null;
+      map.dragPan.enable();
+      useDrawStore.getState().moveVertex(path, [e.lngLat.lng, e.lngLat.lat]);
+    };
+
+    map.on('mousedown', onMouseDown);
+    map.on('mousemove', onMouseMove);
+    map.on('mouseup', onMouseUp);
+    sync(useDrawStore.getState());
+    const unsub = useDrawStore.subscribe(sync);
+
+    return () => {
+      unsub();
+      map.off('mousedown', onMouseDown);
+      map.off('mousemove', onMouseMove);
+      map.off('mouseup', onMouseUp);
+      map.dragPan.enable();
+      erase();
     };
   }, [mapRef, renderer, activeTab]);
 }

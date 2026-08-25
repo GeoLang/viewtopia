@@ -10,9 +10,17 @@ import {
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
 } from 'cesium';
-import { useDrawStore, type DrawMode, } from '../store/draw';
+import {
+  useDrawStore,
+  geometryVertices,
+  geometryWithMovedVertex,
+  type DrawMode,
+} from '../store/draw';
 import { useAppStore } from '../store/app';
 import { Cartesian3 } from 'cesium';
+
+/** the entity id carries the vertex path, so a pick says which vertex it hit */
+const VERTEX_ENTITY_PREFIX = 'draw-vertex-';
 
 function cssToColor(hex: string, alpha = 0.8): Color {
   try {
@@ -212,6 +220,90 @@ export function useDrawCesium(
 
     return () => {
       unsub();
+    };
+  }, [viewerRef, renderer, activeTab]);
+
+  // One draggable point per vertex while the Dataset Editor holds a geometry open
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed()) return;
+
+    let draggingPath: number[] | null = null;
+    let rendered: GeoJSON.Geometry | null = null;
+    const entityIds: string[] = [];
+
+    const erase = () => {
+      for (const id of entityIds) {
+        const entity = viewer.entities.getById(id);
+        if (entity) viewer.entities.remove(entity);
+      }
+      entityIds.length = 0;
+    };
+
+    const draw = (geometry: GeoJSON.Geometry) => {
+      erase();
+      for (const vertex of geometryVertices(geometry)) {
+        const id = VERTEX_ENTITY_PREFIX + JSON.stringify(vertex.path);
+        viewer.entities.add({
+          id,
+          position: Cartesian3.fromDegrees(vertex.position[0], vertex.position[1]),
+          point: {
+            pixelSize: 10,
+            color: Color.WHITE,
+            outlineColor: Color.fromCssColorString('#20c997'),
+            outlineWidth: 2,
+          },
+        });
+        entityIds.push(id);
+      }
+    };
+
+    const sync = (state: { vertexEdit: { geometry: GeoJSON.Geometry } | null }) => {
+      const geometry = state.vertexEdit?.geometry ?? null;
+      if (geometry === rendered) return;
+      rendered = geometry;
+      if (geometry) draw(geometry);
+      else erase();
+    };
+
+    const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
+
+    handler.setInputAction((event: { position: Cartesian2 }) => {
+      if (!useDrawStore.getState().vertexEdit) return;
+      const picked = viewer.scene.pick(event.position) as { id?: { id?: unknown } } | undefined;
+      const id = picked?.id?.id;
+      if (typeof id !== 'string' || !id.startsWith(VERTEX_ENTITY_PREFIX)) return;
+      draggingPath = JSON.parse(id.slice(VERTEX_ENTITY_PREFIX.length));
+      viewer.scene.screenSpaceCameraController.enableInputs = false;
+    }, ScreenSpaceEventType.LEFT_DOWN);
+
+    // the drag preview moves the points only, the store hears one move on release
+    handler.setInputAction((movement: { endPosition: Cartesian2 }) => {
+      const edit = useDrawStore.getState().vertexEdit;
+      if (!draggingPath || !edit) return;
+      const lngLat = cartToLngLat(viewer, movement.endPosition.x, movement.endPosition.y);
+      if (!lngLat) return;
+      draw(geometryWithMovedVertex(edit.geometry, draggingPath, lngLat));
+    }, ScreenSpaceEventType.MOUSE_MOVE);
+
+    handler.setInputAction((event: { position: Cartesian2 }) => {
+      if (!draggingPath) return;
+      const path = draggingPath;
+      draggingPath = null;
+      viewer.scene.screenSpaceCameraController.enableInputs = true;
+      const lngLat = cartToLngLat(viewer, event.position.x, event.position.y);
+      if (lngLat) useDrawStore.getState().moveVertex(path, lngLat);
+    }, ScreenSpaceEventType.LEFT_UP);
+
+    sync(useDrawStore.getState());
+    const unsub = useDrawStore.subscribe(sync);
+
+    return () => {
+      unsub();
+      handler.destroy();
+      if (viewer.isDestroyed()) return;
+      viewer.scene.screenSpaceCameraController.enableInputs = true;
+      erase();
     };
   }, [viewerRef, renderer, activeTab]);
 }

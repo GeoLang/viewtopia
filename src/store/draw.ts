@@ -30,6 +30,106 @@ interface DrawState {
   /** Replace a feature's full attribute map (GeoJSON editor). */
   setFeatureProperties: (id: string, properties: Record<string, string>) => void;
   clearAll: () => void;
+  /** The geometry whose vertices the map is currently letting the user drag. */
+  vertexEdit: { geometry: GeoJSON.Geometry } | null;
+  startVertexEdit: (geometry: GeoJSON.Geometry) => void;
+  moveVertex: (path: number[], position: [number, number]) => void;
+  stopVertexEdit: () => void;
+}
+
+/** One position, or a list of these: the shape of every `coordinates` member. */
+type PositionOrList = number[] | PositionOrList[];
+
+function isPosition(node: PositionOrList): node is number[] {
+  return typeof node[0] === 'number';
+}
+
+function movedPosition(existing: number[], position: [number, number]): number[] {
+  return existing.length >= 3
+    ? [position[0], position[1], existing[2]]
+    : [position[0], position[1]];
+}
+
+/** a closed ring's first and last position are one point, so both move together */
+function movedRing(ring: number[][], index: number, position: [number, number]): number[][] {
+  const last = ring.length - 1;
+  const closed =
+    last > 0 && ring[0][0] === ring[last][0] && ring[0][1] === ring[last][1];
+  const movesBothEnds = closed && (index === 0 || index === last);
+  return ring.map((existing, i) => {
+    if (i === index) return movedPosition(existing, position);
+    if (movesBothEnds && (i === 0 || i === last)) return movedPosition(existing, position);
+    return existing;
+  });
+}
+
+function movedNode(
+  node: PositionOrList,
+  path: number[],
+  position: [number, number],
+  ringLeaves: boolean,
+): PositionOrList {
+  if (isPosition(node)) return path.length === 0 ? movedPosition(node, position) : node;
+  const [index, ...rest] = path;
+  if (index === undefined || index < 0 || index >= node.length) return node;
+  if (ringLeaves && rest.length === 0 && isPosition(node[index])) {
+    return movedRing(node as number[][], index, position);
+  }
+  return node.map((child, i) =>
+    i === index ? movedNode(child, rest, position, ringLeaves) : child,
+  );
+}
+
+/**
+ * `path` indexes into `coordinates` down to one position: Point `[]`,
+ * LineString `[i]`, Polygon `[ring, i]`, MultiPolygon `[polygon, ring, i]`. A
+ * collection's first index picks the member and the rest applies to it.
+ */
+export function geometryWithMovedVertex(
+  geometry: GeoJSON.Geometry,
+  path: number[],
+  position: [number, number],
+): GeoJSON.Geometry {
+  if (geometry.type === 'GeometryCollection') {
+    const [index, ...rest] = path;
+    return {
+      type: 'GeometryCollection',
+      geometries: geometry.geometries.map((member, i) =>
+        i === index ? geometryWithMovedVertex(member, rest, position) : member,
+      ),
+    };
+  }
+  const ringLeaves = geometry.type === 'Polygon' || geometry.type === 'MultiPolygon';
+  const coordinates = movedNode(geometry.coordinates, path, position, ringLeaves);
+  return { ...geometry, coordinates } as GeoJSON.Geometry;
+}
+
+export interface GeometryVertex {
+  path: number[];
+  position: number[];
+}
+
+export function geometryVertices(geometry: GeoJSON.Geometry): GeometryVertex[] {
+  if (geometry.type === 'GeometryCollection') {
+    return geometry.geometries.flatMap((member, i) =>
+      geometryVertices(member).map((vertex) => ({
+        path: [i, ...vertex.path],
+        position: vertex.position,
+      })),
+    );
+  }
+  const found: GeometryVertex[] = [];
+  const walk = (node: PositionOrList, path: number[]): void => {
+    if (isPosition(node)) {
+      found.push({ path, position: node });
+      return;
+    }
+    node.forEach((child, i) => {
+      walk(child, [...path, i]);
+    });
+  };
+  walk(geometry.coordinates, []);
+  return found;
 }
 
 export const useDrawStore = create<DrawState>((set, get) => ({
@@ -38,8 +138,9 @@ export const useDrawStore = create<DrawState>((set, get) => ({
   lineWidth: 2,
   features: [],
   pending: [],
+  vertexEdit: null,
 
-  setMode: (mode) => set({ mode, pending: [] }),
+  setMode: (mode) => set({ mode, pending: [], vertexEdit: null }),
   setColor: (color) => set({ color }),
   setLineWidth: (lineWidth) => set({ lineWidth }),
 
@@ -130,6 +231,16 @@ export const useDrawStore = create<DrawState>((set, get) => ({
     })),
 
   clearAll: () => set({ features: [], pending: [] }),
+
+  startVertexEdit: (geometry) => set({ vertexEdit: { geometry }, mode: null, pending: [] }),
+
+  moveVertex: (path, position) =>
+    set((s) => {
+      if (!s.vertexEdit) return {};
+      return { vertexEdit: { geometry: geometryWithMovedVertex(s.vertexEdit.geometry, path, position) } };
+    }),
+
+  stopVertexEdit: () => set({ vertexEdit: null }),
 }));
 
 type DrawnGeometry =
