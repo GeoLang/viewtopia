@@ -10,6 +10,7 @@
  */
 
 import { apiHeaders, authHeaders, noticeRefusal } from '../../lib/apiAuth';
+import { useChatStore } from '../../store/chat';
 
 export interface PlanStep {
   index: number;
@@ -179,15 +180,22 @@ export async function approveWorkflow(manifest: string): Promise<WorkflowApprova
  *
  * `notify` appends the report to the model's sibyl session: this runs outside
  * the model's turn, so without it a follow-up question would not know the
- * workflow ever ran.
+ * workflow ever ran. `thread_id` names which session that is, and geolang skips
+ * the note without one. A session that has never been sent to has no backend id
+ * yet, so there is nothing to append to either.
  */
 export async function runWorkflow(manifest: string): Promise<WorkflowRun> {
   let body: { result?: string } | null = null;
+  const threadId = useChatStore.getState().activeSession()?.backendId;
   try {
     const res = await fetch('/agent/tools/run_workflow', {
       method: 'POST',
       headers: apiHeaders(),
-      body: JSON.stringify({ args: { manifest_toml: manifest }, notify: true }),
+      body: JSON.stringify({
+        args: { manifest_toml: manifest },
+        notify: true,
+        ...(threadId ? { thread_id: threadId } : {}),
+      }),
     });
     if (!res.ok) {
       noticeRefusal(res.status);

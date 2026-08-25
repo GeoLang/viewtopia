@@ -9,6 +9,7 @@ vi.mock('../../src/viewer/commands', () => ({ executeViewerCommand: vi.fn() }));
 vi.mock('../../src/viewer/uiSpec', () => ({ renderUISpec: vi.fn(() => Promise.resolve()) }));
 
 import { PlanPanel } from '../../src/features/workflow/PlanPanel';
+import { runWorkflow } from '../../src/features/workflow/plan';
 import type { PlanStep, WorkflowPlan } from '../../src/features/workflow/plan';
 import { buildAgUiSubscriber } from '../../src/hooks/useSSE';
 import { useChatStore } from '../../src/store/chat';
@@ -468,5 +469,47 @@ describe('PlanPanel', () => {
 
     fireEvent.click(screen.getByText('Show'));
     expect(screen.getAllByTestId('plan-step')).toHaveLength(3);
+  });
+});
+
+describe('runWorkflow', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    useChatStore.setState({ sessions: [], activeSessionId: null });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const bodyOfTheRun = (fetchMock: ReturnType<typeof vi.fn>) =>
+    JSON.parse(String((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body));
+
+  it('names the sibyl session the note belongs in', async () => {
+    seedSession();
+    const sessionId = useChatStore.getState().activeSessionId!;
+    useChatStore.getState().setBackendId(sessionId, 'sibyl-42');
+    const fetchMock = vi.fn(() => json({ result: toolResult(RUN_REPORT, RUN_JSON) }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await runWorkflow(PLAN.manifest!);
+
+    expect(bodyOfTheRun(fetchMock)).toEqual({
+      args: { manifest_toml: PLAN.manifest },
+      notify: true,
+      thread_id: 'sibyl-42',
+    });
+  });
+
+  it('names no session before the chat has one, so geolang notes nothing', async () => {
+    seedSession();
+    const fetchMock = vi.fn(() => json({ result: toolResult(RUN_REPORT, RUN_JSON) }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await runWorkflow(PLAN.manifest!);
+
+    const body = bodyOfTheRun(fetchMock);
+    expect(body).toEqual({ args: { manifest_toml: PLAN.manifest }, notify: true });
+    expect('thread_id' in body).toBe(false);
   });
 });
