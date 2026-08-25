@@ -33,6 +33,7 @@ import { setLayerOpacity, setLayerVisible } from '../../store/layerControls';
 import { SymbologyEditor } from '../../features/symbology/SymbologyEditor';
 import { geojsonToPmtiles } from '../../features/pmtiles/writer';
 import { TilesetsSection } from '../../features/tilesets/TilesetsSection';
+import { useTiles3dLayerStore, type Tiles3dLayer } from '../../store/tiles3dLayers';
 
 /** Tile and download the layer's features as a .pmtiles archive. */
 function exportPmtiles(layer: AgentLayer): void {
@@ -338,6 +339,81 @@ function RasterLayerRow({
   );
 }
 
+/**
+ * A 3D tileset on the globe, drawn by the Cesium hook from the layer store. It
+ * has no opacity of its own: what a tile feature is painted comes from the
+ * tileset's style.
+ */
+function Tiles3dLayerRow({
+  layer,
+  expanded,
+  onExpand,
+  onRemove,
+}: {
+  layer: Tiles3dLayer;
+  expanded: boolean;
+  onExpand: () => void;
+  onRemove: () => void;
+}) {
+  return (
+    <Paper
+      p="xs"
+      radius="sm"
+      style={{
+        background: 'var(--mantine-color-dark-6)',
+        border: '1px solid var(--mantine-color-dark-5)',
+        cursor: 'pointer',
+      }}
+      onClick={onExpand}
+      data-testid="tiles3d-layer-row"
+    >
+      <Group justify="space-between" wrap="nowrap">
+        <Group gap={4} wrap="nowrap" style={{ minWidth: 0 }}>
+          <IconChevronRight
+            size={12}
+            style={{
+              color: 'var(--mantine-color-dark-2)',
+              flexShrink: 0,
+              transform: expanded ? 'rotate(90deg)' : undefined,
+            }}
+          />
+          <Switch
+            size="xs"
+            checked={layer.visible}
+            aria-label={`Show ${layer.name}`}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => setLayerVisible(layer.id, e.currentTarget.checked)}
+          />
+          <Text size="xs" c="white" lineClamp={1}>
+            {layer.name}
+          </Text>
+        </Group>
+        <Group gap={4} wrap="nowrap">
+          <LayerLoadError layerId={layer.id} layerName={layer.name} />
+          <Badge size="xs" variant="light" color="gray">
+            3D tiles
+          </Badge>
+        </Group>
+      </Group>
+
+      {expanded && (
+        <Button
+          size="xs"
+          mt="xs"
+          variant="subtle"
+          color="red"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+        >
+          Remove
+        </Button>
+      )}
+    </Paper>
+  );
+}
+
 interface LayerManagerProps {
   layers: LayerItem[];
   onRemove: (id: string) => void;
@@ -351,12 +427,15 @@ export function LayerManager({ layers, onRemove, onClose }: LayerManagerProps) {
   const rasterLayers = useAgentLayerStore((s) => s.rasterLayers);
   const removeAgentLayer = useAgentLayerStore((s) => s.removeLayer);
   const removeRasterLayer = useAgentLayerStore((s) => s.removeRasterLayer);
+  const tiles3dLayers = useTiles3dLayerStore((s) => s.layers);
+  const removeTiles3dLayer = useTiles3dLayerStore((s) => s.removeLayer);
   // one row per layer: a plugin or live-document layer sits in both this list
   // and the store the renderers draw from, and only that store's row reaches
   // the map
-  const drawn = new Set([...agentLayers, ...rasterLayers].map((l) => l.id));
+  const drawn = new Set([...agentLayers, ...rasterLayers, ...tiles3dLayers].map((l) => l.id));
   const listedLayers = layers.filter((l) => !drawn.has(l.id));
-  const total = listedLayers.length + agentLayers.length + rasterLayers.length;
+  const total =
+    listedLayers.length + agentLayers.length + rasterLayers.length + tiles3dLayers.length;
 
   return (
     <PanelCard width={300} maxHeight="60vh">
@@ -466,6 +545,18 @@ export function LayerManager({ layers, onRemove, onClose }: LayerManagerProps) {
               onExpand={() => setExpandedId(expandedId === layer.id ? null : layer.id)}
               onRemove={() => {
                 removeRasterLayer(layer.id);
+                onRemove(layer.id);
+              }}
+            />
+          ))}
+          {tiles3dLayers.map((layer) => (
+            <Tiles3dLayerRow
+              key={layer.id}
+              layer={layer}
+              expanded={expandedId === layer.id}
+              onExpand={() => setExpandedId(expandedId === layer.id ? null : layer.id)}
+              onRemove={() => {
+                removeTiles3dLayer(layer.id);
                 onRemove(layer.id);
               }}
             />

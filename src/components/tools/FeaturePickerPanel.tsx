@@ -12,7 +12,7 @@ import { PanelCard, PanelHeader } from '../PanelCard';
 import { useFeaturePickerStore, type FeatureProp } from '../../store/featurePicker';
 import { useColumnLabels } from '../../store/datasetSchemas';
 import { useAssetStateStore } from '../../live/assetState';
-import { ASSET_ID_PROPERTY } from '../../hooks/useAssetColorsMapLibre';
+import { ASSET_ID_PROPERTY } from '../../live/types';
 
 function pickedAssetId(selected: FeatureProp[] | null): string | null {
   return selected?.find((row) => row.id === ASSET_ID_PROPERTY)?.value ?? null;

@@ -10,6 +10,9 @@ import {
   defined,
 } from 'cesium';
 import type { Cartesian2 } from 'cesium';
+import { assetFeatureProperties, withAssetProperties } from '../live/assetFeatures';
+import { ASSET_ID_PROPERTY } from '../live/types';
+import { useAgentLayerStore } from '../store/agentLayers';
 import { useAppStore } from '../store/app';
 import {
   useFeaturePickerStore,
@@ -17,6 +20,32 @@ import {
   propsToRows,
   type FeatureProp,
 } from '../store/featurePicker';
+
+const HIGHLIGHT_COLOR = Color.YELLOW.withAlpha(0.6);
+
+/**
+ * The tile feature the picker painted. One Cesium picker runs at a time, so it
+ * is held here rather than in the hook, where the asset rule can put the
+ * highlight back after a style has repainted every feature.
+ */
+let highlighted: Cesium3DTileFeature | null = null;
+let colorBeforeHighlight: Color | null = null;
+
+export function repaintPickedTileFeature(): void {
+  if (highlighted) highlighted.color = HIGHLIGHT_COLOR;
+}
+
+/**
+ * The rows one picked tile feature shows: its own properties, and under them the
+ * attributes of the ptolemy asset with the same asset id.
+ */
+function tileFeatureRows(feature: Cesium3DTileFeature): FeatureProp[] {
+  const rows = feature.getPropertyIds().map((id) => toRow(id, feature.getProperty(id)));
+  const assetId = feature.getProperty(ASSET_ID_PROPERTY);
+  if (typeof assetId !== 'string') return rows;
+  const layers = useAgentLayerStore.getState().layers;
+  return withAssetProperties(rows, assetFeatureProperties(assetId, layers));
+}
 
 /**
  * Cesium binding for the feature picker (ported from vanilla feature-picker.js).
@@ -30,8 +59,6 @@ export function useFeaturePickerCesium(
   viewerRef: MutableRefObject<Viewer | null>,
 ) {
   const handlerRef = useRef<ScreenSpaceEventHandler | null>(null);
-  const highlightedRef = useRef<Cesium3DTileFeature | null>(null);
-  const originalColorRef = useRef<Color | null>(null);
   // A renderer switch destroys and rebuilds the viewer, so rebind to the new
   // one — a handler left on the old canvas silently stops picking.
   const renderer = useAppStore((s) => s.renderer);
@@ -42,11 +69,10 @@ export function useFeaturePickerCesium(
     if (!viewer || viewer.isDestroyed()) return;
 
     const clearHighlight = () => {
-      const f = highlightedRef.current;
-      if (f) {
-        f.color = originalColorRef.current ?? Color.WHITE;
-        highlightedRef.current = null;
-        originalColorRef.current = null;
+      if (highlighted) {
+        highlighted.color = colorBeforeHighlight ?? Color.WHITE;
+        highlighted = null;
+        colorBeforeHighlight = null;
       }
     };
 
@@ -57,14 +83,10 @@ export function useFeaturePickerCesium(
         clearHighlight();
         const picked = v.scene.pick(click.position);
         if (defined(picked) && picked instanceof Cesium3DTileFeature) {
-          const ids = picked.getPropertyIds();
-          const rows: FeatureProp[] = ids.map((id) => toRow(id, picked.getProperty(id)));
-          useFeaturePickerStore.getState().setSelected(rows);
-          originalColorRef.current = picked.color
-            ? Color.clone(picked.color)
-            : null;
-          picked.color = Color.YELLOW.withAlpha(0.6);
-          highlightedRef.current = picked;
+          useFeaturePickerStore.getState().setSelected(tileFeatureRows(picked));
+          colorBeforeHighlight = picked.color ? Color.clone(picked.color) : null;
+          picked.color = HIGHLIGHT_COLOR;
+          highlighted = picked;
         } else if (defined(picked) && picked.id instanceof Entity) {
           const entity: Entity = picked.id;
           const bag = entity.properties?.getValue(v.clock.currentTime) ?? {};

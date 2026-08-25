@@ -15,6 +15,7 @@ import {
 import { IconTrash } from '@tabler/icons-react';
 import { cameraHashFragment } from '../hooks/useShareLinkHash';
 import { useAgentLayerStore } from '../store/agentLayers';
+import { useTiles3dLayerStore } from '../store/tiles3dLayers';
 import { useAppStore } from '../store/app';
 import {
   agoraErrorText,
@@ -93,6 +94,7 @@ export function LiveShareDialog({
   const canManageDocument = !guest && liveDocumentId === documentId && liveRole === 'edit';
 
   const agentLayers = useAgentLayerStore((state) => state.layers);
+  const tiles3dLayers = useTiles3dLayerStore((state) => state.layers);
   const rule = useLiveStore((state) => state.document.assets[ASSET_RULE_ID]);
 
   const renderer = useAppStore((state) => state.renderer);
@@ -480,7 +482,10 @@ export function LiveShareDialog({
               placeholder="Asset layer"
               value={ruleLayerId || null}
               onChange={(next) => setRuleLayerId(next ?? '')}
-              data={agentLayers.map((layer) => ({ value: layer.id, label: layer.name }))}
+              data={[...agentLayers, ...tiles3dLayers].map((layer) => ({
+                value: layer.id,
+                label: layer.name,
+              }))}
               data-testid="asset-rule-layer"
             />
             <TextInput

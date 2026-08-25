@@ -20,9 +20,11 @@ import { useBuildingsMapLibre } from '../hooks/useBuildingsMapLibre';
 import { useHeatmapsMapLibre } from '../hooks/useHeatmapsMapLibre';
 import { useAgentLayersCesium } from '../hooks/useAgentLayersCesium';
 import { useAgentLayersMapLibre } from '../hooks/useAgentLayersMapLibre';
+import { useAssetColorsCesium } from '../hooks/useAssetColorsCesium';
 import { useAssetColorsMapLibre } from '../hooks/useAssetColorsMapLibre';
 import { useAgentLayersLeaflet } from '../hooks/useAgentLayersLeaflet';
 import { useOgcLayersCesium } from '../hooks/useOgcLayersCesium';
+import { useTilesets3dCesium } from '../hooks/useTilesets3dCesium';
 import { useOgcLayersMapLibre } from '../hooks/useOgcLayersMapLibre';
 import { useDrawCesium } from '../hooks/useDrawCesium';
 import { useDrawMapLibre } from '../hooks/useDrawMapLibre';
@@ -140,9 +142,13 @@ export function ViewerArea() {
   useAgentLayersMapLibre(maplibreRef);
   useAgentLayersLeaflet(leafletRef);
 
+  // 3D models, whether one browser added them or a live document carries them
+  useTilesets3dCesium(cesiumRef);
+
   // The live document's threshold rule repaints the asset layer the agent hook
   // just drew, so it runs after it.
   useAssetColorsMapLibre(maplibreRef);
+  useAssetColorsCesium();
 
   // OGC/XYZ services the user added (raster imagery; no deck.gl equivalent)
   useOgcLayersCesium(cesiumRef);

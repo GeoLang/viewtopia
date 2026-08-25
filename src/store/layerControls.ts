@@ -1,6 +1,7 @@
 import { useAgentLayerStore } from './agentLayers';
 import { useAppStore } from './app';
 import { useOgcLayerStore } from './ogcLayers';
+import { useTiles3dLayerStore } from './tiles3dLayers';
 
 /**
  * One id can sit both in the layer list and in the store a renderer draws from
@@ -13,6 +14,7 @@ export function setLayerVisible(id: string, visible: boolean): void {
   useAppStore.getState().setLayerVisible(id, visible);
   useAgentLayerStore.getState().setLayerVisible(id, visible);
   useOgcLayerStore.getState().setLayerVisible(id, visible);
+  useTiles3dLayerStore.getState().setLayerVisible(id, visible);
 }
 
 // an agent layer's opacity is the fill opacity of its features, which is a

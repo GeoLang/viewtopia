@@ -20,6 +20,7 @@ import {
   useOgcLayerStore,
   type OGCLayer,
 } from '../store/ogcLayers';
+import { useTiles3dLayerStore, type Tiles3dLayer } from '../store/tiles3dLayers';
 import { agoraErrorText, attachmentSourceUrl, uploadAttachment } from './api';
 import { decodeDataUrl, MAXIMUM_ATTACHMENT_BYTES } from './attachments';
 import { compareFractionalIndex, generateIndexBetween } from './fractionalIndex';
@@ -35,6 +36,7 @@ import {
   type LiveLayerServiceSource,
   type LiveLayerSource,
   type LiveLayerStyleOverrides,
+  type LiveLayerTiles3dSource,
   type LiveLayerUrlSource,
   type LiveOperation,
 } from './types';
@@ -44,6 +46,7 @@ interface LocalState {
   agentLayers: AgentLayer[];
   overlays: AgentRasterLayer[];
   ogcLayers: OGCLayer[];
+  tiles3dLayers: Tiles3dLayer[];
   annotations: Annotation[];
   bookmarks: Bookmark[];
 }
@@ -52,6 +55,7 @@ const MATERIALIZED_LAYER_TYPE: LayerItem['type'] = 'geojson';
 const OVERLAY_LAYER_TYPE: LayerItem['type'] = 'raster';
 /** what a service draws as, until a PMTiles archive says it is vector */
 const SERVICE_LAYER_TYPE: LayerItem['type'] = 'raster';
+const TILES_3D_LAYER_TYPE: LayerItem['type'] = 'tiles3d';
 
 /**
  * How far an overlay's bitmap has got towards the document. `unavailable` is
@@ -456,6 +460,54 @@ function syncOgcLayersToDocument(layers: OGCLayer[]): void {
   sendOperations(operations);
 }
 
+function tiles3dLayerEntry(
+  layer: Tiles3dLayer,
+  order: string,
+  source: LiveLayerTiles3dSource,
+): LiveLayerEntry {
+  return {
+    layerId: layer.id,
+    name: layer.name,
+    type: TILES_3D_LAYER_TYPE,
+    visible: layer.visible,
+    opacity: 1,
+    order,
+    source,
+  };
+}
+
+/**
+ * A 3D tileset travels as its tileset.json url, so every member loads the same
+ * tiles for themselves and the model is a layer of the map rather than a
+ * primitive one browser put in its own scene.
+ */
+function syncTiles3dLayersToDocument(layers: Tiles3dLayer[]): void {
+  const entries = useLiveStore.getState().document.layers;
+  const present = new Set(layers.map((layer) => layer.id));
+  const operations: LiveOperation[] = [];
+
+  for (const [id, entry] of Object.entries(entries)) {
+    if (entry.source?.kind !== 'tiles3d') continue;
+    if (present.has(id) || !documentSources.has(id)) continue;
+    documentSources.delete(id);
+    operations.push({ key: documentKey('layers', id), value: null });
+  }
+
+  let previousOrder = lastOrder(entries);
+  for (const layer of layers) {
+    const source: LiveLayerTiles3dSource = { kind: 'tiles3d', url: layer.url };
+    const current = entries[layer.id];
+    const order = current?.order ?? generateIndexBetween(previousOrder, null);
+    const entry = tiles3dLayerEntry(layer, order, source);
+    if (current && sameLayerEntry(current, entry)) continue;
+    if (!current) previousOrder = order;
+    documentSources.set(layer.id, source);
+    operations.push({ key: documentKey('layers', layer.id), value: entry });
+  }
+
+  sendOperations(operations);
+}
+
 function syncAnnotationsToDocument(annotations: Annotation[]): void {
   const entries = useLiveStore.getState().document.annotations;
   const listed = new Set(annotations.map((annotation) => annotation.id));
@@ -614,6 +666,31 @@ function materializeOgcLayer(entry: LiveLayerEntry, source: LiveLayerServiceSour
   });
 }
 
+/** Whether the tileset on the globe already says what the entry says. */
+function tiles3dLayerMatchesEntry(entry: LiveLayerEntry, source: LiveLayerTiles3dSource): boolean {
+  const layer = useTiles3dLayerStore
+    .getState()
+    .layers.find((candidate) => candidate.id === entry.layerId);
+  return (
+    layer !== undefined &&
+    layer.name === entry.name &&
+    layer.url === source.url &&
+    layer.visible === entry.visible
+  );
+}
+
+/** A peer's model, kept under the document's id so a later write replaces it. */
+function materializeTiles3dLayer(entry: LiveLayerEntry, source: LiveLayerTiles3dSource): void {
+  applyFromDocument(() =>
+    useTiles3dLayerStore.getState().putLayer({
+      id: entry.layerId,
+      name: entry.name,
+      url: source.url,
+      visible: entry.visible,
+    }),
+  );
+}
+
 async function fetchFeatureCollection(url: string): Promise<GeoJSON.FeatureCollection | null> {
   try {
     const response = await fetch(url);
@@ -655,6 +732,7 @@ function applySourcesFromDocument(document: LiveDocument): void {
     applyFromDocument(() => {
       if (known.kind === 'image') store.removeRasterLayer(id);
       else if (known.kind === 'service') useOgcLayerStore.getState().removeLayer(id);
+      else if (known.kind === 'tiles3d') useTiles3dLayerStore.getState().removeLayer(id);
       else store.removeLayer(id);
     });
   }
@@ -672,6 +750,11 @@ function applySourcesFromDocument(document: LiveDocument): void {
     if (source.kind === 'service') {
       documentSources.set(entry.layerId, source);
       if (!ogcLayerMatchesEntry(entry, source)) materializeOgcLayer(entry, source);
+      continue;
+    }
+    if (source.kind === 'tiles3d') {
+      documentSources.set(entry.layerId, source);
+      if (!tiles3dLayerMatchesEntry(entry, source)) materializeTiles3dLayer(entry, source);
       continue;
     }
     if (sameJson(documentSources.get(entry.layerId), source)) continue;
@@ -739,6 +822,7 @@ function publishLocalState(local: LocalState): void {
   syncAgentLayerSourcesToDocument(local.agentLayers);
   syncOverlaysToDocument(local.overlays);
   syncOgcLayersToDocument(local.ogcLayers);
+  syncTiles3dLayersToDocument(local.tiles3dLayers);
   syncStyleOverridesToDocument();
   syncAnnotationsToDocument(local.annotations);
   syncBookmarksToDocument(local.bookmarks);
@@ -760,6 +844,7 @@ export function captureStateForNewDocument(): void {
     agentLayers: agent.layers,
     overlays: agent.rasterLayers,
     ogcLayers: useOgcLayerStore.getState().layers,
+    tiles3dLayers: useTiles3dLayerStore.getState().layers,
     annotations: useAnnotationStore.getState().annotations,
   };
 }
@@ -798,6 +883,11 @@ export function startDocumentBridge(): () => void {
     outbound(() => syncOgcLayersToDocument(state.layers));
   });
 
+  const unsubscribeTiles3dLayers = useTiles3dLayerStore.subscribe((state, previous) => {
+    if (state.layers === previous.layers) return;
+    outbound(() => syncTiles3dLayersToDocument(state.layers));
+  });
+
   const unsubscribeLive = useLiveStore.subscribe((state, previous) => {
     if (state.documentId === null) {
       if (previous.documentId !== null) {
@@ -830,6 +920,7 @@ export function startDocumentBridge(): () => void {
     unsubscribeAnnotations();
     unsubscribeAgentLayers();
     unsubscribeOgcLayers();
+    unsubscribeTiles3dLayers();
     unsubscribeLive();
   };
 }

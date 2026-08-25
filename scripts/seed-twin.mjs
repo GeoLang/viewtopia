@@ -1,6 +1,8 @@
 // Seed the digital twin demo: twelve point assets in ptolemy, a fresh agora
 // document carrying them as a live layer, a threshold rule on temperature, and
-// a feed token a producer can send readings with.
+// a feed token a producer can send readings with. Given a tileset url the
+// document also carries the tiled model, and the rule colours its tile features
+// instead of the points.
 //
 // Talks to ptolemy (PTOLEMY_URL, default http://localhost:3000) and to agora
 // through the SPA's proxy (AGORA_URL, default http://localhost:5174/agora).
@@ -30,6 +32,9 @@ const BRANCH_NAME = 'main';
 /** The layer id in the live document, which is also the agent layer id on the map. */
 const LAYER_ID = 'twin-assets';
 
+/** The 3D tileset layer, whose tile features carry the same asset ids. */
+const MODEL_LAYER_ID = 'twin-model';
+
 const DOCUMENT_NAME = 'Twin site';
 const FEED_NAME = 'site sensors';
 const FEED_INTERVAL_SECONDS = 2;
@@ -41,20 +46,24 @@ const ASSET_SPACING_DEGREES = 0.0005;
 
 const ASSET_TYPES = ['chiller', 'pump', 'air handler'];
 
-const TEMPERATURE_RULE = {
-  layerId: LAYER_ID,
-  kind: 'temperature',
-  breakpoints: [
-    { value: 0, color: '#2ecc71' },
-    { value: 25, color: '#f1c40f' },
-    { value: 30, color: '#e74c3c' },
-  ],
-  defaultColor: '#95a5a6',
-  offlineColor: '#7f8c8d',
-};
+function temperatureRule(layerId) {
+  return {
+    layerId,
+    kind: 'temperature',
+    breakpoints: [
+      { value: 0, color: '#2ecc71' },
+      { value: 25, color: '#f1c40f' },
+      { value: 30, color: '#e74c3c' },
+    ],
+    defaultColor: '#95a5a6',
+    offlineColor: '#7f8c8d',
+  };
+}
 
 /** generateIndexBetween(null, null): the only layer in the document sorts first. */
 const FIRST_LAYER_ORDER = 'V';
+/** generateIndexBetween('V', null): the model sorts after the assets. */
+const SECOND_LAYER_ORDER = 'l';
 
 /** Marker for the token on a websocket handshake, see src/lib/apiAuth.ts. */
 const BEARER_SUBPROTOCOL = 'bearer';
@@ -65,18 +74,31 @@ export function assetId(index) {
   return `TWIN-${String(index + 1).padStart(2, '0')}`;
 }
 
-/** The twelve assets as GeoJSON, laid out in a grid from the region anchor. */
-export function buildTwinFeatures([anchorLng, anchorLat]) {
+export function assetName(index) {
+  return `Unit ${index + 1}`;
+}
+
+/** The ids the demo uses when the caller has none of its own. */
+export function defaultAssetIds() {
+  return Array.from({ length: ASSET_COUNT }, (_entry, index) => assetId(index));
+}
+
+/**
+ * The assets as GeoJSON, laid out in a grid from the region anchor. The ids come
+ * from the caller when the tiles carry ids of their own, and a ptolemy feature
+ * and a tile feature are the same asset when they share one.
+ */
+export function buildTwinFeatures([anchorLng, anchorLat], assetIds = defaultAssetIds()) {
   const features = [];
-  for (let index = 0; index < ASSET_COUNT; index += 1) {
+  for (let index = 0; index < assetIds.length; index += 1) {
     const lng = anchorLng + (index % ASSETS_PER_ROW) * ASSET_SPACING_DEGREES;
     const lat = anchorLat + Math.floor(index / ASSETS_PER_ROW) * ASSET_SPACING_DEGREES;
     features.push({
       type: 'Feature',
       geometry: { type: 'Point', coordinates: [lng, lat] },
       properties: {
-        asset_id: assetId(index),
-        name: `Unit ${index + 1}`,
+        asset_id: assetIds[index],
+        name: assetName(index),
         type: ASSET_TYPES[index % ASSET_TYPES.length],
       },
     });
@@ -156,28 +178,71 @@ async function seedAssetFeatures(api, features) {
   return { datasetId, branchId, inserted: operations.length };
 }
 
+function seedToken() {
+  const token = mintToken({ role: 'editor', sub: SEED_SUBJECT });
+  if (!token) throw new Error('PLATFORM_JWT_SECRET is not set, so agora would refuse the seed');
+  return token;
+}
+
+function createDocument(agoraUrl, token, projectId) {
+  return agoraRequest(agoraUrl, '/documents', token, {
+    method: 'POST',
+    body: JSON.stringify(projectId ? { name: DOCUMENT_NAME, projectId } : { name: DOCUMENT_NAME }),
+  });
+}
+
+/** The tiled model as a layer every member loads for themselves. */
+export function modelLayerEntry(tilesetUrl) {
+  return {
+    layerId: MODEL_LAYER_ID,
+    name: 'Twin model',
+    type: 'tiles3d',
+    visible: true,
+    opacity: 1,
+    order: SECOND_LAYER_ORDER,
+    source: { kind: 'tiles3d', url: tilesetUrl },
+  };
+}
+
+/**
+ * A document carrying the model and nothing else, for a caller that has to read
+ * the asset ids off the tiles before it can seed the assets themselves.
+ */
+export async function seedTwinModel({
+  agoraUrl = process.env.AGORA_URL ?? DEFAULT_AGORA_URL,
+  tilesetUrl,
+  projectId,
+} = {}) {
+  const token = seedToken();
+  const document = await createDocument(agoraUrl, token, projectId);
+  await sendOperations(agoraUrl, document.id, token, [
+    { key: `layers/${MODEL_LAYER_ID}`, value: modelLayerEntry(tilesetUrl) },
+  ]);
+  return { documentId: document.id, modelLayerId: MODEL_LAYER_ID };
+}
+
 /**
  * Writes the whole demo and answers what a test needs to drive it. The document
  * is new on every run, so readings from an earlier run never colour this one.
+ * With a tileset url the model is a layer of it too, and the rule then names
+ * the model, because the tile features carry the same asset ids as the points.
  */
 export async function seedTwin({
   ptolemyUrl,
   agoraUrl = process.env.AGORA_URL ?? DEFAULT_AGORA_URL,
   projectId,
+  tilesetUrl,
+  assetIds = defaultAssetIds(),
 } = {}) {
   const base = ptolemyUrl ? `${ptolemyUrl.replace(/\/$/, '')}/api/v1` : undefined;
   const api = ptolemyClient(SEED_SUBJECT, base);
-  const token = mintToken({ role: 'editor', sub: SEED_SUBJECT });
-  if (!token) throw new Error('PLATFORM_JWT_SECRET is not set, so agora would refuse the seed');
+  const token = seedToken();
 
   const { anchor } = await regionAnchor();
-  const features = buildTwinFeatures(anchor);
+  const features = buildTwinFeatures(anchor, assetIds);
   const dataset = await seedAssetFeatures(api, features);
 
-  const document = await agoraRequest(agoraUrl, '/documents', token, {
-    method: 'POST',
-    body: JSON.stringify(projectId ? { name: DOCUMENT_NAME, projectId } : { name: DOCUMENT_NAME }),
-  });
+  const document = await createDocument(agoraUrl, token, projectId);
 
   const layerEntry = {
     layerId: LAYER_ID,
@@ -188,9 +253,11 @@ export async function seedTwin({
     order: FIRST_LAYER_ORDER,
     source: { kind: 'geojson', geojson: { type: 'FeatureCollection', features } },
   };
+  const ruleLayerId = tilesetUrl ? MODEL_LAYER_ID : LAYER_ID;
   await sendOperations(agoraUrl, document.id, token, [
     { key: `layers/${LAYER_ID}`, value: layerEntry },
-    { key: 'assets/rule', value: TEMPERATURE_RULE },
+    ...(tilesetUrl ? [{ key: `layers/${MODEL_LAYER_ID}`, value: modelLayerEntry(tilesetUrl) }] : []),
+    { key: 'assets/rule', value: temperatureRule(ruleLayerId) },
   ]);
 
   const feed = await agoraRequest(agoraUrl, `/documents/${document.id}/feeds`, token, {
@@ -204,6 +271,8 @@ export async function seedTwin({
     feedToken: feed.token,
     assetIds: features.map((feature) => feature.properties.asset_id),
     layerId: LAYER_ID,
+    ruleLayerId,
+    ...(tilesetUrl ? { modelLayerId: MODEL_LAYER_ID } : {}),
     dataset,
   };
 }

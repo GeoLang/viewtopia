@@ -17,13 +17,13 @@ import {
   IconRefresh,
   IconWorldUpload,
 } from '@tabler/icons-react';
-import { Cesium3DTileset } from 'cesium';
 import type { Viewer } from 'cesium';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { getAuthToken } from '../../features/auth/store';
 import { noticeRefusal } from '../../lib/apiAuth';
 import { useAppStore } from '../../store/app';
+import { loadedTileset, useTiles3dLayerStore } from '../../store/tiles3dLayers';
 
 // nginx /api/ is ptolemy; /tiles/ rewrites to tiletopia /api/
 const API = '/tiles/v1';
@@ -46,10 +46,6 @@ interface Asset {
 function authHeaders(base: Record<string, string> = {}): Record<string, string> {
   const token = getAuthToken();
   return token ? { ...base, Authorization: `Bearer ${token}` } : base;
-}
-
-function firstLine(e: unknown): string {
-  return (e instanceof Error ? e.message : String(e)).split('\n')[0];
 }
 
 function parseAsset(raw: unknown): Asset | null {
@@ -116,7 +112,7 @@ export function AssetsPanel({ onClose }: { onClose: () => void }) {
   const [needsSignIn, setNeedsSignIn] = useState(false);
   const [uploadPct, setUploadPct] = useState<number | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
-  const [added, setAdded] = useState<string[]>([]);
+  const added = useTiles3dLayerStore((s) => s.layers);
 
   const timers = useRef(new Map<string, ReturnType<typeof setInterval>>());
   const renderer = useAppStore((s) => s.renderer);
@@ -303,18 +299,23 @@ export function AssetsPanel({ onClose }: { onClose: () => void }) {
     setAssets((prev) => prev.filter((a) => a.id !== id));
   };
 
-  // tileset.json and its tiles are public reads on the server, so no token here
+  // the layer is what draws the model, on this globe and on every member's of a
+  // live map. tileset.json and its tiles are public reads, so no token here
   const addToGlobe = async (asset: Asset) => {
     if (!viewer) return;
     setError(null);
-    try {
-      const tileset = await Cesium3DTileset.fromUrl(`${API}/assets/${asset.id}/tileset.json`);
-      viewer.scene.primitives.add(tileset);
-      setAdded((prev) => [...prev, asset.id]);
-      await viewer.flyTo(tileset);
-    } catch (e) {
-      setError(`${asset.name} failed to load: ${firstLine(e)}`);
+    useTiles3dLayerStore.getState().putLayer({
+      id: asset.id,
+      name: asset.name,
+      url: `${API}/assets/${asset.id}/tileset.json`,
+      visible: true,
+    });
+    const tileset = await loadedTileset(asset.id);
+    if (!tileset) {
+      setError(`${asset.name} failed to load. Its layer row says why.`);
+      return;
     }
+    await viewer.flyTo(tileset);
   };
 
   return (
@@ -447,7 +448,9 @@ export function AssetsPanel({ onClose }: { onClose: () => void }) {
                           color="violet"
                           aria-label={`Add ${asset.name} to globe`}
                           disabled={
-                            asset.status !== 'ready' || !viewer || added.includes(asset.id)
+                            asset.status !== 'ready' ||
+                            !viewer ||
+                            added.some((layer) => layer.id === asset.id)
                           }
                           onClick={() => void addToGlobe(asset)}
                         >

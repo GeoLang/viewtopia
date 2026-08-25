@@ -14,11 +14,11 @@ vi.mock('../../src/viewer/registry', () => ({
   getActiveDeck: vi.fn(() => null),
 }));
 
-import { Cesium3DTileset } from 'cesium';
 import { AssetsPanel } from '../../src/components/tools/AssetsPanel';
 import { getActiveCesiumViewer } from '../../src/viewer/registry';
 import { useAppStore } from '../../src/store/app';
 import { useAuthStore } from '../../src/features/auth/store';
+import { useTiles3dLayerStore } from '../../src/store/tiles3dLayers';
 
 window.matchMedia = vi.fn().mockReturnValue({
   matches: false,
@@ -124,6 +124,7 @@ beforeEach(() => {
   globalThis.fetch = fetchMock as never;
   vi.mocked(getActiveCesiumViewer).mockReturnValue(null as never);
   useAppStore.setState({ renderer: 'cesium' });
+  useTiles3dLayerStore.setState({ layers: [], loaded: {} });
   useAuthStore.setState({ token: 'jwt-token', loggedIn: true });
   respond(() => jsonOk([]));
 });
@@ -308,7 +309,7 @@ describe('AssetsPanel', () => {
     expect(fetchMock.mock.calls.map((c) => c[0])).not.toContain('/tiles/v1/jobs/null');
   });
 
-  it('loads a tiled asset into the globe from its tileset url', async () => {
+  it('adds a tiled asset as a layer, and flies to it once it is drawn', async () => {
     const viewer = fakeViewer();
     vi.mocked(getActiveCesiumViewer).mockReturnValue(viewer as never);
     respond(() => jsonOk([READY]));
@@ -318,11 +319,23 @@ describe('AssetsPanel', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Add quarry.las to globe' }));
     });
 
-    expect(Cesium3DTileset.fromUrl).toHaveBeenCalledWith('/tiles/v1/assets/a1b2/tileset.json');
-    expect(viewer.scene.primitives.add).toHaveBeenCalledWith({
-      tileset: '/tiles/v1/assets/a1b2/tileset.json',
+    expect(useTiles3dLayerStore.getState().layers).toEqual([
+      {
+        id: 'a1b2',
+        name: 'quarry.las',
+        url: '/tiles/v1/assets/a1b2/tileset.json',
+        visible: true,
+      },
+    ]);
+    // the button says the layer is there, whether or not the tiles have loaded
+    expect(screen.getByRole('button', { name: 'Add quarry.las to globe' })).toBeDisabled();
+    expect(viewer.flyTo).not.toHaveBeenCalled();
+
+    const tileset = { boundingSphere: 'sphere' };
+    await act(async () => {
+      useTiles3dLayerStore.getState().setLoaded('a1b2', tileset as never);
     });
-    expect(viewer.flyTo).toHaveBeenCalled();
+    expect(viewer.flyTo).toHaveBeenCalledWith(tileset);
   });
 
   it('deletes only after the confirmation step', async () => {

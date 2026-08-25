@@ -55,11 +55,22 @@ export interface LiveLayerServiceSource {
   url: string;
 }
 
+/**
+ * A 3D Tiles tileset on the globe, as the tileset.json url every member loads
+ * for themselves. The tiles carry each element's `asset_id`, so the asset rule
+ * colours them the way it colours a 2D feature.
+ */
+export interface LiveLayerTiles3dSource {
+  kind: 'tiles3d';
+  url: string;
+}
+
 export type LiveLayerSource =
   | LiveLayerInlineSource
   | LiveLayerUrlSource
   | LiveLayerImageSource
-  | LiveLayerServiceSource;
+  | LiveLayerServiceSource
+  | LiveLayerTiles3dSource;
 
 /**
  * Headroom under agora's 64KiB per-operation cap, measured over the whole
@@ -163,6 +174,12 @@ export interface AssetRule {
 
 /** The document holds one rule, under this id. */
 export const ASSET_RULE_ID = 'rule';
+
+/**
+ * The property carrying the asset id, never a feature id: ptolemy writes it on
+ * the feature and the mesh tiler writes it on the tile feature.
+ */
+export const ASSET_ID_PROPERTY = 'asset_id';
 
 /** One value a feed sent for one asset. */
 export interface AssetReading {

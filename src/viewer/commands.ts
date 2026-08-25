@@ -12,12 +12,7 @@
  * styling (style_by_*), and tool-panel commands
  * (measure, annotate, analysis, weather, …) which open the matching panel.
  */
-import {
-  Cartesian3,
-  Color,
-  Math as CesiumMath,
-  Cesium3DTileset,
-} from 'cesium';
+import { Cartesian3, Color, Math as CesiumMath } from 'cesium';
 import { HexagonLayer, ScreenGridLayer } from '@deck.gl/aggregation-layers';
 import { ArcLayer, ScatterplotLayer } from '@deck.gl/layers';
 import type { Layer } from '@deck.gl/core';
@@ -30,6 +25,7 @@ import { useAgentLayerStore, toFeatureCollection } from '../store/agentLayers';
 import { useDeckLayersStore } from '../hooks/deckLayers';
 import { showHeatmap } from '../lib/mapHeatmap';
 import { useChatStore } from '../store/chat';
+import { loadedTileset, useTiles3dLayerStore } from '../store/tiles3dLayers';
 import { colorByHeight, colorByClassification, colorByProperty } from './tileStyles';
 import { useMeasureStore, type MeasureMode } from '../store/measure';
 
@@ -170,20 +166,23 @@ const handlers: Record<string, Handler> = {
   load_tileset: async (p) => {
     const viewer = getActiveCesiumViewer();
     if (!viewer || typeof p.url !== 'string') return;
-    try {
-      const tileset = await Cesium3DTileset.fromUrl(p.url);
-      viewer.scene.primitives.add(tileset);
-      await viewer.flyTo(tileset);
-    } catch (e) {
-      console.error('load_tileset: failed', e);
-      // the command draws a Cesium primitive and no Layers panel row, so there
-      // is no row to carry the reason
+    const id = crypto.randomUUID();
+    useTiles3dLayerStore.getState().putLayer({
+      id,
+      name: typeof p.name === 'string' ? p.name : 'Tileset',
+      url: p.url,
+      visible: true,
+    });
+    const tileset = await loadedTileset(id);
+    if (!tileset) {
       notifications.show({
         title: 'Could not load tileset',
-        message: e instanceof Error ? e.message : 'the tileset did not load',
+        message: 'the tileset did not load, see its layer row',
         color: 'red',
       });
+      return;
     }
+    await viewer.flyTo(tileset);
   },
 
   screenshot: () => {

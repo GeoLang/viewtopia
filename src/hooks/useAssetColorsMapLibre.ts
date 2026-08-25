@@ -3,12 +3,9 @@ import type { MutableRefObject } from 'react';
 import type maplibregl from 'maplibre-gl';
 import { useAssetStateStore, colorForAsset, type AssetState } from '../live/assetState';
 import { useLiveStore } from '../live/liveStore';
-import { ASSET_RULE_ID, type AssetRule } from '../live/types';
+import { ASSET_ID_PROPERTY, ASSET_RULE_ID, type AssetRule } from '../live/types';
 
 const PREFIX = 'agent-layer-';
-
-/** The feature property carrying the asset id, written by ptolemy, never a feature id. */
-export const ASSET_ID_PROPERTY = 'asset_id';
 
 /** The layers useAgentLayersMapLibre adds per source, and the colour each paints. */
 const COLOR_PAINT = [
