@@ -326,17 +326,22 @@ test.describe('Analysis panels', () => {
     expect(await namedEntityCount(page, 'viewshed-result')).toBe(-1);
     await panel.getByRole('button', { name: 'Compute' }).click();
 
-    // the backend polygon lands on the scene as one filled entity
+    // tiletopia answers with one MultiPolygon member per visible cell, so the
+    // entity count is the drawn cell count and matches the feature's readout
     await expect
       .poll(() => namedEntityCount(page, 'viewshed-result'), { timeout: 30000 })
-      .toBe(1);
-    expect(
-      await page.evaluate(
-        () =>
-          !!window.__viewtopiaViewer.dataSources.getByName('viewshed-result')[0].entities.values[0]
-            .polygon,
-      ),
-    ).toBe(true);
+      .toBeGreaterThan(0);
+    const drawn = await page.evaluate(() => {
+      const entities =
+        window.__viewtopiaViewer.dataSources.getByName('viewshed-result')[0].entities.values;
+      return {
+        count: entities.length,
+        polygons: entities.filter((e) => e.polygon).length,
+        visibleCells: entities[0].properties.visible_cells.getValue(),
+      };
+    });
+    expect(drawn.polygons).toBe(drawn.count);
+    expect(drawn.visibleCells).toBe(drawn.count);
 
     // the result is framed by a camera flight, and the panel only takes ownership
     // of the layer once that flight resolves
