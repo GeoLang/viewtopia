@@ -178,14 +178,27 @@ take effect with `nginx -s reload` instead of a force-recreate.
   tiletopia tracks terrano's master branch: its terrain analysis (slope, aspect,
   hillshade, hydrology, viewshed) and elevation reads come from there, so terrano
   pushes before tiletopia builds.
+- tiletopia picks a tiler by file extension. Meshes (glTF, glb, obj, FBX, IFC, GML) go through
+  this repository's own readers and mesh tiler, and only GeoJSON, GeoPackage and KML reach
+  mago-3d-tiler, a jar named by `TILETOPIA_MAGO_JAR`, because the native readers take no vector
+  input. A source whose own coordinates are z-up rotates the written glTF, since the tileset's
+  frame is the ENU one the root transform names.
+- tiletopia builds a PMTiles archive by running `tippecanoe` as a subprocess with a memory
+  limit, a timeout, a work-directory quota and its stderr captured into the job record, which is
+  the only place it reports progress or explains a refusal. Linking it is not an option: it
+  builds no library, its entry point takes `sqlite3 *` and STL types across what would be the
+  ABI, it calls `exit()` throughout, and its configuration is global mutable state. ptolemy's own
+  MVT path stays live from PostGIS, because an archive is stale the moment someone commits and
+  editable data is what tippecanoe cannot serve at all.
 
 ### 2.3 Authorization model
 
 One HS256 secret signs `{sub, exp, role}` tokens every service accepts, so a user is one
 subject across the platform. The tenancy unit is that subject and the resources it owns or was
-granted: there is no org boundary above it. `008_tenancy.sql` creates organizations,
-org_members and `datasets.org_id`, and nothing enforcing reads them, only the informational
-`/check` routes, which is why `/check` can answer allowed where a write refuses.
+granted: there is no org boundary above it. The organizations, org_members and
+`datasets.org_id` that `008_tenancy.sql` created are dropped again by migration 028, because
+nothing enforcing ever read them and the `org_members` fallback in the informational `/check`
+routes could answer allowed where the write ladder refuses.
 
 In ptolemy, multi-tenancy is enforced in two symmetric middleware layers over the same id
 resolution.
@@ -244,6 +257,38 @@ fixtures reach, which is what per-route query variants are for. Routes needing a
 extension answer 501 rather than 500: MobilityDB for the five trajectory analytics routes,
 pgvector for the four similarity routes.
 
+**Workspaces, projects and roles.** ptolemy holds workspace and project names, descriptions,
+memberships, owner/editor/viewer roles and invitation records. ViewTopia reads and mutates them
+over authenticated `/api/v1` calls and keeps none of that metadata in IndexedDB. Any signed-in
+user creates a workspace and becomes its owner, a workspace editor creates projects and becomes
+their direct owner, project access is inherited from the workspace or granted directly, and the
+effective role is the highest of the two. Owners manage direct members, pending invite links and
+deletion, editors update metadata, viewers read and switch. An invite link is stored as a token hash
+alone, grants editor or viewer and never owner, and carries the expiry its creator names, which
+ViewTopia sets seven days out (`SHARE_LINK_EXPIRY_DAYS`). Owners also add a known user by JWT
+subject, since there is no user directory. ptolemy emails the link when `SMTP_URL`, `SMTP_FROM`
+and `PUBLIC_BASE_URL` are set, and the share dialog offers the email field only when the server
+reports email configured. A project's shared state is `project_state(project_id, key, value jsonb,
+updated_at, updated_by)` behind `GET/PUT /api/v1/projects/{id}/state/{key}`, viewers reading and
+editors writing, capped at 5 MB per value: ViewTopia keeps its map snapshot under `map` and its
+dashboards under `dashboards`. The value is opaque to the server, so a snapshot shape change
+needs no migration. A project is also a third attachment owner beside a dataset and a feature,
+in the same one-owner CHECK, which is what carries overlay bitmaps.
+
+**Project roles reach datasets and documents.** A ptolemy dataset carries a nullable
+`project_id`. Attaching one needs dataset admin plus project editor or owner and makes the
+dataset private, detaching never makes it public again, and the read, write and admin checks take
+the max of the explicit grants and the project role, mapping viewer to read, editor to write and
+owner to admin. An agora document carries the same nullable `project_id`, set at creation or by a
+document editor, and access to a project-linked document is the max of its members row and the
+project role, mapping viewer to view and both editor and owner to edit. agora resolves that role
+by calling ptolemy `GET /api/v1/projects/{id}` with the caller's own bearer, cached 30 seconds per
+document and user, so a revoked membership can still reach the document for that long. ptolemy
+unreachable, refusing, or unconfigured (`PTOLEMY_URL` unset) falls back to the members row alone.
+`GET /documents` folds the role in with one call to ptolemy's `/api/v1/projects` for the whole
+listing, so the Live picker offers a project editor the documents their role reaches, and
+ViewTopia sends the active project id when it creates a live document.
+
 **Invariants:**
 - An external dataset is read-only. Writes answer 409, attachment uploads included. Exempting
   attachments would mean threading a flag through the ladder for a workflow nobody has, and
@@ -276,6 +321,16 @@ pgvector for the four similarity routes.
   schedules persisted in SQLite, a worker claiming due jobs each tick, and only
   actions with real entry points behind them (re-tile an asset, prune export files,
   prune settled job rows). Three consecutive failures disable a job.
+- tiletopia audits from one middleware inside `auth_middleware`, so a request with no token or
+  a bad one never reaches it. Only the routes listed in `AUDITED_ROUTES` are recorded and only
+  when they answered 2xx, because recording refusals would let a caller fill the table by being
+  refused in a loop and recording every mutating method would bury the data writes under this
+  server's many compute-only POSTs. A row is id, timestamp, user (`unidentified` when auth is
+  off), action, resource type and id, details, success, and optional ip and org. The resource id
+  is the last template parameter's value, which is empty for a create. An audit write that fails
+  is logged and dropped, since the mutation has already happened. Reading the log is
+  instance-admin only, capped at 1000 rows a read, and an hourly batched sweep drops rows past
+  `TILETOPIA_AUDIT_RETENTION_DAYS` (default 30, 0 keeps everything).
 - ptolemy audits every mutating route from one middleware inside the write gate
   (actor, method plus matched template, resource type, target id; refusals and reads
   are not recorded, an audit failure never fails the user's write). Webhooks are an
@@ -327,13 +382,16 @@ approval shows its reason in the panel and runs nothing. The manifest downloads 
 which reproduces the run exactly through the same executor, so no generated script can drift
 from what ran. A failed run still records its steps: `execute` returns progress alongside the
 error, so the record shows the steps that finished, the one that died with its own message,
-and the ones never reached.
+and the ones never reached. Every plan step carries `runs_caller_code`, read from the tool
+module's own `TOOL_RUNS_CALLER_CODE` declaration, which only `sql_query` sets, and the plan panel
+labels such a step before approval rather than gating it.
 
 **Identity flows end to end.** The viewer sends its platform JWT to `/chat/agui`, sibyl
 carries it per run (in memory only, never persisted or logged), geolang's tool executor puts
 it in a ContextVar, and its ptolemy/tiletopia/geodukt clients attach it. `PTOLEMY_API_TOKEN`
-survives only as the headless fallback. geodukt validates the same secret, gates `POST /run`
-to editor/admin and records the caller's `sub` on the run. `/validate`, `/operations` and
+survives only as the headless fallback. geodukt validates the same secret, takes either an
+editor-or-admin platform token or a role-free tool token carrying the exact `geodukt:run` scope
+on `POST /run`, and records the caller's `sub` on the run. `/validate`, `/operations` and
 `/health` stay open so headless planning and the evals still work.
 
 **The manifest format is flat.** A step's parameters sit directly under the transform, so a
@@ -498,6 +556,13 @@ Tools" setting with a Preview badge, so there are no dead buttons in the default
 - Choropleth bakes the class colour into each feature as simplestyle properties, which Cesium
   already honours per feature, so MapLibre and Leaflet need only a few lines each. It is offered
   only for a numeric field with more than one distinct value.
+- The Space-Time panel draws tracks as a cube, time on the vertical axis, with a sweep plane,
+  ground shadows and a trail window over the entities the map holds. An import is capped at
+  `MAX_TRACK_POINTS` (100k) points and strided down past it. Seven analyses run in a worker off
+  the main thread: colocation, co-travel, pattern of life, network metrics, clustering,
+  prediction and data quality. The deliberate line is that this is a movement cube and not an
+  intelligence platform: no ontology, no CDR import, no classification markings, no per-record
+  access control and no entity resolution.
 - A project carries its map, and the map lives on the server: the snapshot goes to ptolemy under
   the project's `map` state key, debounced behind any change, and is read back on project switch
   and on sign-in. `projectMaps` in IndexedDB is the offline cache of the same shape as a
@@ -507,7 +572,9 @@ Tools" setting with a Preview badge, so there are no dead buttons in the default
   as the local cache, so a member who has never seen a picture still draws the overlay. A project
   with no stored map keeps what is on screen, so creating one forks the current map rather than
   clearing it. Switching inside a live document imports the project into it, because the
-  outbound sync watches the stores `applyProject` writes. OGC layers are the one thing a
+  outbound sync watches the stores `applyProject` writes. Dashboards sit in the same store under
+  the project's `dashboards` state key rather than in localStorage, so they follow the project
+  rather than the browser. OGC layers are the one thing a
   document cannot hold, see DESIGN_TODO.
 - Imports carrying timestamps (CSV/GeoJSON properties, GPX `coordTimes`) become playable CZML
   with availability, so Timeline Fit-to-Data works through the UI.
@@ -572,7 +639,9 @@ open" without reconnecting into the same refusal.
 
 **`src/` module groups:** `components/` + `features/`, `spacetime/` (31 space-time modules),
 `plugins/` (file-discovered + built-ins), `notebooks/`, `raster/`, `offline/` (IndexedDB
-local-first + op queue; no service worker yet, see DESIGN_TODO), `projects/`, `store/` (Zustand),
+local-first, op queue, and a vite-plugin-pwa service worker that precaches the built shell and
+nothing else, so API responses and tiles stay with `offlineFetch` and the tile cache),
+`projects/`, `store/` (Zustand),
 `duckdb/` (in-browser analytics). ~228 source files.
 
 **Test surface.** A vitest unit suite, a 22-test platform E2E suite against the live stack with

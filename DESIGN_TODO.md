@@ -8,8 +8,8 @@
 > item.** Rewording the doc is the fallback, for a claim nobody intends to build.
 > Ranked 2026-08-21 against the DESIGN.md goal: ship the viewer, the agent, and
 > the services that make a shared map, not more surface. Pick from **Do next**.
-> Do not start at a parked or delete-don't-wire item.
-> Last brought current: **2026-08-21**.
+> Do not start at a parked item.
+> Last brought current: **2026-08-24**.
 >
 > Verify an entry against the code before working it, and do not trust the
 > mechanism it names. Three items in this file were already closed when someone
@@ -20,83 +20,27 @@
 
 ## Do next
 
-The click-path defects and the advertised-vs-real doc cuts (2026-08-21) are
-done. TileTopia, ViewTopia, ptolemy docs pages, terravista and projicio landing
-pages, nubis PMF wording, and GeoLang.github.io were stripped to match the
-code. sibyl has no docs site. verne, topoi and terrano READMEs already matched
-the post-fix code.
+Pick one of three: the four slices under P0 item 5, one module at a time from
+the **Wire for real** list below, or a hosting decision under **Before any
+public deploy**.
 
-The four code items that pass left (fluvius R-tree, geogit working copy path,
-ptolemy Features Part 2, nubis PMF) closed 2026-08-21. Nothing is queued here.
-The next pick is an owner call on the **Delete, do not wire** list below, one
-module at a time, or a hosting decision under **Before any public deploy**.
+## Felt gap leftovers
 
-## In progress: Felt gap slice, 2026-08-23
+- [ ] **an oversize multi-file drop offers the tileset route for the first file
+      only.** Dropping several files over `BROWSER_IMPORT_LIMIT_BYTES` at once
+      should offer every one of them.
 
-Owner calls 2026-08-23: the AWS deploy stays parked. P0 item 1 is untouched, the
-account decision is still open, and the first deploy will be private with no
-domain. This slice closes the other Felt gaps.
+- [ ] **project map state leftovers.** Removing an overlay from the map leaves
+      its ptolemy project attachment behind: the delete route exists and
+      nothing calls it. The save retry queue is in memory, so after a reload
+      only the open project pushes its stale cache. Dashboard writes are one
+      PUT per edit rather than debounced. The dashboard create-and-add-widget
+      flow has no standalone e2e, since a dashboard needs a server project, so
+      that path is covered only against the platform stack.
 
-- [x] **large static uploads, tileset plan phases 2-5.** Shipped 2026-08-23,
-      both halves, see both changelogs. Tilesets draw in MapLibre only
-      (DESIGN.md renderer notes). tiletopia #17 (a delete now kills the
-      running tippecanoe) and #18 (asset uploads stream to disk under the
-      same 4 GiB cap as tilesets, names checked before any path join) closed
-      2026-08-23. Leftover: a drop of several oversize files offers only the
-      first. Server half detail:
-      2026-08-23 (tiletopia changelog): upload, tippecanoe build job, registry,
-      serving via /martin, contract as below with the 202 body
-      `{job_id, tileset}` where job_id equals the tileset id and clients poll
-      `GET /api/v1/tilesets/{id}`.
-      Original item: Detail and settled
-      decisions under **Vector tilesets for large static uploads** below.
-      Contract for the viewer: `POST /api/v1/tilesets` multipart upload
-      (geojson, geojson.gz, fgb, csv) answers 202 with a job id,
-      `GET /api/v1/tilesets` lists archives with status, source id and
-      built_at, `DELETE /api/v1/tilesets/{id}` removes the archive and its
-      source, tiles at `/martin/{source}/{z}/{x}/{y}` and TileJSON at
-      `/martin/{source}`, both already live. tippecanoe runs as a subprocess in
-      the tiletopia image with a memory limit, a timeout, a work directory
-      quota, and stderr captured into the job record. Viewer half: nginx routes
-      `/martin/*` to tiletopia, the import path offers the tileset route for a
-      file over a size threshold instead of loading it into the browser, a
-      layer entry points at the source, job status polls until the source
-      serves.
-
-- [x] **server-backed map state.** Shipped 2026-08-23, see both changelogs.
-      Leftovers: an overlay removed from the map leaves its project attachment
-      behind (the delete route exists, nothing calls it), the save retry queue
-      is in memory so only the open project pushes a stale cache after reload,
-      dashboard writes are one PUT per edit, not debounced, and the dashboard
-      create-and-add-widget flow lost its standalone e2e (dashboards need a
-      server project now), so that coverage exists only against the platform
-      stack and no spec exercises it yet.
-      Original item: ptolemy gets
-      `project_state(project_id, key, value jsonb, updated_at, updated_by)`
-      with `GET/PUT /api/v1/projects/{id}/state/{key}`, viewer role reads,
-      editor writes, keys `map` and `dashboards`, value capped at 5 MB.
-      viewtopia saves the ViewtopiaProject snapshot there debounced on change
-      and loads it on project switch. IndexedDB `projectMaps` stays as the
-      offline cache, newest `savedAt` wins, offline changes retry on reconnect.
-      Overlay bitmaps move from data URLs inside the snapshot to ptolemy
-      project attachments, so the attachments one-owner CHECK gains
-      `project_id`. The dashboards store moves from the `viewtopia_dashboards`
-      localStorage key to the `dashboards` state key, scoped per project.
-
-- [x] **invite email and first-run guidance.** Shipped 2026-08-23, see both
-      changelogs. The first-run overlay also absorbed the WelcomeCard demo
-      offer, so one surface remains. Leftover: the overlay's three entry rows
-      are signposts naming where each control is, not buttons, because wiring
-      them means a shared opener for ProjectSwitcher's and LiveSessionControl's
-      modals. Original item: ptolemy sends the invitation
-      link by email when SMTP is configured (`SMTP_URL` and `SMTP_FROM`
-      env vars, both optional, unset keeps the copy-the-link flow) and the
-      create-invitation body takes an optional recipient email. viewtopia's
-      share dialog shows the email field only when the server reports email
-      configured. First-run guidance: an empty-state overlay on a fresh
-      profile pointing at import, projects and live sessions, dismissed once
-      used. Felt's canvas annotation renderer stays not chased, recorded in
-      DESIGN.md.
+- [ ] **the first-run overlay's three entry rows are signposts, not buttons.**
+      Wiring them needs one shared opener for ProjectSwitcher's and
+      LiveSessionControl's modals.
 
 ## Cross-repository audit, 2026-08-22
 
@@ -151,179 +95,55 @@ ViewTopia, Ptolemy, Jung, TerraVista, Panoptes, and Geoplumb.
       and several tiling and visualization paths are unreachable from the CLI.
 
 - [ ] **Projicio**: twelve EPSG entries still have no usable projection method,
-      and other CRS transforms still require caller-supplied datum grids. The
-      native Cassini-Soldner, Hotine Oblique Mercator, American Polyconic, Equal
-      Earth, and Laborde paths are implemented. The stale documentation claim
-      that they were fallback gaps was corrected in the README and landing page.
+      and other CRS transforms still require caller-supplied datum grids.
 
 - [ ] **Terrano**: the CLI is a synthetic DEM demonstration. It does not read
       or write raster files.
 
-- [ ] **ViewTopia**: project and workspace metadata is server-backed through
-      authenticated `/api/v1` calls, with server-enforced roles and expiring
-      invite links. Per-project map snapshots and overlay files remain
-      browser-local. Project roles are not yet propagated to Ptolemy dataset
-      grants or Agora document members. Dashboards are localStorage-only.
-      Space-Time analysis shipped 2026-08-24 (cube + seven wired analyses,
-      viewtopia changelog). Vertical plugins depend
-      on configured datasets. LiveKit requires an external URL and token.
+- [ ] **ViewTopia**: the vertical plugins draw nothing until an operator
+      configures their datasets, and the LiveKit panel needs an external server
+      URL and token that no part of the platform issues.
 
 ## P0 path to the intended product, 2026-08-22
 
 P0 means a task blocks the stated product path: a team opens one hosted map,
 loads real data, edits it with permission, asks the agent to analyze it, and
 sees the result. Each task needs source, integration, and failure-path tests.
+Numbers keep their original places, so a missing number is a closed item and
+other documents citing "P0 item 5" still land on the right one.
 
 1. **Make the hosted stack start from the published images.**
    Repositories: `infrastructure`, `geolang`, `viewtopia`, `tiletopia`,
    `ptolemy`, `agora`.
-   - [x] Package GeoLang `src/` in one image for the API and executor. The
-     deny-first build context is 528 KB. A local image build, both imports, and
-     both `/health` routes passed without a bind mount on 2026-08-22.
-   - [x] Give the API and executor one UID 1000-owned Natural Earth EFS access
-     point at `/app/geolang/natural_earth`. Local platform Compose uses the same
-     shared-volume contract without a source bind. A real UID 1000 download,
-     cross-container geocode, and `/geojson` response passed on 2026-08-22.
-   - [x] Add one publisher for every Terraform ECR repository. It rejects an
-     existing tag before any build, builds all enabled Linux x86_64 images
-     before the first push, handles the geoplumb wrapper, and shares the
-     GeoLang API image with the executor. Its command tests passed on
-     2026-08-22.
    - [ ] Run `infrastructure/scripts/publish-images.sh` against the applied ECR
-     repositories with one new `image_tag`. No image was pushed during the
-     repository audit.
-   - [x] Add a stdin-only writer for `platform_jwt`, `geolang_executor`,
-     `llm_api_key`, and `jupyter_token`. Values use a mode 600 temporary file
-     and never enter Terraform or the AWS CLI arguments. Command tests passed
-     on 2026-08-22.
-   - [x] Add a 15-minute database secret refresh job. It reads only the two
-     RDS-managed credentials, writes only the matching runtime URL secrets,
-     forces the matching ECS deployments, waits for stability, and restores
-     the previous secret version if the ECS update call fails. Seven focused
-     tests and Terraform validation passed on 2026-08-22.
+     repositories with one new `image_tag`.
    - [ ] After the first AWS apply, populate the four operator-managed secrets,
      confirm both database URL versions are created, force one RDS rotation,
-     and prove Ptolemy and Agora recover with healthy replacement tasks. No
-     secret value or AWS resource was changed during the repository audit.
+     and prove Ptolemy and Agora recover with healthy replacement tasks.
    - [ ] Stage the required EFS data and confirm startup migrations.
-   - [x] Make `/collecta` and `/collecta/*` return the hosted proxy's explicit
-     unavailable response. Both paths returned 501 in a real proxy container on
-     2026-08-22 instead of falling through to ViewTopia's HTML.
    - [ ] Prove the public route set with service health checks and one
      authenticated browser session.
 
 2. **Make project and workspace state server-backed.**
-   Repositories: `viewtopia`, `agora`, `ptolemy`.
-   - [x] Store workspace and project names, descriptions, memberships,
-     owner/editor/viewer roles, and expiring invitation records in Ptolemy.
-   - [x] Load and mutate workspace and project metadata from ViewTopia through
-     authenticated `/api/v1` calls. Keep project and workspace metadata out of
-     IndexedDB.
-   - [x] Allow any signed-in user to create a workspace and become owner. Allow
-     workspace editors to create projects and become direct project owners.
-     Inherit workspace access, allow project-only direct membership, and return
-     the highest effective role.
-   - [x] Enforce owner, editor, and viewer permissions on the server. Owners
-     manage direct members, pending invite links, and deletion. Editors update
-     metadata. Viewers read and switch only.
-   - [x] Add seven-day invite links that store only token hashes server-side and
-     grant editor or viewer access. Owners add known users by JWT subject. There
-     is no email delivery or user directory.
-   - [x] Pass the focused multi-user PostGIS test in Ptolemy. Pass ViewTopia's
-     18 focused tests, the full Vitest suite with 143 files and 1419 tests,
-     TypeScript, and changed-file lint.
-   - [x] Propagate project roles to Ptolemy dataset grants.
-   - [x] Propagate project roles to Agora document members.
-   - [x] Run the two-browser live stack acceptance session for owner, editor,
-     and viewer behavior. A second browser signed in as a project editor with
-     no members row on the document joined it, wrote annotation seq 4, received
-     the owner's seq 5, and both sides appeared in the peer list with role
-     `edit`.
-
-   - [x] Let a project member find a project-linked live map. `GET /documents`
-     folds the project role in, resolved with one call to ptolemy's
-     `/api/v1/projects` for the whole listing, so the Live picker offers a
-     project editor the documents their role reaches.
-   - [x] Send `projectId` from `createLiveDocument`, the key agora reads, so a
-     live map started inside a project is linked to it.
-
-   Resolved design for the two propagation tasks (2026-08-23):
-   - Ptolemy: nullable `project_id` on datasets. Attach requires dataset admin
-     plus project editor or owner, sets visibility private, and detach never
-     flips visibility back. Read/write/admin checks take the max of explicit
-     grants and the effective project role mapped viewer→read, editor→write,
-     owner→admin.
-   - Agora: nullable `project_id` on documents, set at creation or by a
-     document editor. Access on a project-linked document is the max of the
-     members-table role and the project role mapped viewer→view, editor and
-     owner→edit, resolved at access time by calling Ptolemy
-     `GET /api/v1/projects/{id}` with the caller's own bearer (response carries
-     the effective `role`), cached ~30 s per (document, user). Ptolemy
-     unreachable fails closed to the members-table role alone. New env var
-     `PTOLEMY_URL` in agora, wired in docker-compose.platform.yml.
-   - ViewTopia: live document creation passes the active project id. Dataset
-     attach/detach UI is a follow-up; the API path is exercised by tests.
+   Repositories: `viewtopia`, `ptolemy`.
+   - [ ] Give ViewTopia a dataset attach and detach surface for the active
+     project. The ptolemy API path exists and its tests cover it, nothing in
+     the viewer calls it.
 
 3. **Complete one real shared editing path.**
    Repositories: `viewtopia`, `ptolemy`.
-   - [x] Edit one feature's attributes against a ptolemy branch and commit them.
-     The Dataset Editor panel picks a dataset and branch, lists the branch's
-     features, and edits one feature's properties. Each edit queues an op that
-     the sync engine commits as a `POST /branches/{id}/commit` `update`, the
-     same call the real-estate panels make. An update that omits the geometry
-     keeps the one already on the branch, so a property edit sends properties
-     alone. Every value keeps the JSON type it had, so a number edited in place
-     does not come back a string.
-   - [x] Read one feature back. ptolemy answers
-     `GET /branches/{id}/features/{feature_id}` with geometry as hex WKB beside
-     the properties, 404 for a feature not live on the branch.
-   - [x] Merge before committing. The queued op carries what the branch held
-     when the feature was opened, so the three-way merge in
-     `src/offline/conflicts.ts` runs on every sync. A property both sides
-     changed stops the op and the existing `ConflictResolver` asks which side
-     wins. Before this the merge sat behind a request to a route that did not
-     exist and had never run.
-   - [x] Prove the loop. `tests/e2e/dataset-editing.spec.js` imports a GeoJSON
-     feature, edits it in the browser, commits, reloads it from the branch,
-     draws it on the map, and reads the change back from a session that never
-     touched the browser.
-   - [x] Commit a geometry change. Shipped 2026-08-23: the Dataset Editor's
-     Redraw geometry button captures a shape from the Draw machinery and
-     commits it through the same queue and three-way merge as an attribute
-     edit, and the Draw panel commits its shapes to a branch as inserts.
-     Leftovers: no vertex-level editing (a redraw replaces the whole
-     geometry), and a feature whose WKB type the codec still refuses
-     (Z/M, GeometryCollection) cannot be redrawn.
-   - [x] Draw every geometry type. Shipped 2026-08-23: `src/lib/wkb.ts` codes
-     all six 2D WKB types both ways.
-
-4. **Make the advertised agent tool set truthful and runnable.**
-   Repositories: `geolang`, `sibyl`, `geodukt`, `viewtopia`. Closed 2026-08-24:
-   all 39 tools pass the nightly sweep through the real HTTP path in CI
-   (externals included), run_workflow rejects a manifest that was not planned
-   and one the viewer's approve button never posted to
-   `/agent/workflow/approve`, and manifest-derived doc tests stop the counts
-   drifting.
+   - [ ] Edit geometry at the vertex. The Dataset Editor redraws a whole
+     geometry and has no way to move one vertex.
+   - [ ] Redraw a feature whose WKB type `src/lib/wkb.ts` refuses (Z/M
+     coordinates, GeometryCollection). Those features cannot be redrawn at all.
 
 5. **Make the core map data path reliable under service failure.**
    Repositories: `viewtopia`, `ptolemy`, `tiletopia`, `fenestra`. Define which
    service owns each layer type, return explicit errors when a backend is absent,
-   and prove load, refresh, and permission failure in the browser. The
-   demo-payload half is verified closed: no viewer-called route returns demo
-   data (the elevation panels call open-elevation.com, tiletopia's
-   `/api/v1/demo/*` routes have no viewer caller, and the first-run static
-   file is intentional), so what is left is error-path UX and backend-absent
-   tests in the browser.
+   and prove load, refresh, and permission failure in the browser. What is left
+   is error-path UX and backend-absent tests in the browser.
 
-   Plan 2026-08-24, from the code as it stands. Today `useBackendDiscovery`
-   probes tiletopia and geolang only and the two flags it writes to the app
-   store are read by nothing, ptolemy and agora are never probed, a failed
-   tile request on a `/martin` or PMTiles or 3D Tiles layer reaches no
-   listener (only TimelapsePanel listens to MapLibre `error`), so the layer
-   goes blank with no message, a network failure surfaces as the browser's
-   "Failed to fetch" text in the project switcher toast, and the sync engine
-   treats a 403 on a commit as a retryable failure, retries it five times,
-   then gives up with a `console.warn`. Four slices, all in viewtopia:
+   Four slices, all in viewtopia:
    - [ ] **reachability**: probe all four services (`/api/v1/health`,
          `/tiles/v1/health`, `/agora/health`, `/agent/health`, each rewritten
          by `deploy/nginx-platform.conf`), keep per-service up/down in the app
@@ -355,12 +175,6 @@ sees the result. Each task needs source, integration, and failure-path tests.
    and records a clear offline state. Until that exists, keep fleet, sensor,
    and incident pages labelled as configured integrations.
 
-7. **Close the routing correctness gap before presenting routes as authoritative.**
-   Repositories: `itinera`, `viewtopia`. Closed 2026-08-23: `turn_is_banned`
-   is enforced in Dijkstra, A* and Contraction Hierarchies with No and Only
-   restriction tests, RoutingPanel badges itinera versus fallback, and the
-   README now says enforced and labels sub-millisecond CH as a target.
-
 8. **Remove or finish the highest-risk facade routes.**
    Repositories: `tiletopia`, `ptolemy`, `fenestra`. For each route exposed to
    the viewer, choose a real implementation with an integration test or delete
@@ -368,91 +182,62 @@ sees the result. Each task needs source, integration, and failure-path tests.
    hardcoded STAC results, synthetic elevation, fake API keys, dead Ptolemy
    event delivery, and non-consumable Fenestra capabilities.
 
-9. **Make the release checks measure the product path.**
-   Repositories: all service repos plus `viewtopia`. Closed 2026-08-24: the
-   platform e2e starts the stack, imports a fixture, authenticates, edits a
-   feature, runs a real tool through `POST /tools/{name}` and draws its
-   output unmocked; shutdown stays CI cleanup. The nightly sweep covers the
-   full tool surface on top.
-
-## Wire for real (owner call 2026-08-24, was "delete, do not wire")
+## Wire for real
 
 A module is written, unit-tested, exported by a `pub mod` line, and never called
 by any route, CLI path or render loop. `cargo` does not flag it because the
-re-export keeps it live. The docs then describe the module as a feature.
-Owner call 2026-08-24: implement these for real rather than delete them, each
-with tests through its real route, ordered viewer-facing routes first, then
-platform machinery, then the large islands. One exception to reconfirm when
-reached: Space-Time analysis rows sit under an earlier "do not build Gotham"
-owner call that this direction reverses.
+re-export keeps it live. The docs then describe the module as a feature. Owner
+call 2026-08-24: implement these for real rather than delete them, each with
+tests through its real route, ordered viewer-facing routes first, then platform
+machinery, then the large islands. One exception to reconfirm when reached:
+the Space-Time rows sit under an earlier "do not build Gotham" owner call that
+this direction reverses.
 
-- [ ] **tiletopia pub-mod islands, owner calls 2026-08-24.** Done 2026-08-24
-      (tiletopia changelog): `audit` and `offline_export` are wired for real,
-      `versioning.rs` and `dashboard.rs` are deleted. Leftovers from the
-      wiring: audit rows carry no `org_id` (no org claim exists) or
-      `ip_address` (no connect-info), a create records an empty
-      `resource_id`, and stories/portal/catalog/users-me mutations are
-      unaudited (one `AUDITED_ROUTES` row each); the offline bundle is fully
-      offline only when `TILETOPIA_CESIUM_DIR` names a CesiumJS build,
-      otherwise the page says so in a banner; `ExportStatus::Expired` and
-      `expires_at` still drive nothing.
-      Original verification record: delete only what duplicates a real
-      implementation, census
-      candidates were verified 2026-08-24 and mostly cleared: geoprocessing,
-      geostatistics, stac and terrain_analysis ARE the live implementations
-      the premium routes call, they stay. Deleted: `versioning.rs` (asset
-      version control, one route serving demo data, ptolemy is the versioned
-      backbone) and `dashboard.rs` (no routes, viewtopia owns dashboards).
-      Note `temporal.rs` ("temporal versioning" in the docs disclosure list)
-      is a different module and stays parked. Everything else stays in
-      place, parked, no blanket deletion: temporal, crdt, tenant,
-      collaboration, federation, whitelabel,
-      priority_queue, cluster, marketplace, metering, encryption, geofence,
-      arvr, flythrough, dynamic_raster, prediction, onnx_inference,
+- [ ] **tiletopia audit gaps.** An audit row carries no `org_id`, because no
+      token claim names an org, and no `ip_address`, because the middleware has
+      no connect-info. A create records an empty `resource_id`, since the
+      handler picks the id after the middleware ran. The stories, portal,
+      catalog and users-me mutations are unaudited, one `AUDITED_ROUTES` row
+      each.
+
+- [ ] **tiletopia offline export leftovers.** `ExportStatus::Expired` and
+      `expires_at` drive nothing: no sweep retires an expired export and no
+      route refuses one. The bundle is fully offline only when
+      `TILETOPIA_CESIUM_DIR` names a CesiumJS build, and otherwise says so in a
+      banner, so an image that ships without one has no offline viewer.
+
+- [ ] **tiletopia modules still parked, no blanket deletion.** Each needs its
+      own owner call: temporal, crdt, tenant, collaboration, federation,
+      whitelabel, priority_queue, cluster, marketplace, metering, encryption,
+      geofence, arvr, flythrough, dynamic_raster, prediction, onnx_inference,
       model_zoo, anomaly, measurement, clash_detection, cicd, reports,
       retention, scripting, mobile, geocoding, isochrone, map_matching,
-      osm_buildings, multispectral, feature_service, cloud_store,
-      http_cache, indoor, stories, stories_api, scan_registration,
-      flight_planning, issue_tracking. The automated census over-counts:
-      fbx_reader, texture_image and the store/cache backends are live or
-      config-selected, so verify every row before acting on it.
+      osm_buildings, multispectral, feature_service, cloud_store, http_cache,
+      indoor, stories, stories_api, scan_registration, flight_planning,
+      issue_tracking. Verify each row against the code before acting on it: the
+      automated census over-counts, and fbx_reader, texture_image and the
+      store and cache backends are live or config-selected. geoprocessing,
+      geostatistics, stac and terrain_analysis are the implementations the
+      premium routes call.
 
-- [ ] **tiletopia textured native mesh tiling shipped 2026-08-24** (tiletopia
-      changelog): mesh formats never touch mago now, so mago remains only for
-      GeoJSON/GeoPackage/KML, which the native tiler cannot take. Open owner
-      call: build a native vector-to-3D-Tiles path so the jar and JRE leave
-      the image, or keep mago for vector and say so. Recorded leftovers: FBX
-      applies UpAxis only (`UnitScaleFactor`, `FrontAxis`, `CoordAxis` are
-      not read) and still emits no normals; 16- and 32-bit texture pixel
-      formats degrade to untextured; a JPEG texture is re-encoded at quality
-      90 per tile crop; texture decode has no size cap of its own beyond the
-      upload cap.
+- [ ] **tiletopia mesh tiling leftovers.** The FBX reader applies `UpAxis` only,
+      leaving `UnitScaleFactor`, `FrontAxis` and `CoordAxis` unread, and emits
+      no normals. A 16- or 32-bit texture pixel format degrades to untextured.
+      A JPEG texture is re-encoded at quality 90 per tile crop. Texture decode
+      has no size cap of its own beyond the upload cap.
 
-- [ ] **viewtopia Space-Time GeoTime core shipped 2026-08-24** (viewtopia
-      changelog): cube view, sweep plane, shadows, real trail window, 100k
-      import cap with stride downsampling, seven analyses wired through a
-      worker including new co-travel, Entity Resolution button removed,
-      docs truthful. The Gotham line holds: no ontology, CDR import,
-      classification, RBAC, or entity resolution. Still open here:
-      geofencing UI and case management (library code and types exist, no
-      UI, parked), network metrics render as a list only, and movement
-      analytics as geolang agent tools sits under Wait for demand.
+- [ ] **native vector-to-3D-Tiles, or say mago stays.** Owner call: build a
+      native path for GeoJSON, GeoPackage and KML so the mago jar and the JRE
+      leave the image, or keep mago for vector input and document it. Weighed
+      under Wait for demand.
 
-- [~] **ptolemy's Esri-style topology rule engine: delete it, owner call
-      2026-08-24.** 31 rule variants are declared, nothing matches on them,
-      stored rules are never read back, and the only validator ignores its
-      dataset argument and queries two columns (`branch_id`, `is_deleted`)
-      that `feature_versions` does not have, so it always errors. The fake
-      surface goes, PostGIS Topology proper stays, and commit-time topology
-      rules are recorded under Wait for demand.
+- [ ] **Space-Time geofencing UI and case management.** The library code and
+      types exist with no UI behind them, parked. Network metrics render as a
+      list rather than a graph.
 
-- [ ] **jung browser labels shipped 2026-08-24** (wasm `Renderer.add_font`,
-      GeoJSON properties reach `{token}` labels in both front doors, jung
-      changelog). Still open: jung-vello draws geometry only (text in a vello
-      Scene is a second font pipeline), the front doors parse Point geometry
-      only, and `label.rs`'s old `LabelEngine` (no priority, 5x7 bitmap
-      font) is decided 2026-08-24: delete it, `PriorityLabelEngine` is the
-      live path.
+- [ ] **jung text and geometry gaps.** jung-vello draws geometry only: text in
+      a vello Scene needs a second font pipeline. Both front doors parse Point
+      geometry only.
 
 ## Before any public deploy
 
@@ -465,10 +250,7 @@ real instance.
 
 Hosting was deferred by owner decision 2026-08-13, so everything in this section
 is parked with it, along with the hosted stack decisions, the database TLS
-operator steps, the CloudFront realtime test and geoplumb in-region serving.
-The executor precondition closed 2026-08-09, the tool-boundary token exchange
-closed 2026-08-12, and the 2026-08-13 terraform pass closed force_ssl, immutable
-tags, the agora and jupyter security group splits, and the ALB restriction. The
+operator steps, the CloudFront realtime test and geoplumb in-region serving. The
 Terraform definitions are present, but the image, data, secret, and first-apply
 work below still blocks a running hosted stack.
 
@@ -483,10 +265,9 @@ What actually stands in the way, in order:
    ECR image must be pushed under `image_tag`, required spatial and coverage
    data must be staged, every secret container needs a value including the two
    database URLs with `sslmode=verify-full`, and DNS delegation plus ACM
-   validation must complete when the platform profile uses `geolang.com`.
-   GeoLang source packaging, its shared Natural Earth path, and the stale SQLx
-   TLS documentation were corrected on 2026-08-22. The Natural Earth EFS access
-   point still needs data staged before the first hosted scale-up.
+   validation must complete when the platform profile uses `geolang.com`. The
+   Natural Earth EFS access point still needs data staged before the first
+   hosted scale-up.
 4. **share-link policy**, not the links themselves. Share links are built, and
    have been since agora's first migration: create, revoke and resolve, a
    `view` or `edit` role per link, and `resolve_link` mints an anonymous guest
@@ -500,10 +281,6 @@ What actually stands in the way, in order:
 
 Operator-facing deployment gaps:
 
-- [x] **RDS managed passwords rotate every seven days.** A scheduled job now
-      rewrites the Ptolemy and Agora URL secrets within 15 minutes and replaces
-      their ECS tasks. The deployed rotation path still needs the live test in
-      P0 item 1.
 - [ ] **The first apply cannot complete on the platform profile.** The ALB
       security group needs the certificate, which needs ACM validation, which
       needs registrar delegation to a hosted zone the same apply creates. Real
@@ -524,8 +301,8 @@ Operator-facing deployment gaps:
       `Sec-WebSocket-Protocol` and has a zero TTL, but the distribution has never
       carried a real collaboration session. Test it on the deployed distribution.
 - [ ] **hosted stack decisions before a public deploy** (from the 2026-08-13
-      security review of the hosted terraform). The mechanical half closed the
-      same day. What is left needs an owner call:
+      security review of the hosted terraform). What is left needs an owner
+      call:
       - ptolemy classifies GET/HEAD/OPTIONS as public, so reads are anonymous on
         a public domain. Narrower than it sounds: it is scoped to public
         datasets. The visibility middleware answers 404 for any uuid that
@@ -611,10 +388,6 @@ Operator-facing deployment gaps:
       not ours to make. The preceding `check licenses sources bans` step carries
       no such flag and does gate.
 
-      h2 0.4.14 (RUSTSEC-2026-0258) was bumped to 0.4.16 on 2026-08-18 in
-      geodukt, geokode, itinera, ptolemy, tiletopia. tiletopia keeps a second h2
-      line at 0.3.27 via `aws-smithy-http-client`; it cannot move.
-
       Outstanding, none of these fixable from here. Two of them print a "try
       `cargo update -p ...`" hint that does not work, because the version they
       want is a major ahead of what a transitive dependency requires, so cargo
@@ -632,6 +405,8 @@ Operator-facing deployment gaps:
         `^2.28`. Also `bincode` 1.3.3 and `smartstring` 1.0.1, both
         unmaintained with no successor version (RUSTSEC-2025-0141, -2026-0249).
       - itinera: `bincode` 1.3.3, same as geokode's.
+      - tiletopia: a second h2 line at 0.3.27 through `aws-smithy-http-client`,
+        which pins it.
 
 - [ ] **geodukt and ptolemy each carry digest 0.10 and 0.11 at once.** In
       geodukt it is `md-5` 0.10 reaching the graph through `object_store`, and
@@ -647,9 +422,9 @@ Operator-facing deployment gaps:
       parsers. The tree holds `image-size` 0.7.5 through `texture-compressor`
       under `@loaders.gl/textures` 4.4.3, which is deck.gl's loader family
       rather than deck.gl itself. GitHub still reports no patched version. Both
-      alerts were dismissed by hand on 2026-08-13 as not-used, on the sharper
-      ground that those parsers only run in texture-compressor's Node CLI path
-      and never in the browser bundle. The `dompurify` advisory alongside them was investigated and is
+      alerts are dismissed as not-used, on the ground that those parsers only
+      run in texture-compressor's Node CLI path and never in the browser bundle.
+      The `dompurify` advisory alongside them is
       NOT reachable here: it needs `IN_PLACE` sanitizing with hook removal,
       viewtopia disables the Cesium InfoBox, and cesium 26.1.0 calls DOMPurify
       in one place only, `Credit.js`, in the string-returning mode. Recorded so
@@ -657,9 +432,9 @@ Operator-facing deployment gaps:
 
       The fourth alert, `postcss` (CVE-2026-69153, an attacker-chosen
       `sourceMappingURL` reading arbitrary `.map` files when `from` is unset),
-      was dismissed as stale: it named `package-lock.json`, which the pnpm
+      is dismissed as stale: it names `package-lock.json`, which the pnpm
       migration deleted, and the root lockfile is on 8.5.25, past the 8.5.23
-      fix. What it did not report is real: `dashboard/pnpm-lock.yaml` carries
+      fix. What it does not report is real: `dashboard/pnpm-lock.yaml` carries
       8.4.31 as well, from `next@15.5.22`, whose package.json requires that
       exact version with no range, so no update moves it and only a pnpm
       override would. Left alone because it is build-time and
@@ -683,14 +458,13 @@ Parked until a real user, a real feed, or a real customer file exists. The
 thesis is "a team makes and analyzes a map together in the browser". Refuse
 feature-parity fights with ArcGIS, Felt, GEE, Palantir.
 
-- [ ] **ptolemy commit-time topology rules** (owner call 2026-08-24): the fake
-      rule engine is deleted; build a real one only when an Esri migration
-      customer needs rule validation at commit time.
+- [ ] **ptolemy commit-time topology rules** (owner call 2026-08-24): build a
+      real rule engine only when an Esri migration customer needs rule
+      validation at commit time. PostGIS Topology proper stays either way.
 
 - [ ] **tiletopia API keys on write routes** (owner call 2026-08-24): keys stay
       read-only until a machine writer exists. Feeding keys into
-      `require_editor` changes that middleware's contract. Mint/revoke audit
-      logging closes with the 2026-08-24 audit wiring, independent of this.
+      `require_editor` changes that middleware's contract.
 
 - [ ] **native vector-to-3D-Tiles** (owner call 2026-08-24): mago stays for
       GeoJSON/GeoPackage/KML as a subprocess, same call as tippecanoe. Build a
@@ -705,26 +479,15 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
       features, deliberately parked until the panel proves demand. Needs the
       form-schema-to-dataset mapping, incremental sync off collecta's
       cursor, and a decision on who owns the bridge (an exporter in collecta
-      versus a puller elsewhere). Print-resolution rendering and collecta
-      increments 1–2 (compose + Field Data panel) shipped 2026-08-14.
+      versus a puller elsewhere).
 
-- [ ] **precomputed vector tilesets for large static uploads** — shell out to
-      felt/tippecanoe when a user wants to drop a multi-gigabyte file on the
-      map. Decided 2026-08-23 against building it: the hard parts are feature
-      dropping per zoom, a tile size budget that only settles by encoding and
-      re-encoding, a streaming disk sort so the input never has to fit in
-      memory, and topology-preserving polygon simplification that does not
-      leave slivers between neighbours. Fenestra's MVT encoder, topoi's
-      Douglas-Peucker and geoplumb's pyramid walker cover none of those.
-      Linking it is worse than running it: it builds no library, its entry
-      point `traverse_zooms` takes `sqlite3 *` and STL types across what would
-      be the ABI, it calls `exit()` in 512 places, and its configuration is
-      global mutable state, so concurrent builds would need a mutex. It reads a
-      file and writes a file, so a subprocess costs one exec and buys crash and
-      memory isolation from a tool that is OOM-prone on big inputs. Ptolemy's
-      own tiles stay live from PostGIS: a precomputed tileset is stale the
-      moment someone commits, and editable data is the thing tippecanoe cannot
-      serve at all. Integration write-up under **Plans** below.
+- [ ] **a tile builder of our own** (owner call 2026-08-23, against): the hard
+      parts are feature dropping per zoom, a tile size budget that only settles
+      by encoding and re-encoding, a streaming disk sort so the input never has
+      to fit in memory, and topology-preserving polygon simplification that
+      does not leave slivers between neighbours. Fenestra's MVT encoder,
+      topoi's Douglas-Peucker and geoplumb's pyramid walker cover none of
+      those. Revisit only if running tippecanoe as a subprocess stops paying.
 
 - [ ] **read-only warehouse sources** (weigh before building) — Felt reads
       Snowflake/BigQuery/Databricks live, enterprise-only. Ptolemy already
@@ -745,10 +508,8 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
 
 - [ ] **terravista v0.3** — Metal/Vulkan GPU rendering. Biggest advertised-vs-real
       gap on mobile, needs platform GPU toolchains, post-v1 by the existing
-      phasing, competes with the hosted flagship for attention. The labelling
-      half is already done, the README says plainly it is not a Mapbox
-      replacement, so what is left to decide is whether to build the GPU
-      backends at all.
+      phasing, competes with the hosted flagship for attention. What is left to
+      decide is whether to build the GPU backends at all.
 
 - [ ] **terravista has no iOS or macOS anything.** No `.swift`, `.h`, `.modulemap`,
       `Package.swift` or podspec, no cbindgen config, no generated C header, no
@@ -762,11 +523,9 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
       `tv_` FFI symbol touches the style module, so no host can supply one, and
       the renderer uses its own hardcoded style keyed by layer name.
 
-- [ ] **panoptes model weights** — train or source one usable segmentation model and publish
-      weights. The "keep it clearly labeled experimental" branch is done (2026-08-13), so
-      nothing oversells itself now, but no weights exist and segmentation still does
-      not work out of the box. The ONNX inference path is real and proven end to end from the
-      CLI against a synthetic sigmoid model.
+- [ ] **panoptes model weights** — train or source one usable segmentation
+      model and publish weights. No weights exist, so segmentation does not work
+      out of the box.
 
 - [ ] **the next adapter after Esri.** v0.1 covers KML/KMZ, v0.2 the Esri File
       Geodatabase. Pick the next from real customer data rather than
@@ -798,18 +557,17 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
       `<data_defined_properties>` block whose exact spelling nobody here has
       verified against a real QGIS writer, so the export reports the loss rather
       than guessing. Closing it needs a `.qml` written by an actual QGIS to read
-      the encoding off. Everything else in the first cut is done.
+      the encoding off.
 
-- [ ] **offline area download**: regions download and the app shell is
-      service-worker cached. What is left is in the offline story: DuckDB's
-      spatial extension still fetches from extensions.duckdb.org, and the story
-      export fetches MapLibre from unpkg plus tiles from the tile host. The tile
-      cache stores every tile ever viewed, with no size cap and no clear-all.
+- [ ] **the offline story's remaining network reads**: DuckDB's spatial
+      extension fetches from extensions.duckdb.org, and the story export fetches
+      MapLibre from unpkg plus tiles from the tile host. The tile cache stores
+      every tile ever viewed, with no size cap and no clear-all.
 
 - [ ] **composite latency on dense collections**: memory is bounded (folds peak
       at one wave, median and percentile reduce in strips under a fixed 4 Mi
-      value budget), and since 2026-08-13 a strip reads only the items whose
-      footprint reaches its own rows rather than the whole stack. What remains
+      value budget), and a strip reads only the items whose footprint reaches
+      its own rows rather than the whole stack. What remains
       is that strips run one after another, so a stack deep enough to need N
       strips pays N passes of read latency, over the same distinct bytes since
       shared tiles come from the byte cache. geoplumb's own DESIGN.md still says
@@ -842,30 +600,13 @@ Deliberate scope calls, each a product decision rather than a defect to fix.
       itself is worth a rename, camelCase being the right target for
       browser-facing JSON.
 
-- [~] **geodukt as plan substrate**: plan-then-approve flow shipped. Every plan
-      step now carries `runs_caller_code`, set from the tool's own
-      `TOOL_RUNS_CALLER_CODE` declaration, so the panel can mark an escape-hatch
-      step before approval, and PlanPanel marks it. Marking it is as far as it
-      goes: the owner decided 2026-08-12 that approval costs no extra click,
-      because gating it means sql_query emitting a one-step plan instead of a
-      viewer command, which adds a click to every ad-hoc query. Still open:
-      sql_query called on its own bypasses the plan surface entirely, so it
-      stays persona-discouraged there. The NL agent `sql_query` bypass is real:
-      `TOOL_RUNS_CALLER_CODE = True` is declared only on sql_query, plan steps
-      carry the flag, and the approval panel labels such a step rather than
-      gating it, with the discouragement living in the persona text. It is
-      bounded to `/chat`, since `/mcp` drops the tool from both the manifest
-      and the call path.
-
-- [~] **permission-aware enforcement**: the far end is now enforced in every
-      service (per-repo changelogs): tiletopia gates annotations, plugin
-      mutations and the asset listing, collecta enforces roles and form
-      ownership, geolang requires a platform JWT on everything that runs code,
-      writes a file or reads back user data (chat, sessions, uploads, outputs),
-      and geodukt's `/run` takes an editor-or-admin platform token or a
-      role-free tool token carrying the exact `geodukt:run` scope, both on the
-      shared secret. The org schema that the write ladder never read was dropped
-      (ptolemy migration 028). Unknown role strings fail closed everywhere.
+- [ ] **`sql_query` called on its own bypasses the plan surface.** Inside a plan
+      the panel labels the step that runs caller code rather than gating it, an
+      owner call from 2026-08-12: gating means sql_query emits a one-step plan
+      instead of a viewer command, which adds a click to every ad-hoc query.
+      Called directly the tool reaches no plan at all, so the only thing
+      discouraging it is the persona text. Bounded to `/chat`, since `/mcp`
+      drops the tool from both the manifest and the call path.
 
 - [ ] **tiletopia asset metadata is only listing-filtered.** `GET /assets`
       hides other tenants' rows, but `GET /assets/{id}` still answers for any
@@ -902,8 +643,8 @@ Deliberate scope calls, each a product decision rather than a defect to fix.
       legacy-specific: form discovery answers any authenticated caller and
       submission is role-only, both pinned by tests as intended behaviour.
 
-- [ ] ptolemy merge is **attribute-level** for disjoint property edits (shipped
-      2026-08-15). Same-key and both-sides-moved-geometry still conflict.
+- [ ] ptolemy merge is **attribute-level** for disjoint property edits.
+      Same-key and both-sides-moved-geometry still conflict.
 
 - [ ] ptolemy external-source pushdown non-goals (documented in README): near-global
       windows fall back to unfiltered scans; `or`/`not` CQL2 spatial ops are never pushed.
@@ -959,13 +700,12 @@ Deliberate scope calls, each a product decision rather than a defect to fix.
 
       The cost lands on the migration story. A geodatabase is not single-CRS: each
       feature class carries its own spatial reference and a feature dataset only
-      constrains its own members to a shared one. Reprojecting at extraction
-      (shipped) makes the data correct and renderable. The original coordinates
-      now survive it: a commit operation may carry the untransformed geometry and
-      its EPSG code beside the working copy. Getting the numbers back out
-      unchanged now works per feature through the native read, so supporting
-      per-dataset srid later is worth it only if someone needs to query and serve
-      in the native frame. Supporting per-dataset srid later needs no storage
+      constrains its own members to a shared one. Reprojecting at extraction makes
+      the data correct and renderable, and the original coordinates survive it:
+      a commit operation may carry the untransformed geometry and its EPSG code
+      beside the working copy, read back per feature through the native read.
+      So per-dataset srid is worth supporting only if someone needs to query and
+      serve in the native frame. Supporting per-dataset srid later needs no storage
       migration, since the column already accepts any srid. It means taking the
       srid from the dataset on write instead of the literal, then auditing every
       query that assumes 4326, and deciding what a cross-dataset query does when
@@ -979,16 +719,15 @@ Deliberate scope calls, each a product decision rather than a defect to fix.
       tile file, so a large bundle makes the layer.json request slow unless the
       bundle ships its own `available` array.
 
-The geoprocessing NULL panic is real but latent: `merge` and `simplify`
-were fixed 2026-08-13 and contour was deliberately left, because no
-PostGIS build ships `ST_ContourLines`, so that route answers 501 first.
+The geoprocessing NULL panic is latent in contour alone, deliberately left
+because no PostGIS build ships `ST_ContourLines`, so that route answers 501
+first.
 
 ## Plans — too big to hand an agent cold
 
 ### Hosted flagship instance, the thesis blocker
 
-See **Before any public deploy**. The executor and token-exchange preconditions
-are closed. Share links exist. What is open is the AWS account, the apply
+See **Before any public deploy**. What is open is the AWS account, the apply
 sequence, and the anonymous-edit / link-expiry policy.
 
 ### Live layer, if you want fluvius wired in
@@ -1091,24 +830,14 @@ interface they already have.
 Rust (owner decision 2026-07-29). GDAL stays behind one crate or adapter trait,
 feature-gated. Ship the service as a container with GDAL from the distro.
 
-- [ ] **verne: the rest of the hosted Esri story.** verne lists a portal's
-      feature services, reads a FeatureServer or MapServer whole or scoped to
-      one layer with the operator's token or one it mints itself, and carries
-      the untransformed originals. The loader is no longer unchanged: it commits
-      deltas, posts each layer's drawing info as one symbology rule, and applies
-      attachment adds, replacements and deletes. Still open:
-      - the version tree. verne reads any named version (`--gdb-version`, one
-        per extraction), names which layers front versioned data and change
-        tracking, and implements `extractChanges` as the preferred delta path
-        with a local diff fallback. What stays open is carrying the tree itself,
-        which means the VersionManagementServer resource: its `differences`
+- [ ] **verne: the rest of the hosted Esri story.**
+      - the version tree. verne reads one named version per extraction and
+        diffs it, but carries no tree. Carrying it means the
+        VersionManagementServer resource: its `differences`
         needs the `features:user:edit` privilege, a read-session lock
         (`startReading`/`stopReading`, blocking editors on 11.5 and older) and
         at 11.2+ an Advanced Editing license. That needs an enterprise
-        deployment verne may exercise. The ptolemy mapping is no longer a
-        blocker on it: the sidecar carries insert, update and delete ops, and a
-        persisted objectid-to-feature-id index (`object-ids/`) survives across
-        extractions.
+        deployment verne may exercise.
       - legacy generateToken (username/password) is deliberately not taken:
         holding a password is worse than holding a client secret, and OAuth
         client_credentials covers the hosted case.
@@ -1179,53 +908,3 @@ feature-gated. Ship the service as a container with GDAL from the distro.
       linking. "With permission" must be a mechanism, not a promise: explicit
       operator credentials and a log of what was extracted, nothing that sniffs
       or crawls.
-
-### Vector tilesets for large static uploads
-
-Shell out to `felt/tippecanoe`. The decision not to build an equivalent, and
-the reasons, sit under **Wait for demand** above. This is the integration.
-
-Phase 1 shipped 2026-08-23: `TILETOPIA_PMTILES_DIR` registers every archive at
-startup and `/martin` serves the catalog, TileJSON and tiles behind the platform
-JWT, with the `martin` cargo feature built in the Docker image and every CI row.
-`object_store` 0.13 with `fs` is already a dependency behind the same feature.
-
-What this must not touch: ptolemy's own MVT path stays live from PostGIS. A
-precomputed archive is stale the moment someone commits, so editable datasets
-keep the per-request tiles. `/branches/{id}/import/geojson` also stays as it is:
-it reads the whole FeatureCollection into one `serde_json::Value` and commits
-every feature as a versioned row, which is right for editable data and wrong
-for a file measured in gigabytes. The upload path here is a separate one that
-never enters the versioned store.
-
-1. **Serve an archive.** Mount `martin_routes`, enable the feature in the
-   Dockerfile and CI, and register a `.pmtiles` file by hand. Worth doing
-   alone: it proves the whole idea against a real archive before any builder
-   exists, and a hand-built tileset from a laptop is enough to test with.
-2. **Decide where archives live.** Not postgres `bytea` and not the
-   `attachments` table, both of which hold bytes in a column and are sized for
-   a photo rather than a few hundred megabytes. `object_store` on a volume,
-   with a row naming the object key, the dataset it came from, and the build
-   that produced it.
-3. **Run the builder.** A `tippecanoe` binary in the tiletopia image, built
-   from source in its own Dockerfile stage or taken from a distro package.
-   The child needs a memory limit, a timeout, a work directory with a disk
-   quota, and its stderr captured, which is the only place it reports progress
-   and the only place it explains a refusal. It exits non-zero and prints, so
-   there is no api to check.
-4. **Make it a job.** A build runs for minutes, so it cannot be a request. A
-   jobs table, a worker, a status endpoint, and a way to cancel. This is the
-   largest piece and none of it is tile work.
-5. **Show it.** viewtopia adds the source. It already talks to tiletopia for
-   basemaps, so this is a layer entry pointing at a new source id.
-
-Decisions, settled 2026-08-23:
-- **pmtiles, not mbtiles.** One file, range readable, servable straight off
-  object storage. mbtiles is sqlite and wants a live file handle.
-- **tiletopia owns upload, build, storage and serving**, every route behind the
-  platform JWT. V1 sources are user files, not ptolemy datasets, so dataset
-  visibility does not apply yet. When a build from a ptolemy dataset arrives,
-  the archive must answer that dataset's visibility, and a bare object key is a
-  readable url to anyone who guesses it.
-- **an archive is an explicit snapshot.** The list shows built_at, nothing
-  rebuilds automatically, re-upload makes a new archive.
