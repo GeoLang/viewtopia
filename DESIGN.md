@@ -585,12 +585,18 @@ MapLibre marker colours are assigned to `style.background` rather than interpola
 glyphs that never touch the DOM.
 
 **Named actions.** `src/actions/` is the one list of capabilities a typed prompt can reach:
-25 entries, each a name, a description, typed parameters, a `reads` flag and a `destructive`
+41 entries, each a name, a description, typed parameters, a `reads` flag and a `destructive`
 flag, registered by its domain module and run through `runAction`, which coerces the arguments,
 checks the enums and the required ones, drops unknown keys and throws naming every problem.
 The panel offering a capability calls the same function the action does, which is why the
 Scenario panel's compare logic sits in `src/features/scenario/compare.ts`, the asset rule write
-in `src/live/assetRule.ts` and the scrubber's fetch in `src/live/assetHistory.ts`. A layer,
+in `src/live/assetRule.ts`, the scrubber's fetch in `src/live/assetHistory.ts`, viewshed,
+flood and the profile sampling in `src/features/terrain/`, shadows and clipping in
+`src/features/scene/`, travel time and the spatial stats grid in `src/features/analysis/`,
+and the import, OGC service, SQL workspace and STAC asset paths in
+`src/features/dataSources/` and `src/features/stac/`. The analysis results draw straight on
+the renderer as the `viewshed-result` and `flood-result` sources rather than as layers the
+`layers.*` actions can reach. A layer,
 project, document, feed, dataset or branch argument is an id or a name
 (`src/actions/resolve.ts`): exact id, then exact name, then a unique case-insensitive
 substring, and an ambiguous or missing name throws naming the candidates. `layerIndex.ts` is

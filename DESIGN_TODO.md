@@ -9,7 +9,7 @@
 > Ranked 2026-08-21 against the DESIGN.md goal: ship the viewer, the agent, and
 > the services that make a shared map, not more surface. Pick from **Do next**.
 > Do not start at a parked item.
-> Last brought current: **2026-08-25**.
+> Last brought current: **2026-08-26**.
 >
 > Verify an entry against the code before working it, and do not trust the
 > mechanism it names. Three items in this file were already closed when someone
@@ -109,13 +109,22 @@ other documents citing "P0 item 5" still land on the right one.
 7. **Chat-only viewer mode: a typed prompt reaches every capability that does
    not need the mouse.** Repositories: `viewtopia`, `geolang`. Owner call
    2026-08-25, plan under **Chat-only viewer mode** in the plans section.
-   - [ ] Phase 2, analysis and simulate panels as parameterised actions that
-     return their result to the chat: viewshed, flood, terrain profile,
-     shadows, travel time, clipping, cross section, spatial stats.
-   - [ ] Phase 3, data panels as actions: import by URL or upload, export,
-     STAC, OGC, SQL.
-   - [ ] Delete geolang's fixed `viewer_control` action list once the eval set
-     passes on `run` alone.
+   - [ ] Eval gate for the 16 phase 2 and 3 actions shipped 2026-08-26: one
+     TOML per action under `geolang/evals/viewer/tasks/`, `catalogue.json` and
+     `snapshot.json` refreshed from the viewer, `--repeat 3`, then delete
+     geolang's fixed `viewer_control` action list once the set passes on
+     `run` alone.
+   - [ ] Analysis results as layers. `analysis.viewshed` and `analysis.flood`
+     draw straight on the renderer as the `viewshed-result` and `flood-result`
+     sources, so `layers.*` cannot hide, recolour or remove them. Routing them
+     through `addGeoJsonLayer` renames both, and `tests/e2e/panels/analysis.spec.js`,
+     `simulate.spec.js` and `simulate-maplibre.spec.js` assert those names, so
+     the three specs change with it.
+   - [ ] Not run against the live stack after the data panel split:
+     `tests/e2e/panels/data.spec.js` (OGC status text and WFS count). Rebuild
+     the viewtopia container from `60e35348` or later and run it.
+   - [ ] Remove the three `.worktrees/viewtopia-*` checkouts, their commits are
+     on master.
 
 8. **Voice input in the chat.** Repository: `viewtopia`, the server is the
    Aavaaz repo. Owner call 2026-08-25, plan under **Voice input in the chat**
@@ -137,6 +146,8 @@ other documents citing "P0 item 5" still land on the right one.
      `AudioContext({ sampleRate: 16000 })` taking the mic stream.
    - [ ] Hands-free: every completed utterance sent as a prompt on its own,
      with the confirm turn and the streaming lock handled.
+   - [ ] Aavaaz accepts any `AAVAAZ_JWT_SECRET` length. agora refuses one under
+     32 bytes at start, so a short secret is a brute-forceable HS256 gate.
    - [ ] Place-name biasing: WhisperLive's `initial_prompt` fed from the layer
      and project names in the viewer snapshot.
 
@@ -725,42 +736,9 @@ with a WAV through the real container. What is left is P0 item 8.
 
 ### Chat-only viewer mode, phases 2 and 3, and the dictation follow-ups (2026-08-26)
 
-Owner call 2026-08-26: build P0 items 7 and 8 in parallel. Three viewtopia
-agents in `.worktrees/`, cut from `8b5a4745`, one action module each so the
-only shared edits are one import line in `src/actions/index.ts` and the
-catalogue fixture, which is regenerated once after the merge with
-`UPDATE_ACTION_CATALOGUE=1`. Every action follows the phase 1 shape: the
-computation moves into one function under `src/features/` that the panel and
-the action both call, the action returns `{ text }`, a `reads: true` action
-returns a table or list the model can read, an action that draws also adds the
-layer through the existing stores so the snapshot shows it. Unit test per
-action with the service fetch mocked, catalogue fixture updated, one react e2e
-per module running one action through chat mode against a mocked route.
-
-Module A, `src/actions/terrain.ts`: `analysis.viewshed` (observer lon and lat,
-height_m, radius_m, POST `/tiles/v1/analysis/viewshed`, layer added, text
-with the visible area), `analysis.flood` (level_m, bbox defaulting to the
-view, POST `/tiles/v1/analysis/flood`, layer and flooded cell count),
-`analysis.terrain_profile` and `analysis.cross_section` (two points or a
-layer's line, samples, the elevation fetch and `buildProfile` shared, line
-drawn for the cross section, `reads: true` returning min, max, gain and loss).
-
-Module B, `src/actions/scene.ts`: `scene.shadows` (date, hour, on or off, the
-Cesium lighting and shadow map settings the panel sets), `scene.clipping`
-(axis, position, or off), `analysis.travel_time` (centre, minute bands,
-profile, itinera `/api/isochrone`, rings drawn, text with one area per band),
-`analysis.spatial_stats` (layer, method, property, cell size, the deck
-GridLayer the panel shows, text with cell count and value range).
-
-Module C, `src/actions/data.ts`: `data.import_url` (url, name, format guessed
-from the extension, through `importFiles`, upload stays on the panel),
-`data.add_service` (type WMS, WMTS, XYZ, PMTiles or WFS, url, name, the
-OgcServicesTab loaders), `data.export` (layer, format), `stac.search`
-(catalog url, collection, bbox defaulting to the view, `reads: true` returning
-item ids and asset kinds), `stac.add_asset` (catalog, item, asset, the
-`assetAction` rule), `sql.query` (sql, `reads: true`, first 50 rows as a table
-through `ui_spec`), `sql.to_layer` (sql, name), `sql.attach_url` (url, name,
-csv or parquet).
+Phases 2 and 3 shipped 2026-08-26 (`src/actions/terrain.ts`, `scene.ts`,
+`data.ts`, the shared functions under `src/features/`). What is left is the
+eval gate and the two rows under P0 item 7.
 
 Eval gate, geolang, after the merge: one TOML under `evals/viewer/tasks/` per
 new action, `catalogue.json` and `snapshot.json` refreshed from the merged

@@ -6,6 +6,21 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-26: **the analysis, simulate and data panels answer in the chat.**
+  `src/actions/` grew from 25 to 41 named actions. `terrain.ts` adds
+  `analysis.viewshed`, `analysis.flood`, `analysis.terrain_profile` and
+  `analysis.cross_section`, `scene.ts` adds `scene.shadows`, `scene.clipping`,
+  `analysis.travel_time` and `analysis.spatial_stats`, and `data.ts` adds
+  `data.import_url`, `data.add_service`, `data.export`, `stac.search`,
+  `stac.add_asset`, `sql.query`, `sql.to_layer` and `sql.attach_url`. Each is
+  the same function the panel calls, so the Viewshed, Flood, Terrain Profile,
+  Cross Section, Shadows, Clipping, Travel Time, Spatial Stats, Data Sources
+  and STAC panels lost their inline copies to `src/features/terrain/`,
+  `src/features/scene/`, `src/features/analysis/`,
+  `src/features/dataSources/` and `src/features/stac/`. Viewshed now draws on
+  MapLibre too, which chat mode ships with. The profile, cross section, STAC
+  search and SQL query actions read their result back to the model. Unit
+  tests per module and three chat-mode e2e specs cover them.
 - 2026-08-25: **the chat takes dictation.** A mic button beside the send button
   streams the microphone to a WhisperLive server and the transcript into the
   input as you speak, a second click stops it, the text stays for editing and
