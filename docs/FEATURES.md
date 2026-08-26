@@ -18,6 +18,10 @@ and the source paths named by those documents.
 - Seven Space-Time analyses run from the Analysis tab in a worker, each drawing
   its result on the map: colocation, co-travel, pattern-of-life, network
   metrics, behavioral clustering, predictive location, and data quality.
+- Twenty-five typed viewer actions the agent runs through one `viewer_control`
+  run command, with the action catalogue and a snapshot of the current map sent
+  to the model on every chat message, and a chat-only mode (`?mode=chat`) that
+  leaves the chat as the only control.
 - Build-time plugin discovery with 20 built-in plugins.
 - Portal item requests with an API path and local fallback.
 - Dashboard widgets stored in localStorage.

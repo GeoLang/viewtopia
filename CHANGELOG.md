@@ -6,6 +6,29 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-25: **the chat runs the viewer on its own, and `?mode=chat` leaves it
+  as the only control**. `src/actions/` holds 25 named actions with typed
+  parameters, from `camera.fly_to` and `layers.set_visible` through
+  `project.open`, `live.set_asset_rule`, `history.show_at` and
+  `scenario.compare`, each registered by its domain module and each the same
+  function the panel offering that capability calls, so the Scenario panel's
+  compare logic now sits in `src/features/scenario/compare.ts`, the asset rule
+  write in `src/live/assetRule.ts` and the scrubber's fetch in
+  `src/live/assetHistory.ts`. A layer, project, feed, dataset or branch argument
+  is an id or a name, resolved by exact id, exact name, then a unique
+  case-insensitive substring, and an ambiguous name comes back naming the
+  candidates. Every chat message carries `buildViewerSnapshot()` and
+  `actionCatalogue()` as the AG-UI run state, so the model is told the camera,
+  renderer, basemap, up to 50 layers, project, live document, asset rule and
+  picked feature, and it answers with `viewer_control(action='run', name,
+  args)`. A destructive action asks for a confirming reply in the chat before it
+  runs, and a read action's answer goes back as a follow-up turn, at most two per
+  prompt. In chat mode the header, dock, toolbars and overlays are not rendered,
+  a floating "Exit chat mode" button sits over the map, entering posts one
+  message listing what still needs the mouse, and a command that only opens a
+  panel says which panel it would have opened. `tests/unit/actions-*.test.ts`
+  and the deterministic `tests/e2e/chat-mode.spec.js` cover it with no model in
+  the loop.
 - 2026-08-25: **a scenario branch is compared against its base, side by side**.
   A Scenario panel picks a ptolemy dataset, a base branch and a scenario branch,
   makes a new scenario from the base where there is none, and draws each branch

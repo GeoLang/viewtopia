@@ -390,6 +390,16 @@ where tools run in-process with no sandbox and no source shipping, and proxies r
 behind the `agent_event_stream` seam, so the viewer's AG-UI contract is untouched. **AG-UI is
 the viewer's agent channel.**
 
+**The viewer sends its own state and its own catalogue.** Every run's AG-UI `state` is
+`{ viewer, actions }`: a compact snapshot of what the map is showing and the viewer's action
+catalogue, one entry per capability with its description and typed parameters. geolang's
+`src/api/viewer_state.py` renders both into the system turn, so the model reads the layers,
+camera, project and live document instead of guessing, and it acts through one open command,
+`viewer_control(action='run', name, args)`, which reaches the viewer as the existing
+`viewer_cmd` event. A capability added to the viewer's registry needs no geolang change.
+geolang's fixed `viewer_control` action list stays beside `run` until the 40-prompt eval set
+in `evals/viewer/` passes on `run` alone. Contract details in geolang's `docs/api_reference.md`.
+
 **External agents come in over MCP.** geolang-api serves the same 39 tools as stateless
 streamable HTTP at `/agent/mcp`, behind the same platform JWT gate. A request carrying an
 `X-Agora-Document` header (document id or share link token) lands its map effects in that
@@ -570,6 +580,37 @@ tooltips take an element with `textContent` because a string tooltip is parsed a
 MapLibre marker colours are assigned to `style.background` rather than interpolated into
 `cssText` so a value carrying a second declaration is dropped, and Cesium labels are WebGL
 glyphs that never touch the DOM.
+
+**Named actions.** `src/actions/` is the one list of capabilities a typed prompt can reach:
+25 entries, each a name, a description, typed parameters, a `reads` flag and a `destructive`
+flag, registered by its domain module and run through `runAction`, which coerces the arguments,
+checks the enums and the required ones, drops unknown keys and throws naming every problem.
+The panel offering a capability calls the same function the action does, which is why the
+Scenario panel's compare logic sits in `src/features/scenario/compare.ts`, the asset rule write
+in `src/live/assetRule.ts` and the scrubber's fetch in `src/live/assetHistory.ts`. A layer,
+project, document, feed, dataset or branch argument is an id or a name
+(`src/actions/resolve.ts`): exact id, then exact name, then a unique case-insensitive
+substring, and an ambiguous or missing name throws naming the candidates. `layerIndex.ts` is
+the one list of every layer across the app, agent, raster, OGC and 3D tiles stores, each id
+once. `snapshot.ts` builds what the model is told the viewer shows, `dispatch.ts` is the `run`
+command handler, and every result or error is posted as a system message in the chat. A
+destructive action is held in `confirm.ts` and the chat asks for a confirming reply, where yes,
+y, ok, confirm or do it runs it without reaching the model and anything else cancels and goes
+on to the agent as a normal prompt. A read action's text is sent back as a follow-up turn shown
+only as a system line, at most `MAXIMUM_FOLLOW_UPS` per user prompt. The catalogue is kept in
+the `tests/unit/fixtures/action-catalogue.json` golden fixture, which is what geolang's
+`evals/viewer/catalogue.json` is copied from.
+
+**Chat-only mode.** `?mode=chat`, the header's "Chat-only mode" icon and the palette's
+"Chat-only Mode" entry all set the same unpersisted `chatMode` flag, and the URL is rewritten
+on toggle so a reload stays in the mode. The header, panel dock, toolbars, Space-Time panel,
+overlay corner handles and the first-run and tour overlays are not rendered, the chat aside is
+open, a floating "Exit chat mode" button sits over the map, and the panel and measure shortcuts
+are off. Entering posts one system message naming what still needs the mouse: drawing and
+annotation placement, measuring with the cursor, picking a feature by click, vertex drag, image
+overlay corner drag, the swipe handle, the context menu. A viewer command that only opens a
+panel says which panel it would have opened rather than opening it. The actions themselves run
+the same in both modes.
 
 **Tool panels.** 48 registry panels, 30 on by default, plus 22 plugin panels (measure, feature-picker, geojson/style editors,
 geocoding, routing via itinera, terrain profile, cross-section, heatmap, spatial stats,

@@ -43,6 +43,8 @@ calls. Several surfaces are local-only or depend on configured services:
 | **30+ commands** | Measurement, routing, styling, analysis — all voice-driven |
 | **Session persistence** | Chat history saved and replayable |
 | **GeoLang agent** | Spatial reasoning backend. The API advertises 39 tools, and the viewer uses a subset including `sql_query`, `ptolemy_query`, `list_tilesets`, routing, and QGIS algorithms |
+| **Typed actions** | 25 named viewer actions with validated parameters (camera, renderer, basemap, split view, layers, projects, datasets, live documents, history, scenario compare, feature search). The model is sent the catalogue and a snapshot of what the map is showing with every message. A destructive action asks for a confirming reply first |
+| **Chat-only mode** | `?mode=chat`, the header icon or the command palette hides the header, dock and toolbars and leaves the chat as the only control. Drawing, measuring with the cursor and picking by click still need the mouse |
 
 ### Analysis Tools
 | Feature | Description |
@@ -580,6 +582,10 @@ the JWT `sub` on every frame it relays. The frames this client sends and reads:
 linking back to the full app. Pair it with a view-role share link (live map)
 or a `#cam=` hash (static view). The share dialog copies a ready iframe
 snippet for view links.
+
+`?mode=chat` is the other chrome-free URL: the map fills the window and the
+chat is the only control. The header icon and the command palette set the same
+mode, and toggling either way rewrites the URL, so a reload stays where it was.
 
 The iframe offers its host page a postMessage API. Messages the embed accepts
 (parent window only):
