@@ -49,9 +49,7 @@ export function useLeaflet(opts: UseLeafletOptions = {}) {
   const isPane = !!opts.pane;
   const paneIndex = opts.paneIndex ?? 0;
   const basemap = opts.pane?.basemap ?? viewerBasemap;
-  const isActive = opts.pane
-    ? splitActive && activeTab === 'globe' && opts.pane.renderer === 'leaflet'
-    : activeTab === 'map';
+  const isActive = opts.pane ? splitActive && opts.pane.renderer === 'leaflet' : activeTab === 'map';
 
   useEffect(() => {
     if (!isActive) return;
@@ -117,7 +115,7 @@ export function useLeaflet(opts: UseLeafletOptions = {}) {
   // reported as zero, or every 3D move would read as a change and this map
   // would answer it with a correction of its own.
   useFollowSharedCamera(
-    isPane && isActive,
+    isActive && (isPane || splitActive),
     () => {
       const map = mapRef.current;
       if (!map) return null;

@@ -8,6 +8,7 @@ import { DEFAULT_BASEMAP } from '../../src/hooks/basemapTiles';
 import {
   useSplitViewStore,
   usePanes,
+  useActivePaneTab,
   paneRendererChoices,
   VIEWER_PANE,
   COMPARE_PANE,
@@ -171,6 +172,53 @@ describe('split view panes', () => {
 
     expect(cesiumOffered(panes, VIEWER_PANE)).toBe(true);
     expect(cesiumOffered(panes, COMPARE_PANE)).toBe(false);
+  });
+});
+
+describe('the 3D and 2D tabs on the active pane', () => {
+  const tabNow = () => renderHook(() => useActivePaneTab()).result.current;
+
+  it('switch the viewer through the app tab', () => {
+    useSplitViewStore.getState().setActivePaneTab('map');
+
+    expect(useAppStore.getState().activeTab).toBe('map');
+    expect(useSplitViewStore.getState().comparePanes[0].renderer).toBe('maplibre');
+    expect(tabNow()).toBe('map');
+  });
+
+  it('switch a compare pane to Leaflet and back to the globe it drew', () => {
+    useSplitViewStore.getState().setPaneRenderer(COMPARE_PANE, 'cesium');
+    useSplitViewStore.getState().setActivePane(COMPARE_PANE);
+
+    useSplitViewStore.getState().setActivePaneTab('map');
+
+    expect(useSplitViewStore.getState().comparePanes[0].renderer).toBe('leaflet');
+    expect(useAppStore.getState().activeTab).toBe('globe');
+    expect(tabNow()).toBe('map');
+
+    useSplitViewStore.getState().setActivePaneTab('globe');
+
+    expect(useSplitViewStore.getState().comparePanes[0].renderer).toBe('cesium');
+    expect(tabNow()).toBe('globe');
+  });
+
+  it('fall back to MapLibre when the globe the pane left is taken meanwhile', () => {
+    useSplitViewStore.getState().setPaneRenderer(COMPARE_PANE, 'cesium');
+    useSplitViewStore.getState().setActivePane(COMPARE_PANE);
+    useSplitViewStore.getState().setActivePaneTab('map');
+    useAppStore.setState({ renderer: 'cesium' });
+
+    useSplitViewStore.getState().setActivePaneTab('globe');
+
+    expect(useSplitViewStore.getState().comparePanes[0].renderer).toBe('maplibre');
+  });
+
+  it('read a compare pane put on Leaflet by its picker as the 2D tab', () => {
+    useSplitViewStore.getState().setPaneRenderer(COMPARE_PANE, 'leaflet');
+    useSplitViewStore.getState().setActivePane(COMPARE_PANE);
+
+    expect(tabNow()).toBe('map');
+    expect(useAppStore.getState().activeTab).toBe('globe');
   });
 });
 

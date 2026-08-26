@@ -45,7 +45,6 @@ const PANE_LABELS: Record<SplitLayout, string[]> = {
 };
 
 export function SplitViewPanel({ onClose }: { onClose: () => void }) {
-  const activeTab = useAppStore((s) => s.activeTab);
   const localBasemap = useAppStore((s) => s.localBasemap);
   const active = useSplitViewStore((s) => s.active);
   const setActive = useSplitViewStore((s) => s.setActive);
@@ -104,13 +103,6 @@ export function SplitViewPanel({ onClose }: { onClose: () => void }) {
             </Fragment>
           );
         })}
-
-        {activeTab !== 'globe' && (
-          <Text size="xs" c="orange">
-            Every pane is a globe renderer, so the split only shows on the 3D
-            Globe tab.
-          </Text>
-        )}
 
         <Text size="xs" c="dimmed">
           The panes share the camera and the agent's layers. Tools that act on

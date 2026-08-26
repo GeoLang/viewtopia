@@ -98,11 +98,9 @@ export function ViewerArea() {
   const activePane = useSplitViewStore((s) => s.activePane);
   const setActivePane = useSplitViewStore((s) => s.setActivePane);
   const layout = paneLayout(comparePanes.length + 1);
-  // the panes beside the viewer are globe renderers, so the 2D map tab stays single
-  const split = splitActive && activeTab === 'globe';
   // a swipe overlays two panes instead of tiling them, so it needs exactly two
-  const swipe = split && swipeAt !== null && comparePanes.length === 1;
-  const tiled = split && !swipe;
+  const swipe = splitActive && swipeAt !== null && comparePanes.length === 1;
+  const tiled = splitActive && !swipe;
   const columns = tiled ? 2 : 1;
   const rows = tiled && layout === 'grid' ? 2 : 1;
   const setCursorCoords = useAppStore((s) => s.setCursorCoords);
@@ -287,7 +285,7 @@ export function ViewerArea() {
       }
     }, 150);
     return () => clearTimeout(timer);
-  }, [activeTab, renderer, split, swipe, layout, cesiumRef, maplibreRef, leafletRef]);
+  }, [activeTab, renderer, splitActive, swipe, layout, cesiumRef, maplibreRef, leafletRef]);
 
   return (
     <Box
@@ -352,11 +350,11 @@ export function ViewerArea() {
           leafletRef={leafletRef}
         />
 
-        {split && activePane === VIEWER_PANE && <ActivePaneFrame />}
+        {splitActive && activePane === VIEWER_PANE && <ActivePaneFrame />}
       </Box>
 
       {/* The panes beside it: their own renderer instances, synced to the viewer */}
-      {split &&
+      {splitActive &&
         comparePanes.map((pane, i) => {
           const index = i + 1;
           return (

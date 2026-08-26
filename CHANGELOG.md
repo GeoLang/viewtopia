@@ -123,6 +123,11 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-25: **the 3D and 2D tabs switch the highlighted split pane.** The
+  viewer pane shows Leaflet in its own quadrant instead of collapsing the grid,
+  a compare pane swaps to Leaflet and back to the globe it drew, the tab bar
+  reads whichever pane is highlighted, and the Split View panel's "only on the
+  3D tab" notice is gone. `tests/e2e/split-pane-tabs.spec.js` covers it.
 - 2026-08-24: **a plan run names the chat session its report goes to**. The
   approve button's `run_workflow` call sends the viewer session's sibyl id as
   `thread_id`, so geolang appends the run report to that session and to no
@@ -296,6 +301,12 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-08-25: **no light grid between 2D tiles on dark imagery.** Leaflet
+  1.9.4 blends tiles with `mix-blend-mode: plus-lighter` and paints the map
+  ground `#ddd`, so every sub-pixel overlap or gap read as a light seam on the
+  satellite basemap. The tiles blend normally through an SVG alpha filter that
+  makes their edge pixels opaque (the fix the iD editor shipped) and the ground
+  is dark.
 - 2026-08-25: **the react smoke and default boot specs wait for the first
   boot.** Their first shell assertion after `goto` took Playwright's 5 s
   default, which a cold vite compile or a box running other suites exceeds,

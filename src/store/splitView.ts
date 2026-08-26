@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
 import { create } from 'zustand';
 import { DEFAULT_BASEMAP } from '../hooks/basemapTiles';
-import { useAppStore, asRenderer, type Basemap, type Renderer } from './app';
+import { useAppStore, asRenderer, type Basemap, type Renderer, type ViewerTab } from './app';
 
 /**
  * The viewer's two globe renderers plus the 2D map. Leaflet is a compare-pane
- * choice only: the registered viewer every tool binds to has to be a globe, and
- * the 2D Map tab is already the Leaflet view of it.
+ * choice only: the viewer's 2D map is the Map tab, which draws Leaflet over
+ * its globe renderer rather than replacing it.
  */
 export type PaneRenderer = Renderer | 'leaflet';
 
@@ -19,6 +19,8 @@ export function asPaneRenderer(value: unknown): PaneRenderer | null {
 export interface Pane {
   renderer: PaneRenderer;
   basemap: Basemap;
+  /** The globe this pane drew before it went 2D. */
+  globeRenderer?: Renderer;
   /**
    * Agent layers this pane does not draw, so two panes showing the same
    * document can each draw one branch of it. Absent is the same as none.
@@ -101,9 +103,9 @@ interface SplitViewState {
   /** The panes after the viewer, so pane index n is comparePanes[n - 1]. */
   comparePanes: Pane[];
   /**
-   * The pane the map-corner basemap and renderer pickers style, picked by
-   * clicking in it. Tools, agent commands and the viewer registry ignore it:
-   * they act on pane 0 whichever pane is active.
+   * The pane the map-corner basemap and renderer pickers style and the 3D and
+   * 2D tabs switch, picked by clicking in it. Tools, agent commands and the
+   * viewer registry ignore it: they act on pane 0 whichever pane is active.
    */
   activePane: number;
   /**
@@ -123,6 +125,8 @@ interface SplitViewState {
   setLayout: (layout: SplitLayout) => void;
   setActivePane: (index: number) => void;
   setPaneRenderer: (index: number, r: PaneRenderer) => void;
+  /** Put the active pane on a tab: the viewer through the app tab, a compare pane through its renderer. */
+  setActivePaneTab: (tab: ViewerTab) => void;
   setPaneBasemap: (index: number, b: Basemap) => void;
   setSwipeAt: (v: number | null) => void;
   hideLayerInPane: (index: number, layerId: string) => void;
@@ -151,7 +155,7 @@ function writeHiddenLayerIds(
   return { comparePanes: withPane(state.comparePanes, index, { hiddenLayerIds }) };
 }
 
-export const useSplitViewStore = create<SplitViewState>((set) => ({
+export const useSplitViewStore = create<SplitViewState>((set, get) => ({
   active: false,
   comparePanes: DEFAULT_COMPARE_PANES,
   activePane: VIEWER_PANE,
@@ -173,7 +177,30 @@ export const useSplitViewStore = create<SplitViewState>((set) => ({
       if (renderer !== 'leaflet') useAppStore.getState().setRenderer(renderer);
       return;
     }
-    set((s) => ({ comparePanes: withPane(s.comparePanes, index, { renderer }) }));
+    set((s) => {
+      const pane = s.comparePanes[index - 1];
+      const leavingGlobe = renderer === 'leaflet' && pane.renderer !== 'leaflet';
+      const change: Partial<Pane> = leavingGlobe
+        ? { renderer, globeRenderer: pane.renderer as Renderer }
+        : { renderer };
+      return { comparePanes: withPane(s.comparePanes, index, change) };
+    });
+  },
+  setActivePaneTab: (tab) => {
+    const { activePane, comparePanes, setPaneRenderer } = get();
+    if (activePane === VIEWER_PANE) {
+      useAppStore.getState().setActiveTab(tab);
+      return;
+    }
+    if (tab === 'map') {
+      setPaneRenderer(activePane, 'leaflet');
+      return;
+    }
+    const app = useAppStore.getState();
+    const panes = [{ renderer: app.renderer, basemap: app.basemap }, ...comparePanes];
+    const wanted = comparePanes[activePane - 1].globeRenderer ?? 'maplibre';
+    const free = wanted !== 'cesium' || !cesiumHeldElsewhere(panes, activePane);
+    setPaneRenderer(activePane, free ? wanted : 'maplibre');
   },
   setPaneBasemap: (index, basemap) => {
     if (index === VIEWER_PANE) {
@@ -204,6 +231,15 @@ export const useSplitViewStore = create<SplitViewState>((set) => ({
 /** The layer ids one pane leaves out, whether it is the viewer or a compare pane. */
 export function usePaneHiddenLayerIds(index: number): string[] {
   return useSplitViewStore((s) => paneHiddenLayerIds(s, index));
+}
+
+/** The tab the active pane is on: the app tab for the viewer, 2D for a compare pane drawing Leaflet. */
+export function useActivePaneTab(): ViewerTab {
+  const activeTab = useAppStore((s) => s.activeTab);
+  const activePane = useSplitViewStore((s) => s.activePane);
+  const paneRenderer = useSplitViewStore((s) => s.comparePanes[activePane - 1]?.renderer);
+  if (activePane === VIEWER_PANE) return activeTab;
+  return paneRenderer === 'leaflet' ? 'map' : 'globe';
 }
 
 /** Every pane, viewer first, indexed the way the pane setters are. */

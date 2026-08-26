@@ -54,9 +54,9 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
     },
     [isPane, paneIndex],
   );
-  const isActive =
-    activeTab === 'globe' &&
-    (opts.pane ? splitActive && opts.pane.renderer === 'maplibre' : renderer === 'maplibre');
+  const isActive = opts.pane
+    ? splitActive && opts.pane.renderer === 'maplibre'
+    : activeTab === 'globe' && renderer === 'maplibre';
   // the custom url is part of the key: picking another catalog entry keeps
   // basemap === 'custom' and only changes the tiles
   const styleKey = `${basemap}|${selfHostedUrl}|${customBasemap?.url ?? ''}|${

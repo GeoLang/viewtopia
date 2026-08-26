@@ -65,9 +65,9 @@ export function useCesium(opts: UseCesiumOptions = {}) {
     },
     [isPane, paneIndex],
   );
-  const isActive =
-    activeTab === 'globe' &&
-    (opts.pane ? splitActive && opts.pane.renderer === 'cesium' : renderer === 'cesium');
+  const isActive = opts.pane
+    ? splitActive && opts.pane.renderer === 'cesium'
+    : activeTab === 'globe' && renderer === 'cesium';
 
   // Create/destroy viewer based on active state
   useEffect(() => {

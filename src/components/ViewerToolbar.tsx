@@ -20,6 +20,7 @@ import {
 } from '@tabler/icons-react';
 import { useMediaQuery } from '@mantine/hooks';
 import { useAppStore, type ToolPanel, type ViewerTab } from '../store/app';
+import { useActivePaneTab, useSplitViewStore } from '../store/splitView';
 import { toggleInspectPanel } from '../store/featurePicker';
 import { TOOLBAR_ICONS_ONLY_QUERY } from '../theme';
 import { useViewOnlyLive } from '../live/liveStore';
@@ -50,7 +51,9 @@ const TAB_DATA: {
 
 /** `compact` is the phone layout: the labeled menus fold into one "All tools" menu. */
 export function ViewerToolbar({ compact = false }: { compact?: boolean }) {
-  const { activeTab, setActiveTab, togglePanel } = useAppStore();
+  const togglePanel = useAppStore((s) => s.togglePanel);
+  const activePaneTab = useActivePaneTab();
+  const setActivePaneTab = useSplitViewStore((s) => s.setActivePaneTab);
   const toggleSpaceTime = useSpaceTimeStore((s) => s.togglePanel);
   const showPreviewTools = useAppStore((s) => s.settings.showPreviewTools);
   const viewOnly = useViewOnlyLive();
@@ -80,8 +83,8 @@ export function ViewerToolbar({ compact = false }: { compact?: boolean }) {
 
   const rendererTabs = (
     <Tabs
-      value={activeTab}
-      onChange={(v) => v && setActiveTab(v as ViewerTab)}
+      value={activePaneTab}
+      onChange={(v) => v && setActivePaneTab(v as ViewerTab)}
       variant="pills"
       radius="sm"
       style={{ flexShrink: 0 }}

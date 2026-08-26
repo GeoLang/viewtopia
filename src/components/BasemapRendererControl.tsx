@@ -6,6 +6,7 @@ import { BASEMAP_SELECT_GROUPS, basemapSelectGroups } from '../hooks/basemapTile
 import {
   useSplitViewStore,
   usePanes,
+  useActivePaneTab,
   paneRendererChoices,
   VIEWER_PANE,
   type Pane,
@@ -38,22 +39,23 @@ function localBasemapNotice(local: LocalBasemap | null, drawsLocal: boolean): st
 /** Map-corner popover holding the basemap and renderer pickers, so they stop
  * costing permanent toolbar space. */
 export function BasemapRendererControl() {
-  const { activeTab, localBasemap, setLocalBasemap } = useAppStore();
+  const { localBasemap, setLocalBasemap } = useAppStore();
   const uiHidden = useAppStore((s) => s.uiHidden);
   // the pickers style whichever pane was last clicked, which is the viewer
   // itself unless a split is on
   const panes = usePanes();
   const activePane = useSplitViewStore((s) => s.activePane);
+  const activePaneTab = useActivePaneTab();
   const setPaneRenderer = useSplitViewStore((s) => s.setPaneRenderer);
   const setPaneBasemap = useSplitViewStore((s) => s.setPaneBasemap);
   if (uiHidden) return null;
 
   const { renderer, basemap } = panes[activePane] ?? panes[VIEWER_PANE];
 
-  // the 2d map is leaflet: the renderer choice doesn't apply, and vector
-  // styles render as their raster approximation, so they stay choosable
-  // under a label that says what 2d shows
-  const onMapTab = activeTab === 'map';
+  // the 2d map is leaflet: vector styles render as their raster approximation
+  const onMapTab = activePaneTab === 'map';
+  // the viewer's 2d is the tab, not a renderer choice
+  const rendererLocked = onMapTab && activePane === VIEWER_PANE;
   const availableGroups = onMapTab
     ? BASEMAP_SELECT_GROUPS.map((g) =>
         g.group.startsWith('Vector')
@@ -127,13 +129,13 @@ export function BasemapRendererControl() {
             // the 2d tab always draws with leaflet, so show that instead of
             // freezing on the persisted globe renderer
             data={
-              onMapTab
+              rendererLocked
                 ? [{ value: 'leaflet', label: RENDERER_LABELS.leaflet }]
                 : rendererOptions(panes, activePane)
             }
-            value={onMapTab ? 'leaflet' : renderer}
-            disabled={onMapTab}
-            description={onMapTab ? '2D always renders with Leaflet — switch to 3D to change engines' : undefined}
+            value={rendererLocked ? 'leaflet' : renderer}
+            disabled={rendererLocked}
+            description={rendererLocked ? '2D always renders with Leaflet, switch to 3D to change engines' : undefined}
             onChange={(v) => v && setPaneRenderer(activePane, v as PaneRenderer)}
           />
         </Stack>

@@ -29,6 +29,17 @@
   height: 100%;
 }
 
+/* leaflet.css paints the map ground #ddd */
+.leaflet-container {
+  background: var(--mantine-color-dark-8);
+}
+
+/* leaflet.css blends tiles with plus-lighter, a light seam at every tile edge on a gpu */
+.leaflet-container .leaflet-tile-container img.leaflet-tile {
+  mix-blend-mode: normal;
+  filter: url(#leaflet-tile-opaque-edges);
+}
+
 /* Dark scrollbars; Mantine ScrollArea themes its own, this covers native ones */
 * {
   scrollbar-width: thin;

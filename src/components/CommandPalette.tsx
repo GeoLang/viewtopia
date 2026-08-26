@@ -17,6 +17,7 @@ import {
   IconStack2,
 } from '@tabler/icons-react';
 import { useAppStore, type ToolPanel } from '../store/app';
+import { useSplitViewStore } from '../store/splitView';
 import { toggleInspectPanel } from '../store/featurePicker';
 import { useViewOnlyLive } from '../live/liveStore';
 import { useSpaceTimeStore } from '../features/spacetime/store';
@@ -33,7 +34,7 @@ const previewBadge = (
 /** Cmd/Ctrl+K palette over the same registries the toolbar menus render. */
 export function CommandPalette() {
   const togglePanel = useAppStore((s) => s.togglePanel);
-  const setActiveTab = useAppStore((s) => s.setActiveTab);
+  const setActivePaneTab = useSplitViewStore((s) => s.setActivePaneTab);
   const toggleUiHidden = useAppStore((s) => s.toggleUiHidden);
   const setChatMode = useAppStore((s) => s.setChatMode);
   const showPreviewTools = useAppStore((s) => s.settings.showPreviewTools);
@@ -59,13 +60,13 @@ export function CommandPalette() {
             id: 'view-globe',
             label: '3D Globe',
             leftSection: <IconGlobe size={18} />,
-            onClick: () => setActiveTab('globe'),
+            onClick: () => setActivePaneTab('globe'),
           },
           {
             id: 'view-map',
             label: '2D Map',
             leftSection: <IconMap size={18} />,
-            onClick: () => setActiveTab('map'),
+            onClick: () => setActivePaneTab('map'),
           },
           {
             id: 'view-spacetime',
@@ -168,7 +169,7 @@ export function CommandPalette() {
     return groups;
   }, [
     togglePanel,
-    setActiveTab,
+    setActivePaneTab,
     toggleUiHidden,
     setChatMode,
     toggleSpaceTime,

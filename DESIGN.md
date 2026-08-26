@@ -516,9 +516,12 @@ map, plus a synced split view. Picking/draw/measure/agent-layers survive rendere
   limit holds. The layout is two panes across or a 2x2 grid, derived from how many panes there
   are rather than stored, and the viewer is the top left one. A swipe compare overlays two
   panes under a clip path, so it is two panes only. Compare panes may also draw with Leaflet,
-  on the raster approximation of a vector basemap; the viewer pane stays a globe because the
-  tool bindings assume one. Clicking a pane makes it the active one, which is what the
-  map-corner basemap and renderer pickers style, and only the UI keeps Cesium to one pane: the
+  on the raster approximation of a vector basemap. Clicking a pane makes it the active one,
+  which is what the map-corner basemap and renderer pickers style and what the 3D and 2D tabs
+  switch: the viewer pane goes through the app tab and shows Leaflet in its own quadrant, a
+  compare pane swaps its renderer to Leaflet and back to the globe it left (`globeRenderer`),
+  and the split never collapses. The viewer's renderer field stays a globe because the tool
+  bindings assume one. Only the UI keeps Cesium to one pane: the
   option is closed wherever another pane holds it. A pane's `hiddenLayerIds` is
   what lets two panes draw different things: every agent-layer hook skips a layer
   its own pane hides, which is how the Scenario panel puts a base branch on one
