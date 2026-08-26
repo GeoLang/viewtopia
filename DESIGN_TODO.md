@@ -106,16 +106,6 @@ other documents citing "P0 item 5" still land on the right one.
    - [ ] Prove the public route set with service health checks and one
      authenticated browser session.
 
-6. **Digital twin: one site, live asset state, history, scenario.**
-   Repositories: `agora`, `viewtopia`, `tiletopia`, `ptolemy`, `geolang`.
-   Owner call 2026-08-25, plan under **Digital twin** in the plans section.
-   Fluvius is out of this path and comes back later as a rules consumer of
-   agora's readings stream. Slices 1 (feed on the 2D asset layer), 2 (tile
-   binding), 3 (scrubber over the readings table), 4 (scenario compare) and 5
-   (the `asset_readings` agent tool, reachable from the viewer's chat) shipped
-   2026-08-25, see the viewtopia, agora, tiletopia, geolang and sibyl
-   changelogs.
-
 ## Wire for real
 
 A module is written, unit-tested, exported by a `pub mod` line, and never called
@@ -374,6 +364,12 @@ Operator-facing deployment gaps:
 Parked until a real user, a real feed, or a real customer file exists. The
 thesis is "a team makes and analyzes a map together in the browser". Refuse
 feature-parity fights with ArcGIS, Felt, GEE, Palantir.
+
+- [ ] **Fluvius as a rules consumer of agora's readings stream.** Thresholds,
+      geofences and proximity alerts over the live asset readings (see
+      DESIGN.md section 2.0). Fluvius is not in the platform stack, has no
+      persistence or HTTP, and its source socket binds a listener rather than
+      connecting out, so it needs a client to agora's document websocket first.
 
 - [ ] **a standalone e2e for creating a dashboard and adding a widget.** A
       dashboard needs a server project, so that path is covered only against
@@ -652,59 +648,6 @@ first.
 
 See **Before any public deploy**. What is open is the AWS account, the apply
 sequence, and the anonymous-edit / link-expiry policy.
-
-### Digital twin
-
-Owner call 2026-08-25, reversing the 2026-08-13 call that a readings store is
-off-thesis. P0 item 6 tracks the slices. Also answers FleetPanel.
-
-The first twin is one campus or plant from one IFC or glTF model, tiled by
-tiletopia. Readings are scalar values keyed by asset id, one JSON object per
-WebSocket message, every few seconds per asset. Fluvius is not in the path:
-it is not in the platform stack, has no persistence or HTTP, and its source
-socket binds a listener rather than connecting out. Agora is the whole path.
-
-Agora. A feed token minted by a map owner or editor: a platform HS256 JWT
-with a private claim naming the map document and `agora_use: "feed"`, no
-`aud`, long lived, revoked by deleting its feed row. The feed row carries the
-expected interval. An ingest WebSocket route takes readings under that token,
-writes a flat readings table (feed, asset id, kind, time, value, kept 30 days),
-and fans each reading out over the map document's existing WebSocket. Agora
-marks an asset stale after three missed intervals and sends that transition
-the same way, so every member sees the same state and a viewer that just
-opened the map gets current state without replay. A range route returns each
-asset's value at a time T for the scrubber. Readers see readings because they
-can see the map.
-
-Tiles. The IFC reader keeps each element's GlobalId and the mesh tiler writes
-it as `asset_id` through `EXT_structural_metadata`, which the glb writer
-already supports and nothing outside its tests fills. The ptolemy asset
-dataset has an `asset_id` field with the same values. A pick in
-`useFeaturePickerCesium` is one attribute lookup, and a retile keeps working.
-
-Viewer. One threshold rule per map (reading kind, breakpoints, a color each),
-synced as map state, recolors the asset through Cesium's per-feature color,
-and the attribute panel shows every kind's latest value on click. Slice 1
-recolors the ptolemy feature on the 2D layer, slice 2 moves the target to the
-tile feature. The scrubber replays readings only, asset `valid_at` waits for
-the scenario slice. Scenario compare is master and a branch in the existing
-split view, each drawing its own asset layer, with a buffer-and-union coverage
-number per side from ptolemy analytics and the difference shown. Tiletopia
-viewshed runs over terrain cells and itinera over an OSM graph, so neither
-reads a branch and neither is the first compare.
-
-Agent. One geolang tool over agora's readings routes, latest per asset and a
-range, after the four slices, not before.
-
-Test. A Playwright spec on the platform e2e stack that spawns a node producer
-from `tests/e2e/fixtures`, sending readings for the seeded asset ids from a
-fixed list and stopping and restarting on the spec's command. The model is a
-handwritten IFC of about a dozen `IfcBuildingElementProxy` boxes with fixed
-GlobalIds in tiletopia's ingest fixtures, where the tiler test asserts those
-ids come out as `asset_id`. `scripts/seed-twin.mjs` beside `seed-parcels.mjs`
-writes the ptolemy asset dataset with matching ids and mints the feed token.
-Assert on store state and DOM, never pixels. Nothing joins the workflow's
-checkout, build, start and wait lists.
 
 ### Region watch (parked 2026-08-13)
 
