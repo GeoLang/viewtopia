@@ -254,19 +254,16 @@ services:
       - "8090:8090"
     volumes:
       - sibyl-data:/data
-    # provides SIBYL_CLOUD_API_KEY; optional so panels/load CI (no geolang checkout) still parses
+    # provides SIBYL_CLOUD_API_KEY and the rest of the SIBYL_CLOUD_* and
+    # SIBYL_LOCAL_* model config, see geolang/.env.example. optional so
+    # panels/load CI (no geolang checkout) still parses. an `environment`
+    # entry for any of those names would hide the .env value, so none is listed
     env_file:
       - path: ../geolang/.env
         required: false
     environment:
       GEOLANG_URL: http://geolang-api:8080
       PLATFORM_JWT_SECRET: ${PLATFORM_JWT_SECRET:-}
-      SIBYL_CLOUD_API_BASE: ${SIBYL_CLOUD_API_BASE:-}
-      SIBYL_CLOUD_MODELS: ${SIBYL_CLOUD_MODELS:-}
-      # the local pair points at a llama-server on the host as http://host.docker.internal:<port>/v1
-      SIBYL_LOCAL_API_BASE: ${SIBYL_LOCAL_API_BASE:-}
-      SIBYL_LOCAL_MODELS: ${SIBYL_LOCAL_MODELS:-}
-      SIBYL_THINKING: ${SIBYL_THINKING:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:

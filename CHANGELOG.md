@@ -152,9 +152,11 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - 2026-08-26: **sibyl's key and model variables are renamed.** The compose files
-  pass `SIBYL_CLOUD_API_KEY` instead of `XAI_API_KEY`, and the platform compose
-  passes `SIBYL_CLOUD_API_BASE`, `SIBYL_CLOUD_MODELS`, `SIBYL_LOCAL_API_BASE`
-  and `SIBYL_LOCAL_MODELS` in place of `SIBYL_API_BASE` and `SIBYL_MODEL`. The
+  pass `SIBYL_CLOUD_API_KEY` instead of `XAI_API_KEY`. The platform compose no
+  longer lists `SIBYL_API_BASE`, `SIBYL_MODEL` or `SIBYL_THINKING` under
+  `environment`: every `SIBYL_CLOUD_*` and `SIBYL_LOCAL_*` value now comes from
+  `geolang/.env` through `env_file`, because an `environment` entry, even an
+  empty one, hides the file's value. The
   platform E2E and sweep workflows write the `XAI_API_KEY` secret into
   `geolang/.env` as `SIBYL_CLOUD_API_KEY` and no longer write `OPENAI_API_KEY`.
 - 2026-08-25: **the 3D and 2D tabs switch the highlighted split pane.** The
