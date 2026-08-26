@@ -6,6 +6,16 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-25: **the chat takes dictation.** A mic button beside the send button
+  streams the microphone to a WhisperLive server and the transcript into the
+  input as you speak, a second click stops it, the text stays for editing and
+  Enter sends. `src/speech/` holds the client: the WhisperLive handshake over
+  `ws://<host>/speech/`, an AudioWorklet posting 16 kHz float32 frames, the
+  server's segment windows merged by start time, `END_OF_AUDIO` on stop. The
+  server is the Aavaaz GPU image as the `aavaaz` compose service behind the
+  `speech` profile (`SPEECH_MODEL`, default `large-v3-turbo`), and the button
+  is offered only when `/speech/health` answers. `tests/e2e/dictation.spec.js`
+  drives it against a scripted server and Chromium's fake microphone.
 - 2026-08-25: **the chat runs the viewer on its own, and `?mode=chat` leaves it
   as the only control**. `src/actions/` holds 25 named actions with typed
   parameters, from `camera.fly_to` and `layers.set_visible` through

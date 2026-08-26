@@ -9,7 +9,7 @@ import react from '@vitejs/plugin-react';
 // rewrites. Proxying to it rather than to each service keeps dev from having to
 // mirror per-service ports, which drift.
 const PLATFORM_STACK = 'http://localhost:5174';
-const BACKEND_PREFIXES = ['/agent', '/agora', '/api', '/ogc', '/plumb', '/tiles', '/jupyter', '/ws'];
+const BACKEND_PREFIXES = ['/agent', '/agora', '/api', '/ogc', '/plumb', '/tiles', '/jupyter', '/ws', '/speech'];
 
 // everything index.html pulls at boot (entry chunks, styles, fonts, the cesium
 // runtime the bundle binds to as a global), plus all of cesium's lazy-loaded

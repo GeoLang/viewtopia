@@ -403,6 +403,18 @@ bash scripts/platform-up.sh \
 graph build) to answer, and seeds the real-estate demo. It needs the sibling repos
 cloned and your LLM key in `../geolang/.env`.
 
+**Dictation** (optional): the chat's mic button needs the `aavaaz` speech service,
+built from an [Aavaaz](https://github.com/boxerab/aavaaz) checkout at
+`../../Aavaaz` and an NVIDIA GPU with the nvidia container runtime. It sits
+behind a compose profile so a plain `up` skips it:
+
+```bash
+docker compose -f docker-compose.platform.yml --profile speech up -d --build aavaaz
+```
+
+`SPEECH_MODEL` picks the whisper model (default `large-v3-turbo`). The mic
+button appears once `/speech/health` answers.
+
 **Switching regions re-derives everything automatically.** Run it again with a
 different extract URL and it re-downloads the pbf, rebuilds the itinera routing graph,
 re-ingests geokode's addresses, and re-anchors the seeded real-estate demo onto the

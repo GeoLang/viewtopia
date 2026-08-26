@@ -615,6 +615,19 @@ overlay corner drag, the swipe handle, the context menu. A viewer command that o
 panel says which panel it would have opened rather than opening it. The actions themselves run
 the same in both modes.
 
+**Dictation.** A mic button beside the send button toggles it. `src/speech/` opens
+`ws://<host>/speech/` (nginx to the Aavaaz WhisperLive socket, Upgrade forwarded, the
+`bearer` subprotocol offered and echoed by nginx so a server-side JWT check needs no client
+change), sends the WhisperLive handshake (`language: 'en'`, `task: 'transcribe'`,
+`use_vad: true`, float32), then on `SERVER_READY` opens the microphone through an
+`AudioContext` at 16 kHz and an AudioWorklet that posts quarter-second float32 frames. The
+server resends its last ten segments with revisions, so `mergeSegments` keeps only completed
+segments from before a window's first start and takes the window as the rest, and the text
+lands after whatever was typed before the mic went on. Stopping sends a binary
+`END_OF_AUDIO`, keeps the socket for the final window, then closes. The service is the
+`aavaaz` compose service behind the `speech` profile, no host port, no API key, and the button
+is offered only when `/speech/health` answers, so a stack without it shows nothing.
+
 **Tool panels.** 48 registry panels, 30 on by default, plus 22 plugin panels (measure, feature-picker, geojson/style editors,
 geocoding, routing via itinera, terrain profile, cross-section, heatmap, spatial stats,
 weather/wind, shadows/lighting, raster/COG, space-time, notebooks, the industry verticals

@@ -117,6 +117,31 @@ other documents citing "P0 item 5" still land on the right one.
    - [ ] Delete geolang's fixed `viewer_control` action list once the eval set
      passes on `run` alone.
 
+8. **Voice input in the chat.** Repository: `viewtopia`, the server is the
+   Aavaaz repo. Owner call 2026-08-25, plan under **Voice input in the chat**
+   in the plans section.
+   - [!] Live check of the dictation path, stopped 2026-08-26. The `aavaaz`
+     image pulls about 4 GB of torch and CUDA wheels and this connection
+     moved them at 1.8 MB/s, so the build was cancelled. What is in place:
+     `docker compose --profile speech build aavaaz` from the Aavaaz Dockerfile
+     (debconf silenced, `.[whisper]` installed first, the WhisperLive fork
+     `@dev` replaces pypi whisper-live in the last layer, `dev` is pushed and
+     is the only branch with every kwarg `aavaaz serve` passes). The build
+     sandbox copies the host's single VPN resolver, so a VPN blip fails pip
+     with `NameResolutionError` and the build must be restarted. Resume on a
+     fast link: build, `up -d aavaaz`, wait for `/speech/health` through
+     nginx (`large-v3-turbo` downloads on first start), then run a fake-mic
+     Chromium against the vite dev server with a WAV that says a command and
+     expect the words in the chat input. Two things only that run settles:
+     Chrome accepting the 101 with `Sec-WebSocket-Protocol: bearer`, and
+     `AudioContext({ sampleRate: 16000 })` taking the mic stream.
+   - [ ] Hands-free: every completed utterance sent as a prompt on its own,
+     with the confirm turn and the streaming lock handled.
+   - [ ] Aavaaz validates the platform JWT from the `bearer` subprotocol the
+     way agora and tiletopia do, then the `/speech/` route stops being open.
+   - [ ] Place-name biasing: WhisperLive's `initial_prompt` fed from the layer
+     and project names in the viewer snapshot.
+
 ## Wire for real
 
 A module is written, unit-tested, exported by a `pub mod` line, and never called
@@ -680,6 +705,89 @@ actions, scored on the action and args emitted rather than on prose. Run it with
 geolang's fixed `viewer_control` action list once it passes on `run` alone.
 The catalogue there is a copy of `tests/unit/fixtures/action-catalogue.json` and
 is copied by hand, so it needs refreshing whenever an action changes.
+
+### Voice input in the chat
+
+Decided 2026-08-25. A mic button in the chat input toggles dictation: partial
+text streams into the box as you speak, a second click stops, the text stays
+for editing and Enter sends. The client is `src/speech/` in viewtopia: a
+WebSocket to WhisperLive through nginx `/speech/` (same origin, Upgrade
+forwarded, the browser offers `['bearer', jwt]` as subprotocols so a later
+server-side check needs no client change), an `AudioContext` at 16 kHz with an
+AudioWorklet posting Float32 mono frames, the WhisperLive handshake
+(`language: 'en'`, `task: 'transcribe'`, `use_vad: true`), segments merged by
+start time since the server resends the last ten with revisions,
+`END_OF_AUDIO` on stop. The server is the Aavaaz GPU image built from the
+Aavaaz checkout beside GeoLang, `large-v3-turbo` by default (`SPEECH_MODEL`),
+no API key and no host port, behind the compose profile `speech` so CI and
+GPU-less boxes skip it. viewtopia probes `/speech/health` at boot and shows
+the mic only when it answers. Proof: unit tests with a fake WebSocket, a react
+e2e with Playwright's `routeWebSocket` and Chromium's fake mic, one live check
+with a WAV through the real container. What is left is P0 item 8.
+
+### Chat-only viewer mode, phases 2 and 3, and the dictation follow-ups (2026-08-26)
+
+Owner call 2026-08-26: build P0 items 7 and 8 in parallel. Three viewtopia
+agents in `.worktrees/`, cut from `8b5a4745`, one action module each so the
+only shared edits are one import line in `src/actions/index.ts` and the
+catalogue fixture, which is regenerated once after the merge with
+`UPDATE_ACTION_CATALOGUE=1`. Every action follows the phase 1 shape: the
+computation moves into one function under `src/features/` that the panel and
+the action both call, the action returns `{ text }`, a `reads: true` action
+returns a table or list the model can read, an action that draws also adds the
+layer through the existing stores so the snapshot shows it. Unit test per
+action with the service fetch mocked, catalogue fixture updated, one react e2e
+per module running one action through chat mode against a mocked route.
+
+Module A, `src/actions/terrain.ts`: `analysis.viewshed` (observer lon and lat,
+height_m, radius_m, POST `/tiles/v1/analysis/viewshed`, layer added, text
+with the visible area), `analysis.flood` (level_m, bbox defaulting to the
+view, POST `/tiles/v1/analysis/flood`, layer and flooded cell count),
+`analysis.terrain_profile` and `analysis.cross_section` (two points or a
+layer's line, samples, the elevation fetch and `buildProfile` shared, line
+drawn for the cross section, `reads: true` returning min, max, gain and loss).
+
+Module B, `src/actions/scene.ts`: `scene.shadows` (date, hour, on or off, the
+Cesium lighting and shadow map settings the panel sets), `scene.clipping`
+(axis, position, or off), `analysis.travel_time` (centre, minute bands,
+profile, itinera `/api/isochrone`, rings drawn, text with one area per band),
+`analysis.spatial_stats` (layer, method, property, cell size, the deck
+GridLayer the panel shows, text with cell count and value range).
+
+Module C, `src/actions/data.ts`: `data.import_url` (url, name, format guessed
+from the extension, through `importFiles`, upload stays on the panel),
+`data.add_service` (type WMS, WMTS, XYZ, PMTiles or WFS, url, name, the
+OgcServicesTab loaders), `data.export` (layer, format), `stac.search`
+(catalog url, collection, bbox defaulting to the view, `reads: true` returning
+item ids and asset kinds), `stac.add_asset` (catalog, item, asset, the
+`assetAction` rule), `sql.query` (sql, `reads: true`, first 50 rows as a table
+through `ui_spec`), `sql.to_layer` (sql, name), `sql.attach_url` (url, name,
+csv or parquet).
+
+Eval gate, geolang, after the merge: one TOML under `evals/viewer/tasks/` per
+new action, `catalogue.json` and `snapshot.json` refreshed from the merged
+viewer, `python -m evals.viewer_runner --repeat 3`, then delete the
+`ViewerAction` literal and `REQUIRED_PARAMETERS` in
+`src/agents/tools/viewer_control.py` so `run` is the only action, and rerun.
+
+Dictation follow-ups, P0 item 8, after the dictation commit lands:
+
+- JWT in Aavaaz. WhisperLive starts its socket with `websockets.sync.server.serve`,
+  which takes `process_request` and `select_subprotocol`, and the fork's
+  `run()` only builds `process_request` for the API key. The fork gains a
+  `websocket_auth` callable on `run()`. Aavaaz passes one that reads
+  `Sec-WebSocket-Protocol: bearer, <jwt>`, verifies HS256 with
+  `AAVAAZ_JWT_SECRET` (compose sets it from `PLATFORM_JWT_SECRET`), requires
+  `exp` and `sub`, rejects any `aud`, answers 401 otherwise, and selects
+  `bearer` on the 101 so nginx's `add_header Sec-WebSocket-Protocol` goes.
+  Test with a `websockets` client in the Aavaaz suite. The Dockerfile ref is
+  `@dev`, the branch that has every kwarg `aavaaz serve` passes.
+- Hands-free. A second mode on the mic: each completed utterance (a segment
+  with `completed` after the VAD pause) is sent as a prompt on its own, held
+  while a run streams and while a confirm turn is pending, then sent.
+- Place-name biasing. The handshake gains `initial_prompt` built from the layer
+  and project names in the viewer snapshot, capped so it stays under
+  WhisperLive's prompt window.
 
 ### Hosted flagship instance, the thesis blocker
 

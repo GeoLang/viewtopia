@@ -19,6 +19,7 @@ export default defineConfig({
     'backend-absent.spec.js',
     'chat-mode.spec.js',
     'split-pane-tabs.spec.js',
+    'dictation.spec.js',
   ],
   // cesium on swiftshader runs the heaviest tests here at 40-44s on a loaded
   // box, and the specs' own 30-60s waits only report anything under a larger
@@ -36,6 +37,9 @@ export default defineConfig({
       args: [
         '--use-gl=swiftshader',
         '--enable-unsafe-swiftshader',
+        // the dictation spec reads a microphone, chromium's fake one
+        '--use-fake-device-for-media-stream',
+        '--use-fake-ui-for-media-stream',
         // the basemap hosts are served from disk (see local-basemap.js) and the
         // DEM lookup is stubbed in panels-smoke, and chromium resolves them
         // unreliably here. Anything that slips past a stub fails outright

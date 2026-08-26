@@ -17,6 +17,10 @@ import { renderUISpec } from '../viewer/uiSpec';
 import { executeViewerCommand } from '../viewer/commands';
 import { useChatStore, type Message } from '../store/chat';
 import { useSSE } from '../hooks/useSSE';
+import { DictationButton } from '../speech/DictationButton';
+import { useDictation } from '../speech/useDictation';
+import { useSpeechAvailability } from '../speech/availability';
+import { withTypedPrefix } from '../speech/segments';
 
 /** Re-run everything a reply did to the map: its viewer commands, then its map spec. */
 function replayMessage(msg: Message) {
@@ -51,6 +55,25 @@ export function ChatPanel() {
   );
   const [historyIndex, setHistoryIndex] = useState(-1);
   const draftRef = useRef('');
+
+  const speechAvailable = useSpeechAvailability((s) => s.available);
+  const probeSpeech = useSpeechAvailability((s) => s.probe);
+  useEffect(() => {
+    void probeSpeech();
+  }, [probeSpeech]);
+  // what was typed before the mic went on, the transcript follows it
+  const typedBeforeDictation = useRef('');
+  const dictation = useDictation((transcript) =>
+    setInput(withTypedPrefix(typedBeforeDictation.current, transcript)),
+  );
+  const toggleDictation = () => {
+    if (dictation.state !== 'idle') {
+      dictation.stop();
+      return;
+    }
+    typedBeforeDictation.current = input;
+    dictation.start();
+  };
 
   // Auto-create first session
   useEffect(() => {
@@ -88,6 +111,7 @@ export function ChatPanel() {
   const handleSend = () => {
     const prompt = input.trim();
     if (!prompt || streaming) return;
+    dictation.stop();
     setInput('');
     setHistoryIndex(-1);
     draftRef.current = '';
@@ -235,6 +259,9 @@ export function ChatPanel() {
           onKeyDown={handleKeyDown}
           disabled={streaming}
         />
+        {speechAvailable && (
+          <DictationButton state={dictation.state} disabled={streaming} onToggle={toggleDictation} />
+        )}
         {streaming ? (
           <ActionIcon aria-label="Stop generating" variant="filled" color="red" size="lg" onClick={abort}>
             <IconSquare size={14} />

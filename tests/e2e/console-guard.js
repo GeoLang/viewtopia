@@ -20,7 +20,7 @@ const ALLOWED = [
   // asks for the bundle list on mount; with no platform stack running (this
   // suite starts none) the dev proxy answers 500, and running without a backend
   // is a supported state, not an app error
-  /Failed to load resource.*\/(api\/v1\/health|tiles\/v1\/(health|terrain\/bundles)|agora\/health|agent\/health)/,
+  /Failed to load resource.*\/(api\/v1\/health|tiles\/v1\/(health|terrain\/bundles)|agora\/health|agent\/health|speech\/health)/,
 ];
 
 /** Per-page allowances, for a test that drives a failure on purpose. */

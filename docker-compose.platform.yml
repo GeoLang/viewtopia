@@ -427,6 +427,40 @@ services:
       # the geo stack preload happens in a background thread, boot is fast now
       start_period: 60s
 
+  # ── Speech to text (Aavaaz over WhisperLive) ─────────────────────
+  #
+  # The chat's mic button streams audio here through nginx /speech/. Needs the
+  # nvidia container runtime, so it sits behind the `speech` profile and a
+  # plain `up` skips it:
+  #   docker compose --profile speech up -d --build aavaaz
+  # Built from the Aavaaz checkout beside the GeoLang directory. No host port
+  # and no API key: only containers reach 9090, and the nginx route is open.
+  #
+  # Env vars:
+  #   SPEECH_MODEL — whisper model (default large-v3-turbo, about 1.6 GB of
+  #                  VRAM; `small` runs on a CPU-only box with Dockerfile.cpu)
+  aavaaz:
+    build:
+      context: ../../Aavaaz/aavaaz
+    profiles: [speech]
+    command: ["--model", "${SPEECH_MODEL:-large-v3-turbo}"]
+    volumes:
+      - speech-models:/root/.cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      # the model downloads on first start
+      start_period: 300s
+
   # ── Notebooks (Python) ────────────────────────────────────────────
   #
   # Backs viewtopia's notebook python cells (src/notebooks/jupyter.ts) via the
@@ -482,6 +516,7 @@ volumes:
   geolang-cache:
   geolang-outputs:
   geolang-user-data:
+  speech-models:
   geolang-live-data:
   geolang-natural-earth:
   sibyl-data:
