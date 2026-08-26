@@ -10,6 +10,7 @@ import './layers';
 import './live';
 import './project';
 import './scenario';
+import './view';
 
 export { actionCatalogue, runAction, findAction, ActionError } from './registry';
 export type { ActionDefinition, ActionResult, CatalogueEntry } from './registry';

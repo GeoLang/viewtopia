@@ -9,7 +9,8 @@ import {
 import { Notifications } from '@mantine/notifications';
 import { ModalsProvider } from '@mantine/modals';
 import { useMediaQuery } from '@mantine/hooks';
-import { IconMenu2, IconX } from '@tabler/icons-react';
+import { IconLayoutNavbarExpand, IconMenu2, IconX } from '@tabler/icons-react';
+import { announceChatMode } from './actions/chatMode';
 import { useAppStore } from './store/app';
 import { theme, MOBILE_QUERY } from './theme';
 import { Header } from './components/Header';
@@ -51,6 +52,8 @@ export function App() {
   const toggleNav = useAppStore((s) => s.toggleNav);
   const uiHidden = useAppStore((s) => s.uiHidden);
   const toggleUiHidden = useAppStore((s) => s.toggleUiHidden);
+  const chatMode = useAppStore((s) => s.chatMode);
+  const setChatMode = useAppStore((s) => s.setChatMode);
   const toggleSpaceTime = useSpaceTimeStore((s) => s.togglePanel);
 
   const isMobile = useMediaQuery(MOBILE_QUERY, false, {
@@ -83,24 +86,35 @@ export function App() {
   const embed = isEmbedRequested();
   useEmbedMessaging(embed);
 
+  // what the mode is, and what it cannot do, said once for each entry
+  useEffect(() => {
+    announceChatMode(chatMode);
+  }, [chatMode]);
+
+  // the header, the panel dock and the toolbars are all gone in chat mode, so
+  // the map has the window to itself the way presentation mode leaves it
+  const chromeHidden = uiHidden || embed || chatMode;
+  const mobileSheetOpen = mobileChatOpen || chatMode;
+
+  const keyboardShortcuts = (): Record<string, () => void> => {
+    if (embed) return {};
+    // the rest either open a panel or need the cursor, so chat mode keeps only
+    // the one that hides the chrome
+    if (chatMode) return { 'ctrl+.': toggleUiHidden };
+    if (viewOnly) {
+      return { 't': toggleSpaceTime, 'ctrl+.': toggleUiHidden, ...MEASURE_SHORTCUTS };
+    }
+    return {
+      'ctrl+b': toggleChat,
+      'b': toggleChat,
+      't': toggleSpaceTime,
+      'ctrl+.': toggleUiHidden,
+      ...TOOL_SHORTCUTS,
+    };
+  };
+
   useBackendDiscovery();
-  useKeyboardShortcuts(
-    embed
-      ? {}
-      : viewOnly
-        ? {
-            't': toggleSpaceTime,
-            'ctrl+.': toggleUiHidden,
-            ...MEASURE_SHORTCUTS,
-          }
-        : {
-            'ctrl+b': toggleChat,
-            'b': toggleChat,
-            't': toggleSpaceTime,
-            'ctrl+.': toggleUiHidden,
-            ...TOOL_SHORTCUTS,
-          },
-  );
+  useKeyboardShortcuts(keyboardShortcuts());
 
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
 
@@ -135,13 +149,14 @@ export function App() {
       {!embed && <CommandPalette />}
       <ModalsProvider>
         <AppShell
-          header={{ height: 48, collapsed: uiHidden || embed }}
+          header={{ height: 48, collapsed: chromeHidden }}
           aside={{
             width: isMobile ? '100vw' : asideWidth,
             breakpoint: 'sm',
+            // chat mode leaves the chat as the only control, so it is always open
             collapsed: {
-              mobile: !mobileChatOpen || uiHidden || viewOnly || embed,
-              desktop: !navOpened || uiHidden || viewOnly || embed,
+              mobile: !chatMode && (!mobileChatOpen || uiHidden || viewOnly || embed),
+              desktop: !chatMode && (!navOpened || uiHidden || viewOnly || embed),
             },
           }}
           padding={0}
@@ -164,7 +179,7 @@ export function App() {
                 insetInlineStart: 0,
                 height: MOBILE_SHEET_HEIGHT,
                 borderTop: '1px solid var(--mantine-color-dark-5)',
-                transform: mobileChatOpen ? 'translateY(0)' : 'translateY(100%)',
+                transform: mobileSheetOpen ? 'translateY(0)' : 'translateY(100%)',
               }),
             }}
           >
@@ -189,7 +204,7 @@ export function App() {
           </AppShell.Aside>
 
           {/* Floating chat toggle: phones only, desktop has the header icon */}
-          {isMobile && !uiHidden && !viewOnly && !embed && (
+          {isMobile && !chromeHidden && !viewOnly && (
             <Tooltip label={chatOpen ? 'Hide chat (Ctrl+B)' : 'Show chat (Ctrl+B)'} position="left">
               <ActionIcon
                 aria-label={chatOpen ? 'Hide chat' : 'Show chat'}
@@ -201,7 +216,7 @@ export function App() {
                 style={{
                   position: 'fixed',
                   // it rides just above the sheet so it never covers chat
-                  bottom: mobileChatOpen ? `calc(${MOBILE_SHEET_HEIGHT} + 12px)` : 24,
+                  bottom: mobileSheetOpen ? `calc(${MOBILE_SHEET_HEIGHT} + 12px)` : 24,
                   right: 12,
                   zIndex: 400,
                 }}
@@ -216,11 +231,11 @@ export function App() {
               background: 'var(--mantine-color-dark-8)',
               display: 'flex',
               flexDirection: 'column',
-              height: uiHidden || embed ? '100vh' : 'calc(100vh - 48px)',
+              height: chromeHidden ? '100vh' : 'calc(100vh - 48px)',
               position: 'relative',
             }}
           >
-            {isMobile && !uiHidden && !embed && (
+            {isMobile && !chromeHidden && (
               <Group
                 px="sm"
                 py={4}
@@ -233,18 +248,34 @@ export function App() {
             <ErrorBoundary fallbackMessage="Map viewer encountered an error">
               <ViewerArea />
             </ErrorBoundary>
-            {!uiHidden && !embed && (
+            {!chromeHidden && (
               <ErrorBoundary fallbackMessage="SpaceTime panel error">
                 <SpaceTimePanel />
               </ErrorBoundary>
             )}
-            {!uiHidden && !embed && <ToolPanels />}
-            {!uiHidden && !embed && <OverlayCornerHandles />}
+            {!chromeHidden && <ToolPanels />}
+            {!chromeHidden && <OverlayCornerHandles />}
+            {/* chat mode hides the header, so the way back rides on the map */}
+            {chatMode && (
+              <Tooltip label="Exit chat-only mode" position="right">
+                <ActionIcon
+                  aria-label="Exit chat mode"
+                  variant="filled"
+                  color="violet"
+                  size="lg"
+                  radius="xl"
+                  onClick={() => setChatMode(false)}
+                  style={{ position: 'absolute', top: 12, left: 12, zIndex: 400 }}
+                >
+                  <IconLayoutNavbarExpand size={18} />
+                </ActionIcon>
+              </Tooltip>
+            )}
             <MapPresence />
             {!embed && <WindowDropZone />}
             {!embed && <TilesetOffer />}
-            {!uiHidden && !embed && <FirstRunOverlay />}
-            {!uiHidden && !embed && <TourOverlay />}
+            {!chromeHidden && <FirstRunOverlay />}
+            {!chromeHidden && <TourOverlay />}
             {embed && <EmbedBadge />}
           </AppShell.Main>
         </AppShell>

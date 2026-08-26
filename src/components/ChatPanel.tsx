@@ -11,6 +11,7 @@ import {
 } from '@mantine/core';
 import { IconSend, IconPlus, IconTrash, IconSquare } from '@tabler/icons-react';
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { interceptConfirmReply } from '../actions/dispatch';
 import { PlanPanel } from '../features/workflow/PlanPanel';
 import { renderUISpec } from '../viewer/uiSpec';
 import { executeViewerCommand } from '../viewer/commands';
@@ -75,12 +76,24 @@ export function ChatPanel() {
     draftRef.current = '';
   }, [activeSessionId]);
 
+  // a read action's result goes back to the model as its own turn, once the run
+  // that produced it has finished
+  const followUp = useChatStore((s) => s.followUp);
+  useEffect(() => {
+    if (!followUp || streaming) return;
+    const prompt = useChatStore.getState().takeFollowUp();
+    if (prompt) void send(prompt, { followUp: true });
+  }, [followUp, streaming, send]);
+
   const handleSend = () => {
-    if (!input.trim() || streaming) return;
-    send(input.trim());
+    const prompt = input.trim();
+    if (!prompt || streaming) return;
     setInput('');
     setHistoryIndex(-1);
     draftRef.current = '';
+    // a pending destructive action reads the reply itself
+    if (interceptConfirmReply(prompt)) return;
+    send(prompt);
   };
 
   /** Step through sent prompts: +1 goes further back, -1 back toward the draft. */

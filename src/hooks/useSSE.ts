@@ -1,6 +1,8 @@
 import { useCallback, useRef } from 'react';
 import { HttpAgent, type AgentSubscriber } from '@ag-ui/client';
 import type { Message } from '@ag-ui/core';
+import { actionCatalogue } from '../actions';
+import { buildViewerSnapshot } from '../actions/snapshot';
 import type { WorkflowPlan, WorkflowRunReport } from '../features/workflow/plan';
 import { ensureBackendSession } from '../lib/agentSessions';
 import { authHeaders } from '../lib/apiAuth';
@@ -91,6 +93,11 @@ export function buildAgUiSubscriber({ setLastContent, setLastError, setLastMapSp
   };
 }
 
+export interface SendOptions {
+  /** carries a read action's result back to the model, so it is not a prompt */
+  followUp?: boolean;
+}
+
 /**
  * Hook for streaming responses from the GeoLang AI agent over the AG-UI
  * protocol (POST /agent/chat/agui via `@ag-ui/client` HttpAgent).
@@ -109,9 +116,15 @@ export function useSSE() {
   } = useChatStore();
 
   const send = useCallback(
-    async (prompt: string) => {
-      // Add user message
-      addMessage({ role: 'user', content: prompt });
+    async (prompt: string, options?: SendOptions) => {
+      // a follow-up carries a read action's result, which the action already
+      // posted as a system message, so the transcript needs nothing more
+      if (options?.followUp) {
+        useChatStore.getState().countFollowUp();
+      } else {
+        addMessage({ role: 'user', content: prompt });
+        useChatStore.getState().startPromptTurn();
+      }
 
       // Start assistant placeholder
       addMessage({ role: 'assistant', content: '' });
@@ -141,11 +154,14 @@ export function useSSE() {
         ];
         // the bearer goes with the run: geolang hands it to sibyl, which sends it
         // on every tool call, so the tools reach ptolemy and friends as this user
+        // the run state is what the model knows about the viewer: what is on
+        // screen now, and every action it may run through viewer_cmd
         const agent = new HttpAgent({
           url: '/agent/chat/agui',
           headers: authHeaders(),
           threadId,
           initialMessages: messages,
+          initialState: { viewer: buildViewerSnapshot(), actions: actionCatalogue() },
         });
         await agent.runAgent(
           { runId: crypto.randomUUID(), abortController: controller },

@@ -3,6 +3,7 @@ import {
   IconGlobe,
   IconMaximize,
   IconMessage,
+  IconMessageChatbot,
   IconMinimize,
   IconMoon,
   IconSun,
@@ -25,6 +26,7 @@ export function Header() {
   const { toggle: toggleFullscreen, fullscreen } = useFullscreen();
   const navOpened = useAppStore((s) => s.navOpened);
   const toggleNav = useAppStore((s) => s.toggleNav);
+  const setChatMode = useAppStore((s) => s.setChatMode);
   const viewOnly = useViewOnlyLive();
   const isMobile = useMediaQuery(MOBILE_QUERY, false, {
     getInitialValueInEffect: false,
@@ -58,6 +60,19 @@ export function Header() {
               onClick={toggleNav}
             >
               <IconMessage size={16} />
+            </ActionIcon>
+          </Tooltip>
+        )}
+
+        {!isMobile && !viewOnly && (
+          <Tooltip label="Chat-only mode">
+            <ActionIcon
+              aria-label="Chat-only mode"
+              variant="subtle"
+              color="violet"
+              onClick={() => setChatMode(true)}
+            >
+              <IconMessageChatbot size={16} />
             </ActionIcon>
           </Tooltip>
         )}

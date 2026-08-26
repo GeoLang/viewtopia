@@ -188,6 +188,50 @@ describe('AG-UI channel', () => {
     fetchSpy.mockRestore();
   });
 
+  // geolang builds the model's tool list from the catalogue and puts the
+  // snapshot in the system turn, so a run without them leaves the model blind
+  it('sends the viewer snapshot and the action catalogue as the run state', async () => {
+    useChatStore.getState().createSession('AG-UI');
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue({ ok: false, status: 500, statusText: 'err' } as Response);
+
+    const { result } = renderHook(() => useSSE());
+    await act(async () => {
+      await result.current.send('hello');
+    });
+
+    const call = fetchSpy.mock.calls.find((c) => String(c[0]).includes('/agent/chat/agui'));
+    fetchSpy.mockRestore();
+    const { state } = JSON.parse(String(call?.[1]?.body));
+    expect(state.viewer.mode).toBe('full');
+    expect(state.viewer.layers).toEqual([]);
+    expect(state.actions.map((action: { name: string }) => action.name)).toContain('basemap.set');
+  });
+
+  // the action already posted its result as a system message, so a second copy
+  // as a user prompt would read as something the user typed
+  it('sends a follow-up run without writing a prompt into the transcript', async () => {
+    useChatStore.getState().createSession('AG-UI');
+    useChatStore.setState({ followUpCount: 0 });
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue({ ok: false, status: 500, statusText: 'err' } as Response);
+
+    const { result } = renderHook(() => useSSE());
+    await act(async () => {
+      await result.current.send('Result of layers.list: 2 layers.', { followUp: true });
+    });
+    fetchSpy.mockRestore();
+
+    const roles = useChatStore
+      .getState()
+      .activeMessages()
+      .map((message) => message.role);
+    expect(roles).toEqual(['assistant']);
+    expect(useChatStore.getState().followUpCount).toBe(1);
+  });
+
   /** Headers the run request went out with, or undefined if it never went out. */
   async function runHeaders(): Promise<Record<string, string> | undefined> {
     useChatStore.getState().createSession('AG-UI');

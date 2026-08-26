@@ -8,6 +8,7 @@ import {
   IconGlobe,
   IconListDetails,
   IconMap,
+  IconMessageChatbot,
   IconPlug,
   IconPresentation,
   IconRuler,
@@ -34,6 +35,7 @@ export function CommandPalette() {
   const togglePanel = useAppStore((s) => s.togglePanel);
   const setActiveTab = useAppStore((s) => s.setActiveTab);
   const toggleUiHidden = useAppStore((s) => s.toggleUiHidden);
+  const setChatMode = useAppStore((s) => s.setChatMode);
   const showPreviewTools = useAppStore((s) => s.settings.showPreviewTools);
   const toggleSpaceTime = useSpaceTimeStore((s) => s.togglePanel);
   const viewOnly = useViewOnlyLive();
@@ -78,6 +80,12 @@ export function CommandPalette() {
             description: 'Ctrl+.',
             leftSection: <IconPresentation size={18} />,
             onClick: toggleUiHidden,
+          },
+          {
+            id: 'view-chat-only',
+            label: 'Chat-only Mode',
+            leftSection: <IconMessageChatbot size={18} />,
+            onClick: () => setChatMode(true),
           },
         ],
       },
@@ -162,6 +170,7 @@ export function CommandPalette() {
     togglePanel,
     setActiveTab,
     toggleUiHidden,
+    setChatMode,
     toggleSpaceTime,
     showPreviewTools,
     viewOnly,

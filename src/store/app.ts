@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { isChatModeRequested, setChatModeInUrl } from '../actions/chatMode';
 import type { BackendName } from '../offline/backends';
 import type { CameraState } from './cameraViews';
 import {
@@ -160,6 +161,9 @@ interface AppState {
   /** presentation mode: every piece of chrome hidden, only the map (Ctrl+.) */
   uiHidden: boolean;
   toggleUiHidden: () => void;
+  /** chat-only mode: no header, panels or toolbars, the chat the only control */
+  chatMode: boolean;
+  setChatMode: (on: boolean) => void;
 
   // Viewer
   activeTab: ViewerTab;
@@ -269,6 +273,11 @@ export const useAppStore = create<AppState>()(
       setAsideWidth: (asideWidth) => set({ asideWidth: Math.max(250, Math.min(700, asideWidth)) }),
       uiHidden: false,
       toggleUiHidden: () => set((s) => ({ uiHidden: !s.uiHidden })),
+      chatMode: isChatModeRequested(),
+      setChatMode: (chatMode) => {
+        setChatModeInUrl(chatMode);
+        set({ chatMode });
+      },
 
       activeTab: 'globe',
       setActiveTab: (tab) => set({ activeTab: tab }),
