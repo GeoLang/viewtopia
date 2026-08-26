@@ -41,17 +41,9 @@ function decode(hex: string): GeoJSON.Geometry | null {
   }
 }
 
-/** `{`, the first byte of the GeoJSON text /features/at puts in `geometry_wkb`. */
-const GEOJSON_TEXT_FIRST_BYTE = 0x7b;
-
 function geometryOf(bytes: number[] | undefined): GeoJSON.Geometry | null {
   if (!bytes?.length) return null;
-  if (bytes[0] !== GEOJSON_TEXT_FIRST_BYTE) return decode(toHex(bytes));
-  try {
-    return JSON.parse(new TextDecoder().decode(Uint8Array.from(bytes))) as GeoJSON.Geometry;
-  } catch {
-    return null;
-  }
+  return decode(toHex(bytes));
 }
 
 function toBranchFeature(raw: RawFeature): BranchFeature {

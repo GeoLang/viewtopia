@@ -273,6 +273,9 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-08-25: **a branch drawn at a past moment decodes WKB only.** ptolemy's
+  `/features/at` now answers `geometry_wkb` as WKB like `/features`, so the
+  reader no longer sniffs the first byte for GeoJSON text.
 - 2026-08-25: **an attachment dropped by a save the server refused is still
   deleted on the retry.** The cached map record now carries the attachment ids
   the last accepted snapshot may still name and the current one does not, so
