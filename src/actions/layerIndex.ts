@@ -7,6 +7,7 @@ import { layerStyle, useAgentLayerStore } from '../store/agentLayers';
 import { useAppStore } from '../store/app';
 import { ogcLayerOpacity, ogcLayerVisible, useOgcLayerStore } from '../store/ogcLayers';
 import { useTiles3dLayerStore } from '../store/tiles3dLayers';
+import { resolveOne } from './resolve';
 
 export type ViewerLayerKind = 'map' | 'agent' | 'raster' | 'ogc' | 'tiles3d';
 
@@ -74,4 +75,9 @@ export function listViewerLayers(): ViewerLayer[] {
     });
   }
   return listed;
+}
+
+/** The one layer an id or a name names, across every store. */
+export function resolveViewerLayer(query: string): ViewerLayer {
+  return resolveOne('layer', query, listViewerLayers());
 }

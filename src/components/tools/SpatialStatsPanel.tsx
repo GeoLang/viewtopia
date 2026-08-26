@@ -10,8 +10,15 @@ import {
   Code,
 } from '@mantine/core';
 import { IconChartDots } from '@tabler/icons-react';
-import { GridLayer } from '@deck.gl/aggregation-layers';
 import { PanelCard, PanelHeader } from '../PanelCard';
+import {
+  DEFAULT_CELL_METERS,
+  MAX_CELL_METERS,
+  MIN_CELL_METERS,
+  SPATIAL_STATS_GROUP,
+  formatCellValue,
+  showSpatialStatsGrid,
+} from '../../features/analysis/spatialStats';
 import { useDrawStore } from '../../store/draw';
 import { useColumnLabels } from '../../store/datasetSchemas';
 import {
@@ -19,32 +26,18 @@ import {
   pointsFromDraw,
   drawLayerOptions,
   numericProperties,
-  gridSummary,
-  gridWeight,
-  showPanelDeckLayer,
   clearPanelDeckLayer,
   type GridAggregation,
   type PointRecord,
 } from '../../lib/pointData';
 
-const GROUP = 'panel-spatialstats';
-
-const AGG: Record<GridAggregation, 'COUNT' | 'SUM' | 'MEAN'> = {
-  count: 'COUNT',
-  sum: 'SUM',
-  mean: 'MEAN',
-};
-
-/** Cell values can be fractional means, so trim them to something readable. */
-function fmt(n: number): string {
-  return Number.isInteger(n) ? String(n) : n.toFixed(2);
-}
+const CELL_METERS_STEP = 50;
 
 export function SpatialStatsPanel({ onClose }: { onClose: () => void }) {
   const features = useDrawStore((s) => s.features);
   const [method, setMethod] = useState<GridAggregation>('count');
   const [property, setProperty] = useState<string | null>(null);
-  const [cellSize, setCellSize] = useState(500);
+  const [cellSize, setCellSize] = useState(DEFAULT_CELL_METERS);
   const [source, setSource] = useState<string>('pasted');
   const [pasted, setPasted] = useState('');
   const [result, setResult] = useState<string | null>(null);
@@ -78,35 +71,14 @@ export function SpatialStatsPanel({ onClose }: { onClose: () => void }) {
       setResult('No points found in source');
       return;
     }
-    // count has no weight to read, so the property only applies to sum/mean
-    const weightProperty = method === 'count' ? null : property;
-    const agg = AGG[method];
-    showPanelDeckLayer(
-      GROUP,
-      new GridLayer<PointRecord>({
-        id: `panel-grid-${Date.now()}`,
-        data: points,
-        getPosition: (d) => d.position,
-        getColorWeight: (d) => gridWeight(d, weightProperty),
-        colorAggregation: agg,
-        getElevationWeight: (d) => gridWeight(d, weightProperty),
-        elevationAggregation: agg,
-        cellSize,
-        // gpu aggregation allocates a bin for every cell in the data extent
-        gpuAggregation: false,
-        extruded: true,
-        pickable: true,
-      }),
-    );
-    const s = gridSummary(points, cellSize, method, weightProperty);
-    const label = weightProperty ? `${method}(${weightProperty})` : method;
+    const { summary, label } = showSpatialStatsGrid(points, method, property, cellSize);
     setResult(
-      `points: ${s.total}\ncells: ${s.cells}\nmethod: ${label}\nmin/cell: ${fmt(s.min)}\nmax/cell: ${fmt(s.max)}`,
+      `points: ${summary.total}\ncells: ${summary.cells}\nmethod: ${label}\nmin/cell: ${formatCellValue(summary.min)}\nmax/cell: ${formatCellValue(summary.max)}`,
     );
   };
 
   const clear = () => {
-    clearPanelDeckLayer(GROUP);
+    clearPanelDeckLayer(SPATIAL_STATS_GROUP);
     setResult('Cleared');
   };
 
@@ -164,7 +136,15 @@ export function SpatialStatsPanel({ onClose }: { onClose: () => void }) {
         )}
 
         <Text size="xs" c="dimmed">Cell Size: {cellSize} m</Text>
-        <Slider size="xs" min={50} max={5000} step={50} value={cellSize} onChange={setCellSize} color="violet" />
+        <Slider
+          size="xs"
+          min={MIN_CELL_METERS}
+          max={MAX_CELL_METERS}
+          step={CELL_METERS_STEP}
+          value={cellSize}
+          onChange={setCellSize}
+          color="violet"
+        />
 
         <Group gap="xs" grow>
           <Button size="xs" color="violet" onClick={run}>Run</Button>

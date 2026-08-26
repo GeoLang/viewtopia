@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Text,
   Stack,
@@ -7,67 +7,42 @@ import {
   SegmentedControl,
 } from '@mantine/core';
 import { IconScissors } from '@tabler/icons-react';
-import { Cartesian3, ClippingPlane, ClippingPlaneCollection, Ellipsoid } from 'cesium';
 import { PanelCard, PanelHeader } from '../PanelCard';
+import {
+  CENTRE_CLIP_POSITION,
+  DEFAULT_CLIP_AXIS,
+  MAX_CLIP_POSITION,
+  MIN_CLIP_POSITION,
+  applyGlobeClipping,
+  disableGlobeClipping,
+  type ClipAxis,
+} from '../../features/scene/clipping';
 import { useAppStore } from '../../store/app';
 import { getActiveCesiumViewer } from '../../viewer/registry';
-
-type Axis = 'x' | 'y' | 'z';
-
-/** Globe clipping planes live in the earth-fixed frame, so the axes are ECEF. */
-const AXIS_NORMALS: Record<Axis, Cartesian3> = {
-  x: new Cartesian3(1, 0, 0),
-  y: new Cartesian3(0, 1, 0),
-  z: new Cartesian3(0, 0, 1),
-};
-
-/** 50% cuts through the earth's centre; the ends push the cut past the surface. */
-function planeDistance(position: number): number {
-  return ((50 - position) / 50) * Ellipsoid.WGS84.maximumRadius;
-}
 
 export function ClippingPanel({ onClose }: { onClose: () => void }) {
   const renderer = useAppStore((s) => s.renderer);
   const activeTab = useAppStore((s) => s.activeTab);
-  const [axis, setAxis] = useState<Axis>('z');
-  const [position, setPosition] = useState(50);
+  const [axis, setAxis] = useState<ClipAxis>(DEFAULT_CLIP_AXIS);
+  const [position, setPosition] = useState(CENTRE_CLIP_POSITION);
   const [active, setActive] = useState(false);
-  const planeRef = useRef<ClippingPlane | null>(null);
 
   const onCesium = activeTab === 'globe' && renderer === 'cesium';
 
-  // One collection per Cesium viewer: the button only toggles `enabled` and the
-  // controls edit the plane in place. Switching to Cesium with the panel open
-  // destroys the old viewer, so the collection is rebuilt from the current
-  // controls (which is why they are read here but not tracked as deps).
+  // closing the panel or leaving Cesium takes the cut off the globe again
   useEffect(() => {
     const viewer = onCesium ? getActiveCesiumViewer() : null;
     if (!viewer) return;
-    const plane = new ClippingPlane(AXIS_NORMALS[axis], planeDistance(position));
-    planeRef.current = plane;
-    viewer.scene.globe.clippingPlanes = new ClippingPlaneCollection({
-      planes: [plane],
-      enabled: active,
-      edgeWidth: 1,
-    });
     return () => {
-      planeRef.current = null;
-      if (viewer.isDestroyed()) return;
-      const planes = viewer.scene.globe.clippingPlanes;
-      if (planes) planes.enabled = false;
+      if (!viewer.isDestroyed()) disableGlobeClipping(viewer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onCesium]);
 
   useEffect(() => {
-    const viewer = getActiveCesiumViewer();
-    const plane = planeRef.current;
-    if (!viewer || !plane) return;
-    plane.normal = AXIS_NORMALS[axis];
-    plane.distance = planeDistance(position);
-    viewer.scene.globe.clippingPlanes.enabled = active;
-    viewer.scene.requestRender();
-  }, [axis, position, active]);
+    const viewer = onCesium ? getActiveCesiumViewer() : null;
+    if (!viewer) return;
+    applyGlobeClipping(viewer, { axis, position, enabled: active });
+  }, [onCesium, axis, position, active]);
 
   return (
     <PanelCard width={260}>
@@ -83,7 +58,7 @@ export function ClippingPanel({ onClose }: { onClose: () => void }) {
           size="xs"
           fullWidth
           value={axis}
-          onChange={(v) => setAxis(v as Axis)}
+          onChange={(v) => setAxis(v as ClipAxis)}
           data={[
             { value: 'x', label: 'X' },
             { value: 'y', label: 'Y' },
@@ -94,8 +69,8 @@ export function ClippingPanel({ onClose }: { onClose: () => void }) {
         <Text size="xs" c="dimmed">Position: {position}%</Text>
         <Slider
           size="xs"
-          min={0}
-          max={100}
+          min={MIN_CLIP_POSITION}
+          max={MAX_CLIP_POSITION}
           value={position}
           onChange={setPosition}
           color="violet"

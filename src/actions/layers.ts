@@ -5,9 +5,8 @@ import { type AgentLayer, useAgentLayerStore } from '../store/agentLayers';
 import { useAppStore } from '../store/app';
 import { useOgcLayerStore } from '../store/ogcLayers';
 import { useTiles3dLayerStore } from '../store/tiles3dLayers';
-import { listViewerLayers, type ViewerLayer } from './layerIndex';
+import { resolveViewerLayer, type ViewerLayer } from './layerIndex';
 import { ActionError, registerAction } from './registry';
-import { resolveOne } from './resolve';
 
 const MIN_OPACITY = 0;
 const MAX_OPACITY = 1;
@@ -23,10 +22,6 @@ const LAYER_PARAMETER = {
   description: 'Layer id or name.',
   required: true,
 } as const;
-
-function findLayer(query: string): ViewerLayer {
-  return resolveOne('layer', query, listViewerLayers());
-}
 
 function vectorLayer(layer: ViewerLayer): AgentLayer {
   const found = useAgentLayerStore.getState().layers.find((known) => known.id === layer.id);
@@ -63,7 +58,7 @@ registerAction({
     visible: { type: 'boolean', description: 'true shows the layer, false hides it.', required: true },
   },
   run: (args) => {
-    const layer = findLayer(args.layer as string);
+    const layer = resolveViewerLayer(args.layer as string);
     const visible = args.visible as boolean;
     // an id can sit in two stores, so every store holding it moves together
     useAppStore.getState().setLayerVisible(layer.id, visible);
@@ -82,7 +77,7 @@ registerAction({
     opacity: { type: 'number', description: '0 is invisible, 1 is fully opaque.', required: true },
   },
   run: (args) => {
-    const layer = findLayer(args.layer as string);
+    const layer = resolveViewerLayer(args.layer as string);
     const opacity = args.opacity as number;
     if (opacity < MIN_OPACITY || opacity > MAX_OPACITY) {
       throw new ActionError(`an opacity is between ${MIN_OPACITY} and ${MAX_OPACITY}, not ${opacity}`);
@@ -104,7 +99,7 @@ registerAction({
   description: 'Take one layer off the map.',
   parameters: { layer: LAYER_PARAMETER },
   run: (args) => {
-    const layer = findLayer(args.layer as string);
+    const layer = resolveViewerLayer(args.layer as string);
     const agent = useAgentLayerStore.getState();
     useAppStore.getState().removeLayer(layer.id);
     agent.removeLayer(layer.id);
@@ -128,7 +123,7 @@ registerAction({
     },
   },
   run: (args) => {
-    const layer = findLayer(args.layer as string);
+    const layer = resolveViewerLayer(args.layer as string);
     const position = args.position as Position;
 
     const mapLayers = useAppStore.getState().layers;
@@ -159,7 +154,7 @@ registerAction({
     color: { type: 'string', description: 'A css colour, e.g. #38bdf8 or teal.', required: true },
   },
   run: (args) => {
-    const layer = findLayer(args.layer as string);
+    const layer = resolveViewerLayer(args.layer as string);
     const vector = vectorLayer(layer);
     const color = args.color as string;
     if (asColor(color, UNREADABLE_COLOR) === UNREADABLE_COLOR) {
@@ -178,7 +173,7 @@ registerAction({
     column: { type: 'string', description: 'The feature property to shade by.', required: true },
   },
   run: (args) => {
-    const layer = findLayer(args.layer as string);
+    const layer = resolveViewerLayer(args.layer as string);
     const vector = vectorLayer(layer);
     const column = args.column as string;
 

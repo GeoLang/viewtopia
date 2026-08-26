@@ -1,5 +1,77 @@
 [
   {
+    "name": "analysis.spatial_stats",
+    "description": "Bin one layer's points into a grid and reduce each cell, drawn as extruded cells on the map.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "layer": {
+          "type": "string",
+          "description": "Layer id or name to read the points from."
+        },
+        "method": {
+          "type": "string",
+          "description": "How a cell reduces the points in it. count by default.",
+          "enum": [
+            "count",
+            "sum",
+            "mean"
+          ]
+        },
+        "property": {
+          "type": "string",
+          "description": "Numeric property sum and mean weigh. count ignores it."
+        },
+        "cell_size": {
+          "type": "number",
+          "description": "Cell side in metres, 50 to 5000. 500 by default."
+        }
+      },
+      "required": [
+        "layer"
+      ]
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
+    "name": "analysis.travel_time",
+    "description": "Draw how far a vehicle gets from one point within given minutes, one polygon per band.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "lon": {
+          "type": "number",
+          "description": "Longitude of the point travelled from."
+        },
+        "lat": {
+          "type": "number",
+          "description": "Latitude of the point travelled from."
+        },
+        "bands": {
+          "type": "string",
+          "description": "Minutes to reach, comma separated. \"5, 10, 15\" by default."
+        },
+        "profile": {
+          "type": "string",
+          "description": "What is travelling. car by default.",
+          "enum": [
+            "car",
+            "bicycle",
+            "pedestrian",
+            "truck"
+          ]
+        }
+      },
+      "required": [
+        "lon",
+        "lat"
+      ]
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
     "name": "basemap.set",
     "description": "Put a basemap under the layers.",
     "parameters": {
@@ -636,6 +708,71 @@
       "type": "object",
       "properties": {},
       "required": []
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
+    "name": "scene.clipping",
+    "description": "Cut the globe open along one axis to see inside it.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "on": {
+          "type": "boolean",
+          "description": "true cuts the globe, false puts it back whole."
+        },
+        "axis": {
+          "type": "string",
+          "description": "Earth-fixed axis the cut is made along. z by default.",
+          "enum": [
+            "x",
+            "y",
+            "z"
+          ]
+        },
+        "position": {
+          "type": "number",
+          "description": "Where along the axis the cut falls, 0 to 100. 50 cuts through the earth's centre."
+        }
+      },
+      "required": [
+        "on"
+      ]
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
+    "name": "scene.shadows",
+    "description": "Light the globe from the sun at a date and time of day, casting shadows from buildings and terrain.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "on": {
+          "type": "boolean",
+          "description": "true casts shadows, false leaves the globe lit flat."
+        },
+        "date": {
+          "type": "string",
+          "description": "The day the sun is placed on, as yyyy-mm-dd. Today by default."
+        },
+        "hour": {
+          "type": "number",
+          "description": "Hour of the local day, 0 to 24, fractions allowed. 12 by default."
+        },
+        "darkness": {
+          "type": "number",
+          "description": "How dark a shadow falls, 0 to 1. 0.3 by default."
+        },
+        "soft_shadows": {
+          "type": "boolean",
+          "description": "true softens the shadow edges. true by default."
+        }
+      },
+      "required": [
+        "on"
+      ]
     },
     "reads": false,
     "destructive": false

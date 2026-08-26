@@ -23,7 +23,7 @@ function haversineM(lat1: number, lng1: number, lat2: number, lng2: number): num
 }
 
 /** Geodesic area using spherical excess (m²) */
-function geodesicAreaM2(points: [number, number][]): number {
+export function geodesicAreaSquareMeters(points: [number, number][]): number {
   if (points.length < 3) return 0;
   const R = 6_371_000;
   const toRad = (d: number) => (d * Math.PI) / 180;
@@ -96,7 +96,7 @@ export const useMeasureStore = create<MeasureState>((set, get) => ({
 
     if (mode === 'area') {
       if (pending.length < 3) return;
-      const a = geodesicAreaM2(pending);
+      const a = geodesicAreaSquareMeters(pending);
       const fmt = formatArea(a);
       value = fmt.value;
       unit = fmt.unit;

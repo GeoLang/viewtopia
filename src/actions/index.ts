@@ -11,6 +11,7 @@ import './layers';
 import './live';
 import './project';
 import './scenario';
+import './scene';
 import './view';
 
 export { actionCatalogue, runAction, findAction, ActionError } from './registry';

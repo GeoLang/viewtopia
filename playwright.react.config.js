@@ -19,6 +19,7 @@ export default defineConfig({
     'backend-absent.spec.js',
     'chat-mode.spec.js',
     'chat-actions-data.spec.js',
+    'chat-actions-scene.spec.js',
     'split-pane-tabs.spec.js',
     'dictation.spec.js',
   ],

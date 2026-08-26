@@ -14,23 +14,25 @@ import {
 import { IconClockHour4, IconDownload, IconGrid3x3, IconTarget } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { useAgentLayerStore, type AgentLayer } from '../../store/agentLayers';
+import {
+  DEFAULT_BAND_MINUTES,
+  SERVICE_AREA_LAYER_ID,
+  drawServiceAreaBands,
+  parseBandMinutes,
+} from '../../features/analysis/serviceArea';
 import { downloadFile } from '../../features/spacetime/analysis/export';
 import {
   TRAVEL_PROFILES,
   odCsv,
   odLineCollection,
   odMatrix,
-  serviceArea,
-  serviceAreaCollection,
   type OdEntry,
   type ServiceArea,
   type TravelPoint,
   type TravelProfile,
 } from '../../lib/travelTime';
 
-const SERVICE_AREA_LAYER = 'travel-time-service-area';
 const OD_MATRIX_LAYER = 'travel-time-od-matrix';
-const DEFAULT_BANDS = '5, 10, 15';
 /** rows and columns of the matrix drawn on screen; the CSV carries all of it */
 const GRID_PREVIEW = 8;
 
@@ -38,14 +40,6 @@ type Mode = 'serviceArea' | 'odMatrix';
 
 function message(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
-}
-
-function parseBandMinutes(text: string): number[] {
-  const parsed = text
-    .split(',')
-    .map((part) => Number(part.trim()))
-    .filter((value) => Number.isFinite(value) && value > 0);
-  return [...new Set(parsed)].sort((a, b) => a - b);
 }
 
 const originLabel = (index: number) => `O${index + 1}`;
@@ -67,7 +61,7 @@ export function TravelTimePanel({ onClose }: { onClose: () => void }) {
 
   const [centre, setCentre] = useState<TravelPoint | null>(null);
   const [picking, setPicking] = useState(false);
-  const [bands, setBands] = useState(DEFAULT_BANDS);
+  const [bands, setBands] = useState(DEFAULT_BAND_MINUTES);
   const [areas, setAreas] = useState<ServiceArea[]>([]);
   const [areaError, setAreaError] = useState<string | null>(null);
 
@@ -108,7 +102,7 @@ export function TravelTimePanel({ onClose }: { onClose: () => void }) {
   useEffect(
     () => () => {
       const store = useAgentLayerStore.getState();
-      store.removeLayer(SERVICE_AREA_LAYER);
+      store.removeLayer(SERVICE_AREA_LAYER_ID);
       store.removeLayer(OD_MATRIX_LAYER);
     },
     [],
@@ -118,26 +112,10 @@ export function TravelTimePanel({ onClose }: { onClose: () => void }) {
     if (!centre || bandMinutes.length === 0) return;
     setRunning(true);
     setAreaError(null);
-    const settled = await Promise.allSettled(
-      bandMinutes.map((band) => serviceArea(centre, band * 60, profile)),
-    );
-    const drawn = settled.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []));
-    const failed = settled.flatMap((r) => (r.status === 'rejected' ? [message(r.reason)] : []));
-    setAreas(drawn);
+    const drawn = await drawServiceAreaBands(centre, bandMinutes, profile);
+    setAreas(drawn.areas);
+    setAreaError(drawn.failure);
     setRunning(false);
-
-    if (drawn.length === 0) {
-      useAgentLayerStore.getState().removeLayer(SERVICE_AREA_LAYER);
-      setAreaError(failed[0] ?? 'no service area came back');
-      return;
-    }
-    setAreaError(failed.length ? `${failed.length} of ${settled.length} bands: ${failed[0]}` : null);
-    useAgentLayerStore.getState().addLayer({
-      id: SERVICE_AREA_LAYER,
-      name: `Service area (${profile})`,
-      color: '#4dabf7',
-      geojson: serviceAreaCollection(drawn),
-    });
   };
 
   const runOdMatrix = async () => {
