@@ -3,6 +3,7 @@
  * registers its own actions when imported, so a domain is one import line here.
  */
 import './camera';
+import './data';
 import './dataset';
 import './find';
 import './history';

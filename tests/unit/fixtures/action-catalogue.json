@@ -63,6 +63,130 @@
     "destructive": false
   },
   {
+    "name": "data.add_service",
+    "description": "Add a map service as a layer, from its URL.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Which kind of service the URL serves.",
+          "enum": [
+            "wms",
+            "wmts",
+            "wfs",
+            "xyz",
+            "pmtiles"
+          ]
+        },
+        "url": {
+          "type": "string",
+          "description": "Service URL. WMTS and XYZ take a {z}/{x}/{y} tile template."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name for the layer."
+        }
+      },
+      "required": [
+        "type",
+        "url",
+        "name"
+      ]
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
+    "name": "data.export",
+    "description": "Download one vector layer as a file.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "layer": {
+          "type": "string",
+          "description": "Layer id or name."
+        },
+        "format": {
+          "type": "string",
+          "description": "Which format to write, geojson by default.",
+          "enum": [
+            "geoparquet",
+            "flatgeobuf",
+            "pmtiles",
+            "geojson"
+          ]
+        }
+      },
+      "required": [
+        "layer"
+      ]
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
+    "name": "data.import_url",
+    "description": "Import a data file from a URL and draw it on the map.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "URL of the file to import."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name for the layer, the file name by default."
+        },
+        "format": {
+          "type": "string",
+          "description": "The file's format, read from the URL by default.",
+          "enum": [
+            ".geojson",
+            ".json",
+            ".kml",
+            ".gpx",
+            ".csv",
+            ".gpkg",
+            ".shp",
+            ".dbf",
+            ".shx",
+            ".prj",
+            ".cpg",
+            ".fgb",
+            ".parquet",
+            ".geoparquet",
+            ".zip",
+            ".geojson.gz",
+            ".pmtiles",
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".gif",
+            ".webp",
+            ".bmp",
+            ".pdf",
+            ".wld",
+            ".jgw",
+            ".jpw",
+            ".pgw",
+            ".tfw",
+            ".bpw",
+            ".gfw",
+            ".prj",
+            ".gsb"
+          ]
+        }
+      },
+      "required": [
+        "url"
+      ]
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
     "name": "dataset.draw_branch",
     "description": "Draw one branch of a dataset on the map, at its head or at a past moment.",
     "parameters": {
@@ -540,6 +664,135 @@
       ]
     },
     "reads": false,
+    "destructive": false
+  },
+  {
+    "name": "sql.attach_url",
+    "description": "Attach a remote CSV or Parquet file as a table SQL can query.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "URL of the .csv or .parquet file."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name to query it as, the file name by default."
+        },
+        "format": {
+          "type": "string",
+          "description": "The file's format, read from the URL by default.",
+          "enum": [
+            "csv",
+            "parquet"
+          ]
+        }
+      },
+      "required": [
+        "url"
+      ]
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
+    "name": "sql.query",
+    "description": "Run a SQL query over the loaded tables and read the rows back.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "sql": {
+          "type": "string",
+          "description": "The DuckDB SQL to run."
+        }
+      },
+      "required": [
+        "sql"
+      ]
+    },
+    "reads": true,
+    "destructive": false
+  },
+  {
+    "name": "sql.to_layer",
+    "description": "Draw the result of a SQL query on the map as a layer.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "sql": {
+          "type": "string",
+          "description": "The DuckDB SQL to run."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name for the layer, the query itself by default."
+        }
+      },
+      "required": [
+        "sql"
+      ]
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
+    "name": "stac.add_asset",
+    "description": "Put one asset of a STAC item on the map, the way its kind allows.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "catalog": {
+          "type": "string",
+          "description": "STAC catalog URL, as in https://earth-search.aws.element84.com/v1."
+        },
+        "item": {
+          "type": "string",
+          "description": "Item id, as stac.search lists it."
+        },
+        "asset": {
+          "type": "string",
+          "description": "Asset key, as stac.search lists it."
+        }
+      },
+      "required": [
+        "catalog",
+        "item",
+        "asset"
+      ]
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
+    "name": "stac.search",
+    "description": "Search one collection of a STAC catalog for items, listing the assets each one carries.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "catalog": {
+          "type": "string",
+          "description": "STAC catalog URL, as in https://earth-search.aws.element84.com/v1."
+        },
+        "collection": {
+          "type": "string",
+          "description": "Collection id or title."
+        },
+        "bbox": {
+          "type": "string",
+          "description": "west,south,east,north in degrees. The current view by default."
+        },
+        "limit": {
+          "type": "number",
+          "description": "How many items, 20 by default."
+        }
+      },
+      "required": [
+        "catalog",
+        "collection"
+      ]
+    },
+    "reads": true,
     "destructive": false
   }
 ]

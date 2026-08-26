@@ -17,10 +17,9 @@ import {
   IconLink,
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import { query, queryAsGeoJson, NoGeometryError } from '../../duckdb';
+import { query, NoGeometryError } from '../../duckdb';
 import { exportQuery, type ExportFormat } from '../../duckdb/exportFile';
-import { attachCsvUrl, attachParquetUrl } from '../../duckdb/loaders';
-import { useAgentLayerStore } from '../../store/agentLayers';
+import { addQueryLayer, attachUrl, cellText } from './sqlWorkspace';
 
 const MAX_ROWS = 500;
 const HISTORY_KEY = 'viewtopia-sql-history';
@@ -57,20 +56,6 @@ function reason(err: unknown): string {
   return err instanceof Error ? err.message : 'query failed';
 }
 
-function cell(value: unknown): string {
-  if (value === null || value === undefined) return '';
-  if (typeof value === 'object') return JSON.stringify(value);
-  return String(value);
-}
-
-function slug(name: string): string {
-  const cleaned = name
-    .toLowerCase()
-    .replace(/[^a-z0-9_]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-  return cleaned || 'remote';
-}
-
 export function SqlWorkspaceTab() {
   const [sql, setSql] = useState('SHOW TABLES;');
   const [results, setResults] = useState<Results | null>(null);
@@ -78,7 +63,6 @@ export function SqlWorkspaceTab() {
   const [busy, setBusy] = useState(false);
   const [history, setHistory] = useState<string[]>(loadHistory);
   const [url, setUrl] = useState('');
-  const addLayer = useAgentLayerStore((s) => s.addLayer);
 
   const remember = (text: string) => {
     const next = [text, ...history.filter((h) => h !== text)].slice(0, HISTORY_LIMIT);
@@ -107,16 +91,10 @@ export function SqlWorkspaceTab() {
     const text = sql.trim();
     if (!text) return;
     try {
-      const geojson = await queryAsGeoJson(text);
-      addLayer({
-        id: crypto.randomUUID(),
-        name: text.slice(0, 40),
-        color: '#38bdf8',
-        geojson,
-      });
+      const layer = await addQueryLayer(text);
       notifications.show({
         title: 'Added to map',
-        message: `${geojson.features.length} features`,
+        message: `${layer.featureCount} features`,
         color: 'green',
       });
     } catch (err) {
@@ -150,23 +128,8 @@ export function SqlWorkspaceTab() {
   };
 
   const attach = async () => {
-    const remote = url.trim();
-    // signed URLs carry a query string, so the extension is on the path
-    const path = remote.split(/[?#]/)[0];
-    const parquet = path.toLowerCase().endsWith('.parquet');
-    const csv = path.toLowerCase().endsWith('.csv');
-    if (!parquet && !csv) {
-      notifications.show({
-        title: 'Cannot attach',
-        message: 'the URL has to end in .parquet or .csv',
-        color: 'red',
-      });
-      return;
-    }
-    const view = slug((path.split('/').pop() ?? '').replace(/\.[^.]+$/, ''));
     try {
-      if (parquet) await attachParquetUrl(view, remote);
-      else await attachCsvUrl(view, remote);
+      const view = await attachUrl(url.trim());
       notifications.show({
         title: 'Attached',
         message: `query it as ${view}`,
@@ -265,7 +228,7 @@ export function SqlWorkspaceTab() {
                   // biome-ignore lint/suspicious/noArrayIndexKey: result rows have no id
                   <Table.Tr key={index}>
                     {results.columns.map((column) => (
-                      <Table.Td key={column}>{cell(row[column])}</Table.Td>
+                      <Table.Td key={column}>{cellText(row[column])}</Table.Td>
                     ))}
                   </Table.Tr>
                 ))}

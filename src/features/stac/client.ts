@@ -289,10 +289,44 @@ export function catalogTitle(body: unknown, url: string): string {
   return text(raw.title) || text(raw.id) || url;
 }
 
+/** How many items the catalog is asked for when only one of them is wanted. */
+const SINGLE_ITEM = 1;
+
+/**
+ * One item by its id, through the catalog's item search, since the id alone
+ * does not say which collection holds it.
+ */
+export async function fetchItem(catalog: StacCatalog, id: string): Promise<StacItem | null> {
+  const page = await fetchItemPage({
+    url: catalog.searchUrl,
+    searchBody: { ids: [id], limit: SINGLE_ITEM },
+  });
+  return page.items.find((item) => item.id === id) ?? null;
+}
+
+/** A catalog's landing page and the collections it lists, which is what browsing it needs. */
+export async function fetchCatalog(catalogUrl: string): Promise<StacCatalog> {
+  const root = await fetchStac(catalogUrl);
+  const links = parseLinks(root, catalogUrl);
+  const listUrl = collectionsUrl(links, catalogUrl);
+  const body = await fetchStac(listUrl);
+  return {
+    url: catalogUrl,
+    title: catalogTitle(root, catalogUrl),
+    searchUrl: itemSearchUrl(links, catalogUrl),
+    freeTextSearch: parseFreeTextSearch(root),
+    collections: parseCollections(body, listUrl),
+  };
+}
+
 /** The item page URL for one collection, optionally cut to a lon/lat box. */
-export function itemsPageUrl(collection: StacCollection, bbox: number[] | null): string {
+export function itemsPageUrl(
+  collection: StacCollection,
+  bbox: number[] | null,
+  limit: number = ITEM_PAGE_SIZE,
+): string {
   const url = new URL(collection.itemsUrl);
-  url.searchParams.set('limit', String(ITEM_PAGE_SIZE));
+  url.searchParams.set('limit', String(limit));
   if (bbox) url.searchParams.set('bbox', bbox.join(','));
   return url.toString();
 }
@@ -304,10 +338,11 @@ export function itemSearchBody(
   collectionId: string,
   filters: ItemFilters,
   freeTextSearch: boolean,
+  limit: number = ITEM_PAGE_SIZE,
 ): Record<string, unknown> {
   const body: Record<string, unknown> = {
     collections: [collectionId],
-    limit: ITEM_PAGE_SIZE,
+    limit,
   };
   if (filters.bbox) body.bbox = filters.bbox;
   // a catalog outside the free-text conformance class either ignores q or, like
@@ -328,14 +363,15 @@ export function itemRequest(
   catalog: StacCatalog,
   collection: StacCollection,
   filters: ItemFilters,
+  limit: number = ITEM_PAGE_SIZE,
 ): ItemRequest {
   const searchesText = catalog.freeTextSearch && filters.text !== '';
   if (!searchesText && filters.maxCloudCover === null) {
-    return { url: itemsPageUrl(collection, filters.bbox), searchBody: null };
+    return { url: itemsPageUrl(collection, filters.bbox, limit), searchBody: null };
   }
   return {
     url: catalog.searchUrl,
-    searchBody: itemSearchBody(collection.id, filters, catalog.freeTextSearch),
+    searchBody: itemSearchBody(collection.id, filters, catalog.freeTextSearch, limit),
   };
 }
 

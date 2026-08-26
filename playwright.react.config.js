@@ -18,6 +18,7 @@ export default defineConfig({
     'overlay-import.spec.js',
     'backend-absent.spec.js',
     'chat-mode.spec.js',
+    'chat-actions-data.spec.js',
     'split-pane-tabs.spec.js',
     'dictation.spec.js',
   ],

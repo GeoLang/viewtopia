@@ -23,22 +23,16 @@ import {
 } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../../components/PanelCard';
 import { PanelEmptyState, PanelSkeleton } from '../../components/PanelStates';
-import { toFeatureCollection, useAgentLayerStore } from '../../store/agentLayers';
-import { loadPmtilesLayer, useOgcLayerStore } from '../../store/ogcLayers';
+import { useAgentLayerStore } from '../../store/agentLayers';
 import { getViewBounds } from '../../lib/viewBounds';
+import { addStacAsset, assetLayerName } from './addAsset';
 import { favoriteKey, useStacStore, type StacFavorite } from './store';
 import {
   assetAction,
-  catalogTitle,
-  collectionsUrl,
+  fetchCatalog,
   fetchItemPage,
-  fetchStac,
   itemFootprints,
   itemRequest,
-  itemSearchUrl,
-  parseCollections,
-  parseFreeTextSearch,
-  parseLinks,
   STAC_CATALOGS,
   type AssetAction,
   type ItemFilters,
@@ -78,11 +72,7 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
   const favorites = useStacStore((s) => s.favorites);
   const toggleFavorite = useStacStore((s) => s.toggleFavorite);
   const removeFavorite = useStacStore((s) => s.removeFavorite);
-  const openInRasterAnalysis = useStacStore((s) => s.openInRasterAnalysis);
   const addVectorLayer = useAgentLayerStore((s) => s.addLayer);
-  const addOgcLayer = useOgcLayerStore((s) => s.addLayer);
-  const addXyzLayer = useOgcLayerStore((s) => s.addXyzLayer);
-  const removeOgcLayer = useOgcLayerStore((s) => s.removeLayer);
 
   const saved = new Set(favorites.map((f) => favoriteKey(f.catalogUrl, f.collectionId)));
   const currentFavorite: StacFavorite | null = catalog && {
@@ -104,17 +94,7 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
     setOpenItemId(null);
     setItemQuery('');
     try {
-      const root = await fetchStac(catalogUrl);
-      const links = parseLinks(root, catalogUrl);
-      const listUrl = collectionsUrl(links, catalogUrl);
-      const body = await fetchStac(listUrl);
-      const loaded: StacCatalog = {
-        url: catalogUrl,
-        title: catalogTitle(root, catalogUrl),
-        searchUrl: itemSearchUrl(links, catalogUrl),
-        freeTextSearch: parseFreeTextSearch(root),
-        collections: parseCollections(body, listUrl),
-      };
+      const loaded = await fetchCatalog(catalogUrl);
       setCatalog(loaded);
       return loaded;
     } catch (e) {
@@ -194,32 +174,12 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
   }
 
   async function addAsset(item: StacItem, asset: StacAsset) {
-    const action = assetAction(asset);
-    const name = `${item.id} ${asset.key}`;
-    if (action === 'raster') {
-      openInRasterAnalysis(asset.href);
-      return;
-    }
-    if (action === 'tiles') {
-      addXyzLayer(name, asset.href);
-      setStatus(`Added ${name} as tiles.`);
-      return;
-    }
-    const archive = action === 'pmtiles' ? addOgcLayer(name, asset.href, 'pmtiles') : null;
+    const name = assetLayerName(item.id, asset);
     setBusy(true);
     setStatus(`Loading ${name}…`);
     try {
-      if (archive) {
-        const info = await loadPmtilesLayer(archive);
-        setStatus(`${name}: ${info.kind}, zoom ${info.minZoom}–${info.maxZoom}`);
-        return;
-      }
-      const geojson = toFeatureCollection(await fetchStac(asset.href));
-      if (!geojson || geojson.features.length === 0) throw new Error('the asset holds no features');
-      addVectorLayer({ id: crypto.randomUUID(), name, color: '#38bdf8', geojson }, true);
-      setStatus(`${name}: ${geojson.features.length} features`);
+      setStatus(await addStacAsset(item.id, asset));
     } catch (e) {
-      if (archive) removeOgcLayer(archive.id);
       setStatus(`${name}: ${message(e)}`);
     } finally {
       setBusy(false);

@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { ScrollArea, Tabs } from '@mantine/core';
 import { IconDatabase, IconFolders, IconUpload, IconWorldWww } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../../components/PanelCard';
-import { useAgentLayerStore } from '../../store/agentLayers';
 import { useOgcLayerStore } from '../../store/ogcLayers';
 import type { ToolPanel } from '../../store/app';
+import { addImportedLayer } from './importIntoViewer';
 import { OgcServicesTab } from './OgcServicesTab';
 import { SqlWorkspaceTab } from './SqlWorkspaceTab';
 import { FileImportTab } from './FileImportTab';
@@ -25,9 +25,7 @@ export function dataSourceTab(panel: ToolPanel): DataSourceTab {
 export function DataSourcesPanel({ tab, onClose }: { tab: DataSourceTab; onClose: () => void }) {
   const [activeTab, setActiveTab] = useState<DataSourceTab>(tab);
   const ogcLayers = useOgcLayerStore((s) => s.layers);
-  const addOgcLayer = useOgcLayerStore((s) => s.addLayer);
   const removeOgcLayer = useOgcLayerStore((s) => s.removeLayer);
-  const addAgentLayer = useAgentLayerStore((s) => s.addLayer);
 
   return (
     <PanelCard width={460} maxHeight="80vh" testId="data-sources-panel">
@@ -52,22 +50,13 @@ export function DataSourcesPanel({ tab, onClose }: { tab: DataSourceTab; onClose
 
         <ScrollArea style={{ flex: 1, minHeight: 0 }}>
           <Tabs.Panel value="services">
-            <OgcServicesTab
-              layers={ogcLayers}
-              onAdd={addOgcLayer}
-              onRemove={removeOgcLayer}
-            />
+            <OgcServicesTab layers={ogcLayers} onRemove={removeOgcLayer} />
           </Tabs.Panel>
           <Tabs.Panel value="database">
             <SqlWorkspaceTab />
           </Tabs.Panel>
           <Tabs.Panel value="files">
-            <FileImportTab
-              // imported files join the agent layers, so every renderer draws them
-              onImport={(name, geojson) =>
-                addAgentLayer({ id: crypto.randomUUID(), name, color: '#38bdf8', geojson })
-              }
-            />
+            <FileImportTab onImport={addImportedLayer} />
           </Tabs.Panel>
         </ScrollArea>
       </Tabs>

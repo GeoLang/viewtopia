@@ -10,52 +10,42 @@ import {
 } from '@mantine/core';
 import { IconX, IconPlus } from '@tabler/icons-react';
 import { useState } from 'react';
-import { loadPmtilesLayer, loadWfsLayer, type OGCLayer, type OGCType } from '../../store/ogcLayers';
+import type { OGCLayer } from '../../store/ogcLayers';
 import { LayerLoadError } from '../../components/layers/LayerLoadError';
+import {
+  addOgcService,
+  SERVICE_TYPE_LABELS,
+  type AddableServiceType,
+} from './ogcService';
 
 interface OgcServicesTabProps {
   layers: OGCLayer[];
-  onAdd: (name: string, url: string, type: OGCType) => OGCLayer;
   onRemove: (id: string) => void;
 }
 
 const WMTS_NOTE = 'WMTS: paste the RESTful tile template. KVP and GetCapabilities are not read yet.';
 
-export function OgcServicesTab({ layers, onAdd, onRemove }: OgcServicesTabProps) {
+export function OgcServicesTab({ layers, onRemove }: OgcServicesTabProps) {
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
-  const [type, setType] = useState<OGCType>('wms');
+  const [type, setType] = useState<AddableServiceType>('wms');
   const [status, setStatus] = useState<{ text: string; failed: boolean } | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleAdd = async () => {
-    if (!name.trim() || !url.trim()) return;
-    const added = onAdd(name.trim(), url.trim(), type);
+    const added = name.trim();
+    if (!added || !url.trim()) return;
     setName('');
     setUrl('');
-    if (added.type !== 'wfs' && added.type !== 'pmtiles') {
-      setStatus({ text: `Added ${added.name}`, failed: false });
-      return;
-    }
     // WFS and PMTiles are requests, not tile templates: they either answer or
     // they fail, and the panel is where that has to show
     setLoading(true);
-    setStatus({ text: `Loading ${added.name}…`, failed: false });
+    setStatus({ text: `Loading ${added}…`, failed: false });
     try {
-      if (added.type === 'pmtiles') {
-        const info = await loadPmtilesLayer(added);
-        setStatus({
-          text: `${added.name}: ${info.kind}, zoom ${info.minZoom}–${info.maxZoom}`,
-          failed: false,
-        });
-      } else {
-        const count = await loadWfsLayer(added);
-        setStatus({ text: `${added.name}: ${count} features`, failed: false });
-      }
+      setStatus({ text: await addOgcService(added, url.trim(), type), failed: false });
     } catch (e) {
-      onRemove(added.id);
       setStatus({
-        text: `${added.name}: ${e instanceof Error ? e.message : 'request failed'}`,
+        text: `${added}: ${e instanceof Error ? e.message : 'request failed'}`,
         failed: true,
       });
     } finally {
@@ -83,15 +73,9 @@ export function OgcServicesTab({ layers, onAdd, onRemove }: OgcServicesTabProps)
             size="xs"
             flex={1}
             aria-label="Type"
-            data={[
-              { value: 'wms', label: 'WMS' },
-              { value: 'wmts', label: 'WMTS' },
-              { value: 'wfs', label: 'WFS' },
-              { value: 'xyz', label: 'XYZ Tiles' },
-              { value: 'pmtiles', label: 'PMTiles' },
-            ]}
+            data={Object.entries(SERVICE_TYPE_LABELS).map(([value, label]) => ({ value, label }))}
             value={type}
-            onChange={(v) => v && setType(v as OGCType)}
+            onChange={(v) => v && setType(v as AddableServiceType)}
           />
           <Button
             size="xs"
