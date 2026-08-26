@@ -137,8 +137,6 @@ other documents citing "P0 item 5" still land on the right one.
      `AudioContext({ sampleRate: 16000 })` taking the mic stream.
    - [ ] Hands-free: every completed utterance sent as a prompt on its own,
      with the confirm turn and the streaming lock handled.
-   - [ ] Aavaaz validates the platform JWT from the `bearer` subprotocol the
-     way agora and tiletopia do, then the `/speech/` route stops being open.
    - [ ] Place-name biasing: WhisperLive's `initial_prompt` fed from the layer
      and project names in the viewer snapshot.
 
@@ -773,18 +771,7 @@ viewer, `python -m evals.viewer_runner --repeat 3`, then delete the
 Dictation follow-ups, P0 item 8, after the dictation commit lands:
 
 - JWT in Aavaaz. WhisperLive starts its socket with `websockets.sync.server.serve`,
-  which takes `process_request` and `select_subprotocol`, and the fork's
-  `run()` only builds `process_request` for the API key. The fork gains a
-  `websocket_auth` callable on `run()`. Aavaaz passes one that reads
-  `Sec-WebSocket-Protocol: bearer, <jwt>`, verifies HS256 with
-  `AAVAAZ_JWT_SECRET` (compose sets it from `PLATFORM_JWT_SECRET`), requires
-  `exp` and `sub`, rejects any `aud`, answers 401 otherwise, and selects
-  `bearer` on the 101 so nginx's `add_header Sec-WebSocket-Protocol` goes.
-  Test with a `websockets` client in the Aavaaz suite. The Dockerfile ref is
-  `@dev`, the branch that has every kwarg `aavaaz serve` passes.
-- Hands-free. A second mode on the mic: each completed utterance (a segment
-  with `completed` after the VAD pause) is sent as a prompt on its own, held
-  while a run streams and while a confirm turn is pending, then sent.
+  which takes `process_request` and `select_subprotocol`, and the fork while a run streams and while a confirm turn is pending, then sent.
 - Place-name biasing. The handshake gains `initial_prompt` built from the layer
   and project names in the viewer snapshot, capped so it stays under
   WhisperLive's prompt window.

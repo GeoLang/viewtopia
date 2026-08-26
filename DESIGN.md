@@ -617,8 +617,10 @@ the same in both modes.
 
 **Dictation.** A mic button beside the send button toggles it. `src/speech/` opens
 `ws://<host>/speech/` (nginx to the Aavaaz WhisperLive socket, Upgrade forwarded, the
-`bearer` subprotocol offered and echoed by nginx so a server-side JWT check needs no client
-change), sends the WhisperLive handshake (`language: 'en'`, `task: 'transcribe'`,
+platform JWT offered as `['bearer', token]` subprotocols, which Aavaaz verifies on the
+handshake with `AAVAAZ_JWT_SECRET`, set from `PLATFORM_JWT_SECRET` in compose, the same HS256,
+`exp` and `sub` required, any `aud` refused, and answers `bearer` on the 101), sends the
+WhisperLive handshake (`language: 'en'`, `task: 'transcribe'`,
 `use_vad: true`, float32), then on `SERVER_READY` opens the microphone through an
 `AudioContext` at 16 kHz and an AudioWorklet that posts quarter-second float32 frames. The
 server resends its last ten segments with revisions, so `mergeSegments` keeps only completed

@@ -15,7 +15,10 @@ All notable changes to this project will be documented in this file.
   server is the Aavaaz GPU image as the `aavaaz` compose service behind the
   `speech` profile (`SPEECH_MODEL`, default `large-v3-turbo`), and the button
   is offered only when `/speech/health` answers. `tests/e2e/dictation.spec.js`
-  drives it against a scripted server and Chromium's fake microphone.
+  drives it against a scripted server and Chromium's fake microphone. Since
+  2026-08-26 the socket is not open: the browser offers the platform JWT as
+  `['bearer', token]` subprotocols and Aavaaz verifies it on the handshake
+  with `AAVAAZ_JWT_SECRET`, set from `PLATFORM_JWT_SECRET` in compose.
 - 2026-08-25: **the chat runs the viewer on its own, and `?mode=chat` leaves it
   as the only control**. `src/actions/` holds 25 named actions with typed
   parameters, from `camera.fly_to` and `layers.set_visible` through

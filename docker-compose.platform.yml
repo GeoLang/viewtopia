@@ -444,6 +444,8 @@ services:
       context: ../../Aavaaz/aavaaz
     profiles: [speech]
     command: ["--model", "${SPEECH_MODEL:-large-v3-turbo}"]
+    environment:
+      AAVAAZ_JWT_SECRET: ${PLATFORM_JWT_SECRET:-}
     volumes:
       - speech-models:/root/.cache
     deploy:
