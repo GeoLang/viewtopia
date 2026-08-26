@@ -3,28 +3,20 @@
  * message and sent as the AG-UI run state, so a prompt like "hide the second
  * layer" has ids and names to work from.
  */
+import {
+  useScenarioCompareStore,
+  type ComparedBranches,
+  type CoveragePair,
+} from '../features/scenario/compare';
 import { getSharedCamera, type SharedCamera } from '../hooks/sharedCamera';
 import { useAssetStateStore } from '../live/assetState';
 import { useLiveStore } from '../live/liveStore';
 import { ASSET_RULE_ID, type AssetRule } from '../live/types';
 import { useProjectsStore } from '../projects/projectsStore';
-import { useAgentLayerStore } from '../store/agentLayers';
 import { useAppStore, type Basemap, type Renderer, type ViewerTab } from '../store/app';
 import { useFeaturePickerStore } from '../store/featurePicker';
-import { useOgcLayerStore } from '../store/ogcLayers';
 import { paneLayout, useSplitViewStore, type SplitLayout } from '../store/splitView';
-import { useTiles3dLayerStore } from '../store/tiles3dLayers';
-
-/** Which store a layer came from, so an action can address it again. */
-export type ViewerLayerKind = 'map' | 'agent' | 'raster' | 'ogc' | 'tiles3d';
-
-export interface ViewerLayer {
-  id: string;
-  name: string;
-  kind: ViewerLayerKind;
-  visible: boolean;
-  opacity?: number;
-}
+import { listViewerLayers, type ViewerLayer } from './layerIndex';
 
 /** More than this and the state costs more prompt than it is worth. */
 export const MAXIMUM_SNAPSHOT_LAYERS = 50;
@@ -42,57 +34,18 @@ export interface ViewerSnapshot {
   assetRule: AssetRule | null;
   historyAt: string | null;
   pickedFeature: Record<string, string> | null;
-  scenario: null;
-}
-
-/** Every layer on the map, whichever store holds it, in drawing order. */
-export function listViewerLayers(): ViewerLayer[] {
-  const app = useAppStore.getState();
-  const agent = useAgentLayerStore.getState();
-  const ogc = useOgcLayerStore.getState();
-  const tiles3d = useTiles3dLayerStore.getState();
-  return [
-    ...app.layers.map((layer) => ({
-      id: layer.id,
-      name: layer.name,
-      kind: 'map' as const,
-      visible: layer.visible,
-      opacity: layer.opacity,
-    })),
-    ...agent.layers.map((layer) => ({
-      id: layer.id,
-      name: layer.name,
-      kind: 'agent' as const,
-      visible: layer.visible !== false,
-      ...(typeof layer.style?.opacity === 'number' ? { opacity: layer.style.opacity } : {}),
-    })),
-    ...agent.rasterLayers.map((layer) => ({
-      id: layer.id,
-      name: layer.name,
-      kind: 'raster' as const,
-      visible: layer.visible,
-      opacity: layer.opacity,
-    })),
-    ...ogc.layers.map((layer) => ({
-      id: layer.id,
-      name: layer.name,
-      kind: 'ogc' as const,
-      visible: layer.visible !== false,
-      ...(typeof layer.opacity === 'number' ? { opacity: layer.opacity } : {}),
-    })),
-    ...tiles3d.layers.map((layer) => ({
-      id: layer.id,
-      name: layer.name,
-      kind: 'tiles3d' as const,
-      visible: layer.visible,
-    })),
-  ];
+  scenario: { compared: ComparedBranches; coverage: CoveragePair | null } | null;
 }
 
 function pickedFeatureProperties(): Record<string, string> | null {
   const selected = useFeaturePickerStore.getState().selected;
   if (!selected) return null;
   return Object.fromEntries(selected.map((property) => [property.id, property.value]));
+}
+
+function scenarioInProgress(): ViewerSnapshot['scenario'] {
+  const { compared, coverage } = useScenarioCompareStore.getState();
+  return compared ? { compared, coverage } : null;
 }
 
 export function buildViewerSnapshot(): ViewerSnapshot {
@@ -116,7 +69,7 @@ export function buildViewerSnapshot(): ViewerSnapshot {
     assetRule: live.document.assets[ASSET_RULE_ID] ?? null,
     historyAt: useAssetStateStore.getState().historyAt,
     pickedFeature: pickedFeatureProperties(),
-    scenario: null,
+    scenario: scenarioInProgress(),
   };
 }
 

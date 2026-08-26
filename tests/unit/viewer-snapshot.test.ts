@@ -25,6 +25,7 @@ import { useOgcLayerStore } from '../../src/store/ogcLayers';
 import { useSplitViewStore } from '../../src/store/splitView';
 import { useTiles3dLayerStore } from '../../src/store/tiles3dLayers';
 import type { Project } from '../../src/projects/types';
+import { useScenarioCompareStore } from '../../src/features/scenario/compare';
 
 const HARBOUR: Project = {
   id: 'project-1',
@@ -151,11 +152,11 @@ describe('buildViewerSnapshot', () => {
       basemap: 'satellite',
       splitView: { active: true, layout: 'grid' },
       layers: [
-        { id: 'map-1', name: 'Parcels', kind: 'map', visible: true, opacity: 0.8 },
         { id: 'agent-1', name: 'Depot zones', kind: 'agent', visible: false, opacity: 0.5 },
         { id: 'raster-1', name: 'Scan', kind: 'raster', visible: true, opacity: 0.4 },
-        { id: 'ogc-1', name: 'Bathymetry', kind: 'ogc', visible: true },
+        { id: 'ogc-1', name: 'Bathymetry', kind: 'ogc', visible: true, opacity: 1 },
         { id: 'tiles-1', name: 'Port model', kind: 'tiles3d', visible: true },
+        { id: 'map-1', name: 'Parcels', kind: 'map', visible: true, opacity: 0.8 },
       ],
       project: { id: 'project-1', name: 'Harbour survey' },
       live: { documentId: 'document-9', name: 'Harbour live' },
@@ -164,6 +165,27 @@ describe('buildViewerSnapshot', () => {
       pickedFeature: { name: 'Quay 3', depth: '11.5' },
       scenario: null,
     });
+  });
+
+  it('names the comparison in progress', () => {
+    const compared = {
+      datasetId: 'dataset-1',
+      baseBranchId: 'branch-main',
+      scenarioBranchId: 'branch-widening',
+      baseAt: null,
+      scenarioAt: '2026-08-25T09:00:00.000Z',
+      distanceMeters: 50,
+    };
+    const coverage = {
+      base: { featureCount: 3, squareMeters: 900 },
+      scenario: { featureCount: 4, squareMeters: 1200 },
+    };
+    useScenarioCompareStore.setState({ compared, coverage });
+
+    expect(buildViewerSnapshot().scenario).toEqual({ compared, coverage });
+
+    useScenarioCompareStore.setState({ compared: null, coverage: null });
+    expect(buildViewerSnapshot().scenario).toBeNull();
   });
 
   it('sends the model no more layers than it can use', () => {
