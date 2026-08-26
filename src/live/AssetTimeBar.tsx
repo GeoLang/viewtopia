@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Box, Button, Group, Select, Slider, Text, TextInput } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { agoraErrorText, assetsAt } from './api';
+import { agoraErrorText } from './api';
+import { showAssetsAt, showLiveAssets } from './assetHistory';
 import { useAssetStateStore } from './assetState';
 import { useLiveStore } from './liveStore';
 import { ASSET_RULE_ID } from './types';
@@ -43,48 +44,36 @@ export function AssetTimeBar() {
   const documentId = useLiveStore((state) => state.documentId);
   const rule = useLiveStore((state) => state.document.assets[ASSET_RULE_ID]);
   const historyAt = useAssetStateStore((state) => state.historyAt);
-  const showHistory = useAssetStateStore((state) => state.showHistory);
-  const showLive = useAssetStateStore((state) => state.showLive);
 
   const [windowSeconds, setWindowSeconds] = useState(DEFAULT_WINDOW_SECONDS);
   const [windowEndMs, setWindowEndMs] = useState(() => Date.now());
   const [requestedMs, setRequestedMs] = useState<number | null>(null);
   const [typed, setTyped] = useState('');
-  /** the moment of the answer we would still take, so a slow one cannot win */
-  const latestRequestedAt = useRef<string | null>(null);
 
   useEffect(() => {
     if (requestedMs === null || documentId === null) return;
     const at = new Date(requestedMs).toISOString();
     const timer = setTimeout(() => {
-      latestRequestedAt.current = at;
-      void assetsAt(documentId, at)
-        .then((assets) => {
-          if (latestRequestedAt.current !== at) return;
-          showHistory(at, assets);
-        })
-        .catch((failure: unknown) => {
-          if (latestRequestedAt.current !== at) return;
-          notifications.show({
-            title: 'Asset history failed',
-            message: agoraErrorText(failure, 'Could not read that moment.'),
-            color: 'red',
-          });
+      void showAssetsAt(documentId, at).catch((failure: unknown) => {
+        notifications.show({
+          title: 'Asset history failed',
+          message: agoraErrorText(failure, 'Could not read that moment.'),
+          color: 'red',
         });
+      });
     }, REQUEST_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [documentId, requestedMs, showHistory]);
+  }, [documentId, requestedMs]);
 
   if (documentId === null || !rule) return null;
 
   const windowStartMs = windowEndMs - Number(windowSeconds) * MILLISECONDS_PER_SECOND;
 
   const goLive = () => {
-    latestRequestedAt.current = null;
     setRequestedMs(null);
     setTyped('');
     setWindowEndMs(Date.now());
-    showLive();
+    showLiveAssets();
   };
 
   const chooseWindow = (choice: string | null) => {

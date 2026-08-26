@@ -31,9 +31,14 @@ import {
   type LiveFeed,
   type LiveMember,
 } from './api';
+import {
+  FALLBACK_ASSET_COLOR,
+  FALLBACK_OFFLINE_COLOR,
+  saveAssetRule,
+} from './assetRule';
 import { formatBreakpoints, parseBreakpoints } from './assetState';
 import { useLiveStore } from './liveStore';
-import { ASSET_RULE_ID, documentKey, type LiveRole } from './types';
+import { ASSET_RULE_ID, type LiveRole } from './types';
 
 const MEMBER_ROLE_CHOICES = [
   { value: 'view', label: 'View' },
@@ -42,12 +47,6 @@ const MEMBER_ROLE_CHOICES = [
 
 /** What a new feed suggests, matching how often a sensor usually reports. */
 const DEFAULT_FEED_INTERVAL_SECONDS = 10;
-
-/** The colour an asset with no reading in range gets until the rule says otherwise. */
-const FALLBACK_ASSET_COLOR = '#95a5a6';
-
-/** The colour an asset agora has stopped hearing from gets. */
-const FALLBACK_OFFLINE_COLOR = '#7f8c8d';
 
 export function LiveShareDialog({
   documentId,
@@ -210,9 +209,9 @@ export function LiveShareDialog({
     }
   };
 
-  const saveAssetRule = () => {
+  const submitAssetRule = () => {
     if (!ruleLayerId || !ruleKind.trim()) return;
-    useLiveStore.getState().sendOperation(documentKey('assets', ASSET_RULE_ID), {
+    saveAssetRule({
       layerId: ruleLayerId,
       kind: ruleKind.trim(),
       breakpoints: parseBreakpoints(ruleBreakpoints),
@@ -523,7 +522,7 @@ export function LiveShareDialog({
                 size="xs"
                 variant="light"
                 color="violet"
-                onClick={saveAssetRule}
+                onClick={submitAssetRule}
                 data-testid="asset-rule-save"
               >
                 Save
