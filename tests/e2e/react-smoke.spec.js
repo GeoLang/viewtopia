@@ -19,6 +19,16 @@ import { MENU_ITEM } from './panel-helpers';
 
 const REACT_URL = '/';
 
+// vite's first compile after a start, or a box running other suites, takes
+// longer than the 5 s an assertion waits by default
+const BOOT_TIMEOUT = 60000;
+
+/** Load the app and wait for its shell, however long the first boot takes. */
+async function openShell(page) {
+  await page.goto(REACT_URL);
+  await expect(page.getByRole('button', { name: 'Layers' })).toBeVisible({ timeout: BOOT_TIMEOUT });
+}
+
 // the first-visit welcome card is default-boot.spec.js's subject, not this one's
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('viewtopia-first-run', 'dismissed'));
@@ -29,7 +39,7 @@ test.describe('React shell smoke', () => {
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
 
-    await page.goto(REACT_URL);
+    await openShell(page);
 
     // Core shell rendered: a header toolbar button + the Cesium renderer container.
     // (Don't assert `#react-root > *` first — Mantine injects a non-visible <style>
@@ -43,7 +53,7 @@ test.describe('React shell smoke', () => {
   });
 
   test('a tool panel opens from the toolbar', async ({ page }) => {
-    await page.goto(REACT_URL);
+    await openShell(page);
     // Tool buttons carry an aria-label matching their tooltip (Measure, Draw, …).
     const measure = page.getByRole('button', { name: 'Measure' });
     await expect(measure).toBeVisible();
@@ -53,7 +63,7 @@ test.describe('React shell smoke', () => {
   });
 
   test('feature picker (Inspect) opens and toggles', async ({ page }) => {
-    await page.goto(REACT_URL);
+    await openShell(page);
     const inspect = page.getByRole('button', { name: 'Inspect' });
     await expect(inspect).toBeVisible();
     await inspect.click();
@@ -68,7 +78,7 @@ test.describe('React shell smoke', () => {
   });
 
   test('GeoJSON editor opens with its empty state', async ({ page }) => {
-    await page.goto(REACT_URL);
+    await openShell(page);
     // the editor lives in the Actions menu since the toolbar merged into the header
     await page.getByRole('button', { name: 'Actions' }).click();
     await page.locator(MENU_ITEM).filter({ hasText: 'GeoJSON Editor' }).first().click();
@@ -78,7 +88,7 @@ test.describe('React shell smoke', () => {
   });
 
   test('style editor opens with its controls', async ({ page }) => {
-    await page.goto(REACT_URL);
+    await openShell(page);
     await page.getByRole('button', { name: 'Actions' }).click();
     await page.locator(MENU_ITEM).filter({ hasText: 'Style Editor' }).first().click();
     // Panel renders its heading + the color-by-property control.
@@ -87,18 +97,18 @@ test.describe('React shell smoke', () => {
   });
 
   test('theme toggle switches and persists the color scheme', async ({ page }) => {
-    await page.goto(REACT_URL);
+    await openShell(page);
     const html = page.locator('html');
     await expect(html).toHaveAttribute('data-mantine-color-scheme', 'dark');
     await page.getByRole('button', { name: 'Toggle theme' }).click();
     await expect(html).toHaveAttribute('data-mantine-color-scheme', 'light');
     // Mantine persists the choice to localStorage — survives a reload.
     await page.reload();
-    await expect(html).toHaveAttribute('data-mantine-color-scheme', 'light');
+    await expect(html).toHaveAttribute('data-mantine-color-scheme', 'light', { timeout: BOOT_TIMEOUT });
   });
 
   test('auth modal opens and switches between login / register', async ({ page }) => {
-    await page.goto(REACT_URL);
+    await openShell(page);
     // Header trigger (aria-label "Login") opens the modal while logged out.
     await page.getByRole('button', { name: 'Login' }).click();
     await expect(page.getByLabel('Email or username')).toBeVisible();
@@ -109,7 +119,7 @@ test.describe('React shell smoke', () => {
   });
 
   test('portal catalog opens from the Data menu', async ({ page }) => {
-    await page.goto(REACT_URL);
+    await openShell(page);
     await page.getByRole('button', { name: 'Data' }).click();
     await page.getByRole('menuitem', { name: 'Catalog' }).click();
     // Modal renders with search + the signed-out state (no token, so the catalog
@@ -122,7 +132,7 @@ test.describe('React shell smoke', () => {
   test('fly-to box accepts a location without runtime errors', async ({ page }) => {
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
-    await page.goto(REACT_URL);
+    await openShell(page);
     const box = page.getByPlaceholder('Fly to place…');
     await expect(box).toBeVisible();
     // Raw coordinates take the direct path (no network); Enter flies the camera.
@@ -134,7 +144,7 @@ test.describe('React shell smoke', () => {
   test('MapLibre renderer activates with the deck.gl overlay on it', async ({ page }) => {
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
-    await page.goto(REACT_URL);
+    await openShell(page);
     // Switch renderer Cesium → MapLibre via the map-corner control's Select.
     await page.getByRole('button', { name: 'Basemap & renderer' }).click();
     await page.locator('input[aria-label="Renderer"]').click();
@@ -151,7 +161,7 @@ test.describe('React shell smoke', () => {
     // Dashboards live in project state on the server now; standalone has no
     // project, so the panel says so and refuses creation. The create-and-add
     // -widget flow is platform e2e territory.
-    await page.goto(REACT_URL);
+    await openShell(page);
     await page.getByRole('button', { name: 'Tools' }).click();
     await page.getByRole('menuitem', { name: 'Dashboards' }).click();
     await expect(page.getByText(/dashboards live in a project/i)).toBeVisible();

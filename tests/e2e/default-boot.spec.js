@@ -1,5 +1,9 @@
 import { test, expect } from './console-guard';
 
+// a cold vite compile, or a box running the other suites, boots slower than
+// the 5 s an assertion waits by default
+const BOOT_TIMEOUT = 60000;
+
 /**
  * First-load defaults. A clean profile boots the MapLibre renderer on the dark
  * vector basemap, with Cesium one renderer switch away. The panel suites seed
@@ -13,7 +17,7 @@ test('first visit offers the demo dataset and hands over to the tour', async ({ 
   await page.goto('/');
   const overlay = page.getByTestId('first-run-overlay');
   // the first test pays vite's cold compile, same as the boot waits below
-  await expect(overlay).toBeVisible({ timeout: 60000 });
+  await expect(overlay).toBeVisible({ timeout: BOOT_TIMEOUT });
   await overlay.getByRole('button', { name: /demo/i }).click();
   await expect(overlay).not.toBeVisible();
 
@@ -28,12 +32,12 @@ test('first visit offers the demo dataset and hands over to the tour', async ({ 
 test('dismissing the first-run overlay persists across reloads', async ({ page }) => {
   await page.goto('/');
   const overlay = page.getByTestId('first-run-overlay');
-  await expect(overlay).toBeVisible();
+  await expect(overlay).toBeVisible({ timeout: BOOT_TIMEOUT });
   await overlay.getByRole('button', { name: 'Got it' }).click();
   await expect(overlay).not.toBeVisible();
 
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Layers' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Layers' })).toBeVisible({ timeout: BOOT_TIMEOUT });
   await expect(page.getByTestId('first-run-overlay')).not.toBeVisible();
 });
 

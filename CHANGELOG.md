@@ -296,6 +296,11 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-08-25: **the react smoke and default boot specs wait for the first
+  boot.** Their first shell assertion after `goto` took Playwright's 5 s
+  default, which a cold vite compile or a box running other suites exceeds,
+  so they failed locally while CI's single worker passed them. They now wait
+  the same 60 s the panel suites do.
 - 2026-08-25: **a branch drawn at a past moment decodes WKB only.** ptolemy's
   `/features/at` now answers `geometry_wkb` as WKB like `/features`, so the
   reader no longer sniffs the first byte for GeoJSON text.
