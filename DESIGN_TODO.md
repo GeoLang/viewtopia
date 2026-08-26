@@ -106,6 +106,23 @@ other documents citing "P0 item 5" still land on the right one.
    - [ ] Prove the public route set with service health checks and one
      authenticated browser session.
 
+7. **Chat-only viewer mode: a typed prompt reaches every capability that does
+   not need the mouse.** Repositories: `viewtopia`, `geolang`. Owner call
+   2026-08-25, plan under **Chat-only viewer mode** in the plans section.
+   - [ ] Phase 1, the shell and the registry: `?mode=chat` plus a header
+     toggle and a palette entry that hide the header, dock and toolbars the
+     way presentation mode does, the action registry under `src/actions/`
+     with the state setters and the twin actions, the state snapshot on every
+     chat message, `viewer_control.run`, `find_feature`, the deterministic
+     Playwright spec and the 40-prompt eval set.
+   - [ ] Phase 2, analysis and simulate panels as parameterised actions that
+     return their result to the chat: viewshed, flood, terrain profile,
+     shadows, travel time, clipping, cross section, spatial stats.
+   - [ ] Phase 3, data panels as actions: import by URL or upload, export,
+     STAC, OGC, SQL.
+   - [ ] Delete geolang's fixed `viewer_control` action list once the eval set
+     passes on `run` alone.
+
 ## Wire for real
 
 A module is written, unit-tested, exported by a `pub mod` line, and never called
@@ -643,6 +660,61 @@ because no PostGIS build ships `ST_ContourLines`, so that route answers 501
 first.
 
 ## Plans — too big to hand an agent cold
+
+### Chat-only viewer mode
+
+P0 item 7 tracks the phases. Two owner calls pending, written here as the
+defaults until changed: destructive actions (delete a dataset, remove a feed,
+leave a project) take a one-line confirm turn in the chat, and geolang's fixed
+action list stays beside the generic `run` until the eval set passes, then goes.
+
+What exists. geolang's `viewer_control` tool emits one of 37 fixed actions and
+`src/viewer/commands.ts` executes 41, but most of the panel row (`viewshed`,
+`flood`, `import_model` and the rest) only open a panel, which is a dead end
+with no panels. The model is blind: `agent_event_stream` sends the persona and
+the prompt, never the layers, camera, project or live document. The largest
+state surfaces have no command at all: basemap, layer visibility, opacity and
+order, symbology, projects and datasets, the live document join, feeds and the
+asset rule, the scrubber, scenario compare.
+
+The mode. `?mode=chat`, a header toggle and a command palette entry. Header,
+panel dock and toolbars hidden as `Ctrl+.` hides them, the map full screen,
+the chat aside the only control. Panel-opening commands are no-ops in this
+mode. Results a panel used to show come back into the chat through the
+existing `ui_spec` text and table path.
+
+The action registry. Every form-based capability becomes one named function
+with a JSON schema under `src/actions/`, and the panel that offers it today
+calls the same function, so there is one implementation. Names of the shape
+`layers.set_visible`, `basemap.set`, `renderer.set`, `split_view.set`,
+`project.open`, `dataset.draw_branch`, `live.join`, `live.create_feed`,
+`live.set_asset_rule`, `history.show_at`, `scenario.compare`,
+`route.compute`, `isochrone.compute`, `import.from_url`, `export.layer`. The
+registry publishes its catalogue (name, description, schema) and
+`viewer_control` gains one open action, `run`, carrying a name and validated
+args, so geolang needs no code change per capability. The catalogue reaches
+the model as a tool list built at request time from what the viewer sends.
+
+State for the model. Each chat message carries a compact snapshot in the
+AG-UI request state: camera, renderer, basemap, layers with ids, names and
+visibility, active project and dataset, live document id, the asset rule, the
+scrubber time, the picked feature. geolang puts it in the system turn.
+
+Places without a mouse. Prompts name places by address, coordinates or a
+feature name. A `find_feature` action searches loaded layers' properties, and
+geocoding already exists, so "viewshed from the north gate" resolves to a
+point before the analysis runs.
+
+Out of scope, stated in the mode's help text: drawing and annotation
+placement, measuring with the cursor, picking by click, vertex drag, image
+overlay corner drag, the swipe handle, the context menu.
+
+Tests. Registry tests in Vitest, one per action against fake stores. A
+deterministic Playwright spec in chat mode that injects `viewer_cmd` events the
+way `tests/e2e/agent-tool-run.spec.js` does and asserts store state, so the
+model is not in the loop. The model's mapping measured with geolang's NL evals
+on a prompt set of about 40 lines covering every phase 1 action, run with
+`--repeat 3`, scored on the action and args emitted, never on one run.
 
 ### Hosted flagship instance, the thesis blocker
 
