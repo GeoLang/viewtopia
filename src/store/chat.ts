@@ -37,10 +37,20 @@ export interface Session {
   backendId?: string;
 }
 
+/**
+ * Follow-up sends one prompt of the user's may lead to. Two keeps a read action
+ * whose answer needs a second read from turning into a loop.
+ */
+export const MAXIMUM_FOLLOW_UPS = 2;
+
 interface ChatState {
   sessions: Session[];
   activeSessionId: string | null;
   streaming: boolean;
+  /** a read action's result, waiting to go back to the model as the next turn */
+  followUp: string | null;
+  /** follow-up sends since the last prompt the user typed */
+  followUpCount: number;
 
   // Session management
   createSession: (name?: string) => string;
@@ -64,6 +74,14 @@ interface ChatState {
   // Streaming state
   setStreaming: (v: boolean) => void;
 
+  // Follow-up sends
+  queueFollowUp: (prompt: string) => void;
+  /** The queued prompt, cleared, so it can only be sent once. */
+  takeFollowUp: () => string | null;
+  /** A prompt the user typed: the follow-ups it leads to start from zero. */
+  startPromptTurn: () => void;
+  countFollowUp: () => void;
+
   // Computed
   activeSession: () => Session | undefined;
   activeMessages: () => Message[];
@@ -75,6 +93,8 @@ export const useChatStore = create<ChatState>()(
       sessions: [],
       activeSessionId: null,
       streaming: false,
+      followUp: null,
+      followUpCount: 0,
 
       createSession: (name) => {
         const id = crypto.randomUUID();
@@ -269,6 +289,18 @@ export const useChatStore = create<ChatState>()(
 
       setStreaming: (streaming) => set({ streaming }),
 
+      queueFollowUp: (followUp) => set({ followUp }),
+
+      takeFollowUp: () => {
+        const { followUp } = get();
+        if (followUp !== null) set({ followUp: null });
+        return followUp;
+      },
+
+      startPromptTurn: () => set({ followUp: null, followUpCount: 0 }),
+
+      countFollowUp: () => set((s) => ({ followUpCount: s.followUpCount + 1 })),
+
       activeSession: () => {
         const s = get();
         return s.sessions.find((sess) => sess.id === s.activeSessionId);
@@ -291,3 +323,14 @@ export const useChatStore = create<ChatState>()(
     },
   ),
 );
+
+/**
+ * Tell the user what a command or an action did, through the chat transcript
+ * the reply itself arrives in. A notice can land before the first prompt (a
+ * replayed message), so it opens a session rather than being dropped.
+ */
+export function postSystemNotice(text: string): void {
+  const chat = useChatStore.getState();
+  if (!chat.activeSessionId) chat.createSession();
+  useChatStore.getState().addMessage({ role: 'system', content: text });
+}

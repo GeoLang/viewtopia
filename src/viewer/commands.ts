@@ -9,14 +9,16 @@
  * deck.gl visualization layers (add_hexbin, add_arcs, add_scatter, add_screengrid)
  * which draw on the MapLibre map's deck overlay, add_heatmap (a native maplibre
  * heatmap layer, since deck's is screen-space and the map is a globe), 3D-tiles
- * styling (style_by_*), and tool-panel commands
- * (measure, annotate, analysis, weather, …) which open the matching panel.
+ * styling (style_by_*), tool-panel commands
+ * (measure, annotate, analysis, weather, …) which open the matching panel, and
+ * `run`, which runs one named action from the registry under src/actions.
  */
 import { Cartesian3, Color, Math as CesiumMath } from 'cesium';
 import { HexagonLayer, ScreenGridLayer } from '@deck.gl/aggregation-layers';
 import { ArcLayer, ScatterplotLayer } from '@deck.gl/layers';
 import type { Layer } from '@deck.gl/core';
 import { notifications } from '@mantine/notifications';
+import { runViewerAction } from '../actions/dispatch';
 import { getActiveCesiumViewer, getActiveMapLibre } from './registry';
 import { setSharedCamera } from '../hooks/sharedCamera';
 import { runSqlQuery } from '../duckdb/sqlCommand';
@@ -24,7 +26,7 @@ import { useAppStore, asRenderer, type ViewerTab, type ToolPanel } from '../stor
 import { useAgentLayerStore, toFeatureCollection } from '../store/agentLayers';
 import { useDeckLayersStore } from '../hooks/deckLayers';
 import { showHeatmap } from '../lib/mapHeatmap';
-import { useChatStore } from '../store/chat';
+import { postSystemNotice } from '../store/chat';
 import { loadedTileset, useTiles3dLayerStore } from '../store/tiles3dLayers';
 import { colorByHeight, colorByClassification, colorByProperty } from './tileStyles';
 import { useMeasureStore, type MeasureMode } from '../store/measure';
@@ -64,14 +66,13 @@ function addAgentDeckLayer(layer: Layer): void {
 export const SCREENGRID_NOTICE = 'screengrid is not available on the globe renderer';
 
 /**
- * Tell the user what a command did or could not do, through the chat transcript
- * the reply itself arrives in. A notice can land before the first prompt (a
- * replayed message), so it opens a session rather than being dropped.
+ * Chat mode shows no panels, so a command that only opens one says what it
+ * would have opened. True when that happened and nothing else should run.
  */
-function notice(text: string): void {
-  const chat = useChatStore.getState();
-  if (!chat.activeSessionId) chat.createSession();
-  useChatStore.getState().addMessage({ role: 'system', content: text });
+function panelIsUnreachable(action: string, panel: ToolPanel): boolean {
+  if (!useAppStore.getState().chatMode) return false;
+  postSystemNotice(`${action} opens the ${panel} panel, which chat mode does not show.`);
+  return true;
 }
 
 // camera altitude (m) -> web-mercator zoom, so a Cesium-style fly_to also moves
@@ -277,7 +278,7 @@ const handlers: Record<string, Handler> = {
   // support, so it draws nothing on the only renderer deck rides on. Kept, and
   // reported, until it has a replacement.
   add_screengrid: (p) => {
-    notice(SCREENGRID_NOTICE);
+    postSystemNotice(SCREENGRID_NOTICE);
     addAgentDeckLayer(
       new ScreenGridLayer({
         id: `agent-screengrid-${Date.now()}`,
@@ -301,13 +302,18 @@ const handlers: Record<string, Handler> = {
   },
 
   // ─── measurement ────────────────────────────────────────────────────────
-  measure_distance: () => startMeasure('distance'),
-  measure_area: () => startMeasure('area'),
-  measure_height: () => startMeasure('elevation'),
+  measure_distance: () => startMeasure('measure_distance', 'distance'),
+  measure_area: () => startMeasure('measure_area', 'area'),
+  measure_height: () => startMeasure('measure_height', 'elevation'),
+
+  // ─── the action registry ────────────────────────────────────────────────
+  // one open command carrying the name of a catalogue entry and its arguments
+  run: (p) => runViewerAction(p),
 };
 
 /** Open a measurement mode and its panel. */
-function startMeasure(mode: MeasureMode): void {
+function startMeasure(action: string, mode: MeasureMode): void {
+  if (panelIsUnreachable(action, 'measure')) return;
   useMeasureStore.getState().setMode(mode);
   useAppStore.getState().setActivePanel('measure');
 }
@@ -335,7 +341,10 @@ const PANEL_COMMANDS: Record<string, ToolPanel> = {
 };
 
 for (const [action, panel] of Object.entries(PANEL_COMMANDS)) {
-  handlers[action] = () => useAppStore.getState().setActivePanel(panel);
+  handlers[action] = () => {
+    if (panelIsUnreachable(action, panel)) return;
+    useAppStore.getState().setActivePanel(panel);
+  };
 }
 
 export function executeViewerCommand(cmd: ViewerCommand): void {
