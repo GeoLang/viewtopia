@@ -10,12 +10,13 @@ import {
   waitFor,
 } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
+import { ScenarioPanel } from '../../src/components/tools/ScenarioPanel';
 import {
-  ScenarioPanel,
   coverageDifference,
   formatArea,
   formatDifference,
-} from '../../src/components/tools/ScenarioPanel';
+  useScenarioCompareStore,
+} from '../../src/features/scenario/compare';
 import { useAgentLayersMapLibre } from '../../src/hooks/useAgentLayersMapLibre';
 import { useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers';
 import { useAppStore } from '../../src/store/app';
@@ -250,6 +251,7 @@ describe('the scenario panel', () => {
       comparePanes: [{ renderer: 'maplibre', basemap: 'dark' }],
       swipeAt: null,
     });
+    useScenarioCompareStore.setState({ compared: null, coverage: null });
   });
 
   afterEach(() => {

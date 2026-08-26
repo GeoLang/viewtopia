@@ -1,83 +1,26 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button, Group, NumberInput, Select, Stack, Text, TextInput } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconArrowsSplit2, IconPlayerStop, IconRefresh } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../PanelCard';
+import { createBranch, fetchBranches, fetchDatasets, type NamedRecord } from '../../lib/branchFeatures';
 import {
-  branchFeatureCollection,
-  branchIdOfLayer,
-  branchLayerId,
-  createBranch,
-  fetchBranchCoverage,
-  fetchBranchFeatures,
-  fetchBranchFeaturesAt,
-  fetchBranches,
-  fetchDatasets,
-  type BranchCoverage,
-  type NamedRecord,
-} from '../../lib/branchFeatures';
-import { addGeoJsonLayer, removeGeoJsonLayer } from '../../lib/mapLayers';
-import {
-  useSplitViewStore,
-  usePaneHiddenLayerIds,
-  COMPARE_PANE,
-  VIEWER_PANE,
-  type Pane,
-} from '../../store/splitView';
+  DEFAULT_BUFFER_METERS,
+  MAX_BUFFER_METERS,
+  MIN_BUFFER_METERS,
+  coverageDifference,
+  formatArea,
+  formatDifference,
+  recomputeCompare,
+  startCompare,
+  stopCompare,
+  useScenarioCompareStore,
+} from '../../features/scenario/compare';
 
 const PANEL_COLOR = 'grape';
 
-/** How far a feature reaches, when the user has not said. */
-const DEFAULT_BUFFER_METERS = 50;
-/** ptolemy refuses a coverage distance outside this range. */
-const MIN_BUFFER_METERS = 1;
-const MAX_BUFFER_METERS = 100_000;
-
-const SQUARE_METERS_PER_HECTARE = 10_000;
-/** Above one hectare the square metres stop reading, so switch units. */
-const HECTARE_THRESHOLD_SQUARE_METERS = 10_000;
-
-const HECTARE_DECIMALS = 2;
-const PERCENT_DECIMALS = 1;
-
-const BASE_STYLE = { color: '#4dabf7', opacity: 0.4, lineWidth: 2, filled: true, stroked: true };
-const SCENARIO_STYLE = { color: '#f06595', opacity: 0.4, lineWidth: 2, filled: true, stroked: true };
-
 /** The branch whose head a side draws, when it names no moment. */
 const LIVE = 'live';
-
-/** An area a person can read: hectares once the square metres get long. */
-export function formatArea(squareMeters: number): string {
-  if (squareMeters >= HECTARE_THRESHOLD_SQUARE_METERS) {
-    return `${(squareMeters / SQUARE_METERS_PER_HECTARE).toFixed(HECTARE_DECIMALS)} ha`;
-  }
-  return `${Math.round(squareMeters)} m²`;
-}
-
-export interface CoverageDifference {
-  squareMeters: number;
-  /** null when the base covers nothing, so there is no share of it to take */
-  percent: number | null;
-}
-
-/** What the scenario adds to the base, as an area and as a share of it. */
-export function coverageDifference(
-  base: BranchCoverage,
-  scenario: BranchCoverage,
-): CoverageDifference {
-  const squareMeters = scenario.squareMeters - base.squareMeters;
-  return {
-    squareMeters,
-    percent: base.squareMeters > 0 ? (squareMeters / base.squareMeters) * 100 : null,
-  };
-}
-
-export function formatDifference(difference: CoverageDifference): string {
-  const sign = difference.squareMeters < 0 ? '-' : '+';
-  const area = `${sign}${formatArea(Math.abs(difference.squareMeters))}`;
-  if (difference.percent === null) return area;
-  return `${area} (${sign}${Math.abs(difference.percent).toFixed(PERCENT_DECIMALS)}%)`;
-}
 
 function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -96,32 +39,6 @@ function momentOf(typed: string, side: string): string | null {
   return parsed.toISOString();
 }
 
-/** The split view as it stood before a compare took it over. */
-interface SplitViewBefore {
-  active: boolean;
-  comparePanes: Pane[];
-  swipeAt: number | null;
-}
-
-// A comparison outlives the panel that started it: the layers and the hidden
-// ids stay on the map after a close, and reopening has to be able to stop it.
-let splitViewBefore: SplitViewBefore | null = null;
-
-/** The branch pair a running comparison draws, read back off the panes. */
-function comparedBranches(
-  viewerHidden: string[],
-  compareHidden: string[],
-): { baseId: string; scenarioId: string } | null {
-  const scenarioId = viewerHidden.map(branchIdOfLayer).find((id) => id !== null);
-  const baseId = compareHidden.map(branchIdOfLayer).find((id) => id !== null);
-  return baseId && scenarioId ? { baseId, scenarioId } : null;
-}
-
-interface Sides {
-  base: BranchCoverage;
-  scenario: BranchCoverage;
-}
-
 export function ScenarioPanel({ onClose }: { onClose: () => void }) {
   const [datasets, setDatasets] = useState<NamedRecord[]>([]);
   const [datasetId, setDatasetId] = useState<string | null>(null);
@@ -132,11 +49,9 @@ export function ScenarioPanel({ onClose }: { onClose: () => void }) {
   const [distance, setDistance] = useState(DEFAULT_BUFFER_METERS);
   const [baseAt, setBaseAt] = useState('');
   const [scenarioAt, setScenarioAt] = useState('');
-  const [sides, setSides] = useState<Sides | null>(null);
   const [busy, setBusy] = useState(false);
-  const viewerHidden = usePaneHiddenLayerIds(VIEWER_PANE);
-  const compareHidden = usePaneHiddenLayerIds(COMPARE_PANE);
-  const compared = comparedBranches(viewerHidden, compareHidden);
+  const compared = useScenarioCompareStore((state) => state.compared);
+  const coverage = useScenarioCompareStore((state) => state.coverage);
 
   useEffect(() => {
     fetchDatasets()
@@ -156,57 +71,18 @@ export function ScenarioPanel({ onClose }: { onClose: () => void }) {
       .catch((error) => fail('Branches could not be listed', error));
   }, [datasetId]);
 
-  const drawBranch = useCallback(
-    async (branchId: string, typed: string, side: string, style: typeof BASE_STYLE) => {
-      const at = momentOf(typed, side);
-      const features = at
-        ? await fetchBranchFeaturesAt(branchId, at)
-        : await fetchBranchFeatures(branchId);
-      addGeoJsonLayer(branchLayerId(branchId), branchFeatureCollection(features), style);
-    },
-    [],
-  );
-
-  const load = useCallback(
-    async (base: string, scenario: string) => {
-      await drawBranch(base, baseAt, 'base', BASE_STYLE);
-      await drawBranch(scenario, scenarioAt, 'scenario', SCENARIO_STYLE);
-      const [baseCoverage, scenarioCoverage] = await Promise.all([
-        fetchBranchCoverage(base, distance),
-        fetchBranchCoverage(scenario, distance),
-      ]);
-      setSides({ base: baseCoverage, scenario: scenarioCoverage });
-    },
-    [baseAt, scenarioAt, distance, drawBranch],
-  );
-
   async function compare() {
     if (!baseId || !scenarioId) return;
-    if (baseId === scenarioId) {
-      notifications.show({
-        title: 'Pick two branches',
-        message: 'A scenario is compared against a different branch.',
-        color: 'red',
-      });
-      return;
-    }
-    // a second compare would otherwise leave the first pair's layers drawn and
-    // its ids hidden, with no button left to clear them
-    stop();
     setBusy(true);
     try {
-      await load(baseId, scenarioId);
-      const split = useSplitViewStore.getState();
-      splitViewBefore ??= {
-        active: split.active,
-        comparePanes: split.comparePanes,
-        swipeAt: split.swipeAt,
-      };
-      split.setLayout('twoAcross');
-      split.setSwipeAt(null);
-      split.setActive(true);
-      split.hideLayerInPane(VIEWER_PANE, branchLayerId(scenarioId));
-      split.hideLayerInPane(COMPARE_PANE, branchLayerId(baseId));
+      await startCompare({
+        datasetId,
+        baseBranchId: baseId,
+        scenarioBranchId: scenarioId,
+        baseAt: momentOf(baseAt, 'base'),
+        scenarioAt: momentOf(scenarioAt, 'scenario'),
+        distanceMeters: distance,
+      });
     } catch (error) {
       fail('The comparison could not be drawn', error);
     } finally {
@@ -215,31 +91,14 @@ export function ScenarioPanel({ onClose }: { onClose: () => void }) {
   }
 
   async function recompute() {
-    if (!compared) return;
     setBusy(true);
     try {
-      await load(compared.baseId, compared.scenarioId);
+      await recomputeCompare();
     } catch (error) {
       fail('The comparison could not be recomputed', error);
     } finally {
       setBusy(false);
     }
-  }
-
-  function stop() {
-    if (!compared) return;
-    const split = useSplitViewStore.getState();
-    split.showLayerInPane(VIEWER_PANE, branchLayerId(compared.scenarioId));
-    split.showLayerInPane(COMPARE_PANE, branchLayerId(compared.baseId));
-    removeGeoJsonLayer(branchLayerId(compared.baseId));
-    removeGeoJsonLayer(branchLayerId(compared.scenarioId));
-    if (splitViewBefore) {
-      split.setComparePanes(splitViewBefore.comparePanes);
-      split.setSwipeAt(splitViewBefore.swipeAt);
-      split.setActive(splitViewBefore.active);
-      splitViewBefore = null;
-    }
-    setSides(null);
   }
 
   async function createScenario() {
@@ -376,7 +235,7 @@ export function ScenarioPanel({ onClose }: { onClose: () => void }) {
           )}
         </Group>
 
-        {sides && (
+        {coverage && (
           <>
             <Group gap="xs" grow align="flex-start">
               <Stack gap={0}>
@@ -384,7 +243,7 @@ export function ScenarioPanel({ onClose }: { onClose: () => void }) {
                   Base (left)
                 </Text>
                 <Text size="xs" data-testid="scenario-base-coverage">
-                  {sides.base.featureCount} features, {formatArea(sides.base.squareMeters)}
+                  {coverage.base.featureCount} features, {formatArea(coverage.base.squareMeters)}
                 </Text>
               </Stack>
               <Stack gap={0}>
@@ -392,12 +251,13 @@ export function ScenarioPanel({ onClose }: { onClose: () => void }) {
                   Scenario (right)
                 </Text>
                 <Text size="xs" data-testid="scenario-branch-coverage">
-                  {sides.scenario.featureCount} features, {formatArea(sides.scenario.squareMeters)}
+                  {coverage.scenario.featureCount} features,{' '}
+                  {formatArea(coverage.scenario.squareMeters)}
                 </Text>
               </Stack>
             </Group>
             <Text size="xs" c={PANEL_COLOR} data-testid="scenario-difference">
-              {formatDifference(coverageDifference(sides.base, sides.scenario))}
+              {formatDifference(coverageDifference(coverage.base, coverage.scenario))}
             </Text>
             {drawnAtAMoment && (
               <Text size="xs" c="dimmed">
@@ -414,7 +274,7 @@ export function ScenarioPanel({ onClose }: { onClose: () => void }) {
             color="gray"
             data-testid="scenario-stop"
             leftSection={<IconPlayerStop size={12} />}
-            onClick={stop}
+            onClick={stopCompare}
           >
             Stop comparing
           </Button>
