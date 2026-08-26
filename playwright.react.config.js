@@ -20,6 +20,7 @@ export default defineConfig({
     'chat-mode.spec.js',
     'chat-actions-data.spec.js',
     'chat-actions-scene.spec.js',
+    'chat-actions-terrain.spec.js',
     'split-pane-tabs.spec.js',
     'dictation.spec.js',
   ],

@@ -12,6 +12,7 @@ import './live';
 import './project';
 import './scenario';
 import './scene';
+import './terrain';
 import './view';
 
 export { actionCatalogue, runAction, findAction, ActionError } from './registry';

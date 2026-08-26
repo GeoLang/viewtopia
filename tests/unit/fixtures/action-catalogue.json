@@ -1,5 +1,63 @@
 [
   {
+    "name": "analysis.cross_section",
+    "description": "Draw a line on the map and answer how the ground under it rises and falls.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "layer": {
+          "type": "string",
+          "description": "Layer id or name to run along, instead of the two points."
+        },
+        "start_lon": {
+          "type": "number",
+          "description": "Longitude the line starts at."
+        },
+        "start_lat": {
+          "type": "number",
+          "description": "Latitude the line starts at."
+        },
+        "end_lon": {
+          "type": "number",
+          "description": "Longitude the line ends at."
+        },
+        "end_lat": {
+          "type": "number",
+          "description": "Latitude the line ends at."
+        },
+        "samples": {
+          "type": "number",
+          "description": "How many points to read the elevation at, 10 to 200. 100 by default."
+        }
+      },
+      "required": []
+    },
+    "reads": true,
+    "destructive": false
+  },
+  {
+    "name": "analysis.flood",
+    "description": "Flood the ground under a water level and draw what it covers.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "level_m": {
+          "type": "number",
+          "description": "Water level in metres above sea level."
+        },
+        "bbox": {
+          "type": "array",
+          "description": "Where to flood, as [west, south, east, north] in degrees. The current view by default."
+        }
+      },
+      "required": [
+        "level_m"
+      ]
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
     "name": "analysis.spatial_stats",
     "description": "Bin one layer's points into a grid and reduce each cell, drawn as extruded cells on the map.",
     "parameters": {
@@ -35,6 +93,42 @@
     "destructive": false
   },
   {
+    "name": "analysis.terrain_profile",
+    "description": "Read the ground elevation along a line, and answer how it rises and falls.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "layer": {
+          "type": "string",
+          "description": "Layer id or name to run along, instead of the two points."
+        },
+        "start_lon": {
+          "type": "number",
+          "description": "Longitude the line starts at."
+        },
+        "start_lat": {
+          "type": "number",
+          "description": "Latitude the line starts at."
+        },
+        "end_lon": {
+          "type": "number",
+          "description": "Longitude the line ends at."
+        },
+        "end_lat": {
+          "type": "number",
+          "description": "Latitude the line ends at."
+        },
+        "samples": {
+          "type": "number",
+          "description": "How many points to read the elevation at, 10 to 200. 100 by default."
+        }
+      },
+      "required": []
+    },
+    "reads": true,
+    "destructive": false
+  },
+  {
     "name": "analysis.travel_time",
     "description": "Draw how far a vehicle gets from one point within given minutes, one polygon per band.",
     "parameters": {
@@ -61,6 +155,37 @@
             "pedestrian",
             "truck"
           ]
+        }
+      },
+      "required": [
+        "lon",
+        "lat"
+      ]
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
+    "name": "analysis.viewshed",
+    "description": "Work out what an observer standing at a point can see, and draw the visible ground.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "lon": {
+          "type": "number",
+          "description": "Observer longitude in degrees."
+        },
+        "lat": {
+          "type": "number",
+          "description": "Observer latitude in degrees."
+        },
+        "height_m": {
+          "type": "number",
+          "description": "How far the observer's eyes are above the ground, in metres. 2 by default."
+        },
+        "radius_m": {
+          "type": "number",
+          "description": "How far out to look, in metres. 1000 by default."
         }
       },
       "required": [

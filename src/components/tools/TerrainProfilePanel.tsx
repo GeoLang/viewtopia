@@ -11,15 +11,19 @@ import {
 } from '@mantine/core';
 import { IconChartAreaLine, IconX } from '@tabler/icons-react';
 import {
-  fetchElevations,
-  sampleAlongLine,
-  buildProfile,
+  DEFAULT_PROFILE_SAMPLES,
+  MAX_PROFILE_SAMPLES,
+  MIN_PROFILE_SAMPLES,
+  PROFILE_LINE_STYLE,
+  drawProfileLine,
+  sampleTerrainProfile,
+} from '../../features/terrain/profile';
+import {
   ElevationChart,
   type ProfilePoint,
   type ProfileStats,
 } from '../../lib/elevationProfile';
 import { useDrawStore } from '../../store/draw';
-import { renderGeoJson } from '../../viewer/renderGeoJson';
 
 export function TerrainProfilePanel({ onClose }: { onClose: () => void }) {
   const features = useDrawStore((s) => s.features);
@@ -29,7 +33,7 @@ export function TerrainProfilePanel({ onClose }: { onClose: () => void }) {
   const drawing = drawMode === 'line';
 
   const [selectedLine, setSelectedLine] = useState<string | null>(null);
-  const [numSamples, setNumSamples] = useState(100);
+  const [numSamples, setNumSamples] = useState(DEFAULT_PROFILE_SAMPLES);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<ProfilePoint[] | null>(null);
@@ -53,23 +57,13 @@ export function TerrainProfilePanel({ onClose }: { onClose: () => void }) {
     setLoading(true);
     setError(null);
     try {
-      const coords = sampleAlongLine(activeLine.coords, numSamples);
-      const elevations = await fetchElevations(coords);
-      const { points, stats: builtStats } = buildProfile(coords, elevations);
+      const { coordinates, points, stats: builtStats } = await sampleTerrainProfile(
+        activeLine.coords,
+        numSamples,
+      );
       setProfile(points);
       setStats(builtStats);
-      // mark the sampled line on the live scene
-      await renderGeoJson(
-        {
-          type: 'FeatureCollection',
-          features: [
-            { type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} },
-          ],
-        },
-        '#a78bfa',
-        false,
-        'terrain-profile-line',
-      );
+      await drawProfileLine(coordinates, PROFILE_LINE_STYLE);
     } catch (e) {
       setProfile(null);
       setStats(null);
@@ -123,9 +117,9 @@ export function TerrainProfilePanel({ onClose }: { onClose: () => void }) {
             label="Samples"
             w={90}
             value={numSamples}
-            onChange={(v) => setNumSamples(Number(v) || 100)}
-            min={10}
-            max={200}
+            onChange={(v) => setNumSamples(Number(v) || DEFAULT_PROFILE_SAMPLES)}
+            min={MIN_PROFILE_SAMPLES}
+            max={MAX_PROFILE_SAMPLES}
           />
           <Button
             size="xs"

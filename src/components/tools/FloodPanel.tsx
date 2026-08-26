@@ -1,42 +1,21 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Text, Stack, Group, Slider, Button } from '@mantine/core';
 import { IconDroplet } from '@tabler/icons-react';
-import type { GeoJsonDataSource } from 'cesium';
 import { PanelCard, PanelHeader } from '../PanelCard';
-import { getActiveCesiumViewer } from '../../viewer/registry';
-import { renderGeoJson } from '../../viewer/renderGeoJson';
-import { useAppStore } from '../../store/app';
 import { useAuthStore } from '../../features/auth/store';
-import {
-  addMapGeoJson,
-  currentBbox,
-  flood,
-  SIGN_IN_HINT,
-  type MapResult,
-} from '../../lib/terrainAnalysis';
+import { clearFlood, runFlood, useTerrainAnalysisStore } from '../../features/terrain/analysis';
+import { currentBbox, SIGN_IN_HINT } from '../../lib/terrainAnalysis';
+
+const DEFAULT_WATER_LEVEL_METERS = 20;
 
 export function FloodPanel({ onClose }: { onClose: () => void }) {
-  const [waterLevel, setWaterLevel] = useState(20);
+  const [waterLevel, setWaterLevel] = useState(DEFAULT_WATER_LEVEL_METERS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cells, setCells] = useState<number | null>(null);
-  const renderer = useAppStore((s) => s.renderer);
+  const cells = useTerrainAnalysisStore((s) => (s.flood ? s.flood.floodedCells : null));
   const needsSignIn = useAuthStore((s) => !s.token);
-  const dsRef = useRef<GeoJsonDataSource | undefined>(undefined);
-  const mapResultRef = useRef<MapResult | null>(null);
 
-  const clearResult = () => {
-    const viewer = getActiveCesiumViewer();
-    if (dsRef.current && viewer && !viewer.isDestroyed()) {
-      viewer.dataSources.remove(dsRef.current);
-    }
-    dsRef.current = undefined;
-    mapResultRef.current?.remove();
-    mapResultRef.current = null;
-    setCells(null);
-  };
-
-  useEffect(() => clearResult, []);
+  useEffect(() => clearFlood, []);
 
   const run = async () => {
     const bbox = currentBbox();
@@ -47,14 +26,7 @@ export function FloodPanel({ onClose }: { onClose: () => void }) {
     setLoading(true);
     setError(null);
     try {
-      clearResult();
-      const fc = await flood(waterLevel, bbox);
-      setCells(fc.features.length ? (fc.features[0].properties?.flooded_cells ?? 0) : 0);
-      if (renderer === 'maplibre') {
-        mapResultRef.current = addMapGeoJson('flood-result', fc, '#3b82f6');
-      } else {
-        dsRef.current = await renderGeoJson(fc, '#3b82f6', false, 'flood-result');
-      }
+      await runFlood(waterLevel, bbox);
     } catch {
       setError('Flood request failed');
     } finally {
@@ -88,7 +60,7 @@ export function FloodPanel({ onClose }: { onClose: () => void }) {
           >
             Simulate
           </Button>
-          <Button size="xs" variant="default" onClick={clearResult}>
+          <Button size="xs" variant="default" onClick={clearFlood}>
             Clear
           </Button>
         </Group>

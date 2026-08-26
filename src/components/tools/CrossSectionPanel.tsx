@@ -12,15 +12,19 @@ import {
 import { IconRuler2, IconRoute } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import {
-  fetchElevations,
-  sampleAlongLine,
-  buildProfile,
+  CROSS_SECTION_LINE_STYLE,
+  DEFAULT_CROSS_SECTION_SAMPLES,
+  MAX_PROFILE_SAMPLES,
+  MIN_PROFILE_SAMPLES,
+  drawProfileLine,
+  sampleTerrainProfile,
+} from '../../features/terrain/profile';
+import {
   ElevationChart,
   type ProfilePoint,
   type ProfileStats,
 } from '../../lib/elevationProfile';
 import { useDrawStore } from '../../store/draw';
-import { renderGeoJson } from '../../viewer/renderGeoJson';
 
 export function CrossSectionPanel({ onClose }: { onClose: () => void }) {
   const features = useDrawStore((s) => s.features);
@@ -28,7 +32,7 @@ export function CrossSectionPanel({ onClose }: { onClose: () => void }) {
   const [source, setSource] = useState<string>('twopoint');
   const [startCoord, setStartCoord] = useState('51.5,-0.1');
   const [endCoord, setEndCoord] = useState('51.6,-0.05');
-  const [numSamples, setNumSamples] = useState(50);
+  const [numSamples, setNumSamples] = useState(DEFAULT_CROSS_SECTION_SAMPLES);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<ProfilePoint[] | null>(null);
@@ -58,22 +62,13 @@ export function CrossSectionPanel({ onClose }: { onClose: () => void }) {
     setLoading(true);
     setError(null);
     try {
-      const coords = sampleAlongLine(base, numSamples);
-      const elevations = await fetchElevations(coords);
-      const { points, stats: builtStats } = buildProfile(coords, elevations);
+      const { coordinates, points, stats: builtStats } = await sampleTerrainProfile(
+        base,
+        numSamples,
+      );
       setProfile(points);
       setStats(builtStats);
-      // Draw the sampled section line onto the live scene.
-      await renderGeoJson(
-        {
-          type: 'FeatureCollection',
-          features: [
-            { type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} },
-          ],
-        },
-        '#e74c3c',
-        false,
-      );
+      await drawProfileLine(coordinates, CROSS_SECTION_LINE_STYLE);
     } catch (e) {
       setProfile(null);
       setStats(null);
@@ -122,8 +117,8 @@ export function CrossSectionPanel({ onClose }: { onClose: () => void }) {
           label="Sample Points"
           value={numSamples}
           onChange={(v) => setNumSamples(Number(v))}
-          min={10}
-          max={200}
+          min={MIN_PROFILE_SAMPLES}
+          max={MAX_PROFILE_SAMPLES}
         />
 
         <Button

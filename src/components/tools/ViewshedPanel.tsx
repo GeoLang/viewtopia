@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Text, Stack, Group, Button, Slider } from '@mantine/core';
 import { IconEye } from '@tabler/icons-react';
 import {
@@ -6,34 +6,29 @@ import {
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
   type Cartesian2,
-  type GeoJsonDataSource,
 } from 'cesium';
 import { PanelCard, PanelHeader } from '../PanelCard';
-import { getActiveCesiumViewer } from '../../viewer/registry';
-import { renderGeoJson } from '../../viewer/renderGeoJson';
 import { useAuthStore } from '../../features/auth/store';
-import { SIGN_IN_HINT, viewshed } from '../../lib/terrainAnalysis';
+import {
+  DEFAULT_OBSERVER_HEIGHT_METERS,
+  DEFAULT_VIEWSHED_RADIUS_METERS,
+  clearViewshed,
+  runViewshed,
+} from '../../features/terrain/analysis';
+import { SIGN_IN_HINT } from '../../lib/terrainAnalysis';
+import { getActiveCesiumViewer } from '../../viewer/registry';
 
 export function ViewshedPanel({ onClose }: { onClose: () => void }) {
-  const [observerHeight, setObserverHeight] = useState(2);
-  const [radius, setRadius] = useState(1000);
+  const [observerHeight, setObserverHeight] = useState(DEFAULT_OBSERVER_HEIGHT_METERS);
+  const [radius, setRadius] = useState(DEFAULT_VIEWSHED_RADIUS_METERS);
   const [placing, setPlacing] = useState(false);
   const [observer, setObserver] = useState<[number, number] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const needsSignIn = useAuthStore((s) => !s.token);
-  const dsRef = useRef<GeoJsonDataSource | undefined>(undefined);
-
-  const clearResult = () => {
-    const viewer = getActiveCesiumViewer();
-    if (dsRef.current && viewer && !viewer.isDestroyed()) {
-      viewer.dataSources.remove(dsRef.current);
-    }
-    dsRef.current = undefined;
-  };
 
   // clear the rendered layer when the panel unmounts.
-  useEffect(() => clearResult, []);
+  useEffect(() => clearViewshed, []);
 
   // one-shot map click to capture the observer position.
   useEffect(() => {
@@ -60,9 +55,12 @@ export function ViewshedPanel({ onClose }: { onClose: () => void }) {
     setLoading(true);
     setError(null);
     try {
-      clearResult();
-      const fc = await viewshed({ observer, height_m: observerHeight, radius_m: radius });
-      dsRef.current = await renderGeoJson(fc, '#a78bfa', true, 'viewshed-result');
+      await runViewshed({
+        longitude: observer[0],
+        latitude: observer[1],
+        heightMeters: observerHeight,
+        radiusMeters: radius,
+      });
     } catch {
       setError('Viewshed request failed');
     } finally {
@@ -111,7 +109,7 @@ export function ViewshedPanel({ onClose }: { onClose: () => void }) {
           >
             Compute
           </Button>
-          <Button size="xs" variant="default" onClick={clearResult}>
+          <Button size="xs" variant="default" onClick={clearViewshed}>
             Clear
           </Button>
         </Group>
