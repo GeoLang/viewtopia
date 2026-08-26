@@ -12,9 +12,12 @@ const FIXTURE = resolve('tests/unit/fixtures/action-catalogue.json');
 
 describe('the action catalogue fixture', () => {
   it('matches what the viewer sends with every chat message', () => {
-    const current = `${JSON.stringify(actionCatalogue(), null, 2)}\n`;
-    if (process.env.UPDATE_ACTION_CATALOGUE) writeFileSync(FIXTURE, current);
-    expect(readFileSync(FIXTURE, 'utf8')).toBe(current);
+    const current = actionCatalogue();
+    if (process.env.UPDATE_ACTION_CATALOGUE) {
+      writeFileSync(FIXTURE, `${JSON.stringify(current, null, 2)}\n`);
+    }
+    // parsed, since a windows checkout rewrites the fixture's line endings
+    expect(JSON.parse(readFileSync(FIXTURE, 'utf8'))).toEqual(current);
   });
 
   it('holds every phase one action', () => {
