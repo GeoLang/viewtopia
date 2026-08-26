@@ -272,7 +272,7 @@ colour and values it had then until you press Live.
   (every repo is public on GitHub, including
   [geolang](https://github.com/GeoLang/geolang). They clone over SSH by default,
   add `--https` for HTTPS.)
-- **An LLM API key for the agent:** put `XAI_API_KEY` (or `OPENAI_API_KEY`) in
+- **An LLM API key for the agent:** put `SIBYL_CLOUD_API_KEY` in
   `geolang/.env`.
 - **~Several GB of disk** for images (the geolang + QGIS image is large) plus
   any OSM/address data.
@@ -315,8 +315,8 @@ corepack enable                        # activates pnpm (this repo pins pnpm via
 .\scripts\clone-geolang.ps1 C:\src\GeoLang   # native PowerShell helper (clones all repos)
 ```
 
-(or run `scripts/clone-geolang.sh` under Git Bash). Then put your `XAI_API_KEY` /
-`OPENAI_API_KEY` in `C:\src\GeoLang\geolang\.env`.
+(or run `scripts/clone-geolang.sh` under Git Bash). Then put your
+`SIBYL_CLOUD_API_KEY` in `C:\src\GeoLang\geolang\.env`.
 
 ### 3a. Frontend inner loop (native, no containers)
 

@@ -73,8 +73,7 @@ jobs:
       - name: Write geolang/.env
         run: |
           cat > geolang/.env <<EOF
-          XAI_API_KEY=${{ secrets.XAI_API_KEY || 'ci-dummy-key-not-real' }}
-          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          SIBYL_CLOUD_API_KEY=${{ secrets.XAI_API_KEY || 'ci-dummy-key-not-real' }}
           EOF
 
       # compute_route, calculate_isochrones, geocode_place and batch_geocode try

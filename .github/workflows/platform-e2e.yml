@@ -6,9 +6,9 @@ name: Platform E2E (golden path)
 # shippable?" gate.
 #
 # Optional repository secrets:
-#   XAI_API_KEY     - (optional) written into geolang/.env. The golden path does not
-#   OPENAI_API_KEY  - (optional) issue an LLM call, so empty values still pass; provide
-#                     them if you later add an agent NL->map step.
+#   XAI_API_KEY - (optional) written into geolang/.env as SIBYL_CLOUD_API_KEY. The
+#                 golden path does not issue an LLM call, so an absent secret still
+#                 passes. Provide it if you later add an agent NL->map step.
 #
 # Building seven Rust service images from scratch is slow, so this does NOT run on every
 # PR — only master pushes that touch code, the weekly schedule, and manual dispatch.
@@ -77,8 +77,7 @@ jobs:
       - name: Write geolang/.env
         run: |
           cat > geolang/.env <<EOF
-          XAI_API_KEY=${{ secrets.XAI_API_KEY || 'ci-dummy-key-not-real' }}
-          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          SIBYL_CLOUD_API_KEY=${{ secrets.XAI_API_KEY || 'ci-dummy-key-not-real' }}
           EOF
 
       - name: Download OSM extract for routing

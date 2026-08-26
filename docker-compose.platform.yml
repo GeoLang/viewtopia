@@ -254,17 +254,18 @@ services:
       - "8090:8090"
     volumes:
       - sibyl-data:/data
-    # provides XAI_API_KEY; optional so panels/load CI (no geolang checkout) still parses
+    # provides SIBYL_CLOUD_API_KEY; optional so panels/load CI (no geolang checkout) still parses
     env_file:
       - path: ../geolang/.env
         required: false
     environment:
       GEOLANG_URL: http://geolang-api:8080
       PLATFORM_JWT_SECRET: ${PLATFORM_JWT_SECRET:-}
-      # set SIBYL_API_BASE=http://host.docker.internal:<port>/v1 (plus
-      # SIBYL_MODEL) to use a local llama-server on the host instead of x.ai
-      SIBYL_API_BASE: ${SIBYL_API_BASE:-}
-      SIBYL_MODEL: ${SIBYL_MODEL:-}
+      SIBYL_CLOUD_API_BASE: ${SIBYL_CLOUD_API_BASE:-}
+      SIBYL_CLOUD_MODELS: ${SIBYL_CLOUD_MODELS:-}
+      # the local pair points at a llama-server on the host as http://host.docker.internal:<port>/v1
+      SIBYL_LOCAL_API_BASE: ${SIBYL_LOCAL_API_BASE:-}
+      SIBYL_LOCAL_MODELS: ${SIBYL_LOCAL_MODELS:-}
       SIBYL_THINKING: ${SIBYL_THINKING:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"

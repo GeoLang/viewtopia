@@ -50,7 +50,7 @@ services:
     ports:
       - "8090:8090"
     environment:
-      - XAI_API_KEY=${XAI_API_KEY:-}
+      - SIBYL_CLOUD_API_KEY=${SIBYL_CLOUD_API_KEY:-}
       - GEOLANG_URL=http://geolang:8080
     volumes:
       - sibyl-data:/data

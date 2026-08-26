@@ -866,7 +866,7 @@ deletion, so an attribute-only placemark needs its own convention.
 | geokode + itinera | `data/region.osm.pbf` (OSM extract, Monaco for the demo) | `scripts/platform-up.sh` fetches it |
 | itinera | `data/graph.bin` (built from the `.pbf`) | built by `platform-up.sh` |
 | geokode | `data/addresses.csv` (optional, extra addresses) | optional |
-| geolang | LLM API keys (`XAI_API_KEY` / `OPENAI_API_KEY`) | `geolang/.env` via `env_file` |
+| geolang | LLM key (`SIBYL_CLOUD_API_KEY`) and optional local model pair | `geolang/.env` via `env_file` |
 | fenestra WCS | `COVERAGE_DIR` of `.tif`/`.tiff` (optional) | operator-supplied |
 
 One-command bring-up: `docker compose -f docker-compose.platform.yml up -d --build`, then
