@@ -109,20 +109,25 @@ other documents citing "P0 item 5" still land on the right one.
 7. **Chat-only viewer mode: a typed prompt reaches every capability that does
    not need the mouse.** Repositories: `viewtopia`, `geolang`. Owner call
    2026-08-25, plan under **Chat-only viewer mode** in the plans section.
-   - [~] Eval gate. The 56 tasks, the refreshed `catalogue.json` and the
-     refreshed `snapshot.json` are in `geolang/evals/viewer/`, and every one of
-     the 41 actions the viewer offers now has a task. What is left is the run
-     itself: `python -m evals.viewer_runner --repeat 3`, then delete the
-     `ViewerAction` literal and `REQUIRED_PARAMETERS` in
-     `geolang/src/agents/tools/viewer_control.py` so `run` is the only action,
-     and rerun. Blocked on the local model: sibyl offers only the cloud profile,
-     and the runner needs `--allow-cloud` to spend credits. Two passes is about
-     336 model calls. `tests/test_viewer_evals.py` pins the task count at 56 and
-     will need moving when a task is added.
+   - [~] Eval gate. `run` is now the only `viewer_control` action, and the
+     tasks, `catalogue.json` and `snapshot.json` in `geolang/evals/viewer/`
+     cover every catalogue action exactly. What is left is the second pass of
+     `python -m evals.viewer_runner --repeat 3`, against the rebuilt
+     `geolang-platform` image, and the before and after numbers written down.
+     Quote the score over the runs that answered: against the local model on
+     hercules about a quarter of runs stall with no output past the read
+     timeout, cause not established, and a stalled run that emitted no call is
+     unmeasurable while a finished run that emitted none is a real failure.
+     `tests/test_viewer_evals.py` pins the task count and needs moving whenever
+     a task is added.
 
-8. **Voice input in the chat.** Repository: `viewtopia`, the server is the
-   Aavaaz repo. Owner call 2026-08-25, plan under **Voice input in the chat**
-   in the plans section. Shipped, nothing open.
+   - [ ] Two viewer commands still have no catalogue entry, so the agent cannot
+     reach them. `add_arcs` needs paired source and target points, which no
+     layer carries. `add_screengrid` draws nothing on the globe renderer, the
+     only renderer deck rides on, and says so through `SCREENGRID_NOTICE` in
+     `viewtopia/src/viewer/commands.ts`. Decide per command whether it earns a
+     layer-referencing action or the handler goes. `add_geojson` with inline
+     GeoJSON is the same question: `data.import_url` covers the url case only.
 
 ## Wire for real
 
