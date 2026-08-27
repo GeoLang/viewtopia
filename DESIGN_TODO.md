@@ -132,10 +132,10 @@ other documents citing "P0 item 5" still land on the right one.
 
      Read that as removing the fixed actions costing something on this model,
      and decide whether the highest-frequency actions get flat shortcuts back
-     alongside `run`. Anything quoting these numbers needs the stall join
-     promoted out of a scratchpad into `evals/` with tests: the reports cannot
-     tell a stalled run from a finished run that emitted no call, both being a
-     zero with an empty manifest, so the split is read from the sweep log.
+     alongside `run`. Both figures come from `geolang/evals/answered_only.py`,
+     which joins a report against its sweep log: the reports cannot tell a
+     stalled run from a finished run that emitted no call, both being a zero
+     with an empty manifest, so the split is read from the log.
      `tests/test_viewer_evals.py` pins the task count and needs moving whenever
      a task is added.
 
