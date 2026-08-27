@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- 2026-08-26: an action argument wrapped in its own parameter name is read
+  rather than refused. Small models send `{"basemap": {"basemap": "satellite"}}`
+  where the action takes a string, and `basemap.set` answered `basemap must be a
+  string`. `coerceArguments` now unwraps a single-key object whose key is the
+  parameter's own name, for scalar parameters only, so an object parameter
+  holding a same-named key is untouched. Every action gets this, not just
+  `basemap.set`.
+
 ### Added
 
 - 2026-08-26: **the dictation path checked against the real speech service.**

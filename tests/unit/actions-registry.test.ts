@@ -104,6 +104,28 @@ describe('action registry', () => {
       expect(coerceArguments(definition, { count: 1, colour: 'red' })).toEqual({ count: 1 });
     });
 
+    it('unwraps a value the model wrapped in the parameter name', () => {
+      expect(coerceArguments(definition, { count: 1, pick: { pick: 'left' } })).toEqual({
+        count: 1,
+        pick: 'left',
+      });
+    });
+
+    it('still refuses a wrapper holding some other key', () => {
+      expect(() => coerceArguments(definition, { count: 1, pick: { value: 'left' } })).toThrow(
+        'pick must be a string',
+      );
+    });
+
+    it('leaves an object parameter holding a same-named key alone', () => {
+      const withObject = define({
+        parameters: { filter: { type: 'object', description: 'a filter', required: true } },
+      });
+      expect(coerceArguments(withObject, { filter: { filter: 'name = 1' } })).toEqual({
+        filter: { filter: 'name = 1' },
+      });
+    });
+
     it('names every problem in one message', () => {
       expect(() => coerceArguments(definition, { on: 'maybe', pick: 'middle' })).toThrow(
         'test.one: count is required, on must be a boolean, pick must be one of left, right',

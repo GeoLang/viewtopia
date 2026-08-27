@@ -93,6 +93,21 @@ export function actionCatalogue(): CatalogueEntry[] {
 
 const BOOLEAN_WORDS: Record<string, boolean> = { true: true, false: false, yes: true, no: false, on: true, off: false };
 
+/**
+ * `{basemap: {basemap: 'satellite'}}` read back as `'satellite'`.
+ *
+ * Small models echo the parameter name as a wrapper around its own value. Only
+ * for scalar parameters, so an object parameter holding a same-named key is
+ * left alone.
+ */
+function unwrapSelfNamed(key: string, parameter: ActionParameter, value: unknown): unknown {
+  if (parameter.type === 'object') return value;
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return value;
+  const keys = Object.keys(value);
+  if (keys.length !== 1 || keys[0] !== key) return value;
+  return (value as Record<string, unknown>)[key];
+}
+
 /** The value as the parameter's type, or undefined when it cannot be read as one. */
 function coerce(parameter: ActionParameter, value: unknown): unknown {
   switch (parameter.type) {
@@ -132,7 +147,7 @@ export function coerceArguments(definition: ActionDefinition, args: ActionArgume
       if (parameter.required) problems.push(`${key} is required`);
       continue;
     }
-    const read = coerce(parameter, value);
+    const read = coerce(parameter, unwrapSelfNamed(key, parameter, value));
     if (read === undefined) {
       problems.push(`${key} must be a ${parameter.type}`);
       continue;
