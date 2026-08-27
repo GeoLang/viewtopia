@@ -149,26 +149,28 @@ describe('Analysis tab buttons', () => {
     expect(within(results).getByText('Alice with Bob')).toBeInTheDocument();
   });
 
-  it('each button leaves its own kind of result in the store', async () => {
-    const expected = [
-      ['Colocation Detection', 'colocation'],
-      ['Co-Travel Detection', 'cotravel'],
-      ['Pattern-of-Life', 'pattern'],
-      ['Network Metrics', 'network'],
-      ['Behavioral Clustering', 'clustering'],
-      ['Predictive Location', 'prediction'],
-      ['Data Quality Check', 'quality'],
-    ] as const;
+  // one case per button rather than a loop: a loop of seven renders runs past
+  // the 15s cap on a loaded box, and vitest then leaves the abandoned
+  // continuation unmounting trees and eating mocks belonging to later tests
+  const ANALYSIS_RESULT_KIND_BY_BUTTON = [
+    ['Colocation Detection', 'colocation'],
+    ['Co-Travel Detection', 'cotravel'],
+    ['Pattern-of-Life', 'pattern'],
+    ['Network Metrics', 'network'],
+    ['Behavioral Clustering', 'clustering'],
+    ['Predictive Location', 'prediction'],
+    ['Data Quality Check', 'quality'],
+  ] as const;
 
-    for (const [label, kind] of expected) {
-      loadFixture();
+  it.each(ANALYSIS_RESULT_KIND_BY_BUTTON)(
+    '%s leaves a %s result in the store',
+    async (label, kind) => {
       renderPanel();
       await openAnalysisTab();
       fireEvent.click(screen.getByRole('button', { name: label }));
       await waitFor(() => expect(useSpaceTimeStore.getState().analysisResult?.kind).toBe(kind));
-      cleanup();
-    }
-  });
+    },
+  );
 
   it('clears the results on demand', async () => {
     renderPanel();
