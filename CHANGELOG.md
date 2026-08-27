@@ -6,6 +6,17 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-26: **the dictation path checked against the real speech service.**
+  `tests/e2e/dictation-live.spec.js` and `playwright.dictation-live.config.js`
+  drive a headless chromium whose microphone is `tests/fixtures/fly-to-paris.wav`
+  against a stack running the `speech` profile, mint a platform token into
+  `viewtopia_auth`, and expect the spoken words in the chat input. This settles
+  what the scripted socket in `dictation.spec.js` cannot: chrome accepting the
+  101 with `Sec-WebSocket-Protocol: bearer`, and `AudioContext` at 16 kHz taking
+  the mic stream. `large-v3-turbo` downloads on the first connection and the
+  download stops when that client goes away, so warm the model with one
+  long-lived connection before the run.
+
 - 2026-08-26: **the analysis, simulate and data panels answer in the chat.**
   `src/actions/` grew from 25 to 41 named actions. `terrain.ts` adds
   `analysis.viewshed`, `analysis.flood`, `analysis.terrain_profile` and

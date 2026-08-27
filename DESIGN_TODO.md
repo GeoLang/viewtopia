@@ -129,21 +129,6 @@ other documents citing "P0 item 5" still land on the right one.
 8. **Voice input in the chat.** Repository: `viewtopia`, the server is the
    Aavaaz repo. Owner call 2026-08-25, plan under **Voice input in the chat**
    in the plans section.
-   - [!] Live check of the dictation path, stopped 2026-08-26. The `aavaaz`
-     image pulls about 4 GB of torch and CUDA wheels and this connection
-     moved them at 1.8 MB/s, so the build was cancelled. What is in place:
-     `docker compose --profile speech build aavaaz` from the Aavaaz Dockerfile
-     (debconf silenced, `.[whisper]` installed first, the WhisperLive fork
-     `@dev` replaces pypi whisper-live in the last layer, `dev` is pushed and
-     is the only branch with every kwarg `aavaaz serve` passes). The build
-     sandbox copies the host's single VPN resolver, so a VPN blip fails pip
-     with `NameResolutionError` and the build must be restarted. Resume on a
-     fast link: build, `up -d aavaaz`, wait for `/speech/health` through
-     nginx (`large-v3-turbo` downloads on first start), then run a fake-mic
-     Chromium against the vite dev server with a WAV that says a command and
-     expect the words in the chat input. Two things only that run settles:
-     Chrome accepting the 101 with `Sec-WebSocket-Protocol: bearer`, and
-     `AudioContext({ sampleRate: 16000 })` taking the mic stream.
    - [ ] Hands-free: every completed utterance sent as a prompt on its own,
      with the confirm turn and the streaming lock handled.
    - [ ] Aavaaz accepts any `AAVAAZ_JWT_SECRET` length. agora refuses one under
