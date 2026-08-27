@@ -2,7 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { notifications } from '@mantine/notifications';
 import { openDictationSocket, type DictationSocket } from './dictationSocket';
 import { openMicrophone, type Microphone } from './microphone';
-import { mergeSegments, transcriptText, type TranscriptSegment } from './segments';
+import {
+  afterWatermark,
+  mergeSegments,
+  transcriptEnd,
+  transcriptText,
+  type TranscriptSegment,
+} from './segments';
 
 export type DictationState = 'idle' | 'connecting' | 'listening';
 
@@ -22,6 +28,8 @@ export function useDictation(onText: (text: string) => void) {
   const socketRef = useRef<DictationSocket | null>(null);
   const microphoneRef = useRef<Microphone | null>(null);
   const segmentsRef = useRef<TranscriptSegment[]>([]);
+  // everything before this has already been sent as a prompt
+  const watermarkRef = useRef(0);
   const onTextRef = useRef(onText);
   onTextRef.current = onText;
 
@@ -36,6 +44,7 @@ export function useDictation(onText: (text: string) => void) {
   const start = useCallback(() => {
     if (socketRef.current) return;
     segmentsRef.current = [];
+    watermarkRef.current = 0;
     setState('connecting');
     const socket = openDictationSocket({
       onReady: async () => {
@@ -50,7 +59,9 @@ export function useDictation(onText: (text: string) => void) {
       },
       onSegments: (window) => {
         segmentsRef.current = mergeSegments(segmentsRef.current, window);
-        onTextRef.current(transcriptText(segmentsRef.current));
+        onTextRef.current(
+          transcriptText(afterWatermark(segmentsRef.current, watermarkRef.current)),
+        );
       },
       onWait: (minutes) => {
         unavailable(`The speech server is full, try again in about ${Math.ceil(minutes)} min.`);
@@ -75,7 +86,18 @@ export function useDictation(onText: (text: string) => void) {
     setTimeout(() => socket.close(), FINAL_SEGMENTS_GRACE_MS);
   }, []);
 
+  /**
+   * Drop what has been transcribed so far and keep listening.
+   *
+   * Sending a prompt does not end the dictation: the socket and the microphone
+   * stay up so the next sentence needs no second click.
+   */
+  const takeTranscript = useCallback(() => {
+    watermarkRef.current = transcriptEnd(segmentsRef.current);
+    onTextRef.current('');
+  }, []);
+
   useEffect(() => teardown, [teardown]);
 
-  return { state, start, stop };
+  return { state, start, stop, takeTranscript };
 }

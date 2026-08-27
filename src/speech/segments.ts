@@ -41,6 +41,24 @@ export function transcriptText(segments: TranscriptSegment[]): string {
     .join(' ');
 }
 
+/**
+ * The segments still ahead of a watermark.
+ *
+ * The mic stays live across a send, and the server keeps resending its last ten
+ * segments, so without this everything already sent comes back into the box.
+ */
+export function afterWatermark(
+  segments: TranscriptSegment[],
+  watermark: number,
+): TranscriptSegment[] {
+  return segments.filter((seg) => seg.start >= watermark);
+}
+
+/** The end of the last segment, the watermark to start the next prompt from. */
+export function transcriptEnd(segments: TranscriptSegment[]): number {
+  return segments.reduce((latest, seg) => Math.max(latest, seg.end), 0);
+}
+
 /** The transcript after whatever was typed before dictation began. */
 export function withTypedPrefix(prefix: string, transcript: string): string {
   const typed = prefix.trimEnd();

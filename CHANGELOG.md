@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- 2026-08-26: **dictating a run of prompts takes one click.** The mic stays
+  connected across a send: `handleSend` marks what has been said so far and
+  keeps listening, so the next sentence needs no second click.
+  `src/speech/segments.ts` gains the watermark that does it, without which the
+  ten segments the server keeps resending would walk back into the box after
+  every send. Enter sends from anywhere, since a live mic leaves the cursor
+  outside the input, and `useKeyboardShortcuts` now stands aside for a focused
+  button or link so Enter does not both press it and send.
+- 2026-08-26: **the recogniser is told what is on the map.** `src/speech/biasing.ts`
+  builds WhisperLive's `initial_prompt` from the project, live document and
+  layer names, deduplicated, skipping names that bias nothing ("Layer",
+  "untitled", bare numbers) and stopping on a whole name before Whisper's
+  224-token prompt window. So "Thames" comes back spelled the way the map
+  spells it.
+
+### Changed
+
+- 2026-08-26: `b` no longer toggles the chat. It is `ctrl+b`, which was already
+  bound to the same thing.
+
 ### Fixed
 
 - 2026-08-26: an action argument wrapped in its own parameter name is read

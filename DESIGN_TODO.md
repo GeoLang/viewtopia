@@ -128,13 +128,7 @@ other documents citing "P0 item 5" still land on the right one.
 
 8. **Voice input in the chat.** Repository: `viewtopia`, the server is the
    Aavaaz repo. Owner call 2026-08-25, plan under **Voice input in the chat**
-   in the plans section.
-   - [ ] Hands-free: every completed utterance sent as a prompt on its own,
-     with the confirm turn and the streaming lock handled.
-   - [ ] Aavaaz accepts any `AAVAAZ_JWT_SECRET` length. agora refuses one under
-     32 bytes at start, so a short secret is a brute-forceable HS256 gate.
-   - [ ] Place-name biasing: WhisperLive's `initial_prompt` fed from the layer
-     and project names in the viewer snapshot.
+   in the plans section. Shipped, nothing open.
 
 ## Wire for real
 

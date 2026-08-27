@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
+  afterWatermark,
   mergeSegments,
   readSegments,
+  transcriptEnd,
   transcriptText,
   withTypedPrefix,
 } from '../../src/speech/segments';
@@ -55,5 +57,30 @@ describe('the input text', () => {
     expect(withTypedPrefix('show ', 'the parcels')).toBe('show the parcels');
     expect(withTypedPrefix('', 'the parcels')).toBe('the parcels');
     expect(withTypedPrefix('show', '')).toBe('show');
+  });
+});
+
+describe('the watermark that survives a send', () => {
+  it('drops what was already sent and keeps what came after', () => {
+    const spoken = [seg(0, 'fly to paris', true), seg(2, 'now show parks')];
+    expect(transcriptText(afterWatermark(spoken, 1))).toBe('now show parks');
+  });
+
+  it('keeps everything when nothing has been sent yet', () => {
+    const spoken = [seg(0, 'fly to paris', true)];
+    expect(afterWatermark(spoken, 0)).toEqual(spoken);
+  });
+
+  it('takes the watermark from the end of the last segment', () => {
+    expect(transcriptEnd([seg(0, 'one'), seg(4, 'two')])).toBe(5);
+    expect(transcriptEnd([])).toBe(0);
+  });
+
+  it('hides a segment the server resends after it was sent', () => {
+    const spoken = [seg(0, 'fly to paris', true)];
+    const watermark = transcriptEnd(spoken);
+    // the server keeps resending its last ten, so the same segment comes back
+    const resent = mergeSegments(spoken, [seg(0, 'fly to paris', true)]);
+    expect(transcriptText(afterWatermark(resent, watermark))).toBe('');
   });
 });

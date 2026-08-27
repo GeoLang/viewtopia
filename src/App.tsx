@@ -106,7 +106,6 @@ export function App() {
     }
     return {
       'ctrl+b': toggleChat,
-      'b': toggleChat,
       't': toggleSpaceTime,
       'ctrl+.': toggleUiHidden,
       ...TOOL_SHORTCUTS,

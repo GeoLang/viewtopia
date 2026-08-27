@@ -1,5 +1,6 @@
 import { BEARER_SUBPROTOCOL } from '../lib/apiAuth';
 import { getAuthToken } from '../features/auth/store';
+import { placeNamePrompt } from './biasing';
 import { readSegments, type TranscriptSegment } from './segments';
 
 /** nginx forwards this to the Aavaaz WhisperLive websocket. */
@@ -31,8 +32,18 @@ export function speechSocketUrl(): string {
 }
 
 /** The WhisperLive handshake, sent as the first message. */
-export function handshake(uid: string): Record<string, unknown> {
-  return { uid, language: 'en', task: 'transcribe', use_vad: true, audio_format: 'float32' };
+export function handshake(uid: string, initialPrompt = ''): Record<string, unknown> {
+  const options: Record<string, unknown> = {
+    uid,
+    language: 'en',
+    task: 'transcribe',
+    use_vad: true,
+    audio_format: 'float32',
+  };
+  // whisper conditions on this, so the names already on the map come back spelled
+  // the way the map spells them
+  if (initialPrompt) options.initial_prompt = initialPrompt;
+  return options;
 }
 
 export function openDictationSocket(
@@ -45,7 +56,8 @@ export function openDictationSocket(
   let ready = false;
   let closed = false;
 
-  socket.onopen = () => socket.send(JSON.stringify(handshake(crypto.randomUUID())));
+  socket.onopen = () =>
+    socket.send(JSON.stringify(handshake(crypto.randomUUID(), placeNamePrompt())));
   socket.onmessage = (event) => {
     if (typeof event.data !== 'string') return;
     const message = JSON.parse(event.data) as Record<string, unknown>;

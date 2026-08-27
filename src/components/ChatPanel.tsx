@@ -17,6 +17,7 @@ import { renderUISpec } from '../viewer/uiSpec';
 import { executeViewerCommand } from '../viewer/commands';
 import { useChatStore, type Message } from '../store/chat';
 import { useSSE } from '../hooks/useSSE';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { DictationButton } from '../speech/DictationButton';
 import { useDictation } from '../speech/useDictation';
 import { useSpeechAvailability } from '../speech/availability';
@@ -111,7 +112,10 @@ export function ChatPanel() {
   const handleSend = () => {
     const prompt = input.trim();
     if (!prompt || streaming) return;
-    dictation.stop();
+    // the mic stays live across a send, so the next sentence needs no click
+    if (dictation.state === 'idle') dictation.stop();
+    else dictation.takeTranscript();
+    typedBeforeDictation.current = '';
     setInput('');
     setHistoryIndex(-1);
     draftRef.current = '';
@@ -119,6 +123,10 @@ export function ChatPanel() {
     if (interceptConfirmReply(prompt)) return;
     send(prompt);
   };
+
+  // Enter sends from anywhere, so a live mic does not need the cursor put back
+  // in the box first. The hook leaves fields and focused buttons alone.
+  useKeyboardShortcuts({ enter: handleSend });
 
   /** Step through sent prompts: +1 goes further back, -1 back toward the draft. */
   const recallPrompt = (delta: number) => {
