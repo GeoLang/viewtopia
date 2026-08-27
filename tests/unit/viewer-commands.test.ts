@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { notifications } from '@mantine/notifications';
 import { executeViewerCommand, SCREENGRID_NOTICE } from '../../src/viewer/commands';
+import { NO_CESIUM_GLOBE } from '../../src/actions/globe';
+import { CHAT_TILESET_WAIT_SECONDS } from '../../src/viewer/addTileset';
+import { useTiles3dLayerStore } from '../../src/store/tiles3dLayers';
 import { useAppStore } from '../../src/store/app';
 import { useMeasureStore } from '../../src/store/measure';
 import { useDeckLayersStore } from '../../src/hooks/deckLayers';
@@ -10,11 +14,19 @@ import { getSharedCamera } from '../../src/hooks/sharedCamera';
 
 // registry is mocked so we can drive fly_to with no live Cesium viewer and a
 // stub MapLibre map, mirroring the globe renderer the command must now support.
-const reg = vi.hoisted(() => ({ map: null as { flyTo: (o: unknown) => void } | null }));
+const reg = vi.hoisted(() => ({
+  map: null as { flyTo: (o: unknown) => void } | null,
+  viewer: null as { flyTo: (t: unknown) => Promise<void> } | null,
+}));
 vi.mock('../../src/viewer/registry', () => ({
-  getActiveCesiumViewer: () => null,
+  getActiveCesiumViewer: () => reg.viewer,
   getActiveMapLibre: () => reg.map,
 }));
+
+vi.mock('@mantine/notifications', () => ({ notifications: { show: vi.fn() } }));
+
+const TILESET_URL = 'https://example.org/tiles/quarry/tileset.json';
+const MILLISECONDS_PER_SECOND = 1000;
 
 describe('agent viewer commands', () => {
   beforeEach(() => {
@@ -22,6 +34,8 @@ describe('agent viewer commands', () => {
     useDeckLayersStore.setState({ groups: {} });
     useHeatmapStore.setState({ heatmaps: [] });
     useChatStore.setState({ sessions: [], activeSessionId: null });
+    useTiles3dLayerStore.setState({ layers: [], loaded: {} });
+    vi.mocked(notifications.show).mockClear();
   });
 
   it('panel commands open the matching tool panel', () => {
@@ -140,6 +154,35 @@ describe('agent viewer commands', () => {
     expect(cam.longitude).toBeCloseTo(7.42);
     expect(cam.latitude).toBeCloseTo(43.74);
     reg.map = null;
+  });
+
+  it('load_tileset says which renderer a tileset needs when the globe is not up', async () => {
+    executeViewerCommand({ action: 'load_tileset', params: { url: TILESET_URL } });
+    await vi.waitFor(() => expect(notifications.show).toHaveBeenCalled());
+
+    expect(vi.mocked(notifications.show).mock.calls[0][0]).toMatchObject({
+      title: 'Could not load tileset',
+      message: NO_CESIUM_GLOBE,
+      color: 'red',
+    });
+    expect(useTiles3dLayerStore.getState().layers).toEqual([]);
+  });
+
+  it('load_tileset says the row is still loading when the tiles do not draw in time', async () => {
+    reg.viewer = { flyTo: async () => {} };
+    vi.useFakeTimers();
+
+    executeViewerCommand({ action: 'load_tileset', params: { url: TILESET_URL, name: 'Quarry' } });
+    await vi.advanceTimersByTimeAsync(CHAT_TILESET_WAIT_SECONDS * MILLISECONDS_PER_SECOND);
+
+    expect(vi.mocked(notifications.show).mock.calls[0][0]).toMatchObject({
+      title: 'Could not load tileset',
+      message: `Quarry has not drawn within ${CHAT_TILESET_WAIT_SECONDS} seconds and is still loading in the layer list, where its row says if it failed`,
+    });
+    // the row stays, since it is what goes on loading and says if it failed
+    expect(useTiles3dLayerStore.getState().layers.map((layer) => layer.name)).toEqual(['Quarry']);
+    vi.useRealTimers();
+    reg.viewer = null;
   });
 
   it('unknown commands are ignored without throwing', () => {

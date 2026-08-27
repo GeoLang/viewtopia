@@ -7,10 +7,13 @@ import type { Viewer } from 'cesium';
 import { getActiveCesiumViewer } from '../viewer/registry';
 import { ActionError } from './registry';
 
+export const NO_CESIUM_GLOBE =
+  'there is no Cesium globe on screen, so set the renderer to cesium first';
+
 export function cesiumViewer(): Viewer {
   const viewer = getActiveCesiumViewer();
   if (!viewer) {
-    throw new ActionError('there is no Cesium globe on screen, so set the renderer to cesium first');
+    throw new ActionError(NO_CESIUM_GLOBE);
   }
   return viewer;
 }

@@ -38,7 +38,8 @@ import { ACCEPT_FORMATS } from '../lib/importFiles';
 import { downloadBytes } from '../lib/downloadBytes';
 import { getViewBounds } from '../lib/viewBounds';
 import { useAgentLayerStore } from '../store/agentLayers';
-import { addTilesetToGlobe } from '../viewer/addTileset';
+import { addTilesetToGlobe, CHAT_TILESET_WAIT_SECONDS } from '../viewer/addTileset';
+import { NO_CESIUM_GLOBE } from './globe';
 import { ActionError, registerAction } from './registry';
 import { resolveOne } from './resolve';
 
@@ -148,7 +149,12 @@ registerAction({
       args.url as string,
       args.name as string | undefined,
     );
-    if (failure) throw new ActionError(failure);
+    if (failure === 'no-globe') throw new ActionError(NO_CESIUM_GLOBE);
+    if (failure === 'not-drawn') {
+      throw new ActionError(
+        `${name} has not drawn within ${CHAT_TILESET_WAIT_SECONDS} seconds and is still loading in the layer list, where its row says if it failed`,
+      );
+    }
     return { text: `${name} is on the globe and the camera is looking at it.` };
   },
 });

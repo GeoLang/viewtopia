@@ -19,6 +19,7 @@ import { ArcLayer, ScatterplotLayer } from '@deck.gl/layers';
 import type { Layer } from '@deck.gl/core';
 import { notifications } from '@mantine/notifications';
 import { runViewerAction } from '../actions/dispatch';
+import { NO_CESIUM_GLOBE } from '../actions/globe';
 import { getActiveCesiumViewer, getActiveMapLibre } from './registry';
 import { setSharedCamera } from '../hooks/sharedCamera';
 import { runSqlQuery } from '../duckdb/sqlCommand';
@@ -27,7 +28,7 @@ import { useAgentLayerStore, toFeatureCollection } from '../store/agentLayers';
 import { useDeckLayersStore } from '../hooks/deckLayers';
 import { showHeatmap } from '../lib/mapHeatmap';
 import { postSystemNotice } from '../store/chat';
-import { addTilesetToGlobe } from './addTileset';
+import { addTilesetToGlobe, CHAT_TILESET_WAIT_SECONDS } from './addTileset';
 import { colorByHeight, colorByClassification, colorByProperty } from './tileStyles';
 import { useMeasureStore, type MeasureMode } from '../store/measure';
 
@@ -166,11 +167,17 @@ const handlers: Record<string, Handler> = {
 
   load_tileset: async (p) => {
     if (typeof p.url !== 'string') return;
-    const name = typeof p.name === 'string' ? p.name : undefined;
-    const { failure } = await addTilesetToGlobe(p.url, name);
-    if (failure) {
-      notifications.show({ title: 'Could not load tileset', message: failure, color: 'red' });
-    }
+    const wanted = typeof p.name === 'string' ? p.name : undefined;
+    const { name, failure } = await addTilesetToGlobe(p.url, wanted);
+    if (!failure) return;
+    notifications.show({
+      title: 'Could not load tileset',
+      message:
+        failure === 'no-globe'
+          ? NO_CESIUM_GLOBE
+          : `${name} has not drawn within ${CHAT_TILESET_WAIT_SECONDS} seconds and is still loading in the layer list, where its row says if it failed`,
+      color: 'red',
+    });
   },
 
   screenshot: () => {
