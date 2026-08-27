@@ -68,21 +68,25 @@ export const useTiles3dLayerStore = create<Tiles3dLayerState>((set) => ({
 }));
 
 /** How long a caller that wants to fly to a tileset waits for it to load. */
-const TILESET_LOAD_TIMEOUT_MS = 60_000;
+export const TILESET_LOAD_TIMEOUT_MS = 60_000;
 
 /**
  * The primitive drawing this layer, once the Cesium hook has it. Answers null if
- * the tileset never arrives, which a failed load and no Cesium viewer both look
- * like from here.
+ * the tileset never arrives within `timeoutMs`, which a failed load, a slow one
+ * and no Cesium viewer all look like from here. Giving up here does not stop the
+ * load, so the layer row goes on loading and drawing.
  */
-export function loadedTileset(id: string): Promise<Cesium3DTileset | null> {
+export function loadedTileset(
+  id: string,
+  timeoutMs = TILESET_LOAD_TIMEOUT_MS,
+): Promise<Cesium3DTileset | null> {
   const known = useTiles3dLayerStore.getState().loaded[id];
   if (known) return Promise.resolve(known);
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
       unsubscribe();
       resolve(null);
-    }, TILESET_LOAD_TIMEOUT_MS);
+    }, timeoutMs);
     const unsubscribe = useTiles3dLayerStore.subscribe((state) => {
       const tileset = state.loaded[id];
       if (!tileset) return;

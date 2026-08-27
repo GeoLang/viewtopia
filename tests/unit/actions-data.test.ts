@@ -38,6 +38,7 @@ import { useChatStore } from '../../src/store/chat';
 import { useOgcLayerStore } from '../../src/store/ogcLayers';
 import { useTiles3dLayerStore } from '../../src/store/tiles3dLayers';
 import { useStacStore } from '../../src/features/stac/store';
+import { CHAT_TILESET_WAIT_SECONDS } from '../../src/viewer/addTileset';
 import { getActiveCesiumViewer } from '../../src/viewer/registry';
 
 const POINTS: GeoJSON.FeatureCollection = {
@@ -207,8 +208,8 @@ describe('data.add_service', () => {
 describe('data.add_tileset', () => {
   const TILESET_URL = 'https://example.org/tiles/quarry/tileset.json';
   const DRAWN = { root: 'loaded' } as unknown as Cesium3DTileset;
-  /** past the wait in loadedTileset, which is what a tileset that never loads costs */
-  const PAST_THE_LOAD_WAIT_MS = 61_000;
+  const MILLISECONDS_PER_SECOND = 1000;
+  const CHAT_WAIT_MS = CHAT_TILESET_WAIT_SECONDS * MILLISECONDS_PER_SECOND;
 
   function fakeGlobe() {
     return {
@@ -253,16 +254,33 @@ describe('data.add_tileset', () => {
     expect(layer.name).toBe('Tileset');
   });
 
-  it('leaves the layer row behind and says so when the tiles never load', async () => {
+  it('stops waiting for the tiles once the chat wait is up, leaving the layer row loading', async () => {
     onTheGlobe();
     vi.useFakeTimers();
 
     const running = runAction('data.add_tileset', { url: TILESET_URL, name: 'Quarry' });
-    const refused = expect(running).rejects.toThrow('Quarry did not load, see its layer row');
-    await vi.advanceTimersByTimeAsync(PAST_THE_LOAD_WAIT_MS);
+    const refused = expect(running).rejects.toThrow(
+      `Quarry has not drawn within ${CHAT_TILESET_WAIT_SECONDS} seconds and is still loading in the layer list`,
+    );
+    await vi.advanceTimersByTimeAsync(CHAT_WAIT_MS);
     await refused;
 
     expect(useTiles3dLayerStore.getState().layers.map((layer) => layer.name)).toEqual(['Quarry']);
+    vi.useRealTimers();
+  });
+
+  it('is still waiting a second before the chat wait is up', async () => {
+    onTheGlobe();
+    vi.useFakeTimers();
+    const settled = vi.fn();
+
+    const running = runAction('data.add_tileset', { url: TILESET_URL }).catch(settled);
+    await vi.advanceTimersByTimeAsync(CHAT_WAIT_MS - MILLISECONDS_PER_SECOND);
+    expect(settled).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(MILLISECONDS_PER_SECOND);
+    await running;
+    expect(settled).toHaveBeenCalled();
     vi.useRealTimers();
   });
 

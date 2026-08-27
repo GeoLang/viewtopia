@@ -11,11 +11,16 @@ import type { AssetRule } from '../../src/live/types';
 import { useAgentLayerStore } from '../../src/store/agentLayers';
 import { useAppStore } from '../../src/store/app';
 import { setLayerVisible } from '../../src/store/layerControls';
-import { loadedTileset, useTiles3dLayerStore } from '../../src/store/tiles3dLayers';
+import {
+  loadedTileset,
+  TILESET_LOAD_TIMEOUT_MS,
+  useTiles3dLayerStore,
+} from '../../src/store/tiles3dLayers';
 import { FakeAgoraServer } from './stubs/fakeAgoraServer';
 
 const TILESET_URL = '/tiles/v1/assets/a1b2/tileset.json';
 const AT = '2026-08-25T10:00:00Z';
+const ONE_SECOND_MS = 1000;
 
 const RULE: AssetRule = {
   layerId: 'twin-model',
@@ -80,6 +85,36 @@ describe('the 3D tileset layer store', () => {
     await expect(waiting).resolves.toBe(tileset);
     // one already loaded answers without waiting for another write
     await expect(loadedTileset('a1b2')).resolves.toBe(tileset);
+  });
+
+  it('waits a full minute for a caller that names no timeout, as the assets panel does', async () => {
+    vi.useFakeTimers();
+    const answered = vi.fn();
+
+    const waiting = loadedTileset('a1b2').then(answered);
+    await vi.advanceTimersByTimeAsync(TILESET_LOAD_TIMEOUT_MS - ONE_SECOND_MS);
+    expect(answered).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(ONE_SECOND_MS);
+    await waiting;
+    expect(answered).toHaveBeenCalledWith(null);
+    vi.useRealTimers();
+  });
+
+  it('gives up at the shorter timeout a caller names, and still answers a late load', async () => {
+    vi.useFakeTimers();
+    const answered = vi.fn();
+
+    const waiting = loadedTileset('a1b2', ONE_SECOND_MS).then(answered);
+    await vi.advanceTimersByTimeAsync(ONE_SECOND_MS);
+    await waiting;
+    expect(answered).toHaveBeenCalledWith(null);
+
+    // giving up does not stop the load, so the row still gets its primitive
+    const tileset = { name: 'tileset' };
+    useTiles3dLayerStore.getState().setLoaded('a1b2', tileset as never);
+    await expect(loadedTileset('a1b2', ONE_SECOND_MS)).resolves.toBe(tileset);
+    vi.useRealTimers();
   });
 });
 

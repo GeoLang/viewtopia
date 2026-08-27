@@ -4,7 +4,6 @@
  * and a statistics grid.
  */
 
-import type { Viewer } from 'cesium';
 import {
   DEFAULT_BAND_MINUTES,
   SECONDS_PER_MINUTE,
@@ -45,21 +44,13 @@ import { TRAVEL_PROFILES, type ServiceArea, type TravelProfile } from '../lib/tr
 import { useAgentLayerStore } from '../store/agentLayers';
 import { geodesicAreaSquareMeters } from '../store/measure';
 import { executeViewerCommand } from '../viewer/commands';
-import { getActiveCesiumViewer } from '../viewer/registry';
+import { cesiumViewer } from './globe';
 import { resolveViewerLayer } from './layerIndex';
 import { ActionError, registerAction } from './registry';
 
 const CALENDAR_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const DARKNESS_DECIMALS = 2;
 const COORDINATE_DECIMALS = 4;
-
-function cesiumViewer(): Viewer {
-  const viewer = getActiveCesiumViewer();
-  if (!viewer) {
-    throw new ActionError('there is no Cesium globe on screen, so set the renderer to cesium first');
-  }
-  return viewer;
-}
 
 function onOff(on: boolean): string {
   return on ? 'on' : 'off';

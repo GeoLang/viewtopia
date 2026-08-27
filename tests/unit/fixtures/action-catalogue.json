@@ -1133,6 +1133,53 @@
     "destructive": false
   },
   {
+    "name": "tileset.reset_style",
+    "description": "Take any colouring, fading and point size back off every 3D tileset on the globe, so the tiles draw as they came.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
+    "name": "tileset.set_opacity",
+    "description": "Fade every 3D tileset on the globe to a uniform white at the opacity given, which also takes off any colouring it had.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "opacity": {
+          "type": "number",
+          "description": "0 is invisible, 1 is fully opaque."
+        }
+      },
+      "required": [
+        "opacity"
+      ]
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
+    "name": "tileset.set_point_size",
+    "description": "Draw the points of every 3D tileset on the globe at a size in pixels, which also takes off any colouring it had.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "size": {
+          "type": "number",
+          "description": "Width of one point in pixels, above 0. Only a point cloud has points to draw."
+        }
+      },
+      "required": [
+        "size"
+      ]
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
     "name": "tileset.shade_by_classification",
     "description": "Colour every 3D tileset on the globe by its LIDAR classification codes, so ground, vegetation, buildings and water each take a colour.",
     "parameters": {
