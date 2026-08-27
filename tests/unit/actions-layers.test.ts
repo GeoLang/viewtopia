@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import '../../src/actions/layers';
 import { listViewerLayers } from '../../src/actions/layerIndex';
 import { ActionError, runAction } from '../../src/actions/registry';
+import { useDeckLayersStore } from '../../src/hooks/deckLayers';
+import { useHeatmapStore } from '../../src/lib/mapHeatmap';
+import type { PointRecord } from '../../src/lib/pointData';
 import { useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers';
 import { useAppStore } from '../../src/store/app';
 import { useOgcLayerStore } from '../../src/store/ogcLayers';
@@ -214,5 +217,144 @@ describe('layers.shade_by', () => {
     await expect(runAction('layers.shade_by', { layer: 'Roads', column: 'height' })).rejects.toThrow(
       'It carries: risk, name',
     );
+  });
+});
+
+describe('the layer visualizations', () => {
+  /** a layer that carries features but no coordinates to draw */
+  const EMPTY_GEOMETRY: AgentLayer = {
+    id: 'agent-plans',
+    name: 'Plans',
+    geojson: {
+      type: 'FeatureCollection',
+      features: [{ type: 'Feature', geometry: null, properties: { name: 'unplaced' } }],
+    },
+  };
+
+  /** points carrying the weight property a heatmap reads, one of them without it */
+  const READINGS: AgentLayer = {
+    id: 'agent-readings',
+    name: 'Readings',
+    geojson: {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [7.4, 43.7] },
+          properties: { weight: 6 },
+        },
+        {
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [7.5, 43.7] },
+          properties: {},
+        },
+      ],
+    },
+  };
+
+  const roadPositions = ROADS.geojson.features.map(
+    (feature) => (feature.geometry as GeoJSON.Point).coordinates,
+  );
+
+  /** the deck layer the last command registered, since the group accumulates */
+  function lastDeckLayer(): { props: Record<string, unknown> } {
+    const group = useDeckLayersStore.getState().groups.agent ?? [];
+    return group[group.length - 1] as unknown as { props: Record<string, unknown> };
+  }
+
+  function drawnPositions(): unknown[] {
+    return (lastDeckLayer().props.data as PointRecord[]).map((record) => record.position);
+  }
+
+  beforeEach(() => {
+    seed();
+    useAgentLayerStore.setState({
+      layers: [...useAgentLayerStore.getState().layers, EMPTY_GEOMETRY, READINGS],
+    });
+    useAppStore.setState({ renderer: 'cesium', activeTab: 'map' });
+    useHeatmapStore.setState({ heatmaps: [] });
+    useDeckLayersStore.setState({ groups: {} });
+  });
+
+  it('draws a heatmap from the points of the named layer', async () => {
+    const result = await runAction('layers.add_heatmap', {
+      layer: 'Roads',
+      radius: 45,
+      intensity: 2,
+    });
+
+    const heatmaps = useHeatmapStore.getState().heatmaps;
+    expect(heatmaps).toHaveLength(1);
+    expect(heatmaps[0]).toMatchObject({ radius: 45, intensity: 2 });
+    expect(heatmaps[0].points.map((point) => point.position)).toEqual(roadPositions);
+    expect(useAppStore.getState().renderer).toBe('maplibre');
+    expect(result.text).toBe(
+      'Drew 4 points of Roads as a heatmap. The map is now on the maplibre renderer, which is what draws it.',
+    );
+  });
+
+  it('weighs a heatmap point by its own weight property, as the panel does', async () => {
+    await runAction('layers.add_heatmap', { layer: 'Readings' });
+
+    expect(useHeatmapStore.getState().heatmaps[0].points).toEqual([
+      { position: [7.4, 43.7], weight: 6 },
+      { position: [7.5, 43.7], weight: 1 },
+    ]);
+  });
+
+  it('bins the points of the named layer into hexagons', async () => {
+    const result = await runAction('layers.add_hexbin', {
+      layer: 'Roads',
+      radius: 300,
+      elevation_scale: 5,
+    });
+
+    expect(drawnPositions()).toEqual(roadPositions);
+    expect(lastDeckLayer().props.radius).toBe(300);
+    expect(lastDeckLayer().props.elevationScale).toBe(5);
+    expect(useAppStore.getState().renderer).toBe('maplibre');
+    expect(result.text).toBe(
+      'Binned 4 points of Roads into hexagons. The map is now on the maplibre renderer, which is what draws it.',
+    );
+  });
+
+  it('draws the points of the named layer as circles', async () => {
+    const result = await runAction('layers.add_scatter', { layer: 'Road works', radius: 25 });
+
+    const works = ROAD_WORKS.geojson.features.map(
+      (feature) => (feature.geometry as GeoJSON.Point).coordinates,
+    );
+    expect(drawnPositions()).toEqual(works);
+    // deck reads a scatter radius per record, so the handler passes it as getRadius
+    expect(lastDeckLayer().props.getRadius).toBe(25);
+    expect(useAppStore.getState().renderer).toBe('maplibre');
+    expect(result.text).toBe(
+      'Drew 1 point of Road works as circles. The map is now on the maplibre renderer, which is what draws it.',
+    );
+  });
+
+  it('refuses a layer name none of them carries', async () => {
+    for (const name of ['layers.add_heatmap', 'layers.add_hexbin', 'layers.add_scatter']) {
+      await expect(runAction(name, { layer: 'nowhere' })).rejects.toThrow(
+        'no layer matches "nowhere"',
+      );
+    }
+    expect(useHeatmapStore.getState().heatmaps).toEqual([]);
+    expect(useDeckLayersStore.getState().groups.agent ?? []).toEqual([]);
+  });
+
+  it('refuses a layer that carries no features', async () => {
+    for (const name of ['layers.add_heatmap', 'layers.add_hexbin', 'layers.add_scatter']) {
+      await expect(runAction(name, { layer: 'Campus' })).rejects.toThrow('carries no features');
+    }
+  });
+
+  it('refuses a layer whose features hold no points', async () => {
+    for (const name of ['layers.add_heatmap', 'layers.add_hexbin', 'layers.add_scatter']) {
+      await expect(runAction(name, { layer: 'Plans' })).rejects.toThrow(
+        'Plans has no points to draw',
+      );
+    }
+    expect(useAppStore.getState().renderer).toBe('cesium');
   });
 });

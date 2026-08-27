@@ -494,6 +494,84 @@
     "destructive": false
   },
   {
+    "name": "layers.add_heatmap",
+    "description": "Draw one layer's points as a heatmap, which switches the map to the maplibre renderer.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "layer": {
+          "type": "string",
+          "description": "Layer id or name."
+        },
+        "radius": {
+          "type": "number",
+          "description": "How far one point spreads, in pixels."
+        },
+        "intensity": {
+          "type": "number",
+          "description": "How hot the heatmap reads overall."
+        }
+      },
+      "required": [
+        "layer"
+      ]
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
+    "name": "layers.add_hexbin",
+    "description": "Bin one layer's points into extruded hexagons, which switches the map to the maplibre renderer.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "layer": {
+          "type": "string",
+          "description": "Layer id or name."
+        },
+        "radius": {
+          "type": "number",
+          "description": "Hexagon radius in metres."
+        },
+        "elevation_scale": {
+          "type": "number",
+          "description": "How tall a hexagon stands for the points in it."
+        }
+      },
+      "required": [
+        "layer"
+      ]
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
+    "name": "layers.add_scatter",
+    "description": "Draw one layer's points as filled circles, which switches the map to the maplibre renderer.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "layer": {
+          "type": "string",
+          "description": "Layer id or name."
+        },
+        "radius": {
+          "type": "number",
+          "description": "Circle radius in metres."
+        },
+        "color": {
+          "type": "string",
+          "description": "CSS colour of the circles. Violet by default."
+        }
+      },
+      "required": [
+        "layer"
+      ]
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
     "name": "layers.move",
     "description": "Move one layer in the drawing order.",
     "parameters": {

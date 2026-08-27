@@ -1,10 +1,13 @@
 import { suggestSymbology } from '../features/symbology/symbology';
 import { asColor } from '../lib/color';
 import { propertyKeys } from '../lib/geojsonSources';
+import { pointWeight } from '../lib/mapHeatmap';
+import { collectPoints, type PointRecord } from '../lib/pointData';
 import { type AgentLayer, useAgentLayerStore } from '../store/agentLayers';
 import { useAppStore } from '../store/app';
 import { useOgcLayerStore } from '../store/ogcLayers';
 import { useTiles3dLayerStore } from '../store/tiles3dLayers';
+import { executeViewerCommand } from '../viewer/commands';
 import { resolveViewerLayer, type ViewerLayer } from './layerIndex';
 import { ActionError, registerAction } from './registry';
 
@@ -162,6 +165,97 @@ registerAction({
     }
     useAgentLayerStore.getState().setLayerColor(vector.id, color);
     return { text: `${layer.name} is now ${color}.` };
+  },
+});
+
+/**
+ * Every drawing below rides on the MapLibre map, either as a deck overlay layer
+ * or as a native heatmap, and its own helper switches the renderer to reach it.
+ */
+const RENDERER_SWITCHED = 'The map is now on the maplibre renderer, which is what draws it.';
+
+function pointsCounted(count: number): string {
+  return count === 1 ? '1 point' : `${count} points`;
+}
+
+/** The points of one named layer, refusing a layer that carries none. */
+function layerPoints(named: string): { layer: ViewerLayer; points: PointRecord[] } {
+  const layer = resolveViewerLayer(named);
+  const points = collectPoints(vectorLayer(layer).geojson);
+  if (points.length === 0) {
+    throw new ActionError(`${layer.name} has no points to draw`);
+  }
+  return { layer, points };
+}
+
+registerAction({
+  name: 'layers.add_heatmap',
+  description:
+    "Draw one layer's points as a heatmap, which switches the map to the maplibre renderer.",
+  parameters: {
+    layer: LAYER_PARAMETER,
+    radius: { type: 'number', description: 'How far one point spreads, in pixels.' },
+    intensity: { type: 'number', description: 'How hot the heatmap reads overall.' },
+  },
+  run: (args) => {
+    const { layer, points } = layerPoints(args.layer as string);
+    // the panel weighs a point by its own weight property, so the chat does too
+    const weighed = points.map((point) => ({
+      position: point.position,
+      weight: pointWeight(point.properties),
+    }));
+    executeViewerCommand({
+      action: 'add_heatmap',
+      params: { data: weighed, radius: args.radius, intensity: args.intensity },
+    });
+    return {
+      text: `Drew ${pointsCounted(points.length)} of ${layer.name} as a heatmap. ${RENDERER_SWITCHED}`,
+    };
+  },
+});
+
+registerAction({
+  name: 'layers.add_hexbin',
+  description:
+    "Bin one layer's points into extruded hexagons, which switches the map to the maplibre renderer.",
+  parameters: {
+    layer: LAYER_PARAMETER,
+    radius: { type: 'number', description: 'Hexagon radius in metres.' },
+    elevation_scale: {
+      type: 'number',
+      description: 'How tall a hexagon stands for the points in it.',
+    },
+  },
+  run: (args) => {
+    const { layer, points } = layerPoints(args.layer as string);
+    executeViewerCommand({
+      action: 'add_hexbin',
+      params: { data: points, radius: args.radius, elevationScale: args.elevation_scale },
+    });
+    return {
+      text: `Binned ${pointsCounted(points.length)} of ${layer.name} into hexagons. ${RENDERER_SWITCHED}`,
+    };
+  },
+});
+
+registerAction({
+  name: 'layers.add_scatter',
+  description:
+    "Draw one layer's points as filled circles, which switches the map to the maplibre renderer.",
+  parameters: {
+    layer: LAYER_PARAMETER,
+    radius: { type: 'number', description: 'Circle radius in metres.' },
+    color: { type: 'string', description: 'CSS colour of the circles. Violet by default.' },
+  },
+  run: (args) => {
+    const { layer, points } = layerPoints(args.layer as string);
+    executeViewerCommand({
+      action: 'add_scatter',
+      params: { data: points, radius: args.radius, color: args.color },
+    });
+    return {
+      text: `Drew ${pointsCounted(points.length)} of ${layer.name} as circles. ${RENDERER_SWITCHED}`,
+    };
   },
 });
 
