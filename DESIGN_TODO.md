@@ -109,15 +109,33 @@ other documents citing "P0 item 5" still land on the right one.
 7. **Chat-only viewer mode: a typed prompt reaches every capability that does
    not need the mouse.** Repositories: `viewtopia`, `geolang`. Owner call
    2026-08-25, plan under **Chat-only viewer mode** in the plans section.
-   - [~] Eval gate. `run` is now the only `viewer_control` action, and the
-     tasks, `catalogue.json` and `snapshot.json` in `geolang/evals/viewer/`
-     cover every catalogue action exactly. What is left is the second pass of
-     `python -m evals.viewer_runner --repeat 3`, against the rebuilt
-     `geolang-platform` image, and the before and after numbers written down.
-     Quote the score over the runs that answered: against the local model on
-     hercules about a quarter of runs stall with no output past the read
-     timeout, cause not established, and a stalled run that emitted no call is
-     unmeasurable while a finished run that emitted none is a real failure.
+   - [!] Eval gate, blocked on the stall rate. `run` is now the only
+     `viewer_control` action, and the tasks, `catalogue.json` and
+     `snapshot.json` in `geolang/evals/viewer/` cover every catalogue action
+     exactly. There is no after score: the second pass of
+     `python -m evals.viewer_runner --repeat 3` against the rebuilt
+     `geolang-platform` image was stopped at 39 of 201 runs, owner call
+     2026-08-27, because the runs that never answered were climbing rather
+     than settling and a partial pass cannot be compared to the baseline.
+     What was measured instead is how often the stack cut a run short:
+
+     - Baseline, the old image serving the fixed actions against these tasks,
+       whole pass: 14 of 168 runs cut short, 8.3 percent. Answered-only
+       aggregate 0.682 over 56 tasks, 21 perfect, 86 of 157 checks. Report
+       `geolang/evals/reports/20260827T200908+0000-viewer-local:Qwen3.{md,json}`,
+       whose own header reads 0.63 because it counts the stalls as zeros.
+     - Run-only, the rebuilt image, first 39 runs: 11 cut short, 28.2 percent.
+     - Like for like, over the 13 tasks both passes reached: 5 of 39 against
+       11 of 39. The increase is spread over tasks that never stalled in the
+       baseline, not concentrated in one, so it looks systematic. At 39 runs
+       it is not conclusive on its own, two-sided p about 0.09.
+
+     Read that as removing the fixed actions costing something on this model,
+     and decide whether the highest-frequency actions get flat shortcuts back
+     alongside `run`. Anything quoting these numbers needs the stall join
+     promoted out of a scratchpad into `evals/` with tests: the reports cannot
+     tell a stalled run from a finished run that emitted no call, both being a
+     zero with an empty manifest, so the split is read from the sweep log.
      `tests/test_viewer_evals.py` pins the task count and needs moving whenever
      a task is added.
 
