@@ -93,8 +93,9 @@ const dataSourceNames = (page) =>
     return Array.from({ length: v.dataSources.length }, (_, i) => v.dataSources.get(i).name ?? '');
   });
 
-/** The viewshed result, drawn like any other layer the chat can also reach. */
+/** Results the panels draw like any other layer, so `layers.*` can reach them. */
 const VIEWSHED_SOURCE = 'agent-layer-viewshed-result';
+const CONTOURS_SOURCE = 'agent-layer-contours-result';
 
 /** Entity count of a named data source, or -1 when it is not loaded. */
 const namedEntityCount = (page, name) =>
@@ -390,12 +391,13 @@ test.describe('Analysis panels', () => {
     await page.getByRole('option', { name: 'Contour Lines' }).click();
     await panel.getByRole('button', { name: 'Run', exact: true }).click();
     await expect
-      .poll(() => namedEntityCount(page, 'contours-result'), { timeout: 30000 })
+      .poll(() => namedEntityCount(page, CONTOURS_SOURCE), { timeout: 30000 })
       .toBeGreaterThan(10);
     await expect.poll(() => imageryAlphas(page)).toEqual([1]);
 
     await closePanel(page, panel);
-    await expect.poll(() => dataSourceNames(page)).toEqual([]);
+    // the scene picks the removal up when it next settles
+    await expect.poll(() => dataSourceNames(page), { timeout: 30000 }).toEqual([]);
   });
 
   test('terrainAnalysis on MapLibre: the result draws on the renderer being shown', async ({
@@ -444,17 +446,23 @@ test.describe('Analysis panels', () => {
     await page.getByRole('option', { name: 'Contour Lines' }).click();
     await panel.getByRole('button', { name: 'Run', exact: true }).click();
     await expect
-      .poll(() => mapLayerIds(page, 'contours-result'), { timeout: 60000 })
-      .toEqual(['contours-result-fill', 'contours-result-line']);
+      .poll(() => mapLayerIds(page, CONTOURS_SOURCE), { timeout: 60000 })
+      .toEqual([
+        `${CONTOURS_SOURCE}-fill`,
+        `${CONTOURS_SOURCE}-line`,
+        `${CONTOURS_SOURCE}-circle`,
+      ]);
     await expect.poll(() => mapLayerIds(page, 'terrain-result')).toEqual([]);
     expect(
       await page.evaluate(
-        () => window.__viewtopiaMap.getSource('contours-result').serialize().data.features.length,
+        (source) => window.__viewtopiaMap.getSource(source).serialize().data.features.length,
+        CONTOURS_SOURCE,
       ),
     ).toBeGreaterThan(10);
 
-    // the panel owns the layers: closing it takes them off the map
+    // the panel owns the layers: closing it takes them off the map, which the
+    // map picks up when it next settles
     await closePanel(page, panel);
-    await expect.poll(() => mapLayerIds(page, 'contours-result')).toEqual([]);
+    await expect.poll(() => mapLayerIds(page, CONTOURS_SOURCE), { timeout: 60000 }).toEqual([]);
   });
 });

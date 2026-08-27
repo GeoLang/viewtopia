@@ -25,16 +25,19 @@ All notable changes to this project will be documented in this file.
 
 - 2026-08-27: **an analysis result is an ordinary layer.** `analysis.viewshed`,
   `analysis.flood` and `analysis.cross_section`, and the Viewshed, Flood, Cross
-  Section and Terrain Profile panels, all draw through `addGeoJsonLayer` as
-  "Viewshed", "Flood", "Cross section" and "Terrain profile", so the layer panel
-  and the chat's `layers.*` actions can hide, fade, reorder and remove them;
-  before, they went straight to the renderer and nothing could reach them.
+  Section, Terrain Profile and Terrain Analysis panels, all draw through
+  `addGeoJsonLayer` as "Viewshed", "Flood", "Cross section", "Terrain profile"
+  and "Contours", so the layer panel and the chat's `layers.*` actions can hide,
+  fade, reorder and remove them; before, they went straight to the renderer and
+  nothing could reach them.
   `LayerOptions` gains `name` and `fit`, and neither the flood nor a profile
   line frames, since both are computed over the view framing would move.
   Taking a result off through the layer panel now also clears the reading the
   Viewshed and Flood panels report, which would otherwise describe a layer
-  nobody can see. `src/features/terrain/resultLayer.ts` is gone with its last
-  caller.
+  nobody can see. `src/features/terrain/resultLayer.ts`,
+  `src/viewer/renderGeoJson.ts` and `addMapGeoJson` are gone with their last
+  callers. The Terrain Analysis panel's draped raster is the one result the
+  panel still owns outright.
 - 2026-08-27: `tests/unit/fixtures/viewer-snapshot.json` holds the state the
   viewer sends, beside the action catalogue, so geolang's viewer evals copy
   both rather than keeping a hand-written state that drifts from the real shape.

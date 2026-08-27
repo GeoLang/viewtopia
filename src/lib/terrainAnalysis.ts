@@ -189,41 +189,6 @@ function dropMapLayers(map: MapLibreMap, id: string, suffixes: string[]): void {
   if (map.getSource(id)) map.removeSource(id);
 }
 
-/**
- * Draw a GeoJSON result on the displayed MapLibre map, in the same colors the
- * Cesium path uses. Null when MapLibre is not the live renderer.
- */
-export function addMapGeoJson(
-  id: string,
-  data: GeoJSON.FeatureCollection,
-  color: string,
-): MapResult | null {
-  const map = getActiveMapLibre();
-  if (!map) return null;
-  const suffixes = ['-fill', '-line'];
-  dropMapLayers(map, id, suffixes);
-  map.addSource(id, { type: 'geojson', data });
-  // one source can hold mixed geometry, so add a layer per kind
-  map.addLayer({
-    id: `${id}-fill`,
-    type: 'fill',
-    source: id,
-    filter: ['==', ['geometry-type'], 'Polygon'],
-    paint: { 'fill-color': color, 'fill-opacity': 0.4 },
-  });
-  map.addLayer({
-    id: `${id}-line`,
-    type: 'line',
-    source: id,
-    filter: ['in', ['geometry-type'], ['literal', ['LineString', 'Polygon']]],
-    paint: { 'line-color': color, 'line-width': 2 },
-  });
-  return {
-    setOpacity: () => {},
-    remove: () => dropMapLayers(map, id, suffixes),
-  };
-}
-
 /** Drape a PNG (object URL) over a bbox on the displayed MapLibre map. */
 export function addMapRaster(
   id: string,

@@ -10,15 +10,13 @@ import {
   NumberInput,
 } from '@mantine/core';
 import { IconDownload, IconMountain } from '@tabler/icons-react';
-import type { GeoJsonDataSource, ImageryLayer } from 'cesium';
+import type { ImageryLayer } from 'cesium';
 import { PanelCard, PanelHeader } from '../PanelCard';
-import { getActiveCesiumViewer } from '../../viewer/registry';
-import { renderGeoJson } from '../../viewer/renderGeoJson';
+import { addGeoJsonLayer, removeGeoJsonLayer } from '../../lib/mapLayers';
 import { useAppStore } from '../../store/app';
 import { useOgcLayerStore } from '../../store/ogcLayers';
 import { useAuthStore } from '../../features/auth/store';
 import {
-  addMapGeoJson,
   addMapRaster,
   addRasterOverlay,
   contours,
@@ -37,6 +35,11 @@ import {
 
 type Op = 'slope' | 'aspect' | 'hillshade' | 'contours';
 
+/** The contour lines, drawn like any other layer so the layer panel can reach them. */
+const CONTOURS_LAYER_ID = 'contours-result';
+const CONTOURS_LAYER_NAME = 'Contours';
+const CONTOURS_COLOR = '#f59e0b';
+
 export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
   const [analysis, setAnalysis] = useState<Op>('slope');
   const [opacity, setOpacity] = useState(70);
@@ -50,7 +53,6 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
   const addXyzLayer = useOgcLayerStore((s) => s.addXyzLayer);
   const needsSignIn = useAuthStore((s) => !s.token);
   const layerRef = useRef<ImageryLayer | null>(null);
-  const dsRef = useRef<GeoJsonDataSource | undefined>(undefined);
   const mapResultRef = useRef<MapResult | null>(null);
   const urlRef = useRef<string | null>(null);
 
@@ -63,11 +65,7 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
       URL.revokeObjectURL(urlRef.current);
       urlRef.current = null;
     }
-    const viewer = getActiveCesiumViewer();
-    if (dsRef.current && viewer && !viewer.isDestroyed()) {
-      viewer.dataSources.remove(dsRef.current);
-    }
-    dsRef.current = undefined;
+    removeGeoJsonLayer(CONTOURS_LAYER_ID);
   };
 
   useEffect(() => clearResult, []);
@@ -90,11 +88,13 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
       clearResult();
       if (analysis === 'contours') {
         const fc = await contours(bbox as Bbox);
-        if (renderer === 'maplibre') {
-          mapResultRef.current = addMapGeoJson('contours-result', fc, '#f59e0b');
-        } else {
-          dsRef.current = await renderGeoJson(fc, '#f59e0b', false, 'contours-result');
-        }
+        // the contours cover the view they were read from, so framing them
+        // would only shove that view
+        addGeoJsonLayer(CONTOURS_LAYER_ID, fc, {
+          name: CONTOURS_LAYER_NAME,
+          color: CONTOURS_COLOR,
+          fit: false,
+        });
       } else {
         const url = await terrainRaster(analysis, bbox as Bbox, sun);
         urlRef.current = url;
