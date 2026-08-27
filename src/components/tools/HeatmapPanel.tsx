@@ -18,7 +18,7 @@ import {
   drawLayerOptions,
   type PointRecord,
 } from '../../lib/pointData';
-import { clearHeatmap, showHeatmap } from '../../lib/mapHeatmap';
+import { clearHeatmap, pointWeight, showHeatmap } from '../../lib/mapHeatmap';
 
 const HEATMAP_ID = 'panel-heatmap';
 
@@ -59,10 +59,7 @@ export function HeatmapPanel({ onClose }: { onClose: () => void }) {
     }
     showHeatmap({
       id: HEATMAP_ID,
-      points: points.map((p) => ({
-        position: p.position,
-        weight: Number(p.properties.weight) || 1,
-      })),
+      points: points.map((p) => ({ position: p.position, weight: pointWeight(p.properties) })),
       radius,
       intensity,
       colorLow,

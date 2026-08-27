@@ -25,6 +25,11 @@ export interface HeatmapPoint {
   weight: number;
 }
 
+/** How hot one point counts, which the panel and the chat both read the same way. */
+export function pointWeight(properties: Record<string, unknown>): number {
+  return Number(properties.weight) || 1;
+}
+
 export interface HeatmapSpec {
   /** Owner key, one per panel or agent command; re-adding replaces the spec. */
   id: string;
