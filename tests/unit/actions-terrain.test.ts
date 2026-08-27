@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { runViewerAction } from '../../src/actions/dispatch';
+import { listViewerLayers } from '../../src/actions/layerIndex';
 import { runAction } from '../../src/actions/registry';
+import '../../src/actions/layers';
 import '../../src/actions/terrain';
 import { useTerrainAnalysisStore } from '../../src/features/terrain/analysis';
 import { useAgentLayerStore } from '../../src/store/agentLayers';
@@ -129,7 +131,7 @@ beforeEach(() => {
   requests = [];
   registry.map = fakeMapLibre();
   vi.stubGlobal('fetch', vi.fn(fakeBackend));
-  useAppStore.setState({ renderer: 'maplibre' });
+  useAppStore.setState({ renderer: 'maplibre', layers: [] });
   useAgentLayerStore.setState({ layers: [], rasterLayers: [], markers: [], generation: 0 });
   useTerrainAnalysisStore.setState({ viewshed: null, flood: null });
   useChatStore.setState({ sessions: [], activeSessionId: null, followUp: null, followUpCount: 0 });
@@ -152,7 +154,9 @@ describe('analysis.viewshed', () => {
         body: { observer: [7.42, 43.73], height_m: 10, radius_m: 2500 },
       },
     ]);
-    expect(registry.map?.layers).toEqual(['viewshed-result-fill', 'viewshed-result-line']);
+    expect(listViewerLayers()).toContainEqual(
+      expect.objectContaining({ id: 'viewshed-result', name: 'Viewshed' }),
+    );
     expect(useTerrainAnalysisStore.getState().viewshed).toEqual({
       longitude: 7.42,
       latitude: 43.73,
@@ -175,6 +179,19 @@ describe('analysis.viewshed', () => {
     );
     expect(requests).toEqual([]);
   });
+
+  it('leaves a layer the layers actions can hide and take off', async () => {
+    await runAction('analysis.viewshed', { lon: 7.42, lat: 43.73 });
+
+    const hidden = await runAction('layers.set_visible', { layer: 'Viewshed', visible: false });
+    expect(hidden.text).toBe('Viewshed is now hidden.');
+
+    const removed = await runAction('layers.remove', { layer: 'Viewshed' });
+    expect(removed.text).toBe('Viewshed is off the map.');
+    expect(listViewerLayers().map((layer) => layer.id)).not.toContain('viewshed-result');
+    // the panel reads this, and must not go on reporting a result nobody can see
+    expect(useTerrainAnalysisStore.getState().viewshed).toBeNull();
+  });
 });
 
 describe('analysis.flood', () => {
@@ -187,7 +204,9 @@ describe('analysis.flood', () => {
         body: { level_m: 20, bbox: [VIEW.west, VIEW.south, VIEW.east, VIEW.north] },
       },
     ]);
-    expect(registry.map?.layers).toEqual(['flood-result-fill', 'flood-result-line']);
+    expect(listViewerLayers()).toContainEqual(
+      expect.objectContaining({ id: 'flood-result', name: 'Flood' }),
+    );
     expect(useTerrainAnalysisStore.getState().flood).toEqual({
       levelMeters: 20,
       bbox: [VIEW.west, VIEW.south, VIEW.east, VIEW.north],
@@ -216,7 +235,7 @@ describe('analysis.terrain_profile', () => {
 
     expect(result.text).toBe(PROFILE_TEXT);
     // the profile answers a question, it does not put anything on the map
-    expect(registry.map?.layers).toEqual([]);
+    expect(listViewerLayers()).toEqual([]);
   });
 
   it('runs along a line the prompt named by layer name', async () => {
@@ -301,11 +320,13 @@ describe('analysis.cross_section', () => {
     const result = await runAction('analysis.cross_section', TWO_POINTS);
 
     expect(result.text).toBe(PROFILE_TEXT);
-    expect(registry.map?.layers).toEqual(['cross-section-line-fill', 'cross-section-line-line']);
-    const drawn = registry.map?.sources['cross-section-line'] as {
-      data: GeoJSON.FeatureCollection;
-    };
-    const line = drawn.data.features[0].geometry as GeoJSON.LineString;
+    expect(listViewerLayers()).toContainEqual(
+      expect.objectContaining({ id: 'cross-section-line', name: 'Cross section' }),
+    );
+    const drawn = useAgentLayerStore
+      .getState()
+      .layers.find((layer) => layer.id === 'cross-section-line');
+    const line = drawn?.geojson.features[0].geometry as GeoJSON.LineString;
     expect(line.coordinates).toHaveLength(TWO_POINTS.samples + 1);
     expect(line.coordinates[0]).toEqual([0, 0]);
   });

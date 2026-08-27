@@ -11,25 +11,29 @@ const DEFAULT_LAYER_COLOR = '#3388ff';
 export function addGeoJsonLayer(id: string, geojson: object, options?: LayerOptions): void {
   const collection = toFeatureCollection(geojson);
   if (!collection) return;
+  const name = options?.name ?? id;
   useAppStore.getState().addLayer({
     id,
-    name: id,
+    name,
     type: 'geojson',
     visible: true,
     opacity: options?.opacity ?? 1,
   });
-  useAgentLayerStore.getState().addLayer({
-    id,
-    name: id,
-    color: options?.color ?? DEFAULT_LAYER_COLOR,
-    geojson: collection,
-    style: {
-      opacity: options?.opacity,
-      lineWidth: options?.lineWidth,
-      filled: options?.filled,
-      stroked: options?.stroked,
+  useAgentLayerStore.getState().addLayer(
+    {
+      id,
+      name,
+      color: options?.color ?? DEFAULT_LAYER_COLOR,
+      geojson: collection,
+      style: {
+        opacity: options?.opacity,
+        lineWidth: options?.lineWidth,
+        filled: options?.filled,
+        stroked: options?.stroked,
+      },
     },
-  });
+    options?.fit,
+  );
 }
 
 export function removeGeoJsonLayer(id: string): void {

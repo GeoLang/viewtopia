@@ -1,0 +1,78 @@
+{
+  "mode": "chat",
+  "camera": {
+    "longitude": -0.1276,
+    "latitude": 51.5072,
+    "zoom": 14,
+    "pitch": 0,
+    "bearing": 0
+  },
+  "renderer": "cesium",
+  "tab": "globe",
+  "basemap": "osm",
+  "splitView": {
+    "active": false,
+    "layout": "twoAcross"
+  },
+  "layers": [
+    {
+      "id": "lyr_parcels",
+      "name": "Parcels",
+      "kind": "agent",
+      "visible": true,
+      "opacity": 1
+    },
+    {
+      "id": "lyr_flood",
+      "name": "Flood zones",
+      "kind": "agent",
+      "visible": false,
+      "opacity": 0.6
+    },
+    {
+      "id": "lyr_sensors",
+      "name": "Sensors",
+      "kind": "agent",
+      "visible": true,
+      "opacity": 1
+    },
+    {
+      "id": "lyr_buildings",
+      "name": "Buildings",
+      "kind": "tiles3d",
+      "visible": true
+    }
+  ],
+  "project": {
+    "id": "prj_riverside",
+    "name": "Riverside Widening"
+  },
+  "live": {
+    "documentId": "doc_riverside",
+    "name": "Riverside Live"
+  },
+  "assetRule": {
+    "layerId": "lyr_sensors",
+    "kind": "water_level",
+    "breakpoints": [
+      {
+        "value": 0.5,
+        "color": "#2c7fb8"
+      },
+      {
+        "value": 1.5,
+        "color": "#f03b20"
+      }
+    ],
+    "defaultColor": "#999999",
+    "offlineColor": "#444444"
+  },
+  "historyAt": null,
+  "pickedFeature": {
+    "id": "P-1183",
+    "name": "12 Mill Lane",
+    "lon": "-0.1291",
+    "lat": "51.5085"
+  },
+  "scenario": null
+}

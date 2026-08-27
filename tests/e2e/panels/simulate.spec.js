@@ -114,7 +114,7 @@ function floodPolygons(page) {
     const all = window.__viewtopiaViewer.dataSources;
     for (let i = 0; i < all.length; i++) {
       const ds = all.get(i);
-      if (ds.name !== 'flood-result') continue;
+      if (ds.name !== 'agent-layer-flood-result') continue;
       const entities = ds.entities.values;
       const positions = entities.reduce(
         (n, e) => n + (e.polygon?.hierarchy?.getValue()?.positions.length ?? 0),

@@ -1,3 +1,5 @@
+import { readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../src/projects/api', () => ({
@@ -26,6 +28,85 @@ import { useSplitViewStore } from '../../src/store/splitView';
 import { useTiles3dLayerStore } from '../../src/store/tiles3dLayers';
 import type { Project } from '../../src/projects/types';
 import { useScenarioCompareStore } from '../../src/features/scenario/compare';
+
+/**
+ * The state as the viewer sends it, kept on disk so geolang's viewer evals can
+ * copy it (geolang/evals/viewer/snapshot.json) and score a model against the
+ * shape the viewer really builds. Run with UPDATE_VIEWER_SNAPSHOT=1 to rewrite
+ * it after changing the snapshot.
+ */
+const FIXTURE = resolve('tests/unit/fixtures/viewer-snapshot.json');
+
+const RIVERSIDE: Project = {
+  id: 'prj_riverside',
+  workspaceId: 'wsp_thames',
+  name: 'Riverside Widening',
+  createdAt: '2026-08-01T00:00:00Z',
+  updatedAt: '2026-08-20T00:00:00Z',
+  createdBy: 'someone',
+  role: 'editor',
+};
+
+const WATER_LEVEL_RULE: AssetRule = {
+  layerId: 'lyr_sensors',
+  kind: 'water_level',
+  breakpoints: [
+    { value: 0.5, color: '#2c7fb8' },
+    { value: 1.5, color: '#f03b20' },
+  ],
+  defaultColor: '#999999',
+  offlineColor: '#444444',
+};
+
+const NO_FEATURES: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
+
+/**
+ * The scene the eval prompts are written against: a project under revision,
+ * three vector layers, a 3D Tiles city, a live document colouring its sensors,
+ * and a parcel picked on the map.
+ */
+function seedRiverside(): void {
+  setSharedCamera({ longitude: -0.1276, latitude: 51.5072, zoom: 14, pitch: 0, bearing: 0 });
+  useAppStore.setState({ chatMode: true, renderer: 'cesium', activeTab: 'globe', basemap: 'osm' });
+  // the layout is the pane count, which beforeEach does not put back
+  useSplitViewStore.getState().setLayout('twoAcross');
+  useAgentLayerStore.setState({
+    layers: [
+      { id: 'lyr_parcels', name: 'Parcels', geojson: NO_FEATURES, style: { opacity: 1 } },
+      {
+        id: 'lyr_flood',
+        name: 'Flood zones',
+        geojson: NO_FEATURES,
+        visible: false,
+        style: { opacity: 0.6 },
+      },
+      { id: 'lyr_sensors', name: 'Sensors', geojson: NO_FEATURES, style: { opacity: 1 } },
+    ],
+  });
+  useTiles3dLayerStore.setState({
+    layers: [
+      { id: 'lyr_buildings', name: 'Buildings', url: 'https://example.test/tileset.json', visible: true },
+    ],
+  });
+  useProjectsStore.setState({ items: [RIVERSIDE], activeProjectId: RIVERSIDE.id });
+  useLiveStore.setState({
+    documentId: 'doc_riverside',
+    document: {
+      ...emptyLiveDocument('Riverside Live'),
+      assets: { [ASSET_RULE_ID]: WATER_LEVEL_RULE },
+    },
+  });
+  // the picker reports the feature's own properties as text, so a coordinate
+  // reaches the model as the string the data carried
+  useFeaturePickerStore.setState({
+    selected: [
+      { id: 'id', value: 'P-1183' },
+      { id: 'name', value: '12 Mill Lane' },
+      { id: 'lon', value: '-0.1291' },
+      { id: 'lat', value: '51.5085' },
+    ],
+  });
+}
 
 const HARBOUR: Project = {
   id: 'project-1',
@@ -200,5 +281,17 @@ describe('buildViewerSnapshot', () => {
     });
 
     expect(buildViewerSnapshot().layers).toHaveLength(50);
+  });
+});
+
+describe('the viewer snapshot fixture', () => {
+  it('matches what the viewer sends with every chat message', () => {
+    seedRiverside();
+    const current = buildViewerSnapshot();
+    if (process.env.UPDATE_VIEWER_SNAPSHOT) {
+      writeFileSync(FIXTURE, `${JSON.stringify(current, null, 2)}\n`);
+    }
+    // parsed, since a windows checkout rewrites the fixture's line endings
+    expect(JSON.parse(readFileSync(FIXTURE, 'utf8'))).toEqual(current);
   });
 });

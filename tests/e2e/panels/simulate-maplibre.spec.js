@@ -67,6 +67,9 @@ const drapedOverView = (page, source) =>
     };
   }, source);
 
+/** The flood result, drawn like any other layer the chat can also reach. */
+const FLOOD_SOURCE = 'agent-layer-flood-result';
+
 test.describe('Simulate panels on MapLibre', () => {
   test.describe.configure({ mode: 'parallel' });
 
@@ -76,7 +79,7 @@ test.describe('Simulate panels on MapLibre', () => {
     await useMapLibre(page);
     const panel = await openPanel(page, 'Flood', 'Flood Simulation');
 
-    expect(await mapLayerIds(page, 'flood-result')).toEqual([]);
+    expect(await mapLayerIds(page, FLOOD_SOURCE)).toEqual([]);
     await panel.getByRole('button', { name: 'Simulate' }).click();
 
     const cells = panel.getByText(/flooded cell/);
@@ -86,18 +89,25 @@ test.describe('Simulate panels on MapLibre', () => {
     await expect(panel.getByText('Flood request failed')).toHaveCount(0);
 
     await expect
-      .poll(() => mapLayerIds(page, 'flood-result'), { timeout: 60000 })
-      .toEqual(['flood-result-fill', 'flood-result-line']);
+      .poll(() => mapLayerIds(page, FLOOD_SOURCE), { timeout: 60000 })
+      .toEqual([
+        `${FLOOD_SOURCE}-fill`,
+        `${FLOOD_SOURCE}-line`,
+        `${FLOOD_SOURCE}-circle`,
+      ]);
     // the polygons the backend answered with, on the map's own source
     expect(
       await page.evaluate(
-        () => window.__viewtopiaMap.getSource('flood-result').serialize().data.features.length,
+        (source) => window.__viewtopiaMap.getSource(source).serialize().data.features.length,
+        FLOOD_SOURCE,
       ),
     ).toBeGreaterThan(0);
 
     await page.keyboard.press('Escape');
     await expect(panel).toHaveCount(0);
-    await expect.poll(() => mapLayerIds(page, 'flood-result')).toEqual([]);
+    // taking the result off is a store edit the map picks up when it next
+    // settles, so it gets the same budget as drawing it
+    await expect.poll(() => mapLayerIds(page, FLOOD_SOURCE), { timeout: 60000 }).toEqual([]);
   });
 
   test('solar: the irradiance raster drapes over the MapLibre view', async ({ page }) => {

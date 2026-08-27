@@ -19,10 +19,22 @@ function fakeMap() {
     maxzoom?: number;
   }[] = [];
   const sources: Record<string, { data?: unknown }> = {};
+  const handlers: Record<string, (() => void)[]> = {};
+  let styleLoaded = true;
   return {
-    isStyleLoaded: () => true,
-    on: () => undefined,
-    off: () => undefined,
+    setStyleLoaded: (loaded: boolean) => {
+      styleLoaded = loaded;
+    },
+    fire: (event: string) => {
+      for (const handler of handlers[event] ?? []) handler();
+    },
+    isStyleLoaded: () => styleLoaded,
+    on: (event: string, handler: () => void) => {
+      handlers[event] = [...(handlers[event] ?? []), handler];
+    },
+    off: (event: string, handler: () => void) => {
+      handlers[event] = (handlers[event] ?? []).filter((known) => known !== handler);
+    },
     getStyle: () => ({ layers: [...layers], sources: { ...sources } }),
     addSource: (id: string, spec: { data?: unknown }) => {
       sources[id] = spec;
@@ -80,6 +92,29 @@ describe('useAgentLayersMapLibre', () => {
     const ref = { current: map } as unknown as Parameters<typeof useAgentLayersMapLibre>[0];
     return renderHook(() => useAgentLayersMapLibre(ref));
   };
+
+  it('takes a removed layer off a style that was loading when it went', () => {
+    const map = fakeMap();
+    act(() => {
+      useAgentLayerStore.getState().addLayer(layer());
+    });
+    mount(map);
+    expect(map.source('agent-layer-risk')).toBeDefined();
+
+    // mid-load the effect can only wait for a `load` that has already fired, so
+    // the settled style is what has to notice
+    map.setStyleLoaded(false);
+    act(() => {
+      useAgentLayerStore.getState().removeLayer('risk');
+    });
+    expect(map.source('agent-layer-risk')).toBeDefined();
+
+    map.setStyleLoaded(true);
+    act(() => map.fire('idle'));
+
+    expect(map.source('agent-layer-risk')).toBeUndefined();
+    expect(map.getStyle().layers).toEqual([]);
+  });
 
   it('reads a per-feature colour, falling back to the layer colour', () => {
     const map = fakeMap();

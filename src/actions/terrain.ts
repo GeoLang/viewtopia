@@ -209,7 +209,7 @@ registerAction({
   reads: true,
   run: async (args) => {
     const sampled = await profile(args);
-    await drawProfileLine(sampled.coordinates, CROSS_SECTION_LINE_STYLE);
+    drawProfileLine(sampled.coordinates, CROSS_SECTION_LINE_STYLE);
     return { text: profileText(sampled) };
   },
 });

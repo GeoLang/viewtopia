@@ -77,6 +77,8 @@ export interface PluginContext {
 // ─── Layer Options ──────────────────────────────────────────────────
 
 export interface LayerOptions {
+  /** What the layer panel and the chat call it. The id by default. */
+  name?: string;
   color?: string;
   opacity?: number;
   lineWidth?: number;
@@ -85,6 +87,8 @@ export interface LayerOptions {
   extruded?: boolean;
   /** Z-index for layer ordering */
   zIndex?: number;
+  /** Whether adding the layer moves the camera to fit it. True by default. */
+  fit?: boolean;
 }
 
 // ─── Plugin Definition ──────────────────────────────────────────────

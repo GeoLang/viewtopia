@@ -68,7 +68,7 @@ export function CrossSectionPanel({ onClose }: { onClose: () => void }) {
       );
       setProfile(points);
       setStats(builtStats);
-      await drawProfileLine(coordinates, CROSS_SECTION_LINE_STYLE);
+      drawProfileLine(coordinates, CROSS_SECTION_LINE_STYLE);
     } catch (e) {
       setProfile(null);
       setStats(null);

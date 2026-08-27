@@ -61,14 +61,17 @@ const SESSION = {
   updatedAt: 2,
 };
 
+/** The viewshed result, drawn like any other layer the chat can also reach. */
+const VIEWSHED_SOURCE = 'agent-layer-viewshed-result';
+
 const resultLayerIds = (page) =>
-  page.evaluate(() => {
+  page.evaluate((source) => {
     const map = window.__viewtopiaMap;
     if (!map) return [];
     return (map.getStyle()?.layers ?? [])
       .map((layer) => layer.id)
-      .filter((id) => id.startsWith('viewshed-result'));
-  });
+      .filter((id) => id.startsWith(source));
+  }, VIEWSHED_SOURCE);
 
 test('a chat viewshed draws its result and reports the visible area', async ({ page }) => {
   await page.route('**/tiles/v1/analysis/viewshed', (route) =>
@@ -100,5 +103,9 @@ test('a chat viewshed draws its result and reports the visible area', async ({ p
   await expect(page.getByText(REPORTED)).toBeVisible({ timeout: 30_000 });
   await expect
     .poll(() => resultLayerIds(page), { timeout: 30_000 })
-    .toEqual(['viewshed-result-fill', 'viewshed-result-line']);
+    .toEqual([
+      `${VIEWSHED_SOURCE}-fill`,
+      `${VIEWSHED_SOURCE}-line`,
+      `${VIEWSHED_SOURCE}-circle`,
+    ]);
 });

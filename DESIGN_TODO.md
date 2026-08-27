@@ -9,7 +9,7 @@
 > Ranked 2026-08-21 against the DESIGN.md goal: ship the viewer, the agent, and
 > the services that make a shared map, not more surface. Pick from **Do next**.
 > Do not start at a parked item.
-> Last brought current: **2026-08-26**.
+> Last brought current: **2026-08-27**.
 >
 > Verify an entry against the code before working it, and do not trust the
 > mechanism it names. Three items in this file were already closed when someone
@@ -109,22 +109,16 @@ other documents citing "P0 item 5" still land on the right one.
 7. **Chat-only viewer mode: a typed prompt reaches every capability that does
    not need the mouse.** Repositories: `viewtopia`, `geolang`. Owner call
    2026-08-25, plan under **Chat-only viewer mode** in the plans section.
-   - [ ] Eval gate for the 16 phase 2 and 3 actions shipped 2026-08-26: one
-     TOML per action under `geolang/evals/viewer/tasks/`, `catalogue.json` and
-     `snapshot.json` refreshed from the viewer, `--repeat 3`, then delete
-     geolang's fixed `viewer_control` action list once the set passes on
-     `run` alone.
-   - [ ] Analysis results as layers. `analysis.viewshed` and `analysis.flood`
-     draw straight on the renderer as the `viewshed-result` and `flood-result`
-     sources, so `layers.*` cannot hide, recolour or remove them. Routing them
-     through `addGeoJsonLayer` renames both, and `tests/e2e/panels/analysis.spec.js`,
-     `simulate.spec.js` and `simulate-maplibre.spec.js` assert those names, so
-     the three specs change with it.
-   - [ ] Not run against the live stack after the data panel split:
-     `tests/e2e/panels/data.spec.js` (OGC status text and WFS count). Rebuild
-     the viewtopia container from `60e35348` or later and run it.
-   - [ ] Remove the three `.worktrees/viewtopia-*` checkouts, their commits are
-     on master.
+   - [~] Eval gate. The 56 tasks, the refreshed `catalogue.json` and the
+     refreshed `snapshot.json` are in `geolang/evals/viewer/`, and every one of
+     the 41 actions the viewer offers now has a task. What is left is the run
+     itself: `python -m evals.viewer_runner --repeat 3`, then delete the
+     `ViewerAction` literal and `REQUIRED_PARAMETERS` in
+     `geolang/src/agents/tools/viewer_control.py` so `run` is the only action,
+     and rerun. Blocked on the local model: sibyl offers only the cloud profile,
+     and the runner needs `--allow-cloud` to spend credits. Two passes is about
+     336 model calls. `tests/test_viewer_evals.py` pins the task count at 56 and
+     will need moving when a task is added.
 
 8. **Voice input in the chat.** Repository: `viewtopia`, the server is the
    Aavaaz repo. Owner call 2026-08-25, plan under **Voice input in the chat**
@@ -687,12 +681,15 @@ Phase 3, the data panels as actions: import by URL or upload, export, STAC, OGC,
 SQL. Upload has no keyboard path, so import is by URL and the panel stays the
 way in for a local file.
 
-The eval gate. `geolang/evals/viewer/` holds 40 prompts covering the phase 1
-actions, scored on the action and args emitted rather than on prose. Run it with
-`python -m evals.viewer_runner --repeat 3`, never on one run, and delete
-geolang's fixed `viewer_control` action list once it passes on `run` alone.
-The catalogue there is a copy of `tests/unit/fixtures/action-catalogue.json` and
-is copied by hand, so it needs refreshing whenever an action changes.
+The eval gate. `geolang/evals/viewer/` holds 56 prompts, one or more for each
+of the 41 actions the viewer offers, scored on the action and args emitted
+rather than on prose. Run it with `python -m evals.viewer_runner --repeat 3`,
+never on one run, and delete geolang's fixed `viewer_control` action list once
+it passes on `run` alone. Its two fixtures are copies of
+`tests/unit/fixtures/action-catalogue.json` and
+`tests/unit/fixtures/viewer-snapshot.json`, both written by the unit tests that
+build them, and both copied across by hand, so they need refreshing whenever an
+action or the snapshot changes. See `geolang/evals/viewer/README.md`.
 
 ### Voice input in the chat
 
@@ -712,26 +709,6 @@ GPU-less boxes skip it. viewtopia probes `/speech/health` at boot and shows
 the mic only when it answers. Proof: unit tests with a fake WebSocket, a react
 e2e with Playwright's `routeWebSocket` and Chromium's fake mic, one live check
 with a WAV through the real container. What is left is P0 item 8.
-
-### Chat-only viewer mode, phases 2 and 3, and the dictation follow-ups (2026-08-26)
-
-Phases 2 and 3 shipped 2026-08-26 (`src/actions/terrain.ts`, `scene.ts`,
-`data.ts`, the shared functions under `src/features/`). What is left is the
-eval gate and the two rows under P0 item 7.
-
-Eval gate, geolang, after the merge: one TOML under `evals/viewer/tasks/` per
-new action, `catalogue.json` and `snapshot.json` refreshed from the merged
-viewer, `python -m evals.viewer_runner --repeat 3`, then delete the
-`ViewerAction` literal and `REQUIRED_PARAMETERS` in
-`src/agents/tools/viewer_control.py` so `run` is the only action, and rerun.
-
-Dictation follow-ups, P0 item 8, after the dictation commit lands:
-
-- JWT in Aavaaz. WhisperLive starts its socket with `websockets.sync.server.serve`,
-  which takes `process_request` and `select_subprotocol`, and the fork while a run streams and while a confirm turn is pending, then sent.
-- Place-name biasing. The handshake gains `initial_prompt` built from the layer
-  and project names in the viewer snapshot, capped so it stays under
-  WhisperLive's prompt window.
 
 ### Hosted flagship instance, the thesis blocker
 

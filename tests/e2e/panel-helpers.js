@@ -80,7 +80,9 @@ export async function openApp(page) {
     );
   });
   await page.goto('/');
-  await expect(page.getByRole('button', { name: 'Analysis' })).toBeVisible();
+  // the shell paints behind a booting Cesium, which four parallel swiftshader
+  // workers slow past the 5s default
+  await expect(page.getByRole('button', { name: 'Analysis' })).toBeVisible({ timeout: 60000 });
   // let the seeded Cesium renderer finish booting, so its errors land in no
   // test but this one and panels that read the live viewer see it
   await page.waitForFunction(() => !!window.__viewtopiaViewer, null, { timeout: 60000 });

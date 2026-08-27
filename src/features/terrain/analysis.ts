@@ -6,11 +6,17 @@
 
 import * as turf from '@turf/turf';
 import { create } from 'zustand';
+import { addGeoJsonLayer, removeGeoJsonLayer } from '../../lib/mapLayers';
 import { flood, viewshed, type Bbox } from '../../lib/terrainAnalysis';
-import { drawTerrainResult, type TerrainResultLayer } from './resultLayer';
+import { useAgentLayerStore } from '../../store/agentLayers';
 
 export const VIEWSHED_LAYER_ID = 'viewshed-result';
 export const FLOOD_LAYER_ID = 'flood-result';
+
+// a result is an ordinary layer, so the layer panel and the chat's layers.*
+// actions reach it under a name somebody would say out loud
+export const VIEWSHED_LAYER_NAME = 'Viewshed';
+export const FLOOD_LAYER_NAME = 'Flood';
 
 const VIEWSHED_COLOR = '#a78bfa';
 const FLOOD_COLOR = '#3b82f6';
@@ -47,22 +53,25 @@ export const useTerrainAnalysisStore = create<TerrainAnalysisState>(() => ({
   flood: null,
 }));
 
-// a result outlives the panel that asked for it, so what to take off the map is
-// held here rather than in a component
-let viewshedLayer: TerrainResultLayer | null = null;
-let floodLayer: TerrainResultLayer | null = null;
-
 export function clearViewshed(): void {
-  viewshedLayer?.remove();
-  viewshedLayer = null;
+  removeGeoJsonLayer(VIEWSHED_LAYER_ID);
   useTerrainAnalysisStore.setState({ viewshed: null });
 }
 
 export function clearFlood(): void {
-  floodLayer?.remove();
-  floodLayer = null;
+  removeGeoJsonLayer(FLOOD_LAYER_ID);
   useTerrainAnalysisStore.setState({ flood: null });
 }
+
+// A result is an ordinary layer now, so the layer panel and layers.remove can
+// take it off without going through clearViewshed. The panels read this store
+// for what is drawn, so a reading nobody can see on the map has to go with it.
+useAgentLayerStore.subscribe((state) => {
+  const drawn = new Set(state.layers.map((layer) => layer.id));
+  const { viewshed: shed, flood: flooded } = useTerrainAnalysisStore.getState();
+  if (shed && !drawn.has(VIEWSHED_LAYER_ID)) useTerrainAnalysisStore.setState({ viewshed: null });
+  if (flooded && !drawn.has(FLOOD_LAYER_ID)) useTerrainAnalysisStore.setState({ flood: null });
+});
 
 /** Draw what an observer can see, and answer how much ground that is. */
 export async function runViewshed(request: ViewshedRequest): Promise<ViewshedResult> {
@@ -72,7 +81,10 @@ export async function runViewshed(request: ViewshedRequest): Promise<ViewshedRes
     height_m: request.heightMeters,
     radius_m: request.radiusMeters,
   });
-  viewshedLayer = await drawTerrainResult(VIEWSHED_LAYER_ID, collection, VIEWSHED_COLOR, true);
+  addGeoJsonLayer(VIEWSHED_LAYER_ID, collection, {
+    name: VIEWSHED_LAYER_NAME,
+    color: VIEWSHED_COLOR,
+  });
   const result: ViewshedResult = { ...request, visibleSquareMeters: turf.area(collection) };
   useTerrainAnalysisStore.setState({ viewshed: result });
   return result;
@@ -89,7 +101,13 @@ function floodedCells(collection: GeoJSON.FeatureCollection): number {
 export async function runFlood(levelMeters: number, bbox: Bbox): Promise<FloodResult> {
   clearFlood();
   const collection = await flood(levelMeters, bbox);
-  floodLayer = await drawTerrainResult(FLOOD_LAYER_ID, collection, FLOOD_COLOR, false);
+  // the flood is computed over what is on screen, so framing it would only
+  // shove the view it came from
+  addGeoJsonLayer(FLOOD_LAYER_ID, collection, {
+    name: FLOOD_LAYER_NAME,
+    color: FLOOD_COLOR,
+    fit: false,
+  });
   const result: FloodResult = { levelMeters, bbox, floodedCells: floodedCells(collection) };
   useTerrainAnalysisStore.setState({ flood: result });
   return result;

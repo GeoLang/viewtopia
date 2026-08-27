@@ -174,29 +174,36 @@ export function useAgentLayersMapLibre(
     };
 
     // A basemap change calls setStyle, which drops every source and layer with
-    // it, so re-add ours whenever a reloaded style comes back without them.
+    // it, so re-add ours whenever a reloaded style comes back without them. It
+    // also catches a layer taken off the store while the style reported
+    // unloaded, where the branch below can only wait for a `load` that already
+    // fired, which used to leave the removed layer drawn for good.
     // `styledata` only ever fires mid-load (isStyleLoaded false), so `idle` is
-    // the one that catches a settled style; it no-ops once ours are back.
-    const reapplyIfDropped = () => {
+    // the one that catches a settled style; it no-ops once the map matches.
+    const reapplyIfChanged = () => {
       if (!map.isStyleLoaded()) return;
-      const sources = Object.keys(map.getStyle()?.sources ?? {});
-      const missing =
-        paneLayers.some((layer) => !sources.includes(`${PREFIX}${layer.id}`)) ||
-        rasterLayers.some(
-          (layer) => layer.visible && !sources.includes(`${RASTER_PREFIX}${layer.id}`),
-        );
-      if (missing) apply();
+      const drawn = Object.keys(map.getStyle()?.sources ?? {}).filter(
+        (id) => id.startsWith(PREFIX) || id.startsWith(RASTER_PREFIX),
+      );
+      const wanted = [
+        ...paneLayers.map((layer) => `${PREFIX}${layer.id}`),
+        ...rasterLayers
+          .filter((layer) => layer.visible)
+          .map((layer) => `${RASTER_PREFIX}${layer.id}`),
+      ];
+      const same = drawn.length === wanted.length && wanted.every((id) => drawn.includes(id));
+      if (!same) apply();
     };
 
     if (map.isStyleLoaded()) apply();
     else map.on('load', apply);
-    map.on('styledata', reapplyIfDropped);
-    map.on('idle', reapplyIfDropped);
+    map.on('styledata', reapplyIfChanged);
+    map.on('idle', reapplyIfChanged);
 
     return () => {
       map.off('load', apply);
-      map.off('styledata', reapplyIfDropped);
-      map.off('idle', reapplyIfDropped);
+      map.off('styledata', reapplyIfChanged);
+      map.off('idle', reapplyIfChanged);
     };
   }, [paneLayers, rasterLayers, generation, map]);
 }

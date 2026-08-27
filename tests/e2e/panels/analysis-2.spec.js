@@ -148,7 +148,7 @@ test.describe('Analysis panels (batch 2)', () => {
       for (let i = 0; i < v.dataSources.length; i++) out.push(v.dataSources.get(i).name);
       return out;
     });
-    expect(sources).toContain('terrain-profile-line');
+    expect(sources).toContain('agent-layer-terrain-profile-line');
 
     await page.keyboard.press('Escape');
     await expect(panel).toHaveCount(0);

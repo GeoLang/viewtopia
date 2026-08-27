@@ -50,7 +50,7 @@ function TerrainProfilePanel({ ctx }: { ctx: PluginContext }) {
           geometry: { type: 'LineString', coordinates: coords },
           properties: { name: 'Profile Line' },
         }],
-      }, { color: '#e74c3c', lineWidth: 3 });
+      }, { name: 'Terrain profile', color: '#e74c3c', lineWidth: 3 });
     } catch (e) {
       // the DEM lookup can fail, and an empty chart is better than invented terrain
       setProfile(null);

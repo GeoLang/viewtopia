@@ -11,7 +11,7 @@ import {
   type ProfilePoint,
   type ProfileStats,
 } from '../../lib/elevationProfile';
-import { drawTerrainResult } from './resultLayer';
+import { addGeoJsonLayer } from '../../lib/mapLayers';
 
 export const MIN_PROFILE_SAMPLES = 10;
 export const MAX_PROFILE_SAMPLES = 200;
@@ -20,16 +20,20 @@ export const DEFAULT_CROSS_SECTION_SAMPLES = 50;
 
 export interface ProfileLineStyle {
   layerId: string;
+  /** what the layer panel and the chat call it */
+  name: string;
   color: string;
 }
 
 export const PROFILE_LINE_STYLE: ProfileLineStyle = {
   layerId: 'terrain-profile-line',
+  name: 'Terrain profile',
   color: '#a78bfa',
 };
 
 export const CROSS_SECTION_LINE_STYLE: ProfileLineStyle = {
   layerId: 'cross-section-line',
+  name: 'Cross section',
   color: '#e74c3c',
 };
 
@@ -50,11 +54,12 @@ export async function sampleTerrainProfile(
   return { coordinates, points, stats };
 }
 
-export async function drawProfileLine(
+/** The sampled line as an ordinary layer, so the layer panel can reach it. */
+export function drawProfileLine(
   coordinates: [number, number][],
   style: ProfileLineStyle,
-): Promise<void> {
-  await drawTerrainResult(
+): void {
+  addGeoJsonLayer(
     style.layerId,
     {
       type: 'FeatureCollection',
@@ -62,7 +67,8 @@ export async function drawProfileLine(
         { type: 'Feature', geometry: { type: 'LineString', coordinates }, properties: {} },
       ],
     },
-    style.color,
-    false,
+    // the line runs between points the caller already chose, so framing it
+    // would move the view those points were picked in
+    { name: style.name, color: style.color, fit: false },
   );
 }

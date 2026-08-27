@@ -93,6 +93,9 @@ const dataSourceNames = (page) =>
     return Array.from({ length: v.dataSources.length }, (_, i) => v.dataSources.get(i).name ?? '');
   });
 
+/** The viewshed result, drawn like any other layer the chat can also reach. */
+const VIEWSHED_SOURCE = 'agent-layer-viewshed-result';
+
 /** Entity count of a named data source, or -1 when it is not loaded. */
 const namedEntityCount = (page, name) =>
   page.evaluate((n) => {
@@ -323,23 +326,23 @@ test.describe('Analysis panels', () => {
     await page.mouse.click(canvas.x + canvas.width * 0.7, canvas.y + canvas.height * 0.5);
     await expect(panel.getByText(/^Observer: /)).toBeVisible();
 
-    expect(await namedEntityCount(page, 'viewshed-result')).toBe(-1);
+    expect(await namedEntityCount(page, VIEWSHED_SOURCE)).toBe(-1);
     await panel.getByRole('button', { name: 'Compute' }).click();
 
     // tiletopia answers with one MultiPolygon member per visible cell, so the
     // entity count is the drawn cell count and matches the feature's readout
     await expect
-      .poll(() => namedEntityCount(page, 'viewshed-result'), { timeout: 30000 })
+      .poll(() => namedEntityCount(page, VIEWSHED_SOURCE), { timeout: 30000 })
       .toBeGreaterThan(0);
-    const drawn = await page.evaluate(() => {
+    const drawn = await page.evaluate((source) => {
       const entities =
-        window.__viewtopiaViewer.dataSources.getByName('viewshed-result')[0].entities.values;
+        window.__viewtopiaViewer.dataSources.getByName(source)[0].entities.values;
       return {
         count: entities.length,
         polygons: entities.filter((e) => e.polygon).length,
         visibleCells: entities[0].properties.visible_cells.getValue(),
       };
-    });
+    }, VIEWSHED_SOURCE);
     expect(drawn.polygons).toBe(drawn.count);
     expect(drawn.visibleCells).toBe(drawn.count);
 
@@ -359,7 +362,9 @@ test.describe('Analysis panels', () => {
 
     // the panel owns the layer: closing it takes the result off the scene
     await closePanel(page, panel);
-    await expect.poll(() => namedEntityCount(page, 'viewshed-result')).toBe(-1);
+    // taking the result off is a store edit the renderer picks up when it next
+    // settles, so it gets the same budget as drawing it
+    await expect.poll(() => namedEntityCount(page, VIEWSHED_SOURCE), { timeout: 30000 }).toBe(-1);
   });
 
   test('terrainAnalysis: Run drapes a raster the opacity slider controls, then contours', async ({

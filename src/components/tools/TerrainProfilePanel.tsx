@@ -63,7 +63,7 @@ export function TerrainProfilePanel({ onClose }: { onClose: () => void }) {
       );
       setProfile(points);
       setStats(builtStats);
-      await drawProfileLine(coordinates, PROFILE_LINE_STYLE);
+      drawProfileLine(coordinates, PROFILE_LINE_STYLE);
     } catch (e) {
       setProfile(null);
       setStats(null);
