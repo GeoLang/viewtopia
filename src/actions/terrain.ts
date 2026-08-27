@@ -20,14 +20,10 @@ import {
 } from '../features/terrain/profile';
 import { currentBbox, type Bbox } from '../lib/terrainAnalysis';
 import { useAgentLayerStore } from '../store/agentLayers';
+import { checkOnTheGlobe, place } from './coordinates';
 import { listViewerLayers } from './layerIndex';
 import { ActionError, registerAction, type ActionArguments } from './registry';
 import { resolveOne } from './resolve';
-
-const MAX_LONGITUDE = 180;
-const MAX_LATITUDE = 90;
-/** enough to place a point on a street, short enough to read back */
-const COORDINATE_DECIMALS = 4;
 
 const MINIMUM_RADIUS_METERS = 1;
 
@@ -50,17 +46,6 @@ function formatKilometers(meters: number): string {
 function formatSquareKilometers(squareMeters: number): string {
   const squareKilometers = squareMeters / SQUARE_METERS_PER_SQUARE_KILOMETER;
   return `${squareKilometers.toFixed(SQUARE_KILOMETER_DECIMALS)} km²`;
-}
-
-function place(longitude: number, latitude: number): string {
-  return `${longitude.toFixed(COORDINATE_DECIMALS)}, ${latitude.toFixed(COORDINATE_DECIMALS)}`;
-}
-
-function checkOnTheGlobe(longitude: number, latitude: number): [number, number] {
-  if (Math.abs(longitude) > MAX_LONGITUDE || Math.abs(latitude) > MAX_LATITUDE) {
-    throw new ActionError(`${place(longitude, latitude)} is not a longitude and latitude`);
-  }
-  return [longitude, latitude];
 }
 
 function readBbox(value: unknown): Bbox {
