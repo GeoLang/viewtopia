@@ -43,6 +43,21 @@ function fakeViewer() {
         this.renders += 1;
       },
     },
+    entities: {
+      removals: 0,
+      removeAll() {
+        this.removals += 1;
+      },
+    },
+    renders: 0,
+    render() {
+      this.renders += 1;
+    },
+    canvas: {
+      toBlob(callback: (blob: Blob | null) => void) {
+        callback(new Blob(['png bytes'], { type: 'image/png' }));
+      },
+    },
     isDestroyed: () => false,
   };
 }
@@ -72,7 +87,7 @@ let fetchMock: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   viewer = fakeViewer();
   setActiveCesiumViewer(viewer as unknown as Viewer);
-  useAgentLayerStore.setState({ layers: [] });
+  useAgentLayerStore.setState({ layers: [], markers: [] });
   useDeckLayersStore.setState({ groups: {} });
   useAppStore.setState({ renderer: 'cesium', activeTab: 'map', layers: [] });
   useChatStore.setState({ sessions: [], activeSessionId: null, followUp: null, followUpCount: 0 });
@@ -271,5 +286,53 @@ describe('analysis.spatial_stats', () => {
     await expect(
       runAction('analysis.spatial_stats', { layer: 'sensors', cell_size: 9000 }),
     ).rejects.toThrow('cell_size is between 50 and 5000, not 9000');
+  });
+});
+
+describe('scene.screenshot', () => {
+  it('renders a frame and hands the canvas to a PNG download', async () => {
+    URL.createObjectURL = vi.fn().mockReturnValue('blob:shot');
+    URL.revokeObjectURL = vi.fn();
+    const downloaded: HTMLAnchorElement[] = [];
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(function (this: HTMLAnchorElement) {
+        downloaded.push(this);
+      });
+
+    const result = await runAction('scene.screenshot', {});
+
+    expect(viewer.renders).toBe(1);
+    expect(downloaded.map((anchor) => [anchor.download, anchor.href])).toEqual([
+      ['viewtopia-screenshot.png', 'blob:shot'],
+    ]);
+    expect(result.text).toBe('Took a PNG picture of the globe.');
+    click.mockRestore();
+  });
+
+  it('says the globe is not on screen when no viewer is registered', async () => {
+    setActiveCesiumViewer(null);
+    await expect(runAction('scene.screenshot', {})).rejects.toThrow(
+      'there is no Cesium globe on screen',
+    );
+  });
+});
+
+describe('scene.clear', () => {
+  it('empties the markers and clears the globe entities', async () => {
+    useAgentLayerStore.getState().addMarker({ lon: 2.2945, lat: 48.8584, color: '#ff0000' });
+    useAgentLayerStore.getState().addMarker({ lon: -0.09, lat: 51.51, color: '#ff0000' });
+
+    const result = await runAction('scene.clear', {});
+
+    expect(useAgentLayerStore.getState().markers).toEqual([]);
+    expect(viewer.entities.removals).toBe(1);
+    expect(result.text).toBe('Cleared 2 markers.');
+  });
+
+  it('counts one marker in the singular', async () => {
+    useAgentLayerStore.getState().addMarker({ lon: 2.2945, lat: 48.8584, color: '#ff0000' });
+    const result = await runAction('scene.clear', {});
+    expect(result.text).toBe('Cleared 1 marker.');
   });
 });

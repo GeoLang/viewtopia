@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // the WebGL bundle stays out, so the view bbox comes from the shared camera
 vi.mock('cesium', () => ({ Math: { toDegrees: (radians: number) => radians } }));
@@ -29,13 +29,16 @@ vi.mock('../../src/duckdb/loaders', () => ({
 vi.mock('../../src/duckdb/importVector', () => ({ importVectorFiles: importVectorMock }));
 vi.mock('@mantine/notifications', () => ({ notifications: { show: vi.fn() } }));
 
+import type { Cesium3DTileset, Viewer } from 'cesium';
 import '../../src/actions/data';
 import { runViewerAction } from '../../src/actions/dispatch';
 import { ActionError, runAction } from '../../src/actions/registry';
 import { useAgentLayerStore } from '../../src/store/agentLayers';
 import { useChatStore } from '../../src/store/chat';
 import { useOgcLayerStore } from '../../src/store/ogcLayers';
+import { useTiles3dLayerStore } from '../../src/store/tiles3dLayers';
 import { useStacStore } from '../../src/features/stac/store';
+import { getActiveCesiumViewer } from '../../src/viewer/registry';
 
 const POINTS: GeoJSON.FeatureCollection = {
   type: 'FeatureCollection',
@@ -114,6 +117,7 @@ beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock);
   useAgentLayerStore.setState({ layers: [], rasterLayers: [], markers: [], generation: 0 });
   useOgcLayerStore.setState({ layers: [] });
+  useTiles3dLayerStore.setState({ layers: [], loaded: {} });
   useStacStore.setState({ favorites: [], rasterAnalysisUrl: '' });
   useChatStore.setState({ sessions: [], activeSessionId: null, followUp: null, followUpCount: 0 });
 });
@@ -197,6 +201,82 @@ describe('data.add_service', () => {
     await expect(
       runAction('data.add_service', { type: 'tileset', url: WFS_URL, name: 'Built' }),
     ).rejects.toThrow('type must be one of');
+  });
+});
+
+describe('data.add_tileset', () => {
+  const TILESET_URL = 'https://example.org/tiles/quarry/tileset.json';
+  const DRAWN = { root: 'loaded' } as unknown as Cesium3DTileset;
+  /** past the wait in loadedTileset, which is what a tileset that never loads costs */
+  const PAST_THE_LOAD_WAIT_MS = 61_000;
+
+  function fakeGlobe() {
+    return {
+      flownTo: [] as unknown[],
+      async flyTo(tileset: unknown) {
+        this.flownTo.push(tileset);
+      },
+    };
+  }
+
+  function onTheGlobe(): ReturnType<typeof fakeGlobe> {
+    const globe = fakeGlobe();
+    vi.mocked(getActiveCesiumViewer).mockReturnValue(globe as unknown as Viewer);
+    return globe;
+  }
+
+  afterEach(() => {
+    vi.mocked(getActiveCesiumViewer).mockReturnValue(null);
+  });
+
+  it('puts the tileset in the layers and flies the camera to it', async () => {
+    const globe = onTheGlobe();
+
+    const running = runAction('data.add_tileset', { url: TILESET_URL, name: 'Quarry' });
+    const layer = useTiles3dLayerStore.getState().layers[0];
+    useTiles3dLayerStore.getState().setLoaded(layer.id, DRAWN);
+    const result = await running;
+
+    expect([layer.name, layer.url, layer.visible]).toEqual(['Quarry', TILESET_URL, true]);
+    expect(globe.flownTo).toEqual([DRAWN]);
+    expect(result.text).toBe('Quarry is on the globe and the camera is looking at it.');
+  });
+
+  it('names the layer Tileset when the call does not name it', async () => {
+    onTheGlobe();
+
+    const running = runAction('data.add_tileset', { url: TILESET_URL });
+    const layer = useTiles3dLayerStore.getState().layers[0];
+    useTiles3dLayerStore.getState().setLoaded(layer.id, DRAWN);
+
+    expect((await running).text).toContain('Tileset is on the globe');
+    expect(layer.name).toBe('Tileset');
+  });
+
+  it('leaves the layer row behind and says so when the tiles never load', async () => {
+    onTheGlobe();
+    vi.useFakeTimers();
+
+    const running = runAction('data.add_tileset', { url: TILESET_URL, name: 'Quarry' });
+    const refused = expect(running).rejects.toThrow('Quarry did not load, see its layer row');
+    await vi.advanceTimersByTimeAsync(PAST_THE_LOAD_WAIT_MS);
+    await refused;
+
+    expect(useTiles3dLayerStore.getState().layers.map((layer) => layer.name)).toEqual(['Quarry']);
+    vi.useRealTimers();
+  });
+
+  it('refuses to add a tileset when no globe is on screen', async () => {
+    await expect(runAction('data.add_tileset', { url: TILESET_URL })).rejects.toThrow(
+      'there is no Cesium globe on screen',
+    );
+    expect(useTiles3dLayerStore.getState().layers).toEqual([]);
+  });
+
+  it('refuses a call with no URL', async () => {
+    onTheGlobe();
+    await expect(runAction('data.add_tileset', { name: 'Quarry' })).rejects.toThrow('url is required');
+    expect(useTiles3dLayerStore.getState().layers).toEqual([]);
   });
 });
 

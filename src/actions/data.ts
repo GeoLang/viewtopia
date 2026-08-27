@@ -1,6 +1,7 @@
 /**
  * The data panels without the mouse: import a file from a URL, add a service,
- * export a layer, browse a STAC catalog, and query the in-browser database.
+ * add a 3D tileset, export a layer, browse a STAC catalog, and query the
+ * in-browser database.
  * Uploading a file stays on the panel, since a file picker needs the mouse.
  */
 import {
@@ -37,6 +38,7 @@ import { ACCEPT_FORMATS } from '../lib/importFiles';
 import { downloadBytes } from '../lib/downloadBytes';
 import { getViewBounds } from '../lib/viewBounds';
 import { useAgentLayerStore } from '../store/agentLayers';
+import { addTilesetToGlobe } from '../viewer/addTileset';
 import { ActionError, registerAction } from './registry';
 import { resolveOne } from './resolve';
 
@@ -132,6 +134,23 @@ registerAction({
       args.type as AddableServiceType,
     ),
   }),
+});
+
+registerAction({
+  name: 'data.add_tileset',
+  description: 'Load a 3D tileset from its URL onto the globe and fly the camera to it.',
+  parameters: {
+    url: { type: 'string', description: 'URL of the tileset.json to load.', required: true },
+    name: { type: 'string', description: 'Name for the layer in the layer list.' },
+  },
+  run: async (args) => {
+    const { name, failure } = await addTilesetToGlobe(
+      args.url as string,
+      args.name as string | undefined,
+    );
+    if (failure) throw new ActionError(failure);
+    return { text: `${name} is on the globe and the camera is looking at it.` };
+  },
 });
 
 registerAction({

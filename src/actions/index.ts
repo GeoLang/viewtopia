@@ -9,10 +9,12 @@ import './find';
 import './history';
 import './layers';
 import './live';
+import './marker';
 import './project';
 import './scenario';
 import './scene';
 import './terrain';
+import './tileset';
 import './view';
 
 export { actionCatalogue, runAction, findAction, ActionError } from './registry';

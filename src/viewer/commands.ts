@@ -27,7 +27,7 @@ import { useAgentLayerStore, toFeatureCollection } from '../store/agentLayers';
 import { useDeckLayersStore } from '../hooks/deckLayers';
 import { showHeatmap } from '../lib/mapHeatmap';
 import { postSystemNotice } from '../store/chat';
-import { loadedTileset, useTiles3dLayerStore } from '../store/tiles3dLayers';
+import { addTilesetToGlobe } from './addTileset';
 import { colorByHeight, colorByClassification, colorByProperty } from './tileStyles';
 import { useMeasureStore, type MeasureMode } from '../store/measure';
 
@@ -165,25 +165,12 @@ const handlers: Record<string, Handler> = {
   sql_query: (p) => runSqlQuery(p),
 
   load_tileset: async (p) => {
-    const viewer = getActiveCesiumViewer();
-    if (!viewer || typeof p.url !== 'string') return;
-    const id = crypto.randomUUID();
-    useTiles3dLayerStore.getState().putLayer({
-      id,
-      name: typeof p.name === 'string' ? p.name : 'Tileset',
-      url: p.url,
-      visible: true,
-    });
-    const tileset = await loadedTileset(id);
-    if (!tileset) {
-      notifications.show({
-        title: 'Could not load tileset',
-        message: 'the tileset did not load, see its layer row',
-        color: 'red',
-      });
-      return;
+    if (typeof p.url !== 'string') return;
+    const name = typeof p.name === 'string' ? p.name : undefined;
+    const { failure } = await addTilesetToGlobe(p.url, name);
+    if (failure) {
+      notifications.show({ title: 'Could not load tileset', message: failure, color: 'red' });
     }
-    await viewer.flyTo(tileset);
   },
 
   screenshot: () => {

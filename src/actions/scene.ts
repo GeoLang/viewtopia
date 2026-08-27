@@ -44,6 +44,7 @@ import { collectPoints, type GridAggregation } from '../lib/pointData';
 import { TRAVEL_PROFILES, type ServiceArea, type TravelProfile } from '../lib/travelTime';
 import { useAgentLayerStore } from '../store/agentLayers';
 import { geodesicAreaSquareMeters } from '../store/measure';
+import { executeViewerCommand } from '../viewer/commands';
 import { getActiveCesiumViewer } from '../viewer/registry';
 import { resolveViewerLayer } from './layerIndex';
 import { ActionError, registerAction } from './registry';
@@ -160,6 +161,29 @@ registerAction({
         ? `The globe is cut along the ${axis} axis at ${position}%.`
         : 'The globe is whole again.',
     };
+  },
+});
+
+registerAction({
+  name: 'scene.clear',
+  description: 'Remove every marker and drawn entity from the map.',
+  parameters: {},
+  run: () => {
+    const cleared = useAgentLayerStore.getState().markers.length;
+    executeViewerCommand({ action: 'clear_entities' });
+    return { text: cleared === 1 ? 'Cleared 1 marker.' : `Cleared ${cleared} markers.` };
+  },
+});
+
+registerAction({
+  name: 'scene.screenshot',
+  description: 'Download a PNG picture of the globe as it looks now.',
+  parameters: {},
+  run: () => {
+    cesiumViewer();
+    executeViewerCommand({ action: 'screenshot' });
+    // the picture is written from a blob callback the browser answers later
+    return { text: 'Took a PNG picture of the globe.' };
   },
 });
 

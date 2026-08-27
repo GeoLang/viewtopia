@@ -295,6 +295,28 @@
     "destructive": false
   },
   {
+    "name": "data.add_tileset",
+    "description": "Load a 3D tileset from its URL onto the globe and fly the camera to it.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "URL of the tileset.json to load."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name for the layer in the layer list."
+        }
+      },
+      "required": [
+        "url"
+      ]
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
     "name": "data.export",
     "description": "Download one vector layer as a file.",
     "parameters": {
@@ -728,6 +750,37 @@
     "destructive": false
   },
   {
+    "name": "marker.add",
+    "description": "Drop a marker on the map at a longitude and latitude.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "lon": {
+          "type": "number",
+          "description": "Longitude in degrees, -180 to 180."
+        },
+        "lat": {
+          "type": "number",
+          "description": "Latitude in degrees, -90 to 90."
+        },
+        "label": {
+          "type": "string",
+          "description": "Text shown beside the marker."
+        },
+        "color": {
+          "type": "string",
+          "description": "CSS colour of the marker. Red by default."
+        }
+      },
+      "required": [
+        "lon",
+        "lat"
+      ]
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
     "name": "project.list",
     "description": "List the projects this account can open.",
     "parameters": {
@@ -838,6 +891,17 @@
     "destructive": false
   },
   {
+    "name": "scene.clear",
+    "description": "Remove every marker and drawn entity from the map.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
     "name": "scene.clipping",
     "description": "Cut the globe open along one axis to see inside it.",
     "parameters": {
@@ -864,6 +928,17 @@
       "required": [
         "on"
       ]
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
+    "name": "scene.screenshot",
+    "description": "Download a PNG picture of the globe as it looks now.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
     },
     "reads": false,
     "destructive": false
@@ -1055,6 +1130,46 @@
       ]
     },
     "reads": true,
+    "destructive": false
+  },
+  {
+    "name": "tileset.shade_by_classification",
+    "description": "Colour every 3D tileset on the globe by its LIDAR classification codes, so ground, vegetation, buildings and water each take a colour.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
+    "name": "tileset.shade_by_height",
+    "description": "Colour every 3D tileset on the globe by height band, green near the ground through red at the top.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
+    "name": "tileset.shade_by_property",
+    "description": "Colour every 3D tileset on the globe by one feature property's values.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "property": {
+          "type": "string",
+          "description": "Feature property the colours are spread over, as the tileset names it."
+        }
+      },
+      "required": [
+        "property"
+      ]
+    },
+    "reads": false,
     "destructive": false
   }
 ]
