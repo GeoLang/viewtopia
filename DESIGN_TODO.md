@@ -124,15 +124,19 @@ other documents citing "P0 item 5" still land on the right one.
        aggregate 0.682 over 56 tasks, 21 perfect, 86 of 157 checks. Report
        `geolang/evals/reports/20260827T200908+0000-viewer-local:Qwen3.{md,json}`,
        whose own header reads 0.63 because it counts the stalls as zeros.
-     - Run-only, the rebuilt image, first 39 runs: 11 cut short, 28.2 percent.
-     - Like for like, over the 13 tasks both passes reached: 5 of 39 against
-       11 of 39. The increase is spread over tasks that never stalled in the
-       baseline, not concentrated in one, so it looks systematic. At 39 runs
-       it is not conclusive on its own, two-sided p about 0.09.
+     - Run-only, first 39 runs on a box that was also running test suites:
+       11 cut short, 28.2 percent.
+     - That 28.2 was the load, not the change. A second run-only pass on an
+       idle box reached 64 runs before the machine went down, and over the 21
+       tasks it covered it stalled 8 of 62 against the baseline's 8 of 63 on
+       those same tasks. 12.9 percent against 12.7. Log
+       `geolang/evals/reports/20260827T2013-run-only-partial.log`.
 
-     Read that as removing the fixed actions costing something on this model,
-     and decide whether the highest-frequency actions get flat shortcuts back
-     alongside `run`. Both figures come from `geolang/evals/answered_only.py`,
+     So the stall rate gives no reason to put the fixed actions back. What is
+     still missing is the score: no run-only pass has finished, so nothing has
+     been compared to the baseline's 0.682. Until one does, the gate is
+     unmeasured rather than failed. Figures come from
+     `geolang/evals/answered_only.py`,
      which joins a report against its sweep log: the reports cannot tell a
      stalled run from a finished run that emitted no call, both being a zero
      with an empty manifest, so the split is read from the log.
