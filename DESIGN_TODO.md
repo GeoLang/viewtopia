@@ -9,7 +9,7 @@
 > Ranked 2026-08-21 against the DESIGN.md goal: ship the viewer, the agent, and
 > the services that make a shared map, not more surface. Pick from **Do next**.
 > Do not start at a parked item.
-> Last brought current: **2026-08-27**.
+> Last brought current: **2026-08-28**.
 >
 > Verify an entry against the code before working it, and do not trust the
 > mechanism it names. Three items in this file were already closed when someone
@@ -32,14 +32,13 @@ source paths. Existing entries below remain the detailed records for TileTopia,
 ViewTopia, Ptolemy, Jung, TerraVista, Panoptes, and Geoplumb.
 
 - [ ] **Collecta**: no first-party field client, attachment synchronization,
-      Ptolemy integration, recursive repeat validation, or local expression
-      evaluation. Conditions pass through to ODK Collect only.
+      recursive repeat validation, or local expression evaluation. Conditions
+      pass through to ODK Collect only. Publish into Ptolemy is built.
 
-- [ ] **Fenestra**: SLD
-      filters, scale bounds, text, and later symbolizers are not applied. The
-      OGC API Features item route, OpenAPI output, links, MVT endpoint, and the
-      Inspire, geofence, cascade, and printing crates are not complete server
-      features.
+- [ ] **Fenestra**: SLD text symbolizers are never drawn, and only the first
+      symbolizer of each type in a rule is kept. The OGC API Features item
+      route, OpenAPI output, links, MVT endpoint, and the Inspire, geofence,
+      cascade, and printing crates are not complete server features.
 
 - [ ] **Fluvius**: checkpointing and Prometheus metrics are library-only. The
       topology runner does not use the state store, expose metrics, or retain
@@ -47,13 +46,13 @@ ViewTopia, Ptolemy, Jung, TerraVista, Panoptes, and Geoplumb.
       connecting to remote feeds, and MQTT authentication is not wired into the
       running topology.
 
-- [ ] **Geodukt**: `spatial_join` is unavailable. The plugin crate is unused,
-      its round trip does not carry geometry, and the documented Geokode and
-      Jung cross-service wiring is absent.
+- [ ] **Geodukt**: the plugin crate is unused, its round trip does not carry
+      geometry, and the documented Geokode and Jung cross-service wiring is
+      absent.
 
 - [ ] **GeoGit**: Kart repository interoperability, schema evolution,
       feature-aware three-way merge, and a PostGIS working copy are not
-      implemented. GeoJSON export does not carry feature geometry.
+      implemented.
 
 - [ ] **GeoLang**: the API advertises tools whose optional geospatial
       dependencies are absent from the client requirements, so those tools fail
@@ -68,9 +67,9 @@ ViewTopia, Ptolemy, Jung, TerraVista, Panoptes, and Geoplumb.
       positioning result is k-nearest-neighbor over caller-provided signals,
       and the advertised accuracy is not a validated bound.
 
-- [ ] **Itinera**: turn restrictions are parsed and stored but not enforced by
-      routing. Contraction-hierarchy query time is a target, not a benchmark,
-      and the map-matching module is library-only with no HTTP endpoint.
+- [ ] **Itinera**: contraction-hierarchy query time is a target, not a
+      benchmark, and the map-matching module is library-only with no HTTP
+      endpoint.
 
 - [ ] **Panoptes**: no trained model weights ship or are published. COG pixel
       decoding, georeferencing, satellite preprocessing, object-detection NMS,
@@ -180,11 +179,6 @@ this direction reverses.
       no normals. A 16- or 32-bit texture pixel format degrades to untextured.
       A JPEG texture is re-encoded at quality 90 per tile crop. Texture decode
       has no size cap of its own beyond the upload cap.
-
-- [ ] **native vector-to-3D-Tiles, or say mago stays.** Owner call: build a
-      native path for GeoJSON, GeoPackage and KML so the mago jar and the JRE
-      leave the image, or keep mago for vector input and document it. Weighed
-      under Wait for demand.
 
 - [ ] **Space-Time geofencing UI and case management.** The library code and
       types exist with no UI behind them, parked. Network metrics render as a
@@ -500,8 +494,7 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
 - [ ] **collecta conditional visibility is unread in the form model.** The
       `Condition` type exists, validation never looks at it, and the XLSForm
       importer sets it to `None`. It works only on the XLSForm path where the raw
-      expression passes through to ODK Collect on the device. Its README also
-      claimed GeoGit and GeoKode integrations; neither repo references collecta.
+      expression passes through to ODK Collect on the device.
 
 - [ ] **geogit's three-way merge is dead code**; `cmd_merge` shells out to plain
       `git merge`, so two edits to one feature become a binary conflict on a
@@ -690,51 +683,18 @@ first.
 
 ### Chat-only viewer mode
 
-Phase 1 shipped: the mode, the action registry, the state snapshot and the
-catalogue in the AG-UI state, and geolang's `run` action. DESIGN.md 2.4 and 2.6
-describe what is built. What is left is P0 item 7's remaining phases.
+Shipped: the mode, the action registry, the state snapshot, the catalogue in
+the AG-UI state, geolang's `run` as the only `viewer_control` action, and the
+analysis, simulate and data-by-URL actions. DESIGN.md 2.4 and 2.6 describe
+what is built. Upload still needs the mouse. `sql.query` and `sql.to_layer`
+were deleted; `sql_query` is the geolang tool and `sql.attach_url` attaches a
+remote table. What is left is P0 item 7: finish one `--repeat 3` eval against
+the 66 tasks / 53 catalogue actions, and a layer-referencing `add_arcs` the
+day spacetime pairing is a layer.
 
-Phase 2, the analysis and simulate panels as actions that return their result to
-the chat: viewshed, flood, terrain profile, shadows, travel time, clipping,
-cross section, spatial stats. Each one already has a panel that computes it, so
-the work is the same split phase 1 made for compare and the asset rule, the
-computation into a function both the panel and the action call, then a result
-the chat can read as text or a table through the existing `ui_spec` path. Until
-then these are the commands that answer "viewshed opens the viewshed panel,
-which chat mode does not show."
-
-Phase 3, the data panels as actions: import by URL or upload, export, STAC, OGC,
-SQL. Upload has no keyboard path, so import is by URL and the panel stays the
-way in for a local file.
-
-The eval gate. `geolang/evals/viewer/` holds 56 prompts, one or more for each
-of the 41 actions the viewer offers, scored on the action and args emitted
-rather than on prose. Run it with `python -m evals.viewer_runner --repeat 3`,
-never on one run, and delete geolang's fixed `viewer_control` action list once
-it passes on `run` alone. Its two fixtures are copies of
-`tests/unit/fixtures/action-catalogue.json` and
-`tests/unit/fixtures/viewer-snapshot.json`, both written by the unit tests that
-build them, and both copied across by hand, so they need refreshing whenever an
-action or the snapshot changes. See `geolang/evals/viewer/README.md`.
-
-### Voice input in the chat
-
-Decided 2026-08-25. A mic button in the chat input toggles dictation: partial
-text streams into the box as you speak, a second click stops, the text stays
-for editing and Enter sends. The client is `src/speech/` in viewtopia: a
-WebSocket to WhisperLive through nginx `/speech/` (same origin, Upgrade
-forwarded, the browser offers `['bearer', jwt]` as subprotocols so a later
-server-side check needs no client change), an `AudioContext` at 16 kHz with an
-AudioWorklet posting Float32 mono frames, the WhisperLive handshake
-(`language: 'en'`, `task: 'transcribe'`, `use_vad: true`), segments merged by
-start time since the server resends the last ten with revisions,
-`END_OF_AUDIO` on stop. The server is the Aavaaz GPU image built from the
-Aavaaz checkout beside GeoLang, `large-v3-turbo` by default (`SPEECH_MODEL`),
-no API key and no host port, behind the compose profile `speech` so CI and
-GPU-less boxes skip it. viewtopia probes `/speech/health` at boot and shows
-the mic only when it answers. Proof: unit tests with a fake WebSocket, a react
-e2e with Playwright's `routeWebSocket` and Chromium's fake mic, one live check
-with a WAV through the real container. What is left is P0 item 8.
+The eval fixtures are copies of `tests/unit/fixtures/action-catalogue.json`
+and `tests/unit/fixtures/viewer-snapshot.json`. Refresh them from viewtopia
+when an action or the snapshot changes. See `geolang/evals/viewer/README.md`.
 
 ### Hosted flagship instance, the thesis blocker
 
