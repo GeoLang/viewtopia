@@ -457,8 +457,6 @@ model scores 1.00 over the 10-task set.
   real async contract (geojson param, task polling, pyramid sum).
 - Area and buffer geometry is computed in UTM, not 3857: Mercator inflated the reported areas
   ~2.7x and shrank the rendered buffers ~40%.
-- `add_screengrid` reports "screengrid is not available on the globe renderer" as a system
-  message in the chat transcript rather than drawing nothing (§2.6).
 
 ### 2.5 ptolemy data model
 
@@ -508,8 +506,8 @@ map, plus a synced split view. Picking/draw/measure/agent-layers survive rendere
   (HeatmapLayer, ScreenGridLayer) cannot draw. Heatmaps therefore use MapLibre's native
   `heatmap` layer type: `src/lib/mapHeatmap.ts` owns the spec store and the
   radius/intensity/weight → `heatmap-*` paint mapping, `useHeatmapsMapLibre` re-adds the layers
-  after a basemap swap, and both the Heatmap panel and `add_heatmap` go through it. ScreenGrid
-  keeps its deck layer and says so when asked for on the globe.
+  after a basemap swap, and both the Heatmap panel and `add_heatmap` go through it. There is no
+  screen-grid command: `add_hexbin` covers density aggregation and draws on the globe.
 - Split view panes are a list of `{renderer, basemap, hiddenLayerIds}` entries, the viewer itself being pane 0
   in the app store, each pane with its own basemap picker, all driven by one shared-camera hub
   with a re-entrancy guard and a subscribe-time snap, with clean teardown so the WebGL context

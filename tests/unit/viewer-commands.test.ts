@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { notifications } from '@mantine/notifications';
-import { executeViewerCommand, SCREENGRID_NOTICE } from '../../src/viewer/commands';
+import { executeViewerCommand } from '../../src/viewer/commands';
 import { NO_CESIUM_GLOBE } from '../../src/actions/globe';
 import { CHAT_TILESET_WAIT_SECONDS } from '../../src/viewer/addTileset';
 import { useTiles3dLayerStore } from '../../src/store/tiles3dLayers';
@@ -87,17 +87,6 @@ describe('agent viewer commands', () => {
     // deck no longer draws heatmaps at all
     expect(useDeckLayersStore.getState().groups.agent ?? []).toHaveLength(0);
     expect(useAppStore.getState().renderer).toBe('maplibre');
-  });
-
-  it('add_screengrid reports that the globe renderer cannot draw it', () => {
-    executeViewerCommand({ action: 'add_screengrid', params: { data: [[7.42, 43.73]] } });
-
-    const messages = useChatStore.getState().activeMessages();
-    expect(messages).toHaveLength(1);
-    expect(messages[0]).toMatchObject({ role: 'system', content: SCREENGRID_NOTICE });
-    // the deck layer is still registered, so it draws the day the view allows it
-    const ids = (useDeckLayersStore.getState().groups.agent ?? []).map((l) => l.id);
-    expect(ids.some((id) => id.startsWith('agent-screengrid-'))).toBe(true);
   });
 
   it('add_marker stores the marker so every renderer can draw it; clear_entities empties it', () => {

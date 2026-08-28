@@ -139,13 +139,12 @@ other documents citing "P0 item 5" still land on the right one.
      `tests/test_viewer_evals.py` pins the task count and needs moving whenever
      a task is added.
 
-   - [ ] Two viewer commands still have no catalogue entry, so the agent cannot
-     reach them. `add_arcs` needs paired source and target points, which no
-     layer carries. `add_screengrid` draws nothing on the globe renderer, the
-     only renderer deck rides on, and says so through `SCREENGRID_NOTICE` in
-     `viewtopia/src/viewer/commands.ts`. Decide per command whether it earns a
-     layer-referencing action or the handler goes. `add_geojson` with inline
-     GeoJSON is the same question: `data.import_url` covers the url case only.
+   - [ ] `add_arcs` still has no catalogue entry, so the agent cannot reach it.
+     It needs paired source and target points and no layer carries them. Owner
+     call 2026-08-27: leave the handler in place unreached rather than delete
+     it, because the spacetime co-travel analysis already produces paired
+     entity segments and is the source it would draw from. Give it a
+     layer-referencing action the day that pairing is exposed as a layer.
 
 ## Wire for real
 

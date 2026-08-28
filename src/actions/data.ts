@@ -1,14 +1,12 @@
 /**
- * The data panels without the mouse: import a file from a URL, add a service,
- * add a 3D tileset, export a layer, browse a STAC catalog, and query the
- * in-browser database.
+ * The data panels without the mouse: import a file from a URL, draw GeoJSON
+ * given directly, add a service, add a 3D tileset, export a layer, browse a
+ * STAC catalog, and query the in-browser database.
  * Uploading a file stays on the panel, since a file picker needs the mouse.
  */
 import {
-  addQueryLayer,
   attachUrl,
   ATTACH_FORMATS,
-  cellText,
   type AttachFormat,
 } from '../features/dataSources/sqlWorkspace';
 import {
@@ -33,11 +31,10 @@ import {
   convertLayer,
   type ConvertFormat,
 } from '../features/convert/formats';
-import { query, type QueryResult } from '../duckdb';
 import { ACCEPT_FORMATS } from '../lib/importFiles';
 import { downloadBytes } from '../lib/downloadBytes';
 import { getViewBounds } from '../lib/viewBounds';
-import { useAgentLayerStore } from '../store/agentLayers';
+import { toFeatureCollection, useAgentLayerStore } from '../store/agentLayers';
 import { addTilesetToGlobe, CHAT_TILESET_WAIT_SECONDS } from '../viewer/addTileset';
 import { NO_CESIUM_GLOBE } from './globe';
 import { ActionError, registerAction } from './registry';
@@ -45,9 +42,6 @@ import { resolveOne } from './resolve';
 
 const EXPORT_FORMATS = CONVERT_FORMATS.map((format) => format.id);
 const DEFAULT_EXPORT_FORMAT: ConvertFormat = 'geojson';
-
-/** Enough rows for the model to work from, few enough to fit a chat turn. */
-const MAX_REPORTED_ROWS = 50;
 
 /** west, south, east and north */
 const BBOX_VALUE_COUNT = 4;
@@ -64,12 +58,6 @@ const LAYER_PARAMETER = {
 const CATALOG_PARAMETER = {
   type: 'string',
   description: 'STAC catalog URL, as in https://earth-search.aws.element84.com/v1.',
-  required: true,
-} as const;
-
-const SQL_PARAMETER = {
-  type: 'string',
-  description: 'The DuckDB SQL to run.',
   required: true,
 } as const;
 
@@ -108,6 +96,36 @@ registerAction({
     const status = await importUrlIntoViewer(url, fileName);
     if (status.failed) throw new ActionError(status.text);
     return { text: status.text };
+  },
+});
+
+registerAction({
+  name: 'data.add_geojson',
+  description:
+    'Draw GeoJSON given here directly on the map. For a result you already hold, ' +
+    'a handful of features at most. Use data.import_url for anything at a URL or ' +
+    'larger than that.',
+  parameters: {
+    geojson: {
+      type: 'object',
+      description:
+        'The GeoJSON itself: a FeatureCollection, a Feature, or a bare geometry.',
+      required: true,
+    },
+    name: { type: 'string', description: 'Name for the layer.' },
+    color: { type: 'string', description: 'CSS colour for the features, blue by default.' },
+  },
+  run: (args) => {
+    const geojson = toFeatureCollection(args.geojson);
+    if (!geojson) throw new ActionError('that is not GeoJSON I can draw');
+    const name = typeof args.name === 'string' ? args.name : 'GeoJSON';
+    useAgentLayerStore.getState().addLayer({
+      id: crypto.randomUUID(),
+      name,
+      color: typeof args.color === 'string' ? args.color : '#3388ff',
+      geojson,
+    });
+    return { text: `Drew ${geojson.features.length} features as "${name}".` };
   },
 });
 
@@ -262,40 +280,6 @@ registerAction({
       throw new ActionError(`${item.id} has no asset ${key}. It carries: ${keys}`);
     }
     return { text: await addStacAsset(item.id, asset) };
-  },
-});
-
-/** A result as a header line and one line per row, which the model can read back. */
-function reportRows(result: QueryResult): string {
-  if (result.rowCount === 0) return 'The query returned no rows.';
-  const counted =
-    result.rowCount > MAX_REPORTED_ROWS
-      ? `${result.rowCount} rows, the first ${MAX_REPORTED_ROWS}`
-      : `${result.rowCount} rows`;
-  const lines = result.rows
-    .slice(0, MAX_REPORTED_ROWS)
-    .map((row) => result.columns.map((column) => cellText(row[column])).join(' | '));
-  return [`${counted}.`, result.columns.join(' | '), ...lines].join('\n');
-}
-
-registerAction({
-  name: 'sql.query',
-  description: 'Run a SQL query over the loaded tables and read the rows back.',
-  parameters: { sql: SQL_PARAMETER },
-  reads: true,
-  run: async (args) => ({ text: reportRows(await query(args.sql as string)) }),
-});
-
-registerAction({
-  name: 'sql.to_layer',
-  description: 'Draw the result of a SQL query on the map as a layer.',
-  parameters: {
-    sql: SQL_PARAMETER,
-    name: { type: 'string', description: 'Name for the layer, the query itself by default.' },
-  },
-  run: async (args) => {
-    const layer = await addQueryLayer(args.sql as string, args.name as string | undefined);
-    return { text: `${layer.name} is on the map, ${layer.featureCount} features.` };
   },
 });
 

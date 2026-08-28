@@ -397,63 +397,49 @@ describe('stac.add_asset', () => {
   });
 });
 
-describe('sql.query', () => {
-  it('reports the rows as a table', async () => {
-    queryMock.mockResolvedValue({
-      rows: [
-        { city: 'Lisbon', people: 545000 },
-        { city: 'Porto', people: null },
+describe('data.add_geojson', () => {
+  const TRIANGLE = {
+    type: 'Polygon',
+    coordinates: [
+      [
+        [7.41, 43.72],
+        [7.44, 43.72],
+        [7.42, 43.75],
+        [7.41, 43.72],
       ],
-      columns: ['city', 'people'],
-      rowCount: 2,
-      table: null,
+    ],
+  };
+
+  it('draws a bare geometry under the name it was given', async () => {
+    const result = await runAction('data.add_geojson', {
+      geojson: TRIANGLE,
+      name: 'Survey area',
     });
 
-    const result = await runAction('sql.query', { sql: 'SELECT * FROM cities' });
-
-    expect(queryMock).toHaveBeenCalledWith('SELECT * FROM cities');
-    expect(result.text).toBe('2 rows.\ncity | people\nLisbon | 545000\nPorto | ');
+    expect(layerNames()).toEqual(['Survey area']);
+    expect(result.text).toBe('Drew 1 features as "Survey area".');
   });
 
-  it('caps a long result and says how many rows there were', async () => {
-    const rows = Array.from({ length: 120 }, (_, index) => ({ id: index }));
-    queryMock.mockResolvedValue({ rows, columns: ['id'], rowCount: rows.length, table: null });
-
-    const result = await runAction('sql.query', { sql: 'SELECT * FROM big' });
-
-    expect(result.text.split('\n')).toHaveLength(52);
-    expect(result.text).toContain('120 rows, the first 50.');
-  });
-
-  it('says so when the query answers nothing', async () => {
-    queryMock.mockResolvedValue({ rows: [], columns: ['id'], rowCount: 0, table: null });
-
-    await expect(runAction('sql.query', { sql: 'SELECT 1 WHERE false' })).resolves.toEqual({
-      text: 'The query returned no rows.',
-    });
-  });
-});
-
-describe('sql.to_layer', () => {
-  it('draws the query result under the name it was given', async () => {
-    queryAsGeoJsonMock.mockResolvedValue(POINTS);
-
-    const result = await runAction('sql.to_layer', {
-      sql: 'SELECT geom FROM places',
-      name: 'Places',
+  it('takes a whole FeatureCollection', async () => {
+    await runAction('data.add_geojson', {
+      geojson: {
+        type: 'FeatureCollection',
+        features: [
+          { type: 'Feature', geometry: TRIANGLE, properties: {} },
+          { type: 'Feature', geometry: TRIANGLE, properties: {} },
+        ],
+      },
+      name: 'Two areas',
     });
 
-    expect(queryAsGeoJsonMock).toHaveBeenCalledWith('SELECT geom FROM places');
-    expect(layerNames()).toEqual(['Places']);
-    expect(result.text).toBe('Places is on the map, 1 features.');
+    expect(useAgentLayerStore.getState().layers[0].geojson.features).toHaveLength(2);
   });
 
-  it('falls back to the query itself as the layer name', async () => {
-    queryAsGeoJsonMock.mockResolvedValue(POINTS);
-
-    await runAction('sql.to_layer', { sql: 'SELECT geom FROM places' });
-
-    expect(layerNames()).toEqual(['SELECT geom FROM places']);
+  it('refuses something that is not GeoJSON', async () => {
+    await expect(runAction('data.add_geojson', { geojson: { hello: 'world' } })).rejects.toThrow(
+      ActionError,
+    );
+    expect(layerNames()).toEqual([]);
   });
 });
 
@@ -503,18 +489,15 @@ describe('the chat running these actions', () => {
     expect(notices()).toEqual(['roads.geojson: 1 features']);
   });
 
-  it('sends a query result back to the model as the next turn', async () => {
-    queryMock.mockResolvedValue({
-      rows: [{ city: 'Lisbon' }],
-      columns: ['city'],
-      rowCount: 1,
-      table: null,
+  it('sends a reading action\'s result back to the model as the next turn', async () => {
+    await runViewerAction({
+      name: 'stac.search',
+      args: { catalog: CATALOG, collection: 'sentinel-2-l2a', bbox: '7,46,8,47', limit: 5 },
     });
 
-    await runViewerAction({ name: 'sql.query', args: { sql: 'SELECT city FROM cities' } });
-
     expect(useChatStore.getState().followUp).toBe(
-      'Result of sql.query: 1 rows.\ncity\nLisbon',
+      'Result of stac.search: 1 items in Sentinel-2 L2A.\n' +
+        'S2A_TILE_20240601, 2024-06-01, visual (raster), outline (geojson)',
     );
   });
 });

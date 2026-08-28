@@ -6,7 +6,7 @@
  * the live renderer (via the registry) and/or the app store.
  *
  * Covers navigation / marker / geojson / tileset / tab / renderer commands, the
- * deck.gl visualization layers (add_hexbin, add_arcs, add_scatter, add_screengrid)
+ * deck.gl visualization layers (add_hexbin, add_arcs, add_scatter)
  * which draw on the MapLibre map's deck overlay, add_heatmap (a native maplibre
  * heatmap layer, since deck's is screen-space and the map is a globe), 3D-tiles
  * styling (style_by_*), tool-panel commands
@@ -14,7 +14,7 @@
  * `run`, which runs one named action from the registry under src/actions.
  */
 import { Cartesian3, Color, Math as CesiumMath } from 'cesium';
-import { HexagonLayer, ScreenGridLayer } from '@deck.gl/aggregation-layers';
+import { HexagonLayer } from '@deck.gl/aggregation-layers';
 import { ArcLayer, ScatterplotLayer } from '@deck.gl/layers';
 import type { Layer } from '@deck.gl/core';
 import { notifications } from '@mantine/notifications';
@@ -63,8 +63,6 @@ function addAgentDeckLayer(layer: Layer): void {
   store.setActiveTab('globe');
   store.setRenderer('maplibre');
 }
-
-export const SCREENGRID_NOTICE = 'screengrid is not available on the globe renderer';
 
 /**
  * Chat mode shows no panels, so a command that only opens one says what it
@@ -264,22 +262,6 @@ const handlers: Record<string, Handler> = {
           ? [color.red * 255, color.green * 255, color.blue * 255, 200]
           : [167, 139, 250, 200],
         pickable: true,
-      }),
-    );
-  },
-
-  // ScreenGridLayer aggregates in screen space, which a GlobeView does not
-  // support, so it draws nothing on the only renderer deck rides on. Kept, and
-  // reported, until it has a replacement.
-  add_screengrid: (p) => {
-    postSystemNotice(SCREENGRID_NOTICE);
-    addAgentDeckLayer(
-      new ScreenGridLayer({
-        id: `agent-screengrid-${Date.now()}`,
-        data: asArray(p.data),
-        getPosition: toPosition,
-        getWeight: (d: unknown) => num((d as Record<string, unknown>)?.weight, 1),
-        cellSizePixels: num(p.cellSize, 40),
       }),
     );
   },

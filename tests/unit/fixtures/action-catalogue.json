@@ -260,6 +260,32 @@
     "destructive": false
   },
   {
+    "name": "data.add_geojson",
+    "description": "Draw GeoJSON given here directly on the map. For a result you already hold, a handful of features at most. Use data.import_url for anything at a URL or larger than that.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "geojson": {
+          "type": "object",
+          "description": "The GeoJSON itself: a FeatureCollection, a Feature, or a bare geometry."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name for the layer."
+        },
+        "color": {
+          "type": "string",
+          "description": "CSS colour for the features, blue by default."
+        }
+      },
+      "required": [
+        "geojson"
+      ]
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
     "name": "data.add_service",
     "description": "Add a map service as a layer, from its URL.",
     "parameters": {
@@ -1106,46 +1132,6 @@
       },
       "required": [
         "url"
-      ]
-    },
-    "reads": false,
-    "destructive": false
-  },
-  {
-    "name": "sql.query",
-    "description": "Run a SQL query over the loaded tables and read the rows back.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "sql": {
-          "type": "string",
-          "description": "The DuckDB SQL to run."
-        }
-      },
-      "required": [
-        "sql"
-      ]
-    },
-    "reads": true,
-    "destructive": false
-  },
-  {
-    "name": "sql.to_layer",
-    "description": "Draw the result of a SQL query on the map as a layer.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "sql": {
-          "type": "string",
-          "description": "The DuckDB SQL to run."
-        },
-        "name": {
-          "type": "string",
-          "description": "Name for the layer, the query itself by default."
-        }
-      },
-      "required": [
-        "sql"
       ]
     },
     "reads": false,
