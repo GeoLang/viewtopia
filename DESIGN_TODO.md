@@ -174,12 +174,6 @@ this direction reverses.
       geostatistics, stac and terrain_analysis are the implementations the
       premium routes call.
 
-- [ ] **tiletopia mesh tiling leftovers.** The FBX reader applies `UpAxis` only,
-      leaving `UnitScaleFactor`, `FrontAxis` and `CoordAxis` unread, and emits
-      no normals. A 16- or 32-bit texture pixel format degrades to untextured.
-      A JPEG texture is re-encoded at quality 90 per tile crop. Texture decode
-      has no size cap of its own beyond the upload cap.
-
 - [ ] **Space-Time geofencing UI and case management.** The library code and
       types exist with no UI behind them, parked. Network metrics render as a
       list rather than a graph.

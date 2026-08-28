@@ -8,8 +8,8 @@ All notable changes to this project will be documented in this file.
 
 - DESIGN_TODO brought current 2026-08-28: dropped shipped chat-only phases 2
   and 3, the voice leftover that pointed at a closed P0 item 8, Collecta
-  Ptolemy as a gap, GeoGit GeoJSON-without-geometry, and the duplicate native
-  vector-to-3D-Tiles row.
+  Ptolemy as a gap, GeoGit GeoJSON-without-geometry, the duplicate native
+  vector-to-3D-Tiles row, and the tiletopia mesh tiling leftovers now built.
 
 ### Added
 
