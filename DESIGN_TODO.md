@@ -35,10 +35,9 @@ ViewTopia, Ptolemy, Jung, TerraVista, Panoptes, and Geoplumb.
       recursive repeat validation, or local expression evaluation. Conditions
       pass through to ODK Collect only. Publish into Ptolemy is built.
 
-- [ ] **Fenestra**: SLD text symbolizers are never drawn, and only the first
-      symbolizer of each type in a rule is kept. The OGC API Features item
-      route, OpenAPI output, links, MVT endpoint, and the Inspire, geofence,
-      cascade, and printing crates are not complete server features.
+- [ ] **Fenestra**: the OGC API Features item route, OpenAPI output, links, MVT
+      endpoint, and the Inspire, geofence, cascade, and printing crates are not
+      complete server features.
 
 - [ ] **Fluvius**: checkpointing and Prometheus metrics are library-only. The
       topology runner does not use the state store, expose metrics, or retain
