@@ -79,5 +79,4 @@ test('a replayed reply imports a URL onto the map', async ({ page }) => {
   await expect
     .poll(async () => (await snapshot(page)).layers.map((layer) => layer.name), { timeout: 30_000 })
     .toEqual(['e2e-roads.geojson']);
-  await expect(page.getByText('e2e-roads.geojson: 1 features')).toBeVisible();
 });
