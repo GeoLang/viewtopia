@@ -68,10 +68,10 @@ describe('history actions', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('refuses to read history with no live document joined', async () => {
+  it('refuses to read history with no live map joined', async () => {
     useLiveStore.setState({ documentId: null });
     await expect(runAction('history.show_at', { at: AT })).rejects.toThrow(
-      'not joined to a live document',
+      'not joined to a live map',
     );
   });
 });

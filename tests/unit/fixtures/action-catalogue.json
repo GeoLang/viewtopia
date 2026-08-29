@@ -738,7 +738,7 @@
   },
   {
     "name": "live.create_feed",
-    "description": "Create a producer that may send readings into the live document.",
+    "description": "Create a producer that may send readings into the live map.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -761,17 +761,17 @@
   },
   {
     "name": "live.join",
-    "description": "Join a live document, so edits and readings are shared with everyone in it.",
+    "description": "Join a live map, so edits and readings are shared with everyone in it.",
     "parameters": {
       "type": "object",
       "properties": {
-        "document": {
+        "map": {
           "type": "string",
-          "description": "Live document name."
+          "description": "Live map name."
         }
       },
       "required": [
-        "document"
+        "map"
       ]
     },
     "reads": false,
@@ -779,18 +779,18 @@
   },
   {
     "name": "live.leave",
-    "description": "Leave the live document this session is in.",
+    "description": "Leave the live map this session is in.",
     "parameters": {
       "type": "object",
       "properties": {},
       "required": []
     },
     "reads": false,
-    "destructive": true
+    "destructive": false
   },
   {
     "name": "live.list",
-    "description": "List the live documents this account can join.",
+    "description": "List the live maps this account can join.",
     "parameters": {
       "type": "object",
       "properties": {},

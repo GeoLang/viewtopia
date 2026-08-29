@@ -74,7 +74,7 @@ export async function runViewerAction(
   if (definition.destructive) {
     useConfirmStore.getState().setPending({ name, args });
     postSystemNotice(
-      `${name}: ${definition.description}. Reply yes to run it, anything else cancels.`,
+      `${name}: ${definition.description.replace(/\.$/, '')}. Reply yes to run it, anything else cancels.`,
     );
     return;
   }

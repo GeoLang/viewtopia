@@ -245,14 +245,14 @@ const NOOP_CASES: NoopCase[] = [
   {
     action: 'live.join',
     setup: () => useLiveStore.setState({ documentId: 'doc-1' }),
-    args: { document: 'doc-1' },
+    args: { map: 'doc-1' },
     message: 'This session is already in Coastline.',
   },
   {
     action: 'live.leave',
     setup: () => useLiveStore.setState({ documentId: null }),
     args: {},
-    message: 'this session is not joined to a live document',
+    message: 'this session is not joined to a live map',
   },
   {
     action: 'live.set_asset_rule',

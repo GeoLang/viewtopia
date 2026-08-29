@@ -15,7 +15,7 @@ registerAction({
   run: async (args) => {
     const { documentId } = useLiveStore.getState();
     if (documentId === null) {
-      throw new ActionError('this session is not joined to a live document');
+      throw new ActionError('this session is not joined to a live map');
     }
     const at = isoMoment('at', args.at as string);
     if (useAssetStateStore.getState().historyAt === at) {

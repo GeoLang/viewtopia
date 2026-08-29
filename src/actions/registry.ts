@@ -95,7 +95,7 @@ const BOOLEAN_WORDS: Record<string, boolean> = { true: true, false: false, yes: 
 
 /**
  * `{basemap: {basemap: 'satellite'}}` read back as `'satellite'`, and
- * `{document: {'doc-1': null}}` as `'doc-1'`.
+ * `{map: {'doc-1': null}}` as `'doc-1'`.
  *
  * Models wrap a scalar in an object: some echo the parameter name as the key,
  * some put the value where the key goes and leave the value empty. Only for

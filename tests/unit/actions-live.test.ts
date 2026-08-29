@@ -61,7 +61,7 @@ describe('live actions', () => {
   it('lists the documents agora offers', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(DOCUMENTS));
     const result = await runAction('live.list', {});
-    expect(result.text).toBe('3 live documents: Coastline, Coastline north, Campus twin.');
+    expect(result.text).toBe('3 live maps: Coastline, Coastline north, Campus twin.');
   });
 
   it('shows an id only when two documents share a name', async () => {
@@ -70,13 +70,13 @@ describe('live actions', () => {
     );
     const result = await runAction('live.list', {});
     expect(result.text).toBe(
-      '4 live documents: Coastline (doc-1), Coastline north, Campus twin, Coastline (doc-4).',
+      '4 live maps: Coastline (doc-1), Coastline north, Campus twin, Coastline (doc-4).',
     );
   });
 
   it('joins the document a partial name names', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(DOCUMENTS));
-    const result = await runAction('live.join', { document: 'campus' });
+    const result = await runAction('live.join', { map: 'campus' });
 
     expect(useLiveStore.getState().documentId).toBe('doc-3');
     expect(server.connection.documentParameter).toBe('doc-3');
@@ -85,21 +85,21 @@ describe('live actions', () => {
 
   it('refuses a name two documents carry', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(DOCUMENTS));
-    await expect(runAction('live.join', { document: 'coastline' })).rejects.toThrow(ActionError);
+    await expect(runAction('live.join', { map: 'coastline' })).rejects.toThrow(ActionError);
     expect(useLiveStore.getState().documentId).toBeNull();
   });
 
   it('says a session with no sign in cannot join', async () => {
     useAuthStore.setState({ token: null });
     fetchMock.mockResolvedValueOnce(jsonResponse(DOCUMENTS));
-    await expect(runAction('live.join', { document: 'doc-3' })).rejects.toThrow('has no sign in');
+    await expect(runAction('live.join', { map: 'doc-3' })).rejects.toThrow('has no sign in');
   });
 
   it('leaves the document it is in, and says so when it is in none', async () => {
-    await expect(runAction('live.leave', {})).rejects.toThrow('not joined to a live document');
+    await expect(runAction('live.leave', {})).rejects.toThrow('not joined to a live map');
 
     fetchMock.mockResolvedValueOnce(jsonResponse(DOCUMENTS));
-    await runAction('live.join', { document: 'doc-1' });
+    await runAction('live.join', { map: 'doc-1' });
     await runAction('live.leave', {});
     expect(useLiveStore.getState().documentId).toBeNull();
   });
@@ -173,6 +173,6 @@ describe('live actions', () => {
   it('refuses an asset rule when this session is not in a document', async () => {
     await expect(
       runAction('live.set_asset_rule', { layer: 'x', kind: 'temperature', breakpoints: '0:#fff' }),
-    ).rejects.toThrow('not joined to a live document');
+    ).rejects.toThrow('not joined to a live map');
   });
 });

@@ -18,7 +18,7 @@ const MIN_FEED_INTERVAL_SECONDS = 1;
 function joinedDocumentId(): string {
   const { documentId } = useLiveStore.getState();
   if (documentId === null) {
-    throw new ActionError('this session is not joined to a live document');
+    throw new ActionError('this session is not joined to a live map');
   }
   return documentId;
 }
@@ -49,25 +49,25 @@ function assetLayers(): Named[] {
 
 registerAction({
   name: 'live.list',
-  description: 'List the live documents this account can join.',
+  description: 'List the live maps this account can join.',
   parameters: {},
   reads: true,
   run: async () => {
     const documents = await listLiveDocuments();
-    if (documents.length === 0) return { text: 'There are no live documents.' };
+    if (documents.length === 0) return { text: 'There are no live maps.' };
     const lines = documents.map((document) => labelOf(document, documents)).join(', ');
-    return { text: `${documents.length} live documents: ${lines}.` };
+    return { text: `${documents.length} live maps: ${lines}.` };
   },
 });
 
 registerAction({
   name: 'live.join',
-  description: 'Join a live document, so edits and readings are shared with everyone in it.',
+  description: 'Join a live map, so edits and readings are shared with everyone in it.',
   parameters: {
-    document: { type: 'string', description: 'Live document name.', required: true },
+    map: { type: 'string', description: 'Live map name.', required: true },
   },
   run: async (args) => {
-    const document = resolveOne('document', args.document as string, await listLiveDocuments());
+    const document = resolveOne('live map', args.map as string, await listLiveDocuments());
     if (useLiveStore.getState().documentId === document.id) {
       throw new ActionError(`This session is already in ${document.name}.`);
     }
@@ -82,19 +82,20 @@ registerAction({
 
 registerAction({
   name: 'live.leave',
-  description: 'Leave the live document this session is in.',
+  description: 'Leave the live map this session is in.',
   parameters: {},
-  destructive: true,
   run: () => {
     const documentId = joinedDocumentId();
+    // the name comes with the first snapshot, so a session that never got one has only the id
+    const name = useLiveStore.getState().document.meta.name || documentId;
     useLiveStore.getState().disconnect();
-    return { text: `Left ${documentId}.` };
+    return { text: `Left ${name}.` };
   },
 });
 
 registerAction({
   name: 'live.create_feed',
-  description: 'Create a producer that may send readings into the live document.',
+  description: 'Create a producer that may send readings into the live map.',
   parameters: {
     name: { type: 'string', description: 'What the feed is called.', required: true },
     interval_seconds: {
@@ -150,7 +151,7 @@ registerAction({
   run: (args) => {
     joinedDocumentId();
     if (useLiveStore.getState().role !== 'edit') {
-      throw new ActionError('this session joined the live document with the view role');
+      throw new ActionError('this session joined the live map with the view role');
     }
     const layer = resolveOne('layer', args.layer as string, assetLayers());
     const breakpoints = parseBreakpoints(args.breakpoints as string);
