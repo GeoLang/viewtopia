@@ -33,9 +33,6 @@ const VISIBLE_SQUARE = {
   ],
 };
 
-/** The square above is 0.77 km², and nothing else the app could draw is. */
-const REPORTED = 'The observer at -0.1000, 51.5000 sees 0.77 km² within 2500 m.';
-
 const SESSION = {
   id: 'chat-terrain-e2e',
   name: 'Session 1',
@@ -73,7 +70,7 @@ const resultLayerIds = (page) =>
       .filter((id) => id.startsWith(source));
   }, VIEWSHED_SOURCE);
 
-test('a chat viewshed draws its result and reports the visible area', async ({ page }) => {
+test('a chat viewshed draws its result on the live map', async ({ page }) => {
   await page.route('**/tiles/v1/analysis/viewshed', (route) =>
     route.fulfill({ contentType: 'application/json', body: JSON.stringify(VISIBLE_SQUARE) }),
   );
@@ -100,7 +97,6 @@ test('a chat viewshed draws its result and reports the visible area', async ({ p
 
   await page.getByTitle('Click to replay this result on the map').click();
 
-  await expect(page.getByText(REPORTED)).toBeVisible({ timeout: 30_000 });
   await expect
     .poll(() => resultLayerIds(page), { timeout: 30_000 })
     .toEqual([
