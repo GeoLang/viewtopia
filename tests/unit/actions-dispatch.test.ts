@@ -139,6 +139,16 @@ describe('a destructive action', () => {
     expect(notices()).toContain('Cancelled paint.burn.');
   });
 
+  it('runs at once when replayed, the click being the confirmation', async () => {
+    const run = registerBurn();
+
+    await runViewerAction({ name: 'paint.burn', args: {} }, { announce: false });
+
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(useConfirmStore.getState().pending).toBeNull();
+    expect(notices()).toEqual([]);
+  });
+
   it('leaves an ordinary prompt alone when nothing is pending', () => {
     expect(interceptConfirmReply('yes')).toBe(false);
     expect(notices()).toEqual([]);

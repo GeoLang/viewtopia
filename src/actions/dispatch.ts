@@ -27,7 +27,7 @@ function readArguments(args: unknown): ActionArguments | null {
   return args as ActionArguments;
 }
 
-/** A replay of an earlier result draws it again and says nothing about it. */
+/** A replay of an earlier result draws it again, says nothing about it, and takes the click as the confirmation. */
 export interface RunOptions {
   announce?: boolean;
 }
@@ -71,7 +71,7 @@ export async function runViewerAction(
     postSystemNotice(`There is no viewer action named ${name}.`);
     return;
   }
-  if (definition.destructive) {
+  if (definition.destructive && announce) {
     useConfirmStore.getState().setPending({ name, args });
     postSystemNotice(
       `${name}: ${definition.description.replace(/\.$/, '')}. Reply yes to run it, anything else cancels.`,
