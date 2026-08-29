@@ -767,7 +767,7 @@
       "properties": {
         "document": {
           "type": "string",
-          "description": "Live document id or name."
+          "description": "Live document name."
         }
       },
       "required": [

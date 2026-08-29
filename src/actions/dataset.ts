@@ -2,7 +2,7 @@ import { fetchBranches, fetchDatasets } from '../lib/branchFeatures';
 import { drawBranchLayer } from '../features/scenario/branchLayer';
 import { DEFAULT_BRANCH_NAME, resolveBranch, resolveDataset } from './branchLookup';
 import { registerAction } from './registry';
-import { isoMoment } from './resolve';
+import { isoMoment, labelOf } from './resolve';
 
 registerAction({
   name: 'dataset.list',
@@ -15,7 +15,7 @@ registerAction({
     const lines = await Promise.all(
       datasets.map(async (dataset) => {
         const branches = await fetchBranches(dataset.id);
-        return `${dataset.name} (${dataset.id}): ${branches.map((branch) => branch.name).join(', ')}`;
+        return `${labelOf(dataset, datasets)}: ${branches.map((branch) => branch.name).join(', ')}`;
       }),
     );
     return { text: `${datasets.length} datasets. ${lines.join('. ')}.` };

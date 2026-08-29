@@ -9,7 +9,7 @@ import { useLiveStore } from '../live/liveStore';
 import { useAgentLayerStore } from '../store/agentLayers';
 import { useTiles3dLayerStore } from '../store/tiles3dLayers';
 import { ActionError, registerAction } from './registry';
-import { resolveOne, type Named } from './resolve';
+import { labelOf, resolveOne, type Named } from './resolve';
 
 const MIN_FEED_INTERVAL_SECONDS = 1;
 
@@ -37,7 +37,7 @@ registerAction({
   run: async () => {
     const documents = await listLiveDocuments();
     if (documents.length === 0) return { text: 'There are no live documents.' };
-    const lines = documents.map((document) => `${document.name} (${document.id})`).join(', ');
+    const lines = documents.map((document) => labelOf(document, documents)).join(', ');
     return { text: `${documents.length} live documents: ${lines}.` };
   },
 });
@@ -46,7 +46,7 @@ registerAction({
   name: 'live.join',
   description: 'Join a live document, so edits and readings are shared with everyone in it.',
   parameters: {
-    document: { type: 'string', description: 'Live document id or name.', required: true },
+    document: { type: 'string', description: 'Live document name.', required: true },
   },
   run: async (args) => {
     const document = resolveOne('document', args.document as string, await listLiveDocuments());

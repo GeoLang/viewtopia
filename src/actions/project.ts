@@ -1,7 +1,7 @@
 import { useProjectsStore } from '../projects/projectsStore';
 import type { Project } from '../projects/types';
 import { registerAction } from './registry';
-import { resolveOne } from './resolve';
+import { labelOf, resolveOne } from './resolve';
 
 /** The projects this account can open, asking the server on the first call. */
 async function knownProjects(): Promise<Project[]> {
@@ -19,7 +19,7 @@ registerAction({
   run: async () => {
     const projects = await knownProjects();
     if (projects.length === 0) return { text: 'This account has no projects.' };
-    const lines = projects.map((project) => `${project.name} (${project.id})`).join(', ');
+    const lines = projects.map((project) => labelOf(project, projects)).join(', ');
     return { text: `${projects.length} projects: ${lines}.` };
   },
 });

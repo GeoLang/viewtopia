@@ -50,8 +50,9 @@ describe('project actions', () => {
   it('asks the server the first time it lists', async () => {
     const result = await runAction('project.list', {});
     expect(api.listProjects).toHaveBeenCalledTimes(1);
-    expect(result.text).toContain('Harbour survey (p-1)');
-    expect(result.text).toContain('Campus twin (p-3)');
+    expect(result.text).toContain('Harbour survey');
+    expect(result.text).toContain('Campus twin');
+    expect(result.text).not.toContain('p-1');
   });
 
   it('opens the project a partial name names', async () => {

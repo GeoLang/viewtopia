@@ -61,8 +61,17 @@ describe('live actions', () => {
   it('lists the documents agora offers', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(DOCUMENTS));
     const result = await runAction('live.list', {});
-    expect(result.text).toContain('Coastline (doc-1)');
-    expect(result.text).toContain('Campus twin (doc-3)');
+    expect(result.text).toBe('3 live documents: Coastline, Coastline north, Campus twin.');
+  });
+
+  it('shows an id only when two documents share a name', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse([...DOCUMENTS, { id: 'doc-4', name: 'Coastline' }]),
+    );
+    const result = await runAction('live.list', {});
+    expect(result.text).toBe(
+      '4 live documents: Coastline (doc-1), Coastline north, Campus twin, Coastline (doc-4).',
+    );
   });
 
   it('joins the document a partial name names', async () => {

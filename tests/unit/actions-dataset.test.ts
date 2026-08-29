@@ -17,7 +17,8 @@ describe('dataset actions', () => {
 
   it('lists every dataset with its branch names', async () => {
     const result = await runAction('dataset.list', {});
-    expect(result.text).toContain('twin-assets (d-1): main, more sensors');
+    expect(result.text).toContain('twin-assets: main, more sensors');
+    expect(result.text).not.toContain('d-1');
     expect(result.text).toContain('twin-roads');
   });
 

@@ -11,6 +11,15 @@ export interface Named {
   name: string;
 }
 
+/**
+ * How a list names one entry: the name alone, with the id only when another
+ * entry shares that name. A model given ids copies them and gets them wrong.
+ */
+export function labelOf(candidate: Named, all: Named[]): string {
+  const sharingTheName = all.filter((other) => other.name === candidate.name).length;
+  return sharingTheName > 1 ? `${candidate.name} (${candidate.id})` : candidate.name;
+}
+
 function listNames(candidates: Named[]): string {
   return candidates.map((candidate) => candidate.name).join(', ');
 }
