@@ -915,13 +915,13 @@
   },
   {
     "name": "renderer.set",
-    "description": "Pick the engine the globe tab draws with. The flat 2D map is the map tab, see view.set_tab.",
+    "description": "Choose the engine that draws the globe tab and show that tab. For the flat 2D map use view.set_tab.",
     "parameters": {
       "type": "object",
       "properties": {
         "renderer": {
           "type": "string",
-          "description": "cesium for the 3D globe, maplibre for the vector map, both on the globe tab",
+          "description": "cesium or maplibre, the engine behind the globe tab",
           "enum": [
             "cesium",
             "maplibre"
@@ -1283,7 +1283,7 @@
       "properties": {
         "tab": {
           "type": "string",
-          "description": "globe is the 3D view drawn by the chosen renderer, map is the flat 2D map drawn by Leaflet",
+          "description": "globe is the 3D view, map is the flat 2D map drawn by Leaflet",
           "enum": [
             "globe",
             "map"

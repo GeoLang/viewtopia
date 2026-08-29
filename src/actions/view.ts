@@ -4,7 +4,7 @@
  */
 import { useAppStore, type Basemap, type Renderer, type ViewerTab } from '../store/app';
 import { useSplitViewStore, type SplitLayout } from '../store/splitView';
-import { registerAction } from './registry';
+import { ActionError, registerAction } from './registry';
 
 const RENDERERS = ['cesium', 'maplibre'] as const;
 const TABS = ['globe', 'map'] as const;
@@ -22,18 +22,24 @@ const SPLIT_LAYOUTS = ['twoAcross', 'grid'] as const;
 
 registerAction({
   name: 'renderer.set',
-  description: 'Pick the engine the globe tab draws with. The flat 2D map is the map tab, see view.set_tab.',
+  description: 'Choose the engine that draws the globe tab and show that tab. For the flat 2D map use view.set_tab.',
   parameters: {
     renderer: {
       type: 'string',
-      description: 'cesium for the 3D globe, maplibre for the vector map, both on the globe tab',
+      description: 'cesium or maplibre, the engine behind the globe tab',
       enum: RENDERERS,
       required: true,
     },
   },
   run: (args) => {
     const renderer = args.renderer as Renderer;
-    useAppStore.getState().setRenderer(renderer);
+    const store = useAppStore.getState();
+    // a call that changes nothing reads as an error, so the model tries something else
+    if (store.renderer === renderer && store.activeTab === 'globe') {
+      throw new ActionError(`The globe is already drawn with ${renderer}. For the flat 2D map use view.set_tab.`);
+    }
+    store.setRenderer(renderer);
+    store.setActiveTab('globe');
     return { text: `Drawing with ${renderer}.` };
   },
 });
@@ -44,14 +50,18 @@ registerAction({
   parameters: {
     tab: {
       type: 'string',
-      description: 'globe is the 3D view drawn by the chosen renderer, map is the flat 2D map drawn by Leaflet',
+      description: 'globe is the 3D view, map is the flat 2D map drawn by Leaflet',
       enum: TABS,
       required: true,
     },
   },
   run: (args) => {
     const tab = args.tab as ViewerTab;
-    useAppStore.getState().setActiveTab(tab);
+    const store = useAppStore.getState();
+    if (store.activeTab === tab) {
+      throw new ActionError(tab === 'map' ? 'The flat map is already showing.' : 'The globe is already showing.');
+    }
+    store.setActiveTab(tab);
     return { text: tab === 'map' ? 'Showing the flat map.' : 'Showing the globe.' };
   },
 });

@@ -10,7 +10,8 @@ describe('view actions', () => {
     useSplitViewStore.setState({ active: false });
   });
 
-  it('renderer.set switches the globe renderer and leaves the tab alone', async () => {
+  it('renderer.set switches the globe renderer and shows the globe', async () => {
+    useAppStore.setState({ activeTab: 'map' });
     await expect(runAction('renderer.set', { renderer: 'cesium' })).resolves.toEqual({
       text: 'Drawing with cesium.',
     });
@@ -26,6 +27,19 @@ describe('view actions', () => {
     expect(useAppStore.getState().renderer).toBe('maplibre');
 
     await runAction('view.set_tab', { tab: 'globe' });
+    expect(useAppStore.getState().activeTab).toBe('globe');
+  });
+
+  it('renderer.set refuses to do nothing', async () => {
+    await expect(runAction('renderer.set', { renderer: 'maplibre' })).rejects.toThrow(
+      'The globe is already drawn with maplibre.',
+    );
+  });
+
+  it('view.set_tab refuses to do nothing', async () => {
+    await expect(runAction('view.set_tab', { tab: 'globe' })).rejects.toThrow(
+      'The globe is already showing.',
+    );
     expect(useAppStore.getState().activeTab).toBe('globe');
   });
 
