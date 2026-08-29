@@ -4,6 +4,8 @@ import { useLiveStore } from '../live/liveStore';
 import { ActionError, registerAction } from './registry';
 import { isoMoment } from './resolve';
 
+const ALREADY_LIVE = 'The map is already following the live readings.';
+
 registerAction({
   name: 'history.show_at',
   description: 'Show every asset as it stood at a past moment, instead of live.',
@@ -16,6 +18,9 @@ registerAction({
       throw new ActionError('this session is not joined to a live document');
     }
     const at = isoMoment('at', args.at as string);
+    if (useAssetStateStore.getState().historyAt === at) {
+      throw new ActionError(`The map is already showing every asset as it stood at ${at}.`);
+    }
     const shown = await showAssetsAt(documentId, at);
     return { text: `Showing ${shown} assets as they stood at ${at}.` };
   },
@@ -26,9 +31,10 @@ registerAction({
   description: 'Follow the live readings again, after showing a past moment.',
   parameters: {},
   run: () => {
-    const was = useAssetStateStore.getState().historyAt;
+    if (useAssetStateStore.getState().historyAt === null) {
+      throw new ActionError(ALREADY_LIVE);
+    }
     showLiveAssets();
-    if (was === null) return { text: 'The map was already following the live readings.' };
     return { text: 'The map follows the live readings again.' };
   },
 });

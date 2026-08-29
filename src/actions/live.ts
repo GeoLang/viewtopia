@@ -6,6 +6,7 @@ import {
 } from '../live/assetRule';
 import { parseBreakpoints } from '../live/assetState';
 import { useLiveStore } from '../live/liveStore';
+import { ASSET_RULE_ID, type AssetRule } from '../live/types';
 import { useAgentLayerStore } from '../store/agentLayers';
 import { useTiles3dLayerStore } from '../store/tiles3dLayers';
 import { ActionError, registerAction } from './registry';
@@ -20,6 +21,23 @@ function joinedDocumentId(): string {
     throw new ActionError('this session is not joined to a live document');
   }
   return documentId;
+}
+
+/** Whether the document already holds this exact rule. */
+function sameAssetRule(saved: AssetRule | undefined, wanted: AssetRule): boolean {
+  if (!saved) return false;
+  return (
+    saved.layerId === wanted.layerId &&
+    saved.kind === wanted.kind &&
+    saved.defaultColor === wanted.defaultColor &&
+    saved.offlineColor === wanted.offlineColor &&
+    saved.breakpoints.length === wanted.breakpoints.length &&
+    saved.breakpoints.every(
+      (point, index) =>
+        point.value === wanted.breakpoints[index].value &&
+        point.color === wanted.breakpoints[index].color,
+    )
+  );
 }
 
 /** The layers an asset rule can colour: the ones drawn per feature or per tile. */
@@ -50,6 +68,9 @@ registerAction({
   },
   run: async (args) => {
     const document = resolveOne('document', args.document as string, await listLiveDocuments());
+    if (useLiveStore.getState().documentId === document.id) {
+      throw new ActionError(`This session is already in ${document.name}.`);
+    }
     useLiveStore.getState().connect({ documentId: document.id });
     // connect answers nothing, and without a bearer it opens no socket at all
     if (useLiveStore.getState().documentId !== document.id) {
@@ -136,15 +157,19 @@ registerAction({
     if (breakpoints.length === 0) {
       throw new ActionError(`no value and colour pair could be read from "${args.breakpoints}"`);
     }
-    saveAssetRule({
+    const rule: AssetRule = {
       layerId: layer.id,
       kind: (args.kind as string).trim(),
       breakpoints,
       defaultColor: (args.default_color as string) ?? FALLBACK_ASSET_COLOR,
       offlineColor: (args.offline_color as string) ?? FALLBACK_OFFLINE_COLOR,
-    });
+    };
+    if (sameAssetRule(useLiveStore.getState().document.assets[ASSET_RULE_ID], rule)) {
+      throw new ActionError(`${layer.name} is already coloured by ${rule.kind} over those breakpoints.`);
+    }
+    saveAssetRule(rule);
     return {
-      text: `${layer.name} is coloured by ${args.kind as string} over ${breakpoints.length} breakpoints.`,
+      text: `${layer.name} is coloured by ${rule.kind} over ${breakpoints.length} breakpoints.`,
     };
   },
 });

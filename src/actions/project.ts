@@ -1,6 +1,6 @@
 import { useProjectsStore } from '../projects/projectsStore';
 import type { Project } from '../projects/types';
-import { registerAction } from './registry';
+import { ActionError, registerAction } from './registry';
 import { labelOf, resolveOne } from './resolve';
 
 /** The projects this account can open, asking the server on the first call. */
@@ -33,7 +33,7 @@ registerAction({
   run: async (args) => {
     const project = resolveOne('project', args.project as string, await knownProjects());
     if (useProjectsStore.getState().activeProjectId === project.id) {
-      return { text: `${project.name} is already open.` };
+      throw new ActionError(`${project.name} is already open.`);
     }
     await useProjectsStore.getState().switchTo(project.id);
     return { text: `Opened ${project.name}.` };

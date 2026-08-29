@@ -1,4 +1,4 @@
-import { suggestSymbology } from '../features/symbology/symbology';
+import { suggestSymbology, type Symbology } from '../features/symbology/symbology';
 import { asColor } from '../lib/color';
 import { propertyKeys } from '../lib/geojsonSources';
 import { pointWeight } from '../lib/mapHeatmap';
@@ -20,6 +20,18 @@ const UNREADABLE_COLOR = '';
 const POSITIONS = ['top', 'bottom', 'up', 'down'] as const;
 type Position = (typeof POSITIONS)[number];
 
+/** The end of the stack each position reaches for, so a refusal can name it. */
+const POSITION_END: Record<Position, 'top' | 'bottom'> = {
+  top: 'top',
+  up: 'top',
+  bottom: 'bottom',
+  down: 'bottom',
+};
+
+function alreadyAtEnd(name: string, position: Position): string {
+  return `${name} is already at the ${POSITION_END[position]} of the drawing order.`;
+}
+
 const LAYER_PARAMETER = {
   type: 'string',
   description: 'Layer id or name.',
@@ -32,6 +44,13 @@ function vectorLayer(layer: ViewerLayer): AgentLayer {
     throw new ActionError(`${layer.name} is a ${layer.kind} layer, which carries no features`);
   }
   return found;
+}
+
+/** The column a layer is shaded by, unset for the kinds that shade by rules or an expression. */
+function shadedColumn(symbology: Symbology | undefined): string | undefined {
+  if (!symbology) return undefined;
+  const shadesByColumn = symbology.kind === 'graduated' || symbology.kind === 'categorized';
+  return shadesByColumn ? symbology.field : undefined;
 }
 
 /** The features a layer was styled from, which is what its columns come from. */
@@ -63,6 +82,9 @@ registerAction({
   run: (args) => {
     const layer = resolveViewerLayer(args.layer as string);
     const visible = args.visible as boolean;
+    if (layer.visible === visible) {
+      throw new ActionError(`${layer.name} is already ${visible ? 'visible' : 'hidden'}.`);
+    }
     // an id can sit in two stores, so every store holding it moves together
     useAppStore.getState().setLayerVisible(layer.id, visible);
     useAgentLayerStore.getState().setLayerVisible(layer.id, visible);
@@ -87,6 +109,9 @@ registerAction({
     }
     if (layer.kind === 'tiles3d') {
       throw new ActionError(`${layer.name} is a 3D Tiles layer, which draws at one opacity only`);
+    }
+    if (layer.opacity === opacity) {
+      throw new ActionError(`${layer.name} already draws at ${opacity} opacity.`);
     }
     const agent = useAgentLayerStore.getState();
     useAppStore.getState().setLayerOpacity(layer.id, opacity);
@@ -132,16 +157,18 @@ registerAction({
     const mapLayers = useAppStore.getState().layers;
     const mapIndex = mapLayers.findIndex((known) => known.id === layer.id);
     if (mapIndex >= 0) {
-      useAppStore.getState().reorderLayers(mapIndex, positionIndex(position, mapIndex, mapLayers.length));
+      const to = positionIndex(position, mapIndex, mapLayers.length);
+      if (to === mapIndex) throw new ActionError(alreadyAtEnd(layer.name, position));
+      useAppStore.getState().reorderLayers(mapIndex, to);
       return { text: `${layer.name} moved ${position}.` };
     }
 
     const rasters = useAgentLayerStore.getState().rasterLayers;
     const rasterIndex = rasters.findIndex((known) => known.id === layer.id);
     if (rasterIndex >= 0) {
-      useAgentLayerStore
-        .getState()
-        .reorderRasterLayers(rasterIndex, positionIndex(position, rasterIndex, rasters.length));
+      const to = positionIndex(position, rasterIndex, rasters.length);
+      if (to === rasterIndex) throw new ActionError(alreadyAtEnd(layer.name, position));
+      useAgentLayerStore.getState().reorderRasterLayers(rasterIndex, to);
       return { text: `${layer.name} moved ${position}.` };
     }
 
@@ -162,6 +189,9 @@ registerAction({
     const color = args.color as string;
     if (asColor(color, UNREADABLE_COLOR) === UNREADABLE_COLOR) {
       throw new ActionError(`${color} is not a colour`);
+    }
+    if (vector.color === color) {
+      throw new ActionError(`${layer.name} is already ${color}.`);
     }
     useAgentLayerStore.getState().setLayerColor(vector.id, color);
     return { text: `${layer.name} is now ${color}.` };
@@ -270,6 +300,9 @@ registerAction({
     const layer = resolveViewerLayer(args.layer as string);
     const vector = vectorLayer(layer);
     const column = args.column as string;
+    if (shadedColumn(vector.symbology) === column) {
+      throw new ActionError(`${layer.name} is already shaded by ${column}.`);
+    }
 
     const columns = propertyKeys({ id: vector.id, name: vector.name, geojson: baseGeojson(vector) });
     if (!columns.includes(column)) {

@@ -70,10 +70,11 @@ describe('project actions', () => {
     expect(useProjectsStore.getState().activeProjectId).toBe('p-3');
   });
 
-  it('says so when the project is already open', async () => {
+  it('refuses to open the project that is already open', async () => {
     useProjectsStore.setState({ items: [HARBOUR], activeProjectId: 'p-1' });
-    const result = await runAction('project.open', { project: 'p-1' });
-    expect(result.text).toBe('Harbour survey is already open.');
+    await expect(runAction('project.open', { project: 'p-1' })).rejects.toThrow(
+      'Harbour survey is already open.',
+    );
     expect(mapSync.loadProjectMap).not.toHaveBeenCalled();
   });
 });

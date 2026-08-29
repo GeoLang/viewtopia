@@ -3,8 +3,10 @@
  * everything, and the split view's panes.
  */
 import { useAppStore, type Basemap, type Renderer, type ViewerTab } from '../store/app';
-import { useSplitViewStore, type SplitLayout } from '../store/splitView';
+import { paneLayout, useSplitViewStore, type SplitLayout } from '../store/splitView';
 import { ActionError, registerAction } from './registry';
+
+const SPLIT_VIEW_ALREADY_OFF = 'Split view is already off.';
 
 const RENDERERS = ['cesium', 'maplibre'] as const;
 const TABS = ['globe', 'map'] as const;
@@ -79,7 +81,11 @@ registerAction({
   },
   run: (args) => {
     const basemap = args.basemap as Basemap;
-    useAppStore.getState().setBasemap(basemap);
+    const store = useAppStore.getState();
+    if (store.basemap === basemap) {
+      throw new ActionError(`The basemap is already ${basemap}.`);
+    }
+    store.setBasemap(basemap);
     return { text: `Basemap is ${basemap}.` };
   },
 });
@@ -103,6 +109,14 @@ registerAction({
     const active = args.active as boolean;
     const layout = args.layout as SplitLayout | undefined;
     const store = useSplitViewStore.getState();
+    // nothing stores the layout, the pane count is it
+    const shownLayout = paneLayout(store.comparePanes.length + 1);
+    if (!active && !store.active) {
+      throw new ActionError(SPLIT_VIEW_ALREADY_OFF);
+    }
+    if (active && store.active && (layout === undefined || layout === shownLayout)) {
+      throw new ActionError(`Split view is already on, ${shownLayout}.`);
+    }
     if (layout) store.setLayout(layout);
     store.setActive(active);
     if (!active) return { text: 'Split view is off.' };
