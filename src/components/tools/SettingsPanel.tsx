@@ -194,6 +194,14 @@ function profileId(provider: string, model: string): string {
   return `${provider}:${model}`;
 }
 
+/** sibyl names what it rejected in a JSON `error` field, so show that rather than a generic line */
+async function refusalReason(res: Response): Promise<string | null> {
+  const body: unknown = await res.json().catch(() => null);
+  if (!body || typeof body !== 'object') return null;
+  const reason = (body as { error?: unknown }).error;
+  return typeof reason === 'string' && reason ? reason : null;
+}
+
 /**
  * Which model the agent answers with. Providers are listed so several cloud
  * APIs and several local servers can sit side by side. Keys are write-only.
@@ -289,8 +297,8 @@ function AiModelSelect() {
   };
 
   const saveProvider = async () => {
-    if (!form) return;
-    const server = form.kind === 'add' ? form.server : providers.find((p) => p.id === form.id)?.server;
+    // formServer is only undefined when the edited provider vanished under the form
+    if (!form || !formServer) return;
     const trimmedBase = base.trim().replace(/\/$/, '');
     const trimmedModels = models.trim();
     const trimmedKey = key.trim();
@@ -300,14 +308,14 @@ function AiModelSelect() {
       return;
     }
     const editing = form.kind === 'edit' ? providers.find((p) => p.id === form.id) : undefined;
-    if (server === 'cloud' && !trimmedKey && !editing?.has_key) {
+    if (formServer === 'cloud' && !trimmedKey && !editing?.has_key) {
       setError('Cloud needs an API key.');
       return;
     }
     setError(null);
     setBusy(true);
     const payload: Record<string, string> = {
-      server: server ?? 'cloud',
+      server: formServer,
       base: trimmedBase,
       models: trimmedModels,
     };
@@ -327,12 +335,16 @@ function AiModelSelect() {
     setBusy(false);
     if (res) noticeRefusal(res.status);
     if (!res?.ok) {
+      if (!res) {
+        setError('The agent service is unreachable.');
+        return;
+      }
+      const reason = res.status === 400 ? await refusalReason(res) : null;
       setError(
-        res
-          ? res.status === 400
+        reason
+          ?? (res.status === 400
             ? 'That provider was refused.'
-            : (SWITCH_ERRORS[res.status] ?? `Save failed: HTTP ${res.status}`)
-          : 'The agent service is unreachable.',
+            : (SWITCH_ERRORS[res.status] ?? `Save failed: HTTP ${res.status}`)),
       );
       return;
     }
@@ -364,6 +376,11 @@ function AiModelSelect() {
 
   const listed = profiles ?? [];
   const loading = profiles === null;
+  const formServer: ModelServer | undefined = !form
+    ? undefined
+    : form.kind === 'add'
+      ? form.server
+      : providers.find((p) => p.id === form.id)?.server;
 
   return (
     <Stack gap="xs" data-testid="ai-model-select">
@@ -462,7 +479,7 @@ function AiModelSelect() {
           <Text size="xs" fw={600}>
             {form.kind === 'edit' ? 'Edit provider' : form.server === 'cloud' ? 'Add cloud API' : 'Add local server'}
           </Text>
-          {(form.kind === 'add' ? form.server : providers.find((p) => p.id === form.id)?.server) === 'cloud' && (
+          {formServer === 'cloud' && (
             <Select
               size="xs"
               label="Preset"
@@ -495,9 +512,7 @@ function AiModelSelect() {
             size="xs"
             label="API base URL"
             placeholder={
-              (form.kind === 'add' ? form.server : providers.find((p) => p.id === form.id)?.server) === 'local'
-                ? 'http://host.docker.internal:18200/v1'
-                : 'https://api.x.ai/v1'
+              formServer === 'local' ? 'http://host.docker.internal:18200/v1' : 'https://api.x.ai/v1'
             }
             value={base}
             disabled={busy}
@@ -514,7 +529,7 @@ function AiModelSelect() {
             onChange={(e) => setModels(e.currentTarget.value)}
             data-testid="ai-cloud-models"
           />
-          {(form.kind === 'add' ? form.server : providers.find((p) => p.id === form.id)?.server) === 'cloud' && (
+          {formServer === 'cloud' && (
             <PasswordInput
               size="xs"
               label="API key"

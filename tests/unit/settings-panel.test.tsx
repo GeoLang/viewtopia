@@ -64,11 +64,17 @@ function mockAgent({
   models = MODELS,
   putStatus = 204,
   providerStatus = 204,
+  providerBody = null as string | null,
   getOk = true,
 } = {}) {
   const fetchMock = vi.fn((url: string) => {
     if (typeof url === 'string' && url.startsWith('/agent/model/providers')) {
-      return Promise.resolve(new Response(null, { status: providerStatus }));
+      return Promise.resolve(
+        new Response(providerBody, {
+          status: providerStatus,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
     }
     if (url === '/agent/model') {
       return Promise.resolve(new Response(null, { status: putStatus }));
@@ -220,5 +226,25 @@ describe('SettingsPanel AI model section', () => {
       models: 'gpt-oss-20b, qwen3',
       label: 'Workshop',
     });
+  });
+
+  it('shows the reason sibyl gives for refusing a provider', async () => {
+    mockAgent({
+      providerStatus: 400,
+      providerBody: JSON.stringify({ error: 'base must be an http or https URL' }),
+    });
+    renderPanel();
+
+    await waitFor(() => expect(screen.getByTestId('ai-add-local')).toBeEnabled());
+    fireEvent.click(screen.getByTestId('ai-add-local'));
+    fireEvent.change(screen.getByTestId('ai-cloud-base'), { target: { value: 'ftp://nope/v1' } });
+    fireEvent.change(screen.getByTestId('ai-cloud-models'), { target: { value: 'qwen3' } });
+    fireEvent.click(screen.getByTestId('ai-cloud-save'));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('ai-model-error')).toHaveTextContent(
+        'base must be an http or https URL',
+      ),
+    );
   });
 });

@@ -31,7 +31,7 @@
 #   - Place OSM extract at ./data/region.osm.pbf (for routing)
 #   - Place address CSV at ./data/addresses.csv (for geocoding)
 #   - Or remove itinera/geokode services if not needed
-#   - Aavaaz checkout at ../../Aavaaz/aavaaz and an NVIDIA GPU (speech)
+#   - Optional, speech only: Aavaaz checkout at ../../Aavaaz/aavaaz and an NVIDIA GPU
 
 services:
   # ── Database ──────────────────────────────────────────────────────
@@ -430,9 +430,12 @@ services:
   # ── Speech to text (Aavaaz over WhisperLive) ─────────────────────
   #
   # The chat's mic streams audio here through nginx /speech/. Needs the nvidia
-  # container runtime and the Aavaaz checkout beside the GeoLang directory.
-  # No host port and no API key: only containers reach 9090, nginx is the
-  # route. A plain `up` starts it with the rest of the stack.
+  # container runtime and the Aavaaz checkout beside the GeoLang directory, so
+  # it sits behind the `speech` profile and a plain `up` skips it.
+  # scripts/platform-up.sh adds --profile speech when the checkout and an
+  # NVIDIA GPU are both present. By hand:
+  #   docker compose --profile speech up -d --build aavaaz
+  # No host port and no API key: only containers reach 9090, nginx is the route.
   #
   # Env vars:
   #   SPEECH_MODEL — whisper model (default large-v3-turbo, about 1.6 GB of
@@ -440,6 +443,7 @@ services:
   aavaaz:
     build:
       context: ../../Aavaaz/aavaaz
+    profiles: [speech]
     command: ["--model", "${SPEECH_MODEL:-large-v3-turbo}"]
     environment:
       AAVAAZ_JWT_SECRET: ${PLATFORM_JWT_SECRET:-}

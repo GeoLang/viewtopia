@@ -405,9 +405,16 @@ bash scripts/platform-up.sh \
 graph build) to answer, and seeds the real-estate demo. It needs the sibling repos
 cloned and your LLM key in `../geolang/.env`.
 
-**Dictation** comes up with the rest of the stack. The chat mic talks to the
-`aavaaz` speech service, built from an [Aavaaz](https://github.com/boxerab/aavaaz)
-checkout at `../../Aavaaz` and an NVIDIA GPU with the nvidia container runtime.
+**Dictation** (optional): the chat's mic button needs the `aavaaz` speech service,
+built from an [Aavaaz](https://github.com/boxerab/aavaaz) checkout at
+`../../Aavaaz` and an NVIDIA GPU with the nvidia container runtime. It sits
+behind the `speech` compose profile, so a plain `up` skips it. `platform-up.sh`
+turns it on for you when the checkout and a GPU are both there. By hand:
+
+```bash
+docker compose -f docker-compose.platform.yml --profile speech up -d --build aavaaz
+```
+
 `SPEECH_MODEL` picks the whisper model (default `large-v3-turbo`). The mic
 button appears once `/speech/health` answers.
 

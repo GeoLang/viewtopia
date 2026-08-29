@@ -289,7 +289,7 @@ export function ChatPanel() {
           size="sm"
           autosize
           minRows={1}
-          maxRows={1}
+          maxRows={4}
           autoComplete="off"
           aria-label="Message"
           data-1p-ignore

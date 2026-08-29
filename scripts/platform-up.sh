@@ -14,10 +14,6 @@ if [ ! -f ../geolang/.env ]; then
   echo "missing ../geolang/.env (LLM API keys); create it before bring-up" >&2
   exit 1
 fi
-if [ ! -d ../../Aavaaz/aavaaz ]; then
-  echo "missing Aavaaz checkout at ../../Aavaaz/aavaaz (speech service)" >&2
-  exit 1
-fi
 
 # PLATFORM_JWT_SECRET is one HS256 secret for every service that validates JWTs
 # (ptolemy, tiletopia, collecta), so tokens minted by one are accepted by the
@@ -40,6 +36,19 @@ generate_secret() {
 generate_secret PLATFORM_JWT_SECRET
 generate_secret GEOLANG_EXECUTOR_SECRET
 COMPOSE=(docker compose --env-file "$ENV_PLATFORM" -f docker-compose.platform.yml)
+
+# speech needs both the Aavaaz checkout and a working NVIDIA GPU, so it stays
+# behind the `speech` profile and we opt in only when the machine has them.
+SPEECH=0
+if [ ! -d ../../Aavaaz/aavaaz ]; then
+  echo "speech off: no Aavaaz checkout at ../../Aavaaz/aavaaz"
+elif ! command -v nvidia-smi >/dev/null 2>&1 || ! nvidia-smi >/dev/null 2>&1; then
+  echo "speech off: no working NVIDIA GPU (nvidia-smi)"
+else
+  SPEECH=1
+  COMPOSE+=(--profile speech)
+  echo "speech on: Aavaaz checkout and NVIDIA GPU found"
+fi
 
 mkdir -p data
 # Marker of the region the derived data was built from. When the requested pbf
@@ -83,11 +92,13 @@ for probe in "geokode http://localhost:3001/health" "itinera http://localhost:30
     sleep 5
   done
 done
-echo "waiting for aavaaz to answer (model download can take minutes)..."
-for _ in $(seq 1 96); do
-  "${COMPOSE[@]}" exec -T aavaaz curl -fsS http://localhost:8000/health >/dev/null 2>&1 && { echo "  aavaaz ready"; break; }
-  sleep 5
-done
+if [ "$SPEECH" = 1 ]; then
+  echo "waiting for aavaaz to answer (model download can take minutes)..."
+  for _ in $(seq 1 96); do
+    "${COMPOSE[@]}" exec -T aavaaz curl -fsS http://localhost:8000/health >/dev/null 2>&1 && { echo "  aavaaz ready"; break; }
+    sleep 5
+  done
+fi
 "${COMPOSE[@]}" ps --format 'table {{.Name}}\t{{.Status}}'
 
 if [ -f scripts/seed-parcels.mjs ]; then
@@ -101,5 +112,5 @@ fi
 echo
 echo "viewer:  http://localhost:5174"
 echo "agent:   http://localhost:5174/agent/health"
-echo "speech:  http://localhost:5174/speech/health"
+if [ "$SPEECH" = 1 ]; then echo "speech:  http://localhost:5174/speech/health"; fi
 echo "jupyter: http://localhost:5174/jupyter/api"

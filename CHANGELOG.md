@@ -6,11 +6,11 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
-- 2026-08-29: **the speech service is part of the default stack.** `aavaaz`
-  no longer sits behind the `speech` compose profile, so `platform-up.sh` and
-  a plain `docker compose up` start it. Needs the Aavaaz checkout at
-  `../../Aavaaz/aavaaz` and an NVIDIA GPU. The mic still waits on
-  `/speech/health`.
+- 2026-08-29: **`platform-up.sh` starts the speech service by itself.** It
+  adds `--profile speech` when the Aavaaz checkout at `../../Aavaaz/aavaaz`
+  and an NVIDIA GPU are both present, and says which one is missing when they
+  are not. `aavaaz` still sits behind the `speech` profile, so a plain
+  `docker compose up` skips it. The mic still waits on `/speech/health`.
 - DESIGN_TODO brought current 2026-08-28: dropped shipped chat-only phases 2
   and 3, the voice leftover that pointed at a closed P0 item 8, Collecta
   Ptolemy as a gap, GeoGit GeoJSON-without-geometry, the duplicate native
