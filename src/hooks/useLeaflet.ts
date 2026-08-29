@@ -12,6 +12,8 @@ declare global {
   interface Window {
     /** leaflet split panes by pane index, for e2e; no tool reads these */
     __viewtopiaPaneLeaflets?: Record<number, L.Map>;
+    /** the 2d tab's map, for e2e */
+    __viewtopiaLeaflet?: L.Map;
   }
 }
 
@@ -82,6 +84,7 @@ export function useLeaflet(opts: UseLeafletOptions = {}) {
     mapRef.current = map;
     setLiveMap(map);
     if (isPane) publishPaneMap(paneIndex, map);
+    else window.__viewtopiaLeaflet = map;
 
     return () => {
       map.remove();
@@ -89,6 +92,7 @@ export function useLeaflet(opts: UseLeafletOptions = {}) {
       setLiveMap(null);
       tileRef.current = null;
       if (isPane) publishPaneMap(paneIndex, null);
+      else window.__viewtopiaLeaflet = undefined;
     };
   }, [isActive, isPane, paneIndex, opts.containerId]);
 

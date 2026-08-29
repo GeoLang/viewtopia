@@ -42,6 +42,13 @@ async function execute(definition: ActionDefinition, args: ActionArguments): Pro
   chat.queueFollowUp(`Result of ${definition.name}: ${text}`);
 }
 
+declare global {
+  interface Window {
+    // exposed for e2e so a test can run an action the way a tool result does
+    __viewtopiaRunAction?: (params: Record<string, unknown>) => Promise<void>;
+  }
+}
+
 /** viewer_cmd `run`: the params carry the action name and its arguments. */
 export async function runViewerAction(params: Record<string, unknown>): Promise<void> {
   const name = typeof params.name === 'string' ? params.name : String(params.name ?? '');
@@ -64,6 +71,8 @@ export async function runViewerAction(params: Record<string, unknown>): Promise<
   }
   await execute(definition, args);
 }
+
+window.__viewtopiaRunAction = runViewerAction;
 
 /**
  * Answer a pending confirmation with what the user typed. True when the reply

@@ -138,3 +138,32 @@ test.describe('draw tool across renderers', () => {
     await expect.poll(cursor, { timeout: 30000 }).toBe('crosshair');
   });
 });
+
+test.describe('camera on the map tab', () => {
+  const FRANCE = { lon: 2.2, lat: 46.6 };
+  const runAction = (page, name, args) =>
+    page.evaluate(([name, args]) => window.__viewtopiaRunAction({ name, args }), [name, args]);
+  const leafletCentre = (page) =>
+    page.evaluate(() => {
+      const map = window.__viewtopiaLeaflet;
+      if (!map) return null;
+      const centre = map.getCenter();
+      return { lat: centre.lat, lng: centre.lng };
+    });
+  const near = (centre, target) =>
+    !!centre && Math.abs(centre.lat - target.lat) < 0.05 && Math.abs(centre.lng - target.lon) < 0.05;
+
+  // a chat flight on the 2d tab used to write the shared camera only, so the
+  // leaflet map stood still until the tab was left and entered again
+  test('a chat flight moves the leaflet map in place', async ({ page }) => {
+    await page.goto(REACT_URL);
+    await page.waitForFunction(() => !!window.__viewtopiaRunAction, null, { timeout: 60000 });
+
+    await runAction(page, 'view.set_tab', { tab: 'map' });
+    await page.waitForFunction(() => !!window.__viewtopiaLeaflet, null, { timeout: 30000 });
+    expect(near(await leafletCentre(page), FRANCE)).toBe(false);
+
+    await runAction(page, 'camera.fly_to', FRANCE);
+    await expect.poll(async () => near(await leafletCentre(page), FRANCE), { timeout: 30000 }).toBe(true);
+  });
+});
