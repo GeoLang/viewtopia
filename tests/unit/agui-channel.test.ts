@@ -54,6 +54,29 @@ describe('AG-UI subscriber mapping', () => {
     expect(setLastContent).not.toHaveBeenCalled();
   });
 
+  it('rewrites a missing login as a sign-in prompt', () => {
+    sub.onRunErrorEvent!({
+      ...ctx,
+      event: { type: 'RUN_ERROR', message: 'HTTP 401: {"detail":"missing bearer token"}' },
+    } as unknown as P<'onRunErrorEvent'>);
+    expect(setLastError).toHaveBeenCalledWith('Sign in to chat with the agent.');
+  });
+
+  it('rewrites a refused local model as a settings prompt', () => {
+    sub.onRunErrorEvent!({
+      ...ctx,
+      event: {
+        type: 'RUN_ERROR',
+        message:
+          'calling the model: error sending request for url (http://host.docker.internal:18200/v1/chat/completions): client error (Connect): tcp connect error: Connection refused (os error 111)',
+      },
+    } as unknown as P<'onRunErrorEvent'>);
+    expect(setLastError).toHaveBeenCalledWith(
+      "The local model isn't running. Start it, or pick a cloud model in Settings.",
+    );
+    expect(setLastContent).not.toHaveBeenCalled();
+  });
+
   it('appends text deltas via setLastContent', () => {
     sub.onTextMessageContentEvent!({
       ...ctx,

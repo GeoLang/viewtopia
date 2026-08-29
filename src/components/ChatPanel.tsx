@@ -1,7 +1,7 @@
 import {
   Stack,
   ScrollArea,
-  TextInput,
+  Textarea,
   ActionIcon,
   Group,
   Text,
@@ -10,7 +10,7 @@ import {
   Loader,
 } from '@mantine/core';
 import { IconSend, IconPlus, IconTrash, IconSquare } from '@tabler/icons-react';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { interceptConfirmReply } from '../actions/dispatch';
 import { PlanPanel } from '../features/workflow/PlanPanel';
 import { renderUISpec } from '../viewer/uiSpec';
@@ -129,23 +129,41 @@ export function ChatPanel() {
   useKeyboardShortcuts({ enter: handleSend });
 
   /** Step through sent prompts: +1 goes further back, -1 back toward the draft. */
-  const recallPrompt = (delta: number) => {
-    const next = historyIndex + delta;
-    if (next < -1 || next >= promptHistory.length) return;
-    if (historyIndex === -1) draftRef.current = input;
-    setHistoryIndex(next);
-    setInput(next === -1 ? draftRef.current : promptHistory[next]);
-  };
+  const recallPrompt = useCallback(
+    (delta: number) => {
+      const next = historyIndex + delta;
+      if (next < -1 || next >= promptHistory.length) return;
+      if (historyIndex === -1) draftRef.current = input;
+      setHistoryIndex(next);
+      setInput(next === -1 ? draftRef.current : promptHistory[next]);
+    },
+    [historyIndex, promptHistory, input],
+  );
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+  // capture so Chrome does not steal ArrowUp for field history
+  const promptRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = promptRef.current;
+    if (!el) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        recallPrompt(1);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        recallPrompt(-1);
+      }
+    };
+    el.addEventListener('keydown', onKeyDown, true);
+    return () => el.removeEventListener('keydown', onKeyDown, true);
+  }, [recallPrompt]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
       handleSend();
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      recallPrompt(1);
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      recallPrompt(-1);
     }
   };
 
@@ -256,16 +274,33 @@ export function ChatPanel() {
         )}
       </ScrollArea>
 
-      {/* Input */}
+      {/* unnamed textarea so Chrome does not treat this as login */}
+      <form
+        autoComplete="off"
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSend();
+        }}
+      >
       <Group p="sm" gap="xs" style={{ borderTop: '1px solid var(--mantine-color-dark-5)' }}>
-        <TextInput
+        <Textarea
+          ref={promptRef}
           flex={1}
           size="sm"
+          autosize
+          minRows={1}
+          maxRows={1}
+          autoComplete="off"
+          aria-label="Message"
+          data-1p-ignore
+          data-lpignore="true"
+          data-bwignore
           placeholder="Type a message…"
           value={input}
           onChange={(e) => setInput(e.currentTarget.value)}
           onKeyDown={handleKeyDown}
           disabled={streaming}
+          styles={{ input: { resize: 'none' } }}
         />
         {speechAvailable && (
           <DictationButton state={dictation.state} disabled={streaming} onToggle={toggleDictation} />
@@ -286,6 +321,7 @@ export function ChatPanel() {
           </ActionIcon>
         )}
       </Group>
+      </form>
     </Stack>
   );
 }

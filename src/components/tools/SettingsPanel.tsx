@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Text,
   Stack,
@@ -7,8 +7,14 @@ import {
   Slider,
   Divider,
   TextInput,
+  PasswordInput,
+  Button,
+  Group,
+  ActionIcon,
+  Radio,
+  Badge,
 } from '@mantine/core';
-import { IconSettings } from '@tabler/icons-react';
+import { IconSettings, IconPlus, IconPencil, IconTrash } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { useAppStore, type Renderer, type Basemap } from '../../store/app';
 import { BASEMAP_SELECT_GROUPS, isPmtilesUrl } from '../../hooks/basemapTiles';
@@ -19,7 +25,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const { settings, updateSettings } = useAppStore();
 
   return (
-    <PanelCard width={300} maxHeight="calc(100vh - 120px)" testId="settings-panel">
+    <PanelCard width={340} maxHeight="calc(100vh - 120px)" testId="settings-panel">
       <PanelHeader
         icon={<IconSettings size={16} />}
         title="Settings"
@@ -138,16 +144,32 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
+type ModelServer = 'local' | 'cloud';
+
 interface ModelProfile {
   id: string;
   label: string;
   model: string;
+  server?: ModelServer;
+  provider?: string;
   available: boolean;
+  reachable?: boolean;
+}
+
+interface ModelProvider {
+  id: string;
+  label: string;
+  server: ModelServer;
+  base: string;
+  models: string[];
+  has_key: boolean;
+  reachable?: boolean;
 }
 
 interface ModelsResponse {
   active?: string;
   profiles?: ModelProfile[];
+  providers?: ModelProvider[];
 }
 
 const SWITCH_ERRORS: Record<number, string> = {
@@ -156,16 +178,44 @@ const SWITCH_ERRORS: Record<number, string> = {
   503: 'The agent service is down.',
 };
 
+const CLOUD_PRESETS = [
+  { id: 'xai', label: 'xAI (Grok)', base: 'https://api.x.ai/v1', model: 'grok-4-1-fast-reasoning' },
+  { id: 'anthropic', label: 'Anthropic (Claude)', base: 'https://api.anthropic.com/v1', model: 'claude-sonnet-4-5' },
+  { id: 'custom', label: 'Custom (OpenAI-compatible)', base: '', model: '' },
+] as const;
+
+type FormMode = { kind: 'add'; server: ModelServer } | { kind: 'edit'; id: string };
+
+function isUsable(profile: ModelProfile): boolean {
+  return profile.available && profile.reachable !== false;
+}
+
+function profileId(provider: string, model: string): string {
+  return `${provider}:${model}`;
+}
+
 /**
- * Which model the agent answers with, read from and written to geolang-api.
- * With no agent service on the other end the section stays inert rather than
- * failing: nothing else in the panel depends on it.
+ * Which model the agent answers with. Providers are listed so several cloud
+ * APIs and several local servers can sit side by side. Keys are write-only.
  */
 function AiModelSelect() {
   const [profiles, setProfiles] = useState<ModelProfile[] | null>(null);
+  const [providers, setProviders] = useState<ModelProvider[]>([]);
   const [active, setActive] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState<FormMode | null>(null);
+  const [label, setLabel] = useState('');
+  const [base, setBase] = useState('');
+  const [models, setModels] = useState('');
+  const [key, setKey] = useState('');
+  const [preset, setPreset] = useState('custom');
+
+  const applyBody = useCallback((body: ModelsResponse) => {
+    setProfiles(body.profiles ?? []);
+    setProviders(body.providers ?? []);
+    setActive(body.active ?? null);
+  }, []);
 
   useEffect(() => {
     let live = true;
@@ -174,16 +224,26 @@ function AiModelSelect() {
       if (res) noticeRefusal(res.status);
       const body: ModelsResponse | null = res?.ok ? await res.json().catch(() => null) : null;
       if (!live) return;
-      setProfiles(body?.profiles ?? []);
-      setActive(body?.active ?? null);
+      if (!body) {
+        setProfiles([]);
+        return;
+      }
+      applyBody(body);
     })();
     return () => {
       live = false;
     };
-  }, []);
+  }, [applyBody]);
+
+  const refresh = async () => {
+    const res = await fetch('/agent/models', { headers: apiHeaders() }).catch(() => null);
+    if (res) noticeRefusal(res.status);
+    const body: ModelsResponse | null = res?.ok ? await res.json().catch(() => null) : null;
+    if (body) applyBody(body);
+  };
 
   const switchModel = async (id: string | null) => {
-    if (!id || id === active) return;
+    if (!id || id === active) return false;
     const previous = active;
     setActive(id);
     setError(null);
@@ -195,38 +255,302 @@ function AiModelSelect() {
     }).catch(() => null);
     setBusy(false);
     if (res) noticeRefusal(res.status);
-    if (res?.ok) return;
+    if (res?.ok) return true;
     setActive(previous);
     setError(
       res
         ? (SWITCH_ERRORS[res.status] ?? `Switch failed: HTTP ${res.status}`)
         : 'The agent service is unreachable.',
     );
+    return false;
   };
 
-  const data = (profiles ?? []).map((p) => ({
-    value: p.id,
-    label: p.available ? p.label : `${p.label} (unavailable)`,
-    disabled: !p.available,
-  }));
+  const openAdd = (server: ModelServer) => {
+    setForm({ kind: 'add', server });
+    setLabel('');
+    setBase(server === 'cloud' ? 'https://api.x.ai/v1' : '');
+    setModels(server === 'cloud' ? 'grok-4-1-fast-reasoning' : '');
+    setKey('');
+    setPreset(server === 'cloud' ? 'xai' : 'custom');
+    setError(null);
+  };
+
+  const openEdit = (provider: ModelProvider) => {
+    setForm({ kind: 'edit', id: provider.id });
+    setLabel(provider.label);
+    setBase(provider.base);
+    setModels(provider.models.join(', '));
+    setKey('');
+    setPreset(
+      CLOUD_PRESETS.find((item) => item.id !== 'custom' && item.base === provider.base)?.id
+        ?? 'custom',
+    );
+    setError(null);
+  };
+
+  const saveProvider = async () => {
+    if (!form) return;
+    const server = form.kind === 'add' ? form.server : providers.find((p) => p.id === form.id)?.server;
+    const trimmedBase = base.trim().replace(/\/$/, '');
+    const trimmedModels = models.trim();
+    const trimmedKey = key.trim();
+    const trimmedLabel = label.trim();
+    if (!trimmedBase || !trimmedModels) {
+      setError('A base URL and at least one model name are required.');
+      return;
+    }
+    const editing = form.kind === 'edit' ? providers.find((p) => p.id === form.id) : undefined;
+    if (server === 'cloud' && !trimmedKey && !editing?.has_key) {
+      setError('Cloud needs an API key.');
+      return;
+    }
+    setError(null);
+    setBusy(true);
+    const payload: Record<string, string> = {
+      server: server ?? 'cloud',
+      base: trimmedBase,
+      models: trimmedModels,
+    };
+    if (form.kind === 'edit') payload.id = form.id;
+    else if (preset !== 'custom') payload.id = preset;
+    if (trimmedLabel) payload.label = trimmedLabel;
+    else if (preset !== 'custom') {
+      const named = CLOUD_PRESETS.find((item) => item.id === preset);
+      if (named) payload.label = named.label;
+    }
+    if (trimmedKey) payload.key = trimmedKey;
+    const res = await fetch('/agent/model/providers', {
+      method: 'PUT',
+      headers: apiHeaders(),
+      body: JSON.stringify(payload),
+    }).catch(() => null);
+    setBusy(false);
+    if (res) noticeRefusal(res.status);
+    if (!res?.ok) {
+      setError(
+        res
+          ? res.status === 400
+            ? 'That provider was refused.'
+            : (SWITCH_ERRORS[res.status] ?? `Save failed: HTTP ${res.status}`)
+          : 'The agent service is unreachable.',
+      );
+      return;
+    }
+    setKey('');
+    setForm(null);
+    await refresh();
+  };
+
+  const deleteProvider = async (id: string) => {
+    setError(null);
+    setBusy(true);
+    const res = await fetch(`/agent/model/providers/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: apiHeaders(),
+    }).catch(() => null);
+    setBusy(false);
+    if (res) noticeRefusal(res.status);
+    if (!res?.ok) {
+      setError(
+        res
+          ? (SWITCH_ERRORS[res.status] ?? `Delete failed: HTTP ${res.status}`)
+          : 'The agent service is unreachable.',
+      );
+      return;
+    }
+    setForm(null);
+    await refresh();
+  };
+
+  const listed = profiles ?? [];
+  const loading = profiles === null;
 
   return (
-    <Select
-      size="xs"
-      label="Model"
-      description="A switch applies to new messages only."
-      placeholder={profiles === null ? 'Loading…' : 'Unavailable'}
-      data={data}
-      value={active}
-      disabled={busy || data.length === 0}
-      error={error}
-      onChange={switchModel}
-      // the panel scrolls, so an in-place dropdown overlaps the next section
-      // and that section swallows the option clicks. portal it and paint above
-      // the panel stack (ToolPanels sits at 400)
-      comboboxProps={{ withinPortal: true, zIndex: 1500 }}
-      data-testid="ai-model-select"
-      errorProps={{ 'data-testid': 'ai-model-error' }}
-    />
+    <Stack gap="xs" data-testid="ai-model-select">
+      <Text size="xs" c="dimmed">
+        A switch applies to new messages only. Several cloud APIs and local servers can be saved.
+      </Text>
+      {error && (
+        <Text size="xs" c="red" data-testid="ai-model-error">
+          {error}
+        </Text>
+      )}
+      {loading && (
+        <Text size="xs" c="dimmed">
+          Loading…
+        </Text>
+      )}
+      {!loading && listed.length === 0 && (
+        <Text size="xs" c="dimmed">
+          Unavailable
+        </Text>
+      )}
+      {providers.map((provider) => {
+        const down = provider.server === 'local' && provider.reachable === false;
+        return (
+          <Stack key={provider.id} gap={4} data-testid={`ai-provider-${provider.id}`}>
+            <Group justify="space-between" wrap="nowrap" gap="xs">
+              <Group gap={6} wrap="nowrap">
+                <Text size="xs" c="white" fw={600} lineClamp={1}>
+                  {provider.label}
+                </Text>
+                <Badge size="xs" variant="light" color={provider.server === 'local' ? 'gray' : 'violet'}>
+                  {provider.server}
+                </Badge>
+                {down && (
+                  <Badge size="xs" color="red" data-testid="ai-local-warning">
+                    unreachable
+                  </Badge>
+                )}
+              </Group>
+              <ActionIcon
+                aria-label={`Edit ${provider.label}`}
+                size="xs"
+                variant="subtle"
+                disabled={busy}
+                onClick={() => openEdit(provider)}
+              >
+                <IconPencil size={12} />
+              </ActionIcon>
+            </Group>
+            <Radio.Group value={active ?? ''} onChange={(id) => void switchModel(id)}>
+              <Stack gap={2}>
+                {provider.models.map((model) => {
+                  const id = profileId(provider.id, model);
+                  const profile = listed.find((item) => item.id === id);
+                  const disabled = busy || (profile ? !isUsable(profile) : provider.server === 'cloud' && !provider.has_key) || down;
+                  return (
+                    <Radio
+                      key={id}
+                      size="xs"
+                      value={id}
+                      disabled={disabled}
+                      label={model}
+                    />
+                  );
+                })}
+              </Stack>
+            </Radio.Group>
+          </Stack>
+        );
+      })}
+      <Group gap="xs">
+        <Button
+          size="compact-xs"
+          variant="light"
+          color="violet"
+          leftSection={<IconPlus size={12} />}
+          disabled={busy || loading}
+          onClick={() => openAdd('cloud')}
+          data-testid="ai-add-cloud"
+        >
+          Cloud API
+        </Button>
+        <Button
+          size="compact-xs"
+          variant="light"
+          leftSection={<IconPlus size={12} />}
+          disabled={busy || loading}
+          onClick={() => openAdd('local')}
+          data-testid="ai-add-local"
+        >
+          Local
+        </Button>
+      </Group>
+      {form && (
+        <Stack gap="xs" data-testid="ai-provider-form">
+          <Text size="xs" fw={600}>
+            {form.kind === 'edit' ? 'Edit provider' : form.server === 'cloud' ? 'Add cloud API' : 'Add local server'}
+          </Text>
+          {(form.kind === 'add' ? form.server : providers.find((p) => p.id === form.id)?.server) === 'cloud' && (
+            <Select
+              size="xs"
+              label="Preset"
+              data={CLOUD_PRESETS.map((item) => ({ value: item.id, label: item.label }))}
+              value={preset}
+              disabled={busy}
+              onChange={(id) => {
+                const next = CLOUD_PRESETS.find((item) => item.id === id);
+                if (!next) return;
+                setPreset(next.id);
+                if (next.id === 'custom') return;
+                setLabel(next.label);
+                setBase(next.base);
+                setModels(next.model);
+              }}
+              comboboxProps={{ withinPortal: true, zIndex: 1500 }}
+              data-testid="ai-cloud-provider"
+            />
+          )}
+          <TextInput
+            size="xs"
+            label="Name"
+            placeholder="Anthropic"
+            value={label}
+            disabled={busy}
+            onChange={(e) => setLabel(e.currentTarget.value)}
+            data-testid="ai-provider-label"
+          />
+          <TextInput
+            size="xs"
+            label="API base URL"
+            placeholder={
+              (form.kind === 'add' ? form.server : providers.find((p) => p.id === form.id)?.server) === 'local'
+                ? 'http://host.docker.internal:18200/v1'
+                : 'https://api.x.ai/v1'
+            }
+            value={base}
+            disabled={busy}
+            onChange={(e) => setBase(e.currentTarget.value)}
+            data-testid="ai-cloud-base"
+          />
+          <TextInput
+            size="xs"
+            label="Models"
+            description="Comma-separated. Each name is one switchable profile."
+            placeholder="claude-sonnet-4-5, claude-opus-4"
+            value={models}
+            disabled={busy}
+            onChange={(e) => setModels(e.currentTarget.value)}
+            data-testid="ai-cloud-models"
+          />
+          {(form.kind === 'add' ? form.server : providers.find((p) => p.id === form.id)?.server) === 'cloud' && (
+            <PasswordInput
+              size="xs"
+              label="API key"
+              description={
+                form.kind === 'edit' && providers.find((p) => p.id === form.id)?.has_key
+                  ? 'A key is saved. Paste a new one to replace it.'
+                  : 'Saved on the agent, never in this browser.'
+              }
+              value={key}
+              disabled={busy}
+              onChange={(e) => setKey(e.currentTarget.value)}
+            />
+          )}
+          <Group gap="xs">
+            <Button size="xs" color="violet" loading={busy} onClick={() => void saveProvider()} data-testid="ai-cloud-save">
+              Save and use
+            </Button>
+            <Button size="xs" variant="subtle" disabled={busy} onClick={() => setForm(null)}>
+              Cancel
+            </Button>
+            {form.kind === 'edit' && (
+              <ActionIcon
+                aria-label="Delete provider"
+                size="sm"
+                color="red"
+                variant="subtle"
+                disabled={busy}
+                onClick={() => void deleteProvider(form.id)}
+                data-testid="ai-provider-delete"
+              >
+                <IconTrash size={14} />
+              </ActionIcon>
+            )}
+          </Group>
+        </Stack>
+      )}
+    </Stack>
   );
 }

@@ -24,12 +24,14 @@
 #   - geodukt:    Declarative pipeline runner for agent plans (internal port 8100)
 #   - geolang-api: AI/NLP geospatial agent API (port 8080)
 #   - geolang-executor: runs the tool code, holds no platform secret (internal)
+#   - aavaaz:     Speech to text for the chat mic (:5174/speech/, internal)
 #   - viewtopia:  Frontend viewer + A2UI (port 5174)
 #
 # Prerequisites:
 #   - Place OSM extract at ./data/region.osm.pbf (for routing)
 #   - Place address CSV at ./data/addresses.csv (for geocoding)
 #   - Or remove itinera/geokode services if not needed
+#   - Aavaaz checkout at ../../Aavaaz/aavaaz and an NVIDIA GPU (speech)
 
 services:
   # ── Database ──────────────────────────────────────────────────────
@@ -427,12 +429,10 @@ services:
 
   # ── Speech to text (Aavaaz over WhisperLive) ─────────────────────
   #
-  # The chat's mic button streams audio here through nginx /speech/. Needs the
-  # nvidia container runtime, so it sits behind the `speech` profile and a
-  # plain `up` skips it:
-  #   docker compose --profile speech up -d --build aavaaz
-  # Built from the Aavaaz checkout beside the GeoLang directory. No host port
-  # and no API key: only containers reach 9090, and the nginx route is open.
+  # The chat's mic streams audio here through nginx /speech/. Needs the nvidia
+  # container runtime and the Aavaaz checkout beside the GeoLang directory.
+  # No host port and no API key: only containers reach 9090, nginx is the
+  # route. A plain `up` starts it with the rest of the stack.
   #
   # Env vars:
   #   SPEECH_MODEL — whisper model (default large-v3-turbo, about 1.6 GB of
@@ -440,7 +440,6 @@ services:
   aavaaz:
     build:
       context: ../../Aavaaz/aavaaz
-    profiles: [speech]
     command: ["--model", "${SPEECH_MODEL:-large-v3-turbo}"]
     environment:
       AAVAAZ_JWT_SECRET: ${PLATFORM_JWT_SECRET:-}

@@ -14,6 +14,10 @@ if [ ! -f ../geolang/.env ]; then
   echo "missing ../geolang/.env (LLM API keys); create it before bring-up" >&2
   exit 1
 fi
+if [ ! -d ../../Aavaaz/aavaaz ]; then
+  echo "missing Aavaaz checkout at ../../Aavaaz/aavaaz (speech service)" >&2
+  exit 1
+fi
 
 # PLATFORM_JWT_SECRET is one HS256 secret for every service that validates JWTs
 # (ptolemy, tiletopia, collecta), so tokens minted by one are accepted by the
@@ -79,6 +83,11 @@ for probe in "geokode http://localhost:3001/health" "itinera http://localhost:30
     sleep 5
   done
 done
+echo "waiting for aavaaz to answer (model download can take minutes)..."
+for _ in $(seq 1 96); do
+  "${COMPOSE[@]}" exec -T aavaaz curl -fsS http://localhost:8000/health >/dev/null 2>&1 && { echo "  aavaaz ready"; break; }
+  sleep 5
+done
 "${COMPOSE[@]}" ps --format 'table {{.Name}}\t{{.Status}}'
 
 if [ -f scripts/seed-parcels.mjs ]; then
@@ -92,4 +101,5 @@ fi
 echo
 echo "viewer:  http://localhost:5174"
 echo "agent:   http://localhost:5174/agent/health"
+echo "speech:  http://localhost:5174/speech/health"
 echo "jupyter: http://localhost:5174/jupyter/api"

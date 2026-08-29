@@ -134,28 +134,34 @@ export function AuthControl() {
         size="sm"
       >
         {view === 'login' && (
+          <form
+            autoComplete="on"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void handleLogin();
+            }}
+          >
           <Stack gap="sm">
             <TextInput
               label="Email or username"
+              name="username"
               autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.currentTarget.value)}
             />
             <PasswordInput
               label="Password"
+              name="password"
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.currentTarget.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleLogin();
-              }}
             />
             {error && (
               <Text size="xs" c="red">
                 {error}
               </Text>
             )}
-            <Button color="violet" loading={busy} onClick={handleLogin}>
+            <Button color="violet" type="submit" loading={busy}>
               Login
             </Button>
             <Group justify="center" gap="xs">
@@ -179,10 +185,11 @@ export function AuthControl() {
               </Anchor>
             </Group>
             <Divider label="or" labelPosition="center" />
-            <Button variant="default" onClick={() => { setError(null); setView('apikey'); }}>
+            <Button variant="default" type="button" onClick={() => { setError(null); setView('apikey'); }}>
               Use API Key
             </Button>
           </Stack>
+          </form>
         )}
 
         {view === 'register' && (

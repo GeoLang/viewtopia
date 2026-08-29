@@ -217,4 +217,15 @@ describe('geolang chat run', () => {
     const error = await runError(async () => new Response('model refused', { status: 400 }));
     expect(error).toContain('model refused');
   });
+
+  it('asks the user to sign in on a 401 instead of dumping the token error', async () => {
+    const error = await runError(
+      async () =>
+        new Response(JSON.stringify({ detail: 'missing bearer token' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    );
+    expect(error).toBe('Sign in to chat with the agent.');
+  });
 });

@@ -272,7 +272,9 @@ colour and values it had then until you press Live.
   (every repo is public on GitHub, including
   [geolang](https://github.com/GeoLang/geolang). They clone over SSH by default,
   add `--https` for HTTPS.)
-- **An LLM API key for the agent:** put `SIBYL_CLOUD_API_KEY` in
+- **An LLM API key for the agent:** optional in `.env`. Settings → AI Model
+  can paste a cloud key (Grok, Claude, or any OpenAI-compatible base) without
+  editing the server file. To pre-seed one, put `SIBYL_CLOUD_API_KEY` in
   `geolang/.env`.
 - **~Several GB of disk** for images (the geolang + QGIS image is large) plus
   any OSM/address data.
@@ -403,15 +405,9 @@ bash scripts/platform-up.sh \
 graph build) to answer, and seeds the real-estate demo. It needs the sibling repos
 cloned and your LLM key in `../geolang/.env`.
 
-**Dictation** (optional): the chat's mic button needs the `aavaaz` speech service,
-built from an [Aavaaz](https://github.com/boxerab/aavaaz) checkout at
-`../../Aavaaz` and an NVIDIA GPU with the nvidia container runtime. It sits
-behind a compose profile so a plain `up` skips it:
-
-```bash
-docker compose -f docker-compose.platform.yml --profile speech up -d --build aavaaz
-```
-
+**Dictation** comes up with the rest of the stack. The chat mic talks to the
+`aavaaz` speech service, built from an [Aavaaz](https://github.com/boxerab/aavaaz)
+checkout at `../../Aavaaz` and an NVIDIA GPU with the nvidia container runtime.
 `SPEECH_MODEL` picks the whisper model (default `large-v3-turbo`). The mic
 button appears once `/speech/health` answers.
 

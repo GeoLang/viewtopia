@@ -6,12 +6,24 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-08-29: **the speech service is part of the default stack.** `aavaaz`
+  no longer sits behind the `speech` compose profile, so `platform-up.sh` and
+  a plain `docker compose up` start it. Needs the Aavaaz checkout at
+  `../../Aavaaz/aavaaz` and an NVIDIA GPU. The mic still waits on
+  `/speech/health`.
 - DESIGN_TODO brought current 2026-08-28: dropped shipped chat-only phases 2
   and 3, the voice leftover that pointed at a closed P0 item 8, Collecta
   Ptolemy as a gap, GeoGit GeoJSON-without-geometry, the duplicate native
   vector-to-3D-Tiles row, and the tiletopia mesh tiling leftovers now built.
 
 ### Added
+
+- 2026-08-28: **Settings holds several cloud APIs and several local models.**
+  Each provider is a named base URL with its own key (cloud) or none (local)
+  and a comma-separated model list. You switch by picking a model; Add Cloud
+  API / Add Local saves another provider without replacing the others. Keys
+  stay on sibyl, never in localStorage. A switch still applies to new
+  messages only.
 
 - 2026-08-26: **dictating a run of prompts takes one click.** The mic stays
   connected across a send: `handleSend` marks what has been said so far and

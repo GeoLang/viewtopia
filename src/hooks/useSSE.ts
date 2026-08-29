@@ -14,6 +14,10 @@ import { renderUISpec, type UiSpec } from '../viewer/uiSpec';
 /** a run whose request never got a reply, so there is no status to name */
 const NO_RESPONSE = 0;
 
+export const SIGN_IN_TO_CHAT = 'Sign in to chat with the agent.';
+export const LOCAL_MODEL_DOWN =
+  "The local model isn't running. Start it, or pick a cloud model in Settings.";
+
 /**
  * The AG-UI client puts the HTTP status on the error it throws for a refused
  * run (`HTTP 503: ...`, with `status`), and lets fetch's own TypeError through
@@ -27,6 +31,41 @@ export function unreachableRunError(failure: unknown): string | null {
   }
   if (failure instanceof TypeError) return unreachableMessage('geolang', NO_RESPONSE);
   return null;
+}
+
+function statusOf(failure: unknown): number | undefined {
+  if (!(failure instanceof Error)) return undefined;
+  const { status } = failure as Error & { status?: unknown };
+  return typeof status === 'number' ? status : undefined;
+}
+
+function isSignInFailure(failure: unknown, message: string): boolean {
+  if (statusOf(failure) === 401) return true;
+  return /HTTP 401\b/i.test(message) || /missing bearer token/i.test(message);
+}
+
+function isLocalConnectFailure(message: string): boolean {
+  return (
+    /connection refused/i.test(message) ||
+    /tcp connect error/i.test(message) ||
+    /host\.docker\.internal/i.test(message)
+  );
+}
+
+/** Turn a refused run or a streamed model error into the sentence the chat shows. */
+export function chatRunError(failure: unknown): string {
+  const unreachable = unreachableRunError(failure);
+  if (unreachable) return unreachable;
+  const message = failure instanceof Error ? failure.message : String(failure);
+  if (isSignInFailure(failure, message)) return SIGN_IN_TO_CHAT;
+  if (isLocalConnectFailure(message)) return LOCAL_MODEL_DOWN;
+  return message;
+}
+
+export function humanizeAgentMessage(message: string): string {
+  if (isSignInFailure(undefined, message)) return SIGN_IN_TO_CHAT;
+  if (isLocalConnectFailure(message)) return LOCAL_MODEL_DOWN;
+  return message;
 }
 
 /** Store setters the AG-UI subscriber writes through, so it can be tested in isolation. */
@@ -87,7 +126,7 @@ export function buildAgUiSubscriber({ setLastContent, setLastError, setLastMapSp
     },
     onRunErrorEvent({ event }) {
       // keep whatever streamed; the error renders as its own marked block
-      setLastError(event.message);
+      setLastError(humanizeAgentMessage(event.message));
     },
     // onRunFinishedEvent: same as legacy `done`, streaming is cleared in the finally
   };
@@ -180,7 +219,7 @@ export function useSSE() {
         // red block, the partial reply just stays as it is
         const message = (err as Error).message ?? String(err);
         if ((err as Error).name !== 'AbortError' && !/abort/i.test(message)) {
-          setLastError(unreachableRunError(err) ?? message);
+          setLastError(chatRunError(err));
         }
       } finally {
         setStreaming(false);

@@ -8,7 +8,7 @@ import { mintToken } from '../../scripts/platform-token.mjs';
  * accepting the 101 with `Sec-WebSocket-Protocol: bearer`, and
  * `AudioContext({ sampleRate: 16000 })` taking the mic stream.
  *
- * Needs a platform stack up on 5174 with the `speech` profile.
+ * Needs a platform stack up on 5174, including aavaaz.
  *
  *   npx playwright test --config playwright.dictation-live.config.js
  */
@@ -24,7 +24,7 @@ test('the real speech service transcribes the mic into the chat input', async ({
   expect(token, 'PLATFORM_JWT_SECRET is not set, so aavaaz refuses the handshake').toBeTruthy();
 
   const health = await page.request.get('/speech/health');
-  expect(health.status(), 'the speech profile is not up: docker compose --profile speech up -d aavaaz').toBe(200);
+  expect(health.status(), 'aavaaz is not up: docker compose up -d aavaaz').toBe(200);
 
   await page.addInitScript(
     (seed) => {

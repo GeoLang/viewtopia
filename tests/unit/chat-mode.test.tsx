@@ -142,7 +142,29 @@ describe('the chat-only shell', () => {
     expect(screen.queryByTestId('first-run')).not.toBeInTheDocument();
     expect(screen.queryByTestId('tour')).not.toBeInTheDocument();
     expect(screen.getByTestId('viewer-area')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Type a message…')).toBeVisible();
+    const box = screen.getByPlaceholderText('Type a message…');
+    expect(box).toBeVisible();
+    expect(box).toHaveAttribute('autocomplete', 'off');
+    expect(box).not.toHaveAttribute('name');
+    expect(box.tagName).toBe('TEXTAREA');
+  });
+
+  it('arrow-up fills older prompts from this session', () => {
+    useChatStore.getState().createSession('Session 1');
+    useChatStore.getState().addMessage({ role: 'user', content: 'fly to paris' });
+    useChatStore.getState().addMessage({ role: 'assistant', content: 'flying' });
+    useChatStore.getState().addMessage({ role: 'user', content: 'zoom in' });
+    enterByUrl();
+
+    const box = screen.getByPlaceholderText('Type a message…');
+    fireEvent.keyDown(box, { key: 'ArrowUp' });
+    expect(box).toHaveValue('zoom in');
+    fireEvent.keyDown(box, { key: 'ArrowUp' });
+    expect(box).toHaveValue('fly to paris');
+    fireEvent.keyDown(box, { key: 'ArrowDown' });
+    expect(box).toHaveValue('zoom in');
+    fireEvent.keyDown(box, { key: 'ArrowDown' });
+    expect(box).toHaveValue('');
   });
 
   it('says what the mode is and what it cannot do, once', () => {

@@ -18,14 +18,45 @@ const MONACO = { lon: 7.42, lat: 43.73, height: 12000, heading: 45, pitch: -30 }
 
 /** What geolang-api answers on /agent/models; this stack runs no agent service. */
 const MODELS = {
-  active: 'local',
+  active: 'local:Qwen3.5-9B-Q4_K_M',
   profiles: [
-    { id: 'cloud', label: 'Grok (cloud)', model: 'grok-4-1-fast-reasoning', available: true },
+    {
+      id: 'cloud:grok-4-1-fast-reasoning',
+      label: 'grok-4-1-fast-reasoning (cloud)',
+      model: 'grok-4-1-fast-reasoning',
+      server: 'cloud',
+      provider: 'cloud',
+      available: true,
+      reachable: true,
+    },
+    {
+      id: 'local:Qwen3.5-9B-Q4_K_M',
+      label: 'Qwen3.5-9B-Q4_K_M (local)',
+      model: 'Qwen3.5-9B-Q4_K_M',
+      server: 'local',
+      provider: 'local',
+      available: true,
+      reachable: true,
+    },
+  ],
+  providers: [
     {
       id: 'local',
-      label: 'Local (Qwen3.5-9B-Q4_K_M)',
-      model: 'Qwen3.5-9B-Q4_K_M',
-      available: true,
+      label: 'local',
+      server: 'local',
+      base: 'http://127.0.0.1:18200/v1',
+      models: ['Qwen3.5-9B-Q4_K_M'],
+      has_key: false,
+      reachable: true,
+    },
+    {
+      id: 'cloud',
+      label: 'cloud',
+      server: 'cloud',
+      base: 'https://api.x.ai/v1',
+      models: ['grok-4-1-fast-reasoning'],
+      has_key: true,
+      reachable: true,
     },
   ],
 };
@@ -141,17 +172,12 @@ test.describe('More menu panels', () => {
 
     const panel = await openSettings(page);
 
-    // the section opens on whatever the backend calls active
-    const select = panel.getByTestId('ai-model-select');
-    await expect(select).toHaveValue('Local (Qwen3.5-9B-Q4_K_M)');
+    await expect(panel.getByLabel('Qwen3.5-9B-Q4_K_M')).toBeChecked();
     await expect(panel).toContainText('applies to new messages only');
 
-    await select.click();
-    await page.getByRole('option', { name: 'Grok (cloud)' }).click();
+    await panel.getByLabel('grok-4-1-fast-reasoning').click();
 
-    // the choice reaches the backend and the control keeps it
-    await expect.poll(() => switched).toEqual([{ id: 'cloud' }]);
-    await expect(select).toHaveValue('Grok (cloud)');
+    await expect.poll(() => switched).toEqual([{ id: 'cloud:grok-4-1-fast-reasoning' }]);
     await expect(panel.getByTestId('ai-model-error')).toHaveCount(0);
 
     await closePanel(page, panel);

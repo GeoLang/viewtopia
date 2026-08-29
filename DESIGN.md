@@ -631,8 +631,8 @@ server resends its last ten segments with revisions, so `mergeSegments` keeps on
 segments from before a window's first start and takes the window as the rest, and the text
 lands after whatever was typed before the mic went on. Stopping sends a binary
 `END_OF_AUDIO`, keeps the socket for the final window, then closes. The service is the
-`aavaaz` compose service behind the `speech` profile, no host port, no API key, and the button
-is offered only when `/speech/health` answers, so a stack without it shows nothing.
+`aavaaz` compose service (NVIDIA GPU, checkout at `../../Aavaaz/aavaaz`), no host port, no API key, and the button
+is offered only when `/speech/health` answers, so a container still warming its model shows nothing.
 
 **Tool panels.** 48 registry panels, 30 on by default, plus 22 plugin panels (measure, feature-picker, geojson/style editors,
 geocoding, routing via itinera, terrain profile, cross-section, heatmap, spatial stats,
@@ -864,7 +864,8 @@ deletion, so an attribute-only placemark needs its own convention.
 | geokode + itinera | `data/region.osm.pbf` (OSM extract, Monaco for the demo) | `scripts/platform-up.sh` fetches it |
 | itinera | `data/graph.bin` (built from the `.pbf`) | built by `platform-up.sh` |
 | geokode | `data/addresses.csv` (optional, extra addresses) | optional |
-| geolang | LLM key (`SIBYL_CLOUD_API_KEY`) and optional local model pair | `geolang/.env` via `env_file` |
+| geolang | LLM key (`SIBYL_CLOUD_API_KEY`) and optional local model pair. Settings can switch local/cloud and paste a replacement cloud key, which sibyl stores in sqlite | `geolang/.env` via `env_file`, or Settings → AI Model |
+| aavaaz | NVIDIA GPU + nvidia container runtime, checkout at `../../Aavaaz/aavaaz` | sibling repo beside GeoLang |
 | fenestra WCS | `COVERAGE_DIR` of `.tif`/`.tiff` (optional) | operator-supplied |
 
 One-command bring-up: `docker compose -f docker-compose.platform.yml up -d --build`, then

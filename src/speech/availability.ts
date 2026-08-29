@@ -11,8 +11,8 @@ interface SpeechAvailability {
 }
 
 /**
- * Whether the speech service answers. It sits behind a compose profile, so a
- * stack without it is normal and the mic button is simply not offered.
+ * Whether the speech service answers. The mic is offered only then, so a
+ * container still downloading its model does not show a dead button.
  */
 export const useSpeechAvailability = create<SpeechAvailability>((set, get) => ({
   available: false,
