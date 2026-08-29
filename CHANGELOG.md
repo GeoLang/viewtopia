@@ -18,6 +18,22 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-29: **chat actions are tested with no model on the line.** 19 e2e
+  tests drive every view action on both tabs and assert on the live renderer
+  (`chat-actions-tabs`), pin that a replay click moves the map without a new
+  chat line and that tab, renderer, basemap and chat pane survive a reload
+  (`chat-replay-persistence`), and list then act by name for live maps,
+  projects and dataset branches (`chat-list-then-act`). Unit tables cover
+  every action that can be asked for the state it already has, which is now an
+  `ActionError` everywhere, and every argument shape models have sent. geolang
+  gained `viewer_runner --record`/`--replay` and a replay test as a CI gate.
+- 2026-08-29: **the chat says live map, not live document,** matching the UI.
+  `live.join` takes `map`, `live.leave` names the map it left and no longer
+  asks first, since the Leave button does not either. A replay click on a
+  destructive action counts as its confirmation, so history clicks stop
+  stacking "Reply yes" notices. `renderer.set` and `view.set_tab` say that
+  leaflet means the map tab.
+
 - 2026-08-28: **Settings holds several cloud APIs and several local models.**
   Each provider is a named base URL with its own key (cloud) or none (local)
   and a comma-separated model list. You switch by picking a model; Add Cloud

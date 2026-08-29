@@ -51,6 +51,15 @@ const SESSION = {
 
 const snapshot = (page) => page.evaluate(() => window.__viewtopiaSnapshot());
 
+const bandLayerIds = (page) =>
+  page.evaluate((source) => {
+    const map = window.__viewtopiaMap;
+    if (!map) return [];
+    return (map.getStyle()?.layers ?? [])
+      .map((layer) => layer.id)
+      .filter((id) => id.startsWith(`agent-layer-${source}`));
+  }, SERVICE_AREA_LAYER);
+
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/isochrone*', (route) =>
     route.fulfill({
@@ -72,7 +81,7 @@ test.beforeEach(async ({ page }) => {
   }, SESSION);
 });
 
-test('a replayed travel-time reply draws its bands', async ({ page }) => {
+test('a travel-time prompt draws its bands on the live map', async ({ page }) => {
   await page.goto(CHAT_URL);
   await page.waitForFunction(() => !!window.__viewtopiaSnapshot, null, { timeout: 60_000 });
   expect((await snapshot(page)).layers.map((layer) => layer.id)).not.toContain(SERVICE_AREA_LAYER);
@@ -82,4 +91,5 @@ test('a replayed travel-time reply draws its bands', async ({ page }) => {
   await expect
     .poll(async () => (await snapshot(page)).layers.map((layer) => layer.name), { timeout: 30_000 })
     .toContain('Service area (car)');
+  await expect.poll(() => bandLayerIds(page), { timeout: 30_000 }).not.toHaveLength(0);
 });

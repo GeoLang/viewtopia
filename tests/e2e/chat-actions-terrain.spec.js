@@ -70,7 +70,7 @@ const resultLayerIds = (page) =>
       .filter((id) => id.startsWith(source));
   }, VIEWSHED_SOURCE);
 
-test('a replayed viewshed reply draws its result', async ({ page }) => {
+test('a chat viewshed draws its result on the live map', async ({ page }) => {
   await page.route('**/tiles/v1/analysis/viewshed', (route) =>
     route.fulfill({ contentType: 'application/json', body: JSON.stringify(VISIBLE_SQUARE) }),
   );

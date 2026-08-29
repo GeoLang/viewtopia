@@ -48,6 +48,15 @@ const SESSION = {
 
 const snapshot = (page) => page.evaluate(() => window.__viewtopiaSnapshot());
 
+const maplibreLayerIds = (page) =>
+  page.evaluate(() => {
+    const map = window.__viewtopiaMap;
+    if (!map) return [];
+    return (map.getStyle()?.layers ?? [])
+      .map((layer) => layer.id)
+      .filter((id) => id.startsWith('agent-layer-'));
+  });
+
 test.beforeEach(async ({ page }) => {
   await page.route(`**${FILE_URL}`, (route) =>
     route.fulfill({ contentType: 'application/geo+json', body: JSON.stringify(ROADS) }),
@@ -79,4 +88,5 @@ test('a replayed reply imports a URL onto the map', async ({ page }) => {
   await expect
     .poll(async () => (await snapshot(page)).layers.map((layer) => layer.name), { timeout: 30_000 })
     .toEqual(['e2e-roads.geojson']);
+  await expect.poll(() => maplibreLayerIds(page), { timeout: 30_000 }).not.toHaveLength(0);
 });

@@ -9,7 +9,7 @@
 > Ranked 2026-08-21 against the DESIGN.md goal: ship the viewer, the agent, and
 > the services that make a shared map, not more surface. Pick from **Do next**.
 > Do not start at a parked item.
-> Last brought current: **2026-08-28**.
+> Last brought current: **2026-08-29**.
 >
 > Verify an entry against the code before working it, and do not trust the
 > mechanism it names. Three items in this file were already closed when someone
@@ -24,35 +24,21 @@ Pick one: an open row under **P0 path to the intended product** below, one
 module at a time from the **Wire for real** list, or a hosting decision under
 **Before any public deploy**.
 
-## Model-free chat action tests, started 2026-08-29
+## Chat action leftovers, 2026-08-29
 
-Every one of these drives actions the way a tool result does, through
-`window.__viewtopiaRunAction` or the registry, with no model on the line. The
-day's bugs were all of one shape: an action that reported success and changed
-nothing on the visible map, or an argument shape the registry refused.
-
-- [~] **Chat actions across both tabs, e2e** (`tests/e2e/chat-actions-tabs.spec.js`):
-      every view-changing action run on the globe tab and on the map tab, the
-      result asserted on the live renderer (Cesium camera, MapLibre centre,
-      Leaflet centre, layer present), never on the store alone.
-- [~] **Replay and persistence, e2e**: clicking a replayable message moves the
-      map and adds no chat line; tab, renderer, basemap and chat pane survive a
-      reload.
-- [~] **List then act, e2e**: `live.list` then `live.join`, `project.list` then
-      `project.open`, `dataset.list` then `dataset.draw_branch`, by name, and a
-      list never shows an id unless two entries share a name.
-- [~] **No-op is an error, unit**: table over the registry, every action that
-      can be asked for the state it already has throws `ActionError`.
-- [~] **Argument shapes, unit**: one table of the shapes models have sent (a
-      paraphrase, a one-element array, a self-named wrapper, a key-only object,
-      JSON text, numbers as strings) run through `coerceArguments` for every
-      enum and number parameter in the catalogue.
-- [~] **geolang `ViewerControlArgs` shapes, unit**: the same table against the
-      pydantic model.
-- [~] **Viewer evals as a CI gate, geolang**: `viewer_runner --replay` scores a
-      recording of model calls against the current catalogue and tasks with no
-      sibyl and no network; `--record` writes one from a live run; a CI job
-      runs the replay.
+- [ ] **MapLibre raster to vector basemap swap never finishes loading.** After
+      `basemap.set` from a raster basemap back to a vector one on the MapLibre
+      globe, `map.loaded()` never comes true: maplibre-gl 5.24 throws
+      `Cannot read properties of undefined (reading 'signal')` from its image
+      queue about 470 ms after `setStyle` and the sprite never arrives. Pinned
+      by the `test.fail` in `tests/e2e/chat-actions-tabs.spec.js`. Upstream bug
+      or a workaround in `useMapLibre`'s style swap.
+- [ ] **Viewer eval scorer judges a call the model sent, not the call the
+      viewer runs.** `tab: ["globe"]` runs in the viewer (`unwrapSingleton`) but
+      `values_match` in geolang `evals/viewer_scoring.py` scores it as a miss.
+      Unwrapping there moves every historical eval number, so it is an owner
+      decision. `change-to-3d` in `evals/viewer/recordings/grok-2026-08-29.json`
+      is recorded as that miss.
 
 ## Cross-repository audit, 2026-08-22
 
