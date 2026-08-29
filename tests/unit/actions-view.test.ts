@@ -10,16 +10,23 @@ describe('view actions', () => {
     useSplitViewStore.setState({ active: false });
   });
 
-  it('renderer.set switches the renderer, and the tab when asked', async () => {
+  it('renderer.set switches the globe renderer and leaves the tab alone', async () => {
     await expect(runAction('renderer.set', { renderer: 'cesium' })).resolves.toEqual({
       text: 'Drawing with cesium.',
     });
     expect(useAppStore.getState().renderer).toBe('cesium');
     expect(useAppStore.getState().activeTab).toBe('globe');
+  });
 
-    await runAction('renderer.set', { renderer: 'maplibre', tab: 'map' });
-    expect(useAppStore.getState().renderer).toBe('maplibre');
+  it('view.set_tab shows the flat map and the globe', async () => {
+    await expect(runAction('view.set_tab', { tab: 'map' })).resolves.toEqual({
+      text: 'Showing the flat map.',
+    });
     expect(useAppStore.getState().activeTab).toBe('map');
+    expect(useAppStore.getState().renderer).toBe('maplibre');
+
+    await runAction('view.set_tab', { tab: 'globe' });
+    expect(useAppStore.getState().activeTab).toBe('globe');
   });
 
   it('renderer.set refuses a renderer the viewer does not have', async () => {

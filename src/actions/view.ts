@@ -22,27 +22,37 @@ const SPLIT_LAYOUTS = ['twoAcross', 'grid'] as const;
 
 registerAction({
   name: 'renderer.set',
-  description: 'Draw the map with the Cesium globe or with MapLibre, and optionally switch tab.',
+  description: 'Pick the engine the globe tab draws with. The flat 2D map is the map tab, see view.set_tab.',
   parameters: {
     renderer: {
       type: 'string',
-      description: 'cesium draws the globe, maplibre draws the flat map',
+      description: 'cesium for the 3D globe, maplibre for the vector map, both on the globe tab',
       enum: RENDERERS,
       required: true,
-    },
-    tab: {
-      type: 'string',
-      description: 'globe for the 3D view, map for the 2D view',
-      enum: TABS,
     },
   },
   run: (args) => {
     const renderer = args.renderer as Renderer;
-    const tab = args.tab as ViewerTab | undefined;
-    const store = useAppStore.getState();
-    store.setRenderer(renderer);
-    if (tab) store.setActiveTab(tab);
-    return { text: tab ? `Drawing with ${renderer} on the ${tab}.` : `Drawing with ${renderer}.` };
+    useAppStore.getState().setRenderer(renderer);
+    return { text: `Drawing with ${renderer}.` };
+  },
+});
+
+registerAction({
+  name: 'view.set_tab',
+  description: 'Show the globe tab or the flat map tab.',
+  parameters: {
+    tab: {
+      type: 'string',
+      description: 'globe is the 3D view drawn by the chosen renderer, map is the flat 2D map drawn by Leaflet',
+      enum: TABS,
+      required: true,
+    },
+  },
+  run: (args) => {
+    const tab = args.tab as ViewerTab;
+    useAppStore.getState().setActiveTab(tab);
+    return { text: tab === 'map' ? 'Showing the flat map.' : 'Showing the globe.' };
   },
 });
 
