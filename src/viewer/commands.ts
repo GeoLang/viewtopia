@@ -18,7 +18,7 @@ import { HexagonLayer } from '@deck.gl/aggregation-layers';
 import { ArcLayer, ScatterplotLayer } from '@deck.gl/layers';
 import type { Layer } from '@deck.gl/core';
 import { notifications } from '@mantine/notifications';
-import { runViewerAction } from '../actions/dispatch';
+import { runViewerAction, type RunOptions } from '../actions/dispatch';
 import { NO_CESIUM_GLOBE } from '../actions/globe';
 import { getActiveCesiumViewer, getActiveMapLibre } from './registry';
 import { setSharedCamera } from '../hooks/sharedCamera';
@@ -38,7 +38,7 @@ export interface ViewerCommand {
   params?: Record<string, unknown>;
 }
 
-type Handler = (params: Record<string, unknown>) => void | Promise<void>;
+type Handler = (params: Record<string, unknown>, options: RunOptions) => void | Promise<void>;
 
 const num = (v: unknown, dflt = 0): number =>
   typeof v === 'number' && Number.isFinite(v) ? v : dflt;
@@ -291,7 +291,7 @@ const handlers: Record<string, Handler> = {
 
   // ─── the action registry ────────────────────────────────────────────────
   // one open command carrying the name of a catalogue entry and its arguments
-  run: (p) => runViewerAction(p),
+  run: (p, options) => runViewerAction(p, options),
 };
 
 /** Open a measurement mode and its panel. */
@@ -330,11 +330,11 @@ for (const [action, panel] of Object.entries(PANEL_COMMANDS)) {
   };
 }
 
-export function executeViewerCommand(cmd: ViewerCommand): void {
+export function executeViewerCommand(cmd: ViewerCommand, options: RunOptions = {}): void {
   const handler = handlers[cmd.action];
   if (!handler) {
     console.warn(`Unported viewer command: ${cmd.action}`);
     return;
   }
-  void handler(cmd.params ?? {});
+  void handler(cmd.params ?? {}, options);
 }

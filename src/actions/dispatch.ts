@@ -27,7 +27,12 @@ function readArguments(args: unknown): ActionArguments | null {
   return args as ActionArguments;
 }
 
-async function execute(definition: ActionDefinition, args: ActionArguments): Promise<void> {
+/** A replay of an earlier result draws it again and says nothing about it. */
+export interface RunOptions {
+  announce?: boolean;
+}
+
+async function execute(definition: ActionDefinition, args: ActionArguments, announce: boolean): Promise<void> {
   let text: string;
   try {
     ({ text } = await runAction(definition.name, args));
@@ -35,6 +40,7 @@ async function execute(definition: ActionDefinition, args: ActionArguments): Pro
     postSystemNotice(failure instanceof Error ? failure.message : String(failure));
     return;
   }
+  if (!announce) return;
   postSystemNotice(text);
   if (!definition.reads) return;
   const chat = useChatStore.getState();
@@ -50,7 +56,10 @@ declare global {
 }
 
 /** viewer_cmd `run`: the params carry the action name and its arguments. */
-export async function runViewerAction(params: Record<string, unknown>): Promise<void> {
+export async function runViewerAction(
+  params: Record<string, unknown>,
+  { announce = true }: RunOptions = {},
+): Promise<void> {
   const name = typeof params.name === 'string' ? params.name : String(params.name ?? '');
   const args = readArguments(params.args);
   if (args === null) {
@@ -69,7 +78,7 @@ export async function runViewerAction(params: Record<string, unknown>): Promise<
     );
     return;
   }
-  await execute(definition, args);
+  await execute(definition, args, announce);
 }
 
 window.__viewtopiaRunAction = runViewerAction;
@@ -91,6 +100,6 @@ export function interceptConfirmReply(text: string): boolean {
     postSystemNotice(`There is no viewer action named ${pending.name}.`);
     return true;
   }
-  void execute(definition, pending.args);
+  void execute(definition, pending.args, true);
   return true;
 }

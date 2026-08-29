@@ -25,7 +25,7 @@ import { withTypedPrefix } from '../speech/segments';
 
 /** Re-run everything a reply did to the map: its viewer commands, then its map spec. */
 function replayMessage(msg: Message) {
-  for (const cmd of msg.viewerCmds ?? []) executeViewerCommand(cmd);
+  for (const cmd of msg.viewerCmds ?? []) executeViewerCommand(cmd, { announce: false });
   if (msg.mapSpec) void renderUISpec(msg.mapSpec);
 }
 

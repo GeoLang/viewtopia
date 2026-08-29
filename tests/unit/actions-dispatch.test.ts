@@ -42,6 +42,13 @@ describe('runViewerAction', () => {
     expect(notices()).toEqual(['Painted red.']);
   });
 
+  it('a replay runs the action and posts nothing', async () => {
+    await runViewerAction({ name: 'paint.set', args: { color: 'red' } }, { announce: false });
+
+    expect(painted).toBe('red');
+    expect(notices()).toEqual([]);
+  });
+
   // small models send the arguments as a JSON string rather than an object
   it('reads arguments that arrive as JSON text', async () => {
     await runViewerAction({ name: 'paint.set', args: '{"color":"blue"}' });
