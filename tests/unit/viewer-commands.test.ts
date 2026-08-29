@@ -9,6 +9,7 @@ import { useMeasureStore } from '../../src/store/measure';
 import { useDeckLayersStore } from '../../src/hooks/deckLayers';
 import { useAgentLayerStore } from '../../src/store/agentLayers';
 import { useChatStore } from '../../src/store/chat';
+import { useSpaceTimeStore } from '../../src/features/spacetime/store';
 import { useHeatmapStore } from '../../src/lib/mapHeatmap';
 import { getSharedCamera } from '../../src/hooks/sharedCamera';
 
@@ -142,6 +143,18 @@ describe('agent viewer commands', () => {
     const cam = getSharedCamera();
     expect(cam.longitude).toBeCloseTo(7.42);
     expect(cam.latitude).toBeCloseTo(43.74);
+    reg.map = null;
+  });
+
+  it('fly_to on the map tab asks ViewerArea to move the leaflet map', () => {
+    const flyTo = vi.fn();
+    reg.map = { flyTo };
+    useAppStore.setState({ activeTab: 'map' });
+    executeViewerCommand({ action: 'fly_to', params: { lon: 2.2, lat: 46.6, height: 1000 } });
+    expect(useSpaceTimeStore.getState().flyToTarget).toEqual({ lng: 2.2, lat: 46.6, zoom: 16 });
+    expect(flyTo).not.toHaveBeenCalled();
+    expect(getSharedCamera().latitude).toBeCloseTo(46.6);
+    useSpaceTimeStore.getState().clearFlyTo();
     reg.map = null;
   });
 

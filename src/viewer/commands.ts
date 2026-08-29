@@ -24,6 +24,7 @@ import { getActiveCesiumViewer, getActiveMapLibre } from './registry';
 import { setSharedCamera } from '../hooks/sharedCamera';
 import { runSqlQuery } from '../duckdb/sqlCommand';
 import { useAppStore, asRenderer, type ViewerTab, type ToolPanel } from '../store/app';
+import { useSpaceTimeStore } from '../features/spacetime/store';
 import { useAgentLayerStore, toFeatureCollection } from '../store/agentLayers';
 import { useDeckLayersStore } from '../hooks/deckLayers';
 import { showHeatmap } from '../lib/mapHeatmap';
@@ -90,6 +91,12 @@ function moveCamera(p: Record<string, unknown>, setView: boolean): void {
   const zoom = heightToZoom(height);
   const bearing = num(p.heading, 0);
   setSharedCamera({ longitude: lon, latitude: lat, zoom, bearing });
+
+  // the map tab draws with leaflet, which only ViewerArea holds
+  if (useAppStore.getState().activeTab === 'map') {
+    useSpaceTimeStore.getState().flyTo(lon, lat, zoom);
+    return;
+  }
 
   const cesium = getActiveCesiumViewer();
   if (cesium) {
