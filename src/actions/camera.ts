@@ -8,7 +8,10 @@ registerAction({
   parameters: {
     lon: { type: 'number', description: 'Longitude in degrees, -180 to 180.', required: true },
     lat: { type: 'number', description: 'Latitude in degrees, -90 to 90.', required: true },
-    height: { type: 'number', description: 'Height above the ground in metres.' },
+    height: {
+      type: 'number',
+      description: 'Height above the ground in metres: about 5000 for a city, 2000000 for a country. Omit it to land at street level.',
+    },
     heading: { type: 'number', description: 'Compass bearing in degrees, 0 is north.' },
     pitch: { type: 'number', description: 'Tilt in degrees, negative looks down at the ground.' },
   },

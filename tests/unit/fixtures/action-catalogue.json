@@ -240,7 +240,7 @@
         },
         "height": {
           "type": "number",
-          "description": "Height above the ground in metres."
+          "description": "Height above the ground in metres: about 5000 for a city, 2000000 for a country. Omit it to land at street level."
         },
         "heading": {
           "type": "number",
