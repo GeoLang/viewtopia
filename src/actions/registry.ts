@@ -94,18 +94,22 @@ export function actionCatalogue(): CatalogueEntry[] {
 const BOOLEAN_WORDS: Record<string, boolean> = { true: true, false: false, yes: true, no: false, on: true, off: false };
 
 /**
- * `{basemap: {basemap: 'satellite'}}` read back as `'satellite'`.
+ * `{basemap: {basemap: 'satellite'}}` read back as `'satellite'`, and
+ * `{document: {'doc-1': null}}` as `'doc-1'`.
  *
- * Small models echo the parameter name as a wrapper around its own value. Only
- * for scalar parameters, so an object parameter holding a same-named key is
- * left alone.
+ * Models wrap a scalar in an object: some echo the parameter name as the key,
+ * some put the value where the key goes and leave the value empty. Only for
+ * scalar parameters, so an object parameter is left alone.
  */
 function unwrapSelfNamed(key: string, parameter: ActionParameter, value: unknown): unknown {
   if (parameter.type === 'object') return value;
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return value;
-  const keys = Object.keys(value);
-  if (keys.length !== 1 || keys[0] !== key) return value;
-  return (value as Record<string, unknown>)[key];
+  const entries = Object.entries(value);
+  if (entries.length !== 1) return value;
+  const [onlyKey, onlyValue] = entries[0];
+  if (onlyKey === key) return onlyValue;
+  if (onlyValue === null || onlyValue === undefined) return onlyKey;
+  return value;
 }
 
 /**

@@ -265,6 +265,14 @@ describe('settings selfHostedBasemapUrl', () => {
     useAppStore.getState().setActiveTab('globe');
   });
 
+  it('persists whether the chat pane is open', () => {
+    const before = useAppStore.getState().navOpened;
+    useAppStore.getState().toggleNav();
+    const stored = JSON.parse(localStorage.getItem('viewtopia-app') ?? '{}');
+    expect(stored.state.navOpened).toBe(!before);
+    useAppStore.getState().toggleNav();
+  });
+
   it('persists the URL to storage', () => {
     const url = 'https://files.example.com/planet.pmtiles';
     useAppStore.getState().updateSettings({ selfHostedBasemapUrl: url });

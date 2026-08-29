@@ -117,6 +117,16 @@ describe('action registry', () => {
       );
     });
 
+    it('reads the key of a single-entry object whose value is empty', () => {
+      expect(coerceArguments(definition, { count: 1, pick: { left: null } })).toEqual({
+        count: 1,
+        pick: 'left',
+      });
+      expect(() => coerceArguments(definition, { count: 1, pick: { middle: 'x' } })).toThrow(
+        'pick must be a string',
+      );
+    });
+
     it('unwraps a scalar the model put in a one-element array', () => {
       expect(coerceArguments(definition, { count: [3], on: ['yes'], pick: ['left'] })).toEqual({
         count: 3,

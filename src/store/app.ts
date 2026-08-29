@@ -381,6 +381,7 @@ export const useAppStore = create<AppState>()(
           : null,
         renderer: state.renderer,
         activeTab: state.activeTab,
+        navOpened: state.navOpened,
         // a live document's bookmarks belong to the document, so they never
         // overwrite the ones this browser owns
         bookmarks: localBookmarks ?? state.bookmarks,
