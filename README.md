@@ -151,7 +151,7 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 ### UX
 | Feature | Description |
 |---------|-------------|
-| **Keyboard Shortcuts** | 20+ shortcuts (`?` for help) |
+| **Keyboard Shortcuts** | one-letter draw and measure tools, see [Keyboard Shortcuts](#keyboard-shortcuts) |
 | **Dark/Light Theme** | Toggle with persistence |
 | **Geocoding** | Nominatim-powered place search |
 | **Coordinate Readout** | Live lat/lon/height under cursor |
@@ -750,21 +750,22 @@ scripts/clone-geolang.sh  [DIR]   # macOS/Linux/Git-Bash
 
 ## Keyboard Shortcuts
 
+Bare letters open the tool's panel and arm that mode. The same letter again
+disarms it. None of them fire while a text field has focus, and chat mode,
+view-only links and embeds drop the ones that need the mouse.
+
 | Key | Action |
 |-----|--------|
-| `M` | Measure |
-| `A` | Annotate |
-| `I` | Feature info |
-| `D` | Draw |
-| `B` | Bookmarks |
-| `S` | Stories |
-| `C` | Collaboration |
-| `1-4` | Switch tabs |
-| `F1-F3` | Switch renderer |
-| `P` | Print/export |
-| `V` | Split view |
-| `?` | Show help |
-| `Esc` | Close panels |
+| `P` | Draw point |
+| `L` | Draw line |
+| `G` | Draw polygon |
+| `C` | Draw circle |
+| `R` | Draw rectangle |
+| `M` | Measure distance |
+| `A` | Measure area |
+| `T` | Space-time panel |
+| `Ctrl+B` | Show or hide the chat |
+| `Ctrl+.` | Hide the chrome, map only |
 
 ---
 
