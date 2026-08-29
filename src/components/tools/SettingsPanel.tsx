@@ -180,7 +180,7 @@ const SWITCH_ERRORS: Record<number, string> = {
 
 const CLOUD_PRESETS = [
   { id: 'xai', label: 'xAI (Grok)', base: 'https://api.x.ai/v1', model: 'grok-4-1-fast-reasoning' },
-  { id: 'anthropic', label: 'Anthropic (Claude)', base: 'https://api.anthropic.com/v1', model: 'claude-sonnet-4-5' },
+  { id: 'anthropic', label: 'Anthropic (Claude)', base: 'https://api.anthropic.com/v1', model: 'claude-sonnet-5' },
   { id: 'custom', label: 'Custom (OpenAI-compatible)', base: '', model: '' },
 ] as const;
 
@@ -194,7 +194,13 @@ function profileId(provider: string, model: string): string {
   return `${provider}:${model}`;
 }
 
-/** sibyl names what it rejected in a JSON `error` field, so show that rather than a generic line */
+function serverOfForm(form: FormMode | null, providers: ModelProvider[]): ModelServer | undefined {
+  if (!form) return undefined;
+  if (form.kind === 'add') return form.server;
+  return providers.find((p) => p.id === form.id)?.server;
+}
+
+/** sibyl names what it rejected in a JSON `error` field */
 async function refusalReason(res: Response): Promise<string | null> {
   const body: unknown = await res.json().catch(() => null);
   if (!body || typeof body !== 'object') return null;
@@ -340,12 +346,15 @@ function AiModelSelect() {
         return;
       }
       const reason = res.status === 400 ? await refusalReason(res) : null;
-      setError(
-        reason
-          ?? (res.status === 400
-            ? 'That provider was refused.'
-            : (SWITCH_ERRORS[res.status] ?? `Save failed: HTTP ${res.status}`)),
-      );
+      if (reason) {
+        setError(reason);
+        return;
+      }
+      if (res.status === 400) {
+        setError('That provider was refused.');
+        return;
+      }
+      setError(SWITCH_ERRORS[res.status] ?? `Save failed: HTTP ${res.status}`);
       return;
     }
     setKey('');
@@ -376,11 +385,7 @@ function AiModelSelect() {
 
   const listed = profiles ?? [];
   const loading = profiles === null;
-  const formServer: ModelServer | undefined = !form
-    ? undefined
-    : form.kind === 'add'
-      ? form.server
-      : providers.find((p) => p.id === form.id)?.server;
+  const formServer = serverOfForm(form, providers);
 
   return (
     <Stack gap="xs" data-testid="ai-model-select">
@@ -523,7 +528,7 @@ function AiModelSelect() {
             size="xs"
             label="Models"
             description="Comma-separated. Each name is one switchable profile."
-            placeholder="claude-sonnet-4-5, claude-opus-4"
+            placeholder="claude-sonnet-5, claude-opus-5"
             value={models}
             disabled={busy}
             onChange={(e) => setModels(e.currentTarget.value)}

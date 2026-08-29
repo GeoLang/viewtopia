@@ -194,7 +194,7 @@ describe('SettingsPanel AI model section', () => {
     expect(JSON.parse(save?.[1]?.body as string)).toEqual({
       server: 'cloud',
       base: 'https://api.anthropic.com/v1',
-      models: 'claude-sonnet-4-5',
+      models: 'claude-sonnet-5',
       id: 'anthropic',
       label: 'Anthropic (Claude)',
       key: 'sk-ant-new',
