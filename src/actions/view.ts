@@ -26,7 +26,7 @@ registerAction({
   parameters: {
     renderer: {
       type: 'string',
-      description: 'cesium for the 3D globe, maplibre for the faster vector renderer',
+      description: 'cesium draws the globe, maplibre draws the flat map',
       enum: RENDERERS,
       required: true,
     },
