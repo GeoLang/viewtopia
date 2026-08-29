@@ -380,6 +380,7 @@ export const useAppStore = create<AppState>()(
           ? { name: state.localBasemap.name, status: 'needs-file' as const }
           : null,
         renderer: state.renderer,
+        activeTab: state.activeTab,
         // a live document's bookmarks belong to the document, so they never
         // overwrite the ones this browser owns
         bookmarks: localBookmarks ?? state.bookmarks,

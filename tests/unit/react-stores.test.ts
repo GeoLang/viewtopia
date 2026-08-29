@@ -256,6 +256,15 @@ describe('settings selfHostedBasemapUrl', () => {
     expect(useAppStore.getState().settings.selfHostedBasemapUrl).toBe('');
   });
 
+  it('persists the tab so a reload comes back on the same view', () => {
+    useAppStore.getState().setActiveTab('map');
+    const stored = JSON.parse(localStorage.getItem('viewtopia-app') ?? '{}');
+    expect(stored.state.activeTab).toBe('map');
+    expect(stored.state.renderer).toBe(useAppStore.getState().renderer);
+    expect(stored.state.basemap).toBe(useAppStore.getState().basemap);
+    useAppStore.getState().setActiveTab('globe');
+  });
+
   it('persists the URL to storage', () => {
     const url = 'https://files.example.com/planet.pmtiles';
     useAppStore.getState().updateSettings({ selfHostedBasemapUrl: url });
