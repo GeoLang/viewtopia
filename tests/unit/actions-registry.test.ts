@@ -117,6 +117,22 @@ describe('action registry', () => {
       );
     });
 
+    it('unwraps a scalar the model put in a one-element array', () => {
+      expect(coerceArguments(definition, { count: [3], on: ['yes'], pick: ['left'] })).toEqual({
+        count: 3,
+        on: true,
+        pick: 'left',
+      });
+      expect(() => coerceArguments(definition, { count: [1, 2] })).toThrow('count must be a number');
+    });
+
+    it('keeps the one element of an array parameter', () => {
+      const withArray = define({
+        parameters: { ids: { type: 'array', description: 'which ids', required: true } },
+      });
+      expect(coerceArguments(withArray, { ids: ['a'] })).toEqual({ ids: ['a'] });
+    });
+
     it('leaves an object parameter holding a same-named key alone', () => {
       const withObject = define({
         parameters: { filter: { type: 'object', description: 'a filter', required: true } },

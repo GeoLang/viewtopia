@@ -108,6 +108,18 @@ function unwrapSelfNamed(key: string, parameter: ActionParameter, value: unknown
   return (value as Record<string, unknown>)[key];
 }
 
+/**
+ * `{renderer: ['cesium']}` read back as `'cesium'`.
+ *
+ * The same models also put a lone scalar inside an array. Only for scalar
+ * parameters, so an array parameter keeps its one element.
+ */
+function unwrapSingleton(parameter: ActionParameter, value: unknown): unknown {
+  if (parameter.type === 'array' || parameter.type === 'object') return value;
+  if (!Array.isArray(value) || value.length !== 1) return value;
+  return value[0];
+}
+
 /** The value as the parameter's type, or undefined when it cannot be read as one. */
 function coerce(parameter: ActionParameter, value: unknown): unknown {
   switch (parameter.type) {
@@ -147,7 +159,7 @@ export function coerceArguments(definition: ActionDefinition, args: ActionArgume
       if (parameter.required) problems.push(`${key} is required`);
       continue;
     }
-    const read = coerce(parameter, unwrapSelfNamed(key, parameter, value));
+    const read = coerce(parameter, unwrapSingleton(parameter, unwrapSelfNamed(key, parameter, value)));
     if (read === undefined) {
       problems.push(`${key} must be a ${parameter.type}`);
       continue;
