@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { Badge } from '@mantine/core';
 import { useAppStore, type ToolPanel } from '../store/app';
 import { useSpaceTimeStore } from '../features/spacetime/store';
+import { useDrawStore } from '../store/draw';
+import { useMeasureStore } from '../store/measure';
 import { isPreviewPanel } from './toolMenus';
 import { PluginPanel } from '../plugins/PluginHost';
 import { PluginManagerPanel } from '../plugins/runtime/PluginManagerPanel';
@@ -118,6 +120,14 @@ export function ToolPanels() {
     if (!activePanel && !spaceTimeOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
+      // an armed draw or measure tool goes first, the panel on the next press
+      const draw = useDrawStore.getState();
+      const measure = useMeasureStore.getState();
+      if (draw.mode !== null || measure.mode !== null) {
+        draw.setMode(null);
+        measure.setMode(null);
+        return;
+      }
       setActivePanel(null);
       closeSpaceTime();
     };

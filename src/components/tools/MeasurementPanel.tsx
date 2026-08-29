@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import {
   Text,
   Stack,
@@ -38,6 +39,9 @@ export function MeasurementPanel({
   const cancelPending = useMeasureStore((s) => s.cancelPending);
   const clearAll = useMeasureStore((s) => s.clearAll);
   const removeResult = useMeasureStore((s) => s.removeResult);
+
+  // the map keeps measuring after the panel is gone, with nothing left to say so
+  useEffect(() => () => setMode(null), [setMode]);
 
   const activateMode = (m: MeasureMode) => {
     if (mode === m) {

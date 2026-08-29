@@ -16,6 +16,13 @@ All notable changes to this project will be documented in this file.
   Ptolemy as a gap, GeoGit GeoJSON-without-geometry, the duplicate native
   vector-to-3D-Tiles row, and the tiletopia mesh tiling leftovers now built.
 
+### Fixed
+
+- 2026-08-29: **a draw or measure tool can be put down.** Closing its panel
+  disarms it, and Escape disarms an armed tool first and closes the panel on
+  the next press. Before, the only way out of a tool armed by its letter key
+  was the same key again, and the map kept drawing with the panel gone.
+
 ### Added
 
 - 2026-08-29: **chat actions are tested with no model on the line.** 19 e2e

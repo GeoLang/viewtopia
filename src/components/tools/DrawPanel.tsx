@@ -67,6 +67,9 @@ export function DrawPanel({ onClose }: { onClose: () => void }) {
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  // the map keeps drawing after the panel is gone, with nothing left to say so
+  useEffect(() => () => setMode(null), [setMode]);
+
   useEffect(() => {
     if (!saveOpen) return;
     fetchDatasets().then(setDatasets).catch((err) => setSaveError(errorMessage(err)));
