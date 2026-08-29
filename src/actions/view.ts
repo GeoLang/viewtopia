@@ -24,11 +24,12 @@ const SPLIT_LAYOUTS = ['twoAcross', 'grid'] as const;
 
 registerAction({
   name: 'renderer.set',
-  description: 'Choose the engine that draws the globe tab and show that tab. For the flat 2D map use view.set_tab.',
+  description:
+    'Choose the engine that draws the globe tab and show that tab. Leaflet is not one of them: it draws the flat 2D map, so leaflet or 2D means view.set_tab with tab map.',
   parameters: {
     renderer: {
       type: 'string',
-      description: 'cesium or maplibre, the engine behind the globe tab',
+      description: 'cesium or maplibre, the engine behind the globe tab. Never leaflet, that is the map tab.',
       enum: RENDERERS,
       required: true,
     },
@@ -48,7 +49,7 @@ registerAction({
 
 registerAction({
   name: 'view.set_tab',
-  description: 'Show the globe tab or the flat map tab.',
+  description: 'Show the globe tab or the flat map tab. Leaflet draws the map tab, so asking for leaflet means tab map.',
   parameters: {
     tab: {
       type: 'string',
