@@ -40,7 +40,10 @@ export function useWatchRegionsMapLibre(mapRef: MutableRefObject<maplibregl.Map 
     const map = mapRef.current;
     if (!map) return;
 
+    // a style swap drops the source and refuses additions until the new
+    // style is in, and style.load runs this again once it is
     const render = () => {
+      if (!map.isStyleLoaded()) return;
       const features = regionFeatures(useWatchStateStore.getState().watches);
       const source = map.getSource(SOURCE) as maplibregl.GeoJSONSource | undefined;
       if (source) {
@@ -63,12 +66,12 @@ export function useWatchRegionsMapLibre(mapRef: MutableRefObject<maplibregl.Map 
     };
 
     const unsubscribe = useWatchStateStore.subscribe(render);
-    if (map.isStyleLoaded()) render();
-    else map.on('load', render);
+    map.on('style.load', render);
+    render();
 
     return () => {
       unsubscribe();
-      map.off('load', render);
+      map.off('style.load', render);
     };
   }, [mapRef, renderer, activeTab]);
 }
