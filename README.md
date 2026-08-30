@@ -21,7 +21,6 @@ calls. Several surfaces are local-only or depend on configured services:
 - Conflict merge code exists, but the resolver is not mounted and the platform
   sync path does not queue the feature operations it expects.
 - Space-Time Analysis buttons are present but have no handlers.
-- LiveKit voice and video require a configured URL and a token.
 - Vertical plugins read configured service datasets. They do not provide those
   datasets.
 
@@ -164,7 +163,7 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 | **Print/Export** | PNG screenshot with title, scale bar, north arrow |
 | **Tour** | 12-step onboarding walkthrough |
 | **Stories** | Guided fly-through presentations |
-| **Collaboration** | Real-time view sync, cursors, chat, and voice/video |
+| **Collaboration** | Room-based presence and chat over tiletopia's relay |
 | **Responsive** | Mobile-friendly layout with collapsible panels |
 | **PWA** | Installable web app manifest |
 
@@ -239,7 +238,6 @@ inputs.
 | **Room-based sessions** | Join a named room — all participants see each other |
 | **Presence** | Online user list with coloured indicators |
 | **Chat** | Real-time text messaging within the room |
-| **Voice & Video** | Optional LiveKit WebRTC for mic, camera, and screen share. A URL and token are required |
 | **Backend** | Connects to tiletopia's `/api/v1/realtime/{room}` ephemeral relay |
 | **Cursors and camera-follow** | Not here: start a live session, then click a peer avatar in the header |
 
@@ -544,15 +542,14 @@ shipping plan). See [DESIGN.md §2 — Current architecture](DESIGN.md#2-current
 
 ## Collaboration Guide
 
-Chat and voice/video run over tiletopia's ephemeral room relay plus optional
-LiveKit WebRTC. Peer cursors and camera-follow are not part of a room: they belong
-to a live document, where a peer avatar in the header is the follow control.
+Presence and chat run over tiletopia's ephemeral room relay. Peer cursors and
+camera-follow are not part of a room: they belong to a live document, where a
+peer avatar in the header is the follow control.
 
 ### Setup
 
-1. **Configure server URLs** in the Settings panel (⚙️):
-   - **tiletopia URL** — e.g. `https://tiletopia.example.com/api/v1`
-   - **LiveKit URL** (optional) — e.g. `wss://livekit.example.com`
+1. **Configure the tiletopia URL** in the Settings panel (⚙️), for example
+   `https://tiletopia.example.com/api/v1`.
 
 2. **Open the Collaboration panel** from the toolbar menu (👥 Collab).
 
@@ -566,19 +563,6 @@ to a live document, where a peer avatar in the header is the follow control.
 
 Type a message in the chat box at the bottom of the panel. Messages appear in real-time
 for all participants. Your own messages are highlighted in purple.
-
-### Voice & Video (LiveKit)
-
-If a **LiveKit URL** is configured in Settings:
-
-1. After joining a room, a **Voice & Video** section appears.
-2. Paste a LiveKit access token (from your token broker) and click **Join Call**.
-3. Use the toolbar buttons to toggle **mic** 🎤 and **camera** 📹.
-4. Click the **phone icon** 📞 to leave the call (you stay in the collab room).
-
-> **Token broker**: LiveKit requires server-signed JWT tokens. You can add a
-> `/api/v1/livekit/token` endpoint to Ptolemy, or use LiveKit Cloud's token API,
-> or a standalone service. See [LiveKit docs](https://docs.livekit.io/home/).
 
 ### Protocol
 

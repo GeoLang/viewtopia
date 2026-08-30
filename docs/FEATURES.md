@@ -51,7 +51,6 @@ and the source paths named by those documents.
   it expects.
 - Vertical plugins read configured service datasets or demo data. They do not
   provide those datasets.
-- LiveKit voice and video require a configured URL and a token.
 - Viewshed, flood, routing, travel time, and some terrain tools depend on the
   corresponding remote service.
 

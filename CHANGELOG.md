@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Removed
+
+- 2026-08-30: **LiveKit voice and video are gone.** The Collaboration panel's
+  Voice & Video block, `src/store/livekit.ts`, the `livekitUrl` setting and its
+  Settings input, and the `livekit-client` dependency are deleted. Joining a
+  call always needed a token from a broker nobody ships, so the block only ever
+  appeared for an operator who had already built one. The room itself is
+  untouched: presence and chat still run over tiletopia's
+  `/api/v1/realtime/{room}` relay. A `livekitUrl` left in a browser's persisted
+  settings is ignored, since the store merges persisted state field by field
+  and nothing reads that key now.
+
 ### Changed
 
 - 2026-08-29: **`platform-up.sh` starts the speech service by itself.** It

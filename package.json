@@ -81,7 +81,6 @@
     "leaflet": "^1.9.4",
     "leaflet-draw": "^1.0.4",
     "leaflet.markercluster": "^1.5.3",
-    "livekit-client": "^2.19.0",
     "mapillary-js": "^4.1.2",
     "maplibre-gl": "^5.24.0",
     "pdfjs-dist": "^6.2.108",

@@ -3,7 +3,6 @@ import { useAppStore } from '../../src/store/app';
 import { useChatStore } from '../../src/store/chat';
 import { useSpaceTimeStore } from '../../src/features/spacetime/store';
 import { useCollabStore } from '../../src/store/collaboration';
-import { useLiveKitStore } from '../../src/store/livekit';
 
 describe('app store', () => {
   it('toggles nav', () => {
@@ -217,37 +216,6 @@ describe('collaboration store', () => {
 
   it('has no identity of its own: the server assigns one on connect', () => {
     expect(useCollabStore.getState().userId).toBeNull();
-  });
-});
-
-describe('livekit store', () => {
-  it('starts disconnected', () => {
-    const state = useLiveKitStore.getState();
-    expect(state.connected).toBe(false);
-    expect(state.micEnabled).toBe(false);
-    expect(state.camEnabled).toBe(false);
-    expect(state.participants).toEqual([]);
-  });
-
-  it('rejects join without livekitUrl', async () => {
-    // Ensure livekitUrl is empty (default)
-    useAppStore.getState().updateSettings({ livekitUrl: '' });
-    await expect(useLiveKitStore.getState().join('room', 'token')).rejects.toThrow(
-      'LiveKit URL not configured',
-    );
-  });
-});
-
-describe('settings livekitUrl', () => {
-  it('has empty default', () => {
-    useAppStore.getState().updateSettings({ livekitUrl: '' });
-    expect(useAppStore.getState().settings.livekitUrl).toBe('');
-  });
-
-  it('persists livekitUrl', () => {
-    useAppStore.getState().updateSettings({ livekitUrl: 'wss://livekit.example.com' });
-    expect(useAppStore.getState().settings.livekitUrl).toBe('wss://livekit.example.com');
-    useAppStore.getState().updateSettings({ livekitUrl: '' });
   });
 });
 

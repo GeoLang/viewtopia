@@ -144,7 +144,6 @@ interface Settings {
   probeIntervalSec: number;
   tiletopiaUrl: string;
   geolangUrl: string;
-  livekitUrl: string;
   /** overrides VITE_PLUGIN_REGISTRY_URL; empty falls back to the build's value */
   pluginRegistryUrl: string;
   /** Cesium Ion access token, used for both the asset REST API and Ion.defaultAccessToken */
@@ -233,7 +232,6 @@ const DEFAULT_SETTINGS: Settings = {
   probeIntervalSec: 30,
   tiletopiaUrl: '/api/v1',
   geolangUrl: '/agent',
-  livekitUrl: '',
   pluginRegistryUrl: '',
   cesiumIonToken: '',
   googleMapsApiKey: '',

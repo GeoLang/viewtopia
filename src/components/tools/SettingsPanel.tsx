@@ -113,14 +113,6 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           onChange={(e) => updateSettings({ geolangUrl: e.currentTarget.value })}
         />
 
-        <TextInput
-          size="xs"
-          label="LiveKit URL"
-          placeholder="wss://livekit.example.com"
-          value={settings.livekitUrl}
-          onChange={(e) => updateSettings({ livekitUrl: e.currentTarget.value })}
-        />
-
         <Text size="xs" c="dimmed">Probe Interval: {settings.probeIntervalSec}s</Text>
         <Slider
           size="xs"

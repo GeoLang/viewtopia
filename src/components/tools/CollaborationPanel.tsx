@@ -9,21 +9,10 @@ import {
   TextInput,
   Button,
   Divider,
-  Tooltip,
 } from '@mantine/core';
-import {
-  IconUsers,
-  IconSend,
-  IconMicrophone,
-  IconMicrophoneOff,
-  IconVideo,
-  IconVideoOff,
-  IconPhoneOff,
-} from '@tabler/icons-react';
+import { IconUsers, IconSend } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { useCollabStore } from '../../store/collaboration';
-import { useLiveKitStore } from '../../store/livekit';
-import { useAppStore } from '../../store/app';
 import { useAuthStore } from '../../features/auth/store';
 
 export function CollaborationPanel({ onClose }: { onClose: () => void }) {
@@ -41,15 +30,12 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
     sendChat,
   } = useCollabStore();
 
-  const lk = useLiveKitStore();
-  const livekitUrl = useAppStore((s) => s.settings.livekitUrl);
   // the room handshake needs the session JWT, so signed out there is nothing to join
   const loggedIn = useAuthStore((s) => s.loggedIn);
 
   const [roomInput, setRoomInput] = useState('');
   const [nameInput, setNameInput] = useState(userName);
   const [chatInput, setChatInput] = useState('');
-  const [lkToken, setLkToken] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -122,69 +108,10 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
               <Text size="xs" c="dimmed">
                 Room: <Text span c="white" fw={500}>{roomId}</Text>
               </Text>
-              <Button size="xs" color="red" variant="subtle" onClick={() => { lk.leave(); disconnect(); }}>
+              <Button size="xs" color="red" variant="subtle" onClick={disconnect}>
                 Leave
               </Button>
             </Group>
-
-            {/* Voice / Video (LiveKit) */}
-            {livekitUrl && (
-              <>
-                <Divider color="var(--mantine-color-dark-5)" />
-                <Text size="xs" c="dimmed" fw={600}>Voice &amp; Video</Text>
-                {!lk.connected ? (
-                  <Group gap="xs">
-                    <TextInput
-                      size="xs"
-                      placeholder="LiveKit token…"
-                      value={lkToken}
-                      onChange={(e) => setLkToken(e.currentTarget.value)}
-                      style={{ flex: 1 }}
-                    />
-                    <Button
-                      size="xs"
-                      color="violet"
-                      variant="light"
-                      disabled={!lkToken.trim()}
-                      onClick={() => roomId && lk.join(roomId, lkToken.trim())}
-                    >
-                      Join Call
-                    </Button>
-                  </Group>
-                ) : (
-                  <Group gap="xs">
-                    <Tooltip label={lk.micEnabled ? 'Mute mic' : 'Unmute mic'}>
-                      <ActionIcon aria-label={lk.micEnabled ? 'Mute mic' : 'Unmute mic'}
-                        size="sm"
-                        variant="light"
-                        color={lk.micEnabled ? 'green' : 'gray'}
-                        onClick={() => lk.toggleMic()}
-                      >
-                        {lk.micEnabled ? <IconMicrophone size={14} /> : <IconMicrophoneOff size={14} />}
-                      </ActionIcon>
-                    </Tooltip>
-                    <Tooltip label={lk.camEnabled ? 'Turn off camera' : 'Turn on camera'}>
-                      <ActionIcon aria-label={lk.camEnabled ? 'Turn off camera' : 'Turn on camera'}
-                        size="sm"
-                        variant="light"
-                        color={lk.camEnabled ? 'green' : 'gray'}
-                        onClick={() => lk.toggleCam()}
-                      >
-                        {lk.camEnabled ? <IconVideo size={14} /> : <IconVideoOff size={14} />}
-                      </ActionIcon>
-                    </Tooltip>
-                    <Tooltip label="Leave call">
-                      <ActionIcon aria-label="Leave call" size="sm" variant="light" color="red" onClick={() => lk.leave()}>
-                        <IconPhoneOff size={14} />
-                      </ActionIcon>
-                    </Tooltip>
-                    <Badge size="xs" variant="light" color="green">
-                      {lk.participants.length} in call
-                    </Badge>
-                  </Group>
-                )}
-              </>
-            )}
 
             <Divider color="var(--mantine-color-dark-5)" />
             <Text size="xs" c="dimmed" fw={600}>Users</Text>
