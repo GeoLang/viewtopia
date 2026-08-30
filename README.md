@@ -102,6 +102,10 @@ Not implemented: ontology, CDR import, entity resolution, geofencing UI, case ma
 | **Telecom** | Tower inventory, RF coverage simulation (Hata model) |
 | **Emergency** | Incident dispatch, evacuation routing, affected area analysis |
 
+None of these draw anything until the dataset they look for exists.
+[docs/verticals-setup.md](docs/verticals-setup.md) lists the dataset name each
+one discovers, the properties its panel reads, and every settings key.
+
 ### QGIS Plugin Equivalents (Plugins)
 Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 

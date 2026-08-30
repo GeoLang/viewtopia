@@ -26,6 +26,7 @@ import {
   listIncidents,
   createIncident,
   INCIDENTS_DATASET,
+  missingDatasetMessage,
 } from '../../lib/verticals';
 
 interface Incident {
@@ -106,7 +107,7 @@ export function IncidentPanel({ onShowEvacRoutes, onShowAffectedArea, onClose }:
     try {
       const branch = await discoverBranch(INCIDENTS_DATASET);
       if (!branch) {
-        setError('No incident dataset configured');
+        setError(missingDatasetMessage(INCIDENTS_DATASET, 'emergency'));
         setIncidents([]);
         return;
       }
@@ -127,7 +128,7 @@ export function IncidentPanel({ onShowEvacRoutes, onShowAffectedArea, onClose }:
     if (!branch) {
       branch = await discoverBranch(INCIDENTS_DATASET);
       if (!branch) {
-        setError('No incident dataset configured');
+        setError(missingDatasetMessage(INCIDENTS_DATASET, 'emergency'));
         return;
       }
       setBranchId(branch);

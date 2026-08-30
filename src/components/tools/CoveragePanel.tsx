@@ -13,7 +13,12 @@ import {
   Divider,
 } from '@mantine/core';
 import { IconX, IconAntenna, IconSignal4g, IconMapPin } from '@tabler/icons-react';
-import { discoverBranch, listTowers, TOWERS_DATASET } from '../../lib/verticals';
+import {
+  discoverBranch,
+  listTowers,
+  TOWERS_DATASET,
+  missingDatasetMessage,
+} from '../../lib/verticals';
 
 export interface TowerSite {
   id: string;
@@ -53,7 +58,7 @@ export function CoveragePanel({ onFlyTo, onShowCoverage, onShowViewshed, onClose
     try {
       const branchId = await discoverBranch(TOWERS_DATASET);
       if (!branchId) {
-        setError('No tower dataset configured');
+        setError(missingDatasetMessage(TOWERS_DATASET, 'telecom'));
         setTowers([]);
         return;
       }

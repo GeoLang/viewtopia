@@ -14,7 +14,13 @@ import {
   Divider,
 } from '@mantine/core';
 import { IconX, IconPlant, IconDroplet, IconSun } from '@tabler/icons-react';
-import { discoverBranch, listFields, fieldNdvi, FIELDS_DATASET } from '../../lib/verticals';
+import {
+  discoverBranch,
+  listFields,
+  fieldNdvi,
+  FIELDS_DATASET,
+  missingDatasetMessage,
+} from '../../lib/verticals';
 import type { NdviResponse } from '../../lib/verticals';
 import { fetchBranchGeometry } from '../../lib/branchFeatures';
 
@@ -76,7 +82,7 @@ export function FieldPanel({ onHighlightField, onShowNdvi, onClose }: FieldPanel
     try {
       const branchId = await discoverBranch(FIELDS_DATASET);
       if (!branchId) {
-        setError('No field dataset configured');
+        setError(missingDatasetMessage(FIELDS_DATASET, 'agriculture'));
         setFields([]);
         return;
       }

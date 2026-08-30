@@ -23,7 +23,13 @@ import {
   IconCurrencyDollar,
   IconPlus,
 } from '@tabler/icons-react';
-import { searchParcels, parcelCentroid, type ParcelRecord } from '../../lib/realEstate';
+import {
+  searchParcels,
+  parcelCentroid,
+  PARCELS_DATASET,
+  type ParcelRecord,
+} from '../../lib/realEstate';
+import { missingDatasetMessage } from '../../lib/verticals';
 
 interface ParcelInfo {
   apn: string;
@@ -85,7 +91,13 @@ export function ParcelPanel({
   const handleSearch = async () => {
     if (!query.trim()) return;
     if (!branchId) {
-      setError('Parcel dataset not loaded. Run scripts/seed-parcels.mjs.');
+      setError(
+        missingDatasetMessage(
+          PARCELS_DATASET,
+          'real-estate',
+          'Run scripts/seed-parcels.mjs to create it.',
+        ),
+      );
       return;
     }
     setLoading(true);

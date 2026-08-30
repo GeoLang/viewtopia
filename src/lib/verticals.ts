@@ -18,6 +18,22 @@ export const FIELDS_DATASET = 'fields';
 export const INCIDENTS_DATASET = 'incidents';
 export const CONSTRUCTION_DATASET = 'construction';
 
+/** Setup page listing the dataset and settings each vertical plugin expects. */
+export const SETUP_DOC = 'docs/verticals-setup.md';
+
+/**
+ * What a panel says when discoverBranch found no dataset by that name. The
+ * anchor is the plugin id, which is also the heading id on the setup page.
+ */
+export function missingDatasetMessage(
+  datasetName: string,
+  pluginId: string,
+  hint = '',
+): string {
+  const middle = hint ? ` ${hint}` : '';
+  return `No dataset named "${datasetName}".${middle} See ${SETUP_DOC}#${pluginId}`;
+}
+
 async function apiJson<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API}${path}`, {
     ...init,

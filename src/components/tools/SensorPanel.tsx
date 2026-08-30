@@ -13,7 +13,12 @@ import {
   Loader,
 } from '@mantine/core';
 import { IconX, IconActivity, IconAlertTriangle } from '@tabler/icons-react';
-import { discoverBranch, listSensors, SENSORS_DATASET } from '../../lib/verticals';
+import {
+  discoverBranch,
+  listSensors,
+  SENSORS_DATASET,
+  missingDatasetMessage,
+} from '../../lib/verticals';
 
 interface SensorRow {
   id: string;
@@ -45,7 +50,7 @@ export function SensorPanel({ onFlyTo, onClose }: SensorPanelProps) {
       try {
         const branchId = await discoverBranch(SENSORS_DATASET);
         if (!branchId) {
-          if (!cancelled) setError('No sensor dataset configured');
+          if (!cancelled) setError(missingDatasetMessage(SENSORS_DATASET, 'environmental'));
           return;
         }
         const rows = await listSensors(branchId);

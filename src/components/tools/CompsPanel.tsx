@@ -19,7 +19,8 @@ import {
   IconCurrencyDollar,
   IconMapPin,
 } from '@tabler/icons-react';
-import { searchComps } from '../../lib/realEstate';
+import { searchComps, SALES_DATASET } from '../../lib/realEstate';
+import { missingDatasetMessage } from '../../lib/verticals';
 
 const METERS_PER_MILE = 1609.34;
 
@@ -69,7 +70,13 @@ export function CompsPanel({
       return;
     }
     if (!branchId) {
-      setError('Sales dataset not loaded. Run scripts/seed-parcels.mjs.');
+      setError(
+        missingDatasetMessage(
+          SALES_DATASET,
+          'real-estate',
+          'Run scripts/seed-parcels.mjs to create it.',
+        ),
+      );
       return;
     }
     setLoading(true);

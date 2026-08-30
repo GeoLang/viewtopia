@@ -20,6 +20,7 @@ import {
   listMilestones,
   compareSurveys,
   CONSTRUCTION_DATASET,
+  missingDatasetMessage,
   type ElevationStats,
 } from '../../lib/verticals';
 import { fetchBranchGeometry } from '../../lib/branchFeatures';
@@ -72,7 +73,7 @@ export function ConstructionPanel({ onLoadSurvey, onCompareSurveys, onClose }: C
     try {
       const branch = await discoverBranch(CONSTRUCTION_DATASET);
       if (!branch) {
-        setError('No construction dataset configured');
+        setError(missingDatasetMessage(CONSTRUCTION_DATASET, 'construction'));
         setSurveys([]);
         setMilestones([]);
         return;

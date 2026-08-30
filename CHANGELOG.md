@@ -34,6 +34,17 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-30: **`docs/verticals-setup.md` says what each vertical plugin needs
+  before it draws anything.** One section per plugin with the dataset name
+  `discoverBranch` matches, the geometry it wants, the API row fields and the
+  free-form `properties` keys the panel reads, and every settings key with its
+  default and whether any code reads it. Fourteen of the eighteen declared
+  settings keys are read by nothing, which the page now says per key. The seven
+  unconfigured panel states name their dataset and link their section through
+  `missingDatasetMessage`, so the doc path lives in one place, and a unit test
+  reads the page to check every dataset constant, settings key and section
+  anchor still resolves.
+
 - 2026-08-29: **chat actions are tested with no model on the line.** 19 e2e
   tests drive every view action on both tabs and assert on the live renderer
   (`chat-actions-tabs`), pin that a replay click moves the map without a new
