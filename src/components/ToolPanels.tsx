@@ -55,6 +55,7 @@ import { ChartsPanel } from './tools/ChartsPanel';
 import { SplitViewPanel } from './tools/SplitViewPanel';
 import { StoriesPanel } from './tools/StoriesPanel';
 import { CollaborationPanel } from './tools/CollaborationPanel';
+import { RegionWatchPanel } from './tools/RegionWatchPanel';
 import { TimelinePanel } from './tools/TimelinePanel';
 import { DataTablePanel } from './tools/DataTablePanel';
 import { TourLauncher } from './TourOverlay';
@@ -262,6 +263,8 @@ export function ToolPanels() {
       return <StoriesPanel onClose={close} />;
     case 'collaboration':
       return <CollaborationPanel onClose={close} />;
+    case 'regionWatch':
+      return <RegionWatchPanel onClose={close} />;
     case 'timeline':
       return <TimelinePanel onClose={close} />;
     case 'dataTable':

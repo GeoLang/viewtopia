@@ -71,6 +71,7 @@ export type ToolPanel =
   | 'splitView'
   | 'stories'
   | 'collaboration'
+  | 'regionWatch'
   | 'timeline'
   | 'dataTable'
   | 'tour'

@@ -131,6 +131,23 @@ one past moment, and the store holds that answer beside the live map so both
 renderers and the inspector paint the past until Live is pressed, while the feed
 keeps updating what Live goes back to.
 
+A document also carries region watches, which are agora's own schedule rather
+than anything a producer sends. An editor draws a polygon, names a geoplumb
+layer, a reducer and an interval, and optionally a threshold and a webhook
+(`POST /agora/documents/{id}/watches`); agora reduces that region over the layer
+on its interval and relays each run as a `watchReading` frame, after sending
+every watch as a `watches` frame on join. The frames carry no webhook url and no
+webhook secret, so a share link guest on the same socket sees what a watch
+measures and not where its alerts go. Watches never enter the document either:
+`src/live/watchState.ts` holds them keyed by id with a bounded ring of recent
+readings each, the reading frame moves the watch's run time on and drops the
+error it answered past, and `src/components/tools/RegionWatchPanel.tsx` reads
+that store, lists the readings agora kept over the readings route when a watch
+is picked, and creates one from a polygon in the draw store. The region itself
+is a MapLibre source and two layers built from the same store
+(`useWatchRegionsMapLibre`), for the same reason peer cursors are: it is state
+the socket carries and no member should be writing it back into the document.
+
 ### 2.1 Platform topology
 
 The shipping unit is `docker-compose.platform.yml`, all fronted by ViewTopia's nginx on

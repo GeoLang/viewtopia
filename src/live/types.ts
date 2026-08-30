@@ -197,6 +197,48 @@ export interface AssetSnapshot {
   values: { kind: string; value: number; at: string }[];
 }
 
+/** What a watch reduces its region to, one of geoplumb's zonal row fields. */
+export type WatchReducer = 'mean' | 'min' | 'max' | 'sum' | 'count';
+
+/** Which side of its threshold a watch alerts on. */
+export type WatchThresholdOp = 'gt' | 'lt';
+
+export type WatchRegion = GeoJSON.Polygon | GeoJSON.MultiPolygon;
+
+/**
+ * One region watch as everyone on the document sees it. The webhook halves are
+ * there only for a caller who can edit, and the websocket frame carries neither.
+ */
+export interface RegionWatch {
+  id: string;
+  name: string;
+  layer: string;
+  region: WatchRegion;
+  reducer: WatchReducer;
+  intervalSeconds: number;
+  thresholdOp: WatchThresholdOp | null;
+  thresholdValue: number | null;
+  createdBy: string;
+  createdAt: string;
+  lastRunAt: string | null;
+  lastError: string | null;
+  webhookUrl?: string;
+  webhookSecret?: string;
+}
+
+/** One stored reading, as the readings route answers for it. */
+export interface WatchReadingEntry {
+  at: string;
+  value: number;
+  count: number;
+}
+
+/** One run of a watch, as the socket relays it while the run happens. */
+export interface WatchReading extends WatchReadingEntry {
+  /** set on the run that crossed the watch's threshold */
+  tripped: boolean;
+}
+
 export interface LiveDocumentMeta {
   name: string;
 }
@@ -348,6 +390,18 @@ export interface ServerLivenessMessage {
   at: string;
 }
 
+/** Every region watch on the document, sent once per join after `assets`. */
+export interface ServerWatchesMessage {
+  type: 'watches';
+  watches: RegionWatch[];
+}
+
+/** What a watch just measured, relayed on every run that produced a number. */
+export interface ServerWatchReadingMessage extends WatchReading {
+  type: 'watchReading';
+  watch: string;
+}
+
 export type ServerMessage =
   | ServerSnapshotMessage
   | ServerOperationMessage
@@ -358,7 +412,9 @@ export type ServerMessage =
   | ServerPresenceMessage
   | ServerReadingsMessage
   | ServerAssetsMessage
-  | ServerLivenessMessage;
+  | ServerLivenessMessage
+  | ServerWatchesMessage
+  | ServerWatchReadingMessage;
 
 export interface LiveDocumentSummary {
   id: string;

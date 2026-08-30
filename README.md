@@ -240,6 +240,15 @@ inputs.
 | **Chat** | Real-time text messaging within the room |
 | **Backend** | Connects to tiletopia's `/api/v1/realtime/{room}` ephemeral relay |
 | **Cursors and camera-follow** | Not here: start a live session, then click a peer avatar in the header |
+| **Region watch** | Watch a drawn region over a geoplumb layer on a schedule, with an optional threshold that notifies the map's members and posts a webhook |
+
+The Region Watch panel watches part of the map over time. Draw a polygon, pick
+a geoplumb layer and a reducer, say how often to run and optionally a threshold
+and a webhook, and agora reduces that region on its own schedule. The panel
+lists each watch with its last value, the time it ran and whatever failed last,
+marks the run that crossed the threshold, and shows a watch's recent readings
+when you click it. Every region is outlined on the MapLibre globe for everyone
+holding the map, a share link guest included.
 
 The Live panel, reached from the share button of a live map, also manages the
 map's sensor feeds and its asset rule. Creating a feed gives you a token, shown

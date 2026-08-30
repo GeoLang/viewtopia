@@ -31,6 +31,7 @@ const SHIPPED_PANELS = [
   'indoor',
   'timelapse',
   'notebooks',
+  'regionWatch',
   // settings is a top-level toolbar button now, not a menu registry entry
 ] as const;
 

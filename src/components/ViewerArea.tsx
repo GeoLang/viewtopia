@@ -28,6 +28,7 @@ import { useTilesets3dCesium } from '../hooks/useTilesets3dCesium';
 import { useOgcLayersMapLibre } from '../hooks/useOgcLayersMapLibre';
 import { useDrawCesium } from '../hooks/useDrawCesium';
 import { useDrawMapLibre } from '../hooks/useDrawMapLibre';
+import { useWatchRegionsMapLibre } from '../hooks/useWatchRegionsMapLibre';
 import { useAnnotationsCesium } from '../hooks/useAnnotationsCesium';
 import { useAnnotationsMapLibre } from '../hooks/useAnnotationsMapLibre';
 import { useAnnotationsLeaflet } from '../hooks/useAnnotationsLeaflet';
@@ -156,6 +157,10 @@ export function ViewerArea() {
   // Drawing tools
   useDrawCesium(cesiumRef);
   useDrawMapLibre(maplibreRef);
+
+  // The regions the live document's watches cover, which come off the socket
+  // and are never document state
+  useWatchRegionsMapLibre(maplibreRef);
 
   // Annotations, bound here rather than in the panel so one arriving from a
   // live peer still draws while the panel is closed

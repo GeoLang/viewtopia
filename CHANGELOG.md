@@ -46,6 +46,19 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-08-30: **the viewer half of region watch.** A Region Watch panel lists
+  the live document's watches with their layer, reducer, interval, threshold,
+  last value and time, the run that crossed the threshold and the last error,
+  deletes one with the edit role, and creates one from a polygon in the draw
+  store over a layer picked from `/plumb/layers`. `src/live/watchState.ts` holds
+  what the `watches` and `watchReading` frames carry, keyed by watch, with the
+  newest `MAX_READINGS_KEPT` readings each; `liveStore` routes both frames there
+  the way it routes `readings` and `assets`, and clears them on connect and
+  disconnect. Picking a watch reads the readings agora kept over
+  `GET /documents/{id}/watches/{watchId}/readings?since=`. Every region is
+  outlined on the MapLibre globe from the same store, so a view-role member and
+  a share link guest see it without anything being written to the document.
+
 - 2026-08-30: **`docs/verticals-setup.md` says what each vertical plugin needs
   before it draws anything.** One section per plugin with the dataset name
   `discoverBranch` matches, the geometry it wants, the API row fields and the

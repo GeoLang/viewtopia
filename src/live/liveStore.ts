@@ -3,6 +3,7 @@ import { getAuthToken } from '../features/auth/store';
 import { useAssetStateStore } from './assetState';
 import { nextReversal, operationsFor, stepFor, type HistoryStep } from './history';
 import { LiveSocket, type LiveConnectionState } from './socket';
+import { useWatchStateStore } from './watchState';
 import {
   applyDocumentKey,
   emptyLiveDocument,
@@ -154,6 +155,7 @@ export const useLiveStore = create<LiveState>((set, get) => ({
     if (get().documentId !== null) get().disconnect();
     clientSeqCounter = 0;
     useAssetStateStore.getState().clear();
+    useWatchStateStore.getState().clear();
     set({
       documentId,
       role,
@@ -197,6 +199,7 @@ export const useLiveStore = create<LiveState>((set, get) => ({
     socket?.close();
     socket = null;
     useAssetStateStore.getState().clear();
+    useWatchStateStore.getState().clear();
     set({
       connection: 'idle',
       documentId: null,
@@ -349,6 +352,10 @@ export const useLiveStore = create<LiveState>((set, get) => ({
       case 'assets':
       case 'liveness':
         useAssetStateStore.getState().receive(message);
+        return;
+      case 'watches':
+      case 'watchReading':
+        useWatchStateStore.getState().receive(message);
         return;
     }
   },

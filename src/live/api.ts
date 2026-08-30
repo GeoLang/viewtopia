@@ -6,6 +6,11 @@ import type {
   LiveDocumentSummary,
   LiveLinkResolution,
   LiveRole,
+  RegionWatch,
+  WatchReadingEntry,
+  WatchReducer,
+  WatchRegion,
+  WatchThresholdOp,
 } from './types';
 
 const AGORA_BASE = '/agora';
@@ -198,6 +203,56 @@ export async function deleteFeed(documentId: string, feedId: string): Promise<vo
   await agoraFetch(`${feedsPath(documentId)}/${encodeURIComponent(feedId)}`, {
     method: 'DELETE',
   });
+}
+
+/** What a new region watch is registered with. */
+export interface NewRegionWatch {
+  name: string;
+  layer: string;
+  region: WatchRegion;
+  reducer: WatchReducer;
+  intervalSeconds: number;
+  thresholdOp?: WatchThresholdOp;
+  thresholdValue?: number;
+  webhookUrl?: string;
+  webhookSecret?: string;
+}
+
+function watchesPath(documentId: string): string {
+  return `/documents/${encodeURIComponent(documentId)}/watches`;
+}
+
+function watchPath(documentId: string, watchId: string): string {
+  return `${watchesPath(documentId)}/${encodeURIComponent(watchId)}`;
+}
+
+export function listWatches(documentId: string): Promise<RegionWatch[]> {
+  return agoraRequest(watchesPath(documentId));
+}
+
+export function createWatch(
+  documentId: string,
+  watch: NewRegionWatch,
+): Promise<RegionWatch> {
+  return agoraRequest(watchesPath(documentId), {
+    method: 'POST',
+    body: JSON.stringify(watch),
+  });
+}
+
+export async function deleteWatch(documentId: string, watchId: string): Promise<void> {
+  await agoraFetch(watchPath(documentId, watchId), { method: 'DELETE' });
+}
+
+/** One watch's readings after `since`, oldest first, as agora orders them. */
+export function listWatchReadings(
+  documentId: string,
+  watchId: string,
+  since: string,
+): Promise<WatchReadingEntry[]> {
+  return agoraRequest(
+    `${watchPath(documentId, watchId)}/readings?since=${encodeURIComponent(since)}`,
+  );
 }
 
 /** Every asset's state at a past moment, read back from agora's readings table. */

@@ -22,6 +22,7 @@ import {
   IconDrone,
   IconDroplet,
   IconEye,
+  IconEyeCheck,
   IconFlame,
   IconFolders,
   IconHistory,
@@ -138,6 +139,12 @@ export const TOOLS_MENU: ToolMenuItem[][] = [
     { panel: 'timeline', label: 'Timeline', icon: IconTimeline },
     { panel: 'dataTable', label: 'Data Table', icon: IconTable },
     { panel: 'collaboration', label: 'Collaborate', icon: IconUsers },
+    {
+      panel: 'regionWatch',
+      label: 'Region Watch',
+      icon: IconEyeCheck,
+      keywords: ['watch', 'alert', 'threshold', 'zonal', 'geoplumb', 'webhook'],
+    },
     {
       panel: 'printLayout',
       label: 'Print Layout',
