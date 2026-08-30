@@ -9,7 +9,7 @@
 > Ranked 2026-08-21 against the DESIGN.md goal: ship the viewer, the agent, and
 > the services that make a shared map, not more surface. Pick from **Do next**.
 > Do not start at a parked item.
-> Last brought current: **2026-08-29**.
+> Last brought current: **2026-08-30**.
 >
 > Verify an entry against the code before working it, and do not trust the
 > mechanism it names. Three items in this file were already closed when someone
@@ -20,19 +20,35 @@
 
 ## Do next
 
-Pick one: an open row under **P0 path to the intended product** below, one
-module at a time from the **Wire for real** list, or a hosting decision under
-**Before any public deploy**.
+Ordered 2026-08-30, hosting excluded. Items 2, 3, 4, 6 and 8 of that order
+shipped the same day (MapLibre swap, ptolemy attach and detach, geolang tool
+manifest, agora and ptolemy `deny_unknown_fields`, geoplumb ops, fenestra
+items and tiles, itinera `/match`, fluvius runner, LiveKit removal, verticals
+docs), and so did region watch end to end. What is left:
+
+1. Settle the scorer unwrap (`tab: ["globe"]`, under **Chat action leftovers**)
+   before running anything, since it moves every number. Then one full
+   `python -m evals.viewer_runner --repeat 3` on an idle box and compare with
+   `evals.answered_only` to the baseline 0.682. That closes P0 item 7 and
+   decides short-form actions and `sql.attach_url` together.
+2. One owner sitting for the decisions under **Open decisions that are not
+   bugs** plus a triage of the parked tiletopia modules: name the few to wire
+   and mark the rest deliberately parked.
+Everything under **Wait for demand** stays parked. Agora gained sensor reading
+ingest on 2026-08-25, so re-verify the FleetPanel and live-layer rows there
+before picking either.
 
 ## Chat action leftovers, 2026-08-29
 
-- [ ] **MapLibre raster to vector basemap swap never finishes loading.** After
-      `basemap.set` from a raster basemap back to a vector one on the MapLibre
-      globe, `map.loaded()` never comes true: maplibre-gl 5.24 throws
-      `Cannot read properties of undefined (reading 'signal')` from its image
-      queue about 470 ms after `setStyle` and the sprite never arrives. Pinned
-      by the `test.fail` in `tests/e2e/chat-actions-tabs.spec.js`. Upstream bug
-      or a workaround in `useMapLibre`'s style swap.
+- [ ] **Drop `patches/maplibre-gl@5.24.0.patch` when a release carries the
+      fix.** The patch backports maplibre `main`'s "Let an abort reach an image
+      or raster tile load that is still awaiting its `transformRequest`": a
+      raster tile aborted by `setStyle` during that await queued an image
+      request with no controller and stalled the image queue, so the vector
+      basemap's sprite never arrived. The patch is 1.1 MB because it rewrites
+      the minified single line. When the CHANGELOG line ships in a release,
+      bump and delete the patch, `tests/e2e/chat-actions-tabs.spec.js`
+      ("goes back to a vector basemap") proves it.
 - [ ] **Viewer eval scorer judges a call the model sent, not the call the
       viewer runs.** `tab: ["globe"]` runs in the viewer (`unwrapSingleton`) but
       `values_match` in geolang `evals/viewer_scoring.py` scores it as a miss.
@@ -51,15 +67,8 @@ ViewTopia, Ptolemy, Jung, TerraVista, Panoptes, and Geoplumb.
       recursive repeat validation, or local expression evaluation. Conditions
       pass through to ODK Collect only. Publish into Ptolemy is built.
 
-- [ ] **Fenestra**: the OGC API Features item route, OpenAPI output, links, MVT
-      endpoint, and the Inspire, geofence, cascade, and printing crates are not
-      complete server features.
-
-- [ ] **Fluvius**: checkpointing and Prometheus metrics are library-only. The
-      topology runner does not use the state store, expose metrics, or retain
-      window aggregation state. WebSocket sources bind listeners instead of
-      connecting to remote feeds, and MQTT authentication is not wired into the
-      running topology.
+- [ ] **Fenestra**: the Inspire, geofence, cascade and printing crates are
+      not server features, nothing in `fenestra-cli` depends on them.
 
 - [ ] **Geodukt**: the plugin crate is unused, its round trip does not carry
       geometry, and the documented Geokode and Jung cross-service wiring is
@@ -69,22 +78,16 @@ ViewTopia, Ptolemy, Jung, TerraVista, Panoptes, and Geoplumb.
       feature-aware three-way merge, and a PostGIS working copy are not
       implemented.
 
-- [ ] **GeoLang**: the API advertises tools whose optional geospatial
-      dependencies are absent from the client requirements, so those tools fail
-      when called in that environment.
-
-- [ ] **GeoPlumb**: the server accepts only a small subset of the library
-      operators. Raster and vector sources, focal and map algebra, reclassify,
-      quality masking, mosaics, zonal statistics, time series, tensor paths,
-      and the GeoTIFF encoder are not reachable from a layer file.
+- [ ] **GeoPlumb**: a layer file names one source and one chain, so the
+      fan-in elements (mosaic, two-input algebra), the vector and point
+      sources and the GeoTIFF encoder are not reachable from it.
 
 - [ ] **Interiora**: no BLE or WiFi signal acquisition is implemented. The
       positioning result is k-nearest-neighbor over caller-provided signals,
       and the advertised accuracy is not a validated bound.
 
 - [ ] **Itinera**: contraction-hierarchy query time is a target, not a
-      benchmark, and the map-matching module is library-only with no HTTP
-      endpoint.
+      benchmark.
 
 - [ ] **Panoptes**: no trained model weights ship or are published. COG pixel
       decoding, georeferencing, satellite preprocessing, object-detection NMS,
@@ -95,10 +98,6 @@ ViewTopia, Ptolemy, Jung, TerraVista, Panoptes, and Geoplumb.
 
 - [ ] **Terrano**: the CLI is a synthetic DEM demonstration. It does not read
       or write raster files.
-
-- [ ] **ViewTopia**: the vertical plugins draw nothing until an operator
-      configures their datasets, and the LiveKit panel needs an external server
-      URL and token that no part of the platform issues.
 
 ## P0 path to the intended product, 2026-08-22
 
@@ -710,72 +709,33 @@ when an action or the snapshot changes. See `geolang/evals/viewer/README.md`.
 See **Before any public deploy**. What is open is the AWS account, the apply
 sequence, and the anonymous-edit / link-expiry policy.
 
-### Region watch (parked 2026-08-13)
+### Region watch
 
-One feature with two halves: a region you care about, watched over time, fed by
-live sensor streams and by imagery, alerting when it changes. No use case
-available to test against. Written up while it was fresh rather than built.
+Shipped 2026-08-30 end to end. In agora: `watches` and `watch_readings`, the four
+routes under `/documents/{id}/watches`, the `watches` and `watchReading`
+socket frames, the scheduler calling geoplumb `/zonal/{layer}` at
+`WATCH_RESOLUTION_METRES`, the threshold rule with per-member notifications
+and a signed webhook that refuses private hosts and pins the resolved
+address. Owner calls: the watch lives in agora, share-link guests see readings
+only. In the viewer: the `regionWatch` panel, creation from a drawn polygon,
+regions outlined on the globe, the two frames in `liveStore`. agora's README
+and DESIGN.md 2.0 are the references. No chat action yet, the catalogue and
+its eval task count are pinned, add one after the eval gate closes.
 
-What already exists, verified rather than assumed:
-
-- **fluvius** is a real stream processor, not a stub. Geofencing with per-entity
-  state, complex event processing, tumbling/sliding/session windows, watermarks,
-  an rstar R-tree behind the proximity operator, and MQTT, Kafka and WebSocket
-  connectors. 187
-  test functions, 181 passing under `--all-features`. The "millions of entities"
-  the README claims is a design target rather than a measurement: the repo has
-  no benchmarks and no test above trivial scale. It is deployed nowhere: no
-  reference in the terraform, the platform compose, or the proxy Caddyfile.
-- **geoplumb** already answers the hard half of region change. `POST
-  /zonal/{layer}` returns zonal statistics over a region and `POST
-  /zonal/{layer}/series` returns a time series, on demand, against STAC
-  collections or local COGs. That is region change tracking already, missing only
-  persistence and a schedule.
-- **terrano** has `RasterStack`: composites, linear trend fitting, change
-  detection, anomaly z-scores, phenology metrics, normalized difference indices.
-- **panoptes** does pixel-difference change detection, plus an ONNX segmentation
-  path that works but ships no weights.
-- **ptolemy** versions features with branch, diff, merge and audit, so change over
-  time on *vector* data is already a solved problem here.
-- **viewtopia** has TimelinePanel, TimelapsePanel and HeatmapPanel.
-- **tiletopia** carries one written, unit-tested but unwired module worth
-  reusing here: `scripting.rs` (threshold triggers, comparison operators, alert
-  severities). It is referenced only by its `pub mod` line. `geofence.rs` is not
-  spatial geofencing despite the name: it is data-residency policy. The realtime
-  WebSocket is real but carries a closed enum of six collaboration messages and
-  logs-and-drops anything else, so a sensor feed through it needs a new message
-  variant, not a new socket.
-
-What is missing, in dependency order:
-
-1. **the watch object.** A persisted region plus its sources, rule and cadence.
-   Nothing holds one. Decide where it lives: ptolemy already versions geometry
-   and would give diff and audit for free, but a watch is configuration rather
-   than a feature, so it may not belong in a feature store.
-2. **the scheduler.** Something has to re-run the pull and compare. geoplumb is
-   pull-only by design and computes only when asked. Do not put a scheduler
-   inside it. The trigger belongs outside. tiletopia already mounts a
-   scheduler-shaped facade that has never run a job. Replace or delete it, do
-   not start from it.
-3. **the result store.** A per-watch time series of readings and detected
-   changes. Bound it up front with a retention window and a per-watch cap.
-4. **alerting.** fluvius already does thresholds and CEP over streams. Delivery
-   is already written twice and driven zero times (`ptolemy-api/src/delivery.rs`,
-   tiletopia's `webhooks.rs`). Give one of those a caller instead of writing a
-   third.
-5. **sensor ingest.** fluvius deployed as a service with MQTT and WebSocket
-   sources, emitting into agora. Same as the live-layer plan.
-
-Sequencing. Raster first: a watch over a region with a scheduled `/zonal/series`
-call, a threshold and a webhook is a working, useful feature that needs no new
-compute at all. Sensors second. This is the largest addition in the backlog and
-it competes with the hosted flagship for attention. The raster-first sequencing
-is what keeps it affordable, because it reuses geoplumb wholesale.
-
-Open questions to settle before building: whether watch results belong in
-ptolemy, retention per watch, what a shared or anonymous viewer sees of a watch,
-whether the sensor half should speak OGC SensorThings API, whether agora can
-carry a high-frequency feed.
+- [ ] **A third webhook sender now exists** (`agora-server/src/webhooks.rs`
+      beside `ptolemy-api/src/delivery.rs` and tiletopia `webhooks.rs`),
+      because agora cannot depend on either binary crate. Extract ptolemy's
+      into a shared crate if a second agora event ever needs delivery.
+- [ ] **Nothing caps watches per document.** `MAX_WATCH_RUNS_PER_TICK` bounds
+      the work and the oldest-first order keeps it fair, so a document with
+      thousands of watches slows every other document's ticks. Same posture
+      the README takes on feeds. Add a per-document cap when a real deployment
+      shows the need.
+- [ ] Later, not now: sensors as a second source (fluvius over WebSocket into
+      agora, its runner now connects out and checkpoints), a time-series
+      watch over `/zonal/{layer}/series`, OGC SensorThings. tiletopia's
+      `scripting.rs` threshold triggers and its scheduler facade were not
+      reused, delete or wire them under the tiletopia module triage.
 
 Note on `viewtopia/docs/verticals.md`: it is a planning doc for proposed
 verticals, not a description of what exists.

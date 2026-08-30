@@ -194,6 +194,8 @@ services:
       # project roles on documents resolve against ptolemy; unset disables
       # that and the members table alone decides
       PTOLEMY_URL: http://ptolemy:3000
+      # region watches reduce over geoplumb layers; unset disables them
+      GEOPLUMB_URL: http://geoplumb:3000
       RUST_LOG: info
 
   # Field data collection: OpenRosa server for ODK Collect in the field plus
