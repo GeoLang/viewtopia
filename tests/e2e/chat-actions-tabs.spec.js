@@ -263,11 +263,8 @@ test.describe('basemap.set', () => {
     });
   });
 
-  // the same vector basemap reaches loaded() in about a second on boot, but
-  // after a raster one it never does: maplibre-gl 5.24 throws "Cannot read
-  // properties of undefined (reading 'signal')" out of its image queue about
-  // 470 ms after the setStyle and the sprite never arrives
-  test.fail('the maplibre globe goes back to a vector basemap', async ({ page }) => {
+  // needs the maplibre-gl patch, a raster tile load resuming after its abort stalls the image queue
+  test('the maplibre globe goes back to a vector basemap', async ({ page }) => {
     await boot(page);
     await runAction(page, 'basemap.set', { basemap: 'satellite' });
     await expect.poll(() => maplibreBasemapSource(page), { timeout: SETTLE_TIMEOUT }).toEqual({

@@ -21,3 +21,6 @@ overrides:
 # openlayers, a geotiff beta and zarrita. only the geojson module is used.
 ignoredOptionalDependencies:
   - ol
+
+patchedDependencies:
+  maplibre-gl@5.24.0: patches/maplibre-gl@5.24.0.patch

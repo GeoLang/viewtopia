@@ -18,6 +18,15 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-08-30: **the globe goes back to a vector basemap after a raster one.**
+  `patches/maplibre-gl@5.24.0.patch` backports the upstream fix: a raster tile
+  whose `loadTile` resumed after `setStyle` aborted it queued an image request
+  with no `AbortController`, and `processQueue` then threw on
+  `abortController.signal`, stalling the queue so the new style's sprite never
+  loaded and `map.loaded()` stayed false. The patch reads the tile's controller
+  before the `transformRequest` await and drops a controller-less queue item.
+  Drop it when a maplibre release carries "Let an abort reach an image or raster
+  tile load that is still awaiting its `transformRequest`".
 - 2026-08-29: **a draw or measure tool can be put down.** Closing its panel
   disarms it, and Escape disarms an armed tool first and closes the panel on
   the next press. Before, the only way out of a tool armed by its letter key
