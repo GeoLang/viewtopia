@@ -46,6 +46,7 @@ export function cesiumImageryProvider(basemap: string, custom?: CustomBasemap | 
 
 export function useCesium(opts: UseCesiumOptions = {}) {
   const viewerRef = useRef<Viewer | null>(null);
+  const cameraPollRef = useRef<number | null>(null);
   // building the viewer only writes a ref, which nothing downstream can react
   // to, so this renders the caller again with the new instance in the ref
   const [, setLiveViewer] = useState<Viewer | null>(null);
@@ -69,16 +70,23 @@ export function useCesium(opts: UseCesiumOptions = {}) {
     ? splitActive && opts.pane.renderer === 'cesium'
     : activeTab === 'globe' && renderer === 'cesium';
 
+  const destroyViewer = useCallback(() => {
+    if (cameraPollRef.current !== null) {
+      clearInterval(cameraPollRef.current);
+      cameraPollRef.current = null;
+    }
+    if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+      viewerRef.current.destroy();
+    }
+    viewerRef.current = null;
+    setLiveViewer(null);
+    register(null);
+  }, [register]);
+
   // Create/destroy viewer based on active state
   useEffect(() => {
     if (!isActive) {
-      // Destroy when not active
-      if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-        viewerRef.current.destroy();
-      }
-      viewerRef.current = null;
-      setLiveViewer(null);
-      register(null);
+      destroyViewer();
       return;
     }
 
@@ -142,10 +150,7 @@ export function useCesium(opts: UseCesiumOptions = {}) {
     viewer.camera.moveEnd.addEventListener(syncShared);
     // cesium raises those two only while drawing a frame, so a renderer that is
     // seconds behind holds a move back that long. The poll publishes it on time.
-    const cameraPoll = window.setInterval(() => {
-      if (viewer.isDestroyed()) window.clearInterval(cameraPoll);
-      else syncShared();
-    }, CAMERA_PUBLISH_INTERVAL_MS);
+    cameraPollRef.current = window.setInterval(syncShared, CAMERA_PUBLISH_INTERVAL_MS);
 
     // Resize after layout
     viewer.resize();
@@ -156,7 +161,7 @@ export function useCesium(opts: UseCesiumOptions = {}) {
     viewerRef.current = viewer;
     setLiveViewer(viewer);
     register(viewer);
-  }, [isActive, opts.containerId, opts.ionToken, basemap, customBasemap, register]);
+  }, [isActive, opts.containerId, opts.ionToken, basemap, customBasemap, register, destroyViewer]);
 
   // Swap basemap imagery when already active. The custom tiles are a dependency
   // too: another catalog entry keeps basemap === 'custom' and changes only them.
@@ -184,14 +189,9 @@ export function useCesium(opts: UseCesiumOptions = {}) {
   // Release the WebGL context when the owner unmounts (a closing split pane)
   useEffect(
     () => () => {
-      if (viewerRef.current && !viewerRef.current.isDestroyed()) {
-        viewerRef.current.destroy();
-      }
-      viewerRef.current = null;
-      setLiveViewer(null);
-      register(null);
+      destroyViewer();
     },
-    [register],
+    [destroyViewer],
   );
 
   return viewerRef;
