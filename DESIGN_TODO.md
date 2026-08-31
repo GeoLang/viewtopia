@@ -32,12 +32,12 @@ docs), and so did region watch end to end. What is left:
    `evals.answered_only` to the baseline 0.682. That closes P0 item 7 and
    decides short-form actions and `sql.attach_url` together.
 2. The sitting was held 2026-08-31 (`../owner-sitting-2026-08-31.md` records
-   the calls). What it left as work: delete 18 parked tiletopia modules (list
-   under **Wire for real**, needs cargo, wait for the idle box). The eight
-   README rewords from the sheet are done and pushed, interiora's commit
-   waits on its clippy run before pushing. Also queued behind the sweep: an
-   itinera criterion benchmark so the README performance table quotes
-   measured numbers.
+   the calls) and its work has landed: the eight README rewords, the
+   tiletopia module deletion (17 removed, tiletopia 68313a8), and an itinera
+   bench suite plus the CH query shortcut fix the bench work uncovered
+   (itinera 4fe560c). Left: run the bench on hercules once the sweep
+   finishes and put the measured numbers in itinera's README performance
+   table.
 
 Session results 2026-08-31, item 1 still waits on hercules: geoplumb fan-in
 and vector sources shipped (geoplumb 72cd4bb), collecta-cli `pull` shipped
@@ -175,23 +175,14 @@ machinery, then the large islands. One exception to reconfirm when reached:
 the Space-Time rows sit under an earlier "do not build Gotham" owner call that
 this direction reverses.
 
-- [ ] **tiletopia module triage, decided at the 2026-08-31 sitting.** The
-      2026-08-31 census found 18 of the recorded 39 live behind registered
-      routes and three more live through demo routes, those rows are simply
-      off the list, and so is cicd: the census called it a stub but
-      tiletopia-cli's validate subcommand calls cicd::validate_tileset. The
-      other 17 (scripting, cluster, cloud_store, marketplace, arvr,
-      whitelabel, federation, model_zoo, prediction, onnx_inference,
-      priority_queue, flythrough, dynamic_raster, reports, retention,
-      temporal, encryption) are deleted on the module-triage branch in a
-      worktree, grep-verified with no cargo run, along with their orphaned
-      dependencies. Left: cargo check, clippy and tests on that branch once
-      the eval sweep frees the box, then merge to master and push. Park with
-      a reason: crdt (plausible if collaboration deepens), tenant (tiny,
-      quota types a hosted instance would want), geofence (delete instead if
-      no tile-side geofence is ever wanted, agora region watch covers the
-      live case). The deleted modules that were feature ideas rather than
-      duplicates are recorded as low priority under **Wait for demand**.
+- [ ] **tiletopia parked modules, from the 2026-08-31 triage.** 17 modules
+      and their orphaned dependencies are deleted (tiletopia CHANGELOG has
+      the list, cicd stayed because the CLI's validate subcommand calls it).
+      Still parked with a reason: crdt (plausible if collaboration deepens),
+      tenant (tiny, quota types a hosted instance would want), geofence
+      (delete instead if no tile-side geofence is ever wanted, agora region
+      watch covers the live case). The deleted feature ideas are recorded as
+      low priority under **Wait for demand**.
 
 - [ ] **Space-Time geofencing UI and case management.** The library code and
       types exist with no UI behind them, parked. Network metrics render as a
