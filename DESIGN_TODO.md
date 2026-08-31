@@ -26,11 +26,30 @@ manifest, agora and ptolemy `deny_unknown_fields`, geoplumb ops, fenestra
 items and tiles, itinera `/match`, fluvius runner, LiveKit removal, verticals
 docs), and so did region watch end to end. What is left:
 
-1. Settle the scorer unwrap (`tab: ["globe"]`, under **Chat action leftovers**)
-   before running anything, since it moves every number. Then one full
-   `python -m evals.viewer_runner --repeat 3` on an idle box and compare with
-   `evals.answered_only` to the baseline 0.682. That closes P0 item 7 and
-   decides short-form actions and `sql.attach_url` together.
+1. Owner call on the run-only action contract, now that the gate is measured
+   (2026-08-31, full `--repeat 3` pass on an idle hercules). Answered-only
+   0.4833 over 67 tasks, and 0.464 against the baseline's 0.706 over the 50
+   shared tasks, conservative since the scorer unwrap only raises the new
+   number. A 22-task rerun under the documented llama recipe flags splits
+   the causes: the restarted server's flags cost a minor share (0.278 to
+   0.373 on those tasks), the rest is the contract itself. The failure shape
+   repeats across tasks: the model fills `run`'s declared camera fields
+   (lat, lon, height, pitch) and drops the action's own arguments, which
+   exist only as catalogue prose, or puts the value in `name`
+   (`{"name": "satellite"}`). Camera tasks, whose real arguments are the
+   declared fields, improved. Whole-pass stall rate 15.0 percent on an idle
+   box against the baseline's 8.3. Reports:
+   `20260831T201557+0000-viewer-local:Qwen3.json` with
+   `20260831-viewer-sweep-hercules.log`, and the subset
+   `20260831T223359+0000-viewer-local:Qwen3.json` with
+   `20260831-viewer-subset-recipeflags.log`. The options: strip the
+   camera-specific declared fields from the run schema or carry per-action
+   parameter schemas into the tool contract, then one pass to verify, or put
+   the fixed per-action actions back. The catalogue and eval task count stay
+   pinned until this call. Also pick one llama-server config and record it:
+   the 2026-08-31 restart changed sampling (reasoning off, temp 0.7,
+   presence penalty 1.5, no --jinja) and the current server is back on the
+   recipe flags.
 2. The sitting was held 2026-08-31 (`../owner-sitting-2026-08-31.md` records
    the calls) and all its work has landed: the eight README rewords, the
    tiletopia module deletion (17 removed, tiletopia 68313a8), and in itinera
@@ -125,15 +144,12 @@ other documents citing "P0 item 5" still land on the right one.
 7. **Chat-only viewer mode: a typed prompt reaches every capability that does
    not need the mouse.** Repositories: `viewtopia`, `geolang`. Owner call
    2026-08-25, plan under **Chat-only viewer mode** in the plans section.
-   - [!] Eval gate, blocked on the stall rate. `run` is now the only
-     `viewer_control` action, and the tasks, `catalogue.json` and
-     `snapshot.json` in `geolang/evals/viewer/` cover every catalogue action
-     exactly. There is no after score: the second pass of
-     `python -m evals.viewer_runner --repeat 3` against the rebuilt
-     `geolang-platform` image was stopped at 39 of 201 runs, owner call
-     2026-08-27, because the runs that never answered were climbing rather
-     than settling and a partial pass cannot be compared to the baseline.
-     What was measured instead is how often the stack cut a run short:
+   - [!] Eval gate, measured 2026-08-31: the full pass finished on an idle
+     hercules and the run-only contract is the dominant cause of a real
+     regression (0.706 to 0.464 answered-only over the shared tasks). The
+     numbers, the flags-vs-contract attribution and the open owner call are
+     under **Do next** item 1. The 2026-08-27 history below stands as the
+     record of why earlier passes could not be compared:
 
      - Baseline, the old image serving the fixed actions against these tasks,
        whole pass: 14 of 168 runs cut short, 8.3 percent. Answered-only
