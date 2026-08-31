@@ -86,10 +86,6 @@ These are verified advertised gaps found by reading every repository README,
 source paths. Existing entries below remain the detailed records for TileTopia,
 ViewTopia, Ptolemy, Jung, TerraVista, Panoptes, and Geoplumb.
 
-- [ ] **Collecta**: no first-party field client, attachment synchronization,
-      recursive repeat validation, or local expression evaluation. Conditions
-      pass through to ODK Collect only. Publish into Ptolemy is built.
-
 - [ ] **GeoPlumb**: the point sources (LAS with IDW gridding) and the GeoTIFF
       encoder are not reachable from a layer file. Fan-in (mosaic, two-input
       combine), the GeoJSON source and rasterize landed 2026-08-31; the
@@ -97,8 +93,9 @@ ViewTopia, Ptolemy, Jung, TerraVista, Panoptes, and Geoplumb.
 
 All other rows from this audit were closed by the 2026-08-31 sitting: the docs
 in fenestra, geodukt, geogit, interiora, itinera, panoptes, projicio and
-terrano now state the honest scope, wire-for-real calls for any of them stay
-under **Wait for demand**.
+terrano now state the honest scope, and collecta's docs were verified already
+honest the same day. Wire-for-real calls for any of them stay under
+**Wait for demand**.
 
 ## P0 path to the intended product, 2026-08-22
 
