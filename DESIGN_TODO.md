@@ -709,8 +709,7 @@ its eval task count are pinned, add one after the eval gate closes.
 - [ ] Later, not now: sensors as a second source (fluvius over WebSocket into
       agora, its runner now connects out and checkpoints), a time-series
       watch over `/zonal/{layer}/series`, OGC SensorThings. tiletopia's
-      `scripting.rs` threshold triggers and its scheduler facade were not
-      reused, delete or wire them under the tiletopia module triage.
+      unused scripting.rs was deleted in the 2026-08-31 triage.
 
 Note on `viewtopia/docs/verticals.md`: it is a planning doc for proposed
 verticals, not a description of what exists.
