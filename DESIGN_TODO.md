@@ -31,10 +31,10 @@ docs), and so did region watch end to end. What is left:
    `python -m evals.viewer_runner --repeat 3` on an idle box and compare with
    `evals.answered_only` to the baseline 0.682. That closes P0 item 7 and
    decides short-form actions and `sql.attach_url` together.
-2. One owner sitting for the decisions under **Open decisions that are not
-   bugs** plus a triage of the parked tiletopia modules: name the few to wire
-   and mark the rest deliberately parked. Prepared: `../owner-sitting-2026-08-31.md`
-   holds the sheet, with the module census re-verified against the code.
+2. The sitting was held 2026-08-31 (`../owner-sitting-2026-08-31.md` records
+   the calls). What it left as work: delete 18 parked tiletopia modules (list
+   under **Wire for real**, needs cargo, wait for the idle box). The eight
+   README rewords from the sheet are done and await commit.
 
 Session results 2026-08-31, item 1 still waits on hercules: geoplumb fan-in
 and vector sources shipped (geoplumb 72cd4bb), collecta-cli `pull` shipped
@@ -87,38 +87,15 @@ ViewTopia, Ptolemy, Jung, TerraVista, Panoptes, and Geoplumb.
       recursive repeat validation, or local expression evaluation. Conditions
       pass through to ODK Collect only. Publish into Ptolemy is built.
 
-- [ ] **Fenestra**: the Inspire, geofence, cascade and printing crates are
-      not server features, nothing in `fenestra-cli` depends on them.
-
-- [ ] **Geodukt**: the plugin crate is unused, its round trip does not carry
-      geometry, and the documented Geokode and Jung cross-service wiring is
-      absent.
-
-- [ ] **GeoGit**: Kart repository interoperability, schema evolution,
-      feature-aware three-way merge, and a PostGIS working copy are not
-      implemented.
-
 - [ ] **GeoPlumb**: the point sources (LAS with IDW gridding) and the GeoTIFF
       encoder are not reachable from a layer file. Fan-in (mosaic, two-input
       combine), the GeoJSON source and rasterize landed 2026-08-31; the
       per-fragment vector filter, schema map and clip stay library-only.
 
-- [ ] **Interiora**: no BLE or WiFi signal acquisition is implemented. The
-      positioning result is k-nearest-neighbor over caller-provided signals,
-      and the advertised accuracy is not a validated bound.
-
-- [ ] **Itinera**: contraction-hierarchy query time is a target, not a
-      benchmark.
-
-- [ ] **Panoptes**: no trained model weights ship or are published. COG pixel
-      decoding, georeferencing, satellite preprocessing, object-detection NMS,
-      and several tiling and visualization paths are unreachable from the CLI.
-
-- [ ] **Projicio**: twelve EPSG entries still have no usable projection method,
-      and other CRS transforms still require caller-supplied datum grids.
-
-- [ ] **Terrano**: the CLI is a synthetic DEM demonstration. It does not read
-      or write raster files.
+All other rows from this audit were closed by the 2026-08-31 sitting: the docs
+in fenestra, geodukt, geogit, interiora, itinera, panoptes, projicio and
+terrano now state the honest scope, wire-for-real calls for any of them stay
+under **Wait for demand**.
 
 ## P0 path to the intended product, 2026-08-22
 
@@ -195,19 +172,18 @@ machinery, then the large islands. One exception to reconfirm when reached:
 the Space-Time rows sit under an earlier "do not build Gotham" owner call that
 this direction reverses.
 
-- [ ] **tiletopia modules still parked, no blanket deletion.** Each needs its
-      own owner call: temporal, crdt, tenant, collaboration, federation,
-      whitelabel, priority_queue, cluster, marketplace, metering, encryption,
-      geofence, arvr, flythrough, dynamic_raster, prediction, onnx_inference,
-      model_zoo, anomaly, measurement, clash_detection, cicd, reports,
-      retention, scripting, mobile, geocoding, isochrone, map_matching,
-      osm_buildings, multispectral, feature_service, cloud_store, http_cache,
-      indoor, stories, stories_api, scan_registration, flight_planning,
-      issue_tracking. Verify each row against the code before acting on it: the
-      automated census over-counts, and fbx_reader, texture_image and the
-      store and cache backends are live or config-selected. geoprocessing,
-      geostatistics, stac and terrain_analysis are the implementations the
-      premium routes call.
+- [ ] **tiletopia module triage, decided at the 2026-08-31 sitting.** The
+      2026-08-31 census found 18 of the recorded 39 live behind registered
+      routes and three more live through demo routes, those rows are simply
+      off the list. Delete these 18: scripting, cluster, cloud_store,
+      marketplace, cicd, arvr, whitelabel, federation, model_zoo, prediction,
+      onnx_inference, priority_queue, flythrough, dynamic_raster, reports,
+      retention, temporal, encryption. Park with a reason: crdt (plausible if
+      collaboration deepens), tenant (tiny, quota types a hosted instance
+      would want), geofence (delete instead if no tile-side geofence is ever
+      wanted, agora region watch covers the live case). Deletion needs cargo
+      to verify, so it waits for the eval sweep to free the box. Re-verify a
+      module has no caller before deleting it.
 
 - [ ] **Space-Time geofencing UI and case management.** The library code and
       types exist with no UI behind them, parked. Network metrics render as a
@@ -576,43 +552,6 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
 
 Deliberate scope calls, each a product decision rather than a defect to fix.
 
-- [ ] **one JSON case convention across the platform APIs**: agora is camelCase
-      in 7 of its 8 request and response structs and in the websocket protocol
-      (`clientSeq`), ptolemy is snake_case in 223 structs with none in camel.
-      A client author crosses that boundary with nothing to warn them, which is
-      how `createLiveDocument` sent `project_id` to a server reading
-      `projectId`. Renaming either side breaks every client, so the cheap half
-      is first: neither service sets `deny_unknown_fields` on any request
-      struct, so a wrong key is discarded and the call still succeeds. Setting
-      it turns the whole class into a 400 on the first request without changing
-      any payload that works today. Only then decide whether the convention
-      itself is worth a rename, camelCase being the right target for
-      browser-facing JSON.
-
-- [ ] **`sql_query` called on its own bypasses the plan surface.** Inside a plan
-      the panel labels the step that runs caller code rather than gating it, an
-      owner call from 2026-08-12: gating means sql_query emits a one-step plan
-      instead of a viewer command, which adds a click to every ad-hoc query.
-      Called directly the tool reaches no plan at all, so the only thing
-      discouraging it is the persona text. Bounded to `/chat`, since `/mcp`
-      drops the tool from both the manifest and the call path.
-
-- [ ] **tiletopia asset metadata is only listing-filtered.** `GET /assets`
-      hides other tenants' rows, but `GET /assets/{id}` still answers for any
-      valid token, and the Ion-compat `/v1/assets/{id}` is public by design, so
-      gating one and not the other would be theater. Tiles are public regardless
-      (the CDN TTLs depend on it). Decide whether asset metadata is tenant
-      private, and if so do both routes and the CDN together. tiletopia's
-      `GET /assets/{id}` applies no authorization, but it is absent from
-      `is_public_read`, so it needs a valid token: any valid token reads any
-      asset's metadata. The Ion-compat `/v1/assets/{id}` is genuinely public, and
-      so is every asset's `tileset.json` and tile payload.
-
-- [ ] **tiletopia annotation reads are open** to any valid token on any asset.
-      Writes are owner-or-admin. Only worth closing if annotations count as
-      private content. tiletopia annotation reads answer for any valid token
-      while writes go through `may_modify_asset`.
-
 - [ ] tiletopia serves every asset's tiles and `tileset.json` publicly
       (`is_public_read`), even for private assets: anyone holding the asset id
       can read them. The asset listing is no longer public, it filters to what
@@ -623,14 +562,10 @@ Deliberate scope calls, each a product decision rather than a defect to fix.
       (authenticated tiles cannot keep the shared long-TTL cache). The remaining
       post-MVP question is hosting tiles on a separate host (`tiles.<domain>`)
       so authenticated API paths and public tiles do not share a prefix, if
-      private-asset tile gating ever ships.
-
-- [ ] **collecta legacy forms with no creator are admin-only** and are not
-      backfilled to anyone. Decide whether to backfill or leave them.
-      A legacy form with no creator is admin-only for both read and write and is
-      never backfilled. What actually bypasses `form_grants` is not
-      legacy-specific: form discovery answers any authenticated caller and
-      submission is role-only, both pinned by tests as intended behaviour.
+      private-asset tile gating ever ships. Settled at the 2026-08-31 sitting:
+      asset metadata and annotation reads are not private, any valid token may
+      read them, so the open part here is only the future private-asset tile
+      question.
 
 - [ ] ptolemy merge is **attribute-level** for disjoint property edits.
       Same-key and both-sides-moved-geometry still conflict.
