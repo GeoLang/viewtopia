@@ -246,6 +246,14 @@ What actually stands in the way, in order:
    should hand an anonymous guest an `edit` role at all is a product decision
    nobody has made.
 
+- [ ] **viewtopia's url-fetching actions trust their caller.** data.import_url,
+      data.load_tileset and sql.attach_url read args.url and fetch it with no
+      scheme check in the viewer. The only http/https allowlist lives in
+      geolang's viewer_control tool (extended 2026-08-31 to cover urls inside
+      the args object), so any caller that reaches the action registry without
+      passing that tool carries unchecked urls. Add the scheme check in the
+      actions themselves.
+
 Operator-facing deployment gaps:
 
 - [ ] **The first apply cannot complete on the platform profile.** The ALB
