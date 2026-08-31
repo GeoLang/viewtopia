@@ -32,12 +32,10 @@ docs), and so did region watch end to end. What is left:
    `evals.answered_only` to the baseline 0.682. That closes P0 item 7 and
    decides short-form actions and `sql.attach_url` together.
 2. The sitting was held 2026-08-31 (`../owner-sitting-2026-08-31.md` records
-   the calls) and its work has landed: the eight README rewords, the
-   tiletopia module deletion (17 removed, tiletopia 68313a8), and an itinera
-   bench suite plus the CH query shortcut fix the bench work uncovered
-   (itinera 4fe560c). Left: run the bench on hercules once the sweep
-   finishes and put the measured numbers in itinera's README performance
-   table.
+   the calls) and all its work has landed: the eight README rewords, the
+   tiletopia module deletion (17 removed, tiletopia 68313a8), and in itinera
+   a bench suite, the CH query shortcut fix the bench work uncovered, and
+   measured numbers in the README performance table (itinera a80e93c).
 3. Trim the geolang `/tools` manifest, roughly 14k tokens every turn, owner
    go 2026-08-31. Editorial only, one manifest for `/chat` and `/mcp`: delete
    name-echo Field descriptions, keep guidance in exactly one of docstring or
