@@ -34,7 +34,10 @@ docs), and so did region watch end to end. What is left:
 2. The sitting was held 2026-08-31 (`../owner-sitting-2026-08-31.md` records
    the calls). What it left as work: delete 18 parked tiletopia modules (list
    under **Wire for real**, needs cargo, wait for the idle box). The eight
-   README rewords from the sheet are done and await commit.
+   README rewords from the sheet are done and pushed, interiora's commit
+   waits on its clippy run before pushing. Also queued behind the sweep: an
+   itinera criterion benchmark so the README performance table quotes
+   measured numbers.
 
 Session results 2026-08-31, item 1 still waits on hercules: geoplumb fan-in
 and vector sources shipped (geoplumb 72cd4bb), collecta-cli `pull` shipped
@@ -183,7 +186,9 @@ this direction reverses.
       would want), geofence (delete instead if no tile-side geofence is ever
       wanted, agora region watch covers the live case). Deletion needs cargo
       to verify, so it waits for the eval sweep to free the box. Re-verify a
-      module has no caller before deleting it.
+      module has no caller before deleting it. The deleted modules that were
+      feature ideas rather than duplicates are recorded as low priority under
+      **Wait for demand**.
 
 - [ ] **Space-Time geofencing UI and case management.** The library code and
       types exist with no UI behind them, parked. Network metrics render as a
@@ -407,6 +412,22 @@ Operator-facing deployment gaps:
 Parked until a real user, a real feed, or a real customer file exists. The
 thesis is "a team makes and analyzes a map together in the browser". Refuse
 feature-parity fights with ArcGIS, Felt, GEE, Palantir.
+
+- [ ] **Low priority: feature ideas from the deleted tiletopia modules**
+      (2026-08-31 sitting). The code was facade with no callers and is deleted,
+      rebuild from git history if a real user asks. Recorded because the idea
+      was real even though the code was not: reports and print export (if it
+      returns, build map-to-PDF in viewtopia against the live view, with
+      fenestra's printing stub, not tile-side), temporal tiles behind a time
+      slider (waits for a dataset with a time column in real use), flythrough
+      camera paths, arvr viewing, model_zoo, prediction and onnx_inference
+      (dead without weights, same call as panoptes), encryption at rest (needs
+      a key backend, probably ops rather than app code), federation peering
+      (needs a second instance), whitelabel branding, cluster raft
+      scaffolding, cicd pipeline config, retention policies. Not recorded:
+      scripting, cloud_store, priority_queue, dynamic_raster and marketplace,
+      each a duplicate of a shipped implementation (agora region watch,
+      tiletopia-store, scheduler.rs, geoplumb, the plugin registry).
 
 - [ ] **Fluvius as a rules consumer of agora's readings stream.** Thresholds,
       geofences and proximity alerts over the live asset readings (see
