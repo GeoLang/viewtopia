@@ -38,6 +38,13 @@ docs), and so did region watch end to end. What is left:
    (itinera 4fe560c). Left: run the bench on hercules once the sweep
    finishes and put the measured numbers in itinera's README performance
    table.
+3. Trim the geolang `/tools` manifest, roughly 14k tokens every turn, owner
+   go 2026-08-31. Editorial only, one manifest for `/chat` and `/mcp`: delete
+   name-echo Field descriptions, keep guidance in exactly one of docstring or
+   Field description, compress embedded examples, dedupe repeated
+   boilerplate, add a test capping the serialized manifest size. Model-facing
+   text, so the eval stack picks it up only after the gate closes, with one
+   `--repeat 3` confirmation pass on hercules against the fresh baseline.
 
 Session results 2026-08-31, item 1 still waits on hercules: geoplumb fan-in
 and vector sources shipped (geoplumb 72cd4bb), collecta-cli `pull` shipped
