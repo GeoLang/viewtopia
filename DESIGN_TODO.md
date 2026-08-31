@@ -33,22 +33,42 @@ docs), and so did region watch end to end. What is left:
    decides short-form actions and `sql.attach_url` together.
 2. One owner sitting for the decisions under **Open decisions that are not
    bugs** plus a triage of the parked tiletopia modules: name the few to wire
-   and mark the rest deliberately parked.
-Everything under **Wait for demand** stays parked. Agora gained sensor reading
-ingest on 2026-08-25, so re-verify the FleetPanel and live-layer rows there
-before picking either.
+   and mark the rest deliberately parked. Prepared: `../owner-sitting-2026-08-31.md`
+   holds the sheet, with the module census re-verified against the code.
+
+Session results 2026-08-31, item 1 still waits on hercules: geoplumb fan-in
+and vector sources shipped (geoplumb 72cd4bb), collecta-cli `pull` shipped
+(collecta ad75d43), the maplibre 6.x bump was investigated and is blocked on
+deck.gl (see the patch row under **Chat action leftovers**), and the sitting
+decision sheet is at `../owner-sitting-2026-08-31.md` with the verified
+tiletopia census. The regionWatch chat action stays blocked behind the eval
+gate, the catalogue and eval task count are pinned until the `--repeat 3` run
+lands.
+Everything under **Wait for demand** stays parked. The FleetPanel and
+live-layer rows there were re-verified 2026-08-31 against agora's sensor
+reading ingest and rewritten to match.
 
 ## Chat action leftovers, 2026-08-29
 
-- [ ] **Drop `patches/maplibre-gl@5.24.0.patch` when a release carries the
-      fix.** The patch backports maplibre `main`'s "Let an abort reach an image
-      or raster tile load that is still awaiting its `transformRequest`": a
-      raster tile aborted by `setStyle` during that await queued an image
-      request with no controller and stalled the image queue, so the vector
-      basemap's sprite never arrived. The patch is 1.1 MB because it rewrites
-      the minified single line. When the CHANGELOG line ships in a release,
-      bump and delete the patch, `tests/e2e/chat-actions-tabs.spec.js`
-      ("goes back to a vector basemap") proves it.
+- [!] **Drop `patches/maplibre-gl@5.24.0.patch`, blocked on deck.gl.** The fix
+      shipped upstream in maplibre 6.4.0 (PR 8071) but no 5.x release carries
+      it, and the 6.x bump is blocked: v6 removed the internal `map.transform`,
+      and `@deck.gl/mapbox` dereferences it on every interleaved render
+      (`map.transform.height` in `getViewport`, unguarded), verified in the
+      shipped 9.3.7, 9.3.11 and 9.4.0-beta.1 tarballs. The replacement is
+      `@deck.gl/maplibre`'s `MapLibreOverlay`, published only in the 9.4.0
+      beta family, and adopting it also moves luma.gl to a 9.4 beta and
+      reworks the deck plumbing: it does not set `map.__deck`
+      (useDeckOverlay.ts reads it, useFeaturePickerMapLibre.ts pulls the Deck
+      out for `pickObject`) and has no `isInitialized`, so the registry holds
+      the overlay instead and about a dozen unit tests re-mock. Checked
+      2026-08-31: no fix on any 9.3.x, deck.gl RFC 10501 still proposed.
+      Revisit when deck.gl 9.4.0 is stable. Migration notes beyond the import
+      rewrite (47 sites, including 10 type-only default imports): the
+      export-map plugin template links the UMD bundle that v6 no longer
+      publishes, and the stale patch comment sits at
+      `tests/e2e/chat-actions-tabs.spec.js` ("goes back to a vector basemap"
+      stays the proof either way).
 - [ ] **Viewer eval scorer judges a call the model sent, not the call the
       viewer runs.** `tab: ["globe"]` runs in the viewer (`unwrapSingleton`) but
       `values_match` in geolang `evals/viewer_scoring.py` scores it as a miss.
@@ -78,9 +98,10 @@ ViewTopia, Ptolemy, Jung, TerraVista, Panoptes, and Geoplumb.
       feature-aware three-way merge, and a PostGIS working copy are not
       implemented.
 
-- [ ] **GeoPlumb**: a layer file names one source and one chain, so the
-      fan-in elements (mosaic, two-input algebra), the vector and point
-      sources and the GeoTIFF encoder are not reachable from it.
+- [ ] **GeoPlumb**: the point sources (LAS with IDW gridding) and the GeoTIFF
+      encoder are not reachable from a layer file. Fan-in (mosaic, two-input
+      combine), the GeoJSON source and rasterize landed 2026-08-31; the
+      per-fragment vector filter, schema map and clip stay library-only.
 
 - [ ] **Interiora**: no BLE or WiFi signal acquisition is implemented. The
       positioning result is k-nearest-neighbor over caller-provided signals,
@@ -461,15 +482,20 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
       enterprise-pull, and the thesis says refuse parity fights.
 
 - [ ] **if any of this is wanted, the in-thesis version is a live layer, not a
-      sensor platform**: fluvius emitting over WebSocket into agora, which
-      already carries live multiplayer. One connector, reusing shipped
-      infrastructure. It also answers FleetPanel, which is the same gap.
-      A sensor historian is off-thesis. Parked 2026-08-13, no use case to test
-      against. Full write-up under **Plans** below.
+      sensor platform**: re-verified 2026-08-31, the ingest half is built.
+      Agora's `/feeds/ws` takes `Readings` frames under a feed token minted at
+      feed creation, relays them to document subscribers, and viewtopia's
+      `AssetRule` path colors assets by their latest reading end to end. What
+      is missing is only a pusher: fluvius connecting out to `/feeds/ws` as a
+      sink (its runner already connects out and checkpoints), plus feed-token
+      lifecycle for it. A sensor historian stays off-thesis. Parked, no use
+      case to test against.
 
-- [ ] **viewtopia FleetPanel** — currently an honest "no live feed" state; nothing serves
-      vehicle positions. Same gap as the live layer, same answer: fluvius over
-      WebSocket into agora rather than a new ingest path.
+- [ ] **viewtopia FleetPanel** — honest "no live feed" state; nothing serves
+      vehicle positions. Narrower than the live-layer row now: readings ingest
+      and relay exist, so this needs a position feed pushed into `/feeds/ws`
+      (fluvius, same connector as above) and FleetPanel consuming position
+      kinds from the `readings` frames it already receives via liveStore.
 
 - [ ] **terravista v0.3** — Metal/Vulkan GPU rendering. Biggest advertised-vs-real
       gap on mobile, needs platform GPU toolchains, post-v1 by the existing
@@ -534,18 +560,17 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
       its own rows rather than the whole stack. What remains
       is that strips run one after another, so a stack deep enough to need N
       strips pays N passes of read latency, over the same distinct bytes since
-      shared tiles come from the byte cache. geoplumb's own DESIGN.md still says
-      the item list never narrows per strip, which that change contradicts.
+      shared tiles come from the byte cache.
 
 - [ ] **geoplumb breadth**: GEE ships a huge operator library and charting/reduction
       over regions. Grow by demand, not by checklist.
 
-- [ ] **most of those operators are library-only, not reachable from a served
-      layer.** `OpConfig` in geoplumb-server accepts `hillshade`, `bandmath`,
-      `slope` and `aspect` and nothing else, so reclassify, focal statistics,
-      quality masking, convolution, mosaic, reproject, rasterize and the vector
-      ops exist in the engine but cannot be configured on a layer. Either widen
-      `OpConfig` or say plainly that the server exposes four of them.
+- [ ] **the operators still library-only, not reachable from a served
+      layer**: the LAS point source with IDW gridding, the per-fragment vector
+      filter, schema map and boundary clip, and the GeoTIFF encoder.
+      Everything else is configurable: `OpConfig` has ten variants plus
+      fan-in (`mosaic`, `combine`) and the GeoJSON source since 2026-08-31.
+      Widen further by demand.
 
 ## Open decisions that are not bugs
 
