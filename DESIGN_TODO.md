@@ -178,17 +178,20 @@ this direction reverses.
 - [ ] **tiletopia module triage, decided at the 2026-08-31 sitting.** The
       2026-08-31 census found 18 of the recorded 39 live behind registered
       routes and three more live through demo routes, those rows are simply
-      off the list. Delete these 18: scripting, cluster, cloud_store,
-      marketplace, cicd, arvr, whitelabel, federation, model_zoo, prediction,
-      onnx_inference, priority_queue, flythrough, dynamic_raster, reports,
-      retention, temporal, encryption. Park with a reason: crdt (plausible if
-      collaboration deepens), tenant (tiny, quota types a hosted instance
-      would want), geofence (delete instead if no tile-side geofence is ever
-      wanted, agora region watch covers the live case). Deletion needs cargo
-      to verify, so it waits for the eval sweep to free the box. Re-verify a
-      module has no caller before deleting it. The deleted modules that were
-      feature ideas rather than duplicates are recorded as low priority under
-      **Wait for demand**.
+      off the list, and so is cicd: the census called it a stub but
+      tiletopia-cli's validate subcommand calls cicd::validate_tileset. The
+      other 17 (scripting, cluster, cloud_store, marketplace, arvr,
+      whitelabel, federation, model_zoo, prediction, onnx_inference,
+      priority_queue, flythrough, dynamic_raster, reports, retention,
+      temporal, encryption) are deleted on the module-triage branch in a
+      worktree, grep-verified with no cargo run, along with their orphaned
+      dependencies. Left: cargo check, clippy and tests on that branch once
+      the eval sweep frees the box, then merge to master and push. Park with
+      a reason: crdt (plausible if collaboration deepens), tenant (tiny,
+      quota types a hosted instance would want), geofence (delete instead if
+      no tile-side geofence is ever wanted, agora region watch covers the
+      live case). The deleted modules that were feature ideas rather than
+      duplicates are recorded as low priority under **Wait for demand**.
 
 - [ ] **Space-Time geofencing UI and case management.** The library code and
       types exist with no UI behind them, parked. Network metrics render as a
@@ -424,7 +427,7 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
       (dead without weights, same call as panoptes), encryption at rest (needs
       a key backend, probably ops rather than app code), federation peering
       (needs a second instance), whitelabel branding, cluster raft
-      scaffolding, cicd pipeline config, retention policies. Not recorded:
+      scaffolding, retention policies. Not recorded:
       scripting, cloud_store, priority_queue, dynamic_raster and marketplace,
       each a duplicate of a shipped implementation (agora region watch,
       tiletopia-store, scheduler.rs, geoplumb, the plugin registry).
