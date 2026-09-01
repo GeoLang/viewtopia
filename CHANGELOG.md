@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- 2026-08-31: **chat can create a region watch.** `live.watch_region` takes a
+  layer, a reducer, an interval and an optional threshold, and reads its
+  region from a bbox argument, else the drawn polygon, else the current view.
+  No webhook arguments: the panel keeps those.
+
+### Fixed
+
+- 2026-08-31: **every url-taking action refuses anything but an absolute http
+  or https url** (`data.import_url`, `data.add_tileset`, `data.add_service`,
+  `sql.attach_url`, and the stac actions' catalog url). A caller reaching the
+  action registry without geolang's viewer_control can no longer hand them
+  `javascript:`, `data:`, `file:` or a path on the app's own origin.
+
 ### Removed
 
 - 2026-08-30: **LiveKit voice and video are gone.** The Collaboration panel's

@@ -27,8 +27,8 @@ items and tiles, itinera `/match`, fluvius runner, LiveKit removal, verticals
 docs), and so did region watch end to end. What is left:
 
 1. The eval gate passed 2026-08-31 (see P0 item 7 for the numbers): run-only
-   stays, the catalogue and eval task count are unpinned. Follow-ups it
-   opens: add the regionWatch chat action and its eval task; per-task work
+   stays. The regionWatch chat action and its eval task shipped the same
+   day (`live.watch_region`, 72 tasks). Still open: per-task work
    on the six tasks still well under the old baseline
    (dataset-draw-widening-branch, find-before-shading,
    find-the-kingsway-substation, layers-remove-flood-zones,
@@ -44,17 +44,22 @@ docs), and so did region watch end to end. What is left:
    off every turn, byte-cap test added) and was confirmed by the gate pass
    it rode in.
 
-Session results 2026-08-31, item 1 still waits on hercules: geoplumb fan-in
+Session results 2026-08-31, first pass: geoplumb fan-in
 and vector sources shipped (geoplumb 72cd4bb), collecta-cli `pull` shipped
 (collecta ad75d43), the maplibre 6.x bump was investigated and is blocked on
 deck.gl (see the patch row under **Chat action leftovers**), and the sitting
 decision sheet is at `../owner-sitting-2026-08-31.md` with the verified
-tiletopia census. The regionWatch chat action stays blocked behind the eval
-gate, the catalogue and eval task count are pinned until the `--repeat 3` run
-lands.
+tiletopia census.
 Everything under **Wait for demand** stays parked. The FleetPanel and
 live-layer rows there were re-verified 2026-08-31 against agora's sensor
 reading ingest and rewritten to match.
+
+Session results 2026-08-31, second pass: `live.watch_region` shipped with
+its eval task (72 tasks now, catalogue and pin moved together), the url
+scheme check landed inside all six url-fetching actions, and ptolemy's
+listing subquery guard halved listing time and closed ptolemy/TODO.md
+(the index stays, the `ON DELETE SET NULL` action on `datasets.project_id`
+scans it on project delete).
 
 ## Chat action leftovers, 2026-08-29
 
@@ -239,13 +244,15 @@ What actually stands in the way, in order:
    should hand an anonymous guest an `edit` role at all is a product decision
    nobody has made.
 
-- [ ] **viewtopia's url-fetching actions trust their caller.** data.import_url,
-      data.load_tileset and sql.attach_url read args.url and fetch it with no
-      scheme check in the viewer. The only http/https allowlist lives in
-      geolang's viewer_control tool (extended 2026-08-31 to cover urls inside
-      the args object), so any caller that reaches the action registry without
-      passing that tool carries unchecked urls. Add the scheme check in the
-      actions themselves.
+- [ ] **stac.add_asset trusts hrefs inside a fetched catalog document.**
+      The caller-supplied urls are checked since 2026-08-31 (every url-taking
+      action refuses anything but absolute http/https), but `resolveHref` in
+      `src/features/stac/addAsset.ts` keeps an absolute `asset.href` as
+      written and hands it to `fetchStac`, `addXyzLayer` or
+      `openInRasterAnalysis`, so a hostile STAC catalog can put a
+      `javascript:` href into a tile template. Affects the STAC browser panel
+      as much as the action. Needs its own scheme check where the href is
+      resolved, plus a security review pass.
 
 Operator-facing deployment gaps:
 
@@ -713,8 +720,8 @@ and a signed webhook that refuses private hosts and pins the resolved
 address. Owner calls: the watch lives in agora, share-link guests see readings
 only. In the viewer: the `regionWatch` panel, creation from a drawn polygon,
 regions outlined on the globe, the two frames in `liveStore`. agora's README
-and DESIGN.md 2.0 are the references. No chat action yet, the catalogue and
-its eval task count are pinned, add one after the eval gate closes.
+and DESIGN.md 2.0 are the references. The `live.watch_region` chat action
+shipped 2026-08-31 with its eval task.
 
 - [ ] **A third webhook sender now exists** (`agora-server/src/webhooks.rs`
       beside `ptolemy-api/src/delivery.rs` and tiletopia `webhooks.rs`),
