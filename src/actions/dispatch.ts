@@ -32,12 +32,24 @@ export interface RunOptions {
   announce?: boolean;
 }
 
+/**
+ * Send the model what went wrong, so it stops repeating the same bad call. The
+ * eval harness matches this exact shape.
+ */
+function queueFailure(name: string, message: string): void {
+  const chat = useChatStore.getState();
+  if (chat.followUpCount >= MAXIMUM_FOLLOW_UPS) return;
+  chat.queueFollowUp(`${name} failed: ${message}`);
+}
+
 async function execute(definition: ActionDefinition, args: ActionArguments, announce: boolean): Promise<void> {
   let text: string;
   try {
     ({ text } = await runAction(definition.name, args));
   } catch (failure) {
-    postSystemNotice(failure instanceof Error ? failure.message : String(failure));
+    const message = failure instanceof Error ? failure.message : String(failure);
+    postSystemNotice(message);
+    if (announce) queueFailure(definition.name, message);
     return;
   }
   if (!announce) return;
@@ -63,12 +75,16 @@ export async function runViewerAction(
   const name = typeof params.name === 'string' ? params.name : String(params.name ?? '');
   const args = readArguments(params.args);
   if (args === null) {
-    postSystemNotice(`${name}: its arguments did not read as an object.`);
+    const message = `${name}: its arguments did not read as an object.`;
+    postSystemNotice(message);
+    if (announce) queueFailure(name, message);
     return;
   }
   const definition = findAction(name);
   if (!definition) {
-    postSystemNotice(`There is no viewer action named ${name}.`);
+    const message = `There is no viewer action named ${name}.`;
+    postSystemNotice(message);
+    if (announce) queueFailure(name, message);
     return;
   }
   if (definition.destructive && announce) {

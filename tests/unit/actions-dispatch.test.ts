@@ -93,6 +93,61 @@ describe('runViewerAction', () => {
   });
 });
 
+describe('an action that fails', () => {
+  it('sends a refused argument back to the model', async () => {
+    await runViewerAction({ name: 'paint.set', args: {} });
+
+    expect(useChatStore.getState().followUp).toBe('paint.set failed: paint.set: color is required');
+  });
+
+  it('sends what an action threw back to the model', async () => {
+    registerAction({
+      name: 'paint.fail',
+      description: 'Fail at painting',
+      parameters: {},
+      run: () => {
+        throw new ActionError('the tin is empty');
+      },
+    });
+
+    await runViewerAction({ name: 'paint.fail', args: {} });
+
+    expect(useChatStore.getState().followUp).toBe('paint.fail failed: the tin is empty');
+  });
+
+  it('sends back arguments that did not read as an object', async () => {
+    await runViewerAction({ name: 'paint.set', args: 'red' });
+
+    expect(useChatStore.getState().followUp).toBe(
+      'paint.set failed: paint.set: its arguments did not read as an object.',
+    );
+  });
+
+  it('sends back an action name nobody registered', async () => {
+    await runViewerAction({ name: 'paint.everything', args: {} });
+
+    expect(useChatStore.getState().followUp).toBe(
+      'paint.everything failed: There is no viewer action named paint.everything.',
+    );
+  });
+
+  it('stops sending once the follow-ups are spent', async () => {
+    useChatStore.setState({ followUpCount: MAXIMUM_FOLLOW_UPS });
+
+    await runViewerAction({ name: 'paint.set', args: {} });
+
+    expect(notices()).toEqual(['paint.set: color is required']);
+    expect(useChatStore.getState().followUp).toBeNull();
+  });
+
+  it('says nothing to the model when it succeeds without reading anything', async () => {
+    await runViewerAction({ name: 'paint.set', args: { color: 'red' } });
+
+    expect(painted).toBe('red');
+    expect(useChatStore.getState().followUp).toBeNull();
+  });
+});
+
 describe('a destructive action', () => {
   const registerBurn = (run = vi.fn(() => ({ text: 'Burned it.' }))) => {
     registerAction({

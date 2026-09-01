@@ -100,8 +100,8 @@ export function ChatPanel() {
     draftRef.current = '';
   }, [activeSessionId]);
 
-  // a read action's result goes back to the model as its own turn, once the run
-  // that produced it has finished
+  // a read action's result, or an action's failure, goes back to the model as
+  // its own turn, once the run that produced it has finished
   const followUp = useChatStore((s) => s.followUp);
   useEffect(() => {
     if (!followUp || streaming) return;
