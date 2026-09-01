@@ -62,11 +62,31 @@ const CATALOG_PARAMETER = {
 } as const;
 
 /**
+ * A URL an action will open, answered back unchanged. Anything that is not an
+ * absolute http or https URL is refused here, since a caller reaching the
+ * registry directly is not checked anywhere else.
+ */
+function fetchableUrl(url: string): string {
+  let scheme: string;
+  try {
+    scheme = new URL(url).protocol;
+  } catch {
+    throw new ActionError(`"${url}" is not a full URL, so give the whole https:// address`);
+  }
+  if (scheme !== 'http:' && scheme !== 'https:') {
+    throw new ActionError(
+      `the viewer opens http and https URLs, not ${scheme.replace(':', '')} ones`,
+    );
+  }
+  return url;
+}
+
+/**
  * The file name the import routes by: what the caller called it, else the
  * URL's last path segment, carrying the format the caller named.
  */
 function importFileName(url: string, name: string | undefined, format: string | undefined): string {
-  const path = new URL(url, window.location.href).pathname;
+  const path = new URL(url).pathname;
   const base = name ?? decodeURIComponent(path.split('/').pop() ?? '');
   if (base === '') throw new ActionError('the URL names no file, so give it a name');
   if (!format) return base;
@@ -87,7 +107,7 @@ registerAction({
     },
   },
   run: async (args) => {
-    const url = args.url as string;
+    const url = fetchableUrl(args.url as string);
     const fileName = importFileName(
       url,
       args.name as string | undefined,
@@ -149,7 +169,7 @@ registerAction({
   run: async (args) => ({
     text: await addOgcService(
       args.name as string,
-      args.url as string,
+      fetchableUrl(args.url as string),
       args.type as AddableServiceType,
     ),
   }),
@@ -164,7 +184,7 @@ registerAction({
   },
   run: async (args) => {
     const { name, failure } = await addTilesetToGlobe(
-      args.url as string,
+      fetchableUrl(args.url as string),
       args.name as string | undefined,
     );
     if (failure === 'no-globe') throw new ActionError(NO_CESIUM_GLOBE);
@@ -239,7 +259,7 @@ registerAction({
   },
   reads: true,
   run: async (args) => {
-    const catalog = await fetchCatalog(args.catalog as string);
+    const catalog = await fetchCatalog(fetchableUrl(args.catalog as string));
     const collection = resolveOne(
       'collection',
       args.collection as string,
@@ -269,7 +289,7 @@ registerAction({
     asset: { type: 'string', description: 'Asset key, as stac.search lists it.', required: true },
   },
   run: async (args) => {
-    const catalog = await fetchCatalog(args.catalog as string);
+    const catalog = await fetchCatalog(fetchableUrl(args.catalog as string));
     const wanted = args.item as string;
     const item = await fetchItem(catalog, wanted);
     if (!item) throw new ActionError(`${catalog.title} holds no item ${wanted}`);
@@ -297,7 +317,7 @@ registerAction({
   },
   run: async (args) => {
     const view = await attachUrl(
-      args.url as string,
+      fetchableUrl(args.url as string),
       args.name as string | undefined,
       args.format as AttachFormat | undefined,
     );
