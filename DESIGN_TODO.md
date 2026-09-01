@@ -22,12 +22,7 @@
 
 Ordered 2026-08-30, hosting excluded.
 
-1. **panoptes segmentation weights**: find an openly licensed segmentation
-   model that fits the model contract in panoptes' README, or one convertible
-   to it, verify it end to end through `panoptes segment --features onnx`, and
-   publish the weights with their license and provenance. Training our own
-   stays out of scope until sourcing fails.
-2. Per-task work on the six eval tasks still well under the old baseline
+1. Per-task work on the six eval tasks still well under the old baseline
    (dataset-draw-widening-branch, find-before-shading,
    find-the-kingsway-substation, layers-remove-flood-zones,
    scenario-compare-within-25-metres, search-a-stac-collection), and the
@@ -343,7 +338,7 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
       fenestra's printing stub, not tile-side), temporal tiles behind a time
       slider (waits for a dataset with a time column in real use), flythrough
       camera paths, arvr viewing, model_zoo, prediction and onnx_inference
-      (dead without weights, same call as panoptes), encryption at rest (needs
+      (dead without weights), encryption at rest (needs
       a key backend, probably ops rather than app code), federation peering
       (needs a second instance), whitelabel branding, cluster raft
       scaffolding, retention policies. Not recorded:
