@@ -26,7 +26,13 @@ manifest, agora and ptolemy `deny_unknown_fields`, geoplumb ops, fenestra
 items and tiles, itinera `/match`, fluvius runner, LiveKit removal, verticals
 docs), and so did region watch end to end. What is left:
 
-1. The eval gate passed 2026-08-31 (see P0 item 7 for the numbers): run-only
+1. **panoptes segmentation weights** (moved out of Wait for demand
+   2026-09-01, owner ask): find an openly licensed segmentation model that
+   fits the model contract in panoptes' README, or one convertible to it,
+   verify it end to end through `panoptes segment --features onnx`, and
+   publish the weights with their license and provenance. Training our own
+   stays out of scope until sourcing fails.
+2. The eval gate passed 2026-08-31 (see P0 item 7 for the numbers): run-only
    stays. The regionWatch chat action and its eval task shipped the same
    day (`live.watch_region`, 72 tasks). Still open: per-task work
    on the six tasks still well under the old baseline
@@ -35,12 +41,12 @@ docs), and so did region watch end to end. What is left:
    scenario-compare-within-25-metres, search-a-stac-collection); and the
    `sql.attach_url` half of the old decision stays open, since
    attach-a-remote-table still scores 0.
-2. The sitting was held 2026-08-31 (`../owner-sitting-2026-08-31.md` records
+3. The sitting was held 2026-08-31 (`../owner-sitting-2026-08-31.md` records
    the calls) and all its work has landed: the eight README rewords, the
    tiletopia module deletion (17 removed, tiletopia 68313a8), and in itinera
    a bench suite, the CH query shortcut fix the bench work uncovered, and
    measured numbers in the README performance table (itinera a80e93c).
-3. The geolang `/tools` manifest trim landed (geolang 020d568, 24 percent
+4. The geolang `/tools` manifest trim landed (geolang 020d568, 24 percent
    off every turn, byte-cap test added) and was confirmed by the gate pass
    it rode in.
 
@@ -82,12 +88,6 @@ scans it on project delete).
       publishes, and the stale patch comment sits at
       `tests/e2e/chat-actions-tabs.spec.js` ("goes back to a vector basemap"
       stays the proof either way).
-- [ ] **Viewer eval scorer judges a call the model sent, not the call the
-      viewer runs.** `tab: ["globe"]` runs in the viewer (`unwrapSingleton`) but
-      `values_match` in geolang `evals/viewer_scoring.py` scores it as a miss.
-      Unwrapping there moves every historical eval number, so it is an owner
-      decision. `change-to-3d` in `evals/viewer/recordings/grok-2026-08-29.json`
-      is recorded as that miss.
 
 ## Cross-repository audit, 2026-08-22
 
@@ -530,10 +530,6 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
       styles use `type`, `minzoom`, `paint["fill-color"]` and stop functions. No
       `tv_` FFI symbol touches the style module, so no host can supply one, and
       the renderer uses its own hardcoded style keyed by layer name.
-
-- [ ] **panoptes model weights** — train or source one usable segmentation
-      model and publish weights. No weights exist, so segmentation does not work
-      out of the box.
 
 - [ ] **the next adapter after Esri.** v0.1 covers KML/KMZ, v0.2 the Esri File
       Geodatabase. Pick the next from real customer data rather than
