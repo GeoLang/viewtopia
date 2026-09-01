@@ -108,12 +108,25 @@ function sameOrigin(url: string): boolean {
 }
 
 /**
- * An href as written in a STAC document, which may be relative to it. The
- * {z}/{x}/{y} of a tile template has to come back out intact, and `new URL`
- * percent-encodes braces.
+ * An href as written in a STAC document, which may be relative to it, or null
+ * when the viewer will not open it. The {z}/{x}/{y} of a tile template has to
+ * come back out intact, and `new URL` percent-encodes braces.
+ *
+ * A catalog is a third party writing strings that end up at `fetch`, at a tile
+ * source and at the raster panel, so only http and https get through, and a
+ * catalog somewhere else may not name our own origin: that URL would be
+ * fetched with the session bearer on it.
  */
-export function resolveHref(href: string, base: string): string {
-  return new URL(href, base).toString().replace(/%7B/g, '{').replace(/%7D/g, '}');
+export function resolveHref(href: string, base: string): string | null {
+  let url: URL;
+  try {
+    url = new URL(href, base);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+  if (sameOrigin(url.href) && !sameOrigin(base)) return null;
+  return url.toString().replace(/%7B/g, '{').replace(/%7D/g, '}');
 }
 
 export function parseLinks(body: unknown, base: string): StacLink[] {
@@ -124,10 +137,12 @@ export function parseLinks(body: unknown, base: string): StacLink[] {
     const href = text(link.href);
     const rel = text(link.rel);
     if (!href || !rel) return [];
+    const resolved = resolveHref(href, base);
+    if (!resolved) return [];
     return [
       {
         rel,
-        href: resolveHref(href, base),
+        href: resolved,
         title: text(link.title) || undefined,
         method: text(link.method) || undefined,
         body: object(link.body),
@@ -229,11 +244,13 @@ function parseAssets(body: unknown, base: string): StacAsset[] {
     const asset = record(entry);
     const href = text(asset.href);
     if (!href) return [];
+    const resolved = resolveHref(href, base);
+    if (!resolved) return [];
     const roles = Array.isArray(asset.roles) ? asset.roles.filter((r) => typeof r === 'string') : [];
     return [
       {
         key,
-        href: resolveHref(href, base),
+        href: resolved,
         title: text(asset.title) || key,
         mediaType: text(asset.type),
         roles: roles as string[],
