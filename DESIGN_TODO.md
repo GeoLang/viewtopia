@@ -26,42 +26,23 @@ manifest, agora and ptolemy `deny_unknown_fields`, geoplumb ops, fenestra
 items and tiles, itinera `/match`, fluvius runner, LiveKit removal, verticals
 docs), and so did region watch end to end. What is left:
 
-1. Owner call on the run-only action contract, now that the gate is measured
-   (2026-08-31, full `--repeat 3` pass on an idle hercules). Answered-only
-   0.4833 over 67 tasks, and 0.464 against the baseline's 0.706 over the 50
-   shared tasks, conservative since the scorer unwrap only raises the new
-   number. A 22-task rerun under the documented llama recipe flags splits
-   the causes: the restarted server's flags cost a minor share (0.278 to
-   0.373 on those tasks), the rest is the contract itself. The failure shape
-   repeats across tasks: the model fills `run`'s declared camera fields
-   (lat, lon, height, pitch) and drops the action's own arguments, which
-   exist only as catalogue prose, or puts the value in `name`
-   (`{"name": "satellite"}`). Camera tasks, whose real arguments are the
-   declared fields, improved. Whole-pass stall rate 15.0 percent on an idle
-   box against the baseline's 8.3. Reports:
-   `20260831T201557+0000-viewer-local:Qwen3.json` with
-   `20260831-viewer-sweep-hercules.log`, and the subset
-   `20260831T223359+0000-viewer-local:Qwen3.json` with
-   `20260831-viewer-subset-recipeflags.log`. The options: strip the
-   camera-specific declared fields from the run schema or carry per-action
-   parameter schemas into the tool contract, then one pass to verify, or put
-   the fixed per-action actions back. The catalogue and eval task count stay
-   pinned until this call. Also pick one llama-server config and record it:
-   the 2026-08-31 restart changed sampling (reasoning off, temp 0.7,
-   presence penalty 1.5, no --jinja) and the current server is back on the
-   recipe flags.
+1. The eval gate passed 2026-08-31 (see P0 item 7 for the numbers): run-only
+   stays, the catalogue and eval task count are unpinned. Follow-ups it
+   opens: add the regionWatch chat action and its eval task; per-task work
+   on the six tasks still well under the old baseline
+   (dataset-draw-widening-branch, find-before-shading,
+   find-the-kingsway-substation, layers-remove-flood-zones,
+   scenario-compare-within-25-metres, search-a-stac-collection); and the
+   `sql.attach_url` half of the old decision stays open, since
+   attach-a-remote-table still scores 0.
 2. The sitting was held 2026-08-31 (`../owner-sitting-2026-08-31.md` records
    the calls) and all its work has landed: the eight README rewords, the
    tiletopia module deletion (17 removed, tiletopia 68313a8), and in itinera
    a bench suite, the CH query shortcut fix the bench work uncovered, and
    measured numbers in the README performance table (itinera a80e93c).
-3. Trim the geolang `/tools` manifest, roughly 14k tokens every turn, owner
-   go 2026-08-31. Editorial only, one manifest for `/chat` and `/mcp`: delete
-   name-echo Field descriptions, keep guidance in exactly one of docstring or
-   Field description, compress embedded examples, dedupe repeated
-   boilerplate, add a test capping the serialized manifest size. Model-facing
-   text, so the eval stack picks it up only after the gate closes, with one
-   `--repeat 3` confirmation pass on hercules against the fresh baseline.
+3. The geolang `/tools` manifest trim landed (geolang 020d568, 24 percent
+   off every turn, byte-cap test added) and was confirmed by the gate pass
+   it rode in.
 
 Session results 2026-08-31, item 1 still waits on hercules: geoplumb fan-in
 and vector sources shipped (geoplumb 72cd4bb), collecta-cli `pull` shipped
@@ -144,12 +125,24 @@ other documents citing "P0 item 5" still land on the right one.
 7. **Chat-only viewer mode: a typed prompt reaches every capability that does
    not need the mouse.** Repositories: `viewtopia`, `geolang`. Owner call
    2026-08-25, plan under **Chat-only viewer mode** in the plans section.
-   - [!] Eval gate, measured 2026-08-31: the full pass finished on an idle
-     hercules and the run-only contract is the dominant cause of a real
-     regression (0.706 to 0.464 answered-only over the shared tasks). The
-     numbers, the flags-vs-contract attribution and the open owner call are
-     under **Do next** item 1. The 2026-08-27 history below stands as the
-     record of why earlier passes could not be compared:
+   - [x] Eval gate PASSED 2026-08-31. The first measured run-only pass
+     regressed hard (0.706 to 0.464 answered-only over the shared tasks) and
+     a 22-task rerun under the recipe llama flags attributed it: flags were
+     minor (0.278 to 0.373), the contract was the cause, the model filling
+     `run`'s declared camera fields and dropping the catalogue-prose
+     arguments. Owner call: strip the declared fields (geolang f53554e,
+     `run` now declares only action, a required name and args, url guard
+     moved to the extras and args paths). The verifying pass, new schema
+     plus trimmed manifest under recipe flags: answered-only 0.8164 over 71
+     tasks, 50 perfect, 1 of 213 runs cut short, and 0.777 against the
+     baseline's 0.707 over the 54 shared tasks. On the diagnostic subset
+     under identical flags the schema fix moved 0.373 to 0.785. Report
+     `20260901T004124+0000-viewer-local:Qwen3.json` with
+     `20260831-viewer-sweep-newschema.log`, which is the new baseline. The
+     llama-server config for eval runs is the recipe flags in sibyl's
+     README, the 2026-08-31 sampling variant is retired. The 2026-08-27
+     history below stands as the record of why earlier passes could not be
+     compared:
 
      - Baseline, the old image serving the fixed actions against these tasks,
        whole pass: 14 of 168 runs cut short, 8.3 percent. Answered-only
