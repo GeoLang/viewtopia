@@ -2,9 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import '../../src/actions/live';
 import { ActionError, runAction } from '../../src/actions/registry';
 import { useAuthStore } from '../../src/features/auth/store';
+import { setSharedCamera } from '../../src/hooks/sharedCamera';
 import { useLiveStore } from '../../src/live/liveStore';
 import { emptyLiveDocument } from '../../src/live/types';
 import { useAgentLayerStore } from '../../src/store/agentLayers';
+import { useDrawStore } from '../../src/store/draw';
 import { useTiles3dLayerStore } from '../../src/store/tiles3dLayers';
 import { FakeAgoraServer } from './stubs/fakeAgoraServer';
 
@@ -18,6 +20,41 @@ const FEEDS = [
   { id: 'f-1', name: 'pumps', intervalSeconds: 10, createdBy: 'ada', createdAt: '2026-08-01' },
   { id: 'f-2', name: 'gates', intervalSeconds: 30, createdBy: 'ada', createdAt: '2026-08-01' },
 ];
+
+/** What agora answers a create with, which is what the action reads its text from. */
+const CREATED_WATCH = {
+  id: 'w-1',
+  name: 'ndvi drop',
+  layer: 'ndvi_2026',
+  reducer: 'mean',
+  intervalSeconds: 900,
+  thresholdOp: 'lt',
+  thresholdValue: 0.3,
+  region: { type: 'Polygon', coordinates: [] },
+  createdBy: 'ada',
+  createdAt: '2026-08-31',
+  lastRunAt: null,
+  lastError: null,
+};
+
+/** A square drawn with the Draw tool, its ring left open the way the tool leaves it. */
+const DRAWN_SQUARE = {
+  id: 'draw-1',
+  type: 'Polygon' as const,
+  coords: [
+    [20, 10],
+    [21, 10],
+    [21, 11],
+    [20, 11],
+  ] as [number, number][],
+  color: '#ffffff',
+  lineWidth: 2,
+};
+
+function watchBody(): unknown {
+  const [init] = requestsTo('/agora/documents/doc-1/watches');
+  return JSON.parse(String(init.body));
+}
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -48,6 +85,7 @@ describe('live actions', () => {
     useLiveStore.setState({ documentId: null, role: 'edit', document: emptyLiveDocument() });
     useAgentLayerStore.setState({ layers: [], rasterLayers: [], markers: [], generation: 0 });
     useTiles3dLayerStore.setState({ layers: [], loaded: {} });
+    useDrawStore.setState({ features: [] });
     server = new FakeAgoraServer();
     server.install();
   });
@@ -174,5 +212,127 @@ describe('live actions', () => {
     await expect(
       runAction('live.set_asset_rule', { layer: 'x', kind: 'temperature', breakpoints: '0:#fff' }),
     ).rejects.toThrow('not joined to a live map');
+  });
+
+  it('registers the watch a bbox and a threshold ask for', async () => {
+    joined();
+    // a polygon is on the map too, and the bbox given is the one that counts
+    useDrawStore.setState({ features: [DRAWN_SQUARE] });
+    fetchMock.mockResolvedValueOnce(jsonResponse(CREATED_WATCH));
+
+    const result = await runAction('live.watch_region', {
+      layer: 'ndvi_2026',
+      reducer: 'mean',
+      interval_seconds: 900,
+      name: 'ndvi drop',
+      bbox: [10, 40, 11, 41],
+      threshold_op: 'lt',
+      threshold_value: 0.3,
+    });
+
+    const [init] = requestsTo('/agora/documents/doc-1/watches');
+    expect(init.method).toBe('POST');
+    expect(watchBody()).toEqual({
+      name: 'ndvi drop',
+      layer: 'ndvi_2026',
+      region: {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [10, 40],
+            [11, 40],
+            [11, 41],
+            [10, 41],
+            [10, 40],
+          ],
+        ],
+      },
+      reducer: 'mean',
+      intervalSeconds: 900,
+      thresholdOp: 'lt',
+      thresholdValue: 0.3,
+    });
+    expect(result.text).toBe(
+      'ndvi drop reads the mean of ndvi_2026 every 900s, alerting below 0.3.',
+    );
+  });
+
+  it('watches the polygon on the map when no bbox is given', async () => {
+    joined();
+    useDrawStore.setState({ features: [DRAWN_SQUARE] });
+    fetchMock.mockResolvedValueOnce(jsonResponse(CREATED_WATCH));
+
+    await runAction('live.watch_region', { layer: 'ndvi_2026', reducer: 'max' });
+
+    expect(watchBody()).toEqual({
+      name: 'max of ndvi_2026',
+      layer: 'ndvi_2026',
+      region: {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [20, 10],
+            [21, 10],
+            [21, 11],
+            [20, 11],
+            [20, 10],
+          ],
+        ],
+      },
+      reducer: 'max',
+      intervalSeconds: 3600,
+    });
+  });
+
+  it('watches the view when nothing is drawn and no bbox is given', async () => {
+    joined();
+    setSharedCamera({ longitude: 0, latitude: 51, zoom: 8 });
+    fetchMock.mockResolvedValueOnce(jsonResponse(CREATED_WATCH));
+
+    await runAction('live.watch_region', { layer: 'ndvi_2026', reducer: 'mean' });
+
+    // the shared camera's box: 180 / 2 ** 8 degrees either side of it
+    const span = 180 / 2 ** 8;
+    expect(watchBody()).toMatchObject({
+      region: {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [-span, 51 - span],
+            [span, 51 - span],
+            [span, 51 + span],
+            [-span, 51 + span],
+            [-span, 51 - span],
+          ],
+        ],
+      },
+    });
+  });
+
+  it('refuses a watch when this session is not in a document', async () => {
+    await expect(
+      runAction('live.watch_region', { layer: 'ndvi_2026', reducer: 'mean' }),
+    ).rejects.toThrow('not joined to a live map');
+    expect(requestsTo('/agora/documents/doc-1/watches')).toEqual([]);
+  });
+
+  it('refuses a threshold given only half', async () => {
+    joined();
+    await expect(
+      runAction('live.watch_region', {
+        layer: 'ndvi_2026',
+        reducer: 'mean',
+        threshold_op: 'lt',
+      }),
+    ).rejects.toThrow('both threshold_op and threshold_value');
+    expect(requestsTo('/agora/documents/doc-1/watches')).toEqual([]);
+  });
+
+  it('refuses a watch that would read more often than agora allows', async () => {
+    joined();
+    await expect(
+      runAction('live.watch_region', { layer: 'ndvi_2026', reducer: 'mean', interval_seconds: 30 }),
+    ).rejects.toThrow('every 60 seconds');
+    expect(requestsTo('/agora/documents/doc-1/watches')).toEqual([]);
   });
 });

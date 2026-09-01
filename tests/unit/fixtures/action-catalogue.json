@@ -854,6 +854,60 @@
     "destructive": false
   },
   {
+    "name": "live.watch_region",
+    "description": "Watch a region of a raster layer on the live map, reducing it to one number every so often and alerting when that number crosses a threshold.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "layer": {
+          "type": "string",
+          "description": "Geoplumb layer name to read."
+        },
+        "reducer": {
+          "type": "string",
+          "description": "How the region becomes one number: mean, min, max, sum, count.",
+          "enum": [
+            "mean",
+            "min",
+            "max",
+            "sum",
+            "count"
+          ]
+        },
+        "interval_seconds": {
+          "type": "number",
+          "description": "How often to read the region, in seconds, 60 at the least. 3600 by default."
+        },
+        "name": {
+          "type": "string",
+          "description": "What the watch is called. Named after the layer by default."
+        },
+        "bbox": {
+          "type": "array",
+          "description": "Where to watch, as [west, south, east, north] in degrees. The polygon drawn on the map, or the current view, by default."
+        },
+        "threshold_op": {
+          "type": "string",
+          "description": "Alert when the reading is above (gt) or below (lt) threshold_value.",
+          "enum": [
+            "gt",
+            "lt"
+          ]
+        },
+        "threshold_value": {
+          "type": "number",
+          "description": "The number the reading has to cross to alert."
+        }
+      },
+      "required": [
+        "layer",
+        "reducer"
+      ]
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
     "name": "marker.add",
     "description": "Drop a marker on the map at a longitude and latitude.",
     "parameters": {

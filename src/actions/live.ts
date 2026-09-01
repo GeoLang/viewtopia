@@ -1,4 +1,5 @@
-import { createFeed, deleteFeed, listFeeds, listLiveDocuments } from '../live/api';
+import { currentBbox } from '../lib/terrainAnalysis';
+import { createFeed, createWatch, deleteFeed, listFeeds, listLiveDocuments } from '../live/api';
 import {
   FALLBACK_ASSET_COLOR,
   FALLBACK_OFFLINE_COLOR,
@@ -6,13 +7,26 @@ import {
 } from '../live/assetRule';
 import { parseBreakpoints } from '../live/assetState';
 import { useLiveStore } from '../live/liveStore';
-import { ASSET_RULE_ID, type AssetRule } from '../live/types';
+import {
+  ASSET_RULE_ID,
+  DEFAULT_WATCH_INTERVAL_SECONDS,
+  MINIMUM_WATCH_INTERVAL_SECONDS,
+  WATCH_REDUCERS,
+  type AssetRule,
+  type WatchReducer,
+  type WatchRegion,
+  type WatchThresholdOp,
+} from '../live/types';
 import { useAgentLayerStore } from '../store/agentLayers';
+import { drawnFeatureGeometry, useDrawStore } from '../store/draw';
 import { useTiles3dLayerStore } from '../store/tiles3dLayers';
+import { bboxPolygon, readBbox } from './bbox';
 import { ActionError, registerAction } from './registry';
 import { labelOf, resolveOne, type Named } from './resolve';
 
 const MIN_FEED_INTERVAL_SECONDS = 1;
+
+const WATCH_THRESHOLD_OPS: readonly WatchThresholdOp[] = ['gt', 'lt'];
 
 /** The document this session is in, which every write below needs. */
 function joinedDocumentId(): string {
@@ -38,6 +52,39 @@ function sameAssetRule(saved: AssetRule | undefined, wanted: AssetRule): boolean
         point.color === wanted.breakpoints[index].color,
     )
   );
+}
+
+/** The last polygon the Draw tool left on the map, which is what the panel watches. */
+function drawnPolygonRegion(): WatchRegion | null {
+  const polygons = useDrawStore.getState().features.filter((feature) => feature.type === 'Polygon');
+  const last = polygons.at(-1);
+  if (!last) return null;
+  const geometry = drawnFeatureGeometry(last);
+  return geometry.type === 'Polygon' ? geometry : null;
+}
+
+/** The ground a watch reads: the bbox given, else the drawn polygon, else the view. */
+function watchRegion(bbox: unknown): WatchRegion {
+  if (bbox !== undefined) return bboxPolygon(readBbox(bbox));
+  const drawn = drawnPolygonRegion();
+  if (drawn) return drawn;
+  const view = currentBbox();
+  if (!view) {
+    throw new ActionError('a watch needs a bbox, or a polygon drawn on the map');
+  }
+  return bboxPolygon(view);
+}
+
+/** The threshold half of a new watch, which is both fields or neither. */
+function watchThreshold(
+  op: WatchThresholdOp | undefined,
+  value: number | undefined,
+): { thresholdOp?: WatchThresholdOp; thresholdValue?: number } {
+  if (op === undefined && value === undefined) return {};
+  if (op === undefined || value === undefined) {
+    throw new ActionError('an alert needs both threshold_op and threshold_value, or neither');
+  }
+  return { thresholdOp: op, thresholdValue: value };
 }
 
 /** The layers an asset rule can colour: the ones drawn per feature or per tile. */
@@ -131,6 +178,66 @@ registerAction({
     const feed = resolveOne('feed', args.feed as string, await listFeeds(documentId));
     await deleteFeed(documentId, feed.id);
     return { text: `Feed ${feed.name} is gone.` };
+  },
+});
+
+registerAction({
+  name: 'live.watch_region',
+  description:
+    'Watch a region of a raster layer on the live map, reducing it to one number every so often and alerting when that number crosses a threshold.',
+  parameters: {
+    layer: { type: 'string', description: 'Geoplumb layer name to read.', required: true },
+    reducer: {
+      type: 'string',
+      description: `How the region becomes one number: ${WATCH_REDUCERS.join(', ')}.`,
+      enum: WATCH_REDUCERS,
+      required: true,
+    },
+    interval_seconds: {
+      type: 'number',
+      description: `How often to read the region, in seconds, ${MINIMUM_WATCH_INTERVAL_SECONDS} at the least. ${DEFAULT_WATCH_INTERVAL_SECONDS} by default.`,
+    },
+    name: { type: 'string', description: 'What the watch is called. Named after the layer by default.' },
+    bbox: {
+      type: 'array',
+      description:
+        'Where to watch, as [west, south, east, north] in degrees. The polygon drawn on the map, or the current view, by default.',
+    },
+    threshold_op: {
+      type: 'string',
+      description: 'Alert when the reading is above (gt) or below (lt) threshold_value.',
+      enum: WATCH_THRESHOLD_OPS,
+    },
+    threshold_value: { type: 'number', description: 'The number the reading has to cross to alert.' },
+  },
+  run: async (args) => {
+    const documentId = joinedDocumentId();
+    const layer = (args.layer as string).trim();
+    const reducer = args.reducer as WatchReducer;
+    const intervalSeconds = (args.interval_seconds as number) ?? DEFAULT_WATCH_INTERVAL_SECONDS;
+    if (intervalSeconds < MINIMUM_WATCH_INTERVAL_SECONDS) {
+      throw new ActionError(
+        `a watch reads no more often than every ${MINIMUM_WATCH_INTERVAL_SECONDS} seconds`,
+      );
+    }
+    const watch = await createWatch(documentId, {
+      name: ((args.name as string) ?? `${reducer} of ${layer}`).trim(),
+      layer,
+      region: watchRegion(args.bbox),
+      reducer,
+      intervalSeconds,
+      ...watchThreshold(
+        args.threshold_op as WatchThresholdOp | undefined,
+        args.threshold_value as number | undefined,
+      ),
+    });
+    const alert =
+      watch.thresholdOp === null || watch.thresholdValue === null
+        ? 'no alert'
+        : `alerting ${watch.thresholdOp === 'gt' ? 'above' : 'below'} ${watch.thresholdValue}`;
+    return {
+      text: `${watch.name} reads the ${watch.reducer} of ${watch.layer} every ${watch.intervalSeconds}s, ${alert}.`,
+    };
   },
 });
 

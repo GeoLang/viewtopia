@@ -25,11 +25,13 @@ import {
 } from '../../live/api';
 import { useLiveStore } from '../../live/liveStore';
 import { latestReading, useWatchStateStore } from '../../live/watchState';
-import type {
-  RegionWatch,
-  WatchReadingEntry,
-  WatchReducer,
-  WatchThresholdOp,
+import {
+  DEFAULT_WATCH_INTERVAL_SECONDS,
+  MINIMUM_WATCH_INTERVAL_SECONDS,
+  type RegionWatch,
+  type WatchReadingEntry,
+  type WatchReducer,
+  type WatchThresholdOp,
 } from '../../live/types';
 import { drawnFeatureGeometry, useDrawStore, type DrawnFeature } from '../../store/draw';
 
@@ -45,12 +47,6 @@ const THRESHOLD_CHOICES: { value: WatchThresholdOp; label: string }[] = [
   { value: 'gt', label: 'Above' },
   { value: 'lt', label: 'Below' },
 ];
-
-/** Agora refuses anything shorter, so the form does too. */
-const MINIMUM_INTERVAL_SECONDS = 60;
-
-/** What a new watch suggests: often enough for daily imagery, cheap enough to run. */
-const DEFAULT_INTERVAL_SECONDS = 3600;
 
 /** How far back the readings list asks for when a watch is picked. */
 const READINGS_WINDOW_HOURS = 24;
@@ -91,7 +87,7 @@ export function RegionWatchPanel({ onClose }: { onClose: () => void }) {
   const [layer, setLayer] = useState('');
   const [reducer, setReducer] = useState<WatchReducer>('mean');
   const [intervalSeconds, setIntervalSeconds] = useState<number | string>(
-    DEFAULT_INTERVAL_SECONDS,
+    DEFAULT_WATCH_INTERVAL_SECONDS,
   );
   const [thresholdOp, setThresholdOp] = useState<WatchThresholdOp | null>(null);
   const [thresholdValue, setThresholdValue] = useState<number | string>('');
@@ -327,7 +323,7 @@ export function RegionWatchPanel({ onClose }: { onClose: () => void }) {
               <NumberInput
                 size="xs"
                 label="Every (seconds)"
-                min={MINIMUM_INTERVAL_SECONDS}
+                min={MINIMUM_WATCH_INTERVAL_SECONDS}
                 value={intervalSeconds}
                 onChange={setIntervalSeconds}
                 data-testid="watch-interval"

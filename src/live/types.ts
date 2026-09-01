@@ -200,6 +200,14 @@ export interface AssetSnapshot {
 /** What a watch reduces its region to, one of geoplumb's zonal row fields. */
 export type WatchReducer = 'mean' | 'min' | 'max' | 'sum' | 'count';
 
+export const WATCH_REDUCERS: readonly WatchReducer[] = ['mean', 'min', 'max', 'sum', 'count'];
+
+/** Agora refuses anything shorter. */
+export const MINIMUM_WATCH_INTERVAL_SECONDS = 60;
+
+/** What a new watch suggests: often enough for daily imagery, cheap enough to run. */
+export const DEFAULT_WATCH_INTERVAL_SECONDS = 3600;
+
 /** Which side of its threshold a watch alerts on. */
 export type WatchThresholdOp = 'gt' | 'lt';
 

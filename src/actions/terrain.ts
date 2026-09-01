@@ -18,8 +18,9 @@ import {
   sampleTerrainProfile,
   type TerrainProfile,
 } from '../features/terrain/profile';
-import { currentBbox, type Bbox } from '../lib/terrainAnalysis';
+import { currentBbox } from '../lib/terrainAnalysis';
 import { useAgentLayerStore } from '../store/agentLayers';
+import { readBbox } from './bbox';
 import { checkOnTheGlobe, place } from './coordinates';
 import { listViewerLayers } from './layerIndex';
 import { ActionError, registerAction, type ActionArguments } from './registry';
@@ -33,8 +34,6 @@ const SQUARE_KILOMETER_DECIMALS = 2;
 const KILOMETER_DECIMALS = 2;
 const METER_DECIMALS = 0;
 
-const BBOX_CORNERS = 4;
-
 function formatMeters(value: number): string {
   return `${value.toFixed(METER_DECIMALS)} m`;
 }
@@ -46,18 +45,6 @@ function formatKilometers(meters: number): string {
 function formatSquareKilometers(squareMeters: number): string {
   const squareKilometers = squareMeters / SQUARE_METERS_PER_SQUARE_KILOMETER;
   return `${squareKilometers.toFixed(SQUARE_KILOMETER_DECIMALS)} km²`;
-}
-
-function readBbox(value: unknown): Bbox {
-  const corners = (value as unknown[]).map(Number);
-  if (corners.length !== BBOX_CORNERS || !corners.every(Number.isFinite)) {
-    throw new ActionError('a bbox is four numbers: west, south, east, north');
-  }
-  const [west, south, east, north] = corners;
-  if (east <= west || north <= south) {
-    throw new ActionError(`${value} is not a box: east is past west and north is past south`);
-  }
-  return [west, south, east, north];
 }
 
 /** The first line a layer carries, which is what a profile runs along. */
