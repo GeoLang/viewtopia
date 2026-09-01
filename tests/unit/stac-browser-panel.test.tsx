@@ -504,9 +504,10 @@ describe('StacBrowserPanel', () => {
     const [, remoteInit] = fetchMock.mock.calls[0];
     expect((remoteInit as RequestInit).headers).toEqual({ Accept: 'application/json' });
 
-    respond((url) => (url === '/stac/v1' ? jsonOk({ ...ROOT_DOC, links: [] }) : jsonOk({})));
+    const ownCatalog = `${window.location.origin}/stac/v1`;
+    respond((url) => (url === ownCatalog ? jsonOk({ ...ROOT_DOC, links: [] }) : jsonOk({})));
     fetchMock.mockClear();
-    await openCatalog('/stac/v1');
+    await openCatalog(ownCatalog);
 
     const [, localInit] = fetchMock.mock.calls[0];
     const headers = (localInit as RequestInit).headers as Headers;
@@ -519,6 +520,30 @@ describe('StacBrowserPanel', () => {
     await openCatalog();
 
     expect(screen.getByTestId('stac-error')).toHaveTextContent('The catalog is unreachable.');
+  });
+
+  it('refuses a typed catalog URL that is not a full http address', async () => {
+    await renderPanel();
+    await openCatalog('javascript:alert(1)');
+
+    expect(screen.getByTestId('stac-error')).toHaveTextContent(
+      'The viewer opens http and https catalogs, not javascript ones.',
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await openCatalog('/api/v1/projects');
+
+    expect(screen.getByTestId('stac-error')).toHaveTextContent('Give the whole address');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('leaves the open catalog alone when the next URL is refused', async () => {
+    await renderPanel();
+    await openCatalog();
+    await openCatalog('file:///etc/passwd');
+
+    expect(screen.getByTestId('stac-collection-sentinel-2-l2a')).toBeInTheDocument();
+    expect(screen.getByTestId('stac-error')).toHaveTextContent('not file ones');
   });
 });
 

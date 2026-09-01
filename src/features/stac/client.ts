@@ -129,6 +129,24 @@ export function resolveHref(href: string, base: string): string | null {
   return url.toString().replace(/%7B/g, '{').replace(/%7D/g, '}');
 }
 
+/**
+ * Why the viewer will not open this catalog URL, or null when it will. A typed
+ * value that is not a full http or https address would otherwise be resolved
+ * against our own origin and asked for with the session bearer.
+ */
+export function catalogUrlRefusal(url: string): string | null {
+  let protocol: string;
+  try {
+    protocol = new URL(url).protocol;
+  } catch {
+    return 'Give the whole address, as in https://example.org/stac/v1.';
+  }
+  if (protocol !== 'http:' && protocol !== 'https:') {
+    return `The viewer opens http and https catalogs, not ${protocol.replace(':', '')} ones.`;
+  }
+  return null;
+}
+
 export function parseLinks(body: unknown, base: string): StacLink[] {
   const raw = record(body).links;
   if (!Array.isArray(raw)) return [];
@@ -270,6 +288,42 @@ function nextRequest(link: StacLink, sentBody: Record<string, unknown> | null): 
   return { url: link.href, searchBody: body, headers: link.headers };
 }
 
+const GEOMETRY_TYPES = [
+  'Point',
+  'MultiPoint',
+  'LineString',
+  'MultiLineString',
+  'Polygon',
+  'MultiPolygon',
+];
+
+/** any depth of non-empty arrays bottoming out in finite numbers */
+function isCoordinateNest(value: unknown): boolean {
+  if (typeof value === 'number') return Number.isFinite(value);
+  return Array.isArray(value) && value.length > 0 && value.every(isCoordinateNest);
+}
+
+/**
+ * The geometry of an item, or null when it is not one the map can draw. A
+ * catalog can put anything under `geometry`, and the renderers read the
+ * coordinates without checking them. The nesting each type calls for is not
+ * checked, only that there are coordinates and that they are numbers.
+ */
+function parseGeometry(value: unknown): GeoJSON.Geometry | null {
+  const raw = object(value);
+  if (!raw) return null;
+  const type = text(raw.type);
+  if (type === 'GeometryCollection') {
+    const members = Array.isArray(raw.geometries) ? raw.geometries : null;
+    if (!members || members.length === 0) return null;
+    if (members.some((member) => parseGeometry(member) === null)) return null;
+    return raw as unknown as GeoJSON.Geometry;
+  }
+  if (!GEOMETRY_TYPES.includes(type)) return null;
+  if (!isCoordinateNest(raw.coordinates)) return null;
+  return raw as unknown as GeoJSON.Geometry;
+}
+
 function parseItems(
   body: unknown,
   base: string,
@@ -286,7 +340,7 @@ function parseItems(
       {
         id,
         datetime: text(properties.datetime) || null,
-        geometry: (feature.geometry as GeoJSON.Geometry | null) ?? null,
+        geometry: parseGeometry(feature.geometry),
         assets: parseAssets(feature, base),
       },
     ];

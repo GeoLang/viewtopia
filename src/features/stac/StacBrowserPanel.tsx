@@ -29,6 +29,7 @@ import { addStacAsset, assetLayerName } from './addAsset';
 import { favoriteKey, useStacStore, type StacFavorite } from './store';
 import {
   assetAction,
+  catalogUrlRefusal,
   fetchCatalog,
   fetchItemPage,
   itemFootprints,
@@ -86,6 +87,12 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
   );
 
   async function loadCatalog(catalogUrl: string): Promise<StacCatalog | null> {
+    // refused before anything is cleared, so a typo leaves the open catalog alone
+    const refusal = catalogUrlRefusal(catalogUrl);
+    if (refusal) {
+      setError(refusal);
+      return null;
+    }
     setBusy(true);
     setError(null);
     setStatus('');
