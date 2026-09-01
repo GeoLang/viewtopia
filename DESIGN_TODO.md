@@ -9,7 +9,7 @@
 > Ranked 2026-08-21 against the DESIGN.md goal: ship the viewer, the agent, and
 > the services that make a shared map, not more surface. Pick from **Do next**.
 > Do not start at a parked item.
-> Last brought current: **2026-08-30**.
+> Last brought current: **2026-09-01**.
 >
 > Verify an entry against the code before working it, and do not trust the
 > mechanism it names. Three items in this file were already closed when someone
@@ -20,52 +20,19 @@
 
 ## Do next
 
-Ordered 2026-08-30, hosting excluded. Items 2, 3, 4, 6 and 8 of that order
-shipped the same day (MapLibre swap, ptolemy attach and detach, geolang tool
-manifest, agora and ptolemy `deny_unknown_fields`, geoplumb ops, fenestra
-items and tiles, itinera `/match`, fluvius runner, LiveKit removal, verticals
-docs), and so did region watch end to end. What is left:
+Ordered 2026-08-30, hosting excluded.
 
-1. **panoptes segmentation weights** (moved out of Wait for demand
-   2026-09-01, owner ask): find an openly licensed segmentation model that
-   fits the model contract in panoptes' README, or one convertible to it,
-   verify it end to end through `panoptes segment --features onnx`, and
+1. **panoptes segmentation weights**: find an openly licensed segmentation
+   model that fits the model contract in panoptes' README, or one convertible
+   to it, verify it end to end through `panoptes segment --features onnx`, and
    publish the weights with their license and provenance. Training our own
    stays out of scope until sourcing fails.
-2. The eval gate passed 2026-08-31 (see P0 item 7 for the numbers): run-only
-   stays. The regionWatch chat action and its eval task shipped the same
-   day (`live.watch_region`, 72 tasks). Still open: per-task work
-   on the six tasks still well under the old baseline
+2. Per-task work on the six eval tasks still well under the old baseline
    (dataset-draw-widening-branch, find-before-shading,
    find-the-kingsway-substation, layers-remove-flood-zones,
-   scenario-compare-within-25-metres, search-a-stac-collection); and the
-   `sql.attach_url` half of the old decision stays open, since
-   attach-a-remote-table still scores 0.
-3. The sitting was held 2026-08-31 (`../owner-sitting-2026-08-31.md` records
-   the calls) and all its work has landed: the eight README rewords, the
-   tiletopia module deletion (17 removed, tiletopia 68313a8), and in itinera
-   a bench suite, the CH query shortcut fix the bench work uncovered, and
-   measured numbers in the README performance table (itinera a80e93c).
-4. The geolang `/tools` manifest trim landed (geolang 020d568, 24 percent
-   off every turn, byte-cap test added) and was confirmed by the gate pass
-   it rode in.
-
-Session results 2026-08-31, first pass: geoplumb fan-in
-and vector sources shipped (geoplumb 72cd4bb), collecta-cli `pull` shipped
-(collecta ad75d43), the maplibre 6.x bump was investigated and is blocked on
-deck.gl (see the patch row under **Chat action leftovers**), and the sitting
-decision sheet is at `../owner-sitting-2026-08-31.md` with the verified
-tiletopia census.
-Everything under **Wait for demand** stays parked. The FleetPanel and
-live-layer rows there were re-verified 2026-08-31 against agora's sensor
-reading ingest and rewritten to match.
-
-Session results 2026-08-31, second pass: `live.watch_region` shipped with
-its eval task (72 tasks now, catalogue and pin moved together), the url
-scheme check landed inside all six url-fetching actions, and ptolemy's
-listing subquery guard halved listing time and closed ptolemy/TODO.md
-(the index stays, the `ON DELETE SET NULL` action on `datasets.project_id`
-scans it on project delete).
+   scenario-compare-within-25-metres, search-a-stac-collection), and the
+   `sql.attach_url` half of the old decision, since attach-a-remote-table
+   still scores 0.
 
 ## Chat action leftovers, 2026-08-29
 
@@ -91,21 +58,13 @@ scans it on project delete).
 
 ## Cross-repository audit, 2026-08-22
 
-These are verified advertised gaps found by reading every repository README,
-`docs/index.html` when present, other Markdown documents, and the referenced
-source paths. Existing entries below remain the detailed records for TileTopia,
-ViewTopia, Ptolemy, Jung, TerraVista, Panoptes, and Geoplumb.
+Verified advertised gaps from reading every repository README, `docs/index.html`
+when present, other Markdown documents, and the referenced source paths. One
+row remains open:
 
 - [ ] **GeoPlumb**: the point sources (LAS with IDW gridding) and the GeoTIFF
-      encoder are not reachable from a layer file. Fan-in (mosaic, two-input
-      combine), the GeoJSON source and rasterize landed 2026-08-31; the
-      per-fragment vector filter, schema map and clip stay library-only.
-
-All other rows from this audit were closed by the 2026-08-31 sitting: the docs
-in fenestra, geodukt, geogit, interiora, itinera, panoptes, projicio and
-terrano now state the honest scope, and collecta's docs were verified already
-honest the same day. Wire-for-real calls for any of them stay under
-**Wait for demand**.
+      encoder are not reachable from a layer file, and the per-fragment vector
+      filter, schema map and clip are library-only.
 
 ## P0 path to the intended product, 2026-08-22
 
@@ -130,49 +89,6 @@ other documents citing "P0 item 5" still land on the right one.
 7. **Chat-only viewer mode: a typed prompt reaches every capability that does
    not need the mouse.** Repositories: `viewtopia`, `geolang`. Owner call
    2026-08-25, plan under **Chat-only viewer mode** in the plans section.
-   - [x] Eval gate PASSED 2026-08-31. The first measured run-only pass
-     regressed hard (0.706 to 0.464 answered-only over the shared tasks) and
-     a 22-task rerun under the recipe llama flags attributed it: flags were
-     minor (0.278 to 0.373), the contract was the cause, the model filling
-     `run`'s declared camera fields and dropping the catalogue-prose
-     arguments. Owner call: strip the declared fields (geolang f53554e,
-     `run` now declares only action, a required name and args, url guard
-     moved to the extras and args paths). The verifying pass, new schema
-     plus trimmed manifest under recipe flags: answered-only 0.8164 over 71
-     tasks, 50 perfect, 1 of 213 runs cut short, and 0.777 against the
-     baseline's 0.707 over the 54 shared tasks. On the diagnostic subset
-     under identical flags the schema fix moved 0.373 to 0.785. Report
-     `20260901T004124+0000-viewer-local:Qwen3.json` with
-     `20260831-viewer-sweep-newschema.log`, which is the new baseline. The
-     llama-server config for eval runs is the recipe flags in sibyl's
-     README, the 2026-08-31 sampling variant is retired. The 2026-08-27
-     history below stands as the record of why earlier passes could not be
-     compared:
-
-     - Baseline, the old image serving the fixed actions against these tasks,
-       whole pass: 14 of 168 runs cut short, 8.3 percent. Answered-only
-       aggregate 0.682 over 56 tasks, 21 perfect, 86 of 157 checks. Report
-       `geolang/evals/reports/20260827T200908+0000-viewer-local:Qwen3.{md,json}`,
-       whose own header reads 0.63 because it counts the stalls as zeros.
-     - Run-only, first 39 runs on a box that was also running test suites:
-       11 cut short, 28.2 percent.
-     - That 28.2 was the load, not the change. A second run-only pass on an
-       idle box reached 64 runs before the machine went down, and over the 21
-       tasks it covered it stalled 8 of 62 against the baseline's 8 of 63 on
-       those same tasks. 12.9 percent against 12.7. Log
-       `geolang/evals/reports/20260827T2013-run-only-partial.log`.
-
-     So the stall rate gives no reason to put the fixed actions back. What is
-     still missing is the score: no run-only pass has finished, so nothing has
-     been compared to the baseline's 0.682. Until one does, the gate is
-     unmeasured rather than failed. Figures come from
-     `geolang/evals/answered_only.py`,
-     which joins a report against its sweep log: the reports cannot tell a
-     stalled run from a finished run that emitted no call, both being a zero
-     with an empty manifest, so the split is read from the log.
-     `tests/test_viewer_evals.py` pins the task count and needs moving whenever
-     a task is added.
-
    - [ ] `add_arcs` still has no catalogue entry, so the agent cannot reach it.
      It needs paired source and target points and no layer carries them. Owner
      call 2026-08-27: leave the handler in place unreached rather than delete
@@ -191,14 +107,10 @@ machinery, then the large islands. One exception to reconfirm when reached:
 the Space-Time rows sit under an earlier "do not build Gotham" owner call that
 this direction reverses.
 
-- [ ] **tiletopia parked modules, from the 2026-08-31 triage.** 17 modules
-      and their orphaned dependencies are deleted (tiletopia CHANGELOG has
-      the list, cicd stayed because the CLI's validate subcommand calls it).
-      Still parked with a reason: crdt (plausible if collaboration deepens),
-      tenant (tiny, quota types a hosted instance would want), geofence
-      (delete instead if no tile-side geofence is ever wanted, agora region
-      watch covers the live case). The deleted feature ideas are recorded as
-      low priority under **Wait for demand**.
+- [ ] **tiletopia modules still parked after the 2026-08-31 triage**: crdt
+      (plausible if collaboration deepens), tenant (tiny, quota types a
+      hosted instance would want), geofence (delete instead if no tile-side
+      geofence is ever wanted, agora region watch covers the live case).
 
 - [ ] **Space-Time geofencing UI and case management.** The library code and
       types exist with no UI behind them, parked. Network metrics render as a
@@ -243,16 +155,6 @@ What actually stands in the way, in order:
    (there is no expiry column, only `revoked`), and whether a public instance
    should hand an anonymous guest an `edit` role at all is a product decision
    nobody has made.
-
-- [ ] **stac.add_asset trusts hrefs inside a fetched catalog document.**
-      The caller-supplied urls are checked since 2026-08-31 (every url-taking
-      action refuses anything but absolute http/https), but `resolveHref` in
-      `src/features/stac/addAsset.ts` keeps an absolute `asset.href` as
-      written and hands it to `fetchStac`, `addXyzLayer` or
-      `openInRasterAnalysis`, so a hostile STAC catalog can put a
-      `javascript:` href into a tile template. Affects the STAC browser panel
-      as much as the action. Needs its own scheme check where the href is
-      resolved, plus a security review pass.
 
 Operator-facing deployment gaps:
 
@@ -459,8 +361,8 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
       dashboard needs a server project, so that path is covered only against
       the platform stack.
 
-- [ ] **collecta publish follow-ups.** `POST /api/v1/forms/{id}/publish`
-      landed 2026-08-25 as on-demand with the caller's token. Not built:
+- [ ] **collecta publish follow-ups.** `POST /api/v1/forms/{id}/publish` is
+      on-demand with the caller's token. Not built:
       automatic push on every submission (needs a service credential collecta
       would hold, and a call on who owns the datasets), republishing a
       submission edited after publish (collecta has no submission
@@ -499,7 +401,7 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
       enterprise-pull, and the thesis says refuse parity fights.
 
 - [ ] **if any of this is wanted, the in-thesis version is a live layer, not a
-      sensor platform**: re-verified 2026-08-31, the ingest half is built.
+      sensor platform**: the ingest half is built.
       Agora's `/feeds/ws` takes `Readings` frames under a feed token minted at
       feed creation, relays them to document subscribers, and viewtopia's
       `AssetRule` path colors assets by their latest reading end to end. What
@@ -688,14 +590,10 @@ first.
 
 ### Chat-only viewer mode
 
-Shipped: the mode, the action registry, the state snapshot, the catalogue in
-the AG-UI state, geolang's `run` as the only `viewer_control` action, and the
-analysis, simulate and data-by-URL actions. DESIGN.md 2.4 and 2.6 describe
-what is built. Upload still needs the mouse. `sql.query` and `sql.to_layer`
-were deleted; `sql_query` is the geolang tool and `sql.attach_url` attaches a
-remote table. What is left is P0 item 7: finish one `--repeat 3` eval against
-the 66 tasks / 53 catalogue actions, and a layer-referencing `add_arcs` the
-day spacetime pairing is a layer.
+DESIGN.md 2.4 and 2.6 describe what is built. Upload still needs the mouse.
+What is left is the six weak eval tasks and `sql.attach_url` (Do next item
+2), and a layer-referencing `add_arcs` the day spacetime pairing is a layer
+(P0 item 7).
 
 The eval fixtures are copies of `tests/unit/fixtures/action-catalogue.json`
 and `tests/unit/fixtures/viewer-snapshot.json`. Refresh them from viewtopia
@@ -708,16 +606,7 @@ sequence, and the anonymous-edit / link-expiry policy.
 
 ### Region watch
 
-Shipped 2026-08-30 end to end. In agora: `watches` and `watch_readings`, the four
-routes under `/documents/{id}/watches`, the `watches` and `watchReading`
-socket frames, the scheduler calling geoplumb `/zonal/{layer}` at
-`WATCH_RESOLUTION_METRES`, the threshold rule with per-member notifications
-and a signed webhook that refuses private hosts and pins the resolved
-address. Owner calls: the watch lives in agora, share-link guests see readings
-only. In the viewer: the `regionWatch` panel, creation from a drawn polygon,
-regions outlined on the globe, the two frames in `liveStore`. agora's README
-and DESIGN.md 2.0 are the references. The `live.watch_region` chat action
-shipped 2026-08-31 with its eval task.
+agora's README and DESIGN.md 2.0 describe what is built. Open:
 
 - [ ] **A third webhook sender now exists** (`agora-server/src/webhooks.rs`
       beside `ptolemy-api/src/delivery.rs` and tiletopia `webhooks.rs`),
@@ -730,8 +619,7 @@ shipped 2026-08-31 with its eval task.
       shows the need.
 - [ ] Later, not now: sensors as a second source (fluvius over WebSocket into
       agora, its runner now connects out and checkpoints), a time-series
-      watch over `/zonal/{layer}/series`, OGC SensorThings. tiletopia's
-      unused scripting.rs was deleted in the 2026-08-31 triage.
+      watch over `/zonal/{layer}/series`, OGC SensorThings.
 
 Note on `viewtopia/docs/verticals.md`: it is a planning doc for proposed
 verticals, not a description of what exists.
