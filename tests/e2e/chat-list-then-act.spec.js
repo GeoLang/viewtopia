@@ -1,4 +1,5 @@
 import { test, expect, allowConsoleError } from './console-guard';
+import { EMPTY_AGENT_RUN } from './agent-run-stub';
 
 /**
  * List, then act on one entry by the name the list gave. The three pairs go to
@@ -64,15 +65,6 @@ const POINT_WKB_BYTES = POINT_WKB_HEX.match(/../g).map((pair) => Number.parseInt
 const BRANCH_FEATURE_COUNT = 2;
 
 const ROADS_BRANCH_LAYER = 'agent-layer-ptolemy-branch-b-roads-main';
-
-/** An AG-UI run that starts and finishes with nothing in between. */
-const EMPTY_RUN = [
-  'data: {"type":"RUN_STARTED","threadId":"e2e-session","runId":"e2e-run"}',
-  '',
-  'data: {"type":"RUN_FINISHED","threadId":"e2e-session","runId":"e2e-run"}',
-  '',
-  '',
-].join('\n');
 
 const AGORA_SOCKET_REFUSED = /WebSocket connection to .*\/agora\/ws/;
 
@@ -152,7 +144,7 @@ async function routeAgent(page) {
       if (pathname.startsWith('/agent/sessions')) return route.fulfill({ status: 204 });
       // a read action queues a follow-up run, and this is a run that says nothing
       if (pathname === '/agent/chat/agui') {
-        return route.fulfill({ contentType: 'text/event-stream', body: EMPTY_RUN });
+        return route.fulfill({ contentType: 'text/event-stream', body: EMPTY_AGENT_RUN });
       }
       return unmodelled(route, pathname);
     },

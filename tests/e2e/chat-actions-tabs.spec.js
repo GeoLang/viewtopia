@@ -1,11 +1,13 @@
 import { test, expect } from './console-guard';
+import { stubAgentRuns } from './agent-run-stub';
 
 /**
  * The chat actions that move between the globe tab and the flat map tab, run
  * the way a tool result runs them and asserted on the live renderer.
  *
- * Every action goes through window.__viewtopiaRunAction, so no model and no
- * agent backend are involved.
+ * Every action goes through window.__viewtopiaRunAction, so no model drives
+ * anything here. An action that fails still sends its message back to the
+ * model, and stubAgentRuns answers that run.
  *
  *   npx playwright test -c playwright.react.config.js tests/e2e/chat-actions-tabs.spec.js
  */
@@ -191,6 +193,7 @@ test.describe('renderer.set', () => {
   });
 
   test('the renderer already showing is an error and changes nothing', async ({ page }) => {
+    const agentRuns = await stubAgentRuns(page);
     await boot(page);
     await openChat(page);
 
@@ -204,6 +207,9 @@ test.describe('renderer.set', () => {
     await expect(page.locator('#maplibre-container')).toBeVisible();
     await expect(page.locator('#leaflet-container')).toBeHidden();
     expect(await cesiumUp(page)).toBe(false);
+    await expect
+      .poll(() => agentRuns.join('\n'), { timeout: SETTLE_TIMEOUT })
+      .toContain('renderer.set failed: The globe is already drawn with maplibre.');
   });
 });
 
@@ -223,6 +229,7 @@ test.describe('view.set_tab', () => {
   });
 
   test('the tab already showing is an error and changes nothing', async ({ page }) => {
+    const agentRuns = await stubAgentRuns(page);
     await boot(page);
     await openChat(page);
 
@@ -242,6 +249,9 @@ test.describe('view.set_tab', () => {
     });
     await expect(page.locator('#leaflet-container')).toBeVisible();
     expect(await page.evaluate(() => !!window.__viewtopiaLeaflet)).toBe(true);
+    await expect
+      .poll(() => agentRuns.join('\n'), { timeout: SETTLE_TIMEOUT })
+      .toContain('view.set_tab failed: The flat map is already showing.');
   });
 });
 
