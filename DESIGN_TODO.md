@@ -22,6 +22,23 @@
 
 Ordered 2026-08-30, hosting excluded.
 
+0. **[~] Weak eval task fixes, in flight 2026-09-01.** Diagnosis from full
+   transcripts (scratchpad diagnostic, seven tasks, local Qwen3.5): the model
+   flails because a failed viewer action returns a success-looking echo and
+   the error text never reaches it, reads actions get no answer in the eval
+   harness though the live viewer sends `Result of <name>: <text>`, and three
+   agent tools (geocode_place, find_nearest, sql_query) capture prompts that
+   viewer actions own. Fix tracks, all dispatched:
+   - viewtopia dispatch.ts: send action failures back to the model as a
+     follow-up `<name> failed: <message>`, same MAXIMUM_FOLLOW_UPS cap.
+   - geolang evals: mirror the live loop, validate run calls against the
+     catalogue, answer reads actions from fixture texts, feed failures back,
+     cap 2 follow-ups, accumulate calls across turns.
+   - geolang tool descriptions: scope geocode_place to world places, point
+     sql_query at sql.attach_url for remote files, strengthen the find_feature
+     instruction.
+   - then re-run the seven tasks at --repeat 3 on the hercules model and
+     compare against the 2026-09-01 0.82 baseline report.
 1. Per-task work on the six eval tasks still well under the old baseline
    (dataset-draw-widening-branch, find-before-shading,
    find-the-kingsway-substation, layers-remove-flood-zones,
