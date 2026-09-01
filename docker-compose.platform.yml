@@ -334,6 +334,8 @@ services:
       context: ../geolang
       dockerfile: Dockerfile
     image: geolang-platform:latest
+    # an oversized tool run can OOM against the memory limit below
+    restart: on-failure
     user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
     volumes:
       - geolang-outputs:/app/geolang/outputs
