@@ -16,7 +16,7 @@ const SETTLE_TIMEOUT = 30_000;
 const VECTOR_BASEMAP_TIMEOUT = 15_000;
 
 const FRANCE = { lon: 2.2, lat: 46.6 };
-const ROADS_URL = '/e2e-tabs-roads.geojson';
+const ROADS_PATH = '/e2e-tabs-roads.geojson';
 const ROADS_LAYER = 'e2e-tabs-roads.geojson';
 
 const ROADS = {
@@ -104,7 +104,7 @@ const cesiumUp = (page) =>
   });
 
 test.beforeEach(async ({ page }) => {
-  await page.route(`**${ROADS_URL}`, (route) =>
+  await page.route(`**${ROADS_PATH}`, (route) =>
     route.fulfill({ contentType: 'application/geo+json', body: JSON.stringify(ROADS) }),
   );
   await page.addInitScript(() => {
@@ -131,8 +131,8 @@ async function openChat(page) {
   await expect(page.getByPlaceholder('Type a message…')).toBeVisible();
 }
 
-async function importRoads(page) {
-  await runAction(page, 'data.import_url', { url: ROADS_URL });
+async function importRoads(page, baseURL) {
+  await runAction(page, 'data.import_url', { url: new URL(ROADS_PATH, baseURL).toString() });
   await expect
     .poll(async () => (await page.evaluate(() => window.__viewtopiaSnapshot())).layers.length, {
       timeout: SETTLE_TIMEOUT,
@@ -298,9 +298,9 @@ test.describe('basemap.set', () => {
 });
 
 test.describe('layers.set_visible', () => {
-  test('hiding a layer takes it off the maplibre globe', async ({ page }) => {
+  test('hiding a layer takes it off the maplibre globe', async ({ page, baseURL }) => {
     await boot(page);
-    await importRoads(page);
+    await importRoads(page, baseURL);
     await expect.poll(() => maplibreLayerIds(page), { timeout: SETTLE_TIMEOUT }).not.toHaveLength(0);
 
     await runAction(page, 'layers.set_visible', { layer: ROADS_LAYER, visible: false });
@@ -310,9 +310,9 @@ test.describe('layers.set_visible', () => {
     await expect.poll(() => maplibreLayerIds(page), { timeout: SETTLE_TIMEOUT }).not.toHaveLength(0);
   });
 
-  test('hiding a layer takes it off the leaflet map', async ({ page }) => {
+  test('hiding a layer takes it off the leaflet map', async ({ page, baseURL }) => {
     await boot(page);
-    await importRoads(page);
+    await importRoads(page, baseURL);
     await showMapTab(page);
     await expect.poll(() => leafletPathCount(page), { timeout: SETTLE_TIMEOUT }).toBeGreaterThan(0);
 

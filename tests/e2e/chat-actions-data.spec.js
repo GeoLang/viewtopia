@@ -9,7 +9,7 @@ import { test, expect } from './console-guard';
  */
 
 const CHAT_URL = '/?mode=chat';
-const FILE_URL = '/e2e-roads.geojson';
+const FILE_PATH = '/e2e-roads.geojson';
 
 const ROADS = {
   type: 'FeatureCollection',
@@ -29,22 +29,22 @@ const ROADS = {
 };
 
 /** A session whose one reply imports the file, ready to replay. */
-const SESSION = {
+const session = (fileUrl) => ({
   id: 'chat-actions-data-e2e',
   name: 'Session 1',
   messages: [
-    { id: 'u1', role: 'user', content: `import ${FILE_URL}`, timestamp: 1 },
+    { id: 'u1', role: 'user', content: `import ${fileUrl}`, timestamp: 1 },
     {
       id: 'a1',
       role: 'assistant',
       content: 'Importing the roads.',
       timestamp: 2,
-      viewerCmds: [{ action: 'run', params: { name: 'data.import_url', args: { url: FILE_URL } } }],
+      viewerCmds: [{ action: 'run', params: { name: 'data.import_url', args: { url: fileUrl } } }],
     },
   ],
   createdAt: 1,
   updatedAt: 2,
-};
+});
 
 const snapshot = (page) => page.evaluate(() => window.__viewtopiaSnapshot());
 
@@ -57,11 +57,11 @@ const maplibreLayerIds = (page) =>
       .filter((id) => id.startsWith('agent-layer-'));
   });
 
-test.beforeEach(async ({ page }) => {
-  await page.route(`**${FILE_URL}`, (route) =>
+test.beforeEach(async ({ page, baseURL }) => {
+  await page.route(`**${FILE_PATH}`, (route) =>
     route.fulfill({ contentType: 'application/geo+json', body: JSON.stringify(ROADS) }),
   );
-  await page.addInitScript((session) => {
+  await page.addInitScript((stored) => {
     localStorage.setItem('viewtopia-first-run', 'dismissed');
     localStorage.setItem('viewtopia-tour-done', '1');
     localStorage.setItem(
@@ -71,11 +71,11 @@ test.beforeEach(async ({ page }) => {
     localStorage.setItem(
       'viewtopia-chat',
       JSON.stringify({
-        state: { sessions: [session], activeSessionId: session.id },
+        state: { sessions: [stored], activeSessionId: stored.id },
         version: 0,
       }),
     );
-  }, SESSION);
+  }, session(new URL(FILE_PATH, baseURL).toString()));
 });
 
 test('a replayed reply imports a URL onto the map', async ({ page }) => {

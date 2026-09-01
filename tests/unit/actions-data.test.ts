@@ -472,6 +472,141 @@ describe('sql.attach_url', () => {
   });
 });
 
+describe('the URL scheme check', () => {
+  const REFUSAL = /is not a full URL|opens http and https/;
+
+  /** The shapes an action refuses, each carrying a path that action would take. */
+  function refused(fileName: string): [string, string][] {
+    return [
+      ['a javascript: URL', `javascript:fetch("https://elsewhere.example/${fileName}")`],
+      ['a data: URL', `data:text/plain,${fileName}`],
+      ['a path relative to the app', `/data/${fileName}`],
+      ['a host with no scheme', `example.org/data/${fileName}`],
+    ];
+  }
+
+  describe('data.import_url', () => {
+    it('imports an https URL', async () => {
+      await runAction('data.import_url', { url: 'https://example.org/data/roads.geojson' });
+
+      expect(requested()).toEqual(['https://example.org/data/roads.geojson']);
+      expect(layerNames()).toEqual(['roads.geojson']);
+    });
+
+    for (const [shape, url] of refused('roads.geojson')) {
+      it(`refuses ${shape}`, async () => {
+        await expect(runAction('data.import_url', { url })).rejects.toThrow(REFUSAL);
+
+        expect(fetchMock).not.toHaveBeenCalled();
+        expect(layerNames()).toEqual([]);
+      });
+    }
+  });
+
+  describe('data.add_service', () => {
+    it('adds a service at an https URL', async () => {
+      await runAction('data.add_service', { type: 'wfs', url: WFS_URL, name: 'Parcels' });
+
+      expect(requested()[0]).toContain(WFS_URL);
+      expect(layerNames()).toEqual(['Parcels']);
+    });
+
+    for (const [shape, url] of refused('wfs')) {
+      it(`refuses ${shape}`, async () => {
+        await expect(
+          runAction('data.add_service', { type: 'wfs', url, name: 'Parcels' }),
+        ).rejects.toThrow(REFUSAL);
+
+        expect(fetchMock).not.toHaveBeenCalled();
+        expect(useOgcLayerStore.getState().layers).toEqual([]);
+      });
+    }
+  });
+
+  describe('data.add_tileset', () => {
+    const DRAWN = { root: 'loaded' } as unknown as Cesium3DTileset;
+
+    beforeEach(() => {
+      const globe = { flyTo: async () => {} };
+      vi.mocked(getActiveCesiumViewer).mockReturnValue(globe as unknown as Viewer);
+    });
+
+    afterEach(() => {
+      vi.mocked(getActiveCesiumViewer).mockReturnValue(null);
+    });
+
+    it('loads a tileset at an https URL', async () => {
+      const url = 'https://example.org/tiles/quarry/tileset.json';
+
+      const running = runAction('data.add_tileset', { url, name: 'Quarry' });
+      const layer = useTiles3dLayerStore.getState().layers[0];
+      useTiles3dLayerStore.getState().setLoaded(layer.id, DRAWN);
+      await running;
+
+      expect(layer.url).toBe(url);
+    });
+
+    for (const [shape, url] of refused('tileset.json')) {
+      it(`refuses ${shape}`, async () => {
+        await expect(runAction('data.add_tileset', { url, name: 'Quarry' })).rejects.toThrow(
+          REFUSAL,
+        );
+
+        expect(useTiles3dLayerStore.getState().layers).toEqual([]);
+      });
+    }
+  });
+
+  describe('sql.attach_url', () => {
+    it('attaches an https URL', async () => {
+      const url = 'https://example.org/data/trips.parquet';
+
+      await runAction('sql.attach_url', { url });
+
+      expect(attachParquetMock).toHaveBeenCalledWith('trips', url);
+    });
+
+    for (const [shape, url] of refused('trips.parquet')) {
+      it(`refuses ${shape}`, async () => {
+        await expect(runAction('sql.attach_url', { url })).rejects.toThrow(REFUSAL);
+
+        expect(attachParquetMock).not.toHaveBeenCalled();
+        expect(attachCsvMock).not.toHaveBeenCalled();
+      });
+    }
+  });
+
+  describe('the STAC actions', () => {
+    it('reads a catalog at an https URL', async () => {
+      await runAction('stac.search', { catalog: CATALOG, collection: 'sentinel-2-l2a' });
+
+      expect(requested()[0]).toBe(CATALOG);
+    });
+
+    for (const [shape, url] of refused('stac/v1')) {
+      it(`stac.search refuses ${shape}`, async () => {
+        await expect(
+          runAction('stac.search', { catalog: url, collection: 'sentinel-2-l2a' }),
+        ).rejects.toThrow(REFUSAL);
+
+        expect(fetchMock).not.toHaveBeenCalled();
+      });
+
+      it(`stac.add_asset refuses ${shape}`, async () => {
+        await expect(
+          runAction('stac.add_asset', {
+            catalog: url,
+            item: 'S2A_TILE_20240601',
+            asset: 'outline',
+          }),
+        ).rejects.toThrow(REFUSAL);
+
+        expect(fetchMock).not.toHaveBeenCalled();
+      });
+    }
+  });
+});
+
 describe('the chat running these actions', () => {
   const notices = (): string[] =>
     useChatStore
