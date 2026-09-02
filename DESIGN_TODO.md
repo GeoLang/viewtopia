@@ -582,12 +582,6 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
 - [ ] **geoplumb breadth**: GEE ships a huge operator library and charting/reduction
       over regions. Grow by demand, not by checklist.
 
-- [ ] **fenestra cannot reach terrano's multi-band GeoTIFF or COG work.**
-      `fenestra/Cargo.toml` pins `terrano-core` at git tag `v0.1.0`, the newest
-      tag terrano has, and terrano's workspace version is still `0.1.0`. Moving
-      fenestra means bumping terrano's version, cutting a tag, and repinning.
-      Only worth doing when fenestra needs a multi-band coverage.
-
 ## Open decisions that are not bugs
 
 Deliberate scope calls, each a product decision rather than a defect to fix.

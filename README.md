@@ -435,9 +435,6 @@ src/GeoLang/
 └── viewtopia/
 ```
 
-`scripts/clone-geolang.sh` does not yet clone `agora` or `geoplumb`, so clone
-those two by hand until it does.
-
 **One command** brings up the whole stack for **any region** from the `viewtopia/`
 checkout — pass any [Geofabrik](https://download.geofabrik.de) extract URL:
 
