@@ -6,6 +6,8 @@ import {
 } from '../lib/branchFeatures';
 import { resolveOne } from './resolve';
 
+export const DATASET_ARGUMENT_DESCRIPTION = 'Dataset name as dataset.list spells it, or its id.';
+
 /** The branch a dataset has when nobody names one. */
 export const DEFAULT_BRANCH_NAME = 'main';
 

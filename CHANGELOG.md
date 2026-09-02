@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- 2026-09-01: **the dataset argument of `dataset.draw_branch` and
+  `scenario.compare` is described as the name `dataset.list` spells, or the
+  id.** "Dataset id or name" had Qwen3.5 inventing `road_network` for Road
+  Network, which the resolver refuses.
+- 2026-09-01: **the travel-time bands default is `5,10,15`, no spaces, and the
+  parameter says so.** The example `"5, 10, 15"` had both local models
+  writing `10, 20` for a list the person typed as `10,20`.
+
 ### Added
 
 - 2026-08-31: **chat can create a region watch.** `live.watch_region` takes a

@@ -1,6 +1,11 @@
 import { fetchBranches, fetchDatasets } from '../lib/branchFeatures';
 import { drawBranchLayer } from '../features/scenario/branchLayer';
-import { DEFAULT_BRANCH_NAME, resolveBranch, resolveDataset } from './branchLookup';
+import {
+  DATASET_ARGUMENT_DESCRIPTION,
+  DEFAULT_BRANCH_NAME,
+  resolveBranch,
+  resolveDataset,
+} from './branchLookup';
 import { registerAction } from './registry';
 import { isoMoment, labelOf } from './resolve';
 
@@ -26,7 +31,7 @@ registerAction({
   name: 'dataset.draw_branch',
   description: 'Draw one branch of a dataset on the map, at its head or at a past moment.',
   parameters: {
-    dataset: { type: 'string', description: 'Dataset id or name.', required: true },
+    dataset: { type: 'string', description: DATASET_ARGUMENT_DESCRIPTION, required: true },
     branch: { type: 'string', description: `Branch id or name, ${DEFAULT_BRANCH_NAME} by default.` },
     at: { type: 'string', description: 'ISO 8601 moment to draw the branch as it stood then.' },
   },

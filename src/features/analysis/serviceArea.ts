@@ -15,7 +15,7 @@ import { useAgentLayerStore } from '../../store/agentLayers';
 
 export const SERVICE_AREA_LAYER_ID = 'travel-time-service-area';
 /** The bands drawn when nobody has said which. */
-export const DEFAULT_BAND_MINUTES = '5, 10, 15';
+export const DEFAULT_BAND_MINUTES = '5,10,15';
 
 export const SECONDS_PER_MINUTE = 60;
 

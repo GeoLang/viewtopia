@@ -192,7 +192,7 @@ registerAction({
     lat: { type: 'number', description: 'Latitude of the point travelled from.', required: true },
     bands: {
       type: 'string',
-      description: `Minutes to reach, comma separated. "${DEFAULT_BAND_MINUTES}" by default.`,
+      description: `Minutes to reach, comma separated with no spaces, as in ${DEFAULT_BAND_MINUTES}. That is the default.`,
     },
     profile: {
       type: 'string',

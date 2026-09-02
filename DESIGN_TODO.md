@@ -22,24 +22,53 @@
 
 Ordered 2026-08-30, hosting excluded.
 
-0. **Weak eval tasks, per-task transcript work.** The 2026-09-01 mechanism
-   fixes are all live (viewtopia sends `<name> failed: <message>` follow-ups,
-   the eval harness mirrors the live reply loop with reads fixtures, tool
-   descriptions scoped, persona geocode rule scoped, sibyl runs pin their
-   profile). Re-run of the seven weak tasks moved only
-   dataset-draw-widening-branch (0.22 to 0.56); still at zero:
-   scenario-compare-within-25-metres, find-the-kingsway-substation,
-   search-a-stac-collection, attach-a-remote-table (that one now reaches
-   viewer_control but garbles the name, `run sales`). Next: capture full
-   transcripts per zero task (scratchpad diagnose script pattern), fix each
-   cause individually, re-run with `--only` at `--repeat 3`. Report pair:
-   20260901T155150 vs the 0.82 baseline 20260901T004124.
-1. Per-task work on the six eval tasks still well under the old baseline
-   (dataset-draw-widening-branch, find-before-shading,
-   find-the-kingsway-substation, layers-remove-flood-zones,
-   scenario-compare-within-25-metres, search-a-stac-collection), and the
-   `sql.attach_url` half of the old decision, since attach-a-remote-table
-   still scores 0.
+0. **Weak eval tasks, per-task transcript work.** The chat default is
+   Qwen3.5 (owner call 2026-09-01), so weakness is read off the
+   `local:Qwen3.5-35B-A3B` profile: the 0.82 baseline 20260901T004124. The
+   Qwen3.8 sweep (0.87, 20260902T000529) is a comparison only. The 2026-09-01
+   15:51 Qwen3.5 rerun and that Qwen3.8 sweep both ran against a geolang-api
+   container whose `/tools` still listed lon, lat, height, heading, pitch,
+   duration, label, color, url, attribute and iso as viewer_control fields, and
+   their transcripts show the model filling those instead of the catalogue's
+   parameters (`layers.remove` with lat, lon and height and no `layer`). The
+   container was recreated on 2026-09-02 00:17 UTC with the trimmed manifest
+   (action, name, args only) and no weak task has been scored against it yet.
+   Transcripts (`evals.viewer_runner --transcripts`) and one round of wording
+   are in, uncommitted on 2026-09-01: the viewer instructions end with a
+   precedence rule (a listed action comes before any agent tool, whatever a
+   persona rule says), find_feature before geocode_place for "where is X" and
+   for anything named that is not a town, city or address, the dataset
+   argument described as the name dataset.list spells, the harness read
+   timeout at 180 s. Twelve-task check at `--repeat 3` (report
+   20260902T014559, aggregate 0.64 against 0.17 for the same tasks in the
+   baseline): find-the-kingsway-substation, find-before-shading,
+   travel-time-bands and dataset-draw-branch-at-a-moment now stable 1.00.
+   Still failing, with the cause read from transcripts:
+   - terrain-profile-between-two-points and cross-section-along-a-line, 0 in
+     6 of 6 runs: the persona's "elevation profile / terrain cross-section,
+     use terrain_profile" rule beats the precedence sentence every time.
+   - scenario-compare-within-25-metres, 0: "pairing features within 25
+     metres" reads as a geoprocessing job, the model goes to find_nearest and
+     plan_workflow over files named from its own imagination.
+   - find-before-flying, 0.67 flaky: one run geocodes "the old brewery"
+     straight away; the other two call find_feature, then geocode anyway
+     because the reads fixture answers every find_feature with the Kingsway
+     matches.
+   - attach-a-remote-table and search-a-stac-collection, 0.67 flaky: one run
+     in three writes an ATTACH through sql_query, or loops on asset_readings.
+   - scenario-compare-branches and dataset-draw-widening-branch: the model
+     writes `road_network` or `ds_roads` for Road Network in about half the
+     runs, some after inventing a dataset.list result inside its own turn.
+   - change-to-3d: the task says it is asked from the map tab, the shared
+     snapshot sits on the globe tab with cesium, and renderer.set says it
+     shows the globe tab too, so `renderer.set cesium` is a defensible call
+     the scorer marks 0. Owner call: a per-task snapshot, or a different
+     expected call.
+   Owner call before the next round: hide an agent tool from a run whose
+   catalogue offers the viewer action that replaces it (terrain_profile,
+   calculate_isochrones, ptolemy_query list_datasets, and the geocode and
+   "where is X" rules), or reword those five persona rules. Then a full
+   72-task sweep at `--repeat 3` against the 0.82 baseline before committing.
 
 ## Chat action leftovers, 2026-08-29
 

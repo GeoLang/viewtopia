@@ -9,7 +9,7 @@ import {
   stopCompare,
   useScenarioCompareStore,
 } from '../features/scenario/compare';
-import { resolveBranch, resolveDataset } from './branchLookup';
+import { DATASET_ARGUMENT_DESCRIPTION, resolveBranch, resolveDataset } from './branchLookup';
 import { ActionError, registerAction } from './registry';
 import { isoMoment } from './resolve';
 import type { BranchCoverage } from '../lib/branchFeatures';
@@ -23,7 +23,7 @@ registerAction({
   description:
     'Compare two branches of a dataset side by side, with the ground each one covers.',
   parameters: {
-    dataset: { type: 'string', description: 'Dataset id or name.', required: true },
+    dataset: { type: 'string', description: DATASET_ARGUMENT_DESCRIPTION, required: true },
     base_branch: { type: 'string', description: 'Branch id or name to compare against.', required: true },
     scenario_branch: { type: 'string', description: 'Branch id or name being proposed.', required: true },
     distance: {
