@@ -3,7 +3,8 @@
 # Single Docker image bundling all core GeoLang services for simple deployments.
 # Use this when you want a single-container deployment instead of full compose.
 #
-# Build:  docker build -f Dockerfile.allinone -t geolang-allinone .
+# Build:  docker build -f viewtopia/Dockerfile.allinone -t geolang-allinone .
+#         from the directory that holds the ptolemy, fenestra, tiletopia and viewtopia checkouts
 # Run:    docker run -p 3000:3000 -p 3003:3003 -p 3100:3100 -p 5432:5432 geolang-allinone
 #
 # Included services:

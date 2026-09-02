@@ -19,38 +19,46 @@ coverage, cross-platform). Geolang runs Ruff and its pytest suite in CI.
 
 The three big structural bets are **settled**:
 1. **Golden path proven and gated.** The full stack comes up from one compose file and a
-   Playwright suite (22 tests, 0 skips) locks the viewer → backends → agent round-trip
-   against the live services, in CI, without stubbing geolang. See §3, Phase 0.
+   Playwright suite (35 tests, 0 skips) locks the viewer → backends → agent round-trip
+   against the live services, in CI, without stubbing geolang.
 2. **ViewTopia is one stack.** React (`main.tsx`) is the only front-end. There is no
    vanilla `.js` shell.
-3. **The backbone has real tests.** ptolemy carries ~595 test functions including conflict-depth,
+3. **The backbone has real tests.** ptolemy carries 704 test functions including conflict-depth,
    write-path and visibility coverage.
 
-Maturity from source-level test declarations:
+Maturity from source-level test declarations (Rust `#[test]`/`#[tokio::test]` attributes,
+`def test_` for geolang, `it(`/`test(` for viewtopia):
 
 | Repo | Role | Tests | Read |
 |------|------|-------|------|
-| tiletopia | 3D tiles / terrain / COG | ~737 | Mature ✅ |
-| ptolemy | versioned PostGIS backbone | ~595 | Hardened ✅ |
-| jung | cartographic rendering library | 324 | Labels render on the default path (style text properties, priority collision, curved along lines, caller-supplied TTF), in the browser via the wasm `Renderer.add_font`, and `{token}` labels read real GeoJSON properties; viewtopia does not use the wasm crate |
+| tiletopia | 3D tiles / terrain / COG | 936 | Mature ✅ |
+| ptolemy | versioned PostGIS backbone | 704 | Hardened ✅ |
+| jung | cartographic rendering library | 338 | Labels render on the default path (style text properties, priority collision, curved along lines, caller-supplied TTF), in the browser via the wasm `Renderer.add_font`, and `{token}` labels read real GeoJSON properties; viewtopia does not use the wasm crate |
 | verne | foreign-format inventory + extractor (§2.7) | 233 | ✅ live-load CI against ptolemy |
-| geodukt / fluvius | ETL+workflow / spatial streams | ~240 / 187 | geodukt consumed; fluvius not deployed |
-| nubis / topoi | point cloud / geometry | 161 / 246 | nubis via geoplumb; topoi as viewer wasm |
-| terravista | mobile SDK | 130 Rust | Android fetches and draws (Canvas); Metal/Vulkan is v0.3 ⚠️ |
-| collecta | field collection | 117 | OpenRosa + attachments + Field Data panel, which publishes a form into a ptolemy dataset |
-| projicio / sibyl | CRS / agent loop (§2.4) | 198 / 87 | ✅ |
-| terrano / fenestra | raster / OGC gateway (WMS/WFS/WMTS/WCS/OGC API) | 140 / 98 | ✅ |
-| geokode / geogit / itinera | geocode / geo VCS / routing | 75 / 73 / 84 | geogit is CLI-only, not in the viewer |
+| agora | live shared map documents (§2.0) | 235 | ✅ documents, presence, feeds and region watches in the platform stack |
+| geodukt / fluvius | ETL+workflow / spatial streams | 244 / 209 | geodukt consumed; fluvius not deployed |
+| nubis / topoi | point cloud / geometry | 165 / 258 | nubis via geoplumb; topoi as viewer wasm |
+| geoplumb | pull-based windowed compute engine (§2.0) | 191 | COG, STAC, GeoJSON and LAS layers served as XYZ tiles; agora region watches reduce over its layers |
+| terravista | mobile SDK | 130 Rust | Android fetches and draws (Canvas), including MVT; the core has no GPU backend ⚠️ |
+| collecta | field collection | 142 | OpenRosa + attachments + Field Data panel, which publishes a form into a ptolemy dataset |
+| projicio / sibyl | CRS / agent loop (§2.4) | 210 / 142 | ✅ |
+| terrano / fenestra | raster / OGC gateway (WMS/WFS/WMTS/WCS/OGC API) | 180 / 152 | ✅ |
+| geokode / geogit / itinera | geocode / geo VCS / routing | 70 / 82 / 102 | geogit is CLI-only, not in the viewer |
 | interiora | indoor | 82 | ✅ |
-| panoptes | imagery ML | 44 | ONNX path real, **no published weights** ⚠️ |
-| viewtopia | flagship viewer | 1,299 Vitest tests + 22 platform E2E | 48 registry panels (18 preview-gated) + 22 plugin panels |
-| geolang | NL→GIS agent | 404 pytest functions | 39 tools, wired to ptolemy/itinera/geokode/geodukt |
+| panoptes | imagery ML | 48 | ONNX path real; building segmentation weights published, other models have none |
+| viewtopia | flagship viewer | 2,068 Vitest tests + 35 platform E2E | registry panels + plugin panels (§2.6) |
+| geolang | NL→GIS agent | 637 pytest functions | wired to ptolemy/itinera/geokode/geodukt (§2.4) |
 
 **Current headline risks:**
-- **terravista v0.3 is Metal/Vulkan.** The Android library fetches tiles over HTTP and
-  draws on Canvas, including MVT. The core still only describes the frame. Biggest
-  remaining advertised-vs-real gap on mobile.
-- **panoptes ships no model weights.** Inference works only with a user-supplied ONNX file.
+- **terravista has no GPU backend.** The Android library fetches tiles over HTTP and draws
+  on Canvas, including MVT. The Rust core only describes the frame: nothing in it uses
+  Metal, Vulkan or wgpu. `android/gradle.properties` declares `VERSION_NAME=0.4.0` while
+  the newest git tag is `v0.2.0`, so JitPack serves 0.2.0. Biggest remaining
+  advertised-vs-real gap on mobile.
+- **panoptes ships weights for buildings only.** `panoptes-buildings-v1.onnx` is attached
+  to the `weights-buildings-v1` release and `--model buildings` reads it from the working
+  directory. Roads, landcover, vegetation and change have no weights, so those need a
+  user-supplied ONNX file.
 - **ptolemy's raw-write CI check has a blind spot.** `ci/no-raw-writes.sh` cannot see a
   mutating Postgres function called through `SELECT`, which `topology.rs` does. Those routes
   are admin-only for that reason.
@@ -152,7 +160,8 @@ the socket carries and no member should be writing it back into the document.
 
 The shipping unit is `docker-compose.platform.yml`, all fronted by ViewTopia's nginx on
 `:5174` so the SPA talks to every backend same-origin via relative paths (`/api/*`,
-`/tiles/*`, `/agent/*`, `/jupyter/*`, `/ogc/*`). The nginx config is
+`/tiles/*`, `/martin/*`, `/agent/*`, `/jupyter/*`, `/ogc/*`, `/agora/*`, `/collecta/*`,
+`/plumb/*`, `/api/indoor/*`, `/speech/*`). The nginx config is
 `deploy/nginx-platform.conf`, reached through a stub include
 (`deploy/nginx-platform-include.conf`) plus a `deploy/` directory mount, so config edits
 take effect with `nginx -s reload` instead of a force-recreate.
@@ -190,9 +199,11 @@ take effect with `nginx -s reload` instead of a force-recreate.
   with `PTOLEMY_URL`/`TILETOPIA_URL`/`GEOKODE_URL`/`ITINERA_URL` plus geodukt. Agent runs
   execute on the `sibyl` service, which calls back into geolang-api's `/tools` endpoints for
   in-process tool execution.
-- Backends are independent Rust services except `geolang-api` (Python) and `jupyter`
-  (scipy-notebook for python notebook cells). Only `ptolemy` talks to PostGIS. fenestra
-  goes through ptolemy's REST API.
+- Backends are independent Rust services except `geolang-api` (Python), `aavaaz` (Python,
+  `speech` profile) and `jupyter` (scipy-notebook for python notebook cells). Two services
+  reach the shared Postgres instance and each owns its own database there, `ptolemy` and
+  `agora`. fenestra goes through ptolemy's REST API. collecta, geoplumb and interiora keep
+  their state in their own volumes.
 - The panels and loadtest CI jobs bring up a stack without geolang, so viewtopia carries no
   `depends_on` for it (nginx resolves `/agent/` at request time) and compose marks geolang's
   `env_file` `required: false`.
@@ -206,9 +217,15 @@ take effect with `nginx -s reload` instead of a force-recreate.
 | geokode | Rust | Forward/reverse/autocomplete geocoding from an OSM `.pbf` | `data/region.osm.pbf` |
 | itinera | Rust | Routing + isochrones + delivery optimization over a prebuilt graph | `data/graph.bin` |
 | fenestra | Rust | OGC gateway WMS/WFS/WMTS/OGC-API/WCS over ptolemy + a GeoTIFF coverage dir | reads ptolemy, `COVERAGE_DIR` |
+| agora | Rust | live shared map documents, presence, feeds and region watches over websockets (§2.0) | `agora` database on the shared Postgres |
+| collecta | Rust | field forms, OpenRosa submissions and attachments, publish into a ptolemy dataset | `collecta-data` volume |
+| geoplumb | Rust | pull-based windowed compute, COG/STAC/GeoJSON/LAS layers served as XYZ tiles and zonal reductions | `geoplumb-cache` volume |
+| interiora | Rust | indoor venue maps and indoor routing | `interiora-data` volume |
 | geodukt | Rust | ETL workflow executor, validates and runs TOML manifests (internal `:8100`) | bind-mounted workspace |
 | geolang-api | Python | NL→GIS agent tools + `/tools` manifest and executor, drives the viewer + calls the backends | cache |
+| geolang-executor | Python | runs the tool code, holds no platform secret, no published port | `geolang-outputs` volume |
 | sibyl | Rust | agent loop, LLM calls, sessions | sqlite volume |
+| aavaaz | Python | speech to text for dictation, behind the `speech` compose profile | none |
 | jupyter | n/a | python notebook kernels for viewtopia notebook cells | scipy-notebook |
 | viewtopia | JS/TS | The SPA (this repo) | nginx |
 
@@ -242,8 +259,8 @@ granted: there is no org boundary above it. The organizations, org_members and
 nothing enforcing ever read them and the `org_members` fallback in the informational `/check`
 routes could answer allowed where the write ladder refuses.
 
-In ptolemy, multi-tenancy is enforced in two symmetric middleware layers over the same id
-resolution.
+ptolemy enforces that ownership in two middleware layers over the same id resolution, read
+visibility and the write gate.
 
 **Visibility (read side).** Datasets have per-dataset visibility. A private dataset answers
 404, not 403, and is filtered out of every listing. The resolver maps every dataset-owned id
@@ -401,8 +418,11 @@ ViewTopia sends the active project id when it creates a live document.
 
 ### 2.4 Agent stack
 
-**sibyl** (Rust: axum, rusqlite, hand-rolled xAI client) owns the agent loop, sessions and
-summarize-on-overflow history. `geolang-api` serves a `/tools` manifest plus an executor,
+**sibyl** (Rust: axum, rusqlite, its own OpenAI chat-completions client) owns the agent loop,
+sessions and summarize-on-overflow history. The client speaks OpenAI chat completions to any
+named provider: `SIBYL_CLOUD_API_BASE` defaults to `https://api.x.ai/v1` with
+`grok-4-1-fast-reasoning`, and providers stored through `PUT /model/providers` in sqlite
+override the environment. `geolang-api` serves a `/tools` manifest plus an executor,
 where tools run in-process with no sandbox and no source shipping, and proxies runs as NDJSON
 behind the `agent_event_stream` seam, so the viewer's AG-UI contract is untouched. **AG-UI is
 the viewer's agent channel.**
@@ -412,13 +432,18 @@ the viewer's agent channel.**
 catalogue, one entry per capability with its description and typed parameters. geolang's
 `src/api/viewer_state.py` renders both into the system turn, so the model reads the layers,
 camera, project and live document instead of guessing, and it acts through one open command,
-`viewer_control(action='run', name, args)`, which reaches the viewer as the existing
-`viewer_cmd` event. A capability added to the viewer's registry needs no geolang change.
-geolang's fixed `viewer_control` action list stays beside `run` until the 40-prompt eval set
-in `evals/viewer/` passes on `run` alone. Contract details in geolang's `docs/api_reference.md`.
+`viewer_control(action='run', name, args)`, which reaches the viewer as a
+`__VIEWER_CMD__` marker carrying `{action: 'run', params: {name, args}}`. A capability added
+to the viewer's registry needs no geolang change. `run` is the only action geolang knows:
+the action names belong to the viewer's catalogue, and the 72-task set in
+`evals/viewer/` is what scores the model against it. Contract details in geolang's
+`docs/api_reference.md`.
 
-**External agents come in over MCP.** geolang-api serves the same 39 tools as stateless
-streamable HTTP at `/agent/mcp`, behind the same platform JWT gate. A request carrying an
+**External agents come in over MCP.** geolang-api serves 40 tools to sibyl over HTTP and 38
+of them to outside agents as stateless
+streamable HTTP at `/agent/mcp`, behind the same platform JWT gate. The MCP manifest drops
+`sql_query`, which declares `TOOL_RUNS_CALLER_CODE`, and `run_workflow`, which declares
+`TOOL_NEEDS_USER_APPROVAL`. A request carrying an
 `X-Agora-Document` header (document id or share link token) lands its map effects in that
 live document: `__UI_SPEC__` layers become `layers/` ops (inline under 48KiB, published to
 an open-read URL otherwise), camera commands become presence, and the agent joins as
@@ -445,8 +470,9 @@ carries it per run (in memory only, never persisted or logged), geolang's tool e
 it in a ContextVar, and its ptolemy/tiletopia/geodukt clients attach it. `PTOLEMY_API_TOKEN`
 survives only as the headless fallback. geodukt validates the same secret, takes either an
 editor-or-admin platform token or a role-free tool token carrying the exact `geodukt:run` scope
-on `POST /run`, and records the caller's `sub` on the run. `/validate`, `/operations` and
-`/health` stay open so headless planning and the evals still work.
+on `POST /run` and on every `/gp/*` route, and records the caller's `sub` on the run. The run
+history routes `/runs` and `/runs/{id}` are behind their own check. `/validate`, `/operations`
+and `/health` stay open so headless planning and the evals still work.
 
 **The manifest format is flat.** A step's parameters sit directly under the transform, so a
 nested `[transform.params]` table is read as one parameter literally named `params`. This
@@ -454,18 +480,20 @@ bites anyone writing a manifest by hand.
 
 **Manifest validation is strict.** Required parameters are enforced once in the registry and
 checked identically on `/validate`, `/run` and both CLI paths: `distance`, `epsilon`,
-`to_crs`, filter's field and value, clip's four edges, expression's expressions. `schema_map`
-must do at least one of rename, drop or add, and `/gp/clip` has no whole-world default. This
-is breaking for manifests that leaned on the old defaults, which beats silent wrong data (a
-buffer with no distance used to validate and silently use 1 metre). Transforms are
-single-input, so `spatial_join` cannot appear in a manifest at all. Known limit:
-`check_parameters` catches a missing required parameter but does not reject an unknown one,
-so a misspelled parameter sitting beside a valid one still validates.
+`to_crs`, filter's `field` and `equals`, clip's four edges, expression's expressions.
+`schema_map` must do at least one of rename, drop or add, and `/gp/clip` has no whole-world
+default, so a buffer with no distance is refused rather than silently run at 1 metre. Most
+transforms take one input, but `spatial_join` takes a second: its required `join` parameter
+names the earlier step whose features to join against, so it can appear in a manifest.
+Known limit: `check_parameters` catches a missing required parameter but does not reject an
+unknown one, so a misspelled parameter sitting beside a valid one still validates.
 
 **Evals** (`geolang/evals/`) score NL-to-manifest against the expected pipeline graph, never
 prose. `--repeat` exists because scoring one sample per task let a flaky task report a clean
-sheet. A rejected manifest is not counted as the model's answer. The local Qwen3.5-35B-A3B
-model scores 1.00 over the 10-task set.
+sheet. A rejected manifest is not counted as the model's answer. The newest recorded run of
+the 10-task workflow set scores 0.96 aggregate for the local Qwen3.5-35B-A3B model at three
+runs per task, with three tasks flaky. `evals/viewer/` is the separate 72-task set that
+scores the viewer action catalogue.
 
 **Tool behaviour worth knowing:**
 - `assess_environmental_risk` is deterministic: stable geocode pick, rounded grid, batch retries.
@@ -495,6 +523,12 @@ model scores 1.00 over the 10-task set.
 - Trajectories pick a JSONB fallback path per request so they work on the stock PostGIS that
   CI and the compose stack run. The five trajectory analytics routes stay MobilityDB-only.
 - External sources push predicates down (3-15x, and plain GiST indexing suffices).
+- `POST /api/v1/parcels/split` and `/parcels/merge` do no geometry work: each answers with the
+  input geometry and a message telling the caller to run the split or merge in topoi and commit
+  the result. The README table says so.
+- The `DataStore` trait is implemented by `ptolemy-geopackage`, `ptolemy-mongodb` and
+  `ptolemy-elasticsearch` only. `PgStore` does not implement it and no binary links those three
+  crates, so the deployed API talks to Postgres directly.
 - ptolemy publishes `ghcr.io/geolang/ptolemy` from `.github/workflows/docker.yml`. No OpenAPI spec.
 
 ### 2.6 ViewTopia internals (this repo)
@@ -576,6 +610,10 @@ service, reached at one prefix (§2.2 says what each service is):
 | server tilesets and their `/martin` vector tiles, PMTiles exports, terrain bundles, 3D Tiles assets | tiletopia | `/tiles/v1/*`, `/martin/*` |
 | live documents, comments, presence | agora | `/agora/*`, the `/agora/ws` socket |
 | agent layers and tool outputs | geolang | `/agent/geojson/*` |
+| the layer list a region watch reduces over, and its raster tiles | geoplumb | `/plumb/*` (`src/lib/geoplumb.ts`) |
+| field forms, submissions and attachments | collecta | `/collecta/api/v1/*` (`src/lib/collecta.ts`) |
+| indoor venues, levels and indoor routes | interiora | `/api/indoor/*` (`src/lib/indoorMaps.ts`) |
+| geocoding and routing when the platform serves them | geokode, itinera | `/api/geocode/*`, `/api/route`, `/api/isochrone` |
 | WMS, WFS and WMTS the platform serves | fenestra | `/ogc/*`, which the viewer asks itself only for SLD conversion (`/ogc/sld/symbology`) |
 | a WMS, WFS, WMTS, XYZ or PMTiles URL the user typed | whichever host that URL names | as typed |
 | basemaps | the configured tile host (`src/hooks/basemapTiles.ts`) | as configured |
@@ -600,7 +638,7 @@ MapLibre marker colours are assigned to `style.background` rather than interpola
 glyphs that never touch the DOM.
 
 **Named actions.** `src/actions/` is the one list of capabilities a typed prompt can reach:
-41 entries, each a name, a description, typed parameters, a `reads` flag and a `destructive`
+55 entries, each a name, a description, typed parameters, a `reads` flag and a `destructive`
 flag, registered by its domain module and run through `runAction`, which coerces the arguments,
 checks the enums and the required ones, drops unknown keys and throws naming every problem.
 The panel offering a capability calls the same function the action does, which is why the
@@ -652,11 +690,14 @@ lands after whatever was typed before the mic went on. Stopping sends a binary
 `../../Aavaaz/aavaaz`), no host port, no API key, and the button is offered only when
 `/speech/health` answers, so a stack without it shows nothing.
 
-**Tool panels.** 48 registry panels, 30 on by default, plus 22 plugin panels (measure, feature-picker, geojson/style editors,
-geocoding, routing via itinera, terrain profile, cross-section, heatmap, spatial stats,
-weather/wind, shadows/lighting, raster/COG, space-time, notebooks, the industry verticals
-wired via plugins to ptolemy `/api/v1/*`). **18 experimental panels are gated** behind a "Show Preview
-Tools" setting with a Preview badge, so there are no dead buttons in the default UI.
+**Tool panels.** 64 registry panels in `src/components/toolMenus.ts`, spread over the Actions,
+Analysis, Simulate, Tools, Data and More menus, plus 20 plugin panels (measure,
+feature-picker, geojson/style editors, geocoding, routing via itinera, terrain profile,
+cross-section, heatmap, spatial stats, weather/wind, shadows/lighting, raster/COG,
+space-time, notebooks, the industry verticals wired via plugins to ptolemy `/api/v1/*`).
+Every registry panel is shown by default. The `preview` flag, `isPreviewPanel` and the "Show
+Preview Tools" setting are still in place, but no panel sets the flag, so nothing is gated
+and there are no dead buttons in the default UI.
 
 - Signed-out and keyless states replace failed requests. Terrain/Flood/Solar and Viewshed
   read the session before POSTing, disabling Run behind a sign-in hint. The catalog panel
@@ -774,16 +815,18 @@ tabs of one account survive one closing, rooms are reclaimed when empty, and roo
 capped at 32 per user with refusals closing as 4029, which the client surfaces as "too many rooms
 open" without reconnecting into the same refusal.
 
-**`src/` module groups:** `components/` + `features/`, `spacetime/` (31 space-time modules),
-`plugins/` (file-discovered + built-ins), `notebooks/`, `raster/`, `offline/` (IndexedDB
-local-first, op queue, and a vite-plugin-pwa service worker that precaches the built shell and
-nothing else, so API responses and tiles stay with `offlineFetch` and the tile cache),
+**`src/` module groups:** `components/` + `features/`, `features/spacetime/` (21 space-time
+modules), `plugins/` (file-discovered + built-ins), `notebooks/`, `raster/`, `offline/`
+(IndexedDB local-first, op queue, and a vite-plugin-pwa service worker that precaches the built
+shell and nothing else, so API responses and tiles stay with `offlineFetch` and the tile cache),
 `projects/`, `store/` (Zustand),
-`duckdb/` (in-browser analytics). ~228 source files.
+`duckdb/` (in-browser analytics). ~465 TypeScript source files.
 
-**Test surface.** A vitest unit suite, a 22-test platform E2E suite against the live stack with
-a strict console-error tripwire and zero 5xx tolerance, a registry-derived panel sweep across 50
-tools, and a runtime-enumerated plugin sweep across all 23 plugin panels. The panels and sweep
+**Test surface.** A vitest unit suite of 2,068 tests, a 35-test platform E2E suite against the
+live stack with a strict console-error tripwire and zero 5xx tolerance, a registry-derived panel
+sweep over the 49 panels of the Analysis, Simulate, Tools, Data and More menus, each opened
+through its real menu path with an empty fixme list, and a plugin sweep that enumerates the
+plugins the loaded app reports rather than a fixed list. The panels and sweep
 stacks run without an agent, so `openApp` in `tests/e2e/panel-helpers.js` stubs the
 `/agent/health` probe with a 2xx (the only answer chrome does not log as a console error). The
 header status dot is the only thing that reads it. Lint is Biome (`lint`/`lint:fix`, formatter
@@ -826,7 +869,8 @@ elements left open, so an unchecked read reports a truncated file as a clean one
   pinned to `OpenFileGDB`, so Esri's SDK driver can never be picked up.
 - GDAL reads the two hardest semantic layers (coded and range domains since 3.3, relationship
   classes with cardinality and composite flag since 3.6) but georust's crate wraps neither, so
-  verne carries ~260 lines of read-only glue over `gdal-sys`. Esri subtypes have no GDAL model
+  verne carries 317 lines of read-only glue over `gdal-sys` in `verne-gdb/src/glue.rs`. Esri
+  subtypes have no GDAL model
   at all and are parsed out of the geodatabase's own catalog XML.
 - The domain and relationship handles are borrowed const pointers the dataset owns, and freeing
   them aborts the process. Only the two `*Names` lists are the caller's to destroy.
@@ -844,10 +888,19 @@ elements left open, so an unchecked read reports a truncated file as a clean one
   product whose value is an honest account of losses, a fabricated loss is the worst failure
   available.
 - The extraction sidecar's structs mirror ptolemy's request bodies field for field, so loading is
-  a POST of each struct rather than a translation that can drift. Two fields cannot mirror,
+  a POST of each struct rather than a translation that can drift. Four fields cannot mirror. Two
   because ptolemy wants the id of a row that does not exist until the load runs: a subtype's
   `domain_assignments` names its domains and a relationship class names its two datasets, so both
-  are typed as names and the loader swaps them.
+  are typed as names and the loader swaps them. The other two because the sidecar holds a
+  different shape than the request: an attachment names a file beside the sidecar and the loader
+  reads it and base64s it into `data`, and a dataset carries an ArcGIS layer's whole
+  `drawingInfo`, which the loader wraps in a format tag and posts as one symbology rule.
+- A feature-service extraction can be incremental. `verne extract --since <earlier extraction
+  directory>` asks the service's `extractChanges` what moved and writes insert, update and
+  delete operations `verne load` commits onto the datasets that earlier extraction created.
+  It reads which feature is which from the object id index that extraction wrote under
+  `object-ids`, and attachments from `attachment-ids`. A geodatabase is always extracted
+  whole, so `--since` against one is refused.
 - The extraction log records every report row as carried, carried-with-losses or skipped, decided
   from the verdict rather than from the caller, so the report and the log cannot give different
   accounts of the same thing. Operator and timestamp are required, because the licence position
@@ -859,7 +912,7 @@ elements left open, so an unchecked read reports a truncated file as a clean one
   which GDAL does not model, so it never sees them used and never carries them.
 
 **What the platform carries because of the report.** jung's `StyleRule` carries min/max zoom and
-`symbology_rules` carries min/max scale. `SpriteAtlas::insert` takes any icon, so jung symbolises
+ptolemy's `symbology_rules` table carries min/max scale. `SpriteAtlas::insert` takes any icon, so jung symbolises
 from outside its own library. jung symbol placement carries an icon anchor, a pixel offset and a
 clockwise rotation, so KML `hotSpot` and IconStyle `heading` survive (`blit_icon` remains the
 default-placement wrapper). terrano's `BandedRaster`, 8-bit samples and multi-band GeoTIFF
@@ -881,7 +934,7 @@ deletion, so an attribute-only placemark needs its own convention.
 |---------|-------|-------------|
 | geokode + itinera | `data/region.osm.pbf` (OSM extract, Monaco for the demo) | `scripts/platform-up.sh` fetches it |
 | itinera | `data/graph.bin` (built from the `.pbf`) | built by `platform-up.sh` |
-| geokode | `data/addresses.csv` (optional, extra addresses) | optional |
+| geokode | exactly one `--data` path, dispatched on the extension over `.csv`, `.geojson`, `.json` and `.pbf` | compose passes `/data/region.osm.pbf`, so an address CSV is an alternative source the platform stack never reads |
 | geolang | LLM key (`SIBYL_CLOUD_API_KEY`) and optional local model pair. Settings can switch local/cloud and paste a replacement cloud key, which sibyl stores in sqlite | `geolang/.env` via `env_file`, or Settings → AI Model |
 | aavaaz (optional, `speech` profile) | NVIDIA GPU + nvidia container runtime, checkout at `../../Aavaaz/aavaaz` | sibling repo beside GeoLang, `platform-up.sh` opts in when both are present |
 | fenestra WCS | `COVERAGE_DIR` of `.tif`/`.tiff` (optional) | operator-supplied |
@@ -901,22 +954,10 @@ honestly after teardown. Its fenestra scenario measures the proxy route by defau
 
 ## 3. Roadmap: phases
 
-Detailed task state lives in [DESIGN_TODO.md](DESIGN_TODO.md). High-level:
+Detailed task state lives in [DESIGN_TODO.md](DESIGN_TODO.md). The one phase still open:
 
-- **Phase 0, prove & lock the golden path.** ✅ DONE. Stack bring-up is reproducible, and one
-  golden journey (viewer → tileset → geocode → route → NL agent command) is locked by a
-  22-test Playwright gate against the live stack, wired into CI without stubbing geolang.
-- **Phase 0b, collapse ViewTopia to one stack.** ✅ DONE. React is the only front-end, and
-  NL→map is verified end-to-end through nginx.
-- **Phase 1, finish the v1 surface (viewer + agent + services).** ✅ DONE. Vertical panels wired
-  to real endpoints, experimental panels preview-gated, analysis + jupyter E2E un-skipped,
-  one-command quickstart.
-- **Phase 2, harden the backbone.** ✅ DONE. ptolemy write/merge hardening + fork-aware
-  feature view, multi-tenancy across ptolemy and tiletopia (§2.3), collecta JWT auth + sync
-  protocol, fenestra real WCS. All verifier-confirmed.
-- **Phase 3, mobile & ML breadth.** ⏳ NEXT. terravista v0.2 (HTTP tiles + MVT on Android)
-  shipped; v0.3 is Metal/Vulkan. panoptes model weights. collecta media attachments
-  shipped; increment 3 is ptolemy push. Off the core viewer+agent path.
+- **Phase 3, mobile and ML breadth.** terravista's Rust core has no GPU backend, and
+  panoptes has published weights for buildings only. Off the core viewer+agent path.
 
 **Explicitly not being invested in until the core ships:** breadth for its own sake. The
 platform is already wide, and the work is depth on the golden path.

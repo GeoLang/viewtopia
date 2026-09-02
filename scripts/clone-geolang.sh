@@ -42,6 +42,7 @@ TARGET="${TARGET:-GeoLang}"
 
 # GeoLang-owned repos (cloned from the GeoLang GitHub org).
 GITHUB_REPOS=(
+  agora
   collecta
   fenestra
   fluvius
@@ -49,6 +50,7 @@ GITHUB_REPOS=(
   geogit
   geokode
   GeoLang.github.io
+  geoplumb
   infrastructure
   interiora
   itinera

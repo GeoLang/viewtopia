@@ -3,9 +3,9 @@
 This file replaces the old feature catalogue. The old catalogue described
 planned and local-only behavior as shipped behavior.
 
-The workspace audit on 2026-08-22 covered 26 repositories. It checked each
-repository README, `docs/index.html` when present, other Markdown documents,
-and the source paths named by those documents.
+The lists below were last checked against the source on 2026-09-02, one agent
+per repository over each README, `docs/index.html` when present, the other
+Markdown documents, and the source paths those documents name.
 
 ## ViewTopia implemented paths
 
@@ -18,14 +18,23 @@ and the source paths named by those documents.
 - Seven Space-Time analyses run from the Analysis tab in a worker, each drawing
   its result on the map: colocation, co-travel, pattern-of-life, network
   metrics, behavioral clustering, predictive location, and data quality.
-- Twenty-five typed viewer actions the agent runs through one `viewer_control`
+- Fifty-five typed viewer actions the agent runs through one `viewer_control`
   run command, with the action catalogue and a snapshot of the current map sent
   to the model on every chat message, and a chat-only mode (`?mode=chat`) that
-  leaves the chat as the only control.
-- Build-time plugin discovery with 20 built-in plugins.
+  leaves the chat as the only control. Every action taking a URL refuses
+  anything but an absolute `http` or `https` one.
+- Build-time plugin discovery with 20 built-in plugins, and runtime install
+  from a registry document whose bundles are checked against a mandatory
+  sha-256.
 - Portal item requests with an API path and local fallback.
-- Dashboard widgets stored in localStorage.
+- Dashboard widgets stored against the active project in Ptolemy.
+- STAC catalog search and asset layers, browser-side format conversion to
+  GeoParquet, FlatGeobuf, PMTiles and GeoJSON, print layout with atlas export,
+  collecta field-data publishing into a Ptolemy dataset, interiora indoor
+  venues, and geodukt pipeline run history.
 - IndexedDB stores, an offline operation queue, and Agora collaboration.
+- Region watches: agora reduces a drawn region over a geoplumb layer on a
+  schedule, notifies on a threshold crossing, and posts a webhook.
 - Workspace and project names, descriptions, memberships, owner/editor/viewer
   roles, and expiring invitation records stored by Ptolemy.
 - Authenticated `/api/v1` reads and mutations for workspace and project
@@ -42,13 +51,12 @@ and the source paths named by those documents.
 
 ## ViewTopia partial or local-only paths
 
-- Per-project map snapshots and overlay files remain browser-local. Project
-  roles are not yet propagated to Ptolemy dataset grants or Agora document
-  members.
-- Dashboard save and load use localStorage. There is no dashboard API store.
-- The conflict merge code supports a narrow operation shape. The resolver is
-  not mounted, and the platform sync path does not queue the feature operations
-  it expects.
+- Project roles are not yet propagated to Ptolemy dataset grants or Agora
+  document members.
+- Only Dataset Editor feature property and geometry edits go through the
+  offline operation queue. No other resource is queued.
+- The Geofences panel creates and lists circle fences. Nothing evaluates a
+  crossing and no renderer draws a fence.
 - Vertical plugins read configured service datasets or demo data. They do not
   provide those datasets.
 - Viewshed, flood, routing, travel time, and some terrain tools depend on the
@@ -57,11 +65,11 @@ and the source paths named by those documents.
 ## Not implemented in ViewTopia
 
 - Space-Time classification, RBAC, ontology, CDR import, entity resolution,
-  geofencing UI, and case management. Entity resolution has no algorithm and no
-  button; the rest have library code or types but no reachable UI.
-- Returning DuckDB result rows to the agent for follow-up reasoning.
-- A standalone SQL workbench panel. The notebook and agent SQL paths are
-  implemented.
+  and case management. Entity resolution has no algorithm and no button; the
+  rest have library code or types but no reachable UI.
+- Returning DuckDB result rows to the agent for follow-up reasoning. A query
+  publishes a summary to a window event and a global ring buffer, which is
+  read by the UI, not sent back to the model as a turn.
 
 ## Source of truth
 

@@ -181,17 +181,17 @@ footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color
 <section class="features">
 <div class="container">
 <h2>Platform Capabilities</h2>
-<p class="subtitle">19 Rust-native modules. One unified platform.</p>
+<p class="subtitle">22 open-source modules, Rust apart from the Python AI agent. One unified platform.</p>
 <div class="feature-grid">
 <div class="feature-card">
 <div class="icon">🤖</div>
 <h3>Natural Language Analysis</h3>
-<p>GeoLang AI agent translates your questions into spatial operations. Powered by Letta for persistent memory across sessions.</p>
+<p>The GeoLang AI agent translates your questions into spatial operations. The agent loop runs in sibyl, which keeps each session's history in sqlite.</p>
 </div>
 <div class="feature-card">
 <div class="icon">🎨</div>
-<h3>Adaptive UI (A2UI)</h3>
-<p>Every response generates a custom interface — maps, charts, tables, forms — tailored to your specific question. No static dashboards.</p>
+<h3>Answers that draw themselves</h3>
+<p>The agent answers with a map, a table or an image spec, and the viewer renders it in place. A layer the agent adds is an ordinary layer you can restyle, reorder and export.</p>
 </div>
 <div class="feature-card">
 <div class="icon">🗄️</div>
@@ -221,7 +221,7 @@ footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color
 <div class="feature-card">
 <div class="icon">📱</div>
 <h3>Mobile SDK</h3>
-<p>Rust-native mobile SDK for iOS and Android. Offline tile caching, gesture controls, annotation layers.</p>
+<p>Rust mobile map core consumed from Kotlin over a flat C FFI. Camera and viewport math, gesture recognition, tile caching, offline feature storage, on-device turn-by-turn. Android only, and the host does the fetching and the drawing.</p>
 </div>
 <div class="feature-card">
 <div class="icon">🛰️</div>
@@ -244,7 +244,7 @@ footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color
 <p class="period">forever</p>
 <ul>
 <li>Self-hosted (Docker Compose)</li>
-<li>All 19 modules</li>
+<li>All 22 modules</li>
 <li>Community support</li>
 <li>AGPL-3.0 license</li>
 <li>Unlimited users</li>
@@ -259,7 +259,7 @@ footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color
 <li>Managed hosting</li>
 <li>GeoLang AI agent</li>
 <li>10K queries/month</li>
-<li>A2UI adaptive interfaces</li>
+<li>Agent answers rendered as maps and tables</li>
 <li>Email support</li>
 </ul>
 <a href="#" class="outline">Coming Soon</a>
@@ -297,10 +297,10 @@ footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color
 <!-- Stack -->
 <section class="stack">
 <div class="container">
-<h2>Built on 19 Open-Source Modules</h2>
+<h2>Built on 22 Open-Source Modules</h2>
 <div class="stack-list">
 <div class="stack-item"><span class="emoji">🏗️</span><div><div class="name">TileTopia</div><div class="desc">3D Tiles server</div></div></div>
-<div class="stack-item"><span class="emoji">🌍</span><div><div class="name">ViewTopia</div><div class="desc">Unified viewer + A2UI</div></div></div>
+<div class="stack-item"><span class="emoji">🌍</span><div><div class="name">ViewTopia</div><div class="desc">Unified viewer + AI chat</div></div></div>
 <div class="stack-item"><span class="emoji">🗄️</span><div><div class="name">Ptolemy</div><div class="desc">Enterprise geodatabase</div></div></div>
 <div class="stack-item"><span class="emoji">🚗</span><div><div class="name">Itinera</div><div class="desc">Routing + isochrones</div></div></div>
 <div class="stack-item"><span class="emoji">📍</span><div><div class="name">Geokode</div><div class="desc">Geocoding</div></div></div>
@@ -317,7 +317,10 @@ footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color
 <div class="stack-item"><span class="emoji">📋</span><div><div class="name">Collecta</div><div class="desc">Field data collection</div></div></div>
 <div class="stack-item"><span class="emoji">📱</span><div><div class="name">TerraVista</div><div class="desc">Mobile SDK</div></div></div>
 <div class="stack-item"><span class="emoji">🌐</span><div><div class="name">Fenestra</div><div class="desc">OGC services</div></div></div>
-<div class="stack-item"><span class="emoji">🤖</span><div><div class="name">GeoLang</div><div class="desc">AI agent</div></div></div>
+<div class="stack-item"><span class="emoji">🤖</span><div><div class="name">GeoLang</div><div class="desc">AI agent tools</div></div></div>
+<div class="stack-item"><span class="emoji">🔮</span><div><div class="name">Sibyl</div><div class="desc">Agent loop</div></div></div>
+<div class="stack-item"><span class="emoji">🤝</span><div><div class="name">Agora</div><div class="desc">Live maps and presence</div></div></div>
+<div class="stack-item"><span class="emoji">🔧</span><div><div class="name">GeoPlumb</div><div class="desc">Windowed compute</div></div></div>
 </div>
 <p style="margin-top:24px;color:var(--muted,#8b949e);max-width:720px">
 <strong>Your data is just PostGIS.</strong> Ptolemy stores features in plain PostGIS

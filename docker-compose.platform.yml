@@ -28,8 +28,7 @@
 #   - viewtopia:  Frontend viewer + A2UI (port 5174)
 #
 # Prerequisites:
-#   - Place OSM extract at ./data/region.osm.pbf (for routing)
-#   - Place address CSV at ./data/addresses.csv (for geocoding)
+#   - Place OSM extract at ./data/region.osm.pbf (routing and geocoding read it)
 #   - Or remove itinera/geokode services if not needed
 #   - Optional, speech only: Aavaaz checkout at ../../Aavaaz/aavaaz and an NVIDIA GPU
 
@@ -108,8 +107,6 @@ services:
         condition: service_healthy
     environment:
       RUST_LOG: info,fenestra=debug
-      FENESTRA_HOST: 0.0.0.0
-      FENESTRA_PORT: "8080"
       PTOLEMY_URL: http://ptolemy:3000
       # capabilities embed absolute URLs; they have to point back through the
       # viewtopia proxy's /ogc/ mount, not at fenestra's bind address.

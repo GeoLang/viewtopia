@@ -38,10 +38,10 @@ param(
 
 # GeoLang-owned repos (GeoLang GitHub org).
 $GithubRepos = @(
-    "collecta", "fenestra", "fluvius", "geodukt", "geogit", "geokode",
-    "GeoLang.github.io", "infrastructure", "interiora", "itinera", "jung",
-    "nubis", "panoptes", "projicio", "ptolemy", "terrano", "terravista",
-    "tiletopia", "topoi", "viewtopia"
+    "agora", "collecta", "fenestra", "fluvius", "geodukt", "geogit", "geokode",
+    "GeoLang.github.io", "geoplumb", "infrastructure", "interiora", "itinera",
+    "jung", "nubis", "panoptes", "projicio", "ptolemy", "sibyl", "terrano",
+    "terravista", "tiletopia", "topoi", "viewtopia"
 )
 
 # Repos that don't live in the GeoLang GitHub org.

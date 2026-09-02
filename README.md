@@ -18,9 +18,10 @@ calls. Several surfaces are local-only or depend on configured services:
   and expiring invitation records. ViewTopia does not write this metadata or
   invitations to IndexedDB.
 - Dashboard definitions belong to the active project and are stored on the server.
-- Conflict merge code exists, but the resolver is not mounted and the platform
-  sync path does not queue the feature operations it expects.
-- Space-Time Analysis buttons are present but have no handlers.
+- Only feature property and geometry edits from the Dataset Editor go through
+  the offline operation queue. No other resource is queued.
+- The Geofences panel creates and lists fences. Nothing evaluates a crossing or
+  draws a fence on the map.
 - Vertical plugins read configured service datasets. They do not provide those
   datasets.
 
@@ -32,17 +33,16 @@ calls. Several surfaces are local-only or depend on configured services:
 | **CesiumJS 3D Globe** | Full 3D globe with terrain, 3D Tiles, and imagery |
 | **MapLibre GL** | GPU-accelerated 2D vector maps |
 | **deck.gl** | High-performance data visualization layers |
-| **Leaflet** | 2D map with drawing and marker clustering |
-| **Split View** | Side-by-side 3D + 2D with synced cameras |
+| **Leaflet** | The Map tab: 2D map with drawing and marker clustering. The globe area itself switches between Cesium and MapLibre |
+| **Split View** | Two panes across or a four-pane grid, with synced cameras. Each pane picks its own renderer |
 
 ### AI Agent
 | Feature | Description |
 |---------|-------------|
 | **Natural language queries** | "Fly to London and classify the point cloud" |
-| **30+ commands** | Measurement, routing, styling, analysis — all voice-driven |
 | **Session persistence** | Chat history saved and replayable |
-| **GeoLang agent** | Spatial reasoning backend. The API advertises 39 tools, and the viewer uses a subset including `sql_query`, `ptolemy_query`, `list_tilesets`, routing, and QGIS algorithms |
-| **Typed actions** | 25 named viewer actions with validated parameters (camera, renderer, basemap, split view, layers, projects, datasets, live documents, history, scenario compare, feature search). The model is sent the catalogue and a snapshot of what the map is showing with every message. A destructive action asks for a confirming reply first |
+| **GeoLang agent** | Spatial reasoning backend. The API advertises 40 tools, and the viewer uses a subset including `sql_query`, `ptolemy_query`, `list_tilesets`, routing, and QGIS algorithms |
+| **Typed actions** | 55 named viewer actions with validated parameters (camera, renderer, basemap, split view, view tabs, layers, tilesets, scene, terrain and flood analysis, markers, data import and export, SQL attach, STAC, projects, datasets, live maps, history, scenario compare, feature search). The model is sent the catalogue and a snapshot of what the map is showing with every message. A destructive action asks for a confirming reply first. Every action that takes a URL refuses anything but an absolute `http` or `https` one |
 | **Chat-only mode** | `?mode=chat`, the header icon or the command palette hides the header, dock and toolbars and leaves the chat as the only control. Drawing, measuring with the cursor and picking by click still need the mouse |
 
 ### Analysis Tools
@@ -54,7 +54,7 @@ calls. Several surfaces are local-only or depend on configured services:
 | **Viewshed** | Line-of-sight visibility analysis |
 | **Routing** | itinera point-to-point directions (public OSRM demo fallback) |
 | **Travel Time** | itinera service-area bands from a point, and OD matrices between two point layers |
-| **Charts** | Histogram, scatter, and time series |
+| **Charts** | Bar or histogram, line, and pie over a layer's attributes |
 
 ### Space-Time Intelligence
 The panel tracks entities and their positions over time.
@@ -69,7 +69,11 @@ The panel tracks entities and their positions over time.
 
 The Analysis tab runs seven analyses in a worker and draws each result on the map and in the cube: colocation (meeting markers), co-travel (paired track segments over a sustained window), pattern-of-life (dwell rings and off-pattern events), network metrics (ranked entity list), behavioral clustering (tracks recolored by cluster), predictive location (ghost marker and projected path), and data quality (issues marked at their events).
 
-Not implemented: ontology, CDR import, entity resolution, geofencing UI, case management, and classification/RBAC.
+The Geofences panel creates a named circle fence and lists the fences, but no
+code evaluates a crossing and no renderer draws one.
+
+Not implemented: ontology, CDR import, entity resolution, case management, and
+classification/RBAC.
 
 ### Plugin System
 | Feature | Description |
@@ -77,7 +81,8 @@ Not implemented: ontology, CDR import, entity resolution, geofencing UI, case ma
 | **Auto-discovery** | Build-time discovery of folders in `src/plugins/`, followed by runtime loading |
 | **Plugin SDK** | Full context: map control, store access, API proxy, settings |
 | **Settings UI** | Each plugin declares settings schema, rendered in Settings panel |
-| **20 built-in plugins** | Industry verticals + QGIS-equivalent tools (see below) |
+| **20 built-in plugins** | Seven industry verticals, eleven QGIS-equivalent tools, Panoramax street-level imagery, and one example plugin (see below) |
+| **Runtime install** | More → Plugin Manager installs a plugin from a registry document, checked against a mandatory sha-256. A runtime plugin can never claim a built-in id |
 | **Hot reload** | Vite HMR during development |
 
 ### Portal & Content Management
@@ -88,7 +93,7 @@ Not implemented: ontology, CDR import, entity resolution, geofencing UI, case ma
 | **Portal API** | REST-backed item CRUD with offline localStorage fallback |
 | **Dashboard Builder** | Configurable widget-based dashboards (map, chart, indicator, gauge, list, rich text) |
 | **Dashboard Grid** | CSS grid layout with per-widget positioning |
-| **Save/Load** | Persist dashboard configurations to localStorage |
+| **Save/Load** | A dashboard belongs to the active project and is stored under its `dashboards` state key in Ptolemy, so every member sees the same ones. Dashboards left in this browser's old `viewtopia_dashboards` key move into the first project that opens |
 
 ### Industry Verticals (Plugins)
 | Plugin | Description |
@@ -106,22 +111,30 @@ None of these draw anything until the dataset they look for exists.
 one discovers, the properties its panel reads, and every settings key.
 
 ### QGIS Plugin Equivalents (Plugins)
-Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
+Eleven of the most-downloaded QGIS plugins have an equivalent here:
 
 | Plugin | QGIS Equivalent | Downloads | Key Tech |
 |--------|-----------------|-----------|----------|
-| **Basemap Catalog** | QuickMapServices | 11.3M | 30+ tile providers, category filter |
+| **Basemap Catalog** | QuickMapServices | 11.3M | 30 tile providers, category filter |
 | **OSM Downloader** | QuickOSM | 3.0M | Overpass API, 12 presets |
 | **Raster Classification** | Semi-Auto Classification | 2.6M | K-means, ISODATA in-browser |
 | **Coordinate Tools** | Lat Lon Tools | 1.7M | DD/DMS/UTM/Geohash/WKT/GeoJSON |
 | **Terrain Profile** | Profile tool | 1.6M | Open-Elevation API, SVG chart |
 | **Export Map** | qgis2web | 1.6M | PNG/JPEG/HTML + embed codes |
-| **3D Viewer** | Qgis2threejs | 1.4M | deck.gl terrain + buildings |
 | **Street View** | Street View | 901K | Google + Mapillary integration |
 | **KML Tools** | KML Tools | 771K | Import KML/KMZ/GPX, export KML |
 | **Shape Tools** | Shape Tools | 669K | Geodesic circles, ellipses, sectors, arcs |
 | **Point Sampling** | Point Sampling Tool | 662K | Multi-layer sampling + CSV export |
 | **Advanced Sketching** | Sketching Tools | 669K | Split, merge, offset, smooth, densify, snap |
+
+Terrain and extruded buildings, which Qgis2threejs covers in QGIS, are the
+Terrain and Buildings panels here rather than a plugin. The vector geoprocessing
+ops are the Geoprocessing panel, described under
+[Geoprocessing](#geoprocessing).
+
+Panoramax is the twentieth built-in plugin: open street-level imagery from the
+federated catalog at api.panoramax.xyz, no API key, with each picture's author
+and CC-BY-SA licence shown.
 
 ### Data & Layers
 | Feature | Description |
@@ -131,7 +144,10 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 | **OGC Layers** | Import WMS, WMTS, WFS, and XYZ tile services |
 | **Image Overlay** | Drop a site plan image or PDF, place it by world file + `.prj` (projicio wasm) or two clicks, keep it as a layer |
 | **Drag & Drop** | Drop GeoJSON, GPX, KML, CSV, GeoPackage, Shapefile (loose or zipped), FlatGeobuf and GeoParquet files to import |
-| **Server Tilesets** | A GeoJSON, FlatGeobuf or CSV over 50 MB is built into a vector tileset by TileTopia and drawn as tiles, MapLibre only |
+| **PMTiles** | Drop a `.pmtiles` archive and it is registered on the pmtiles protocol as a tile layer, MapLibre only |
+| **STAC Browser** | Search a STAC catalog by bbox and date, then add an item's asset as a layer. Earth Search, Microsoft Planetary Computer and CEDA are offered before you type a URL |
+| **Convert** | Write a loaded vector layer back out as GeoParquet, FlatGeobuf, PMTiles or GeoJSON, in the browser |
+| **Server Tilesets** | A GeoJSON, FlatGeobuf or CSV over 50 MB is built into a vector tileset by TileTopia and drawn as tiles, MapLibre only. A gzipped GeoJSON goes to the builder whatever its size, since nothing in the browser reads one |
 | **GPX/KML Import** | Track and waypoint rendering |
 | **SQL** | Run DuckDB SQL over imported and attached data, draw the result on the map, export CSV or Parquet |
 | **Layer Manager** | Reorder, toggle visibility, opacity, remove |
@@ -161,17 +177,18 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 | **Right-Click Menu** | Context actions at any location |
 | **Minimap** | Overview map with viewport rectangle |
 | **Print/Export** | PNG screenshot with title, scale bar, north arrow |
-| **Tour** | 12-step onboarding walkthrough |
+| **Print Layout** | Compose a page at a chosen size and margin with a title, scale bar, north arrow and layer legend. Atlas mode writes one page per feature of a coverage layer |
+| **Tour** | 7-step onboarding walkthrough |
 | **Stories** | Guided fly-through presentations |
 | **Collaboration** | Room-based presence and chat over tiletopia's relay |
 | **Responsive** | Mobile-friendly layout with collapsible panels |
-| **PWA** | Installable web app manifest |
+| **PWA** | Installable web app manifest, plus a service worker that precaches the app shell and the whole Cesium runtime so the viewer boots with the origin down |
 
 ### Offline-First
 | Feature | Description |
 |---------|-------------|
 | **Local-first storage** | Offline browser state uses IndexedDB and localStorage. Not all data is available without network |
-| **Operation queue** | A feature edit queues locally and commits to its Ptolemy branch on sync. Other resources have no server path and are not queued |
+| **Operation queue** | A Dataset Editor feature edit queues locally and commits to its Ptolemy branch on sync. Other resources have no server path and are not queued |
 | **Auto-sync** | Attempts to push queued operations when the browser reconnects |
 | **API response cache** | GET responses cached with TTL for offline fallback |
 | **Sync indicator** | Real-time UI showing pending/synced/offline status |
@@ -218,6 +235,14 @@ Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads):
 Runs topoi compiled to WASM in a worker. Every distance, tolerance and cell
 size is metres: ops compute in a local equirectangular frame centred on their
 inputs.
+
+### Field Data, Indoor and Pipelines
+| Feature | Description |
+|---------|-------------|
+| **Field Data** | Pick a collecta form and draw its submissions as a layer, geometry taken from the form's first geo field and falling back to the device location. Attachments show inline, and publishing copies the submissions into a Ptolemy dataset, only the new ones on a repeat call |
+| **Indoor** | Load an interiora venue, switch floors, and upload an indoor map document with the editor or admin role |
+| **Run History** | Every geodukt pipeline run the platform kept, not only this session's, with each run's steps, their outcomes and the manifest it ran |
+| **Workflow plans** | The agent's `plan_workflow` tool streams a geodukt manifest as a plan for you to read before anything runs. Approving posts the manifest back to the approval route and then to `run_workflow`, which refuses a manifest with no approval |
 
 ### Notebooks
 | Feature | Description |
@@ -278,8 +303,10 @@ colour and values it had then until you press Live.
   from its sibling repository*, so you need them cloned as peers of `viewtopia/`.
   Use the bootstrap script:
   ```bash
-  scripts/clone-geolang.sh ~/src/GeoLang   # clones every platform repo
+  scripts/clone-geolang.sh ~/src/GeoLang   # clones the platform repos
   ```
+  It leaves out `agora` and `geoplumb`, which the platform compose file builds,
+  so clone those two by hand.
   (every repo is public on GitHub, including
   [geolang](https://github.com/GeoLang/geolang). They clone over SSH by default,
   add `--https` for HTTPS.)
@@ -336,7 +363,7 @@ corepack enable                        # activates pnpm (this repo pins pnpm via
 ```powershell
 cd C:\src\GeoLang\viewtopia
 pnpm install
-pnpm run dev          # → http://localhost:5174
+pnpm run dev          # → http://localhost:5173
 pnpm test ; pnpm run build
 ```
 
@@ -380,26 +407,36 @@ pnpm install
 
 # Start dev server
 pnpm run dev
-# → http://localhost:5174
+# → http://localhost:5173, which proxies /agent, /agora, /api, /ogc, /plumb,
+#   /tiles, /jupyter, /ws and /speech to a platform stack on 5174
 ```
 
 ### Full platform (all services via Docker Compose)
 
 The platform compose file builds each backend from its sibling repository.
 Clone them all with `scripts/clone-geolang.sh` (see [Requirements](#requirements)),
-or ensure at least these repos are cloned as peers of `viewtopia/`:
+or ensure every repo the compose file has a build context for is cloned as a peer
+of `viewtopia/`:
 
 ```
 src/GeoLang/
+├── agora/        # Live maps, presence, region watches
+├── collecta/     # Field data collection
 ├── fenestra/
+├── geodukt/      # Pipeline runs
 ├── geokode/
 ├── geolang/      # AI agent tools + API (Python + QGIS)
-├── sibyl/        # Agent loop service (Rust)
+├── geoplumb/     # Windowed raster and vector compute
+├── interiora/    # Indoor maps
 ├── itinera/
 ├── ptolemy/
+├── sibyl/        # Agent loop service (Rust)
 ├── tiletopia/
 └── viewtopia/
 ```
+
+`scripts/clone-geolang.sh` does not yet clone `agora` or `geoplumb`, so clone
+those two by hand until it does.
 
 **One command** brings up the whole stack for **any region** from the `viewtopia/`
 checkout — pass any [Geofabrik](https://download.geofabrik.de) extract URL:
@@ -476,14 +513,27 @@ on Windows — it does not apply to native Docker on Linux.
 | Fenestra | 3003 | WMS/WFS/WMTS/WCS gateway, proxied at `/ogc/` (host port is dev convenience) |
 | TileTopia | 3100 | 3D Tiles / terrain / assets, plus auth, portal, and terrain analysis |
 | GeoLang AI | 8080 | Agent API + tool executor; runs ride the sibyl service (port 8090) |
+| Agora | n/a | Live maps, presence, sensor feeds and region watches, proxied at `/agora/` |
+| GeoPlumb | n/a | Windowed raster and vector compute, proxied at `/plumb/` |
+| Interiora | n/a | Indoor maps, proxied at `/api/indoor/` |
+| Collecta | n/a | Field data collection over OpenRosa, proxied at `/collecta/` |
+| GeoDukt | n/a | Pipeline run history, proxied at `/api/pipeline/runs` |
 | Jupyter | n/a | Python notebook kernels, proxied at `/jupyter/` (no host port) |
 | ViewTopia | 5174 | Web app (nginx reverse proxy) |
 
+The services with no host port are reachable only through the nginx proxy on
+5174.
+
 The nginx proxy fronts everything on 5174, so the app talks same-origin:
-`/api/` → Ptolemy, `/api/v1/auth` + `/api/v1/portal` → TileTopia, `/tiles/` →
-TileTopia (including `/tiles/v1/analysis`, backed by terrano), `/api/route` +
-`/api/isochrone` + `/api/network/` → Itinera, `/api/geocode/` → Geokode, `/agent/` → GeoLang,
+`/api/` + `/ws/` + `/api/v1/sse` + `/api/v1/auth/oidc/` → Ptolemy,
+`/api/v1/auth` + `/api/v1/portal` → TileTopia, `/tiles/` →
+TileTopia (including `/tiles/v1/analysis`, backed by terrano), `/martin/` →
+TileTopia's martin tile sources, `/api/route` +
+`/api/isochrone` + `/api/network/` + `/api/delivery/` → Itinera,
+`/api/geocode/` → Geokode, `/agent/` → GeoLang,
 `/api/pipeline/runs` → geodukt's run history (its `/run` is not proxied),
+`/agora/` → Agora, `/plumb/` → GeoPlumb, `/collecta/` → Collecta,
+`/api/indoor/` → Interiora, `/speech/` → aavaaz,
 `/jupyter/` → Jupyter, `/ogc/` → Fenestra (so WMS is `/ogc/wms` and OGC API
 Features is `/ogc/ogc/collections`, since fenestra namespaces that API itself).
 Fenestra's WMTS and OGC API responses carry absolute URLs, so serving the stack on
@@ -526,7 +576,8 @@ docker compose -f docker-compose.platform.yml exec viewtopia nginx -s reload
 ### All-in-One single container
 
 ```bash
-docker build -f Dockerfile.allinone -t geolang-allinone .
+# from the directory that holds the ptolemy, fenestra, tiletopia and viewtopia checkouts
+docker build -f viewtopia/Dockerfile.allinone -t geolang-allinone .
 docker run -p 3000:3000 -p 3003:3003 -p 3100:3100 -p 5432:5432 geolang-allinone
 # → Ptolemy :3000, Fenestra(WMS/WFS) :3003, TileTopia :3100, PostGIS :5432
 ```
@@ -598,6 +649,11 @@ snippet for view links.
 `?mode=chat` is the other chrome-free URL: the map fills the window and the
 chat is the only control. The header icon and the command palette set the same
 mode, and toggling either way rewrites the URL, so a reload stays where it was.
+
+The rest of the URL scheme: `?live=TOKEN` opens a live map from a share link,
+`?invite=TOKEN` joins the project the invite names once you are signed in, and
+`?presenter=1` is the second window Stories opens for the presenter view.
+`#cam=lng,lat,height,heading,pitch&renderer=...` lands a reader at a fixed view.
 
 The iframe offers its host page a postMessage API. Messages the embed accepts
 (parent window only):
@@ -697,7 +753,12 @@ export default {
 | `ctx.map.addGeoJsonLayer(id, geojson)` | Add a temporary data layer |
 | `ctx.map.removeLayer(id)` | Remove a layer |
 | `ctx.map.fitBounds(bbox)` | Fit view to bounding box |
+| `ctx.map.getCursorCoords()` | Cursor lat, lng and elevation |
+| `ctx.map.onMapClick(cb)` | Subscribe to map clicks, returns an unsubscribe |
 | `ctx.store.getLayers()` | Get current layer list |
+| `ctx.store.getBasemap()` | Current basemap id |
+| `ctx.store.setCustomBasemap({url, attr})` | Switch the viewers to custom raster tiles |
+| `ctx.store.getRenderer()` | Current renderer, `cesium` or `maplibre` |
 | `ctx.store.getSettings()` | Get app settings |
 | `ctx.api.fetch(path)` | Proxied fetch to backend |
 | `ctx.settings.get(key)` | Read plugin setting |
@@ -713,10 +774,12 @@ See [docs/plugins.md](docs/plugins.md) for the full guide.
 ```bash
 pnpm run dev                 # Start dev server
 pnpm run build               # Production build
-pnpm test                    # Unit tests (vitest)
+pnpm test                    # Unit tests (vitest): 2379 tests in 202 files
 pnpm run test:e2e            # E2E tests (Playwright)
-pnpm run test:e2e:react      # React suites (28 tests) on a throwaway Vite server :5175
-pnpm run test:e2e:platform   # Golden path (8), real-estate (5), analysis (5); needs the stack up
+pnpm run test:e2e:react      # React suites (88 tests, 17 files) on a throwaway Vite server :5175
+pnpm run test:e2e:platform   # 35 tests in 14 files, golden path (8) included. Needs the stack up
+pnpm run test:e2e:sweep      # Panel and plugin sweeps
+pnpm run test:e2e:panels     # Per-panel suites
 pnpm run test:all            # Unit + E2E
 ```
 
@@ -769,10 +832,10 @@ view-only links and embeds drop the ones that need the mouse.
 ## Stack
 
 - **Frontend:** Vite, React + Mantine UI, CesiumJS, deck.gl, MapLibre GL, Leaflet, Apache Arrow
-- **Backend:** [GeoLang](https://github.com/GeoLang/tiletopia) (Rust) + [GeoLang](https://github.com/GeoLang/geolang) (Python)
+- **Backend:** [tiletopia](https://github.com/GeoLang/tiletopia), [ptolemy](https://github.com/GeoLang/ptolemy), [agora](https://github.com/GeoLang/agora), [itinera](https://github.com/GeoLang/itinera), [geokode](https://github.com/GeoLang/geokode), [fenestra](https://github.com/GeoLang/fenestra), [geoplumb](https://github.com/GeoLang/geoplumb) (Rust) + [geolang](https://github.com/GeoLang/geolang) (Python)
 - **AI:** sibyl agent loop (Rust) plus the viewer's spatial tool subset
 - **Analysis:** space-time entity tracks, the space-time cube, and the seven Analysis tab analyses, plus the charts and SQL workspace
-- **Deploy:** Docker Compose, Helm, Terraform
+- **Deploy:** Docker Compose here. Terraform for hosted infrastructure lives in [infrastructure](https://github.com/GeoLang/infrastructure)
 
 ---
 

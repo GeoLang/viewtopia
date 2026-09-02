@@ -51,7 +51,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <header>
 <div class="container">
 <h1>ViewTopia</h1>
-<p class="tagline">Unified geospatial viewer combining GeoLang's 3D globe with GeoLang's AI-powered spatial analysis — all in one interface.</p>
+<p class="tagline">Unified geospatial viewer: tiletopia's 3D globe and geolang's AI spatial analysis in one interface.</p>
 <div class="badges">
 <a href="https://github.com/GeoLang/viewtopia"><img src="https://img.shields.io/github/stars/GeoLang/viewtopia?style=flat-square&color=7c3aed" alt="Stars"></a>
 <a href="https://github.com/GeoLang/viewtopia/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-7c3aed?style=flat-square" alt="License"></a>
@@ -75,7 +75,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <div class="stat"><div class="num">20</div><div class="label">Plugins</div></div>
 <div class="stat"><div class="num">11</div><div class="label">QGIS Ports</div></div>
 <div class="stat"><div class="num">4</div><div class="label">Space-Time panel surfaces</div></div>
-<div class="stat"><div class="num">1405</div><div class="label">Unit Tests</div></div>
+<div class="stat"><div class="num">2379</div><div class="label">Unit Tests</div></div>
 <div class="stat"><div class="num">$0</div><div class="label">Per month</div></div>
 </div>
 </div>
@@ -116,7 +116,8 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <li>SQL, routing, QGIS (321 algorithms)</li>
 <li>Agent loop runs in sibyl (Rust)</li>
 <li>Auto-renders maps from chat</li>
-<li>Follow-up action buttons</li>
+<li>55 typed viewer actions the chat can run</li>
+<li>Chat-only mode at <code>?mode=chat</code></li>
 </ul>
 </div>
 <div class="card">
@@ -141,12 +142,12 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <div class="card">
 <h3>📊 Multi-Format Data</h3>
 <ul>
-<li>GeoPackage, GeoJSON, Shapefile</li>
-<li>CSV with coordinate columns</li>
-<li>LAS/LAZ point clouds</li>
-<li>GeoTIFF rasters</li>
-<li>glTF/GLB 3D models</li>
-<li>Drag-and-drop upload</li>
+<li>Drop GeoJSON, GeoPackage, Shapefile, CSV, KML, GPX</li>
+<li>FlatGeobuf and GeoParquet through DuckDB spatial</li>
+<li>A <code>.pmtiles</code> archive becomes a tile layer</li>
+<li>Over 50 MB, tiletopia tiles it instead</li>
+<li>LAS/LAZ, IFC and mesh uploads tile on the server</li>
+<li>glTF/GLB models and GeoTIFF rasters have their own panels</li>
 </ul>
 </div>
 <div class="card">
@@ -156,7 +157,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <li>MapLibre GL (vector tiles, deck.gl overlays interleaved)</li>
 <li>Leaflet (lightweight 2D)</li>
 <li>Shared camera state across all</li>
-<li>Synced split view, two panes</li>
+<li>Synced split view: two across, or a four-pane grid</li>
 </ul>
 </div>
 <div class="card">
@@ -228,7 +229,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <ul>
 <li>JavaScript and SQL cells run in the browser</li>
 <li>Python cells on the bundled Jupyter service</li>
-<li>Dashboard chart and map widgets</li>
+<li>Dashboard chart and map widgets, stored against the project</li>
 <li>Portal item catalog with sharing levels</li>
 </ul>
 </div>
@@ -248,33 +249,42 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <section>
 <div class="container">
 <h2>🤝 Real-Time Collaboration</h2>
-<p style="color:var(--muted)">Collaborate in real-time via Ptolemy's ephemeral room relay.</p>
+<p style="color:var(--muted)">Two separate things: a room for presence and chat, and a live map that peers hold together.</p>
 <div class="grid">
 <div class="card">
-<h3>👁️ View Sync (Follow Mode)</h3>
+<h3>👥 Rooms</h3>
 <ul>
-<li>Click the eye icon next to a user to follow their camera</li>
-<li>Camera state (lat, lng, zoom, bearing, pitch) synced in real-time</li>
-<li>Great for guided reviews and presentations</li>
-<li>Click again to stop following</li>
+<li>Enter a display name and any room id to join</li>
+<li>Online user list with coloured indicators</li>
+<li>Real-time text chat within the room</li>
+<li>Ephemeral: nothing about a room is stored</li>
 </ul>
 </div>
 <div class="card">
-<h3>🖱️ Cursor &amp; Presence</h3>
+<h3>👁️ Live maps and camera-follow</h3>
 <ul>
-<li>See where other users are pointing on the map</li>
-<li>Online user list with coloured indicators</li>
-<li>Real-time text chat within the room</li>
-<li>Room-based sessions — share a room name to collaborate</li>
+<li>Peer cursors and camera-follow belong to a live map, not a room</li>
+<li>Start a live session, then click a peer avatar in the header to follow</li>
+<li>Every member loads the same layers and tilesets</li>
+<li>A share link carries view or edit access</li>
 </ul>
 </div>
 <div class="card">
 <h3>⚙️ Configuration</h3>
 <ul>
-<li>Server URLs in Settings panel (GeoLang/Ptolemy, GeoLang)</li>
-<li>Connects to Ptolemy's <code>/ws/rooms/{room_id}</code> relay</li>
-<li>Opaque JSON relay — any message format works</li>
-<li>Rooms auto-created on first connection, auto-cleaned on last disconnect</li>
+<li>The tiletopia API URL goes in the Settings panel</li>
+<li>Rooms connect to tiletopia's <code>/api/v1/realtime/{room}</code> socket</li>
+<li>The session JWT rides in the subprotocol, <code>['bearer', jwt]</code></li>
+<li>The server stamps <code>user_id</code> from the JWT <code>sub</code> on every relayed frame</li>
+</ul>
+</div>
+<div class="card">
+<h3>🔭 Region watch</h3>
+<ul>
+<li>Draw a region over a geoplumb layer and pick a reducer</li>
+<li>Agora runs it on its own schedule and keeps the readings</li>
+<li>A threshold crossing notifies the map's members and posts a webhook</li>
+<li>Every watched region is outlined for everyone holding the map</li>
 </ul>
 </div>
 </div>
@@ -283,7 +293,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 
 <section>
 <div class="container">
-<h2>� Plugin System</h2>
+<h2>🔌 Plugin System</h2>
 <p style="color:var(--muted)">Extensible file-based plugin architecture. Build-time discovery finds folders in <code>src/plugins/</code>, then the runtime loads their panels.</p>
 <div class="grid">
 <div class="card">
@@ -318,8 +328,18 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <ul>
 <li>Real Estate — parcels, comps, split/merge</li>
 <li>Logistics — fleet tracking, delivery optimization</li>
-<li>Environmental — IoT sensor monitoring</li>
+<li>Environmental, sensor inventory from a configured dataset</li>
 <li>Construction, Agriculture, Telecom, Emergency</li>
+<li>None draw anything until their dataset exists</li>
+</ul>
+</div>
+<div class="card">
+<h3>📦 Runtime Install</h3>
+<ul>
+<li>More → Plugin Manager installs from a registry document</li>
+<li>Never from a URL a user pastes</li>
+<li>A mandatory sha-256 is checked at install and at every load</li>
+<li>A runtime plugin can never claim a built-in id</li>
 </ul>
 </div>
 </div>
@@ -330,7 +350,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <section>
 <div class="container">
 <h2>📡 Offline-First & Conflict Resolution</h2>
-<p style="color:var(--muted)">Some browser state survives reloads. The client attempts queued operations when it reconnects. The conflict resolver is not mounted.</p>
+<p style="color:var(--muted)">Some browser state survives reloads. The client attempts queued operations when it reconnects. Only Dataset Editor feature edits are queued.</p>
 <div class="grid">
 <div class="card">
 <h3>Local-First Storage</h3>
@@ -372,7 +392,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <section>
 <div class="container">
 <h2>📁 Projects & Workspaces</h2>
-<p style="color:var(--muted)">Ptolemy stores project and workspace metadata. ViewTopia reads and mutates it through authenticated <code>/api/v1</code> calls. Map snapshots and overlay files remain browser-local.</p>
+<p style="color:var(--muted)">Ptolemy stores project and workspace metadata, and ViewTopia reads and mutates it through authenticated <code>/api/v1</code> calls. Map snapshots, overlay bitmaps and dashboards are stored against the project too, so every member opens the same map.</p>
 <div class="grid">
 <div class="card">
 <h3>Workspaces</h3>
@@ -389,7 +409,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <li>Server-backed names, descriptions, memberships, and roles</li>
 <li>Workspace editors may create projects and become direct project owners</li>
 <li>Direct project membership can grant project-only access</li>
-<li>Map snapshots and overlay files remain browser-local</li>
+<li>Map snapshots, overlay bitmaps and dashboards sync to the server</li>
 <li>Metadata reads and mutations work across signed-in sessions</li>
 <li>Create/switch/delete from header dropdown</li>
 </ul>
@@ -420,7 +440,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <section>
 <div class="container">
 <h2>Space-Time tracks</h2>
-<p style="color:var(--muted);margin-bottom:20px">Entities, CSV ingest, a time scrubber, and manual links. Classification, RBAC and Gotham-class analysis are not in this product.</p>
+<p style="color:var(--muted);margin-bottom:20px">Entities, CSV ingest, a time scrubber, manual links, and seven analyses. Classification, RBAC, ontology, CDR import, entity resolution and case management are not in this product.</p>
 <div class="grid">
 <div class="card">
 <h3>Entity Management</h3>
@@ -449,8 +469,15 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <div class="card">
 <h3>Analysis tab</h3>
 <ul>
-<li>Seven buttons, no handlers</li>
-<li>Colocation, pattern-of-life, clustering and the rest exist as library code with no UI caller</li>
+<li>Seven analyses run in a worker and draw on the map and in the cube</li>
+<li>Colocation, co-travel, pattern-of-life, network metrics, behavioral clustering, predictive location, data quality</li>
+</ul>
+</div>
+<div class="card">
+<h3>Space-time cube</h3>
+<ul>
+<li>A pitched camera where height is time</li>
+<li>Sweep plane at the playhead, ground shadows under each track</li>
 </ul>
 </div>
 </div>
@@ -460,7 +487,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <section>
 <div class="container">
 <h2>🔌 QGIS Plugin Equivalents</h2>
-<p style="color:var(--muted);margin-bottom:20px">Ported from the top 20 most-downloaded QGIS plugins (~30M combined downloads). All run natively in the browser — no desktop install needed.</p>
+<p style="color:var(--muted);margin-bottom:20px">Eleven of the most-downloaded QGIS plugins have an equivalent here, and each one runs in the browser with no desktop install.</p>
 <div class="grid">
 <div class="card">
 <h3>📍 Basemap Catalog</h3>
@@ -481,12 +508,11 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 </ul>
 </div>
 <div class="card">
-<h3>🧮 Geoprocessing</h3>
+<h3>📍 Point Sampling</h3>
 <ul>
-<li>Buffer, dissolve, intersect, union, difference</li>
-<li>Voronoi, convex hull, centroids, simplify</li>
-<li>Powered by Turf.js — runs in browser</li>
-<li>Replaces: mmqgis (1.7M downloads)</li>
+<li>Sample several layers at a set of points</li>
+<li>Export the sampled table as CSV</li>
+<li>Replaces: Point Sampling Tool (662K downloads)</li>
 </ul>
 </div>
 <div class="card">
@@ -508,12 +534,11 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 </ul>
 </div>
 <div class="card">
-<h3>🏢 3D Viewer</h3>
+<h3>🖼️ Export Map</h3>
 <ul>
-<li>3D terrain with configurable exaggeration</li>
-<li>Extruded buildings from height fields</li>
-<li>Lighting, fog, sky atmosphere controls</li>
-<li>Replaces: Qgis2threejs (1.4M downloads)</li>
+<li>PNG or JPEG of the current view</li>
+<li>Standalone HTML with an embed snippet</li>
+<li>Replaces: qgis2web (1.6M downloads)</li>
 </ul>
 </div>
 <div class="card">
@@ -636,10 +661,10 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <span class="hl">│  │   Chat Panel      │  │   Viz Panel (tabs/toolbar)   │   │</span><br>
 <span class="hl">│  └───────────────────┘  └──────────────────────────────┘   │</span><br>
 <span class="hl">└──────┬────────────────────────────────────────┬──────────────┘</span><br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│ <span class="dim">/api → proxy</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│ <span class="dim">/agent → proxy</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│ <span class="dim">/tiles → proxy</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│ <span class="dim">/agent → proxy</span><br>
 <span class="hl">┌──────▼──────────────┐</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">┌──────▼──────────────┐</span><br>
-<span class="hl">│  GeoLang (Rust)   │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  GeoLang (Python)   │</span><br>
-<span class="hl">│  :3000              │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  :8080              │</span><br>
+<span class="hl">│  tiletopia (Rust)   │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  geolang (Python)   │</span><br>
+<span class="hl">│  :3100              │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  :8080              │</span><br>
 <span class="hl">│                     │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│                     │</span><br>
 <span class="hl">│  • 3D Tiles server  │</span>               <span class="hl">│  • viewer tool subset │</span><br>
 <span class="hl">│  • Terrain mesh     │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • QGIS, GeoPandas  │</span><br>
@@ -672,21 +697,33 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 │   │   ├── tools/           # Tool panels (measure, terrain, SQL, …)
 │   │   └── layers/          # Layer tree and styling
 │   ├── viewer/
-│   │   ├── registry.ts      # Renderer registry (Cesium/MapLibre/Leaflet)
+│   │   ├── registry.ts      # Live Cesium/MapLibre/deck instances
 │   │   ├── commands.ts      # Unified agent command protocol
-│   │   ├── uiSpec.ts        # Render agent map/table/image specs
-│   │   └── renderGeoJson.ts # Shared GeoJSON draw path
+│   │   ├── addTileset.ts    # 3D Tiles and terrain onto the globe
+│   │   └── uiSpec.ts        # Render agent map/table/image specs
+│   ├── actions/             # The 55 named viewer actions the chat runs
 │   ├── services/            # geocode.ts, route.ts: backend clients
 │   ├── duckdb/              # DuckDB-WASM: SQL over local data
+│   ├── toolbox/             # Geoprocessing ops, topoi compiled to WASM
+│   ├── raster/              # COG loader, NDVI, hillshade, contours
+│   ├── live/                # Live maps, sensor feeds, region watches
+│   ├── offline/             # IndexedDB, operation queue, conflict resolver
+│   ├── projects/            # Projects, workspaces, sharing, map sync
+│   ├── overlay/             # Image and PDF overlays, world files
+│   ├── speech/              # Dictation over the aavaaz service
 │   ├── notebooks/           # JS / SQL / Python (Jupyter) cells
 │   ├── features/
 │   │   ├── spacetime/       # Entities, tracks, analysis algorithms
 │   │   ├── dashboards/      # Chart + map widgets
 │   │   ├── portal/          # Item catalog
+│   │   ├── stac/            # STAC catalog search, asset layers
+│   │   ├── tilesets/        # Server-built vector tilesets
+│   │   ├── printLayout/     # Page composition and atlas export
+│   │   ├── workflow/        # Agent plan approval
 │   │   └── auth/            # Login, tokens
 │   ├── store/               # Zustand state slices
 │   ├── lib/                 # Terrain, weather, real-estate, parsers
-│   └── plugins/             # Plugin API + built-ins
+│   └── plugins/             # Plugin SDK, registry, built-ins
 ├── tests/
 │   ├── unit/                # vitest
 │   └── e2e/                 # Playwright (react + live platform)
@@ -714,9 +751,11 @@ pnpm run dev
 <span style="color:#475569"># Full platform: clone every repo, then one command for the rest</span>
 <span style="color:#475569"># (downloads an OSM extract, builds, waits healthy, seeds demo data)</span>
 scripts/clone-geolang.sh ~/src/GeoLang
+<span style="color:#475569"># it skips agora and geoplumb, which the compose file builds: clone both by hand</span>
 scripts/platform-up.sh
 
 <span style="color:#475569"># Or run a single backend: tiletopia (3D Tiles, terrain, analysis)</span>
+<span style="color:#475569"># it refuses to start without TILETOPIA_JWT_SECRET (32+ bytes)</span>
 cd ../tiletopia &amp;&amp; cargo run -- serve --port 3000
 
 <span style="color:#475569"># Or the AI agent: geolang serves the tools, sibyl runs the agent loop</span>
@@ -732,8 +771,11 @@ cd ../geolang &amp;&amp; docker compose up -d --build</pre>
 <a href="https://github.com/GeoLang/sibyl">sibyl</a> (agent loop),
 <a href="https://github.com/GeoLang/tiletopia">tiletopia</a>,
 <a href="https://github.com/GeoLang/ptolemy">ptolemy</a>,
+<a href="https://github.com/GeoLang/agora">agora</a> (live maps),
+<a href="https://github.com/GeoLang/geoplumb">geoplumb</a> (windowed compute),
 <a href="https://github.com/GeoLang/itinera">itinera</a>,
 <a href="https://github.com/GeoLang/geokode">geokode</a>,
+<a href="https://github.com/GeoLang/fenestra">fenestra</a> (OGC gateway),
 <a href="https://github.com/GeoLang/terrano">terrano</a>.</p>
 <p>&copy; 2026 Grok Image Compression Inc. Licensed under AGPL-3.0-or-later.</p>
 </div>

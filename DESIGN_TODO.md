@@ -9,7 +9,7 @@
 > Ranked 2026-08-21 against the DESIGN.md goal: ship the viewer, the agent, and
 > the services that make a shared map, not more surface. Pick from **Do next**.
 > Do not start at a parked item.
-> Last brought current: **2026-09-01**.
+> Last brought current: **2026-09-02**.
 >
 > Verify an entry against the code before working it, and do not trust the
 > mechanism it names. Three items in this file were already closed when someone
@@ -18,36 +18,110 @@
 
 ---
 
+## Doc audit 2026-09-02, findings to address
+
+README.md and docs/index.html in every repo were compared against the code on
+2026-09-02 and edited in place, uncommitted. Open items only, an item is
+deleted when it is done.
+
+### Modules removed 2026-09-02, rebuild from history if wanted
+
+Owner call 2026-09-02: library code that no route, command or manifest
+reached was deleted rather than left advertising itself. Each entry names the
+last commit that still has the file, so `git show <sha>:<path>` recovers it.
+Wire one only when a user asks for the feature.
+
+- [ ] geokode API keys with per-key rate limits, an offline index file, and a
+  Rayon parallel batch geocoder. `crates/geokode-server/src/api_keys.rs`,
+  `crates/geokode-server/src/hex.rs`, `crates/geokode-core/src/offline.rs`,
+  `crates/geokode-core/src/batch.rs` at 0852bcc. The offline file would let a client geocode with no server and no
+  rebuild from CSV or PBF. `/batch` stays sequential through
+  `Geocoder::batch_forward`.
+- [ ] itinera API keys with permissions and rate limit tiers, a copy of the
+  geokode module. `crates/itinera-server/src/api_keys.rs` and `hex.rs` at
+  a80e93c. Auth is
+  platform JWT only.
+- [ ] fenestra OGC API Processes request and response types, a server-side
+  plugin trait with request and response hooks, and the four stub crates that
+  implemented it: `fenestra-inspire` (CSW types and three INSPIRE substring
+  checks), `fenestra-geofence` (rule types), `fenestra-printing` (PDF stub),
+  `fenestra-cascade` (upstream URL rewrite and cache, no HTTP request).
+  `crates/fenestra-core/src/processes.rs`, `crates/fenestra-core/src/plugin.rs`
+  and `crates/fenestra-{inspire,geofence,printing,cascade}/` at 9be4e75. The
+  server linked none of the four.
+- [ ] geodukt database and object store connectors. `DatabaseConnector` trait
+  for PostGIS, SQL Server and Oracle with a `PostGisConnector` whose reads
+  returned nothing, an `object_store` builder for S3, GCS and Azure, and the
+  empty `geodukt-plugins` crate. `crates/geodukt-io/src/database_io.rs`,
+  `crates/geodukt-io/src/cloud_io.rs`, `crates/geodukt-plugins/` at d9f1b76.
+  A manifest source or sink for object stores is the one piece that did real
+  work.
+- [ ] fluvius edge runtime (single-threaded ingest, map operators, buffered
+  forward flush for constrained devices), trajectory prediction (linear and
+  weighted extrapolation per entity plus an anomaly flag on distance from the
+  prediction), and multi-tenant quotas with API keys.
+  `crates/fluvius-core/src/edge.rs`, `predict.rs`, `tenant.rs` at a5023b8.
+  Also the unused k-NN and radius queries on `SpatialIndex`.
+- [ ] geogit feature-level three-way merge: auto-resolves non-overlapping
+  deltas, merges column edits on the same feature, returns typed conflicts
+  (both modified, modify versus delete) with a side-picking strategy.
+  `crates/geogit-core/src/merge.rs` at d856b5d. `ggt merge` merges the
+  GeoPackage bytes through git instead.
+- [ ] ptolemy OTLP trace export. `crates/ptolemy-api/src/telemetry.rs`
+  (`init_telemetry`, `TelemetryConfig`, `OtlpProtocol`) built a fmt layer and
+  logged that the exporter crate was missing, the CLI never called it. At the
+  2026-09-02 HEAD of ptolemy. Rebuilding means adding the opentelemetry crates
+  to `ptolemy-api` and calling the init from `ptolemy-cli`.
+- [ ] tiletopia `crates/tiletopia-cache`, a workspace member with no caller and
+  no tests, and `GET /api/v1/assets/{id}/thumbnail`, which nothing ever wrote a
+  file for. At 68313a8. The CRDT, multi-tenant isolation and geofencing
+  modules stay parked by the earlier owner call recorded below.
+
+### Platform config
+
+- [ ] infrastructure: the WAF rate limit keys on the CloudFront edge address,
+  not the client. The SNS alarm topic has no subscription. TileTopia's task
+  definition sets `AWS_S3_BUCKET` and no TileTopia code reads it.
+- [ ] infrastructure `tests/` is not run by CI.
+
+### Doc claims left standing without backing
+
+- [ ] geokode docs/index.html: "tested up to 500k records, about a second per
+  short prefix query". No benchmark or fixture backs the number.
+- [ ] projicio README header: "5935 EPSG codes embedded at compile time". 6184
+  definitions are embedded, 5935 resolve.
+- [ ] geolang docs/DESIGN.md: "rotate the once-committed API keys". Not
+  verifiable from the repo.
+- [ ] infrastructure docs/earth-observation-plan.md still lists as planned:
+  STAC collection and item write endpoints (ptolemy has six GET routes under
+  `/api/v1/stac`), seasonal decomposition, phase 4 registration in ptolemy and
+  lazy COG copy to S3, all of phase 5, NAIP, Planet and Maxar sources. Marked
+  not built in the plan.
+- [ ] viewtopia README Stack line said Helm. No chart exists anywhere, reworded
+  to Docker Compose plus Terraform in infrastructure. If Helm is wanted it is
+  an item here, not a doc line.
+- [ ] viewtopia README "Embedding" section (`?embed=1`, postMessage API) and
+  the pricing tiers in docs/platform.html were not verified against the code.
+- [ ] GeoLang.github.io index.html hero: "custom interfaces, instantly". The
+  viewer renders a map, image or table spec, no form or chart generation.
+  "Live Collaboration" card claims comment mentions, agora has no mention
+  handling that the audit could find. Security section: "TLS required for all
+  external connections", nothing in compose or code enforces it.
+
 ## Do next
 
 Ordered 2026-08-30, hosting excluded.
 
 0. **Weak eval tasks, per-task transcript work.** The chat default is
    Qwen3.5 (owner call 2026-09-01), so weakness is read off the
-   `local:Qwen3.5-35B-A3B` profile: the 0.82 baseline 20260901T004124. The
-   Qwen3.8 sweep (0.87, 20260902T000529) is a comparison only. The 2026-09-01
-   15:51 Qwen3.5 rerun and that Qwen3.8 sweep both ran against a geolang-api
-   container whose `/tools` still listed lon, lat, height, heading, pitch,
-   duration, label, color, url, attribute and iso as viewer_control fields, and
-   their transcripts show the model filling those instead of the catalogue's
-   parameters (`layers.remove` with lat, lon and height and no `layer`). The
-   container was recreated on 2026-09-02 00:17 UTC with the trimmed manifest
-   (action, name, args only) and no weak task has been scored against it yet.
-   Shipped 2026-09-01 (geolang 3b40843, viewtopia 0198de84, sibyl 6850dfc):
-   an agent tool names the viewer actions that replace it and a run whose
-   catalogue offers one leaves it out (`terrain_profile`,
-   `calculate_isochrones`), the viewer instructions end with a precedence
-   rule and find_feature before geocode_place, the dataset and bands
-   parameter descriptions are reworded, tasks can override the shared
-   snapshot (the two tab tasks are asked from the map tab), the runner
-   writes transcripts, and the harness read timeout is 180 s. Twelve-task
-   check on Qwen3.5 before the tool hiding: 0.64 against 0.17 for the same
-   tasks in the 0.82 baseline (report 20260902T014559). Terrain profile and
-   cross section then scored 1.00 on Qwen3.8 with the tools hidden.
+   `local:Qwen3.5-35B-A3B` profile against the 0.82 baseline 20260901T004124.
+   The Qwen3.8 sweep (0.87, 20260902T000529) is a comparison only. No weak task
+   has been scored yet against the geolang-api container carrying the trimmed
+   `viewer_control` manifest, so the standing per-task numbers predate it.
    Next: the full 72-task Qwen3.5 sweep at `--repeat 3` against
-   20260901T004124, blocked on hercules being down at 02:10 UTC; sibyl is
-   on Qwen3.8 until then because switching back was refused while the
-   provider was unreachable. Still weak, cause read from transcripts:
+   20260901T004124, blocked on hercules being down; sibyl is on Qwen3.8 until
+   then, because switching back was refused while the provider was unreachable.
+   Still weak, cause read from transcripts:
    - scenario-compare-within-25-metres, 0: "pairing features within 25
      metres" reads as a geoprocessing job and the model builds a
      find_nearest and plan_workflow pipeline. The action's `distance` is a
@@ -130,9 +204,12 @@ this direction reverses.
       hosted instance would want), geofence (delete instead if no tile-side
       geofence is ever wanted, agora region watch covers the live case).
 
-- [ ] **Space-Time geofencing UI and case management.** The library code and
-      types exist with no UI behind them, parked. Network metrics render as a
-      list rather than a graph.
+- [ ] **Space-Time geofencing crossings and case management.** The Geofences
+      panel creates and lists circle and polygon fences, and
+      `src/features/spacetime/analysis/geofence.ts` exports
+      `detectFenceCrossings`, which computes enter and exit events. Nothing
+      calls it, so no crossing is ever shown. Case management has types and no
+      UI. Network metrics render as a list rather than a graph.
 
 ## Before any public deploy
 
@@ -152,7 +229,8 @@ work below still blocks a running hosted stack.
 What actually stands in the way, in order:
 
 1. **the AWS account decision**. Nothing proceeds without it.
-2. **four owner calls**, listed under platform hygiene below. Only ptolemy
+2. **four owner calls**, listed under **hosted stack decisions before a public
+   deploy** below. Only ptolemy
    classifying GET as public is a genuine blocker for a public domain.
    Topology name-keyed reads and `GET /replication/peers` are now Admin.
    The other three are things you would regret later rather than at launch.
@@ -361,7 +439,8 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
       fenestra's printing stub, not tile-side), temporal tiles behind a time
       slider (waits for a dataset with a time column in real use), flythrough
       camera paths, arvr viewing, model_zoo, prediction and onnx_inference
-      (dead without weights), encryption at rest (needs
+      (panoptes now publishes building segmentation weights, so tile-side
+      inference has one model it could run), encryption at rest (needs
       a key backend, probably ops rather than app code), federation peering
       (needs a second instance), whitelabel branding, cluster raft
       scaffolding, retention policies. Not recorded:
@@ -371,9 +450,11 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
 
 - [ ] **Fluvius as a rules consumer of agora's readings stream.** Thresholds,
       geofences and proximity alerts over the live asset readings (see
-      DESIGN.md section 2.0). Fluvius is not in the platform stack, has no
-      persistence or HTTP, and its source socket binds a listener rather than
-      connecting out, so it needs a client to agora's document websocket first.
+      DESIGN.md section 2.0). Fluvius is not in the platform stack. Its
+      `--source-bind` socket binds a listener, but `ws_remote_source` already
+      connects out for a remote feed and `CheckpointManager` already persists,
+      so what is missing is a topology source pointed at agora's document
+      websocket and a sink pointed at `/feeds/ws` with a feed token.
 
 - [ ] **a standalone e2e for creating a dashboard and adding a widget.** A
       dashboard needs a server project, so that path is covered only against
@@ -434,16 +515,16 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
       (fluvius, same connector as above) and FleetPanel consuming position
       kinds from the `readings` frames it already receives via liveStore.
 
-- [ ] **terravista v0.3** — Metal/Vulkan GPU rendering. Biggest advertised-vs-real
-      gap on mobile, needs platform GPU toolchains, post-v1 by the existing
-      phasing, competes with the hosted flagship for attention. What is left to
+- [ ] **terravista GPU rendering** — Metal and Vulkan backends. Biggest
+      advertised-vs-real gap on mobile, needs platform GPU toolchains,
+      competes with the hosted flagship for attention. What is left to
       decide is whether to build the GPU backends at all.
 
 - [ ] **terravista has no iOS or macOS anything.** No `.swift`, `.h`, `.modulemap`,
       `Package.swift` or podspec, no cbindgen config, no generated C header, no
-      iOS CI job. The README's Swift example imports a module that does not exist,
-      and "macOS" appears nowhere in the codebase. Its JNI is hand-written, not
-      generated from a header as the docs claim.
+      iOS CI job, and "macOS" appears nowhere in the codebase. The README's
+      roadmap keeps a Metal backend and Swift Package Manager distribution as
+      planned, and Metal needs the iOS binding first.
 
 - [ ] **terravista's style engine is unreachable and does not parse Mapbox GL
       JSON.** The structs are snake_case serde derives with no renames, while real
@@ -463,12 +544,15 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
       importer sets it to `None`. It works only on the XLSForm path where the raw
       expression passes through to ODK Collect on the device.
 
-- [ ] **geogit's three-way merge is dead code**; `cmd_merge` shells out to plain
-      `git merge`, so two edits to one feature become a binary conflict on a
-      MessagePack blob. Kart compatibility is also broken three ways (geometry
-      serializes as a MessagePack integer array not bytes, the GPKG header keeps
-      the source SRS id where Kart requires 0, and `meta/crs/` is documented and
-      never written).
+- [ ] **geogit has no feature-aware merge.** `cmd_merge` calls `repo.merge`,
+      which merges the GeoPackage bytes through plain `git merge`, so two edits
+      to one feature become a binary conflict on a MessagePack blob and
+      `geogit resolve` can only pick ours, theirs, ancestor, delete or the
+      working copy. Kart compatibility is broken three ways as well: geometry
+      serializes as a MessagePack integer array rather than bytes, the GPKG
+      header keeps the source SRS id where Kart requires 0, and no vector
+      dataset writes a `meta/crs/` entry (only the point cloud import writes
+      `meta/crs.wkt`).
 
 - [ ] **local deployment packaging (last)**: GPU detection, quantized model
       download, context config, inference-server setup. Wrap llama.cpp/ollama
@@ -497,6 +581,12 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
 
 - [ ] **geoplumb breadth**: GEE ships a huge operator library and charting/reduction
       over regions. Grow by demand, not by checklist.
+
+- [ ] **fenestra cannot reach terrano's multi-band GeoTIFF or COG work.**
+      `fenestra/Cargo.toml` pins `terrano-core` at git tag `v0.1.0`, the newest
+      tag terrano has, and terrano's workspace version is still `0.1.0`. Moving
+      fenestra means bumping terrano's version, cutting a tag, and repinning.
+      Only worth doing when fenestra needs a multi-band coverage.
 
 ## Open decisions that are not bugs
 
@@ -552,10 +642,10 @@ Deliberate scope calls, each a product decision rather than a defect to fix.
       query variants are for, and a handler that swallows its error is invisible
       to it. Add a variant when a route grows a second branch.
       Decided against 2026-08-13: keeping the script that generated the request-body
-      table. The table is `const BODY` in `route_sweep.rs` and holds 93 entries, not
-      130, which was a rough count across three tables. Its values are domain-tuned
-      rather than derivable from struct shapes: 34 carry fixture-id markers, 11 carry
-      WKB hex and 2 more carry GeoJSON, and the sweep's whole point is that the
+      table. The table is `const BODY` in `route_sweep.rs` and holds 102 entries. Its
+      values are domain-tuned
+      rather than derivable from struct shapes: 33 carry fixture-id markers, 11 carry
+      WKB hex and 3 more carry GeoJSON, and the sweep's whole point is that the
       handler reached SQL, which needs values that pass validation. It also
       self-maintains, since adding a route that refuses `{}` fails the sweep by name.
 
@@ -602,9 +692,8 @@ first.
 ### Chat-only viewer mode
 
 DESIGN.md 2.4 and 2.6 describe what is built. Upload still needs the mouse.
-What is left is the six weak eval tasks and `sql.attach_url` (Do next item
-2), and a layer-referencing `add_arcs` the day spacetime pairing is a layer
-(P0 item 7).
+What is left is the weak eval tasks in **Do next** and a layer-referencing
+`add_arcs` the day spacetime pairing is a layer (P0 item 7).
 
 The eval fixtures are copies of `tests/unit/fixtures/action-catalogue.json`
 and `tests/unit/fixtures/viewer-snapshot.json`. Refresh them from viewtopia

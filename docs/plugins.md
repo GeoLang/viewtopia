@@ -40,7 +40,7 @@ export default plugin;
 
 ## Plugin Context API
 
-Every plugin panel receives a `ctx: PluginContext` prop with three namespaces:
+Every plugin panel receives a `ctx: PluginContext` prop with four namespaces:
 
 ### `ctx.map` — Map Controls
 
@@ -48,6 +48,7 @@ Every plugin panel receives a `ctx: PluginContext` prop with three namespaces:
 |--------|-------------|
 | `flyTo(lng, lat, zoom?)` | Fly camera to location |
 | `getCursorCoords()` | Get current cursor lat/lng/elevation |
+| `onMapClick(cb)` | Subscribe to map clicks in geographic coords, returns an unsubscribe |
 | `addGeoJsonLayer(id, geojson, options?)` | Add a GeoJSON layer |
 | `removeLayer(id)` | Remove a layer |
 | `fitBounds([west, south, east, north])` | Fit view to bounds |
@@ -58,8 +59,9 @@ Every plugin panel receives a `ctx: PluginContext` prop with three namespaces:
 |--------|-------------|
 | `getLayers()` | Get all map layers |
 | `getActivePanel()` | Current active panel name |
-| `getBasemap()` | Current basemap (osm/satellite/topo/dark) |
-| `getRenderer()` | Current renderer (cesium/deckgl/maplibre) |
+| `getBasemap()` | Current basemap: `osm`, `satellite`, `topo`, `dark`, `liberty`, `bright`, `positron`, `selfhosted`, `custom` or `local` |
+| `setCustomBasemap({url, attr})` | Switch the viewers to custom raster tiles |
+| `getRenderer()` | Current renderer: `cesium` or `maplibre` |
 | `getSettings()` | All app settings |
 
 ### `ctx.api` — Backend API
@@ -68,6 +70,14 @@ Every plugin panel receives a `ctx: PluginContext` prop with three namespaces:
 |--------|-------------|
 | `fetch(path, options?)` | Proxied fetch (adds base URL + headers) |
 | `baseUrl` | The platform API base URL |
+
+### `ctx.settings`, per-plugin persistence
+
+| Method | Description |
+|--------|-------------|
+| `get(key, defaultValue?)` | Read one setting |
+| `set(key, value)` | Write one setting to localStorage |
+| `getAll()` | Every setting for this plugin |
 
 ### `ctx.close()` — Close the plugin panel
 
@@ -85,8 +95,16 @@ interface PluginDefinition {
   Panel: React.ComponentType<{ ctx: PluginContext }>;
   onLoad?: (ctx: PluginContext) => void | (() => void);
   shortcut?: string;    // e.g. "ctrl+shift+p"
+  settings?: PluginSettingField[];   // rendered in the Settings panel
 }
 ```
+
+Each settings field is `{ key, label, type, defaultValue?, description?,
+options?, min?, max? }`, where `type` is `text`, `number`, `boolean`, `select`
+or `color` and `options` is `{ value, label }` pairs for a `select`.
+
+`PLUGIN_SDK_VERSION`, exported from the SDK, is bumped whenever the
+`PluginContext` shape changes, so a downloaded bundle can check it.
 
 ## Layer Options
 
@@ -94,6 +112,7 @@ When adding GeoJSON layers:
 
 ```typescript
 ctx.map.addGeoJsonLayer('my-layer', geojson, {
+  name: 'My Layer',   // what the layer panel and the chat call it, the id by default
   color: '#ff6600',
   opacity: 0.8,
   lineWidth: 2,
@@ -101,6 +120,7 @@ ctx.map.addGeoJsonLayer('my-layer', geojson, {
   stroked: true,
   extruded: false,
   zIndex: 10,
+  fit: true,          // whether adding it moves the camera, true by default
 });
 ```
 
@@ -115,13 +135,13 @@ Set `category` to control where your plugin appears:
 
 ## Events
 
-Plugins can listen for platform events:
+The app dispatches these on `window`:
 
-```typescript
-window.addEventListener('viewtopia:layer:add', (e) => {
-  console.log('Layer added:', e.detail);
-});
-```
+| Event | `detail` |
+|-------|----------|
+| `viewtopia:map:click` | `{ lat, lng }` of the clicked point. `ctx.map.onMapClick` wraps this one |
+| `viewtopia:sql_result` | `{ sql, rowCount, columns, sample }` after a `sql_query` run |
+| `viewtopia:sql_error` | `{ sql, error }` |
 
 ## Available Libraries
 
@@ -221,6 +241,8 @@ src/plugins/
 ├── sdk.ts                    # Type definitions (DO NOT MODIFY)
 ├── registry.ts               # Auto-discovery (DO NOT MODIFY)
 ├── PluginHost.tsx            # Panel renderer (DO NOT MODIFY)
+├── PluginSettings.tsx        # Settings-schema renderer (DO NOT MODIFY)
+├── runtime/                  # Registry client and bundle loader (DO NOT MODIFY)
 ├── example-plugin/
 │   └── index.tsx             # Working example
 └── your-plugin/
