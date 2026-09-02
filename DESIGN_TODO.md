@@ -63,16 +63,6 @@ Ordered 2026-08-30, hosting excluded.
       `tests/e2e/chat-actions-tabs.spec.js` ("goes back to a vector basemap"
       stays the proof either way).
 
-## Cross-repository audit, 2026-08-22
-
-Verified advertised gaps from reading every repository README, `docs/index.html`
-when present, other Markdown documents, and the referenced source paths. One
-row remains open:
-
-- [ ] **GeoPlumb**: the point sources (LAS with IDW gridding) and the GeoTIFF
-      encoder are not reachable from a layer file, and the per-fragment vector
-      filter, schema map and clip are library-only.
-
 ## P0 path to the intended product, 2026-08-22
 
 P0 means a task blocks the stated product path: a team opens one hosted map,
@@ -486,13 +476,6 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
 
 - [ ] **geoplumb breadth**: GEE ships a huge operator library and charting/reduction
       over regions. Grow by demand, not by checklist.
-
-- [ ] **the operators still library-only, not reachable from a served
-      layer**: the LAS point source with IDW gridding, the per-fragment vector
-      filter, schema map and boundary clip, and the GeoTIFF encoder.
-      Everything else is configurable: `OpConfig` has ten variants plus
-      fan-in (`mosaic`, `combine`) and the GeoJSON source since 2026-08-31.
-      Widen further by demand.
 
 ## Open decisions that are not bugs
 

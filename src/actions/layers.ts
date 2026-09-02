@@ -74,7 +74,8 @@ function positionIndex(position: Position, from: number, length: number): number
 
 registerAction({
   name: 'layers.set_visible',
-  description: 'Show or hide one layer.',
+  description:
+    'Show or hide one layer, keeping it in the layer list. To take a layer off entirely, use layers.remove.',
   parameters: {
     layer: LAYER_PARAMETER,
     visible: { type: 'boolean', description: 'true shows the layer, false hides it.', required: true },
@@ -124,7 +125,8 @@ registerAction({
 
 registerAction({
   name: 'layers.remove',
-  description: 'Take one layer off the map.',
+  description:
+    'Take one layer off the map entirely, out of the layer list too. To hide it but keep it, use layers.set_visible.',
   parameters: { layer: LAYER_PARAMETER },
   run: (args) => {
     const layer = resolveViewerLayer(args.layer as string);
