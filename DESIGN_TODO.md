@@ -84,30 +84,6 @@ Wire one only when a user asks for the feature.
   definition sets `AWS_S3_BUCKET` and no TileTopia code reads it.
 - [ ] infrastructure `tests/` is not run by CI.
 
-### Doc claims left standing without backing
-
-- [ ] geokode docs/index.html: "tested up to 500k records, about a second per
-  short prefix query". No benchmark or fixture backs the number.
-- [ ] projicio README header: "5935 EPSG codes embedded at compile time". 6184
-  definitions are embedded, 5935 resolve.
-- [ ] geolang docs/DESIGN.md: "rotate the once-committed API keys". Not
-  verifiable from the repo.
-- [ ] infrastructure docs/earth-observation-plan.md still lists as planned:
-  STAC collection and item write endpoints (ptolemy has six GET routes under
-  `/api/v1/stac`), seasonal decomposition, phase 4 registration in ptolemy and
-  lazy COG copy to S3, all of phase 5, NAIP, Planet and Maxar sources. Marked
-  not built in the plan.
-- [ ] viewtopia README Stack line said Helm. No chart exists anywhere, reworded
-  to Docker Compose plus Terraform in infrastructure. If Helm is wanted it is
-  an item here, not a doc line.
-- [ ] viewtopia README "Embedding" section (`?embed=1`, postMessage API) and
-  the pricing tiers in docs/platform.html were not verified against the code.
-- [ ] GeoLang.github.io index.html hero: "custom interfaces, instantly". The
-  viewer renders a map, image or table spec, no form or chart generation.
-  "Live Collaboration" card claims comment mentions, agora has no mention
-  handling that the audit could find. Security section: "TLS required for all
-  external connections", nothing in compose or code enforces it.
-
 ## Do next
 
 Ordered 2026-08-30, hosting excluded.
@@ -203,6 +179,13 @@ this direction reverses.
       (plausible if collaboration deepens), tenant (tiny, quota types a
       hosted instance would want), geofence (delete instead if no tile-side
       geofence is ever wanted, agora region watch covers the live case).
+
+- [ ] **ptolemy STAC collection and item write endpoints.** Six GET routes
+      exist under `/api/v1/stac`: `/stac`, `/stac/collections`,
+      `/stac/collections/{id}`, `/stac/collections/{id}/items`,
+      `/stac/collections/{id}/items/{item_id}` and `/stac/search`. Nothing
+      writes into the catalog, so this adds the collection and item write
+      endpoints.
 
 - [ ] **Space-Time geofencing crossings and case management.** The Geofences
       panel creates and lists circle and polygon fences, and
@@ -581,6 +564,31 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
 
 - [ ] **geoplumb breadth**: GEE ships a huge operator library and charting/reduction
       over regions. Grow by demand, not by checklist.
+
+- [ ] **seasonal decomposition over a raster stack.** `RasterStack` in
+      `terrano-core/src/timeseries.rs` computes composites, a per-pixel linear
+      trend, change detection, a z-score anomaly and phenology metrics.
+      Seasonal decomposition is the gap in that set. No request behind it.
+
+- [ ] **register external STAC items in ptolemy, plus a lazy COG copy to S3.**
+      An ingest pipeline would register searched items in ptolemy's STAC
+      catalog as metadata only, then download the COGs to S3 on demand.
+      geoplumb searches per pulled window and reads assets over HTTP range
+      requests instead, and its memory and disk caches absorb the repeats. No
+      request behind it.
+
+- [ ] **cloud-scale distributed raster processing.** Dask-style chunked tiles
+      over an SQS job queue, COG output to the S3 tile bucket, outputs
+      registered in the STAC catalog. geoplumb computes windows in parallel
+      inside one process and no job leaves it. The SQS queues and the tiles
+      bucket the platform profile creates have no consumer. No request behind
+      it.
+
+- [ ] **NAIP, Planet and Maxar imagery sources.** Three sources named as worth
+      supporting: NAIP (COG, US, 0.6m, free), Planet (COG, global, 3-5m, paid)
+      and Maxar/WorldView (GeoTIFF, global, 0.3m, paid). geoplumb's STAC source
+      reaches any collection on a STAC API, and the platform stack configures
+      `cop-dem-glo-30` and `sentinel-2-l2a` only. No request behind it.
 
 ## Open decisions that are not bugs
 
