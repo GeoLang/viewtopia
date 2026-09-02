@@ -33,42 +33,34 @@ Ordered 2026-08-30, hosting excluded.
    parameters (`layers.remove` with lat, lon and height and no `layer`). The
    container was recreated on 2026-09-02 00:17 UTC with the trimmed manifest
    (action, name, args only) and no weak task has been scored against it yet.
-   Transcripts (`evals.viewer_runner --transcripts`) and one round of wording
-   are in, uncommitted on 2026-09-01: the viewer instructions end with a
-   precedence rule (a listed action comes before any agent tool, whatever a
-   persona rule says), find_feature before geocode_place for "where is X" and
-   for anything named that is not a town, city or address, the dataset
-   argument described as the name dataset.list spells, the harness read
-   timeout at 180 s. Twelve-task check at `--repeat 3` (report
-   20260902T014559, aggregate 0.64 against 0.17 for the same tasks in the
-   baseline): find-the-kingsway-substation, find-before-shading,
-   travel-time-bands and dataset-draw-branch-at-a-moment now stable 1.00.
-   Still failing, with the cause read from transcripts:
-   - terrain-profile-between-two-points and cross-section-along-a-line, 0 in
-     6 of 6 runs: the persona's "elevation profile / terrain cross-section,
-     use terrain_profile" rule beats the precedence sentence every time.
+   Shipped 2026-09-01 (geolang 3b40843, viewtopia 0198de84, sibyl 6850dfc):
+   an agent tool names the viewer actions that replace it and a run whose
+   catalogue offers one leaves it out (`terrain_profile`,
+   `calculate_isochrones`), the viewer instructions end with a precedence
+   rule and find_feature before geocode_place, the dataset and bands
+   parameter descriptions are reworded, tasks can override the shared
+   snapshot (the two tab tasks are asked from the map tab), the runner
+   writes transcripts, and the harness read timeout is 180 s. Twelve-task
+   check on Qwen3.5 before the tool hiding: 0.64 against 0.17 for the same
+   tasks in the 0.82 baseline (report 20260902T014559). Terrain profile and
+   cross section then scored 1.00 on Qwen3.8 with the tools hidden.
+   Next: the full 72-task Qwen3.5 sweep at `--repeat 3` against
+   20260901T004124, blocked on hercules being down at 02:10 UTC; sibyl is
+   on Qwen3.8 until then because switching back was refused while the
+   provider was unreachable. Still weak, cause read from transcripts:
    - scenario-compare-within-25-metres, 0: "pairing features within 25
-     metres" reads as a geoprocessing job, the model goes to find_nearest and
-     plan_workflow over files named from its own imagination.
-   - find-before-flying, 0.67 flaky: one run geocodes "the old brewery"
-     straight away; the other two call find_feature, then geocode anyway
-     because the reads fixture answers every find_feature with the Kingsway
-     matches.
-   - attach-a-remote-table and search-a-stac-collection, 0.67 flaky: one run
-     in three writes an ATTACH through sql_query, or loops on asset_readings.
-   - scenario-compare-branches and dataset-draw-widening-branch: the model
-     writes `road_network` or `ds_roads` for Road Network in about half the
-     runs, some after inventing a dataset.list result inside its own turn.
-   - change-to-3d: the task says it is asked from the map tab, the shared
-     snapshot sits on the globe tab with cesium, and renderer.set says it
-     shows the globe tab too, so `renderer.set cesium` is a defensible call
-     the scorer marks 0. Owner call: a per-task snapshot, or a different
-     expected call.
-   Owner call before the next round: hide an agent tool from a run whose
-   catalogue offers the viewer action that replaces it (terrain_profile,
-   calculate_isochrones, ptolemy_query list_datasets, and the geocode and
-   "where is X" rules), or reword those five persona rules. Then a full
-   72-task sweep at `--repeat 3` against the 0.82 baseline before committing.
+     metres" reads as a geoprocessing job and the model builds a
+     find_nearest and plan_workflow pipeline. The action's `distance` is a
+     coverage buffer, so the prompt asks for something scenario.compare does
+     not do.
+   - find-before-flying, flaky: the reads fixture answers every find_feature
+     with the Kingsway matches, so a run that asks for the brewery is told
+     about a substation and geocodes.
+   - dataset ids: the model writes `road_network` or `ds_roads` for Road
+     Network in about half the dataset runs, some after inventing a
+     dataset.list result inside its own turn.
+   - attach-a-remote-table and search-a-stac-collection, flaky: one run in
+     three writes an ATTACH through sql_query or loops on asset_readings.
 
 ## Chat action leftovers, 2026-08-29
 
