@@ -736,11 +736,12 @@ and there are no dead buttons in the default UI.
   only for a numeric field with more than one distinct value.
 - The Space-Time panel draws tracks as a cube, time on the vertical axis, with a sweep plane,
   ground shadows and a trail window over the entities the map holds. An import is capped at
-  `MAX_TRACK_POINTS` (100k) points and strided down past it. Seven analyses run in a worker off
-  the main thread: colocation, co-travel, pattern of life, network metrics, clustering,
-  prediction and data quality. The deliberate line is that this is a movement cube and not an
+  `MAX_TRACK_POINTS` (100k) points and strided down past it. Eight analyses run in a worker off
+  the main thread: colocation, co-travel, geofence crossings, pattern of life, network
+  metrics (nodes on each entity's last fix, a line per link), clustering, prediction and
+  data quality. The deliberate line is that this is a movement cube and not an
   intelligence platform: no ontology, no CDR import, no classification markings, no per-record
-  access control and no entity resolution.
+  access control, no entity resolution and no case management.
 - A project carries its map, and the map lives on the server: the snapshot goes to ptolemy under
   the project's `map` state key, debounced behind any change, and is read back on project switch
   and on sign-in. `projectMaps` in IndexedDB is the offline cache of the same shape as a

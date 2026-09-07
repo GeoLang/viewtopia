@@ -4,8 +4,6 @@ import type {
   Track,
   Link,
   Geofence,
-  Alert,
-  Case,
   TimeRange,
 } from './types';
 import type { AnalysisKind, AnalysisResult } from './analysis/run';
@@ -16,8 +14,6 @@ interface SpaceTimeState {
   tracks: Track[];
   links: Link[];
   geofences: Geofence[];
-  alerts: Alert[];
-  cases: Case[];
 
   // Playback
   timeRange: TimeRange;
@@ -60,15 +56,6 @@ interface SpaceTimeState {
   addGeofence: (fence: Geofence) => void;
   removeGeofence: (id: string) => void;
 
-  // Alerts
-  addAlert: (alert: Alert) => void;
-  clearAlerts: () => void;
-
-  // Cases
-  addCase: (c: Case) => void;
-  updateCase: (id: string, updates: Partial<Case>) => void;
-  removeCase: (id: string) => void;
-
   // Playback controls
   setCurrentTime: (t: number) => void;
   setTimeRange: (r: TimeRange) => void;
@@ -97,8 +84,6 @@ export const useSpaceTimeStore = create<SpaceTimeState>((set) => ({
   tracks: [],
   links: [],
   geofences: [],
-  alerts: [],
-  cases: [],
 
   timeRange: { min: 0, max: 0 },
   currentTime: 0,
@@ -147,18 +132,6 @@ export const useSpaceTimeStore = create<SpaceTimeState>((set) => ({
   addGeofence: (fence) => set((s) => ({ geofences: [...s.geofences, fence] })),
   removeGeofence: (id) =>
     set((s) => ({ geofences: s.geofences.filter((f) => f.id !== id) })),
-
-  addAlert: (alert) => set((s) => ({ alerts: [...s.alerts, alert] })),
-  clearAlerts: () => set({ alerts: [] }),
-
-  addCase: (c) => set((s) => ({ cases: [...s.cases, c] })),
-  updateCase: (id, updates) =>
-    set((s) => ({
-      cases: s.cases.map((c) =>
-        c.id === id ? { ...c, ...updates, updatedAt: Date.now() } : c,
-      ),
-    })),
-  removeCase: (id) => set((s) => ({ cases: s.cases.filter((c) => c.id !== id) })),
 
   setCurrentTime: (currentTime) => set({ currentTime }),
   setTimeRange: (timeRange) => set({ timeRange }),

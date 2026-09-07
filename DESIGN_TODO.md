@@ -9,7 +9,7 @@
 > Ranked 2026-08-21 against the DESIGN.md goal: ship the viewer, the agent, and
 > the services that make a shared map, not more surface. Pick from **Do next**.
 > Do not start at a parked item.
-> Last brought current: **2026-09-02**.
+> Last brought current: **2026-09-07**.
 >
 > Verify an entry against the code before working it, and do not trust the
 > mechanism it names. Three items in this file were already closed when someone
@@ -74,15 +74,17 @@ Wire one only when a user asks for the feature.
   to `ptolemy-api` and calling the init from `ptolemy-cli`.
 - [ ] tiletopia `crates/tiletopia-cache`, a workspace member with no caller and
   no tests, and `GET /api/v1/assets/{id}/thumbnail`, which nothing ever wrote a
-  file for. At 68313a8. The CRDT, multi-tenant isolation and geofencing
-  modules stay parked by the earlier owner call recorded below.
+  file for. At 68313a8.
+- [ ] tiletopia crdt, geofence and tenant modules, 13 unit tests and no
+  caller. `crates/tiletopia-server/src/crdt.rs`, `geofence.rs`, `tenant.rs`
+  at 71910e3. Agora region watches cover the live geofence case.
 
 ### Platform config
 
-- [ ] infrastructure: the WAF rate limit keys on the CloudFront edge address,
-  not the client. The SNS alarm topic has no subscription. TileTopia's task
-  definition sets `AWS_S3_BUCKET` and no TileTopia code reads it.
-- [ ] infrastructure `tests/` is not run by CI.
+- [ ] tiletopia `deploy/terraform` creates a tiles S3 bucket, grants the task
+  access to it and sets `AWS_S3_BUCKET`, and `deploy/DEPLOY.md` draws it as
+  tile storage. No tiletopia code reads the variable. Read it or delete the
+  bucket, the policy and the diagram.
 
 ## Do next
 
@@ -163,36 +165,6 @@ other documents citing "P0 item 5" still land on the right one.
      it, because the spacetime co-travel analysis already produces paired
      entity segments and is the source it would draw from. Give it a
      layer-referencing action the day that pairing is exposed as a layer.
-
-## Wire for real
-
-A module is written, unit-tested, exported by a `pub mod` line, and never called
-by any route, CLI path or render loop. `cargo` does not flag it because the
-re-export keeps it live. The docs then describe the module as a feature. Owner
-call 2026-08-24: implement these for real rather than delete them, each with
-tests through its real route, ordered viewer-facing routes first, then platform
-machinery, then the large islands. One exception to reconfirm when reached:
-the Space-Time rows sit under an earlier "do not build Gotham" owner call that
-this direction reverses.
-
-- [ ] **tiletopia modules still parked after the 2026-08-31 triage**: crdt
-      (plausible if collaboration deepens), tenant (tiny, quota types a
-      hosted instance would want), geofence (delete instead if no tile-side
-      geofence is ever wanted, agora region watch covers the live case).
-
-- [ ] **ptolemy STAC collection and item write endpoints.** Six GET routes
-      exist under `/api/v1/stac`: `/stac`, `/stac/collections`,
-      `/stac/collections/{id}`, `/stac/collections/{id}/items`,
-      `/stac/collections/{id}/items/{item_id}` and `/stac/search`. Nothing
-      writes into the catalog, so this adds the collection and item write
-      endpoints.
-
-- [ ] **Space-Time geofencing crossings and case management.** The Geofences
-      panel creates and lists circle and polygon fences, and
-      `src/features/spacetime/analysis/geofence.ts` exports
-      `detectFenceCrossings`, which computes enter and exit events. Nothing
-      calls it, so no crossing is ever shown. Case management has types and no
-      UI. Network metrics render as a list rather than a graph.
 
 ## Before any public deploy
 

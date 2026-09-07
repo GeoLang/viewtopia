@@ -35,6 +35,10 @@ All notable changes to this project will be documented in this file.
 
 ### Removed
 
+- 2026-09-07: **the Space-Time store's case and alert slices.** `Case`,
+  `CaseNote`, `CasePhase` and `Alert` had store actions and no UI. Owner call:
+  no case management in the movement cube.
+
 - 2026-08-30: **LiveKit voice and video are gone.** The Collaboration panel's
   Voice & Video block, `src/store/livekit.ts`, the `livekitUrl` setting and its
   Settings input, and the `livekit-client` dependency are deleted. Joining a
