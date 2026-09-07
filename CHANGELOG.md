@@ -16,6 +16,10 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-09-07: **the Analysis tab gains Geofence Crossings, and Network Metrics
+  draws its graph.** Crossings mark who entered or left which fence and when.
+  Nodes sit on each entity's last fix, sized by degree, with a line per link.
+
 - 2026-08-31: **chat can create a region watch.** `live.watch_region` takes a
   layer, a reducer, an interval and an optional threshold, and reads its
   region from a bbox argument, else the drawn polygon, else the current view.

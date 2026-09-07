@@ -20,7 +20,7 @@ import { useSpaceTimeStore } from '../../src/features/spacetime/store';
 import { useDeckLayersStore } from '../../src/hooks/deckLayers';
 import { useSpaceTimeAnalysisDeckLayers } from '../../src/hooks/useSpaceTimeAnalysisDeckLayers';
 import { runAnalysis } from '../../src/features/spacetime/analysis/run';
-import type { Entity, SpaceTimeEvent, Track } from '../../src/features/spacetime/types';
+import type { Entity, Geofence, SpaceTimeEvent, Track } from '../../src/features/spacetime/types';
 
 window.matchMedia = vi.fn().mockReturnValue({
   matches: false,
@@ -36,14 +36,30 @@ Element.prototype.scrollIntoView = vi.fn();
 
 const START = Date.parse('2024-01-15T08:00:00Z');
 const TEN_MINUTES = 600_000;
+const WALKER_START_LNG = -122.4;
+const WALKER_LNG_STEP = 0.0001;
+const WALKER_LAT = 37.77;
+
+// alice's first fix sits 35 m out and her second steps inside, so she enters once and stays
+const DEPOT_FENCE_CENTER_STEP = 4;
+const DEPOT_FENCE_RADIUS_M = 30;
+
+const DEPOT_FENCE: Geofence = {
+  id: 'depot',
+  name: 'Depot',
+  type: 'circle',
+  center: [WALKER_START_LNG + DEPOT_FENCE_CENTER_STEP * WALKER_LNG_STEP, WALKER_LAT],
+  radius: DEPOT_FENCE_RADIUS_M,
+  active: true,
+};
 
 function walker(entityId: string, lngOffset: number): Track {
   const events: SpaceTimeEvent[] = [0, 1, 2, 3, 4, 5].map((step) => ({
     id: `${entityId}-${step}`,
     entityId,
     timestamp: START + step * TEN_MINUTES,
-    lng: -122.4 + step * 0.0001 + lngOffset,
-    lat: 37.77,
+    lng: WALKER_START_LNG + step * WALKER_LNG_STEP + lngOffset,
+    lat: WALKER_LAT,
   }));
   return { id: `track-${entityId}`, entityId, events };
 }
@@ -70,6 +86,7 @@ function loadFixture() {
     ]),
     tracks: [walker('alice', 0), walker('bob', 0.0001)],
     links: [{ id: 'l1', sourceId: 'alice', targetId: 'bob', kind: 'colocation' }],
+    geofences: [DEPOT_FENCE],
     timeRange: { min: START, max: START + 5 * TEN_MINUTES },
     currentTime: START,
     analysisResult: null,
@@ -110,6 +127,7 @@ describe('Analysis tab buttons', () => {
     for (const label of [
       'Colocation Detection',
       'Co-Travel Detection',
+      'Geofence Crossings',
       'Pattern-of-Life',
       'Network Metrics',
       'Behavioral Clustering',
@@ -149,12 +167,22 @@ describe('Analysis tab buttons', () => {
     expect(within(results).getByText('Alice with Bob')).toBeInTheDocument();
   });
 
+  it('runs geofence crossings and names the fence alice entered', async () => {
+    renderPanel();
+    await openAnalysisTab();
+    fireEvent.click(screen.getByRole('button', { name: 'Geofence Crossings' }));
+
+    const results = await screen.findByTestId('spacetime-analysis-results');
+    expect(within(results).getByText('Alice entered Depot')).toBeInTheDocument();
+  });
+
   // one case per button rather than a loop: a loop of seven renders runs past
   // the 15s cap on a loaded box, and vitest then leaves the abandoned
   // continuation unmounting trees and eating mocks belonging to later tests
   const ANALYSIS_RESULT_KIND_BY_BUTTON = [
     ['Colocation Detection', 'colocation'],
     ['Co-Travel Detection', 'cotravel'],
+    ['Geofence Crossings', 'geofence'],
     ['Pattern-of-Life', 'pattern'],
     ['Network Metrics', 'network'],
     ['Behavioral Clustering', 'clustering'],
@@ -216,6 +244,7 @@ describe('analysis deck layers', () => {
         tracks: state.tracks,
         links: state.links,
         entities: [...state.entities.values()].map((e) => ({ id: e.id, name: e.name })),
+        geofences: state.geofences,
         timeRange: state.timeRange,
       }),
     });
@@ -255,9 +284,17 @@ describe('analysis deck layers', () => {
     ]);
   });
 
-  it('draws nothing for network metrics, which is a ranked list', () => {
+  it('draws a node per entity and a path per link for network metrics', () => {
     draw('network');
-    expect(analysisLayerIds()).toEqual([]);
+    expect(analysisLayerIds()).toEqual([
+      'spacetime-analysis-paths',
+      'spacetime-analysis-points',
+    ]);
+  });
+
+  it('draws a crossing marker for geofence', () => {
+    draw('geofence');
+    expect(analysisLayerIds()).toEqual(['spacetime-analysis-points']);
   });
 
   it('lifts the marks into the cube by their timestamp', () => {

@@ -33,6 +33,7 @@ import type { Entity, Track } from './types';
 const ANALYSIS_BUTTONS: { kind: AnalysisKind; label: string }[] = [
   { kind: 'colocation', label: 'Colocation Detection' },
   { kind: 'cotravel', label: 'Co-Travel Detection' },
+  { kind: 'geofence', label: 'Geofence Crossings' },
   { kind: 'pattern', label: 'Pattern-of-Life' },
   { kind: 'network', label: 'Network Metrics' },
   { kind: 'clustering', label: 'Behavioral Clustering' },
@@ -66,6 +67,7 @@ export function SpaceTimePanel() {
             tracks: state.tracks,
             links: state.links,
             entities: [...state.entities.values()].map((e) => ({ id: e.id, name: e.name })),
+            geofences: state.geofences,
             timeRange: state.timeRange,
           }),
         );

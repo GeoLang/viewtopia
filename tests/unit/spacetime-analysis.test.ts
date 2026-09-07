@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { detectCoTravel } from '../../src/features/spacetime/analysis/co-travel';
 import { runAnalysis, PREDICTION_HORIZON_MS } from '../../src/features/spacetime/analysis/run';
 import type { AnalysisInput } from '../../src/features/spacetime/analysis/run';
-import type { Link, SpaceTimeEvent, Track } from '../../src/features/spacetime/types';
+import type { Geofence, Link, SpaceTimeEvent, Track } from '../../src/features/spacetime/types';
 
 const START = Date.parse('2024-01-15T08:00:00Z');
 const TEN_MINUTES = 600_000;
@@ -72,6 +72,7 @@ function input(overrides: Partial<AnalysisInput> = {}): AnalysisInput {
       { id: 'carol', name: 'Carol' },
       { id: 'dave', name: 'Dave' },
     ],
+    geofences: overrides.geofences ?? [],
     timeRange: overrides.timeRange ?? { min: START, max: START + 5 * TEN_MINUTES },
   };
 }
@@ -161,14 +162,53 @@ describe('runAnalysis', () => {
     expect(result.rows.some((r) => r.detail.includes('busiest around 8:00 UTC'))).toBe(true);
   });
 
-  it('network metrics rank entities and draw nothing', () => {
+  it('network metrics rank entities and draw the graph over their last fixes', () => {
     const result = runAnalysis('network', input());
-    expect(result.points).toEqual([]);
-    expect(result.paths).toEqual([]);
     expect(result.title).toBe('4 entities over 2 links');
     // bob is linked to both alice and carol, so he outranks them
     expect(result.rows[0].label).toBe('Bob');
     expect(result.rows[0].detail).toMatch(/degree 0\.6[67]/);
+
+    expect(result.points).toHaveLength(4);
+    expect(result.points[0].label).toMatch(/^Bob, degree 0\.6[67]$/);
+    expect(result.paths.map((p) => p.label)).toEqual(['Alice to Bob', 'Bob to Carol']);
+    // carol's track ends earlier than bob's, so the link rises through the cube
+    const bobToCarol = result.paths[1];
+    expect(bobToCarol.points).toHaveLength(2);
+    expect(bobToCarol.points[0].timestamp).not.toBe(bobToCarol.points[1].timestamp);
+  });
+
+  it('network gives an entity without a track a row but no marker', () => {
+    const result = runAnalysis(
+      'network',
+      input({
+        tracks: [alice(), bob()],
+        entities: [
+          { id: 'alice', name: 'Alice' },
+          { id: 'bob', name: 'Bob' },
+          { id: 'erin', name: 'Erin' },
+        ],
+        links: [{ id: 'l1', sourceId: 'alice', targetId: 'erin', kind: 'communication' }],
+      }),
+    );
+    expect(result.rows.map((r) => r.label)).toContain('Erin');
+    expect(result.points.map((p) => p.label.split(',')[0])).toEqual(['Alice', 'Bob']);
+    expect(result.paths).toEqual([]);
+  });
+
+  it('geofence says so when no fence is active', () => {
+    const dormant: Geofence = {
+      id: 'depot',
+      name: 'Depot',
+      type: 'circle',
+      center: [-122.4, 37.77],
+      radius: 1000,
+      active: false,
+    };
+    const result = runAnalysis('geofence', input({ geofences: [dormant] }));
+    expect(result.title).toBe('No active geofences');
+    expect(result.rows).toEqual([]);
+    expect(result.points).toEqual([]);
   });
 
   it('clustering colors every track by its cluster', () => {
@@ -208,7 +248,7 @@ describe('runAnalysis', () => {
 
   it('reports an empty run rather than throwing on no data', () => {
     const bare = input({ tracks: [], links: [], entities: [] });
-    for (const kind of ['colocation', 'cotravel', 'pattern', 'network', 'clustering', 'prediction', 'quality'] as const) {
+    for (const kind of ['colocation', 'cotravel', 'geofence', 'pattern', 'network', 'clustering', 'prediction', 'quality'] as const) {
       const result = runAnalysis(kind, bare);
       expect(result.kind).toBe(kind);
       expect(result.points).toEqual([]);

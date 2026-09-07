@@ -1,6 +1,7 @@
-import type { Link, SpaceTimeEvent, TimeRange, Track } from '../types';
+import type { Geofence, Link, SpaceTimeEvent, TimeRange, Track } from '../types';
 import { eventsInWindow } from '../cube';
 import { detectColocations } from './colocation';
+import { detectFenceCrossings } from './geofence';
 import { detectCoTravel } from './co-travel';
 import { computeDailyPattern, detectAnomalies, detectFrequentLocations } from './pattern-of-life';
 import { computeBetweenness, computeDegree } from './network-metrics';
@@ -11,6 +12,7 @@ import { detectQualityIssues, qualitySummary } from './data-quality';
 export type AnalysisKind =
   | 'colocation'
   | 'cotravel'
+  | 'geofence'
   | 'pattern'
   | 'network'
   | 'clustering'
@@ -65,6 +67,7 @@ export interface AnalysisInput {
   tracks: Track[];
   links: Link[];
   entities: { id: string; name: string }[];
+  geofences: Geofence[];
   timeRange: TimeRange;
 }
 
@@ -84,6 +87,10 @@ const PREDICTION_COLOR: Rgba = [235, 235, 255, 150];
 const COTRAVEL_COLOR: Rgba = [80, 250, 160, 230];
 const QUALITY_ERROR_COLOR: Rgba = [255, 70, 70, 240];
 const QUALITY_WARNING_COLOR: Rgba = [255, 196, 0, 230];
+const FENCE_ENTER_COLOR: Rgba = [110, 231, 183, 235];
+const FENCE_EXIT_COLOR: Rgba = [251, 146, 60, 235];
+const NETWORK_NODE_COLOR: Rgba = [147, 197, 253, 235];
+const NETWORK_LINK_COLOR: Rgba = [129, 140, 248, 190];
 
 const CLUSTER_COLORS: Rgba[] = [
   [167, 139, 250, 255],
@@ -98,9 +105,15 @@ const MEETING_RADIUS = 7;
 const ANOMALY_RADIUS = 6;
 const PREDICTION_RADIUS = 10;
 const QUALITY_RADIUS = 6;
+const FENCE_CROSSING_RADIUS = 7;
 const CLUSTER_PATH_WIDTH = 5;
 const COTRAVEL_PATH_WIDTH = 6;
 const PREDICTION_PATH_WIDTH = 2;
+const NETWORK_LINK_WIDTH = 3;
+
+// computeDegree normalises to 0..1, so the whole size spread sits in the per-degree term
+const NETWORK_NODE_BASE_RADIUS = 6;
+const NETWORK_NODE_RADIUS_PER_DEGREE = 10;
 
 /** Dwell ring size grows with visits and stays readable at one visit. */
 const DWELL_RING_BASE_M = 40;
@@ -186,6 +199,42 @@ function coTravel(input: AnalysisInput, nameOf: (id: string) => string): DraftRe
   };
 }
 
+function geofence(input: AnalysisInput, nameOf: (id: string) => string): DraftResult {
+  if (!input.geofences.some((fence) => fence.active)) {
+    return empty('geofence', 'No active geofences');
+  }
+
+  const crossings = detectFenceCrossings(input.tracks, input.geofences);
+  if (crossings.length === 0) return empty('geofence', 'No fence crossings');
+
+  const fenceNames = new Map(input.geofences.map((fence) => [fence.id, fence.name]));
+  const labelOf = (crossing: (typeof crossings)[number]) =>
+    `${nameOf(crossing.entityId)} ${crossing.direction === 'enter' ? 'entered' : 'left'} ${
+      fenceNames.get(crossing.fenceId) ?? crossing.fenceId
+    }`;
+
+  return {
+    kind: 'geofence',
+    title: `${crossings.length} fence crossings`,
+    rows: trim(
+      crossings.map((crossing) => ({
+        label: labelOf(crossing),
+        detail: new Date(crossing.timestamp).toLocaleString(),
+      })),
+    ),
+    points: crossings.map((crossing) => ({
+      lng: crossing.lng,
+      lat: crossing.lat,
+      timestamp: crossing.timestamp,
+      color: crossing.direction === 'enter' ? FENCE_ENTER_COLOR : FENCE_EXIT_COLOR,
+      radius: FENCE_CROSSING_RADIUS,
+      ringRadiusM: null,
+      label: labelOf(crossing),
+    })),
+    paths: [],
+  };
+}
+
 function pattern(input: AnalysisInput, nameOf: (id: string) => string): DraftResult {
   const rows: RowText[] = [];
   const points: AnalysisPoint[] = [];
@@ -253,6 +302,36 @@ function network(input: AnalysisInput, nameOf: (id: string) => string): DraftRes
     .map((id) => ({ id, degree: degree.get(id) ?? 0, betweenness: betweenness.get(id) ?? 0 }))
     .sort((a, b) => b.degree - a.degree || b.betweenness - a.betweenness);
 
+  const lastEventOf = new Map<string, SpaceTimeEvent>();
+  for (const track of input.tracks) {
+    const last = track.events[track.events.length - 1];
+    if (last) lastEventOf.set(track.entityId, last);
+  }
+
+  const points: AnalysisPoint[] = [];
+  for (const entry of ranked) {
+    const last = lastEventOf.get(entry.id);
+    if (!last) continue;
+    points.push({
+      lng: last.lng,
+      lat: last.lat,
+      timestamp: last.timestamp,
+      color: NETWORK_NODE_COLOR,
+      radius: NETWORK_NODE_BASE_RADIUS + entry.degree * NETWORK_NODE_RADIUS_PER_DEGREE,
+      ringRadiusM: null,
+      label: `${nameOf(entry.id)}, degree ${entry.degree.toFixed(2)}`,
+    });
+  }
+
+  const paths: AnalysisPath[] = [];
+  for (const link of input.links) {
+    const source = lastEventOf.get(link.sourceId);
+    const target = lastEventOf.get(link.targetId);
+    if (!source || !target) continue;
+    const label = `${nameOf(link.sourceId)} to ${nameOf(link.targetId)}`;
+    paths.push(pathOf([source, target], NETWORK_LINK_COLOR, NETWORK_LINK_WIDTH, label));
+  }
+
   return {
     kind: 'network',
     title: `${entityIds.length} entities over ${input.links.length} links`,
@@ -262,8 +341,8 @@ function network(input: AnalysisInput, nameOf: (id: string) => string): DraftRes
         detail: `degree ${entry.degree.toFixed(2)}, betweenness ${entry.betweenness.toFixed(2)}`,
       })),
     ),
-    points: [],
-    paths: [],
+    points,
+    paths,
   };
 }
 
@@ -403,6 +482,7 @@ const ANALYSES: Record<
 > = {
   colocation,
   cotravel: coTravel,
+  geofence,
   pattern,
   network,
   clustering,
