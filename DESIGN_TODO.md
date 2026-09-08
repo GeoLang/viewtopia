@@ -78,13 +78,14 @@ Wire one only when a user asks for the feature.
 - [ ] tiletopia crdt, geofence and tenant modules, 13 unit tests and no
   caller. `crates/tiletopia-server/src/crdt.rs`, `geofence.rs`, `tenant.rs`
   at 71910e3. Agora region watches cover the live geofence case.
+- [ ] tiletopia s3, gcs, azure and hybrid tile store backends, nothing
+  constructed them (the CLI and server build `LocalStore` only), with the
+  aws, cloud-storage and azure_storage crates, the deploy tile bucket and the
+  MinIO compose service. `crates/tiletopia-store/src/{s3,gcs,azure,hybrid}.rs`
+  at 818e00f.
 
 ### Platform config
 
-- [ ] tiletopia `deploy/terraform` creates a tiles S3 bucket, grants the task
-  access to it and sets `AWS_S3_BUCKET`, and `deploy/DEPLOY.md` draws it as
-  tile storage. No tiletopia code reads the variable. Read it or delete the
-  bucket, the policy and the diagram.
 
 ## Do next
 
@@ -208,22 +209,6 @@ What actually stands in the way, in order:
    nobody has made.
 
 Operator-facing deployment gaps:
-
-- [ ] **The first apply cannot complete on the platform profile.** The ALB
-      security group needs the certificate, which needs ACM validation, which
-      needs registrar delegation to a hosted zone the same apply creates. Real
-      sequence is apply, let ACM time out, read `name_servers`, delegate, re-apply.
-- [ ] **Agora's security group admits the whole shared ECS group** (twelve tasks),
-      not the two the README names, and the stated rationale that agora
-      authenticates nothing is false.
-- [ ] **With `enable_cdn = true` and no domain, the shipped defaults, CloudFront
-      reaches the ALB over `http-only`**, sending Authorization headers and
-      cookies across the public internet in cleartext.
-- [ ] Also unrecorded: GuardDuty and the Route53 zone are both created
-      unconditionally and fail or duplicate against an existing one; the RDS
-      engine minor is pinned to `16.4`; the ALB CloudWatch alarms are wired with
-      the DNS name where the dimension needs the ARN suffix, so they silently
-      report no data; ElastiCache and SQS are provisioned with no consumer.
 
 - [ ] **CloudFront realtime WS untested live**: the realtime behavior forwards
       `Sec-WebSocket-Protocol` and has a zero TTL, but the distribution has never
