@@ -16,8 +16,8 @@ importers:
   .:
     dependencies:
       '@ag-ui/client':
-        specifier: 0.0.57
-        version: 0.0.57
+        specifier: 0.0.59
+        version: 0.0.59
       '@ag-ui/core':
         specifier: 0.0.57
         version: 0.0.57
@@ -208,17 +208,20 @@ packages:
   '@adobe/css-tools@4.4.4':
     resolution: {integrity: sha512-Elp+iwUx5rN5+Y8xLt5/GRoG20WGoDCQ/1Fb+1LiGtvwbDavuSk0jhD/eZdckHAuzcDzccnkv+rEjyWfRx18gg==}
 
-  '@ag-ui/client@0.0.57':
-    resolution: {integrity: sha512-Xap2alG9Z0/j5kb3x4D7oTpe2sw1dfrC9rgJJr2NZu5vKcm8dzIPNd31mF2B4zS3BKqYIu245yxKPhEtT30MHw==}
+  '@ag-ui/client@0.0.59':
+    resolution: {integrity: sha512-d7++r8sBAq6z9G/D/WKrMznQ1Mdvew14pCqOVATReFIvl06mCi1BPqTwmos3zCDGAIiSgcvxc/8m472rYQgFFQ==}
 
   '@ag-ui/core@0.0.57':
     resolution: {integrity: sha512-gho1OWjNE6E3Rl7ZEZ1wr2CEpUHjLFU0FqzCZZk439TicLu+BfLCMkMokB07bMGlRmbJ60hM6LW60iOVauCx+Q==}
 
-  '@ag-ui/encoder@0.0.57':
-    resolution: {integrity: sha512-ifD9NctR4xyPDR58xF9GK1bj/S8oECFkTeDfuYD8tXdbcOstIJ2TOqU2zhiCKnw7Vw+zR9Qv3TbsM9E7Gi9X3Q==}
+  '@ag-ui/core@0.0.59':
+    resolution: {integrity: sha512-hDgy4ipTqXieT8YG8Mr917Y+FD/f11VK1GefZ5CwTDCuNqS/oTwjJ5l/DZkicThgS8hQW/Y7wPylPBMBJ8BkUg==}
 
-  '@ag-ui/proto@0.0.57':
-    resolution: {integrity: sha512-pPENOZt0P6ibH8sCTgq05wLYXi5t3P9B5r/1bWYehXjUxtyOdnukSlWM++SsCIwUXsQdm/b3aBgGjEeTF7RenA==}
+  '@ag-ui/encoder@0.0.59':
+    resolution: {integrity: sha512-wQCzBsStyZMm8nzhTdTx1G0B1C8yv5rbzZLnz1ka/l5LcJEsK3KTounU8CR9l+7QtcpOUUDJKd0xAbyI6gNcSw==}
+
+  '@ag-ui/proto@0.0.59':
+    resolution: {integrity: sha512-X+uvDaegLEHw5kJu8tv2eSqHH8ouat+JCfFokGV1uuMquY8qCEQSlGsM7xzexwX9fujuxgHOWumg5kJDqa0+RA==}
 
   '@apideck/better-ajv-errors@0.3.7':
     resolution: {integrity: sha512-TajUJwGWbDwkCx/CZi7tRE8PVB7simCvKJfHUsSdvps+aTM/PDPP4gkLmKnc+x3CE//y9i/nj74GqdL/hwk7Iw==}
@@ -4438,11 +4441,11 @@ snapshots:
 
   '@adobe/css-tools@4.4.4': {}
 
-  '@ag-ui/client@0.0.57':
+  '@ag-ui/client@0.0.59':
     dependencies:
-      '@ag-ui/core': 0.0.57
-      '@ag-ui/encoder': 0.0.57
-      '@ag-ui/proto': 0.0.57
+      '@ag-ui/core': 0.0.59
+      '@ag-ui/encoder': 0.0.59
+      '@ag-ui/proto': 0.0.59
       '@types/uuid': 10.0.0
       compare-versions: 6.1.1
       fast-json-patch: 3.1.1
@@ -4455,14 +4458,18 @@ snapshots:
     dependencies:
       zod: 3.25.76
 
-  '@ag-ui/encoder@0.0.57':
+  '@ag-ui/core@0.0.59':
     dependencies:
-      '@ag-ui/core': 0.0.57
-      '@ag-ui/proto': 0.0.57
+      zod: 3.25.76
 
-  '@ag-ui/proto@0.0.57':
+  '@ag-ui/encoder@0.0.59':
     dependencies:
-      '@ag-ui/core': 0.0.57
+      '@ag-ui/core': 0.0.59
+      '@ag-ui/proto': 0.0.59
+
+  '@ag-ui/proto@0.0.59':
+    dependencies:
+      '@ag-ui/core': 0.0.59
       '@bufbuild/protobuf': 2.13.0
       '@protobuf-ts/protoc': 2.11.1
 
