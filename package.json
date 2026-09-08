@@ -48,7 +48,7 @@
     "test:all": "vitest run && playwright test"
   },
   "dependencies": {
-    "@ag-ui/client": "0.0.57",
+    "@ag-ui/client": "0.0.59",
     "@ag-ui/core": "0.0.57",
     "@deck.gl/aggregation-layers": "^9.3.2",
     "@deck.gl/core": "^9.3.2",
