@@ -545,9 +545,15 @@ a bottom sheet with a floating toggle. Not chased from the Felt audit: their can
 renderer and per-frame cursor rotation, still below the visible waterline.
 
 **Renderers.** Two globe renderers, not three: CesiumJS (3D globe) and MapLibre GL (vector
-globe) with the deck.gl data-viz layers interleaved into MapLibre through `MapboxOverlay`
-(`@deck.gl/mapbox`, `interleaved: true`), so analysis/agent/panel layers draw in the same view
+globe) with the deck.gl data-viz layers interleaved into MapLibre through `MapLibreOverlay`
+(`@deck.gl/maplibre`, `interleaved: true`), so analysis/agent/panel layers draw in the same view
 as the vector globe, terrain relief and OGC rasters. There is no standalone deck.gl renderer.
+The overlay keeps its Deck private, so the registry holds the overlay itself, registered from
+its `onLoad` because picking throws before that, and mirrors the pushed layer array to
+`window.__viewtopiaDeckLayers` for e2e assertions. MapLibre 6 ships as ES modules only: the
+app sets `setWorkerUrl` because maplibre resolves its worker beside its own module URL, and
+the exported standalone pages (story, export-map plugin) load it with a module script from
+unpkg.
 Persisted state and share links that say `deckgl` fall back to maplibre. Leaflet is the 2D
 map, plus a synced split view. Picking/draw/measure/agent-layers survive renderer switches.
 

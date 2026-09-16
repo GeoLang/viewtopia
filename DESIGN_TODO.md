@@ -9,7 +9,7 @@
 > Ranked 2026-08-21 against the DESIGN.md goal: ship the viewer, the agent, and
 > the services that make a shared map, not more surface. Pick from **Do next**.
 > Do not start at a parked item.
-> Last brought current: **2026-09-07**.
+> Last brought current: **2026-09-16**.
 >
 > Verify an entry against the code before working it, and do not trust the
 > mechanism it names. Three items in this file were already closed when someone
@@ -84,9 +84,6 @@ Wire one only when a user asks for the feature.
   MinIO compose service. `crates/tiletopia-store/src/{s3,gcs,azure,hybrid}.rs`
   at 818e00f.
 
-### Platform config
-
-
 ## Do next
 
 Ordered 2026-08-30, hosting excluded.
@@ -101,41 +98,15 @@ Ordered 2026-08-30, hosting excluded.
    20260901T004124, blocked on hercules being down; sibyl is on Qwen3.8 until
    then, because switching back was refused while the provider was unreachable.
    Still weak, cause read from transcripts:
-   - scenario-compare-within-25-metres, 0: "pairing features within 25
-     metres" reads as a geoprocessing job and the model builds a
-     find_nearest and plan_workflow pipeline. The action's `distance` is a
-     coverage buffer, so the prompt asks for something scenario.compare does
-     not do.
-   - find-before-flying, flaky: the reads fixture answers every find_feature
-     with the Kingsway matches, so a run that asks for the brewery is told
-     about a substation and geocodes.
+   - scenario-compare-within-25-metres and find-before-flying: the task
+     prompt and the `find_feature` reads fixture were fixed in geolang
+     5ad6d5c (2026-09-16), unscored until a model server is back. If either
+     is still weak after the next sweep the cause is the model, not the task.
    - dataset ids: the model writes `road_network` or `ds_roads` for Road
      Network in about half the dataset runs, some after inventing a
      dataset.list result inside its own turn.
    - attach-a-remote-table and search-a-stac-collection, flaky: one run in
      three writes an ATTACH through sql_query or loops on asset_readings.
-
-## Chat action leftovers, 2026-08-29
-
-- [!] **Drop `patches/maplibre-gl@5.24.0.patch`, blocked on deck.gl.** The fix
-      shipped upstream in maplibre 6.4.0 (PR 8071) but no 5.x release carries
-      it, and the 6.x bump is blocked: v6 removed the internal `map.transform`,
-      and `@deck.gl/mapbox` dereferences it on every interleaved render
-      (`map.transform.height` in `getViewport`, unguarded), verified in the
-      shipped 9.3.7, 9.3.11 and 9.4.0-beta.1 tarballs. The replacement is
-      `@deck.gl/maplibre`'s `MapLibreOverlay`, published only in the 9.4.0
-      beta family, and adopting it also moves luma.gl to a 9.4 beta and
-      reworks the deck plumbing: it does not set `map.__deck`
-      (useDeckOverlay.ts reads it, useFeaturePickerMapLibre.ts pulls the Deck
-      out for `pickObject`) and has no `isInitialized`, so the registry holds
-      the overlay instead and about a dozen unit tests re-mock. Checked
-      2026-08-31: no fix on any 9.3.x, deck.gl RFC 10501 still proposed.
-      Revisit when deck.gl 9.4.0 is stable. Migration notes beyond the import
-      rewrite (47 sites, including 10 type-only default imports): the
-      export-map plugin template links the UMD bundle that v6 no longer
-      publishes, and the stale patch comment sits at
-      `tests/e2e/chat-actions-tabs.spec.js` ("goes back to a vector basemap"
-      stays the proof either way).
 
 ## P0 path to the intended product, 2026-08-22
 
@@ -479,20 +450,19 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
       next, then the CAD-adjacent platforms. Blocked on real customer data rather
       than on engineering. Full verne write-up under **Plans**.
 
-- [ ] **collecta conditional visibility is unread in the form model.** The
-      `Condition` type exists, validation never looks at it, and the XLSForm
-      importer sets it to `None`. It works only on the XLSForm path where the raw
-      expression passes through to ODK Collect on the device.
+- [ ] **collecta validation does not descend into repeat children**, so a
+      `relevant` condition or constraint on a field inside a repeat is only
+      checked on the device, never server-side. Top-level `relevant` is read
+      since collecta 050a45e.
 
 - [ ] **geogit has no feature-aware merge.** `cmd_merge` calls `repo.merge`,
       which merges the GeoPackage bytes through plain `git merge`, so two edits
       to one feature become a binary conflict on a MessagePack blob and
       `geogit resolve` can only pick ours, theirs, ancestor, delete or the
-      working copy. Kart compatibility is broken three ways as well: geometry
-      serializes as a MessagePack integer array rather than bytes, the GPKG
-      header keeps the source SRS id where Kart requires 0, and no vector
-      dataset writes a `meta/crs/` entry (only the point cloud import writes
-      `meta/crs.wkt`).
+      working copy. The stored encoding is Kart v3 since geogit cd5b44f,
+      proven against two blobs from Kart's own test repos. Left on that side:
+      `column_srs_id` reads only `EPSG:<code>` identifiers and declares 4326
+      for a custom CRS in the working copy table.
 
 - [ ] **local deployment packaging (last)**: GPU detection, quantized model
       download, context config, inference-server setup. Wrap llama.cpp/ollama
@@ -508,8 +478,9 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
 
 - [ ] **the offline story's remaining network reads**: DuckDB's spatial
       extension fetches from extensions.duckdb.org, and the story export fetches
-      MapLibre from unpkg plus tiles from the tile host. The tile cache stores
-      every tile ever viewed, with no size cap and no clear-all.
+      MapLibre from unpkg plus tiles from the tile host. The tile cache is
+      capped at `TILE_CACHE_BUDGET_BYTES` with saved regions pinned and
+      `clearBrowsingCache` for the rest, so the cache side is closed.
 
 - [ ] **composite latency on dense collections**: memory is bounded (folds peak
       at one wave, median and percentile reduce in strips under a fixed 4 Mi
