@@ -450,19 +450,15 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
       next, then the CAD-adjacent platforms. Blocked on real customer data rather
       than on engineering. Full verne write-up under **Plans**.
 
-- [ ] **collecta validation does not descend into repeat children**, so a
-      `relevant` condition or constraint on a field inside a repeat is only
-      checked on the device, never server-side. Top-level `relevant` is read
-      since collecta 050a45e.
-
 - [ ] **geogit has no feature-aware merge.** `cmd_merge` calls `repo.merge`,
       which merges the GeoPackage bytes through plain `git merge`, so two edits
       to one feature become a binary conflict on a MessagePack blob and
       `geogit resolve` can only pick ours, theirs, ancestor, delete or the
       working copy. The stored encoding is Kart v3 since geogit cd5b44f,
-      proven against two blobs from Kart's own test repos. Left on that side:
-      `column_srs_id` reads only `EPSG:<code>` identifiers and declares 4326
-      for a custom CRS in the working copy table.
+      proven against two blobs from Kart's own test repos, and a custom CRS
+      gets Kart's hashed srs id in the working copy. Left on that side: the
+      GeoPackage importer names the CRS file after the source table's local
+      srs id, where Kart reads the code out of the WKT.
 
 - [ ] **local deployment packaging (last)**: GPU detection, quantized model
       download, context config, inference-server setup. Wrap llama.cpp/ollama
