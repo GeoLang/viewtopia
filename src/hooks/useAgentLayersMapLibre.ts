@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { MutableRefObject } from 'react';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import type { ExpressionSpecification } from 'maplibre-gl';
 import {
   useAgentLayerStore,

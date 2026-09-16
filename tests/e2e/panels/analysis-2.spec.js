@@ -191,7 +191,7 @@ test.describe('Analysis panels (batch 2)', () => {
     await expect(page.locator('#maplibre-container canvas').first()).toBeVisible();
     await page.waitForFunction(
       () =>
-        (window.__viewtopiaDeck?.props?.layers ?? []).some((l) =>
+        (window.__viewtopiaDeckLayers ?? []).some((l) =>
           String(l?.id).startsWith('panel-grid-'),
         ),
       null,
@@ -202,7 +202,7 @@ test.describe('Analysis panels (batch 2)', () => {
     // so read them off the live layer: the weights are the pasted "value"s, and
     // MEAN is the mapped form of the chosen aggregation, not a deck.gl default
     const gridProps = await page.evaluate(() => {
-      const layer = (window.__viewtopiaDeck?.props?.layers ?? []).find((l) =>
+      const layer = (window.__viewtopiaDeckLayers ?? []).find((l) =>
         String(l?.id).startsWith('panel-grid-'),
       );
       if (!layer) return null;
@@ -258,7 +258,7 @@ test.describe('Analysis panels (batch 2)', () => {
     // COUNT reaches the layer too, and with no property every point weighs 1
     await page.waitForFunction(
       () =>
-        (window.__viewtopiaDeck?.props?.layers ?? []).some((l) =>
+        (window.__viewtopiaDeckLayers ?? []).some((l) =>
           String(l?.id).startsWith('panel-grid-'),
         ),
       null,
@@ -266,7 +266,7 @@ test.describe('Analysis panels (batch 2)', () => {
     );
     expect(
       await page.evaluate(() => {
-        const layer = (window.__viewtopiaDeck?.props?.layers ?? []).find((l) =>
+        const layer = (window.__viewtopiaDeckLayers ?? []).find((l) =>
           String(l?.id).startsWith('panel-grid-'),
         );
         return {

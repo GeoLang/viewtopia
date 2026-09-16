@@ -439,7 +439,7 @@ test.describe('local tool panels (batch 2)', () => {
 
     await page.waitForFunction(() => window.__viewtopiaMap.getPitch() > 55, null, { timeout: 10000 });
     await page.waitForFunction(
-      () => window.__viewtopiaDeck?.props.layers.some((l) => l.id === 'spacetime-sweep-plane'),
+      () => window.__viewtopiaDeckLayers?.some((l) => l.id === 'spacetime-sweep-plane'),
       null,
       { timeout: 10000 },
     );
@@ -472,7 +472,7 @@ test.describe('local tool panels (batch 2)', () => {
     await expect(results.getByTestId('spacetime-analysis-row').first()).toContainText('Dana + Eli');
 
     await page.waitForFunction(
-      () => window.__viewtopiaDeck?.props.layers.some((l) => l.id === 'spacetime-analysis-points'),
+      () => window.__viewtopiaDeckLayers?.some((l) => l.id === 'spacetime-analysis-points'),
       null,
       { timeout: 10000 },
     );

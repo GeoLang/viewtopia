@@ -97,7 +97,7 @@ const registry = vi.hoisted(() => ({ map: null as ReturnType<typeof fakeMapLibre
 vi.mock('../../src/viewer/registry', () => ({
   getActiveCesiumViewer: () => null,
   getActiveMapLibre: () => registry.map,
-  getActiveDeck: () => null,
+  getActiveDeckOverlay: () => null,
 }));
 
 /** Every request the terrain actions make, answered without a backend. */

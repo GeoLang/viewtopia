@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('maplibre-gl', () => ({
-  default: { addProtocol: vi.fn() },
+  addProtocol: vi.fn(),
 }));
 
 const get = vi.fn();
@@ -17,7 +17,7 @@ vi.mock('../../src/offline/db', () => ({
   },
 }));
 
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import { useNetworkStore } from '../../src/offline/network';
 import {
   cachedTileUrl,

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 // markers and controls are DOM overlays that need maplibre's stylesheet
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { registerPmtilesProtocol } from '../features/pmtiles/source';
 import { registerCachedTileProtocol } from '../offline/tileProtocol';
+import { registerMapLibreWorker } from '../lib/maplibreWorkerUrl';
 import { useAppStore } from '../store/app';
 import { useSplitViewStore, COMPARE_PANE, type Pane } from '../store/splitView';
 import { getSharedCamera, setSharedCamera } from './sharedCamera';
@@ -83,6 +84,7 @@ export function useMapLibre(opts: UseMapLibreOptions = {}) {
     );
     if (!container || mapRef.current) return;
 
+    registerMapLibreWorker();
     registerPmtilesProtocol();
     registerCachedTileProtocol();
 

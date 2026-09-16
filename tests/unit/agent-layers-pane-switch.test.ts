@@ -64,13 +64,12 @@ const maplibre = vi.hoisted(() => {
 });
 
 vi.mock('maplibre-gl', () => ({
-  default: {
-    Map: maplibre.FakeMap,
-    Marker: maplibre.FakeMarker,
-    NavigationControl: class {},
-    addProtocol: () => undefined,
-    removeProtocol: () => undefined,
-  },
+  Map: maplibre.FakeMap,
+  Marker: maplibre.FakeMarker,
+  NavigationControl: class {},
+  addProtocol: () => undefined,
+  removeProtocol: () => undefined,
+  setWorkerUrl: () => undefined,
 }));
 
 const cesium = vi.hoisted(() => {

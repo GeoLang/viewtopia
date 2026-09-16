@@ -1,6 +1,7 @@
-import maplibregl, { type Map as MapLibreMap } from 'maplibre-gl';
+import { Map as MapLibreMap } from 'maplibre-gl';
 import { readMapLibreCamera } from '../../hooks/cameraSync';
 import { useAppStore } from '../../store/app';
+import { registerMapLibreWorker } from '../../lib/maplibreWorkerUrl';
 import { getActiveMapLibre } from '../../viewer/registry';
 import { type MapCapture, maplibreCapture, maplibreSettled } from './capture';
 import { CSS_DPI, MAX_SIDE } from './imageExport';
@@ -94,7 +95,8 @@ export async function printResolutionCapture(
 
   const view = readMapLibreCamera(live);
   const liveCanvas = live.getCanvas();
-  const map = new maplibregl.Map({
+  registerMapLibreWorker();
+  const map = new MapLibreMap({
     container,
     style: { ...live.getStyle(), projection: live.getProjection() },
     center: [view.longitude, view.latitude],

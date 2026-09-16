@@ -136,7 +136,7 @@ const imageryAlphas = (page) =>
 
 /** ids of the layers the map's deck.gl overlay currently draws. */
 const deckLayerIds = (page) =>
-  page.evaluate(() => window.__viewtopiaDeck?.props?.layers?.map((l) => l.id) ?? []);
+  page.evaluate(() => window.__viewtopiaDeckLayers?.map((l) => l.id) ?? []);
 
 /** Move a Mantine slider by keyboard, one step per press. */
 async function nudgeSlider(page, slider, key, steps) {

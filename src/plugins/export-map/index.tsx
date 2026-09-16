@@ -15,6 +15,7 @@ import {
   type BasemapTiles,
 } from '../../hooks/basemapTiles';
 import { getSharedCamera } from '../../hooks/sharedCamera';
+import { MAPLIBRE_CDN } from '../../lib/maplibreCdn';
 import { metersPerCssPixel, niceScaleBar } from '../../lib/scaleBar';
 
 type ExportFormat = 'png' | 'jpeg' | 'html-embed' | 'html-full';
@@ -168,8 +169,7 @@ function ExportMapPanel(_props: { ctx: PluginContext }) {
 <head>
   <meta charset="utf-8">
   <title>${title || 'ViewTopia Map Export'}</title>
-  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl/dist/maplibre-gl.css">
-  <script src="https://unpkg.com/maplibre-gl/dist/maplibre-gl.js"></script>
+  <link rel="stylesheet" href="${MAPLIBRE_CDN}.css">
   <style>
     body { margin: 0; padding: 0; }
     #map { width: 100vw; height: 100vh; }
@@ -177,7 +177,8 @@ function ExportMapPanel(_props: { ctx: PluginContext }) {
 </head>
 <body>
   <div id="map"></div>
-  <script>
+  <script type="module">
+    import * as maplibregl from '${MAPLIBRE_CDN}.mjs';
     const map = new maplibregl.Map({
       container: 'map',
       style: ${JSON.stringify(style)},

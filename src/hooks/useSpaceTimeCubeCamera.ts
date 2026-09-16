@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 
 /** Pitch cube view tilts to, so the time axis reads as height. */

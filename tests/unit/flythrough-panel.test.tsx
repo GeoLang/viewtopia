@@ -44,7 +44,7 @@ vi.mock('cesium', () => ({
 vi.mock('../../src/viewer/registry', () => ({
   getActiveCesiumViewer: vi.fn(() => null),
   getActiveMapLibre: vi.fn(() => null),
-  getActiveDeck: vi.fn(() => null),
+  getActiveDeckOverlay: vi.fn(() => null),
 }));
 
 import { FlythroughPanel } from '../../src/components/tools/FlythroughPanel';

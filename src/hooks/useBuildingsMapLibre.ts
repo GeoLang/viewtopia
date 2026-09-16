@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { MutableRefObject } from 'react';
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 import { useBuildingStore, BUILDINGS_LAYER_ID } from '../store/buildings';
 import { useAppStore } from '../store/app';
 

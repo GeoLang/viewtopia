@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 import { useMeasureStore, type MeasureMode } from '../store/measure';
 import { useAppStore } from '../store/app';
 

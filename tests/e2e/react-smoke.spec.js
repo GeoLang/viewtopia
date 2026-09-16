@@ -153,7 +153,7 @@ test.describe('React shell smoke', () => {
       timeout: 10000,
     });
     // deck.gl has no renderer of its own: it interleaves into that map
-    await page.waitForFunction(() => !!window.__viewtopiaDeck, null, { timeout: 30000 });
+    await page.waitForFunction(() => !!window.__viewtopiaDeckOverlay, null, { timeout: 30000 });
     expect(errors, `runtime errors:\n${errors.join('\n')}`).toEqual([]);
   });
 

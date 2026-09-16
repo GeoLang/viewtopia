@@ -20,7 +20,7 @@ vi.mock('../../src/viewer/registry', () => ({
       getNorth: () => VIEW.north,
     }),
   })),
-  getActiveDeck: vi.fn(() => null),
+  getActiveDeckOverlay: vi.fn(() => null),
 }));
 
 // no indexeddb in jsdom and fake-indexeddb is not a dependency, so the store

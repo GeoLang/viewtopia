@@ -103,8 +103,9 @@ describe('building a story page', () => {
       },
     );
 
-    const script = html.match(/<script>([\s\S]*?)<\/script>\s*<\/body>/)?.[1] ?? '';
-    new Function(script)();
+    const script = html.match(/<script type="module">([\s\S]*?)<\/script>\s*<\/body>/)?.[1] ?? '';
+    // the page imports maplibre from the cdn, which new Function cannot do, so the global stub stands in
+    new Function(script.replace(/^\s*import .*$/m, ''))();
 
     expect(observed).toHaveLength(2);
     notify([{ isIntersecting: true, target: observed[1] }]);

@@ -273,7 +273,7 @@ test.describe('basemap.set', () => {
     });
   });
 
-  // needs the maplibre-gl patch, a raster tile load resuming after its abort stalls the image queue
+  // a raster basemap swapped out mid-load must not leave maplibre's image queue stalled
   test('the maplibre globe goes back to a vector basemap', async ({ page }) => {
     await boot(page);
     await runAction(page, 'basemap.set', { basemap: 'satellite' });

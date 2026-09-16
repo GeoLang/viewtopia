@@ -97,7 +97,7 @@ async function readInt(locator) {
 /** deck.gl layers currently pushed into the live Deck, by id prefix. */
 function deckLayers(page, prefix) {
   return page.evaluate((p) => {
-    const layers = window.__viewtopiaDeck?.props?.layers ?? [];
+    const layers = window.__viewtopiaDeckLayers ?? [];
     return layers
       .filter((l) => l.id.startsWith(p))
       .map((l) => ({ id: l.id, count: l.props.data.length, first: l.props.data[0] }));

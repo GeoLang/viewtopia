@@ -5,7 +5,7 @@ vi.mock('cesium', () => ({ Math: { toDegrees: (radians: number) => radians } }))
 vi.mock('../../src/viewer/registry', () => ({
   getActiveCesiumViewer: vi.fn(() => null),
   getActiveMapLibre: vi.fn(() => null),
-  getActiveDeck: vi.fn(() => null),
+  getActiveDeckOverlay: vi.fn(() => null),
 }));
 
 // duckdb is mocked at its own boundary, the actions and the stores are real

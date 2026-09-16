@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { act, renderHook, cleanup } from '@testing-library/react';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import {
   useAnnotationsMapLibre,
   annotationMarkerElement,
@@ -45,9 +45,11 @@ function fakeMap() {
     project: () => new maplibregl.Point(10, 20),
     getTerrain: () => null,
     terrain: null,
-    transform: {
-      lngLatToCameraDepth: () => 0.5,
-      getCoveringTilesDetailsProvider: () => ({ allowWorldCopies: () => false }),
+    _camera: {
+      transform: {
+        lngLatToCameraDepth: () => 0.5,
+        getCoveringTilesDetailsProvider: () => ({ allowWorldCopies: () => false }),
+      },
     },
     _getUIString: () => '',
     _requestDomTask: (task: () => void) => task(),

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import { useAnnotationStore, type Annotation, type PendingPlacement } from '../store/annotations';
 import { useAppStore } from '../store/app';
 

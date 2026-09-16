@@ -1,6 +1,7 @@
 import type { BasemapTiles } from '../hooks/basemapTiles';
 import { standaloneRasterStyle } from '../hooks/basemapTiles';
 import { cameraZoom } from '../hooks/cameraSync';
+import { MAPLIBRE_CDN } from './maplibreCdn';
 import type { CameraState } from '../store/cameraViews';
 
 export interface StoryStep {
@@ -17,9 +18,6 @@ export interface StoryExportOptions {
   steps: StoryStep[];
   basemap: BasemapTiles;
 }
-
-/** Pinned major, so a future MapLibre release cannot change an exported page. */
-const MAPLIBRE_CDN = 'https://unpkg.com/maplibre-gl@5/dist/maplibre-gl';
 
 const MAX_MAPLIBRE_PITCH = 85;
 
@@ -79,7 +77,6 @@ export function buildStoryHtml({ title, steps, basemap }: StoryExportOptions): s
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${pageTitle}</title>
   <link rel="stylesheet" href="${MAPLIBRE_CDN}.css">
-  <script src="${MAPLIBRE_CDN}.js"></script>
   <style>
     :root { color-scheme: dark; }
     body { margin: 0; font-family: system-ui, sans-serif; background: #111; color: #fff; }
@@ -97,7 +94,8 @@ export function buildStoryHtml({ title, steps, basemap }: StoryExportOptions): s
   <main>
 ${cards}
   </main>
-  <script>
+  <script type="module">
+    import * as maplibregl from '${MAPLIBRE_CDN}.mjs';
     const views = ${embeddedJson(views)};
     const map = new maplibregl.Map({
       container: 'map',

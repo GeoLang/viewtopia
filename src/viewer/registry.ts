@@ -6,7 +6,8 @@
  */
 import type { Viewer } from 'cesium';
 import type { Map as MapLibreMap } from 'maplibre-gl';
-import type { Deck } from '@deck.gl/core';
+import type { Layer } from '@deck.gl/core';
+import type { MapLibreOverlay } from '@deck.gl/maplibre';
 import { COMPARE_PANE } from '../store/splitView';
 
 declare global {
@@ -14,7 +15,8 @@ declare global {
     // exposed for e2e/debug so tests can assert live viewer state
     __viewtopiaViewer?: Viewer | null;
     __viewtopiaMap?: MapLibreMap | null;
-    __viewtopiaDeck?: Deck | null;
+    __viewtopiaDeckOverlay?: MapLibreOverlay | null;
+    __viewtopiaDeckLayers?: Layer[] | null;
     // the pane beside the viewer, which no tool acts on
     __viewtopiaPaneViewer?: Viewer | null;
     __viewtopiaPaneMap?: MapLibreMap | null;
@@ -26,7 +28,7 @@ declare global {
 
 let cesiumViewer: Viewer | null = null;
 let maplibreMap: MapLibreMap | null = null;
-let deckInstance: Deck | null = null;
+let deckOverlay: MapLibreOverlay | null = null;
 
 const paneViewers = new Map<number, Viewer>();
 const paneMaps = new Map<number, MapLibreMap>();
@@ -78,15 +80,21 @@ export function getPaneMapLibre(): MapLibreMap | null {
 }
 
 /**
- * The Deck the MapLibre map's interleaved overlay owns. Registered by
- * useDeckOverlay so the feature picker can pick deck layers, which
- * queryRenderedFeatures never returns.
+ * The MapLibre map's interleaved deck overlay. Registered by useDeckOverlay so
+ * the feature picker can pick deck layers, which queryRenderedFeatures never
+ * returns. It is registered only once its Deck has loaded, because picking
+ * before that throws.
  */
-export function setActiveDeck(d: Deck | null): void {
-  deckInstance = d;
-  window.__viewtopiaDeck = d;
+export function setActiveDeckOverlay(overlay: MapLibreOverlay | null): void {
+  deckOverlay = overlay;
+  window.__viewtopiaDeckOverlay = overlay;
 }
 
-export function getActiveDeck(): Deck | null {
-  return deckInstance;
+export function getActiveDeckOverlay(): MapLibreOverlay | null {
+  return deckOverlay;
+}
+
+// the overlay keeps its layers private, so mirror the pushed array for e2e
+export function setActiveDeckLayers(layers: Layer[] | null): void {
+  window.__viewtopiaDeckLayers = layers;
 }

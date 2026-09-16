@@ -71,7 +71,7 @@ test.describe('camera across renderers', () => {
     await switchRenderer(page, 'MapLibre');
     await page.waitForFunction(() => !!window.__viewtopiaMap, null, { timeout: 30000 });
     // the deck overlay rides on that map, so it comes up with it
-    await page.waitForFunction(() => !!window.__viewtopiaDeck, null, { timeout: 30000 });
+    await page.waitForFunction(() => !!window.__viewtopiaDeckOverlay, null, { timeout: 30000 });
 
     await switchRenderer(page, 'CesiumJS');
     await page.waitForFunction(() => !!window.__viewtopiaViewer, null, { timeout: 30000 });

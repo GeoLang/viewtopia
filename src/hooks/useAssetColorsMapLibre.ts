@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 import {
   useAssetStateStore,
   colorForAsset,
@@ -19,11 +19,16 @@ const COLOR_PAINT = [
   { suffix: '-circle', property: 'circle-color' },
 ] as const;
 
+type ColorPaintProperty = (typeof COLOR_PAINT)[number]['property'];
+
+/** all three colour properties take the same value type, so one name covers them */
+type ColorPaintValue = Extract<maplibregl.PaintPropertyEntry, { name: ColorPaintProperty }>['value'];
+
 /** What one layer painted before the rule took it over, and what we left there. */
 interface PaintedLayer {
-  property: string;
-  original: unknown;
-  applied: unknown;
+  property: ColorPaintProperty;
+  original: ColorPaintValue;
+  applied: ColorPaintValue;
 }
 
 type PaintedLayers = Map<string, PaintedLayer>;
@@ -38,15 +43,16 @@ const sameValue = (left: unknown, right: unknown) =>
 export function assetColorExpression(
   rule: AssetRule,
   assets: Record<string, AssetState>,
-  fallback: unknown,
-): unknown {
+  fallback: ColorPaintValue,
+): ColorPaintValue {
   const entries = Object.entries(assets);
   // a match needs at least one branch, so with nothing to colour the layer stays as it was
   if (entries.length === 0) return fallback;
   const match: unknown[] = ['match', ['get', ASSET_ID_PROPERTY]];
   for (const [assetId, asset] of entries) match.push(assetId, colorForAsset(rule, asset));
   match.push(fallback);
-  return match;
+  // the style spec types match as a fixed tuple, which a built-up branch list cannot be
+  return match as ColorPaintValue;
 }
 
 function applyPaint(
@@ -58,7 +64,7 @@ function applyPaint(
   for (const { suffix, property } of COLOR_PAINT) {
     const layerId = `${PREFIX}${rule.layerId}${suffix}`;
     if (!map.getLayer(layerId)) continue;
-    const current: unknown = map.getPaintProperty(layerId, property);
+    const current = map.getPaintProperty(layerId, property);
     const known = painted.get(layerId);
     // the agent layer effect re-adds its layers, which puts the layer's own
     // colour back, so anything we did not write is the original

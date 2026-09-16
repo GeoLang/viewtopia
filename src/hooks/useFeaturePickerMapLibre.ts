@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import type { MutableRefObject } from 'react';
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 import { useAppStore } from '../store/app';
 import { useFeaturePickerStore, propsToRows, toRow } from '../store/featurePicker';
-import { getActiveDeck } from '../viewer/registry';
+import { getActiveDeckOverlay } from '../viewer/registry';
 
 const AGENT_PREFIX = 'agent-layer-';
 
@@ -20,9 +20,9 @@ const pickBox = (p: maplibregl.Point): [maplibregl.PointLike, maplibregl.PointLi
  * layers are custom style layers, so queryRenderedFeatures never sees them.
  */
 function pickDeckProps(p: maplibregl.Point): Record<string, unknown> | null {
-  const deck = getActiveDeck();
-  if (!deck?.isInitialized) return null;
-  const info = deck.pickObject({ x: p.x, y: p.y, radius: PICK_TOLERANCE });
+  const overlay = getActiveDeckOverlay();
+  if (!overlay) return null;
+  const info = overlay.pickObject({ x: p.x, y: p.y, radius: PICK_TOLERANCE });
   const props = (info?.object as { properties?: Record<string, unknown> } | undefined)
     ?.properties;
   return props ?? null;

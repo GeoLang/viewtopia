@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { MutableRefObject } from 'react';
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 import { useAppStore } from '../store/app';
 import { applyHeatmaps, heatmapStyleId, useHeatmapStore } from '../lib/mapHeatmap';
 

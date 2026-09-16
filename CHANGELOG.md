@@ -6,6 +6,16 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-09-16: **maplibre-gl 6.10 and deck.gl 9.4, with the interleaved overlay
+  from `@deck.gl/maplibre`.** The 5.x patch that stopped an aborted raster tile
+  load from stalling the image queue shipped upstream in 6.4.0, so `patches/`
+  is gone. `MapLibreOverlay` keeps its Deck private, so the registry holds the
+  overlay and the feature picker calls `overlay.pickObject`. maplibre 6 has no
+  default export and no UMD bundle: every `maplibregl` import is a namespace
+  import, and the exported map and story pages load `maplibre-gl.mjs` from a
+  module script. maplibre looks for its worker beside its own module url, so
+  every map now calls `setWorkerUrl` with the worker chunk Vite emits.
+
 - 2026-09-01: **the dataset argument of `dataset.draw_branch` and
   `scenario.compare` is described as the name `dataset.list` spells, or the
   id.** "Dataset id or name" had Qwen3.5 inventing `road_network` for Road
