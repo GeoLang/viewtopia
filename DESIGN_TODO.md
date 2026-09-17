@@ -84,6 +84,32 @@ Wire one only when a user asks for the feature.
   MinIO compose service. `crates/tiletopia-store/src/{s3,gcs,azure,hybrid}.rs`
   at 818e00f.
 
+## In flight 2026-09-16, self-host preview release
+
+Owner call 2026-09-16: cut a 0.x self-host preview, hosting excluded. A
+self-hoster downloads one bundle and pulls images, no source checkouts.
+Recovery notes if the session dies.
+
+- [~] Ten repos get a `release.yml` that builds and pushes
+  `ghcr.io/geolang/<repo>:<tag>` and `:latest` on a `v*` tag push, the shape
+  of tiletopia's docker job: agora, collecta, fenestra, geokode, interiora,
+  itinera, geodukt, geoplumb, sibyl, geolang. ptolemy, tiletopia and
+  viewtopia already publish. Committed per repo, pushed by the orchestrator.
+- [~] viewtopia gets `docker-compose.release.yml`, an override that pins every
+  service to its ghcr tag and resets `build`, and the release workflow
+  attaches a `geolang-platform-<tag>.tar.gz` bundle holding the two compose
+  files, `deploy/`, `scripts/fetch-osm-extract.sh`, an env example and a
+  short README with the policy defaults. The old release job failed on
+  `download-artifact`, fix in the same change.
+- [ ] Tag every platform repo at master, one sitting: agora, collecta,
+  geoplumb, sibyl, geolang v0.1.0; fenestra, geokode, itinera, interiora,
+  geodukt, ptolemy, viewtopia v0.2.0; tiletopia v0.4.0. Then confirm every
+  image pulls anonymously, bring the stack up from the bundle alone in a
+  scratch directory, and run the golden path against it.
+- [ ] Package visibility is an owner step if a package lands private:
+  `ghcr.io/geolang/viewtopia` is private today while `ptolemy` is public.
+  Check each after the first publish, flip in the package settings.
+
 ## Do next
 
 Ordered 2026-08-30, hosting excluded.
