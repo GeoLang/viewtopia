@@ -12,7 +12,7 @@ metrics are library-only.
 ## Environmental Monitoring
 
 ### Components
-- **SensorPanel** — live sensor readings (temperature, humidity, air quality, water level) via WebSocket
+- **SensorPanel**: sensor inventory and the last reading from the `sensors` dataset. The plugin declares a `wsUrl` setting but nothing reads it, so there is no live stream
 - **WeatherPanel** (existing) — current conditions and hourly forecast from open-meteo, optional temperature/precipitation grid overlay
 - **FloodPanel** (existing) — flood zone analysis
 - **HeatmapPanel** (existing) — sensor density/intensity visualization
@@ -23,11 +23,6 @@ metrics are library-only.
 - collecta: field observation forms, submission ingestion and storage
 - terrano: terrain analysis, watershed delineation
 - panoptes: imagery feature extraction, ONNX segmentation and pixel-difference change detection (weights are yours to supply, none ship)
-
-### Configuration
-```env
-VITE_SENSOR_WS_URL=ws://localhost:3004/ws/sensors
-```
 
 ### Use Cases
 - Water quality monitoring (rivers, treatment plants)
@@ -44,8 +39,7 @@ VITE_SENSOR_WS_URL=ws://localhost:3004/ws/sensors
 - **TerrainProfilePanel** (existing) — cross-section analysis
 - **VolumePanel** (existing) — 3D volume calculations
 - **CrossSectionPanel** (existing) — road/pipeline cross-sections
-- **ModelImportPanel** (existing) — BIM/IFC import
-- **PointCloudComparePanel** (existing) — drone survey comparison
+- **ModelImportPanel** (existing): glTF and GLB models. An IFC file goes to the server through the Assets panel instead
 - **MeasurementPanel** (existing) — distance, area, elevation
 
 ### Backend: tiletopia + nubis + terrano
@@ -66,7 +60,7 @@ VITE_SENSOR_WS_URL=ws://localhost:3004/ws/sensors
 
 ### Components
 - **FieldPanel** — crop zones, NDVI health index, soil moisture, growth status
-- **RasterViewerPanel** (existing) — NDVI/multispectral imagery
+- **RasterPanel** (existing): NDVI and other band math over a loaded GeoTIFF
 - **DronePanel** (existing) — drone flight planning
 - **TimelapsePanel** (existing) — crop growth over time
 - **SpatialStatsPanel** (existing) — yield statistics by zone
@@ -119,7 +113,8 @@ VITE_SENSOR_WS_URL=ws://localhost:3004/ws/sensors
 ### Backend: itinera + geokode + ptolemy
 - itinera: evacuation route calculation, isochrones
 - geokode: address lookup for incident locations
-- ptolemy: real-time incident data, WebSocket updates
+- ptolemy: incident features, read and written over `/incidents`. The panel
+  polls, there is no incident WebSocket
 
 ### Use Cases
 - Fire/flood incident command

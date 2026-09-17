@@ -93,11 +93,12 @@ interface PluginDefinition {
   icon?: ReactNode;     // @tabler/icons-react icon
   category?: 'analysis' | 'simulate' | 'tools' | 'data' | 'plugins';
   Panel: React.ComponentType<{ ctx: PluginContext }>;
-  onLoad?: (ctx: PluginContext) => void | (() => void);
-  shortcut?: string;    // e.g. "ctrl+shift+p"
   settings?: PluginSettingField[];   // rendered in the Settings panel
 }
 ```
+
+The type also carries `onLoad` and `shortcut`. Nothing reads either one, so
+setting them does nothing.
 
 Each settings field is `{ key, label, type, defaultValue?, description?,
 options?, min?, max? }`, where `type` is `text`, `number`, `boolean`, `select`

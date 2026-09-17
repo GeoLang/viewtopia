@@ -3,8 +3,8 @@
 ## Motivation
 
 ViewTopia has an in-browser DuckDB Spatial worker, SQL notebook cells, a map
-bridge, and an agent command. This document records the implemented path and
-the remaining optional work.
+bridge, and an agent command. This document records the path as built and the
+one piece that is missing.
 
 ## Why it's a fit, not a graft
 
@@ -17,7 +17,7 @@ the remaining optional work.
 
 GeoLibre exposes DuckDB as a generic SQL pad. ViewTopia can do better:
 
-1. **Map ↔ SQL bridge** — `map.addLayerFromQuery(sql)` so results render directly as deck.gl/MapLibre layers.
+1. **Map ↔ SQL bridge**: a query with a geometry column becomes an agent layer, which every renderer draws.
 2. **Agent tool** — register `sql_query` on the AI agent so NL queries get translated to DuckDB SQL and rendered without a Ptolemy round-trip.
 
 These two make DuckDB a force multiplier rather than a side panel.
@@ -39,11 +39,11 @@ These two make DuckDB a force multiplier rather than a side panel.
 6. Render Arrow result tables in [NotebookPanel.tsx](../src/notebooks/NotebookPanel.tsx) using the existing data-table component.
 
 ### Phase 3: map bridge
-7. `map.addLayerFromQuery(sql, options)` runtime helper. Detect geometry columns (WKB/WKT or lon/lat pairs).
+7. `queryAsGeoJson` in [spatial.ts](../src/duckdb/spatial.ts) detects geometry columns (WKB/WKT or lon/lat pairs).
 8. "Show on map" button on SQL cell results when a geometry column is detected.
 
 ### Phase 4: agent integration
-9. Registered `sql_query` viewer command in [src/viewer-commands.js](../src/viewer-commands.js). The GeoLang agent emits this over its SSE `viewer_cmd` channel.
+9. Registered `sql_query` viewer command in [sqlCommand.ts](../src/duckdb/sqlCommand.ts). The GeoLang agent emits this over its SSE `viewer_cmd` channel.
 
 **Protocol — `sql_query` viewer command**
 
@@ -64,14 +64,14 @@ These two make DuckDB a force multiplier rather than a side panel.
 
 Frontend behaviour:
 - Runs the SQL against the in-browser DuckDB.
-- If `show_on_map` (default `true`), converts to GeoJSON via `queryAsGeoJson` and renders to both Cesium and Leaflet via the shared `renderGeoJson` helper (auto-fits when `fit: true`).
+- If `show_on_map` (default `true`), converts to GeoJSON via `queryAsGeoJson` and adds it to the agent layer store, which Cesium, MapLibre and Leaflet all draw (auto-fits when `fit: true`).
 - Stashes a result summary (`sql`, `rowCount`, `columns`, `sample` first 5 rows) on `window.__viewtopiaSqlResults` (ring buffer of 20).
 - Dispatches a `viewtopia:sql_result` or `viewtopia:sql_error` CustomEvent for any UI/agent-roundtrip code to hook.
 
 Server-side note: the GeoLang agent needs a `sql_query` tool that returns this command. Round-tripping result rows back to the agent for follow-up reasoning is not yet implemented — the agent would need to either re-emit a refined SQL or call a new HTTP endpoint that reads `window.__viewtopiaSqlResults`. Defer until the use case demands it.
 
-### Remaining optional work: standalone workbench panel
-10. Panel under panel-manager mirroring GeoLibre's SQL pad. Shares the same DuckDB instance as the notebook.
+### Phase 5: standalone workbench
+10. [SqlWorkspaceTab.tsx](../src/features/dataSources/SqlWorkspaceTab.tsx), a tab in the Data Sources panel. It shares the notebook's DuckDB instance and exports a result as CSV or GeoParquet.
 
 ## Architecture
 
@@ -111,7 +111,8 @@ src/duckdb/
 - **Cross-origin isolation**: DuckDB-WASM needs SharedArrayBuffer for some features. Verify Vite dev server and the deployed CDN headers (`COOP`/`COEP`). Fall back to non-SAB mode if needed.
 - **Spatial extension availability**: hosted ourselves. `scripts/fetch-duckdb-extensions.mjs` (the `prebuild` hook) downloads spatial for the pinned DuckDB version into `public/duckdb-extensions/`, and the worker points `custom_extension_repository` at the app origin, falling back to extensions.duckdb.org only if the origin copy is missing.
 
-## Effort
+## Not implemented
 
-The standalone workbench panel is optional. Returning SQL result rows to the
-agent for follow-up reasoning is also not implemented.
+Returning SQL result rows to the agent for follow-up reasoning. A query
+publishes a summary to a window event and a global ring buffer, both read by the
+UI, never sent back to the model as a turn.

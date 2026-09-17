@@ -75,7 +75,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <div class="stat"><div class="num">20</div><div class="label">Plugins</div></div>
 <div class="stat"><div class="num">11</div><div class="label">QGIS Ports</div></div>
 <div class="stat"><div class="num">4</div><div class="label">Space-Time panel surfaces</div></div>
-<div class="stat"><div class="num">2379</div><div class="label">Unit Tests</div></div>
+<div class="stat"><div class="num">2384</div><div class="label">Unit Tests</div></div>
 <div class="stat"><div class="num">$0</div><div class="label">Per month</div></div>
 </div>
 </div>
@@ -113,7 +113,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <li>Natural language spatial analysis</li>
 <li>AG-UI event stream from <code>/chat/agui</code></li>
 <li>Viewer integration with a subset of GeoLang's geospatial tools</li>
-<li>SQL, routing, QGIS (321 algorithms)</li>
+<li>SQL, routing, and any QGIS processing algorithm by id</li>
 <li>Agent loop runs in sibyl (Rust)</li>
 <li>Auto-renders maps from chat</li>
 <li>55 typed viewer actions the chat can run</li>
@@ -181,7 +181,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <div class="card">
 <h3>🔍 Map Search</h3>
 <ul>
-<li>Nominatim geocoding integration</li>
+<li>Search through geokode, public Nominatim as fallback</li>
 <li>Fly to searched location</li>
 <li>Works in both 2D and 3D views</li>
 <li>Keyboard accessible</li>
@@ -327,7 +327,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <h3>🏢 Built-in Plugins</h3>
 <ul>
 <li>Real Estate — parcels, comps, split/merge</li>
-<li>Logistics — fleet tracking, delivery optimization</li>
+<li>Logistics, delivery optimization. The fleet tab has no feed to show</li>
 <li>Environmental, sensor inventory from a configured dataset</li>
 <li>Construction, Agriculture, Telecom, Emergency</li>
 <li>None draw anything until their dataset exists</li>
@@ -367,6 +367,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <li>FIFO queue with retry and exponential backoff</li>
 <li>Real-time indicator: pending/synced/offline</li>
 <li>Pre-cache tiles for an area (bbox + zoom range)</li>
+<li>Tiles are capped at 200 MB, and only tiles outside a saved area are dropped</li>
 </ul>
 </div>
 <div class="card">
@@ -440,7 +441,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <section>
 <div class="container">
 <h2>Space-Time tracks</h2>
-<p style="color:var(--muted);margin-bottom:20px">Entities, CSV ingest, a time scrubber, manual links, and seven analyses. Classification, RBAC, ontology, CDR import, entity resolution and case management are not in this product.</p>
+<p style="color:var(--muted);margin-bottom:20px">Entities, CSV ingest, a time scrubber, manual links, and eight analyses. Classification, RBAC, ontology, CDR import, entity resolution and case management are not in this product.</p>
 <div class="grid">
 <div class="card">
 <h3>Entity Management</h3>
@@ -469,8 +470,8 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <div class="card">
 <h3>Analysis tab</h3>
 <ul>
-<li>Seven analyses run in a worker and draw on the map and in the cube</li>
-<li>Colocation, co-travel, pattern-of-life, network metrics, behavioral clustering, predictive location, data quality</li>
+<li>Eight analyses run in a worker and draw on the map and in the cube</li>
+<li>Colocation, co-travel, geofence crossings, pattern-of-life, network metrics, behavioral clustering, predictive location, data quality</li>
 </ul>
 </div>
 <div class="card">
@@ -544,8 +545,8 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <div class="card">
 <h3>🔬 Raster Classification</h3>
 <ul>
-<li>K-means and ISODATA clustering</li>
-<li>In-browser unsupervised classification</li>
+<li>K-means clustering in the browser</li>
+<li>The ISODATA option is that k-means with twice the iterations</li>
 <li>Class statistics and color-mapped output</li>
 <li>Replaces: Semi-Auto Classification (2.6M downloads)</li>
 </ul>
@@ -580,9 +581,9 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <div class="card">
 <h3>✏️ Advanced Sketching</h3>
 <ul>
-<li>Split, merge, reshape polygons</li>
-<li>Parallel offset, Bezier smooth, densify</li>
-<li>Snapping with configurable tolerance</li>
+<li>Split and merge polygons</li>
+<li>Parallel offset, Bezier smooth, densify, simplify</li>
+<li>Reshape, orthogonalize, extend/trim and snap are shown disabled</li>
 <li>Replaces: Sketching Tools (669K downloads)</li>
 </ul>
 </div>
@@ -593,7 +594,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <section id="comparison">
 <div class="container">
 <h2>ViewTopia vs The Alternatives</h2>
-<p style="color:var(--muted);margin-bottom:20px">There's nothing else that combines 3D globe, 2D map, and AI chat in a single open-source viewer.</p>
+<p style="color:var(--muted);margin-bottom:20px">How ViewTopia lines up against the viewers it is closest to.</p>
 <div style="overflow-x:auto">
 <table>
 <thead>
@@ -627,7 +628,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <h3>vs QGIS</h3>
 <ul>
 <li>QGIS = desktop GIS, not web-based</li>
-<li>Top 20 QGIS plugins ported to ViewTopia</li>
+<li>Eleven of the most-downloaded QGIS plugins have an equivalent here</li>
 <li>AI-driven analysis + notebooks</li>
 <li>Real-time collaboration built-in</li>
 <li>ViewTopia runs in the browser — no install</li>

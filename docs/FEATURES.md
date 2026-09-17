@@ -9,15 +9,17 @@ Markdown documents, and the source paths those documents name.
 
 ## ViewTopia implemented paths
 
-- Cesium, MapLibre, deck.gl, and Leaflet viewer paths.
+- Cesium, MapLibre and Leaflet viewer paths. deck.gl draws into MapLibre through
+  `@deck.gl/maplibre` and is not a renderer you can pick.
 - Local raster tools, geometry tools, overlays, imports, and exports.
 - DuckDB-WASM spatial queries from notebooks and the `sql_query` viewer command.
 - Entity creation, CSV ingest, track playback, and manual Space-Time links.
 - The Space-Time cube: a pitched camera where height is time, a sweep plane at
   the playhead, ground shadows, and a trailing time window over the tracks.
-- Seven Space-Time analyses run from the Analysis tab in a worker, each drawing
-  its result on the map: colocation, co-travel, pattern-of-life, network
-  metrics, behavioral clustering, predictive location, and data quality.
+- Eight Space-Time analyses run from the Analysis tab in a worker, each drawing
+  its result on the map: colocation, co-travel, geofence crossings,
+  pattern-of-life, network metrics, behavioral clustering, predictive location,
+  and data quality.
 - Fifty-five typed viewer actions the agent runs through one `viewer_control`
   run command, with the action catalogue and a snapshot of the current map sent
   to the model on every chat message, and a chat-only mode (`?mode=chat`) that
@@ -55,8 +57,9 @@ Markdown documents, and the source paths those documents name.
   document members.
 - Only Dataset Editor feature property and geometry edits go through the
   offline operation queue. No other resource is queued.
-- The Geofences panel creates and lists circle fences. Nothing evaluates a
-  crossing and no renderer draws a fence.
+- The Geofences panel creates and lists fences, and the Geofence Crossings
+  analysis reads them. A polygon fence is stored with no vertices, so only a
+  circle fence matches a point, and no renderer draws a fence.
 - Vertical plugins read configured service datasets or demo data. They do not
   provide those datasets.
 - Viewshed, flood, routing, travel time, and some terrain tools depend on the

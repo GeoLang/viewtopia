@@ -20,8 +20,9 @@ calls. Several surfaces are local-only or depend on configured services:
 - Dashboard definitions belong to the active project and are stored on the server.
 - Only feature property and geometry edits from the Dataset Editor go through
   the offline operation queue. No other resource is queued.
-- The Geofences panel creates and lists fences. Nothing evaluates a crossing or
-  draws a fence on the map.
+- The Geofences panel creates and lists fences, and the Space-Time Analysis tab
+  finds track crossings of them. A polygon fence is stored with no vertices, so
+  only a circle fence matches a point. No renderer draws a fence on the map.
 - Vertical plugins read configured service datasets. They do not provide those
   datasets.
 
@@ -32,7 +33,7 @@ calls. Several surfaces are local-only or depend on configured services:
 |---------|-------------|
 | **CesiumJS 3D Globe** | Full 3D globe with terrain, 3D Tiles, and imagery |
 | **MapLibre GL** | GPU-accelerated 2D vector maps |
-| **deck.gl** | High-performance data visualization layers |
+| **deck.gl** | Data visualization layers drawn into MapLibre through `@deck.gl/maplibre`. There is no standalone deck renderer to pick |
 | **Leaflet** | The Map tab: 2D map with drawing and marker clustering. The globe area itself switches between Cesium and MapLibre |
 | **Split View** | Two panes across or a four-pane grid, with synced cameras. Each pane picks its own renderer |
 
@@ -67,10 +68,11 @@ The panel tracks entities and their positions over time.
 | **Space-time cube** | Toggle a pitched camera where height is time, with a sweep plane at the playhead and ground shadows under each track |
 | **Manual Linking** | Dialog for analyst-created entity relationships |
 
-The Analysis tab runs seven analyses in a worker and draws each result on the map and in the cube: colocation (meeting markers), co-travel (paired track segments over a sustained window), pattern-of-life (dwell rings and off-pattern events), network metrics (ranked entity list), behavioral clustering (tracks recolored by cluster), predictive location (ghost marker and projected path), and data quality (issues marked at their events).
+The Analysis tab runs eight analyses in a worker and draws each result on the map and in the cube: colocation (meeting markers), co-travel (paired track segments over a sustained window), geofence crossings (an entry or exit point per crossing), pattern-of-life (dwell rings and off-pattern events), network metrics (ranked entity list), behavioral clustering (tracks recolored by cluster), predictive location (ghost marker and projected path), and data quality (issues marked at their events).
 
-The Geofences panel creates a named circle fence and lists the fences, but no
-code evaluates a crossing and no renderer draws one.
+The Geofences panel creates a named fence and lists the fences. The Geofence
+Crossings analysis above is what reads them. A polygon fence is stored with no
+vertices, so only a circle fence matches a point, and no renderer draws a fence.
 
 Not implemented: ontology, CDR import, entity resolution, case management, and
 classification/RBAC.
@@ -117,7 +119,7 @@ Eleven of the most-downloaded QGIS plugins have an equivalent here:
 |--------|-----------------|-----------|----------|
 | **Basemap Catalog** | QuickMapServices | 11.3M | 30 tile providers, category filter |
 | **OSM Downloader** | QuickOSM | 3.0M | Overpass API, 12 presets |
-| **Raster Classification** | Semi-Auto Classification | 2.6M | K-means, ISODATA in-browser |
+| **Raster Classification** | Semi-Auto Classification | 2.6M | K-means in-browser. The ISODATA option runs the same k-means with twice the iterations, it has no split or merge step |
 | **Coordinate Tools** | Lat Lon Tools | 1.7M | DD/DMS/UTM/Geohash/WKT/GeoJSON |
 | **Terrain Profile** | Profile tool | 1.6M | Open-Elevation API, SVG chart |
 | **Export Map** | qgis2web | 1.6M | PNG/JPEG/HTML + embed codes |
@@ -125,7 +127,7 @@ Eleven of the most-downloaded QGIS plugins have an equivalent here:
 | **KML Tools** | KML Tools | 771K | Import KML/KMZ/GPX, export KML |
 | **Shape Tools** | Shape Tools | 669K | Geodesic circles, ellipses, sectors, arcs |
 | **Point Sampling** | Point Sampling Tool | 662K | Multi-layer sampling + CSV export |
-| **Advanced Sketching** | Sketching Tools | 669K | Split, merge, offset, smooth, densify, snap |
+| **Advanced Sketching** | Sketching Tools | 669K | Split, merge, offset, smooth, densify, simplify. Reshape, orthogonalize, extend/trim and snap are shown disabled |
 
 Terrain and extruded buildings, which Qgis2threejs covers in QGIS, are the
 Terrain and Buildings panels here rather than a plugin. The vector geoprocessing
@@ -159,10 +161,10 @@ and CC-BY-SA licence shown.
 | Feature | Description |
 |---------|-------------|
 | **Heatmaps** | MapLibre native heatmap layer |
-| **Hex Bins** | Hexagonal aggregation |
-| **Arc Diagrams** | Origin-destination arcs |
-| **Scatter Plots** | Point-based scatter |
-| **Screen Grid** | Density grid overlay |
+| **Hex Bins** | Hexagonal aggregation. Asked for in the chat, no panel offers it |
+| **Arc Diagrams** | Origin-destination arcs. Asked for in the chat, no panel offers it |
+| **Scatter Plots** | Point-based scatter, from the chat or the Wind and Space-Time panels |
+| **Density Grid** | Square aggregation grid in the Spatial Stats panel |
 | **Style Editor** | Color by property/height/classification |
 | **Annotations** | Click-to-annotate with pins |
 | **Bookmarks** | Save & restore camera positions |
@@ -172,7 +174,7 @@ and CC-BY-SA licence shown.
 |---------|-------------|
 | **Keyboard Shortcuts** | one-letter draw and measure tools, see [Keyboard Shortcuts](#keyboard-shortcuts) |
 | **Dark/Light Theme** | Toggle with persistence |
-| **Geocoding** | Nominatim-powered place search |
+| **Geocoding** | Place search through geokode, falling back to public Nominatim |
 | **Coordinate Readout** | Live lat/lon/height under cursor |
 | **Right-Click Menu** | Context actions at any location |
 | **Minimap** | Overview map with viewport rectangle |
@@ -781,7 +783,7 @@ See [docs/plugins.md](docs/plugins.md) for the full guide.
 ```bash
 pnpm run dev                 # Start dev server
 pnpm run build               # Production build
-pnpm test                    # Unit tests (vitest): 2379 tests in 202 files
+pnpm test                    # Unit tests (vitest): 2384 tests in 202 files
 pnpm run test:e2e            # E2E tests (Playwright)
 pnpm run test:e2e:react      # React suites (88 tests, 17 files) on a throwaway Vite server :5175
 pnpm run test:e2e:platform   # 35 tests in 14 files, golden path (8) included. Needs the stack up

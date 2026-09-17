@@ -1,8 +1,8 @@
 # GeoLang Real Estate MVP
 
 A self-hosted real estate panel prototype. Parcel and sales search require
-configured Ptolemy branches or the seeded demo datasets. Editing uses the
-client geometry path and does not provide a Ptolemy commit-time topology gate.
+configured Ptolemy branches or the seeded demo datasets. Nothing checks the
+resulting geometry at commit time.
 
 ## Architecture
 
@@ -16,20 +16,13 @@ client geometry path and does not provide a Ptolemy commit-time topology gate.
 ┌───────────▼───────────┐ ┌────────▼──────────┐
 │   ptolemy (API)        │ │  geokode          │
 │   Datasets, Branches,  │ │  Geocoding API    │
-│   Spatial Queries, MVT │ └───────────────────┘
-└───────────┬───────────┘
-            │
-┌───────────▼───────────┐ ┌───────────────────┐
-│   geodukt (Import)     │ │  itinera          │
-│   Shapefile, GPKG,     │ │  Routing +        │
-│   GeoJSON, CSV         │ │  Drive-time       │
-└───────────────────────┘ └───────────────────┘
-            │
-┌───────────▼───────────┐ ┌───────────────────┐
-│   topoi (Geometry)     │ │  projicio         │
-│   Split, Merge, R-tree │ │  CRS transforms   │
-│   Buffer, Clip         │ │  EPSG registry    │
-└───────────────────────┘ └───────────────────┘
+│   Parcel search, MVT,  │ └───────────────────┘
+│   ST_Split             │
+└────────────────────────┘ ┌───────────────────┐
+                           │  itinera          │
+                           │  Routing +        │
+                           │  Drive-time       │
+                           └───────────────────┘
 ```
 
 ## Quick Start
@@ -37,7 +30,7 @@ client geometry path and does not provide a Ptolemy commit-time topology gate.
 ### Prerequisites
 
 - Docker & Docker Compose
-- Node.js 22+
+- Node.js 20+
 - Rust 1.85+ (for backend services)
 
 ### 1. Start backend services
@@ -45,50 +38,27 @@ client geometry path and does not provide a Ptolemy commit-time topology gate.
 ```bash
 cd ptolemy
 docker compose up -d
-
-# Create real estate datasets
-./scripts/re-setup.sh http://localhost:3000/api/v1
 ```
 
-### 2. Import parcel data
+### 2. Load parcel data
 
-Download parcel shapefiles from your county assessor's open data portal, then:
+The plugin looks for two datasets by name, `demo_parcels` and `demo_sales`, and
+takes the branch called `main`. `scripts/seed-parcels.mjs` creates both against
+a running ptolemy, anchored on the region the stack imported.
 
 ```bash
-# Import parcels (supports .shp, .gpkg, .geojson)
-geodukt import --format shapefile \
-  --dataset <PARCELS_DATASET_ID> \
-  --url http://localhost:3000/api/v1 \
-  parcels.shp
-
-# Import sales records
-geodukt import --format csv \
-  --dataset <SALES_DATASET_ID> \
-  --url http://localhost:3000/api/v1 \
-  --lat-col latitude --lon-col longitude \
-  sales.csv
-
-# Import zoning overlay
-geodukt import --format geojson \
-  --dataset <ZONING_DATASET_ID> \
-  --url http://localhost:3000/api/v1 \
-  zoning.geojson
+node scripts/seed-parcels.mjs
 ```
 
-### 3. Configure & start frontend
+For your own data, import the files in the viewer by dropping them on the map,
+or point the plugin at existing branches: Settings, Real Estate, then
+`parcelBranchId` and `salesBranchId`. A branch id set there is used directly and
+the name lookup is skipped.
+
+### 3. Start the frontend
 
 ```bash
 cd viewtopia
-cp .env.example .env
-
-# Edit .env with your dataset IDs from step 1:
-# VITE_API_URL=http://localhost:3000/api/v1
-# VITE_PARCELS_DATASET=<id>
-# VITE_SALES_DATASET=<id>
-# VITE_ZONING_DATASET=<id>
-# VITE_GEOCODE_URL=http://localhost:3001
-# VITE_ROUTING_URL=http://localhost:3002
-
 pnpm install
 pnpm run dev
 ```
@@ -116,8 +86,9 @@ Open http://localhost:5173
 ### Parcel Editing (ParcelEditPanel)
 - **Split**: Draw a line across a parcel to subdivide it
 - **Merge**: Select 2+ adjacent parcels to combine
-- Client-side parcel editing. Ptolemy topology validation is not implemented
-- Backed by topoi's computational geometry engine
+- Split posts the cut line to ptolemy's `/geoprocessing/split`, which runs
+  ST_Split. Merge unions the polygons with turf in the browser
+- Ptolemy topology validation is not implemented
 
 ### Additional Tools
 - **Geocoding** — address search powered by geokode (self-hosted, no API keys)
@@ -140,16 +111,15 @@ The system works with standard open data formats:
 
 ## Configuration Reference
 
-### Environment Variables (viewtopia/.env)
+The plugin reads no environment variables. Everything it can be told is a plugin
+setting, stored in localStorage:
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `VITE_API_URL` | Ptolemy API base URL | `http://localhost:3000/api/v1` |
-| `VITE_PARCELS_DATASET` | UUID of parcels dataset | — |
-| `VITE_SALES_DATASET` | UUID of sales dataset | — |
-| `VITE_ZONING_DATASET` | UUID of zoning dataset | — |
-| `VITE_GEOCODE_URL` | Geokode service URL | `http://localhost:3001` |
-| `VITE_ROUTING_URL` | Itinera routing service URL | `http://localhost:3002` |
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `parcelBranchId` | Branch id for parcels | empty, meaning discover `demo_parcels` |
+| `salesBranchId` | Branch id for sales | empty, meaning discover `demo_sales` |
+| `defaultRadius` | Declared but not read. The radius slider starts at 0.5 miles | `1600` |
+| `maxDays` | Declared but not read. The age input starts at 6 months | `365` |
 
 ### Docker Compose Services
 
@@ -158,7 +128,7 @@ services:
   ptolemy:     # API + storage (port 3000)
   geokode:    # Geocoding (port 3001)
   itinera:    # Routing (port 3002)
-  viewtopia:  # Frontend (port 5173)
+  viewtopia:  # Frontend behind nginx (port 5174)
 ```
 
 ## Comparison with Esri

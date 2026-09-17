@@ -6,6 +6,14 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-09-16: **the public docs say what the code does.** Corrected the
+  Space-Time analysis count (eight, and the Geofences panel feeds one of them),
+  deck.gl's place as a MapLibre overlay rather than a viewer, the ISODATA
+  option, sketching's disabled tools, the unit test count, the QGIS algorithm
+  count, and geocoding's geokode-first path. Dropped the `.env.example`,
+  `VITE_*` and `geodukt import` setup steps from the logistics and real-estate
+  pages, none of which exist, and pointed duckdb-wasm.md at the files that do.
+
 - 2026-09-16: **maplibre-gl 6.10 and deck.gl 9.4, with the interleaved overlay
   from `@deck.gl/maplibre`.** The 5.x patch that stopped an aborted raster tile
   load from stalling the image queue shipped upstream in 6.4.0, so `patches/`
