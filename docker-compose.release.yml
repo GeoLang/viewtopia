@@ -1,0 +1,72 @@
+# published images instead of source builds, applied after docker-compose.platform.yml:
+#   docker compose --env-file .env.platform -f docker-compose.platform.yml -f docker-compose.release.yml up -d
+# aavaaz is not here: it sits behind the `speech` profile and builds from a
+# checkout outside GeoLang, so a bundle cannot run it.
+
+services:
+  ptolemy:
+    build: !reset null
+    image: ghcr.io/geolang/ptolemy:v0.2.0
+
+  tiletopia:
+    build: !reset null
+    image: ghcr.io/geolang/tiletopia:v0.4.0
+
+  fenestra:
+    build: !reset null
+    image: ghcr.io/geolang/fenestra:v0.2.0
+
+  geokode:
+    build: !reset null
+    image: ghcr.io/geolang/geokode:v0.2.0
+
+  itinera:
+    build: !reset null
+    image: ghcr.io/geolang/itinera:v0.2.0
+
+  interiora:
+    build: !reset null
+    image: ghcr.io/geolang/interiora:v0.2.0
+
+  agora:
+    build: !reset null
+    image: ghcr.io/geolang/agora:v0.1.0
+
+  collecta:
+    build: !reset null
+    image: ghcr.io/geolang/collecta:v0.1.0
+
+  geoplumb:
+    build: !reset null
+    image: ghcr.io/geolang/geoplumb:v0.1.0
+
+  sibyl:
+    build: !reset null
+    image: ghcr.io/geolang/sibyl:v0.1.0
+    # without !override the list appends and keeps the ../geolang/.env entry
+    env_file: !override
+      - path: ./geolang.env
+        required: false
+
+  geodukt:
+    build: !reset null
+    image: ghcr.io/geolang/geodukt:v0.2.0
+
+  geolang-data-init:
+    build: !reset null
+    image: ghcr.io/geolang/geolang:v0.1.0
+
+  geolang-executor:
+    build: !reset null
+    image: ghcr.io/geolang/geolang:v0.1.0
+
+  geolang-api:
+    build: !reset null
+    image: ghcr.io/geolang/geolang:v0.1.0
+    env_file: !override
+      - path: ./geolang.env
+        required: false
+
+  viewtopia:
+    build: !reset null
+    image: ghcr.io/geolang/viewtopia:v0.2.0

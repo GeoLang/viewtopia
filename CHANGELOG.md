@@ -26,6 +26,14 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-09-16: **a release bundle that runs the platform from published
+  images.** `docker-compose.release.yml` resets every `build:` in the platform
+  file to a `ghcr.io/geolang/*` tag and repoints the two `../geolang/.env`
+  entries at `./geolang.env`, and the release workflow packs it with
+  `deploy/`, the fetch and seed scripts, two env examples and a README as
+  `geolang-platform-<tag>.tar.gz`. The release job now filters the artifact
+  download, which the docker job's `*.dockerbuild` record used to fail.
+
 - 2026-09-07: **the Analysis tab gains Geofence Crossings, and Network Metrics
   draws its graph.** Crossings mark who entered or left which fence and when.
   Nodes sit on each entity's last fix, sized by degree, with a line per link.

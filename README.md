@@ -411,6 +411,16 @@ pnpm run dev
 #   /tiles, /jupyter, /ws and /speech to a platform stack on 5174
 ```
 
+### Self-hosting from published images
+
+If you want to run the platform rather than develop on it, you do not need any
+of the checkouts below. Every tagged release carries a
+`geolang-platform-<tag>.tar.gz` bundle on the
+[releases page](https://github.com/GeoLang/viewtopia/releases): the two compose
+files, `deploy/`, the fetch and seed scripts, and a README with the five
+commands. It runs the whole stack from `ghcr.io/geolang/*` images, so the only
+prerequisite is Docker Engine with Compose v2.
+
 ### Full platform (all services via Docker Compose)
 
 The platform compose file builds each backend from its sibling repository.
