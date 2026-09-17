@@ -115,7 +115,7 @@ footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color
 <div class="container">
 <h1>GeoLang</h1>
 <p class="tagline">Enterprise GIS. Natural Language.</p>
-<p class="sub">Ask questions in plain English. Get maps, analysis, and custom interfaces — instantly. No GIS training. No expensive licenses.</p>
+<p class="sub">Ask questions in plain English. The agent runs the spatial work and draws the answer on the map. No GIS training. No licence fees.</p>
 <div class="hero-cta">
 <a href="#pricing" class="btn-primary">Get Started Free</a>
 <a href="https://github.com/GeoLang" class="btn-secondary">View on GitHub</a>
@@ -126,12 +126,12 @@ footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color
 <!-- Demo -->
 <section class="demo">
 <div class="container">
-<h2>See It in Action</h2>
-<p>One prompt replaces 20 clicks in traditional GIS software.</p>
+<h2>What an answer looks like</h2>
+<p>An illustration of the shape of a reply, not a recorded run. The rows below are made up, and the analysis needs parcel data you have loaded.</p>
 <div class="demo-box">
 <div class="demo-prompt">Show me all parcels within 500m of the new transit stop that are zoned commercial and under 50% lot coverage</div>
 <div class="demo-response">
-<div class="demo-map">🗺️ Interactive map with 12 matching parcels highlighted</div>
+<div class="demo-map">🗺️ The matching parcels, drawn as a layer you can restyle and export</div>
 <div class="demo-table">
 <table>
 <tr><th>APN</th><th>Zone</th><th>Coverage</th><th>Area</th></tr>
@@ -166,8 +166,8 @@ footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color
 <h3>The GeoLang Way</h3>
 <ul>
 <li>Free, self-hosted</li>
-<li>Productive in 5 minutes — just type</li>
-<li>One sentence = complete analysis + map</li>
+<li>Type the question instead of finding the tool</li>
+<li>A sentence gets you an analysis and a map layer</li>
 <li>Anyone on the team can ask spatial questions</li>
 <li>Open formats, open source, no lock-in</li>
 <li>Real-time collaboration, web-native</li>
@@ -181,7 +181,7 @@ footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color
 <section class="features">
 <div class="container">
 <h2>Platform Capabilities</h2>
-<p class="subtitle">22 open-source modules, Rust apart from the Python AI agent. One unified platform.</p>
+<p class="subtitle">23 open-source modules. Rust, apart from the Python agent API and the TypeScript viewer. One unified platform.</p>
 <div class="feature-grid">
 <div class="feature-card">
 <div class="icon">🤖</div>
@@ -191,7 +191,7 @@ footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color
 <div class="feature-card">
 <div class="icon">🎨</div>
 <h3>Answers that draw themselves</h3>
-<p>The agent answers with a map, a table or an image spec, and the viewer renders it in place. A layer the agent adds is an ordinary layer you can restyle, reorder and export.</p>
+<p>The agent answers with a map spec and the viewer draws it in place. A layer it adds is an ordinary layer you can restyle, reorder and export. The agent can also emit a table or an image spec, which the viewer stores on the reply and does not draw.</p>
 </div>
 <div class="feature-card">
 <div class="icon">🗄️</div>
@@ -206,7 +206,7 @@ footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color
 <div class="feature-card">
 <div class="icon">🌐</div>
 <h3>3D / Digital Twin</h3>
-<p>3D Tiles, terrain, point cloud visualization. Indoor mapping with BLE/WiFi positioning. Real-time streaming for IoT/sensor data.</p>
+<p>3D Tiles, terrain, point cloud visualization. Indoor venue maps, and a position estimated by k-nearest-neighbour over signal readings your app collects. Interiora does no BLE or WiFi scanning itself. Real-time streaming for IoT/sensor data.</p>
 </div>
 <div class="feature-card">
 <div class="icon">🚗</div>
@@ -226,7 +226,7 @@ footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color
 <div class="feature-card">
 <div class="icon">🛰️</div>
 <h3>AI/ML Imagery</h3>
-<p>Object detection, change detection, land classification on satellite and aerial imagery. Panoptes-powered computer vision.</p>
+<p>Panoptes segments satellite and aerial imagery with an ONNX model, either the published building weights or your own, and traces the result as vectors. Change detection is pixel differencing. Land cover has no weights, and object detection is a library result type with no command behind it.</p>
 </div>
 </div>
 </div>
@@ -236,14 +236,14 @@ footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color
 <section class="pricing" id="pricing">
 <div class="container">
 <h2>Pricing</h2>
-<p class="subtitle">Free forever, self-hosted. Hosted plans arrive with the hosted flagship.</p>
+<p class="subtitle">Self-hosted, and that is the only way to run it. There is no hosted offering.</p>
 <div class="pricing-grid">
 <div class="price-card">
 <h3>Community</h3>
 <div class="price">$0</div>
 <p class="period">forever</p>
 <ul>
-<li>Self-hosted (Docker Compose)</li>
+<li>Docker Compose, from published images or your own build</li>
 <li>All 23 modules</li>
 <li>Community support</li>
 <li>AGPL-3.0 license</li>
@@ -298,12 +298,15 @@ even with every GeoLang service switched off. No lock-in, no export step.
 <section class="cta">
 <div class="container">
 <h2>Ready to simplify GIS?</h2>
-<p>Deploy the full platform in one command. Ask your first spatial question in minutes.</p>
+<p>Take the <code>geolang-platform</code> bundle off the releases page. Generate two secrets, fetch an OSM extract for your region, then bring the stack up from published images. Five commands, no source checkouts, Docker Engine with Compose v2 the only prerequisite.</p>
 <div class="hero-cta">
-<a href="https://github.com/GeoLang" class="btn-primary">Get Started Free</a>
+<a href="https://github.com/GeoLang/viewtopia/releases" class="btn-primary">Get the release bundle</a>
 </div>
 <p style="margin-top:20px;font-family:monospace;color:var(--muted);font-size:.9rem">
-docker compose -f docker-compose.platform.yml up --build
+docker compose --env-file .env.platform -f docker-compose.platform.yml -f docker-compose.release.yml up -d
+</p>
+<p style="margin-top:12px;color:var(--muted);font-size:.9rem">
+Building from source instead means cloning every module repo first, since the platform compose file builds each backend from its sibling checkout.
 </p>
 </div>
 </section>

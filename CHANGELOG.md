@@ -13,6 +13,10 @@ All notable changes to this project will be documented in this file.
   count, and geocoding's geokode-first path. Dropped the `.env.example`,
   `VITE_*` and `geodukt import` setup steps from the logistics and real-estate
   pages, none of which exist, and pointed duckdb-wasm.md at the files that do.
+  On platform.html: 23 modules rather than 22, the viewer draws only the
+  agent's map spec, interiora does no BLE or WiFi scanning, panoptes has no
+  land cover weights and no object detection command, there is no hosted plan,
+  and the one-command deploy is the release bundle's five.
 
 - 2026-09-16: **maplibre-gl 6.10 and deck.gl 9.4, with the interleaved overlay
   from `@deck.gl/maplibre`.** The 5.x patch that stopped an aborted raster tile
