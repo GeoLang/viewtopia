@@ -83,6 +83,12 @@ Wire one only when a user asks for the feature.
   aws, cloud-storage and azure_storage crates, the deploy tile bucket and the
   MinIO compose service. `crates/tiletopia-store/src/{s3,gcs,azure,hybrid}.rs`
   at 818e00f.
+- [ ] tiletopia 2D map tile demo engine: an XYZ proxy-and-cache `fetch_tile`
+  no route reached, four sources and a MapLibre style compiled into the
+  binary, TileJSON over them and fixed cache stats, served as
+  `GET /api/v1/tiles/*`. `crates/tiletopia-server/src/map_tiles.rs` above the
+  martin module at 79ba8fb. Tiles from built tilesets are served under
+  `/martin`.
 
 ## Self-host preview release, follow-ups
 
@@ -92,11 +98,6 @@ The 0.x preview shipped 2026-09-16: every platform repo publishes
 against a stack pulled from those images alone. Pins live in
 `docker-compose.release.yml` and are bumped by hand per release. Open:
 
-- [ ] **aarch64 linux binaries fail in two repos**, so ptolemy v0.2.0 and
-      tiletopia v0.4.0 have images but no GitHub release. ptolemy: openssl-sys
-      finds no OpenSSL for the target under cross. tiletopia: manifold_csg_sys
-      compiles its C++ for the host (relocations in x86_64 objects) under cross.
-      Fix or drop the target from those two matrices.
 - [ ] **No upgrade test yet.** The first release exists now, so the next one
       can bring up v0.2.0 with data, move to the next pins, and check ptolemy
       and agora migrations carry the data.

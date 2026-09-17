@@ -848,6 +848,39 @@ view-only links and embeds drop the ones that need the mouse.
 
 ---
 
+## Build Status
+
+The CI workflow of every GeoLang repo, on its default branch. infrastructure has no CI, its badge is the Terraform workflow. GeoLang.github.io, proj4rs and renovate-config have no workflow.
+
+| Repo | Build |
+|------|-------|
+| [agora](https://github.com/GeoLang/agora) | [![agora](https://github.com/GeoLang/agora/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoLang/agora/actions/workflows/ci.yml) |
+| [collecta](https://github.com/GeoLang/collecta) | [![collecta](https://github.com/GeoLang/collecta/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoLang/collecta/actions/workflows/ci.yml) |
+| [fenestra](https://github.com/GeoLang/fenestra) | [![fenestra](https://github.com/GeoLang/fenestra/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoLang/fenestra/actions/workflows/ci.yml) |
+| [fluvius](https://github.com/GeoLang/fluvius) | [![fluvius](https://github.com/GeoLang/fluvius/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoLang/fluvius/actions/workflows/ci.yml) |
+| [geodukt](https://github.com/GeoLang/geodukt) | [![geodukt](https://github.com/GeoLang/geodukt/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoLang/geodukt/actions/workflows/ci.yml) |
+| [geogit](https://github.com/GeoLang/geogit) | [![geogit](https://github.com/GeoLang/geogit/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoLang/geogit/actions/workflows/ci.yml) |
+| [geokode](https://github.com/GeoLang/geokode) | [![geokode](https://github.com/GeoLang/geokode/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoLang/geokode/actions/workflows/ci.yml) |
+| [geolang](https://github.com/GeoLang/geolang) | [![geolang](https://github.com/GeoLang/geolang/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoLang/geolang/actions/workflows/ci.yml) |
+| [geoplumb](https://github.com/GeoLang/geoplumb) | [![geoplumb](https://github.com/GeoLang/geoplumb/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoLang/geoplumb/actions/workflows/ci.yml) |
+| [infrastructure](https://github.com/GeoLang/infrastructure) | [![infrastructure](https://github.com/GeoLang/infrastructure/actions/workflows/terraform.yml/badge.svg)](https://github.com/GeoLang/infrastructure/actions/workflows/terraform.yml) |
+| [interiora](https://github.com/GeoLang/interiora) | [![interiora](https://github.com/GeoLang/interiora/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoLang/interiora/actions/workflows/ci.yml) |
+| [itinera](https://github.com/GeoLang/itinera) | [![itinera](https://github.com/GeoLang/itinera/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoLang/itinera/actions/workflows/ci.yml) |
+| [jung](https://github.com/GeoLang/jung) | [![jung](https://github.com/GeoLang/jung/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoLang/jung/actions/workflows/ci.yml) |
+| [nubis](https://github.com/GeoLang/nubis) | [![nubis](https://github.com/GeoLang/nubis/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoLang/nubis/actions/workflows/ci.yml) |
+| [panoptes](https://github.com/GeoLang/panoptes) | [![panoptes](https://github.com/GeoLang/panoptes/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoLang/panoptes/actions/workflows/ci.yml) |
+| [projicio](https://github.com/GeoLang/projicio) | [![projicio](https://github.com/GeoLang/projicio/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoLang/projicio/actions/workflows/ci.yml) |
+| [ptolemy](https://github.com/GeoLang/ptolemy) | [![ptolemy](https://github.com/GeoLang/ptolemy/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoLang/ptolemy/actions/workflows/ci.yml) |
+| [sibyl](https://github.com/GeoLang/sibyl) | [![sibyl](https://github.com/GeoLang/sibyl/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoLang/sibyl/actions/workflows/ci.yml) |
+| [terrano](https://github.com/GeoLang/terrano) | [![terrano](https://github.com/GeoLang/terrano/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoLang/terrano/actions/workflows/ci.yml) |
+| [terravista](https://github.com/GeoLang/terravista) | [![terravista](https://github.com/GeoLang/terravista/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoLang/terravista/actions/workflows/ci.yml) |
+| [tiletopia](https://github.com/GeoLang/tiletopia) | [![tiletopia](https://github.com/GeoLang/tiletopia/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoLang/tiletopia/actions/workflows/ci.yml) |
+| [topoi](https://github.com/GeoLang/topoi) | [![topoi](https://github.com/GeoLang/topoi/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoLang/topoi/actions/workflows/ci.yml) |
+| [verne](https://github.com/GeoLang/verne) | [![verne](https://github.com/GeoLang/verne/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoLang/verne/actions/workflows/ci.yml) |
+| [viewtopia](https://github.com/GeoLang/viewtopia) | [![viewtopia](https://github.com/GeoLang/viewtopia/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoLang/viewtopia/actions/workflows/ci.yml) |
+
+---
+
 ## License
 
 AGPL-3.0-or-later, see [LICENSE](LICENSE).
