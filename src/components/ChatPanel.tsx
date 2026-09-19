@@ -10,6 +10,8 @@ import {
   Loader,
 } from '@mantine/core';
 import { IconSend, IconPlus, IconTrash, IconSquare } from '@tabler/icons-react';
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { interceptConfirmReply } from '../actions/dispatch';
 import { PlanPanel } from '../features/workflow/PlanPanel';
@@ -225,23 +227,30 @@ export function ChatPanel() {
               }}
             >
               <Text
+                component="div"
                 size="sm"
                 c={msg.role === 'user' ? 'white' : 'gray.3'}
+                className={msg.role === 'assistant' ? 'chat-markdown' : undefined}
                 title={replayable ? 'Click to replay this result on the map' : undefined}
                 onClick={replayable ? () => replayMessage(msg) : undefined}
                 style={{
                   display: 'inline-block',
+                  textAlign: 'left',
                   background:
                     msg.role === 'user' ? 'var(--mantine-color-violet-7)' : 'var(--mantine-color-dark-6)',
                   padding: '6px 10px',
                   borderRadius: 8,
                   maxWidth: '85%',
-                  whiteSpace: 'pre-wrap',
+                  whiteSpace: msg.role === 'assistant' ? undefined : 'pre-wrap',
                   cursor: replayable ? 'pointer' : undefined,
                   borderLeft: replayable ? '2px solid var(--mantine-color-violet-4)' : undefined,
                 }}
               >
-                {msg.content}
+                {msg.role === 'assistant' ? (
+                  <Markdown remarkPlugins={[remarkGfm]}>{msg.content}</Markdown>
+                ) : (
+                  msg.content
+                )}
               </Text>
               {msg.error && (
                 <Text
