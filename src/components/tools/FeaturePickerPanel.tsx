@@ -64,7 +64,7 @@ export function FeaturePickerPanel({ onClose }: { onClose: () => void }) {
   const assetId = pickedAssetId(selected);
 
   return (
-    <PanelCard width={300}>
+    <PanelCard width={320}>
       <PanelHeader
         icon={<IconClick size={16} />}
         title="Feature Info"
@@ -101,20 +101,16 @@ export function FeaturePickerPanel({ onClose }: { onClose: () => void }) {
           </Text>
         ) : (
           <ScrollArea.Autosize mah={320}>
-            <Table withRowBorders={false} verticalSpacing={2} fz="xs">
-              <Table.Tbody>
-                {selected.map((row) => (
-                  <Table.Tr key={row.id}>
-                    <Table.Td style={{ color: 'var(--mantine-color-violet-4)', verticalAlign: 'top' }}>
-                      {columnLabel(row.id)}
-                    </Table.Td>
-                    <Table.Td style={{ color: 'var(--mantine-color-dark-0)', wordBreak: 'break-word' }}>
-                      {row.value}
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
+            <dl style={{ margin: 0, fontSize: 'var(--mantine-font-size-xs)' }}>
+              {selected.map((row) => (
+                <div key={row.id} style={{ marginBottom: 6 }}>
+                  <dt style={{ color: 'var(--mantine-color-violet-4)' }}>{columnLabel(row.id)}</dt>
+                  <dd style={{ margin: 0, color: 'var(--mantine-color-dark-0)', overflowWrap: 'anywhere' }}>
+                    {row.value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </ScrollArea.Autosize>
         )}
 

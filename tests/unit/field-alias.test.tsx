@@ -199,7 +199,7 @@ describe('the feature info panel', () => {
         <FeaturePickerPanel onClose={() => {}} />
       </MantineProvider>,
     );
-    return screen.getAllByRole('row').map((row) => within(row).getAllByRole('cell')[0].textContent);
+    return screen.getAllByRole('term').map((term) => term.textContent);
   }
 
   it('labels a picked property with its alias', () => {
