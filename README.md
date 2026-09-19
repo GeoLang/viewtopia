@@ -316,6 +316,12 @@ colour and values it had then until you press Live.
   can paste a cloud key (Grok, Claude, or any OpenAI-compatible base) without
   editing the server file. To pre-seed one, put `SIBYL_CLOUD_API_KEY` in
   `geolang/.env`.
+- **A Carto basemap key** for the 2D tab, which draws Carto rasters in place
+  of the Dark, Liberty, Bright and Positron vector styles. Without a key those
+  tiles carry an "API KEY REQUIRED" watermark from about zoom 13. Request one
+  free at [carto.com/basemaps/apikey](https://carto.com/basemaps/apikey) and
+  put `VITE_CARTO_API_KEY` in `viewtopia/.env` for Vite and in `.env.platform`
+  for the compose build. It is baked into the bundle at build time.
 - **~Several GB of disk** for images (the geolang + QGIS image is large) plus
   any OSM/address data.
 - **No GPU required**.

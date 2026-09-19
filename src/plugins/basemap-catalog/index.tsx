@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { Paper, Text, Stack, TextInput, Group, Badge, SimpleGrid, UnstyledButton, Image, Tooltip } from '@mantine/core';
 import { IconMap2, IconSearch } from '@tabler/icons-react';
 import type { PluginDefinition, PluginContext } from '../sdk';
+import { cartoTiles } from '../../hooks/basemapTiles';
 
 interface BasemapSource {
   id: string;
@@ -27,9 +28,9 @@ const BASEMAPS: BasemapSource[] = [
   // Streets
   { id: 'osm-standard', name: 'OpenStreetMap', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '© OpenStreetMap contributors', category: 'streets' },
   { id: 'osm-hot', name: 'OSM Humanitarian', url: 'https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', attribution: '© OpenStreetMap contributors, HOT', category: 'streets' },
-  { id: 'carto-voyager', name: 'Carto Voyager', url: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', attribution: '© Carto, © OSM contributors', category: 'streets' },
-  { id: 'carto-positron', name: 'Carto Positron', url: 'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', attribution: '© Carto, © OSM contributors', category: 'light' },
-  { id: 'carto-dark', name: 'Carto Dark Matter', url: 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', attribution: '© Carto, © OSM contributors', category: 'dark' },
+  { id: 'carto-voyager', name: 'Carto Voyager', url: cartoTiles('rastertiles/voyager'), attribution: '© Carto, © OSM contributors', category: 'streets' },
+  { id: 'carto-positron', name: 'Carto Positron', url: cartoTiles('light_all'), attribution: '© Carto, © OSM contributors', category: 'light' },
+  { id: 'carto-dark', name: 'Carto Dark Matter', url: cartoTiles('dark_all'), attribution: '© Carto, © OSM contributors', category: 'dark' },
   // Satellite
   { id: 'esri-world-imagery', name: 'Esri World Imagery', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: '© Esri', category: 'satellite' },
   { id: 'esri-clarity', name: 'Esri Clarity', url: 'https://clarity.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: '© Esri', category: 'satellite' },

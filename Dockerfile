@@ -4,6 +4,8 @@ RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
+ARG VITE_CARTO_API_KEY
+ENV VITE_CARTO_API_KEY=$VITE_CARTO_API_KEY
 RUN pnpm run build
 
 FROM nginx:alpine

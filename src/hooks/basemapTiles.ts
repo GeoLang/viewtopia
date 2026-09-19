@@ -10,6 +10,13 @@ import type { StyleSpecification } from 'maplibre-gl';
 import { layers, namedFlavor } from '@protomaps/basemaps';
 import { cachedTileUrl } from '../offline/tileProtocol';
 
+// keyless carto rasters carry an "API KEY REQUIRED" watermark from about zoom 13
+export function cartoTiles(style: string): string {
+  const url = `https://basemaps.cartocdn.com/${style}/{z}/{x}/{y}.png`;
+  const key = import.meta.env.VITE_CARTO_API_KEY;
+  return key ? `${url}?key=${key}` : url;
+}
+
 export type Basemap =
   | 'osm'
   | 'satellite'
@@ -63,23 +70,23 @@ export const BASEMAP_TILES: Record<string, BasemapTiles> = {
  */
 export const VECTOR_APPROX_RASTER: Record<string, BasemapTiles> = {
   liberty: {
-    url: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+    url: cartoTiles('rastertiles/voyager'),
     attr: '© CARTO © OpenStreetMap',
   },
   bright: {
-    url: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+    url: cartoTiles('rastertiles/voyager'),
     attr: '© CARTO © OpenStreetMap',
   },
   positron: {
-    url: 'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+    url: cartoTiles('light_all'),
     attr: '© CARTO © OpenStreetMap',
   },
   dark: {
-    url: 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+    url: cartoTiles('dark_all'),
     attr: '© CARTO © OpenStreetMap',
   },
   selfhosted: {
-    url: 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+    url: cartoTiles('dark_all'),
     attr: '© CARTO © OpenStreetMap',
   },
 };

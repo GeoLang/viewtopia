@@ -498,6 +498,7 @@ services:
         VITE_GEOCODE_URL: http://localhost:3001
         VITE_ROUTING_URL: http://localhost:3002
         VITE_GEOLANG_URL: http://localhost:8080
+        VITE_CARTO_API_KEY: ${VITE_CARTO_API_KEY:-}
     ports:
       - "5174:5174"
     volumes:
