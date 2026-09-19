@@ -6,6 +6,12 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-09-19: **the viewer image starts without its compose neighbours.** The
+  Dockerfile's nginx resolved `tiletopia` and `geolang` at startup, so the image
+  exited on any host where those names do not exist, Fargate included. The
+  upstreams now resolve per request through Docker's DNS, the dev compose
+  keeps its `/api/` and `/agent/` proxying, and the platform compose still
+  mounts its own config over this one.
 - 2026-09-16: **the public docs say what the code does.** Corrected the
   Space-Time analysis count (eight, and the Geofences panel feeds one of them),
   deck.gl's place as a MapLibre overlay rather than a viewer, the ISODATA

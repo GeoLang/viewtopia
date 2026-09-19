@@ -14,14 +14,20 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # upstreams resolve per request, so nginx starts where tiletopia and geolang are absent
+    resolver 127.0.0.11 valid=10s ipv6=off;
+
     location /api/ {
-        proxy_pass http://tiletopia:3000/api/;
+        set $tiletopia tiletopia;
+        proxy_pass http://$tiletopia:3000$request_uri;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
     }
 
     location /agent/ {
-        proxy_pass http://geolang:8080/;
+        set $geolang geolang;
+        rewrite ^/agent/(.*)$ /$1 break;
+        proxy_pass http://$geolang:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
     }

@@ -137,14 +137,18 @@ other documents citing "P0 item 5" still land on the right one.
 1. **Make the hosted stack start from the published images.**
    Repositories: `infrastructure`, `geolang`, `viewtopia`, `tiletopia`,
    `ptolemy`, `agora`.
-   - [ ] Run `infrastructure/scripts/publish-images.sh` against the applied ECR
-     repositories with one new `image_tag`.
+   - [x] Run `infrastructure/scripts/publish-images.sh` against the applied ECR
+     repositories with one new `image_tag` (v0.1.0, viewtopia and the proxy,
+     2026-09-19).
    - [ ] After the first AWS apply, populate the four operator-managed secrets,
      confirm both database URL versions are created, force one RDS rotation,
      and prove Ptolemy and Agora recover with healthy replacement tasks.
-   - [ ] Stage the required EFS data and confirm startup migrations.
-   - [ ] Prove the public route set with service health checks and one
-     authenticated browser session.
+   - [x] Stage the required EFS data and confirm startup migrations (nothing to
+     stage for the nine-service preview, migrations ran on first start
+     2026-09-19).
+   - [x] Prove the public route set with service health checks and one
+     authenticated session (curl signup, token accepted by three services, one
+     agent run, 2026-09-19).
 
 7. **Chat-only viewer mode: a typed prompt reaches every capability that does
    not need the mouse.** Repositories: `viewtopia`, `geolang`. Owner call
@@ -158,201 +162,59 @@ other documents citing "P0 item 5" still land on the right one.
 
 ## Before any public deploy
 
-The hosted flagship is the thesis blocker ("click a link, you're in the map").
-It is money and ops, not an engineering TODO an agent can pick. The AWS account
-decision has been open since 2026-08-05 and also blocks geoplumb in-region
-serving. Suggested order: deploy privately first, prove the stack runs
-in-region, then settle the anonymous-edit and link-expiry questions against a
-real instance.
+### Hosted preview, live since 2026-09-19
 
-Hosting was deferred by owner decision 2026-08-13, so everything in this section
-is parked with it, along with the hosted stack decisions, the database TLS
-operator steps, the CloudFront realtime test and geoplumb in-region serving. The
-Terraform definitions are present, but the image, data, secret, and first-apply
-work below still blocks a running hosted stack.
+Owner calls 2026-09-19: AWS account 000152811496 in us-east-1 (the owner is in
+Toronto) under IAM user `geolang-deploy` (CLI profile `geolang`), nine services
+(proxy, viewtopia, ptolemy, tiletopia, agora, geolang-api, executor, sibyl,
+geodukt), no domain, Sibyl on Amazon Bedrock. Low cost is the constraint.
 
-What actually stands in the way, in order:
+Live at https://d2dkw27j378mpo.cloudfront.net, applied from
+`infrastructure/profiles/preview.tfvars` (138 resources, state in the
+`geolang-terraform-state-000152811496` bucket in us-west-2). Verified the same
+day: every enabled route answers through CloudFront, all nine tasks healthy on
+Fargate Spot, a signup on tiletopia yields a token that ptolemy, agora and
+geolang-api accept, and one chat run ("Fly the map to Monaco") geocoded,
+downloaded Natural Earth into EFS and returned a map spec. The viewer loads in
+headless Chromium with its canvas and toolbar.
 
-1. **the AWS account decision**. Nothing proceeds without it.
-2. **four owner calls**, listed under **hosted stack decisions before a public
-   deploy** below. Only ptolemy
-   classifying GET as public is a genuine blocker for a public domain.
-   Topology name-keyed reads and `GET /replication/peers` are now Admin.
-   The other three are things you would regret later rather than at launch.
-3. **the mechanical apply blockers**, in infrastructure's README: every enabled
-   ECR image must be pushed under `image_tag`, required spatial and coverage
-   data must be staged, every secret container needs a value including the two
-   database URLs with `sslmode=verify-full`, and DNS delegation plus ACM
-   validation must complete when the platform profile uses `geolang.com`. The
-   Natural Earth EFS access point still needs data staged before the first
-   hosted scale-up.
-4. **share-link policy**, not the links themselves. Share links are built, and
-   have been since agora's first migration: create, revoke and resolve, a
-   `view` or `edit` role per link, and `resolve_link` mints an anonymous guest
-   session (`sub` = `guest-<uuid>`, 12 hours) whose entire surface is the
-   websocket, since every other route requires a platform JWT. Role is re-read
-   from the row on each connect, so revoking kills the next handshake but not a
-   socket already open. What is actually open is policy: links never expire
-   (there is no expiry column, only `revoked`), and whether a public instance
-   should hand an anonymous guest an `edit` role at all is a product decision
-   nobody has made.
+Shape, all in `infrastructure` (README has the detail):
 
-Operator-facing deployment gaps:
+- one Aurora Serverless v2 PostgreSQL 17.10 cluster, min 0 ACU, auto-pause
+  after 300 s, `rds.force_ssl` on, RDS Data API on. Ptolemy and agora are two
+  databases on it with the master credential (the compose layout), the refresh
+  Lambda created `agora` through the Data API on its first run. Ptolemy's
+  delivery worker polls every 5 s and agora's watch tick every 30 s, so the
+  cluster only pauses while the tasks are scaled to zero.
+- no NAT gateway: tasks run in the public subnets with public IPs.
+- Fargate Spot for every service, ptolemy health check on `/api/v1/healthz`.
+- ghcr images for seven services, ECR builds for the Caddy proxy and viewtopia.
+- `scripts/platform-scale.sh up|down`, plus a nightly scale-down at 23:00
+  America/Toronto with no morning schedule.
+- Sibyl calls `https://bedrock-mantle.us-east-1.api.aws/v1` with
+  `openai.gpt-oss-120b` (active) and `qwen.qwen3-235b-a22b-2507`. Bedrock has
+  no Qwen3.5 or 3.8, so the 0.82 eval baseline does not carry over.
 
-- [ ] **CloudFront realtime WS untested live**: the realtime behavior forwards
-      `Sec-WebSocket-Protocol` and has a zero TTL, but the distribution has never
-      carried a real collaboration session. Test it on the deployed distribution.
-- [ ] **hosted stack decisions before a public deploy** (from the 2026-08-13
-      security review of the hosted terraform). What is left needs an owner
-      call:
-      - ptolemy classifies GET/HEAD/OPTIONS as public, so reads are anonymous on
-        a public domain. Narrower than it sounds: it is scoped to public
-        datasets. The visibility middleware answers 404 for any uuid that
-        resolves to a private dataset, and every listing filters to
-        `visibility = 'public'` in SQL, pinned by
-        `test_private_dataset_is_absent_from_every_listing`. Topology
-        name-keyed reads and `GET /replication/peers` are Admin, not this rule.
-      - the terraform plan CI job authenticates with long-lived AWS access
-        keys rather than OIDC. The job is gated to `workflow_dispatch` and the
-        workflow grants only `contents: read`, which bounds the blast radius.
-      - the S3 state backend is commented out, terraform state is local only.
-        Needs a bucket that does not exist yet.
-      - the executor's inbound 8081 admits the whole VPC CIDR (a security group
-        reference cycle prevents naming geolang-api's group), so
-        `GEOLANG_EXECUTOR_SECRET` is the only guard on it.
-- [ ] **database TLS is opt-in per operator, not enforced in code.** With
-      `rds.force_ssl` now on, a service reaches its database only over TLS, but
-      whether that TLS is *verified* rests on the connection string an operator
-      pastes into Secrets Manager. sqlx makes this worse than it looks: under
-      `sslmode=require` it installs a verifier that returns Ok for any
-      certificate and ignores `sslrootcert` entirely, contradicting its own doc
-      comment, so `require` buys encryption with no authentication and anything
-      answering in the database's place can read and rewrite the session. Only
-      `verify-ca` and `verify-full` check the chain. The URLs must therefore end
-      in `?sslmode=verify-full&sslrootcert=/etc/ssl/rds-global-bundle.pem` and
-      must name the RDS endpoint directly, since a CNAME in front of it fails
-      hostname verification. Neither ptolemy nor agora enforces this in code,
-      because doing so would break local and CI postgres, which have no TLS.
-      Decide whether a hosted-only check is worth having. Also note the service
-      images now fetch the CA bundle unpinned at build time, so rebuilds pick up
-      CA rotations automatically and reproducibility rests on AWS.
+Cost, us-east-1 list prices: about 5.50 USD a day while up, about 1.10 a day
+scaled to zero (ALB, secrets, storage).
 
-      Both agents reached the `require` finding independently and both reproduced
-      it live: `sslmode=require` connects happily to a cert signed by an untrusted
-      CA with a mismatched hostname. It also diverges from libpq, where a present
-      root CA file silently upgrades `require` to `verify-ca`. sqlx does no such
-      thing, so an operator pasting AWS's own `require` guidance plus an
-      `sslrootcert` gets zero verification and no warning.
+Open, from this deploy:
 
-      Operator steps, since neither service can enforce this itself:
-      - `ptolemy_database_url` and `agora_database_url` must both end in
-        `?sslmode=verify-full&sslrootcert=/etc/ssl/rds-global-bundle.pem`.
-        Without the `sslmode`, ptolemy defaults to `prefer` and reaches RDS over
-        unverified TLS rather than failing.
-      - `PTOLEMY_EXTERNAL_DATABASE_URL`, if set, needs the same two parameters.
-      - assumes the deployment reaches RDS directly rather than through RDS
-        Proxy, which uses ACM certificates and would not need this bundle.
+- [ ] one viewer eval sweep against both Bedrock profiles to pick the default.
+- [ ] `/api/geocode/*` answers 404 from ptolemy's catch-all instead of the
+      proxy's 501, because the geokode gate is closed and the Caddy route
+      order lets `/api/*` catch it. Same shape as the tiletopia case the
+      infrastructure README already names.
+- [ ] agora holds the cluster master credential. A separate role for it needs
+      the refresh Lambda to create the role and store its password.
+- [ ] the account's Lambda concurrency quota is 10, so the refresh Lambda has
+      no reserved concurrency and two runs overlapped once (schedule plus a
+      manual invoke). The equality check made the second a no-op.
+- [ ] the Bedrock key is a long-term key on IAM user `geolang-sibyl-bedrock`,
+      365 days, which AWS recommends only for exploration.
+- [ ] the P0 item 1 rotation test (force one RDS rotation and prove ptolemy
+      and agora recover) has not been run.
 
-- [ ] **in-region deployment**: cold pulls are bound by the residential
-      link to us-west-2. Serving next to the data is the remaining latency
-      lever; blocked on an AWS account decision (2026-08-05).
-
-- [!] **enable the dependency graph for GeoLang repos, an owner-only click.**
-      Diagnosed 2026-08-13: the graph is DISABLED for viewtopia (and every
-      GeoLang repo probed, their SBOM endpoints all 404), because GitHub turned
-      it off by default for new public repos in May 2025 and this org never
-      enabled it, while Dependabot alerts stayed on. Alerts therefore keep
-      matching new advisories against the last snapshot ever computed, taken
-      from `package-lock.json` before the pnpm migration deleted it, which is
-      why all 23 alerts carry that manifest path and ghosts keep firing on
-      ranges the tree left long ago (alert 19, dompurify, is such a ghost: the
-      tree holds 3.4.13, past the fix). Re-checked 2026-08-18: the graph is
-      still off, every SBOM endpoint still 404s, and alert 19 is now the only
-      one still open. Two nanoid alerts (23 and 25) were auto-dismissed, the
-      newer of them on 2026-08-17, but the tree does hold nanoid 3.3.16, inside
-      alert 25's `< 3.3.18` range, so that one is not a manifest ghost. No workflow can help, the
-      submission API 404s while the graph is off, and none is needed: pnpm v9
-      lockfiles parse natively once it is on. Fix is owner-only, either per repo
-      (Settings, Advanced Security, Dependency graph, Enable) or org-wide via a
-      code-security configuration with `dependency_graph: enabled` attached to
-      all repos without one (needs `write:org`, which the local gh token lacks).
-      After enabling, the SBOM endpoint should return ~1000 packages and the
-      alerts should re-resolve against `pnpm-lock.yaml`; whether stale alerts
-      auto-close was not verifiable in advance, so check alert 19 and dismiss it
-      by hand if it survives.
-
-- [ ] **advisories nobody can upgrade out of (2026-08-12, re-checked
-      2026-08-18).** `cargo deny check advisories` fails in ptolemy, geodukt,
-      geokode and itinera. That is four of roughly twenty Rust repos, not all of
-      them: agora, checked as a fifth, reports clean. CI stays green anyway,
-      because each of the four runs that step with `continue-on-error: true`, so
-      it reports without gating, which is the right policy while the fixes are
-      not ours to make. The preceding `check licenses sources bans` step carries
-      no such flag and does gate.
-
-      Outstanding, none of these fixable from here. Two of them print a "try
-      `cargo update -p ...`" hint that does not work, because the version they
-      want is a major ahead of what a transitive dependency requires, so cargo
-      locks nothing. Verify with `--dry-run` before believing that hint again.
-      - ptolemy: `rsa` 0.9.10, the Marvin timing sidechannel
-        (RUSTSEC-2023-0071), through `openidconnect` 4.0.1. Not through
-        sqlx-postgres, which is in the tree but does not reach `rsa`. No
-        upgrade published. ptolemy also warns on yanked `spin` 0.9.8.
-      - geodukt: `quick-xml` 0.37.5, two denial-of-service advisories
-        (RUSTSEC-2026-0194, -0195). Wants >= 0.41 but `object_store` 0.11.2
-        pins `^0.37`. Also `rustls-pemfile` through the same `object_store`
-        (RUSTSEC-2025-0134, unmaintained, no safe upgrade).
-      - geokode: `protobuf` 2.28.0 uncontrolled-recursion crash
-        (RUSTSEC-2024-0437). Wants >= 3.7.2 but `osmpbfreader` 0.16.1 pins
-        `^2.28`. Also `bincode` 1.3.3 and `smartstring` 1.0.1, both
-        unmaintained with no successor version (RUSTSEC-2025-0141, -2026-0249).
-      - itinera: `bincode` 1.3.3, same as geokode's.
-      - tiletopia: a second h2 line at 0.3.27 through `aws-smithy-http-client`,
-        which pins it.
-
-- [ ] **geodukt and ptolemy each carry digest 0.10 and 0.11 at once.** In
-      geodukt it is `md-5` 0.10 reaching the graph through `object_store`, and
-      the duplicate is `digest` alone, since geodukt holds a single `sha2`
-      (0.11). In ptolemy it is sqlx 0.8, mongodb 3.7 and openidconnect 4.0, all
-      still on sha2 0.10, so the 0.11 bump added a second copy rather than
-      replacing one, and ptolemy duplicates both `digest` and `sha2`.
-      `deny.toml` warns on duplicates rather than failing in both, so CI is
-      green. Each resolves itself when those upstreams move.
-
-- [ ] **viewtopia's two `image-size` advisories have no fix published.** Both
-      are denial of service through infinite loops in the JXL, HEIF and ICNS
-      parsers. The tree holds `image-size` 0.7.5 through `texture-compressor`
-      under `@loaders.gl/textures` 4.4.3, which is deck.gl's loader family
-      rather than deck.gl itself. GitHub still reports no patched version. Both
-      alerts are dismissed as not-used, on the ground that those parsers only
-      run in texture-compressor's Node CLI path and never in the browser bundle.
-      The `dompurify` advisory alongside them is
-      NOT reachable here: it needs `IN_PLACE` sanitizing with hook removal,
-      viewtopia disables the Cesium InfoBox, and cesium 26.1.0 calls DOMPurify
-      in one place only, `Credit.js`, in the string-returning mode. Recorded so
-      nobody investigates it twice.
-
-      The fourth alert, `postcss` (CVE-2026-69153, an attacker-chosen
-      `sourceMappingURL` reading arbitrary `.map` files when `from` is unset),
-      is dismissed as stale: it names `package-lock.json`, which the pnpm
-      migration deleted, and the root lockfile is on 8.5.25, past the 8.5.23
-      fix. What it does not report is real: `dashboard/pnpm-lock.yaml` carries
-      8.4.31 as well, from `next@15.5.22`, whose package.json requires that
-      exact version with no range, so no update moves it and only a pnpm
-      override would. Left alone because it is build-time and
-      development-scope, and the dashboard compiles only its own stylesheets,
-      so no CSS anyone else chose reaches postcss.
-
-- [ ] Two operational consequences of dropping the zero-rows rule, for whoever
-      deploys first: a deployment needs at least one instance-admin token holder,
-      because that is the only actor who can grant on a dataset the backfill
-      skipped (blank or machine `created_by`), and any service account writing to
-      datasets it did not create needs an explicit grant where the editor role
-      alone used to pass.
-
-- [ ] **collecta role strings outside admin/editor/viewer now fail closed.**
-      Nothing in the repo creates others, but a live database predating this may
-      hold them, and those accounts stop working on deploy.
 
 ## Wait for demand
 
