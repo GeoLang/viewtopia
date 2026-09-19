@@ -57,9 +57,8 @@ const leafletTileTemplate = (page) =>
     return template;
   });
 
-/** One paragraph per chat line, which is what a replay must not add to. */
-const chatLines = (page) =>
-  page.locator('aside [class*="mantine-ScrollArea-viewport"] p').count();
+/** One bubble per chat line, which is what a replay must not add to. */
+const chatLines = (page) => page.locator('aside [data-testid="chat-line"]').count();
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {

@@ -228,6 +228,7 @@ export function ChatPanel() {
             >
               <Text
                 component="div"
+                data-testid="chat-line"
                 size="sm"
                 c={msg.role === 'user' ? 'white' : 'gray.3'}
                 className={msg.role === 'assistant' ? 'chat-markdown' : undefined}
