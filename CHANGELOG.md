@@ -44,6 +44,27 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-09-20: **Toronto parcels never read the Monaco demo sales.** The comps
+  panel paired every parcels dataset with `demo_sales`, so a Toronto parcel
+  searched sales seeded in Monaco. Each parcels dataset now has its own sales
+  partner, `sales` for `parcels` and `demo_sales` for `demo_parcels`, and the
+  panel names the missing partner when there is none.
+- 2026-09-20: **a parcel search shows every match.** The Parcels panel asked
+  for one result and rendered it as the answer, so "100 Queen St W" came back
+  as 1100 Queen St W with nothing to say other parcels had matched. It now
+  fetches ten, lists address and APN per row when more than one comes back,
+  and puts an exact match of what was typed first. Picking a row flies to that
+  parcel, draws it and feeds the selection, the same as a single hit does.
+- 2026-09-20: **the Parcels panel stops inventing fields.** A parcel with no
+  `flood_zone` was shown as a green "Zone X" badge, which claims minimal flood
+  hazard for data that has no flood field at all, and the 498,469 Toronto
+  parcels have none. The Flood Zone section is gone when the field is absent,
+  the owner line is gone when there is no owner, and the Valuation section is
+  gone when neither assessed nor market value is present instead of printing
+  two dashes.
+- 2026-09-20: **a comps search with no sales says so.** The form sat
+  unchanged, so an empty result read as a panel that had not run. It now
+  prints one line naming the radius and period it searched.
 - 2026-09-20: **the Data Sources panel minimizes.** Its tab strip is laid out
   with an inline `display: flex`, which beat the class rule that hides a
   minimized card's body, so the chevron flipped and nothing rolled up. The
@@ -63,6 +84,11 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-09-20: **the chat starts a live map.** `live.start` creates a live map
+  with a name and joins it, what the toolbar's Live control does on Start,
+  so "create a live session" no longer has the model guessing an action name.
+  `history.show_live` now says it returns from a past moment and is not for
+  starting a live map, which "set map to live" was landing on.
 - 2026-09-20: **the chat opens panels.** `panel.open` takes any panel id the
   toolbar's buttons or menus open (the catalogue lists each with its label,
   Layers, Legend and Settings included) or a plugin id, and

@@ -510,7 +510,7 @@
   },
   {
     "name": "history.show_live",
-    "description": "Follow the live readings again, after showing a past moment.",
+    "description": "Return to the present after history.show_at showed a past moment. Not for starting or joining a live map.",
     "parameters": {
       "type": "object",
       "properties": {},
@@ -848,6 +848,24 @@
         "layer",
         "kind",
         "breakpoints"
+      ]
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
+    "name": "live.start",
+    "description": "Start a new live map with a name and join it, the same as the toolbar Live control. live.join is for a map that already exists.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "map": {
+          "type": "string",
+          "description": "What the live map is called."
+        }
+      },
+      "required": [
+        "map"
       ]
     },
     "reads": false,

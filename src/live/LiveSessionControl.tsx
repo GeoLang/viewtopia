@@ -14,14 +14,13 @@ import {
 import { IconBroadcast, IconLogout, IconShare } from '@tabler/icons-react';
 import { useAuthStore } from '../features/auth/store';
 import { useEntryPointStore } from '../onboarding/entryPoints';
-import { useProjectsStore } from '../projects/projectsStore';
-import { agoraErrorText, createLiveDocument, listLiveDocuments } from './api';
-import { captureStateForNewDocument } from './documentBridge';
+import { agoraErrorText, listLiveDocuments } from './api';
 import { LiveComments } from './LiveComments';
 import { LivePeers } from './LivePeers';
 import { LiveShareDialog } from './LiveShareDialog';
 import { LiveUndo } from './LiveUndo';
 import { useLiveStore } from './liveStore';
+import { startLiveDocument } from './startLiveDocument';
 import type { LiveDocumentSummary } from './types';
 
 export function LiveSessionControl() {
@@ -64,16 +63,7 @@ export function LiveSessionControl() {
     setBusy(true);
     setError('');
     try {
-      // a document started inside a project belongs to it, so project members
-      // reach the session through their project role. agora refuses an attach
-      // from a project viewer, so a viewer's session starts unattached instead
-      const { items, activeProjectId } = useProjectsStore.getState();
-      const activeRole = items.find((project) => project.id === activeProjectId)?.role;
-      const projectId = activeRole === 'owner' || activeRole === 'editor' ? activeProjectId : null;
-      const created = await createLiveDocument(name.trim() || 'Untitled live map', projectId);
-      // the document starts from what this browser already has on screen
-      captureStateForNewDocument();
-      connect({ documentId: created.id });
+      await startLiveDocument(name);
       setPickerOpen(false);
       setName('');
     } catch (failure) {

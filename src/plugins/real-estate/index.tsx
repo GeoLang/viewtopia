@@ -13,8 +13,7 @@ import {
   discoverBranch,
   mergeParcels,
   splitParcel,
-  discoverParcelsBranch,
-  SALES_DATASET,
+  discoverParcelSource,
   type ParcelRecord,
 } from '../../lib/realEstate';
 
@@ -26,6 +25,7 @@ const SPLIT_LINE_LAYER = 'real-estate-split-line';
 function RealEstatePanel({ ctx }: { ctx: PluginContext }) {
   const [parcelsBranch, setParcelsBranch] = useState<string | null>(null);
   const [salesBranch, setSalesBranch] = useState<string | null>(null);
+  const [salesDataset, setSalesDataset] = useState<string | null>(null);
   const [subject, setSubject] = useState<{ lat: number; lng: number } | null>(null);
   const [selected, setSelected] = useState<ParcelRecord[]>([]);
 
@@ -39,14 +39,17 @@ function RealEstatePanel({ ctx }: { ctx: PluginContext }) {
 
   useEffect(() => {
     let active = true;
-    // settings override wins, otherwise discover the seeded demo datasets by name
+    // a settings override wins over discovery
     const overrideParcels = ctx.settings.get<string>('parcelBranchId', '');
     const overrideSales = ctx.settings.get<string>('salesBranchId', '');
     (async () => {
-      const p = overrideParcels || (await discoverParcelsBranch());
-      const s = overrideSales || (await discoverBranch(SALES_DATASET));
+      const source = overrideParcels ? null : await discoverParcelSource();
+      const p = overrideParcels || source?.parcelsBranch || null;
+      const sales = source?.salesDataset ?? null;
+      const s = overrideSales || (sales ? await discoverBranch(sales) : null);
       if (!active) return;
       setParcelsBranch(p);
+      setSalesDataset(sales);
       setSalesBranch(s);
     })().catch(() => {
       /* leave branches null; panels show a load hint */
@@ -199,6 +202,7 @@ function RealEstatePanel({ ctx }: { ctx: PluginContext }) {
       <Tabs.Panel value="comps">
         <CompsPanel
           branchId={salesBranch}
+          salesDataset={salesDataset}
           subjectLat={subject?.lat ?? null}
           subjectLng={subject?.lng ?? null}
           onFlyTo={(lat, lng, zoom) => ctx.map.flyTo(lng, lat, zoom)}
@@ -230,7 +234,7 @@ const plugin: PluginDefinition = {
   Panel: RealEstatePanel,
   settings: [
     { key: 'parcelBranchId', label: 'Parcels Branch ID', type: 'text', description: 'UUID of the branch containing parcel data (blank = auto-discover parcels, then demo_parcels)' },
-    { key: 'salesBranchId', label: 'Sales Branch ID', type: 'text', description: 'UUID of the branch containing sales data (blank = auto-discover demo_sales)' },
+    { key: 'salesBranchId', label: 'Sales Branch ID', type: 'text', description: 'UUID of the branch containing sales data (blank = the sales dataset paired with the parcels dataset, sales for parcels and demo_sales for demo_parcels)' },
     { key: 'defaultRadius', label: 'Default Comp Radius (m)', type: 'number', defaultValue: 1600, min: 100, max: 50000 },
     { key: 'maxDays', label: 'Max Comp Age (days)', type: 'number', defaultValue: 365, min: 30, max: 1825 },
   ],

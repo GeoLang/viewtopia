@@ -37,7 +37,7 @@ vi.mock('../../src/lib/verticals', async (importOriginal) => ({
 vi.mock('../../src/lib/realEstate', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../src/lib/realEstate')>()),
   discoverBranch: vi.fn(async () => 'parcels-branch'),
-  discoverParcelsBranch: vi.fn(async () => 'parcels-branch'),
+  discoverParcelSource: vi.fn(async () => ({ parcelsBranch: 'parcels-branch', salesDataset: 'sales' })),
   searchParcels: vi.fn(),
   splitParcel: vi.fn(async () => ({ newApns: ['12-1', '12-2'] })),
 }));

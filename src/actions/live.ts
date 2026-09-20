@@ -7,6 +7,7 @@ import {
 } from '../live/assetRule';
 import { parseBreakpoints } from '../live/assetState';
 import { useLiveStore } from '../live/liveStore';
+import { startLiveDocument } from '../live/startLiveDocument';
 import {
   ASSET_RULE_ID,
   DEFAULT_WATCH_INTERVAL_SECONDS,
@@ -104,6 +105,30 @@ registerAction({
     if (documents.length === 0) return { text: 'There are no live maps.' };
     const lines = documents.map((document) => labelOf(document, documents)).join(', ');
     return { text: `${documents.length} live maps: ${lines}.` };
+  },
+});
+
+registerAction({
+  name: 'live.start',
+  description:
+    'Start a new live map with a name and join it, the same as the toolbar Live control. live.join is for a map that already exists.',
+  parameters: {
+    map: { type: 'string', description: 'What the live map is called.', required: true },
+  },
+  run: async (args) => {
+    const name = String(args.map ?? '').trim();
+    if (!name) throw new ActionError('a live map needs a name');
+    const { documentId, document } = useLiveStore.getState();
+    if (documentId !== null) {
+      throw new ActionError(
+        `this session is already in ${document.meta.name || documentId}, leave it first`,
+      );
+    }
+    const created = await startLiveDocument(name);
+    if (useLiveStore.getState().documentId !== created.id) {
+      throw new ActionError(`could not join ${created.name}: this session has no sign in`);
+    }
+    return { text: `Started ${created.name}.` };
   },
 });
 

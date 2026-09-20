@@ -42,8 +42,8 @@ docker compose up -d
 
 ### 2. Load parcel data
 
-The plugin looks for a parcels dataset named `parcels`, falls back to
-`demo_parcels`, and pairs it with `demo_sales`. It takes the branch called
+The plugin looks for a parcels dataset named `parcels`, paired with `sales`, and
+falls back to `demo_parcels`, paired with `demo_sales`. It takes the branch called
 `main`. `scripts/seed-parcels.mjs` creates the two demo datasets against a
 running ptolemy, anchored on the region the stack imported.
 
@@ -80,15 +80,24 @@ dataset that already has features unless you pass `--replace`.
 The loader also writes `data/toronto/toronto_census_da.gpkg`, which you can drop
 straight onto the map.
 
+Routing and address search read the one OSM extract the stack was started with,
+Monaco by default. For Toronto drive times and addresses start the stack on the
+Toronto extract instead:
+
+```bash
+scripts/platform-up.sh https://download.bbbike.org/osm/bbbike/Toronto/Toronto.osm.pbf
+```
+
 Two attributions travel with the data in each feature's `source` property, and
 both licences allow commercial use:
 
 - Contains information licensed under the Open Government Licence – Toronto
 - Statistics Canada, 2021 Census of Population, Open Government Licence – Canada
 
-Sales stay demo data. Ontario does not publish property sale records as open
-data, so the comps panel keeps reading `demo_sales` and `scripts/load-toronto.py`
-never touches it.
+Ontario does not publish property sale records as open data, so there is no
+`sales` dataset for Toronto and the comps panel reports that. It never reads the
+Monaco `demo_sales`, which stays paired with `demo_parcels` untouched. Load your
+own sales as a dataset named `sales`, or point `salesBranchId` at one.
 
 For your own data, import the files in the viewer by dropping them on the map,
 or point the plugin at existing branches: Settings, Real Estate, then
@@ -108,11 +117,12 @@ Open http://localhost:5173
 ## Features
 
 ### Parcel Lookup (ParcelPanel)
-- Search by APN, street address, or owner name
+- Search by APN, street address, or owner name, and pick from the matches when
+  more than one parcel comes back
 - View zoning designation with color coding
 - See assessed value, market value, year built
 - Lot area and building square footage
-- FEMA flood zone designation
+- FEMA flood zone designation when the data carries one
 - Click to fly to parcel on map
 
 ### Comparable Sales (CompsPanel)
@@ -157,7 +167,7 @@ setting, stored in localStorage:
 | Setting | Description | Default |
 |---------|-------------|---------|
 | `parcelBranchId` | Branch id for parcels | empty, meaning discover `parcels` then `demo_parcels` |
-| `salesBranchId` | Branch id for sales | empty, meaning discover `demo_sales` |
+| `salesBranchId` | Branch id for sales | empty, meaning the sales dataset paired with the parcels dataset |
 | `defaultRadius` | Declared but not read. The radius slider starts at 0.5 miles | `1600` |
 | `maxDays` | Declared but not read. The age input starts at 6 months | `365` |
 

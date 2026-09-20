@@ -17,7 +17,7 @@ import {
   SETUP_DOC,
   missingDatasetMessage,
 } from '../../src/lib/verticals';
-import { PARCELS_DATASET_NAMES, SALES_DATASET } from '../../src/lib/realEstate';
+import { PARCELS_DATASET_NAMES, SALES_DATASET_NAMES } from '../../src/lib/realEstate';
 
 /**
  * The setup page is the only place an operator learns which dataset name each
@@ -45,7 +45,7 @@ const verticals = [
   { plugin: environmental, datasets: [SENSORS_DATASET] },
   { plugin: telecom, datasets: [TOWERS_DATASET] },
   { plugin: logistics, datasets: [] },
-  { plugin: realEstate, datasets: [...PARCELS_DATASET_NAMES, SALES_DATASET] },
+  { plugin: realEstate, datasets: [...PARCELS_DATASET_NAMES, ...SALES_DATASET_NAMES] },
 ];
 
 describe('verticals setup page', () => {

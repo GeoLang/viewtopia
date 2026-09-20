@@ -19,7 +19,7 @@ import {
   IconCurrencyDollar,
   IconMapPin,
 } from '@tabler/icons-react';
-import { searchComps, SALES_DATASET } from '../../lib/realEstate';
+import { searchComps, SALES_DATASET_NAMES } from '../../lib/realEstate';
 import { missingDatasetMessage } from '../../lib/verticals';
 
 const METERS_PER_MILE = 1609.34;
@@ -40,6 +40,7 @@ interface CompSale {
 
 interface CompsPanelProps {
   branchId: string | null;
+  salesDataset: string | null;
   subjectLat: number | null;
   subjectLng: number | null;
   onFlyTo: (lat: number, lng: number, zoom?: number) => void;
@@ -50,6 +51,7 @@ interface CompsPanelProps {
 
 export function CompsPanel({
   branchId,
+  salesDataset,
   subjectLat,
   subjectLng,
   onFlyTo,
@@ -61,6 +63,9 @@ export function CompsPanel({
   const [minSqft, setMinSqft] = useState<number | string>(0);
   const [maxSqft, setMaxSqft] = useState<number | string>(10000);
   const [comps, setComps] = useState<CompSale[]>([]);
+  const [emptyResult, setEmptyResult] = useState<{ radiusMiles: number; months: number } | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,15 +77,16 @@ export function CompsPanel({
     if (!branchId) {
       setError(
         missingDatasetMessage(
-          SALES_DATASET,
+          salesDataset ?? SALES_DATASET_NAMES[0],
           'real-estate',
-          'Run scripts/seed-parcels.mjs to create it.',
+          'Load a sales layer under that name, or set salesBranchId in the plugin settings.',
         ),
       );
       return;
     }
     setLoading(true);
     setError(null);
+    setEmptyResult(null);
 
     try {
       const num = (v: number | string, fallback: number): number => {
@@ -116,6 +122,7 @@ export function CompsPanel({
         };
       });
       setComps(results);
+      if (results.length === 0) setEmptyResult({ radiusMiles: radius, months });
       onHighlightComps(results.map((c) => ({ lat: c.lat, lng: c.lng })));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Search failed');
@@ -203,6 +210,12 @@ export function CompsPanel({
         {error && (
           <Text size="xs" c="red">
             {error}
+          </Text>
+        )}
+
+        {emptyResult && (
+          <Text size="xs" c="dimmed">
+            No sales within {emptyResult.radiusMiles} miles in the last {emptyResult.months} months.
           </Text>
         )}
 

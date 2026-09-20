@@ -225,10 +225,11 @@ feed, so the panel states that rather than opening a socket that does not exist.
 
 ## Real Estate
 
-**Dataset names:** `parcels` then `demo_parcels` (`PARCELS_DATASET_NAMES`) and
-`demo_sales` (`SALES_DATASET`), both in `src/lib/realEstate.ts`. Parcel discovery
-takes the first of the two names that exists, so real parcels shadow the demo set
-without deleting it. This is the one plugin whose discovery can be overridden: a
+**Dataset names:** `parcels` paired with `sales`, then `demo_parcels` paired with
+`demo_sales` (`PARCEL_SOURCES` in `src/lib/realEstate.ts`). Parcel discovery takes
+the first parcels name that exists, so real parcels shadow the demo set without
+deleting it, and the comps panel reads only that source's own sales dataset: real
+parcels never see the demo sales. This is the one plugin whose discovery can be overridden: a
 non-empty `parcelBranchId` or `salesBranchId` setting is used as the branch id
 directly and `discoverBranch` is skipped.
 
@@ -285,6 +286,6 @@ its centroid becomes the search origin.
 | Key | Type | Default | Read by the plugin |
 |---|---|---|---|
 | `parcelBranchId` | text | empty, meaning discover `demo_parcels` | yes |
-| `salesBranchId` | text | empty, meaning discover `demo_sales` | yes |
+| `salesBranchId` | text | empty, meaning the sales dataset paired with the parcels dataset | yes |
 | `defaultRadius` | number | `1600` | no, the panel's radius slider starts at 0.5 miles |
 | `maxDays` | number | `365` | no, the panel's age input starts at 6 months |

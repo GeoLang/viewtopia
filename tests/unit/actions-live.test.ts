@@ -112,6 +112,26 @@ describe('live actions', () => {
     );
   });
 
+  it('starts a live map and joins it', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: 'doc-9', name: 'Toronto sites' }));
+    const result = await runAction('live.start', { map: 'Toronto sites' });
+
+    const [init] = requestsTo('/agora/documents');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(String(init.body))).toEqual({ name: 'Toronto sites' });
+    expect(useLiveStore.getState().documentId).toBe('doc-9');
+    expect(server.connection.documentParameter).toBe('doc-9');
+    expect(result.text).toBe('Started Toronto sites.');
+  });
+
+  it('refuses to start a map while in one, and one with no name', async () => {
+    joined();
+    await expect(runAction('live.start', { map: 'Another' })).rejects.toThrow('already in');
+    expect(requestsTo('/agora/documents')).toHaveLength(0);
+    useLiveStore.getState().disconnect();
+    await expect(runAction('live.start', { map: ' ' })).rejects.toThrow('needs a name');
+  });
+
   it('joins the document a partial name names', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(DOCUMENTS));
     const result = await runAction('live.join', { map: 'campus' });

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { discoverParcelsBranch } from '../../src/lib/realEstate';
+import { discoverParcelSource } from '../../src/lib/realEstate';
 
 const REAL_PARCELS_BRANCH = 'branch-real';
 const DEMO_PARCELS_BRANCH = 'branch-demo';
@@ -28,18 +28,24 @@ function stubPtolemy(datasetNames: string[]) {
 describe('parcels dataset discovery', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('prefers the real parcels dataset over the demo one', async () => {
+  it('prefers the real parcels dataset and pairs it with sales, never demo_sales', async () => {
     stubPtolemy(['demo_sales', 'demo_parcels', 'parcels']);
-    await expect(discoverParcelsBranch()).resolves.toBe(REAL_PARCELS_BRANCH);
+    await expect(discoverParcelSource()).resolves.toEqual({
+      parcelsBranch: REAL_PARCELS_BRANCH,
+      salesDataset: 'sales',
+    });
   });
 
-  it('falls back to demo_parcels when no real parcels are loaded', async () => {
+  it('falls back to demo_parcels with demo_sales when no real parcels are loaded', async () => {
     stubPtolemy(['demo_sales', 'demo_parcels']);
-    await expect(discoverParcelsBranch()).resolves.toBe(DEMO_PARCELS_BRANCH);
+    await expect(discoverParcelSource()).resolves.toEqual({
+      parcelsBranch: DEMO_PARCELS_BRANCH,
+      salesDataset: 'demo_sales',
+    });
   });
 
   it('returns null when neither dataset exists', async () => {
     stubPtolemy(['demo_sales']);
-    await expect(discoverParcelsBranch()).resolves.toBeNull();
+    await expect(discoverParcelSource()).resolves.toBeNull();
   });
 });

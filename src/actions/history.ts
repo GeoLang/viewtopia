@@ -28,7 +28,8 @@ registerAction({
 
 registerAction({
   name: 'history.show_live',
-  description: 'Follow the live readings again, after showing a past moment.',
+  description:
+    'Return to the present after history.show_at showed a past moment. Not for starting or joining a live map.',
   parameters: {},
   run: () => {
     if (useAssetStateStore.getState().historyAt === null) {

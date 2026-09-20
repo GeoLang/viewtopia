@@ -13,6 +13,7 @@ import {
   Divider,
   Select,
   ColorSwatch,
+  UnstyledButton,
 } from '@mantine/core';
 import {
   IconSearch,
@@ -40,11 +41,11 @@ interface ParcelInfo {
   zoning: string;
   zoningColor: string;
   landUse: string;
-  assessedValue: number;
-  marketValue: number;
+  assessedValue: number | null;
+  marketValue: number | null;
   yearBuilt: number | null;
   buildingArea: number | null;
-  floodZone: string;
+  floodZone: string | null;
   geometry: GeoJSON.Geometry | null;
 }
 
@@ -73,6 +74,19 @@ const ZONING_COLORS: Record<string, string> = {
   OS: '#009688',
 };
 
+const PARCEL_SEARCH_LIMIT = 10;
+
+function exactMatchFirst(
+  results: ParcelRecord[],
+  searchType: string,
+  query: string,
+): ParcelRecord[] {
+  const typed = query.toLowerCase();
+  const isExact = (parcel: ParcelRecord) =>
+    (searchType === 'address' ? parcel.address : parcel.apn).toLowerCase() === typed;
+  return [...results].sort((a, b) => Number(isExact(b)) - Number(isExact(a)));
+}
+
 export function ParcelPanel({
   branchId,
   onFlyTo,
@@ -85,8 +99,46 @@ export function ParcelPanel({
   const [query, setQuery] = useState('');
   const [parcel, setParcel] = useState<ParcelInfo | null>(null);
   const [record, setRecord] = useState<ParcelRecord | null>(null);
+  const [matches, setMatches] = useState<ParcelRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const showParcel = (r: ParcelRecord) => {
+    const props = r.properties;
+    const num = (key: string): number => {
+      const v = props[key];
+      return typeof v === 'number' ? v : 0;
+    };
+    const numOrNull = (key: string): number | null => {
+      const v = props[key];
+      return typeof v === 'number' ? v : null;
+    };
+    setRecord(r);
+    setParcel({
+      apn: r.apn,
+      address: r.address,
+      owner: r.owner,
+      area: r.sqft || num('area_sqft'),
+      areaUnit: 'sq ft',
+      zoning: r.zoning || 'Unknown',
+      zoningColor: ZONING_COLORS[r.zoning] || '#757575',
+      landUse: typeof props.land_use === 'string' ? props.land_use : '',
+      assessedValue: numOrNull('assessed_value'),
+      marketValue: numOrNull('market_value'),
+      yearBuilt: num('year_built') || null,
+      buildingArea: num('building_sqft') || null,
+      floodZone: typeof props.flood_zone === 'string' ? props.flood_zone : null,
+      geometry: r.geometry,
+    });
+    if (r.geometry) {
+      const centroid = parcelCentroid(r);
+      if (centroid) {
+        onFlyTo(centroid[1], centroid[0], 18);
+        onSubjectFound?.(centroid[1], centroid[0]);
+      }
+      onHighlightParcel(r.geometry);
+    }
+  };
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -104,44 +156,20 @@ export function ParcelPanel({
     setError(null);
     setParcel(null);
     setRecord(null);
+    setMatches([]);
 
     try {
-      const results = await searchParcels(branchId, searchType || 'apn', query.trim(), 1);
+      const type = searchType || 'apn';
+      const results = await searchParcels(branchId, type, query.trim(), PARCEL_SEARCH_LIMIT);
       if (results.length === 0) {
         setError('No parcel found for this query.');
         return;
       }
-      const r = results[0];
-      const props = r.properties;
-      const num = (key: string): number => {
-        const v = props[key];
-        return typeof v === 'number' ? v : 0;
-      };
-      setRecord(r);
-      setParcel({
-        apn: r.apn,
-        address: r.address,
-        owner: r.owner,
-        area: r.sqft || num('area_sqft'),
-        areaUnit: 'sq ft',
-        zoning: r.zoning || 'Unknown',
-        zoningColor: ZONING_COLORS[r.zoning] || '#757575',
-        landUse: typeof props.land_use === 'string' ? props.land_use : '',
-        assessedValue: num('assessed_value'),
-        marketValue: num('market_value'),
-        yearBuilt: num('year_built') || null,
-        buildingArea: num('building_sqft') || null,
-        floodZone: typeof props.flood_zone === 'string' ? props.flood_zone : 'X',
-        geometry: r.geometry,
-      });
-      if (r.geometry) {
-        const centroid = parcelCentroid(r);
-        if (centroid) {
-          onFlyTo(centroid[1], centroid[0], 18);
-          onSubjectFound?.(centroid[1], centroid[0]);
-        }
-        onHighlightParcel(r.geometry);
+      if (results.length === 1) {
+        showParcel(results[0]);
+        return;
       }
+      setMatches(exactMatchFirst(results, type, query.trim()));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Search failed');
     } finally {
@@ -214,6 +242,26 @@ export function ParcelPanel({
           </Text>
         )}
 
+        {matches.length > 1 && (
+          <Stack gap={4}>
+            <Text size="xs" c="dimmed">
+              {matches.length} parcels match
+            </Text>
+            {matches.map((match) => (
+              <UnstyledButton key={match.id} onClick={() => showParcel(match)}>
+                <Paper p={4} withBorder>
+                  <Group justify="space-between" gap="xs" wrap="nowrap">
+                    <Text size="xs">{match.address || '(no address)'}</Text>
+                    <Text size="xs" c="dimmed">
+                      {match.apn}
+                    </Text>
+                  </Group>
+                </Paper>
+              </UnstyledButton>
+            ))}
+          </Stack>
+        )}
+
         {parcel && (
           <ScrollArea h={400}>
             <Stack gap="xs">
@@ -230,9 +278,11 @@ export function ParcelPanel({
                   <Text size="sm" fw={500}>
                     {parcel.address}
                   </Text>
-                  <Text size="xs" c="dimmed">
-                    Owner: {parcel.owner}
-                  </Text>
+                  {parcel.owner && (
+                    <Text size="xs" c="dimmed">
+                      Owner: {parcel.owner}
+                    </Text>
+                  )}
                 </Stack>
               </Paper>
 
@@ -245,37 +295,45 @@ export function ParcelPanel({
                 <Text size="xs">{parcel.landUse}</Text>
               </Group>
 
-              <Divider label="Valuation" labelPosition="left" />
-              <Table>
-                <Table.Tbody>
-                  <Table.Tr>
-                    <Table.Td>
-                      <Group gap={4}>
-                        <IconCurrencyDollar size={12} />
-                        <Text size="xs">Assessed</Text>
-                      </Group>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="xs" fw={500}>
-                        {formatCurrency(parcel.assessedValue)}
-                      </Text>
-                    </Table.Td>
-                  </Table.Tr>
-                  <Table.Tr>
-                    <Table.Td>
-                      <Group gap={4}>
-                        <IconCurrencyDollar size={12} />
-                        <Text size="xs">Market</Text>
-                      </Group>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="xs" fw={500}>
-                        {formatCurrency(parcel.marketValue)}
-                      </Text>
-                    </Table.Td>
-                  </Table.Tr>
-                </Table.Tbody>
-              </Table>
+              {(parcel.assessedValue !== null || parcel.marketValue !== null) && (
+                <>
+                  <Divider label="Valuation" labelPosition="left" />
+                  <Table>
+                    <Table.Tbody>
+                      {parcel.assessedValue !== null && (
+                        <Table.Tr>
+                          <Table.Td>
+                            <Group gap={4}>
+                              <IconCurrencyDollar size={12} />
+                              <Text size="xs">Assessed</Text>
+                            </Group>
+                          </Table.Td>
+                          <Table.Td>
+                            <Text size="xs" fw={500}>
+                              {formatCurrency(parcel.assessedValue)}
+                            </Text>
+                          </Table.Td>
+                        </Table.Tr>
+                      )}
+                      {parcel.marketValue !== null && (
+                        <Table.Tr>
+                          <Table.Td>
+                            <Group gap={4}>
+                              <IconCurrencyDollar size={12} />
+                              <Text size="xs">Market</Text>
+                            </Group>
+                          </Table.Td>
+                          <Table.Td>
+                            <Text size="xs" fw={500}>
+                              {formatCurrency(parcel.marketValue)}
+                            </Text>
+                          </Table.Td>
+                        </Table.Tr>
+                      )}
+                    </Table.Tbody>
+                  </Table>
+                </>
+              )}
 
               <Divider label="Dimensions" labelPosition="left" />
               <Table>
@@ -323,14 +381,18 @@ export function ParcelPanel({
                 </Table.Tbody>
               </Table>
 
-              <Divider label="Flood Zone" labelPosition="left" />
-              <Badge
-                size="sm"
-                color={parcel.floodZone === 'X' ? 'green' : 'red'}
-                variant="light"
-              >
-                Zone {parcel.floodZone}
-              </Badge>
+              {parcel.floodZone && (
+                <>
+                  <Divider label="Flood Zone" labelPosition="left" />
+                  <Badge
+                    size="sm"
+                    color={parcel.floodZone === 'X' ? 'green' : 'red'}
+                    variant="light"
+                  >
+                    Zone {parcel.floodZone}
+                  </Badge>
+                </>
+              )}
 
               <Group gap="xs" mt="xs">
                 <Button

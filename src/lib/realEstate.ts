@@ -6,8 +6,13 @@ import * as turf from '@turf/turf';
 import { apiHeaders, noticeRefusal } from './apiAuth';
 import { geojsonToWkbHex, wkbHexToGeojson, geometryCentroid } from './wkb';
 
-export const PARCELS_DATASET_NAMES = ['parcels', 'demo_parcels'];
-export const SALES_DATASET = 'demo_sales';
+// each parcels dataset reads only its own sales partner
+export const PARCEL_SOURCES = [
+  { parcels: 'parcels', sales: 'sales' },
+  { parcels: 'demo_parcels', sales: 'demo_sales' },
+] as const;
+export const PARCELS_DATASET_NAMES = PARCEL_SOURCES.map((source) => source.parcels);
+export const SALES_DATASET_NAMES = PARCEL_SOURCES.map((source) => source.sales);
 export const DEFAULT_BRANCH = 'main';
 
 const API = '/api/v1';
@@ -92,10 +97,15 @@ export async function discoverBranch(
   return branch?.id ?? null;
 }
 
-export async function discoverParcelsBranch(): Promise<string | null> {
-  for (const name of PARCELS_DATASET_NAMES) {
-    const branchId = await discoverBranch(name);
-    if (branchId) return branchId;
+export interface ParcelSource {
+  parcelsBranch: string;
+  salesDataset: string;
+}
+
+export async function discoverParcelSource(): Promise<ParcelSource | null> {
+  for (const source of PARCEL_SOURCES) {
+    const branchId = await discoverBranch(source.parcels);
+    if (branchId) return { parcelsBranch: branchId, salesDataset: source.sales };
   }
   return null;
 }
