@@ -225,12 +225,16 @@ feed, so the panel states that rather than opening a socket that does not exist.
 
 ## Real Estate
 
-**Dataset names:** `demo_parcels` (`PARCELS_DATASET`) and `demo_sales`
-(`SALES_DATASET`), both in `src/lib/realEstate.ts`. This is the one plugin whose
-discovery can be overridden: a non-empty `parcelBranchId` or `salesBranchId`
-setting is used as the branch id directly and `discoverBranch` is skipped.
+**Dataset names:** `parcels` then `demo_parcels` (`PARCELS_DATASET_NAMES`) and
+`demo_sales` (`SALES_DATASET`), both in `src/lib/realEstate.ts`. Parcel discovery
+takes the first of the two names that exists, so real parcels shadow the demo set
+without deleting it. This is the one plugin whose discovery can be overridden: a
+non-empty `parcelBranchId` or `salesBranchId` setting is used as the branch id
+directly and `discoverBranch` is skipped.
 
-`scripts/seed-parcels.mjs` creates both datasets against a running ptolemy.
+`scripts/seed-parcels.mjs` creates `demo_parcels` and `demo_sales` against a
+running ptolemy. `scripts/load-toronto.py` creates `parcels` from City of Toronto
+open data and does not touch the demo datasets.
 
 **Geometry:** parcels are polygons, returned inline as `geometry_wkb_hex` on the
 search response rather than fetched separately. Comps are points, and their
@@ -253,6 +257,12 @@ Properties the panel reads:
 | `building_sqft` | number | hidden |
 | `flood_zone` | string | `X` |
 | `acres` | number | `0`, summed when merging parcels |
+
+`scripts/load-toronto.py` writes `apn`, `address`, `address_count`, `zoning`,
+`zone_category`, `percent_commercial`, `percent_office`, `percent_residential`,
+`land_use`, `area_sqm`, `sqft`, `acres`, `lat`, `lng` and `source`. It writes no
+`owner`, `assessed_value`, `market_value`, `year_built`, `building_sqft` or
+`flood_zone`, so those panel fields fall back to their missing values above.
 
 **Comps** (`GET /comps/search`): the row carries `id`, `address`, `sale_price`,
 `sale_date`, `sqft`, `price_per_sqft` and `distance_m`.

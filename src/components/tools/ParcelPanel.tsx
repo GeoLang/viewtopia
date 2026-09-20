@@ -26,7 +26,7 @@ import {
 import {
   searchParcels,
   parcelCentroid,
-  PARCELS_DATASET,
+  PARCELS_DATASET_NAMES,
   type ParcelRecord,
 } from '../../lib/realEstate';
 import { missingDatasetMessage } from '../../lib/verticals';
@@ -93,9 +93,9 @@ export function ParcelPanel({
     if (!branchId) {
       setError(
         missingDatasetMessage(
-          PARCELS_DATASET,
+          PARCELS_DATASET_NAMES.join('" or "'),
           'real-estate',
-          'Run scripts/seed-parcels.mjs to create it.',
+          'Run scripts/load-toronto.py for Toronto parcels, or scripts/seed-parcels.mjs for the demo set.',
         ),
       );
       return;

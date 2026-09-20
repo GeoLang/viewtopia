@@ -3,6 +3,8 @@ import '@testing-library/jest-dom/vitest';
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import { FileImportTab } from '../../src/features/dataSources/FileImportTab';
+import { useAuthStore } from '../../src/features/auth/store';
+import { useChatStore } from '../../src/store/chat';
 
 // only the duckdb side is mocked, the text-format path stays the real one
 const importVectorFiles = vi.hoisted(() => vi.fn());
@@ -42,8 +44,14 @@ function setup() {
 beforeEach(() => {
   importVectorFiles.mockReset();
   notify.mockReset();
+  useAuthStore.setState({ loggedIn: false, token: null, user: null, error: null });
+  useChatStore.setState({ sessions: [], activeSessionId: null });
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 describe('FileImportTab routing', () => {
   it('sends a shapefile and its sidecars through as one batch', async () => {
@@ -106,6 +114,20 @@ describe('FileImportTab routing', () => {
     expect(onImport.mock.calls[0][0]).toBe('shapes.geojson');
     expect(onImport.mock.calls[0][1].features).toHaveLength(1);
     expect(importVectorFiles).not.toHaveBeenCalled();
+  });
+
+  it('sends an imported file to the agent and stays green when that upload fails', async () => {
+    useAuthStore.setState({ loggedIn: true, token: 'jwt-abc', user: null, error: null });
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('boom', { status: 500 })));
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const onImport = setup();
+    drop([new File([JSON.stringify(point)], 'shapes.geojson')]);
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe('/agent/upload');
+    expect(onImport).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('import-status')).toHaveTextContent('1 features');
+    expect(notify.mock.calls.map((c) => c[0].color)).toEqual(['green']);
   });
 
   it('rejects a format neither path handles', async () => {

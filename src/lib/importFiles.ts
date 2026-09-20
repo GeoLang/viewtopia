@@ -13,6 +13,7 @@ import { importOverlayFiles } from '../overlay/importOverlay';
 import { OVERLAY_ACCEPT, overlayFileKind } from '../overlay/worldFile';
 import { tilesetFormat, tooLargeForBrowser } from '../features/tilesets/api';
 import { useTilesetStore } from '../features/tilesets/store';
+import { uploadFileToAgent } from '../features/dataSources/uploadToAgent';
 
 const extOf = (name: string) => '.' + name.split('.').pop()?.toLowerCase();
 
@@ -53,6 +54,10 @@ async function handleVectorFiles(files: File[], onImport: ImportHandler, onStatu
         message: `${problem.file} — ${problem.message}`,
         color: problem.level === 'warning' ? 'yellow' : 'red',
       });
+    }
+    const unreadableFiles = new Set(problems.filter((p) => p.level !== 'warning').map((p) => p.file));
+    if (layers.length) {
+      for (const file of files) if (!unreadableFiles.has(file.name)) void uploadFileToAgent(file);
     }
     const summary = layers.length
       ? layers.map((l) => `${l.name}: ${l.geojson.features.length} features`).join(', ')
@@ -180,6 +185,7 @@ async function runImport(files: File[], onImport: ImportHandler, onStatus: Statu
       const timed = timedImport(collection);
       const onTimeline = timed ? await loadTimedImport(file.name, timed) : false;
       if (!onTimeline) onImport(file.name, collection);
+      void uploadFileToAgent(file);
       const summary = onTimeline
         ? `${count}, ${timed?.features.length} on the timeline`
         : timed

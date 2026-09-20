@@ -573,6 +573,10 @@ docker compose -f docker-compose.platform.yml restart geokode itinera
 # the current region: it reads the pbf bbox and snaps to the nearest geocoded
 # address, so the demo lands on the actual city (Monaco by default).
 node scripts/seed-parcels.mjs
+
+# Real Toronto parcels (zoning + address) and 2021 census dissemination areas
+# into Ptolemy as `parcels` and `toronto_census_da`. See docs/real-estate.md.
+uv run scripts/load-toronto.py
 ```
 
 Geokode also accepts an OpenAddresses CSV (`LON,LAT,NUMBER,STREET,CITY,REGION,POSTCODE`)

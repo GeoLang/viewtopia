@@ -13,7 +13,7 @@ import {
   discoverBranch,
   mergeParcels,
   splitParcel,
-  PARCELS_DATASET,
+  discoverParcelsBranch,
   SALES_DATASET,
   type ParcelRecord,
 } from '../../lib/realEstate';
@@ -43,7 +43,7 @@ function RealEstatePanel({ ctx }: { ctx: PluginContext }) {
     const overrideParcels = ctx.settings.get<string>('parcelBranchId', '');
     const overrideSales = ctx.settings.get<string>('salesBranchId', '');
     (async () => {
-      const p = overrideParcels || (await discoverBranch(PARCELS_DATASET));
+      const p = overrideParcels || (await discoverParcelsBranch());
       const s = overrideSales || (await discoverBranch(SALES_DATASET));
       if (!active) return;
       setParcelsBranch(p);
@@ -229,7 +229,7 @@ const plugin: PluginDefinition = {
   category: 'plugins',
   Panel: RealEstatePanel,
   settings: [
-    { key: 'parcelBranchId', label: 'Parcels Branch ID', type: 'text', description: 'UUID of the branch containing parcel data (blank = auto-discover demo_parcels)' },
+    { key: 'parcelBranchId', label: 'Parcels Branch ID', type: 'text', description: 'UUID of the branch containing parcel data (blank = auto-discover parcels, then demo_parcels)' },
     { key: 'salesBranchId', label: 'Sales Branch ID', type: 'text', description: 'UUID of the branch containing sales data (blank = auto-discover demo_sales)' },
     { key: 'defaultRadius', label: 'Default Comp Radius (m)', type: 'number', defaultValue: 1600, min: 100, max: 50000 },
     { key: 'maxDays', label: 'Max Comp Age (days)', type: 'number', defaultValue: 365, min: 30, max: 1825 },

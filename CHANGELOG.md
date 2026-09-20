@@ -44,6 +44,21 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-09-20: **real Toronto parcels and census areas in ptolemy.**
+  `scripts/load-toronto.py` downloads the city's property boundaries, address
+  points and zoning by-law areas plus StatCan's 2021 dissemination areas and
+  profile, joins an address and a zone onto each parcel, and imports them as
+  `parcels` and `toronto_census_da`. The real-estate panel now looks for
+  `parcels` before `demo_parcels`, so loading the city shadows the demo set
+  without deleting it. Sales stay demo data because Ontario publishes no sale
+  records as open data.
+- 2026-09-20: **an imported file also reaches the agent's upload store.** Every
+  `.geojson`, `.json`, `.gpkg`, `.zip` and `.csv` the viewer imports is posted
+  to `/agent/upload` alongside the browser layer, with the active chat
+  session's sibyl thread id when it has one, so the chat's tools can name the
+  file. Signed-out imports send nothing, and a refused upload only warns on the
+  console.
+
 - 2026-09-16: **a release bundle that runs the platform from published
   images.** `docker-compose.release.yml` resets every `build:` in the platform
   file to a `ghcr.io/geolang/*` tag and repoints the two `../geolang/.env`

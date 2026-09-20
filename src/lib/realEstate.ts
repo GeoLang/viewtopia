@@ -6,7 +6,7 @@ import * as turf from '@turf/turf';
 import { apiHeaders, noticeRefusal } from './apiAuth';
 import { geojsonToWkbHex, wkbHexToGeojson, geometryCentroid } from './wkb';
 
-export const PARCELS_DATASET = 'demo_parcels';
+export const PARCELS_DATASET_NAMES = ['parcels', 'demo_parcels'];
 export const SALES_DATASET = 'demo_sales';
 export const DEFAULT_BRANCH = 'main';
 
@@ -90,6 +90,14 @@ export async function discoverBranch(
   );
   const branch = branches.find((b) => b.name === branchName) ?? branches[0];
   return branch?.id ?? null;
+}
+
+export async function discoverParcelsBranch(): Promise<string | null> {
+  for (const name of PARCELS_DATASET_NAMES) {
+    const branchId = await discoverBranch(name);
+    if (branchId) return branchId;
+  }
+  return null;
 }
 
 export async function searchParcels(

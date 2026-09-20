@@ -666,6 +666,57 @@ economic development offices publishing available sites, and teams outside
 the US where the foot-traffic panels are thin. Do not promise foot
 traffic. On that path the niche revenue bar is plausible over years.
 
+POC build, started 2026-09-20. Owner calls: Toronto is the region, the
+wedge is consultancies and brokers who bring their own candidate sites and
+points of interest, and the POC is the four items below. Found while
+planning: a layer imported into the viewer never reaches a geolang tool. The
+viewer draws it in the browser only, geolang's `POST /upload` and
+`list_user_datasets` exist but nothing in viewtopia calls them, and the only
+own-data path is a ptolemy dataset exported with `ptolemy_query`. So the
+bring-your-own-data hook starts with that bridge.
+
+- [x] **geolang: `trade_area` tool.** One call: sites from `sites` (names) or
+      `sites_path` (an uploaded or exported layer), a drive, walk or cycle
+      time, then per site the population inside (GHS-POP, WorldPop fallback),
+      competitors and anchors inside (OSM categories or the user's own layer,
+      one Overpass query for all sites), and optional area-weighted
+      demographics from a polygon layer. One polygon GPKG with the numbers
+      as columns and a table in the reply. The isochrone, population and OSM
+      tag code moves out of `calculate_isochrones`, `download_population_grid`
+      and `download_osm_data` into shared modules so the new tool and the
+      old ones run the same code.
+- [x] **geolang: `score_sites` takes `sites_path` and `competitors_path`.**
+      Sites from a layer instead of only geocoded names, competition from the
+      user's own layer instead of only OSM.
+- [x] **viewtopia: imported files reach the agent.** Every file the viewer
+      imports (drop zone, files tab, chat `data.import_url`) is also posted to
+      `/agent/upload` with the session bearer and the chat thread id, so
+      `list_user_datasets` lists it and tools can name it. Formats geolang
+      reads: geojson, gpkg, zipped shapefile, csv with lat and lon. No token,
+      no upload.
+- [x] **Toronto data into ptolemy.** A loader that downloads Toronto property
+      boundaries, zoning and address points and StatCan 2021 dissemination
+      areas with population, income and age, joins zoning onto parcels,
+      writes the datasets the real-estate panels read plus a
+      `toronto_census_da` polygon dataset, through ptolemy's import routes.
+      Sources and fields are pinned in the loader from the research of
+      2026-09-20.
+- [x] **Evals.** NL eval tests that upload a candidate sites CSV and assert
+      the model reaches `trade_area` and `score_sites` with `sites_path`,
+      plus offline unit tests and sweep arguments for the new tool.
+
+All five landed 2026-09-20. Facts from the build: the census profile zip
+holds six regional CSVs and Ontario's is 8.8 GB uncompressed, median household
+income is characteristic 243, ptolemy's import routes needed a 64 MiB body
+limit (they took axum's 2 MB default), and the loader was verified on a
+downtown bbox only (3,951 parcels, 89 areas, 102 s), the full city is an
+estimate of 4 to 6 minutes. Open: whether Toronto keeps `PARCELID` stable
+across daily rebuilds, the NL eval tests have not run against a live model,
+and the hosted preview has not been loaded.
+
+Left for after the POC: the weights panel, the PDF report, the deal as a
+project, and the demo landing page.
+
 Foot traffic, if it is ever wanted, in this order:
 
 - [ ] **Bring the customer's own licence.** No visit-level vendor allows
