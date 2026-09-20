@@ -634,6 +634,69 @@ usage, never per seat, which is the complaint about the incumbents.
 Measure three numbers: signups on the preview, maps shared from it, and
 replies to the twenty emails.
 
+Competitors, researched 2026-09-20 with sources in the session, not
+re-verified since. Every serious competitor sells proprietary data first
+and software second at quote-only prices: Esri Business Analyst (the only
+published prices, 700 or 5,200 USD per user per year on its AWS
+Marketplace listing, plus expiring credits), Placer.ai (property-level
+foot traffic, no published price, the circulating figures trace to no
+primary source), Buxton (Audiense since July 2025, consulting-built
+models), Kalibrate (2.9 million traffic counts, also resold by Esri),
+SiteZeus (rebuilt as Atlas with an "Ask Zeus" assistant, May 2026), CARTO
+(quote-only, one 89,000 USD a year listing, self-hosting on Enterprise),
+Regrid (parcels under an EULA that allows rendering to customers and
+forbids redistribution), Felt (no site selection product, no published
+prices, AI on Enterprise only). The AI-native entrants matter more:
+GrowthFactor at 200 USD a month plus a 5,000 USD discovery fee with foot
+traffic bundled and MCP access, Gini by MyTraffic at 249 EUR a month in
+Europe. Nobody in the field is open source, self-hosted, or flat-priced.
+Buyer complaints match this product line for line: no published prices,
+per-seat plus credit metering, a skills barrier, data gaps fixed by
+ticket, models that stay with the vendor's consultants. No site-selection
+market report exists, only location intelligence at 21 to 25 billion USD
+for 2025 with no SMB split; the SMB denominator is about 9,000 US franchise
+brands, 1,100 Canadian, and a few thousand actively expanding.
+
+Chance of success, the call made 2026-09-20: as a pure retail site
+selection product, low, because the moat is foot traffic, traffic counts
+and spend data that are not public, and GrowthFactor already holds the
+cheap plain-English slot with that data bundled. As a wedge, good: sell to
+site selection consultancies and brokers who bring their own data,
+economic development offices publishing available sites, and teams outside
+the US where the foot-traffic panels are thin. Do not promise foot
+traffic. On that path the niche revenue bar is plausible over years.
+
+Foot traffic, if it is ever wanted, in this order:
+
+- [ ] **Bring the customer's own licence.** No visit-level vendor allows
+      resale (Placer's terms forbid providing its data to third parties)
+      and none publishes an OEM tier, but Placer Feeds and Advan deliver
+      CSV or Parquet to the customer, Placer into the customer's own
+      Snowflake. A connector that reads those files into a ptolemy dataset
+      under the customer's licence is about a week and matches the
+      own-your-data positioning.
+- [ ] **Free exposure proxies, labelled as such.** Nothing free measures
+      visits to a store. State DOT AADT and Toronto intersection counts for
+      street traffic, transit faregate entries for station catchments (MTA
+      hourly is open, TTC's station series stopped in 2017), LEHD LODES and
+      StatCan commuting flows for daytime population, Overture places for
+      POIs under CDLA-Permissive with no share-alike. Google Popular Times
+      is off limits (not in the Places API, scraping and caching forbidden)
+      and Strava Metro bars resale and model training.
+- [ ] **An embedded licence only when a paying customer needs it.** Advan
+      Research first (the old SafeGraph Patterns lineage, visits per POI,
+      US and Canada, terms negotiated), SafeGraph for places and card
+      spend with usage rights priced into the contract, dataplor's
+      own-your-data claim unverified, Environics MobileScapes or TELUS
+      Insights for Canada (carrier-modelled since April 2026, so numbers
+      will not compare with a US panel). Expect an annual contract in the
+      tens of thousands and the FTC obligations flowing down: five orders
+      since 2024 require consent at collection, a sensitive-location
+      blocklist, supplier audits and retention limits; Maryland, Oregon and
+      Virginia ban the sale of precise geolocation; Canada is PIPEDA with
+      Bill C-36 at first reading. No order defines a safe aggregation
+      threshold.
+
 ### Region watch
 
 agora's README and DESIGN.md 2.0 describe what is built. Open:
