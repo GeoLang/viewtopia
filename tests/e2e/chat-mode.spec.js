@@ -65,7 +65,7 @@ test('chat mode drops the chrome and keeps the chat', async ({ page }) => {
   expect((await snapshot(page)).mode).toBe('chat');
 });
 
-test('a replayed reply runs its action and reports the panel it cannot open', async ({ page }) => {
+test('a replayed reply runs its action and opens the panel it names', async ({ page }) => {
   await page.goto(CHAT_URL);
   await page.waitForFunction(() => !!window.__viewtopiaSnapshot, null, { timeout: 60_000 });
   expect((await snapshot(page)).basemap).toBe('osm');
@@ -73,12 +73,11 @@ test('a replayed reply runs its action and reports the panel it cannot open', as
   await page.getByTitle('Click to replay this result on the map').click();
 
   await expect.poll(async () => (await snapshot(page)).basemap, { timeout: 30_000 }).toBe('dark');
-  await expect(
-    page.getByText('viewshed opens the viewshed panel, which chat mode does not show.'),
-  ).toBeVisible();
+  // the toolbars stay hidden, the panel the chat opened is drawn
+  await expect(page.getByText('Viewshed Analysis')).toBeVisible();
+  await expect(page.getByLabel('Exit chat mode')).toBeVisible();
 
-  // nothing opened: leaving the mode brings the panel dock back, still empty
   await page.getByLabel('Exit chat mode').click();
   await expect(page.getByLabel('Exit chat mode')).toHaveCount(0);
-  await expect(page.getByText('Viewshed Analysis')).toHaveCount(0);
+  await expect(page.getByText('Viewshed Analysis')).toBeVisible();
 });
