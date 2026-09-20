@@ -9,7 +9,7 @@
 > Ranked 2026-08-21 against the DESIGN.md goal: ship the viewer, the agent, and
 > the services that make a shared map, not more surface. Pick from **Do next**.
 > Do not start at a parked item.
-> Last brought current: **2026-09-16**.
+> Last brought current: **2026-09-19**.
 >
 > Verify an entry against the code before working it, and do not trust the
 > mechanism it names. Three items in this file were already closed when someone
@@ -198,22 +198,35 @@ Shape, all in `infrastructure` (README has the detail):
 Cost, us-east-1 list prices: about 5.50 USD a day while up, about 1.10 a day
 scaled to zero (ALB, secrets, storage).
 
-Open, from this deploy:
+Owner calls 2026-09-19 (evening): no domain yet, the nightly scale-down
+stays with manual scale-up, share links keep granting edit to guests.
 
-- [ ] one viewer eval sweep against both Bedrock profiles to pick the default.
-- [ ] `/api/geocode/*` answers 404 from ptolemy's catch-all instead of the
-      proxy's 501, because the geokode gate is closed and the Caddy route
-      order lets `/api/*` catch it. Same shape as the tiletopia case the
-      infrastructure README already names.
-- [ ] agora holds the cluster master credential. A separate role for it needs
-      the refresh Lambda to create the role and store its password.
-- [ ] the account's Lambda concurrency quota is 10, so the refresh Lambda has
-      no reserved concurrency and two runs overlapped once (schedule plus a
-      manual invoke). The equality check made the second a no-op.
-- [ ] the Bedrock key is a long-term key on IAM user `geolang-sibyl-bedrock`,
-      365 days, which AWS recommends only for exploration.
+Hardening in progress 2026-09-19, two agents in worktrees:
+
+- [~] **Executor isolation** (geolang). One prompt's OSM download killed the
+      only executor task tonight and chat was down for everyone until ECS
+      replaced it. Plan: every tool run happens in a pre-warmed worker
+      process (spawn, geo stack preloaded), the executor watches the worker's
+      RSS and wall clock and kills it at `GEOLANG_TOOL_MEMORY_LIMIT_MB`
+      (default 3072) or `GEOLANG_TOOL_TIMEOUT_SECONDS` (default 840, under
+      the API client's 900), answers with a plain error naming the limit, and
+      spawns a replacement. `GEOLANG_TOOL_MAX_CONCURRENT` (default 2) bounds
+      parallel runs; a run past that waits briefly then gets a busy error.
+      The preview profile moves the executor task to 8 GiB so two runs at the
+      cap fit.
+- [~] `/api/geocode/*` answers 404 from ptolemy's catch-all instead of the
+      proxy's 501 (infrastructure Caddyfile route order).
+- [~] agora gets its own database role, created and stored by the refresh
+      Lambda on first run, instead of the cluster master credential.
 - [ ] the P0 item 1 rotation test (force one RDS rotation and prove ptolemy
-      and agora recover) has not been run.
+      and agora recover) runs after the next apply, recipe in the
+      infrastructure README.
+- [ ] one viewer eval sweep against both Bedrock profiles to pick the default.
+
+Accepted as is: the Bedrock key stays a long-term key (expires 2027-09-19,
+rotate by hand before then, noted in the infrastructure README); the refresh
+Lambda has no reserved concurrency because the account quota is 10, and an
+overlapping run is a no-op by the equality check.
 
 
 ## Wait for demand
@@ -505,10 +518,43 @@ The eval fixtures are copies of `tests/unit/fixtures/action-catalogue.json`
 and `tests/unit/fixtures/viewer-snapshot.json`. Refresh them from viewtopia
 when an action or the snapshot changes. See `geolang/evals/viewer/README.md`.
 
-### Hosted flagship instance, the thesis blocker
+### Public demo on the hosted preview
 
-See **Before any public deploy**. What is open is the AWS account, the apply
-sequence, and the anonymous-edit / link-expiry policy.
+The preview is live (see **Before any public deploy**) and costs about 5.50
+USD a day up, about 1.10 scaled to zero. Owner calls 2026-09-19: no domain
+yet, the nightly scale-down stays with manual scale-up, share links keep
+granting edit to guests. Nothing in sibyl or geolang-api limits what one
+caller can spend beyond `SIBYL_RUN_BUDGET_SECS` per run, so an open demo has
+no ceiling on model tokens or executor time. The plan, in payoff order:
+
+- [ ] **Spend caps in geolang-api, before anything public.** A global daily
+      chat run budget and a per-caller cap (JWT subject, share-link guest id,
+      or client address for anonymous callers), counted where `/chat/agui`
+      starts a sibyl run, with a plain reply when either trips: "the demo
+      budget for today is used up". Both limits are environment variables
+      with the defaults spelled out in the README. Guests also get an upload
+      size and count cap at the tiletopia and ptolemy attachment routes. The
+      risk is a script in a loop, not a curious user: one chat run on
+      `openai.gpt-oss-120b` costs well under a cent.
+- [ ] **Wake on demand instead of always on.** A static landing page on the
+      CloudFront hostname (S3 origin, no task) stays up at no cost. Its
+      "start the demo" button calls a Lambda behind a function URL that runs
+      the scale-up, the page polls `/health` and hands over when the proxy
+      answers, about two to three minutes. An idle timer (no `/chat/agui`
+      call for thirty minutes, read from the proxy access log or a
+      CloudWatch metric) scales back down. The floor is then the load
+      balancer, secrets and EFS.
+- [ ] **Let Aurora pause while the tasks are up.** The cluster pauses only
+      when ptolemy's five-second delivery poll and agora's thirty-second
+      watch tick stop. Both pollers back off to a few minutes after a quiet
+      period so the cluster can pause between sessions, and the first
+      request after a pause pays the fifteen-second resume.
+- [ ] **Demo hours as the no-code fallback.** A morning scale-up schedule
+      beside the nightly scale-down in `infrastructure/nightly_scale_down.tf`,
+      with the hours on the landing page. Halves the up-cost, no code.
+- [ ] **When the AWS credits end,** the nine services fit the self-host
+      compose bundle on one small VPS at about a tenth of the monthly cost.
+      The caps above carry over unchanged, wake on demand does not apply.
 
 ### Region watch
 
