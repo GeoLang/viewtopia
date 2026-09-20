@@ -429,6 +429,11 @@ files, `deploy/`, the fetch and seed scripts, and a README with the five
 commands. It runs the whole stack from `ghcr.io/geolang/*` images, so the only
 prerequisite is Docker Engine with Compose v2.
 
+The hosted AWS preview is a Terraform stack in
+[infrastructure](https://github.com/GeoLang/infrastructure). Its README covers
+the first deploy, scaling the stack up and down, and redeploying a service
+after a change.
+
 ### Full platform (all services via Docker Compose)
 
 The platform compose file builds each backend from its sibling repository.
