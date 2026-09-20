@@ -34,6 +34,7 @@ export function useAgentLayersLeaflet(
   const rasterLayers = useAgentLayerStore((s) => s.rasterLayers);
   const markers = useAgentLayerStore((s) => s.markers);
   const generation = useAgentLayerStore((s) => s.generation);
+  const frame = useAgentLayerStore((s) => s.frame);
   const hiddenLayerIds = usePaneHiddenLayerIds(paneIndex);
   const paneLayers = useMemo(
     () => visibleLayers(layers).filter((layer) => !hiddenLayerIds.includes(layer.id)),
@@ -128,7 +129,7 @@ export function useAgentLayersLeaflet(
     map.on('zoomend', showForZoom);
 
     // Frame only when a new spec arrives, never on a plain map swap.
-    const bounds = agentLayersBounds(paneLayers);
+    const bounds = frame ?? agentLayersBounds(paneLayers);
     if (bounds && framedRef.current !== generation) {
       framedRef.current = generation;
       map.fitBounds(
@@ -146,5 +147,5 @@ export function useAgentLayersLeaflet(
       // remove() is a no-op once the layer is detached
       for (const { object } of drawn) object.remove();
     };
-  }, [paneLayers, generation, map]);
+  }, [paneLayers, generation, frame, map]);
 }

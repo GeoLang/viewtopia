@@ -123,7 +123,7 @@ describe('useAgentLayersLeaflet', () => {
   beforeEach(() => {
     cleanup();
     container = makeContainer();
-    useAgentLayerStore.setState({ layers: [], rasterLayers: [], markers: [], generation: 0 });
+    useAgentLayerStore.setState({ layers: [], rasterLayers: [], markers: [], generation: 0, frame: null });
     useAppStore.setState({ activeTab: 'map' });
     setSharedCamera({ longitude: 0, latitude: 20, zoom: 2 });
   });
@@ -391,7 +391,7 @@ describe('useAgentLayersLeaflet on a split-view compare pane', () => {
   beforeEach(() => {
     cleanup();
     container = makeContainer(PANE_CONTAINER_ID);
-    useAgentLayerStore.setState({ layers: [], rasterLayers: [], markers: [], generation: 0 });
+    useAgentLayerStore.setState({ layers: [], rasterLayers: [], markers: [], generation: 0, frame: null });
     useAppStore.setState({ activeTab: 'globe' });
     useSplitViewStore.setState({ active: true });
     setSharedCamera({ longitude: 0, latitude: 20, zoom: 2 });

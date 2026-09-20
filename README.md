@@ -43,7 +43,7 @@ calls. Several surfaces are local-only or depend on configured services:
 | **Natural language queries** | "Fly to London and classify the point cloud" |
 | **Session persistence** | Chat history saved and replayable |
 | **GeoLang agent** | Spatial reasoning backend. The API advertises 40 tools, and the viewer uses a subset including `sql_query`, `ptolemy_query`, `list_tilesets`, routing, and QGIS algorithms |
-| **Typed actions** | 55 named viewer actions with validated parameters (camera, renderer, basemap, split view, view tabs, layers, tilesets, scene, terrain and flood analysis, markers, data import and export, SQL attach, STAC, projects, datasets, live maps, history, scenario compare, feature search). The model is sent the catalogue and a snapshot of what the map is showing with every message. A destructive action asks for a confirming reply first. Every action that takes a URL refuses anything but an absolute `http` or `https` one |
+| **Typed actions** | 57 named viewer actions with validated parameters (panels, camera, renderer, basemap, split view, view tabs, layers, tilesets, scene, terrain and flood analysis, markers, data import and export, SQL attach, STAC, projects, datasets, live maps, history, scenario compare, feature search). The model is sent the catalogue and a snapshot of what the map is showing with every message. A destructive action asks for a confirming reply first. Every action that takes a URL refuses anything but an absolute `http` or `https` one |
 | **Chat-only mode** | `?mode=chat`, the header icon or the command palette hides the header, dock and toolbars and leaves the chat as the only control. Drawing, measuring with the cursor and picking by click still need the mouse |
 
 ### Analysis Tools

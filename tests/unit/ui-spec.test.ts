@@ -126,6 +126,61 @@ describe('renderUISpec', () => {
     expect(useAgentLayerStore.getState().generation).toBe(4);
   });
 
+  it('hides the layers already on the map instead of dropping them', async () => {
+    const imported = {
+      id: 'census',
+      name: 'toronto_census_da',
+      color: '#38bdf8',
+      geojson: {
+        type: 'FeatureCollection' as const,
+        features: [
+          { type: 'Feature' as const, properties: {}, geometry: { type: 'Point' as const, coordinates: [-79.4, 43.7] } },
+        ],
+      },
+    };
+    useAgentLayerStore.setState({ layers: [imported], generation: 1, frame: null });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              type: 'FeatureCollection',
+              features: [
+                { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [-79.38, 43.65] } },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        ),
+      ),
+    );
+
+    await renderUISpec({
+      type: 'map',
+      layers: [{ name: 'Trade areas', file: 'outputs/candidate_trade_areas.gpkg' }],
+    });
+
+    const state = useAgentLayerStore.getState();
+    expect(state.layers.map((l) => [l.id, l.visible])).toEqual([
+      ['census', false],
+      ['spec-candidate_trade_areas.gpkg', undefined],
+    ]);
+    expect(state.generation).toBe(2);
+    expect(state.frame).not.toBeNull();
+
+    // the same file drawn again replaces its own layer, not the imported one
+    await renderUISpec({
+      type: 'map',
+      layers: [{ name: 'Trade areas', file: 'outputs/candidate_trade_areas.gpkg' }],
+    });
+    expect(state.layers.length).toBe(2);
+    expect(useAgentLayerStore.getState().layers.map((l) => l.id)).toEqual([
+      'census',
+      'spec-candidate_trade_areas.gpkg',
+    ]);
+  });
+
   it('keeps the source path on the layer it puts in the store', async () => {
     vi.stubGlobal(
       'fetch',

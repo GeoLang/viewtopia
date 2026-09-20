@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Loader, Stack, Text } from '@mantine/core';
 import { IconUpload } from '@tabler/icons-react';
 import { importFiles } from '../lib/importFiles';
-import { useAgentLayerStore } from '../store/agentLayers';
+import { addImportedLayer } from '../features/dataSources/importIntoViewer';
 
 /**
  * Full-window drop target: dragging files anywhere over the app raises the
@@ -44,10 +44,7 @@ export function WindowDropZone() {
       const files = [...(e.dataTransfer?.files ?? [])];
       if (!files.length) return;
       setImporting(files.length);
-      const addLayer = useAgentLayerStore.getState().addLayer;
-      void importFiles(files, (name, geojson) =>
-        addLayer({ id: crypto.randomUUID(), name, color: '#38bdf8', geojson }),
-      ).finally(() => setImporting(0));
+      void importFiles(files, addImportedLayer).finally(() => setImporting(0));
     };
 
     window.addEventListener('dragenter', onDragEnter);

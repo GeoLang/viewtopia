@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { agentLayersBounds, type LayerBounds } from '../hooks/agentLayerBounds';
 import { applySymbology, clearSymbology, type Symbology } from '../features/symbology/symbology';
 import { asColor } from '../lib/color';
 import type { Corners } from '../overlay/georeference';
@@ -139,9 +140,11 @@ interface AgentLayerState {
   markers: AgentMarker[];
   /** Bumped each time a new spec lands, so renderers know to reframe. */
   generation: number;
+  frame: LayerBounds | null;
   setLayers: (layers: AgentLayer[]) => void;
   /** Add one layer (add_geojson / sql_query / plugin); a known id replaces that layer, fit reframes the view. */
   addLayer: (layer: AgentLayer, fit?: boolean) => void;
+  addLayers: (layers: AgentLayer[]) => void;
   /** Drop one layer by id (a panel taking back what it added). */
   removeLayer: (id: string) => void;
   /** Fill opacity of one layer, which every renderer reads through layerStyle. */
@@ -247,7 +250,9 @@ export const useAgentLayerStore = create<AgentLayerState>((set) => ({
   editingRasterId: null,
   markers: [],
   generation: 0,
-  setLayers: (layers) => set((s) => ({ layers: sanitizeLayers(layers), generation: s.generation + 1 })),
+  frame: null,
+  setLayers: (layers) =>
+    set((s) => ({ layers: sanitizeLayers(layers), generation: s.generation + 1, frame: null })),
   addLayer: (layer, fit = true) =>
     set((s) => {
       const clean = sanitizeLayers([layer]);
@@ -257,6 +262,21 @@ export const useAgentLayerStore = create<AgentLayerState>((set) => ({
           ? s.layers.flatMap((l) => (l.id === layer.id ? clean : [l]))
           : [...s.layers, ...clean],
         generation: fit ? s.generation + 1 : s.generation,
+        frame: fit ? agentLayersBounds(clean) : s.frame,
+      };
+    }),
+  addLayers: (layers) =>
+    set((s) => {
+      const clean = sanitizeLayers(layers);
+      const replaced = new Set(clean.map((l) => l.id));
+      // the rest stays in the list, hidden, to switch back on
+      const hidden = s.layers
+        .filter((l) => !replaced.has(l.id))
+        .map((l) => (l.visible === false ? l : { ...l, visible: false }));
+      return {
+        layers: [...hidden, ...clean],
+        generation: s.generation + 1,
+        frame: agentLayersBounds(clean),
       };
     }),
   removeLayer: (id) => set((s) => ({ layers: s.layers.filter((l) => l.id !== id) })),
@@ -332,5 +352,5 @@ export const useAgentLayerStore = create<AgentLayerState>((set) => ({
     }),
   setMarkers: (markers) => set({ markers: sanitizeMarkers(markers) }),
   clearMarkers: () => set({ markers: [] }),
-  clear: () => set({ layers: [], rasterLayers: [], editingRasterId: null, markers: [] }),
+  clear: () => set({ layers: [], rasterLayers: [], editingRasterId: null, markers: [], frame: null }),
 }));

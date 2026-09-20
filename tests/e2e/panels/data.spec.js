@@ -434,6 +434,23 @@ test.describe('Data panels', () => {
     await closePanel(page, panel);
   });
 
+  test('dataSources: minimize rolls the panel up to its title bar and back', async ({ page }) => {
+    await openViewer(page);
+    const panel = await openDataSources(page, 'Files');
+    const openHeight = (await panel.boundingBox()).height;
+
+    await panel.getByLabel('Minimize panel').click();
+    await expect(panel.getByRole('tab', { name: 'Files' })).toBeHidden();
+    await expect
+      .poll(async () => (await panel.boundingBox()).height)
+      .toBeLessThan(openHeight / 2);
+
+    await panel.getByLabel('Restore panel').click();
+    await expect(panel.getByRole('tab', { name: 'Files' })).toBeVisible();
+
+    await closePanel(page, panel);
+  });
+
   test('trackImport: an imported GPX track draws its line and points, and frames them', async ({
     page,
   }) => {

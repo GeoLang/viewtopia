@@ -29,6 +29,7 @@ import {
   IconLayoutColumns,
   IconLayoutDashboard,
   IconLink,
+  IconListDetails,
   IconMapPin,
   IconMapRoute,
   IconMoon,
@@ -48,8 +49,10 @@ import {
   IconRuler2,
   IconSchool,
   IconSearch,
+  IconSettings,
   IconScissors,
   IconSolarPanel,
+  IconStack2,
   IconSun,
   IconTable,
   IconDatabaseEdit,
@@ -217,6 +220,12 @@ export const TOOL_MENU_GROUPS: { group: string; sections: ToolMenuItem[][] }[] =
 export const ALL_TOOL_MENU_ITEMS: ToolMenuItem[] = TOOL_MENU_GROUPS.map(
   (menu) => menu.sections,
 ).flat(2);
+
+export const TOOLBAR_PANEL_ITEMS: ToolMenuItem[] = [
+  { panel: 'layers', label: 'Layers', icon: IconStack2 },
+  { panel: 'legend', label: 'Legend', icon: IconListDetails },
+  { panel: 'settings', label: 'Settings', icon: IconSettings },
+];
 
 export function visibleToolItems(items: ToolMenuItem[], showPreview: boolean): ToolMenuItem[] {
   return showPreview ? items : items.filter((item) => !item.preview);

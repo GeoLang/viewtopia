@@ -1,17 +1,15 @@
 import type { AgentLayer } from '../store/agentLayers';
 
+export type LayerBounds = [west: number, south: number, east: number, north: number];
+
 /** [west, south, east, north] covering every position, or null if there are none. */
-export function agentLayersBounds(
-  layers: AgentLayer[],
-): [number, number, number, number] | null {
+export function agentLayersBounds(layers: AgentLayer[]): LayerBounds | null {
   return featuresBounds(layers.flatMap((layer) => layer.geojson.features ?? []));
 }
 
 /** [west, south, east, north] covering every position, or null if there are none. */
-export function featuresBounds(
-  features: GeoJSON.Feature[],
-): [number, number, number, number] | null {
-  const bounds: [number, number, number, number] = [180, 90, -180, -90];
+export function featuresBounds(features: GeoJSON.Feature[]): LayerBounds | null {
+  const bounds: LayerBounds = [180, 90, -180, -90];
   let any = false;
 
   for (const f of features) {

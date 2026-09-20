@@ -42,8 +42,35 @@ All notable changes to this project will be documented in this file.
   parameter says so.** The example `"5, 10, 15"` had both local models
   writing `10, 20` for a list the person typed as `10,20`.
 
+### Fixed
+
+- 2026-09-20: **the Data Sources panel minimizes.** Its tab strip is laid out
+  with an inline `display: flex`, which beat the class rule that hides a
+  minimized card's body, so the chevron flipped and nothing rolled up. The
+  rule now wins over inline styles for every panel.
+- 2026-09-20: **a chat map result no longer wipes the layers on the map.** A
+  result drew its layers by replacing the whole list, so an uploaded census
+  layer vanished the moment a trade area came back. The other layers now stay
+  in the list, switched off so the result reads alone, and a result drawn
+  again replaces its own earlier layer by file name.
+- 2026-09-20: **an imported file frames itself.** Adding a layer reframed the
+  view to every agent layer at once, so a file dropped while a layer from
+  another region was on the map fitted the whole globe and looked like a
+  failed import. The store now records the added layer's own box and the
+  three renderers fit that. An import whose box is already inside the current
+  view leaves the camera where it is, so dropping five files over the area you
+  are working on does not jump five times.
+
 ### Added
 
+- 2026-09-20: **the chat opens panels.** `panel.open` takes any panel id the
+  toolbar's buttons or menus open (the catalogue lists each with its label,
+  Layers, Legend and Settings included) or a plugin id, and
+  `panel.close` closes the open one, so "open the data sources panel" works
+  from the chat. In chat-only mode a panel the chat opens is drawn even
+  though the toolbars stay hidden, so the older viewshed and measure commands
+  open their panels there too instead of posting that chat mode does not
+  show them.
 - 2026-09-20: **real Toronto parcels and census areas in ptolemy.**
   `scripts/load-toronto.py` downloads the city's property boundaries, address
   points and zoning by-law areas plus StatCan's 2021 dissemination areas and

@@ -164,9 +164,10 @@
 }
 
 /* A minimized card shows its title bar and nothing else. Hiding the body rather
-   than unmounting it keeps whatever was typed into the panel. */
+   than unmounting it keeps whatever was typed into the panel. Important beats
+   the inline display on the Data Sources tabs. */
 .panel-card-minimized > *:not(:first-child) {
-  display: none;
+  display: none !important;
 }
 
 .panel-card-minimized > *:first-child {

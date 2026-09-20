@@ -28,7 +28,6 @@ import { useSpaceTimeStore } from '../features/spacetime/store';
 import { useAgentLayerStore, toFeatureCollection } from '../store/agentLayers';
 import { useDeckLayersStore } from '../hooks/deckLayers';
 import { showHeatmap } from '../lib/mapHeatmap';
-import { postSystemNotice } from '../store/chat';
 import { addTilesetToGlobe, CHAT_TILESET_WAIT_SECONDS } from './addTileset';
 import { colorByHeight, colorByClassification, colorByProperty } from './tileStyles';
 import { useMeasureStore, type MeasureMode } from '../store/measure';
@@ -63,16 +62,6 @@ function addAgentDeckLayer(layer: Layer): void {
   const store = useAppStore.getState();
   store.setActiveTab('globe');
   store.setRenderer('maplibre');
-}
-
-/**
- * Chat mode shows no panels, so a command that only opens one says what it
- * would have opened. True when that happened and nothing else should run.
- */
-function panelIsUnreachable(action: string, panel: ToolPanel): boolean {
-  if (!useAppStore.getState().chatMode) return false;
-  postSystemNotice(`${action} opens the ${panel} panel, which chat mode does not show.`);
-  return true;
 }
 
 // camera altitude (m) -> web-mercator zoom, so a Cesium-style fly_to also moves
@@ -285,9 +274,9 @@ const handlers: Record<string, Handler> = {
   },
 
   // ─── measurement ────────────────────────────────────────────────────────
-  measure_distance: () => startMeasure('measure_distance', 'distance'),
-  measure_area: () => startMeasure('measure_area', 'area'),
-  measure_height: () => startMeasure('measure_height', 'elevation'),
+  measure_distance: () => startMeasure('distance'),
+  measure_area: () => startMeasure('area'),
+  measure_height: () => startMeasure('elevation'),
 
   // ─── the action registry ────────────────────────────────────────────────
   // one open command carrying the name of a catalogue entry and its arguments
@@ -295,8 +284,7 @@ const handlers: Record<string, Handler> = {
 };
 
 /** Open a measurement mode and its panel. */
-function startMeasure(action: string, mode: MeasureMode): void {
-  if (panelIsUnreachable(action, 'measure')) return;
+function startMeasure(mode: MeasureMode): void {
   useMeasureStore.getState().setMode(mode);
   useAppStore.getState().setActivePanel('measure');
 }
@@ -325,7 +313,6 @@ const PANEL_COMMANDS: Record<string, ToolPanel> = {
 
 for (const [action, panel] of Object.entries(PANEL_COMMANDS)) {
   handlers[action] = () => {
-    if (panelIsUnreachable(action, panel)) return;
     useAppStore.getState().setActivePanel(panel);
   };
 }

@@ -61,6 +61,7 @@ export function useAgentLayersMapLibre(
   const rasterLayers = useAgentLayerStore((s) => s.rasterLayers);
   const markers = useAgentLayerStore((s) => s.markers);
   const generation = useAgentLayerStore((s) => s.generation);
+  const frame = useAgentLayerStore((s) => s.frame);
   const hiddenLayerIds = usePaneHiddenLayerIds(paneIndex);
   const paneLayers = useMemo(
     () => visibleLayers(layers).filter((layer) => !hiddenLayerIds.includes(layer.id)),
@@ -166,7 +167,7 @@ export function useAgentLayersMapLibre(
         });
       }
 
-      const bounds = agentLayersBounds(paneLayers);
+      const bounds = frame ?? agentLayersBounds(paneLayers);
       if (bounds && framedRef.current !== generation) {
         framedRef.current = generation;
         map.fitBounds(bounds, { padding: 60, maxZoom: 17, duration: 0 });
@@ -205,5 +206,5 @@ export function useAgentLayersMapLibre(
       map.off('styledata', reapplyIfChanged);
       map.off('idle', reapplyIfChanged);
     };
-  }, [paneLayers, rasterLayers, generation, map]);
+  }, [paneLayers, rasterLayers, generation, frame, map]);
 }

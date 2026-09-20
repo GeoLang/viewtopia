@@ -44,6 +44,7 @@ export function useAgentLayersCesium(
   const rasterLayers = useAgentLayerStore((s) => s.rasterLayers);
   const markers = useAgentLayerStore((s) => s.markers);
   const generation = useAgentLayerStore((s) => s.generation);
+  const frame = useAgentLayerStore((s) => s.frame);
   const hiddenLayerIds = usePaneHiddenLayerIds(paneIndex);
   const paneLayers = useMemo(
     () => visibleLayers(layers).filter((layer) => !hiddenLayerIds.includes(layer.id)),
@@ -163,9 +164,13 @@ export function useAgentLayersCesium(
       // so a tilted frame here would shift the view on every renderer switch.
       if (last && framedRef.current !== generation) {
         framedRef.current = generation;
-        await viewer
-          .flyTo(last, { offset: new HeadingPitchRange(0, CesiumMath.toRadians(-90), 0) })
-          .catch(() => undefined);
+        if (frame) {
+          viewer.camera.flyTo({ destination: Rectangle.fromDegrees(...frame) });
+        } else {
+          await viewer
+            .flyTo(last, { offset: new HeadingPitchRange(0, CesiumMath.toRadians(-90), 0) })
+            .catch(() => undefined);
+        }
       }
     };
 
@@ -179,5 +184,5 @@ export function useAgentLayersCesium(
       viewer.camera.changed.removeEventListener(showForZoom);
       viewer.camera.moveEnd.removeEventListener(showForZoom);
     };
-  }, [paneLayers, generation, viewer]);
+  }, [paneLayers, generation, frame, viewer]);
 }

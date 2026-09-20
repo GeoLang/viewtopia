@@ -85,7 +85,8 @@ export async function renderUISpec(spec: UiSpec): Promise<void> {
       }
       const geojson = (await res.json()) as GeoJSON.FeatureCollection;
       const agentLayer: AgentLayer = {
-        id: `${i}-${file}`,
+        // a result drawn again replaces its own earlier layer
+        id: `spec-${file}`,
         name: layer.name || file,
         color,
         geojson,
@@ -121,5 +122,7 @@ export async function renderUISpec(spec: UiSpec): Promise<void> {
     });
   }
 
-  useAgentLayerStore.getState().setLayers(loaded);
+  // a result that loaded nothing must not hide what is on the map
+  if (!loaded.length) return;
+  useAgentLayerStore.getState().addLayers(loaded);
 }

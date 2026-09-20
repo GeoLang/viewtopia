@@ -179,6 +179,7 @@ function fakeViewer(zoom: number) {
     positionCartographic: { height: cameraHeight(zoom) },
     changed: new CesiumEvent(),
     moveEnd: new CesiumEvent(),
+    flyTo: () => undefined,
   };
   return {
     isDestroyed: () => false,

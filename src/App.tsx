@@ -53,6 +53,7 @@ export function App() {
   const uiHidden = useAppStore((s) => s.uiHidden);
   const toggleUiHidden = useAppStore((s) => s.toggleUiHidden);
   const chatMode = useAppStore((s) => s.chatMode);
+  const activePanel = useAppStore((s) => s.activePanel);
   const setChatMode = useAppStore((s) => s.setChatMode);
   const toggleSpaceTime = useSpaceTimeStore((s) => s.togglePanel);
 
@@ -252,7 +253,7 @@ export function App() {
                 <SpaceTimePanel />
               </ErrorBoundary>
             )}
-            {!chromeHidden && <ToolPanels />}
+            {(!chromeHidden || (chatMode && activePanel)) && <ToolPanels />}
             {!chromeHidden && <OverlayCornerHandles />}
             {/* chat mode hides the header, so the way back rides on the map */}
             {chatMode && (

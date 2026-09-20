@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 
 // the map and the panel dock are the point of the test only by their absence,
 // so they stand in as markers rather than booting cesium and every panel
@@ -149,6 +149,21 @@ describe('the chat-only shell', () => {
     expect(box.tagName).toBe('TEXTAREA');
   });
 
+  it('draws a panel the chat opened, and nothing when none is open', () => {
+    enterByUrl();
+    expect(screen.queryByTestId('tool-panels')).not.toBeInTheDocument();
+
+    act(() => {
+      useAppStore.getState().setActivePanel('dataSources');
+    });
+    expect(screen.getByTestId('tool-panels')).toBeInTheDocument();
+
+    act(() => {
+      useAppStore.getState().setActivePanel(null);
+    });
+    expect(screen.queryByTestId('tool-panels')).not.toBeInTheDocument();
+  });
+
   it('arrow-up fills older prompts from this session', () => {
     useChatStore.getState().createSession('Session 1');
     useChatStore.getState().addMessage({ role: 'user', content: 'fly to paris' });
@@ -199,17 +214,15 @@ describe('the chat-only shell', () => {
 });
 
 describe('panel commands in chat mode', () => {
-  it('say what they would have opened, and open nothing', () => {
+  it('open the panel, since the shell draws a panel the chat opened', () => {
     useAppStore.setState({ chatMode: true });
 
     executeViewerCommand({ action: 'viewshed' });
-    executeViewerCommand({ action: 'measure_area' });
+    expect(useAppStore.getState().activePanel).toBe('viewshed');
 
-    expect(useAppStore.getState().activePanel).toBeNull();
-    expect(messages()).toEqual([
-      'viewshed opens the viewshed panel, which chat mode does not show.',
-      'measure_area opens the measure panel, which chat mode does not show.',
-    ]);
+    executeViewerCommand({ action: 'measure_area' });
+    expect(useAppStore.getState().activePanel).toBe('measure');
+    expect(messages()).toEqual([]);
   });
 
   it('open the panel as usual outside the mode', () => {

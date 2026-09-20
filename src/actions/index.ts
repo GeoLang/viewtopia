@@ -10,6 +10,7 @@ import './history';
 import './layers';
 import './live';
 import './marker';
+import './panel';
 import './project';
 import './scenario';
 import './scene';
