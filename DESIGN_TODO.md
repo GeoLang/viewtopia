@@ -556,6 +556,93 @@ no ceiling on model tokens or executor time. The plan, in payoff order:
       compose bundle on one small VPS at about a tenth of the monthly cost.
       The caps above carry over unchanged, wake on demand does not apply.
 
+### First vertical: commercial site selection
+
+Owner direction 2026-09-19: pick one vertical workflow before the horizontal
+platform. `docs/verticals.md` names seven and calls every one partial: the
+panels read configured or demo datasets and no vertical has a live feed.
+Commercial site selection is the pick, because it runs on public data
+(parcels, zoning, census, roads, points of interest, terrain, flood risk)
+and needs nothing new to demo. Residential brokerage is out: MLS listings
+are licensed and closed. The buyers are retail and franchise expansion
+managers, site selection consultants, small developers and commercial
+brokers, who today pay per seat for Esri Business Analyst or Placer.ai or
+work in spreadsheets and Google Maps.
+
+What exists: the real-estate plugin's parcel and comparable-sales panels
+over the two seeded demo datasets (`docs/verticals-setup.md`),
+`score_sites` with population, amenities, transport, flood risk, green space
+and competition criteria, `calculate_isochrones`, `download_population_grid`,
+`download_osm_data` for competitors and anchors, `aggregate_by_region`,
+`assess_environmental_risk`, terrain, 3D buildings, share links, comments,
+dashboards, image and PDF overlays. None of it touches real data yet.
+
+Product, in order. Items 1 and 2 are the product, about three to four weeks
+for one region. Ship those, put them in front of two site selectors, and let
+their reaction order the rest.
+
+- [ ] **Real data connectors for one region.** Parcels and zoning from one
+      municipal or county open-data portal, census demographics from
+      StatCan or the US Census API, public sales records where a county
+      publishes them. Each connector maps its source onto the property keys
+      the panels already read. One region first, Ontario or one US state:
+      parcel schemas differ per jurisdiction and one working region is a
+      sellable product.
+- [ ] **Trade area analysis as one chat step.** Drive-time area around a
+      candidate, then population, income, competitors and anchors inside
+      it, composed from the isochrone, population grid and OSM tools into
+      one tool with one result table. Chaining is where the model slips
+      (see the weak eval tasks under **Do next**).
+- [ ] **Side-by-side site comparison with adjustable weights.**
+      `score_sites` takes weights as an argument, the panel to move them and
+      compare a shortlist does not exist.
+- [ ] **A site report export.** A PDF with the map, the trade area table and
+      the comparables. Today the outputs are a GeoPackage and a dashboard.
+- [ ] **A deal as a unit of work.** One project per candidate set with a
+      shortlist, a status and the comments already built, so the shared map
+      is the record of the decision.
+- [ ] **Eval tasks written for site selection prompts,** so model quality
+      is measured on this workflow and not only the general suite.
+
+Marketing, mostly distribution of the demo. The pitch: ask for sites in
+plain English, get a shared map and a report, self-host free or pay a flat
+fee for hosting. Pricing follows the GitLab model already decided: AGPL
+self-host free, hosted per organisation at a flat monthly fee plus agent
+usage, never per seat, which is the complaint about the incumbents.
+
+- [ ] **Make the demo the ad.** A public example map on the preview that
+      opens in one click, seeded with the region's parcels and census data,
+      a prompt already typed and a sample report beside it. Depends on the
+      spend caps and a morning scale-up in **Public demo on the hosted
+      preview**: a demo that is off overnight loses everyone west of
+      Toronto and all of Europe.
+- [ ] **One case study per region, written as an answer.** "Every vacant
+      commercial parcel within ten minutes of a Toronto subway station,
+      ranked", with the map embedded and the prompt shown. Post where site
+      selectors read (LinkedIn, the ICSC community, r/commercialrealestate)
+      and where GIS people read (r/gis, the GIS newsletters, the Mastodon
+      and Bluesky GIS crowds). A Show HN post carries the open-source angle
+      to the developers at those firms.
+- [ ] **Twenty cold emails that are maps.** Twenty expansion managers or
+      consultants, each sent a shared map of their brand's actual market
+      with three candidate sites scored and two sentences. Ten minutes each
+      once the region's data is loaded, and the cheapest test of whether the
+      workflow lands. No replies means the workflow is wrong, not the
+      channel.
+- [ ] **Economic development offices as a channel.** Host a public
+      "available sites" map for one municipality for free. Every retailer
+      that looks at that city sees the product, and public-sector buyers
+      are the ones who ask for OGC conformance (a free TEAM Engine run of
+      ptolemy against the OGC API Features suite is the cheap credibility
+      step, an OGC code sprint the next).
+- [ ] **The open-source channels for credibility.** A README with a
+      thirty-second GIF, the awesome-gis lists, a FOSS4G talk. These bring
+      contributors and GIS-literate users, not buyers, and they are what a
+      buyer's GIS analyst checks before saying yes.
+
+Measure three numbers: signups on the preview, maps shared from it, and
+replies to the twenty emails.
+
 ### Region watch
 
 agora's README and DESIGN.md 2.0 describe what is built. Open:
