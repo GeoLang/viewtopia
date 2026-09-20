@@ -10,12 +10,17 @@ allowBuilds:
   esbuild: true
   protobufjs: true
 
-# Force patched versions of dev-only advisories (undici via jsdom/vitest,
-# @babel/core via @vitejs/plugin-react). Nothing here ships to users; the
-# overrides just keep the audit clean.
+# Force patched versions of advisories in transitive deps. undici,
+# @babel/core and fast-uri are dev-only. maplibre-gl 5 comes from @panoramax/web-viewer,
+# whose photo viewer entry (the only one we load) never imports it. fflate
+# 0.7 comes from @loaders.gl/compression, which only calls the one-argument
+# sync functions that 0.8 kept.
 overrides:
   undici: "^7.29.0"
   "@babel/core": "^7.29.1"
+  fast-uri: "^3.1.8"
+  maplibre-gl: "^6.10.0"
+  fflate: "^0.8.3"
 
 # flatgeobuf ships an OpenLayers adapter we never import, and it drags in
 # openlayers, a geotiff beta and zarrita. only the geojson module is used.
