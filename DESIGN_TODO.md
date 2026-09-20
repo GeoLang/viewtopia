@@ -201,26 +201,17 @@ scaled to zero (ALB, secrets, storage).
 Owner calls 2026-09-19 (evening): no domain yet, the nightly scale-down
 stays with manual scale-up, share links keep granting edit to guests.
 
-Hardening in progress 2026-09-19, two agents in worktrees:
+Hardening shipped 2026-09-20 (geolang aa5a003, infrastructure 78af6d5,
+live on the preview): every tool run happens in a pre-warmed worker
+process with `GEOLANG_TOOL_MEMORY_LIMIT_MB`, `GEOLANG_TOOL_TIMEOUT_SECONDS`
+and `GEOLANG_TOOL_MAX_CONCURRENT` (defaults 3072, 840, 2) and the executor
+task runs at 8 GiB; closed `/api/*` gates answer 501 before ptolemy's
+catch-all; agora connects with its own database role, moved across by the
+refresh Lambda; a forced master password rotation was run and ptolemy and
+agora came back healthy with no authentication failures. Watch out: the
+23:00 Toronto scale-down fired in the middle of that test, so do not roll
+services near 23:00.
 
-- [~] **Executor isolation** (geolang). One prompt's OSM download killed the
-      only executor task tonight and chat was down for everyone until ECS
-      replaced it. Plan: every tool run happens in a pre-warmed worker
-      process (spawn, geo stack preloaded), the executor watches the worker's
-      RSS and wall clock and kills it at `GEOLANG_TOOL_MEMORY_LIMIT_MB`
-      (default 3072) or `GEOLANG_TOOL_TIMEOUT_SECONDS` (default 840, under
-      the API client's 900), answers with a plain error naming the limit, and
-      spawns a replacement. `GEOLANG_TOOL_MAX_CONCURRENT` (default 2) bounds
-      parallel runs; a run past that waits briefly then gets a busy error.
-      The preview profile moves the executor task to 8 GiB so two runs at the
-      cap fit.
-- [~] `/api/geocode/*` answers 404 from ptolemy's catch-all instead of the
-      proxy's 501 (infrastructure Caddyfile route order).
-- [~] agora gets its own database role, created and stored by the refresh
-      Lambda on first run, instead of the cluster master credential.
-- [ ] the P0 item 1 rotation test (force one RDS rotation and prove ptolemy
-      and agora recover) runs after the next apply, recipe in the
-      infrastructure README.
 - [ ] one viewer eval sweep against both Bedrock profiles to pick the default.
 
 Accepted as is: the Bedrock key stays a long-term key (expires 2027-09-19,
