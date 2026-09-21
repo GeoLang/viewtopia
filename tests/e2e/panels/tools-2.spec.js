@@ -59,8 +59,8 @@ const SESSION = {
   updatedAt: 2,
 };
 
-/** renderUISpec names the data source after the layer index + file, so the picker label is fixed. */
-const LAYER_LABEL = 'agent-layer-0-parcels.geojson (4)';
+/** renderUISpec names the data source spec-<file>, so the picker label is fixed. */
+const LAYER_LABEL = 'agent-layer-spec-parcels.geojson (4)';
 
 const PEER = { user_id: 'peer-42', user_name: 'Ada Peer', color: '#22d3ee' };
 

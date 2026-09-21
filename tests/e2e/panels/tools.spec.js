@@ -26,7 +26,7 @@ const PARCELS = {
   })),
 };
 
-const LAYER_NAME = 'agent-layer-0-parcels.geojson';
+const LAYER_NAME = 'agent-layer-spec-parcels.geojson';
 
 const SESSION = {
   id: 'panels-tools-session',
