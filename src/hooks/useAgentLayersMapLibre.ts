@@ -13,8 +13,8 @@ import {
 import { usePaneHiddenLayerIds, VIEWER_PANE } from '../store/splitView';
 import { MARKER_RADIUS_KEY, POINT_RADIUS } from '../features/symbology/symbology';
 import { agentLayersBounds } from './agentLayerBounds';
+import { AGENT_LAYER_SOURCE_PREFIX as PREFIX } from '../store/agentLayerNames';
 
-const PREFIX = 'agent-layer-';
 const RASTER_PREFIX = 'agent-raster-';
 
 /**

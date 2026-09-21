@@ -12,6 +12,7 @@ import { authHeaders, noticeRefusal } from '../lib/apiAuth';
 import { offlineFetch } from '../offline/cache';
 import { useAppStore } from '../store/app';
 import { useAgentLayerStore, type AgentLayer } from '../store/agentLayers';
+import { specLayerId } from '../store/agentLayerNames';
 
 const LAYER_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
@@ -85,8 +86,7 @@ export async function renderUISpec(spec: UiSpec): Promise<void> {
       }
       const geojson = (await res.json()) as GeoJSON.FeatureCollection;
       const agentLayer: AgentLayer = {
-        // a result drawn again replaces its own earlier layer
-        id: `spec-${file}`,
+        id: specLayerId(file),
         name: layer.name || file,
         color,
         geojson,

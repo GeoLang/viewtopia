@@ -23,10 +23,10 @@ import {
 } from '../store/agentLayers';
 import { usePaneHiddenLayerIds, VIEWER_PANE } from '../store/splitView';
 import { cameraZoom } from './cameraSync';
+import { AGENT_LAYER_SOURCE_PREFIX as PREFIX } from '../store/agentLayerNames';
 import { bboxOfCorners, cornersAxisAligned } from '../overlay/georeference';
 import { OVERLAY_ENTITY_PREFIX, quadOverlayEntity } from '../overlay/cesiumQuad';
 
-const PREFIX = 'agent-layer-';
 const MARKER_PREFIX = 'agent-marker-';
 
 /**

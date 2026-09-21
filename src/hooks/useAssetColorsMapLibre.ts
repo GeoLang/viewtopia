@@ -8,9 +8,8 @@ import {
   type AssetState,
 } from '../live/assetState';
 import { useLiveStore } from '../live/liveStore';
+import { AGENT_LAYER_SOURCE_PREFIX as PREFIX } from '../store/agentLayerNames';
 import { ASSET_ID_PROPERTY, ASSET_RULE_ID, type AssetRule } from '../live/types';
-
-const PREFIX = 'agent-layer-';
 
 /** The layers useAgentLayersMapLibre adds per source, and the colour each paints. */
 const COLOR_PAINT = [

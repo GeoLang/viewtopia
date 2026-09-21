@@ -3,14 +3,12 @@
  * side (calculated fields, virtual fields, joins) is in expressions.ts.
  */
 import type { AgentLayer } from '../../store/agentLayers';
-
-/** The Cesium renderer names each agent layer's data source `agent-layer-<id>`. */
-const DATA_SOURCE_PREFIX = 'agent-layer-';
+import { AGENT_LAYER_SOURCE_PREFIX } from '../../store/agentLayerNames';
 
 /** The store id behind a viewer data source, or null for one nothing owns. */
 export function agentLayerId(dataSourceName: string): string | null {
-  return dataSourceName.startsWith(DATA_SOURCE_PREFIX)
-    ? dataSourceName.slice(DATA_SOURCE_PREFIX.length)
+  return dataSourceName.startsWith(AGENT_LAYER_SOURCE_PREFIX)
+    ? dataSourceName.slice(AGENT_LAYER_SOURCE_PREFIX.length)
     : null;
 }
 

@@ -1,6 +1,7 @@
 import { test, expect, allowConsoleError } from '../console-guard';
 import { PANEL, MENU_ITEM, openApp, openBasemapRendererControl } from '../panel-helpers';
 import { mintToken } from '../../../scripts/platform-token.mjs';
+import { AGENT_LAYER_SOURCE_PREFIX, specLayerId } from '../../../src/store/agentLayerNames';
 
 /**
  * Functional smoke for the Tools menu panels against the live platform stack.
@@ -26,7 +27,7 @@ const PARCELS = {
   })),
 };
 
-const LAYER_NAME = 'agent-layer-spec-parcels.geojson';
+const LAYER_NAME = `${AGENT_LAYER_SOURCE_PREFIX}${specLayerId('parcels.geojson')}`;
 
 const SESSION = {
   id: 'panels-tools-session',

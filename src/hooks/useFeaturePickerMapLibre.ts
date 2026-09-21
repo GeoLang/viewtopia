@@ -4,8 +4,7 @@ import type * as maplibregl from 'maplibre-gl';
 import { useAppStore } from '../store/app';
 import { useFeaturePickerStore, propsToRows, toRow } from '../store/featurePicker';
 import { getActiveDeckOverlay } from '../viewer/registry';
-
-const AGENT_PREFIX = 'agent-layer-';
+import { AGENT_LAYER_SOURCE_PREFIX as AGENT_PREFIX } from '../store/agentLayerNames';
 
 /** Agent points draw at a 5px radius; querying a bare point makes them near-unclickable. */
 const PICK_TOLERANCE = 8;

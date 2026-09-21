@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import { test as unguarded } from '@playwright/test';
 import { test, expect } from '../console-guard';
 import { PANEL, MENU_ITEM, openApp } from '../panel-helpers.js';
+import { AGENT_LAYER_SOURCE_PREFIX, specLayerId } from '../../../src/store/agentLayerNames';
 
 /**
  * Functional smoke for Tools ▸ Data Table, Collaborate, Print Layout against the
@@ -59,8 +60,7 @@ const SESSION = {
   updatedAt: 2,
 };
 
-/** renderUISpec names the data source spec-<file>, so the picker label is fixed. */
-const LAYER_LABEL = 'agent-layer-spec-parcels.geojson (4)';
+const LAYER_LABEL = `${AGENT_LAYER_SOURCE_PREFIX}${specLayerId('parcels.geojson')} (4)`;
 
 const PEER = { user_id: 'peer-42', user_name: 'Ada Peer', color: '#22d3ee' };
 
