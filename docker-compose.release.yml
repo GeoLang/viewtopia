@@ -18,7 +18,7 @@ services:
 
   geokode:
     build: !reset null
-    image: ghcr.io/geolang/geokode:v0.3.0
+    image: ghcr.io/geolang/geokode:v0.3.1
 
   itinera:
     build: !reset null
@@ -54,15 +54,15 @@ services:
 
   geolang-data-init:
     build: !reset null
-    image: ghcr.io/geolang/geolang:v0.1.5
+    image: ghcr.io/geolang/geolang:v0.1.6
 
   geolang-executor:
     build: !reset null
-    image: ghcr.io/geolang/geolang:v0.1.5
+    image: ghcr.io/geolang/geolang:v0.1.6
 
   geolang-api:
     build: !reset null
-    image: ghcr.io/geolang/geolang:v0.1.5
+    image: ghcr.io/geolang/geolang:v0.1.6
     env_file: !override
       - path: ./geolang.env
         required: false
