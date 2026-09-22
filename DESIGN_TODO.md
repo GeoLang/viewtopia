@@ -211,7 +211,19 @@ agora came back healthy with no authentication failures. Watch out: the
 23:00 Toronto scale-down fired in the middle of that test, so do not roll
 services near 23:00.
 
-- [ ] one viewer eval sweep against both Bedrock profiles to pick the default.
+Model picked 2026-09-22 (geolang 4898def, live on the preview): the hosted
+default is `cloud:openai.gpt-oss-120b`, 0.80 against 0.45 for
+`qwen.qwen3-235b-a22b-2507` on the viewer eval at `--repeat 3`, and Qwen
+reached 0.73 on the reworded viewer instructions. With those instructions,
+`compare_layers` and `ptolemy_query` behind their viewer actions, and a 404
+pointing a dotted action name at viewer_control, the gpt-oss baseline on the
+rolled preview is 0.92 over 76 tasks (report 20260922T192650).
+
+- [ ] five viewer eval tasks still fail on gpt-oss:
+      `scenario-compare-branches`, `scenario-compare-within-25-metres`,
+      `dataset-draw-widening-branch` and `tab-to-leaflet` draw no
+      viewer_control call at all, and `history-show-live` answers with
+      `live.join`.
 
 Accepted as is: the Bedrock key stays a long-term key (expires 2027-09-19,
 rotate by hand before then, noted in the infrastructure README); the refresh
