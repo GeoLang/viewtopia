@@ -98,9 +98,16 @@ The 0.x preview shipped 2026-09-16: every platform repo publishes
 against a stack pulled from those images alone. Pins live in
 `docker-compose.release.yml` and are bumped by hand per release. Open:
 
-- [ ] **No upgrade test yet.** The first release exists now, so the next one
-      can bring up v0.2.0 with data, move to the next pins, and check ptolemy
-      and agora migrations carry the data.
+- [ ] **Upgrade test has only run backwards.** `scripts/upgrade-test.sh
+      <old_image> <new_image>` writes a dataset, branch and features through the
+      old image, restarts on the new one, and checks the migration version rose
+      and the reads match. Passes from a ptolemy built at v0.1.0 to master
+      (2026-09-22). The next release runs it forwards on the new pins, and agora
+      once it has a second tag.
+- [ ] **Tag ptolemy before the next terraform apply.** `infrastructure/main.tf`
+      now passes `PLATFORM_JWT_SECRET` to ptolemy, which the v0.2.0 image does
+      not read. Roll a ptolemy tag carrying the rename into `preview.tfvars`
+      in the same apply.
 
 ## Do next
 
@@ -133,22 +140,6 @@ loads real data, edits it with permission, asks the agent to analyze it, and
 sees the result. Each task needs source, integration, and failure-path tests.
 Numbers keep their original places, so a missing number is a closed item and
 other documents citing "P0 item 5" still land on the right one.
-
-1. **Make the hosted stack start from the published images.**
-   Repositories: `infrastructure`, `geolang`, `viewtopia`, `tiletopia`,
-   `ptolemy`, `agora`.
-   - [x] Run `infrastructure/scripts/publish-images.sh` against the applied ECR
-     repositories with one new `image_tag` (v0.1.0, viewtopia and the proxy,
-     2026-09-19).
-   - [ ] After the first AWS apply, populate the four operator-managed secrets,
-     confirm both database URL versions are created, force one RDS rotation,
-     and prove Ptolemy and Agora recover with healthy replacement tasks.
-   - [x] Stage the required EFS data and confirm startup migrations (nothing to
-     stage for the nine-service preview, migrations ran on first start
-     2026-09-19).
-   - [x] Prove the public route set with service health checks and one
-     authenticated session (curl signup, token accepted by three services, one
-     agent run, 2026-09-19).
 
 7. **Chat-only viewer mode: a typed prompt reaches every capability that does
    not need the mouse.** Repositories: `viewtopia`, `geolang`. Owner call
@@ -449,7 +440,7 @@ Deliberate scope calls, each a product decision rather than a defect to fix.
       ever grows a path that should be laddered.
 
 - [ ] None of the above decides anything when auth is off, which is now
-      `PTOLEMY_AUTH_DISABLED=true` rather than an empty `PTOLEMY_JWT_SECRET`:
+      `PTOLEMY_AUTH_DISABLED=true` rather than an empty `PLATFORM_JWT_SECRET`:
       the serve path uses the strict config, which refuses an empty secret
       outright. With auth off the permission check passes and the read
       visibility layer no-ops, but the write ladder still resolves the target

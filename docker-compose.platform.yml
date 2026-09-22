@@ -65,7 +65,7 @@ services:
     environment:
       DATABASE_URL: postgres://ptolemy:${POSTGRES_PASSWORD:-ptolemy}@db/ptolemy
       RUST_LOG: info,ptolemy_api=debug
-      PTOLEMY_JWT_SECRET: ${PLATFORM_JWT_SECRET:-}
+      PLATFORM_JWT_SECRET: ${PLATFORM_JWT_SECRET:-}
     ports:
       - "3000:3000"
     command:
