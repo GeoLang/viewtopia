@@ -6,7 +6,7 @@
 services:
   ptolemy:
     build: !reset null
-    image: ghcr.io/geolang/ptolemy:v0.2.0
+    image: ghcr.io/geolang/ptolemy:v0.2.1
 
   tiletopia:
     build: !reset null
@@ -18,7 +18,7 @@ services:
 
   geokode:
     build: !reset null
-    image: ghcr.io/geolang/geokode:v0.2.0
+    image: ghcr.io/geolang/geokode:v0.3.0
 
   itinera:
     build: !reset null
@@ -54,15 +54,15 @@ services:
 
   geolang-data-init:
     build: !reset null
-    image: ghcr.io/geolang/geolang:v0.1.0
+    image: ghcr.io/geolang/geolang:v0.1.5
 
   geolang-executor:
     build: !reset null
-    image: ghcr.io/geolang/geolang:v0.1.0
+    image: ghcr.io/geolang/geolang:v0.1.5
 
   geolang-api:
     build: !reset null
-    image: ghcr.io/geolang/geolang:v0.1.0
+    image: ghcr.io/geolang/geolang:v0.1.5
     env_file: !override
       - path: ./geolang.env
         required: false
