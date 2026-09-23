@@ -145,8 +145,17 @@ only when a user asks for it. Items already listed above are not repeated.
 Comparison tables removed because nobody here can source the competitor side:
 itinera against OSRM, Valhalla and GraphHopper, fluvius against Kafka Streams,
 Flink and GeoEvent, geogit's Kart column, and viewtopia's price, web-based and
-QGIS download rows. tiletopia's index.html still has unverified Mapbox,
-Google, Bentley, Trimble and Potree columns.
+QGIS download rows, and tiletopia's Mapbox, Google Maps, Bentley iTwin,
+Trimble Clarity and Potree columns. The dropped tiletopia cells claimed Google
+Maps and Bentley iTwin serve 3D Tiles point clouds, Bentley iTwin has presence,
+chat and 3D annotations, and Potree is self-hosted, open source and has no REST
+API.
+
+- [ ] tiletopia's Cesium Ion column, in the README and on the page, is
+  unverified apart from self-hosting: Ion has no presence or chat, no 3D
+  annotations, no XYZ raster tiles, and "mixed" temporal versioning. Its
+  "Self-hosted: no" was wrong, since Cesium sells Cesium ion Self-Hosted, and
+  is fixed.
 
 ## Doc audit 2026-09-02, findings to address
 
