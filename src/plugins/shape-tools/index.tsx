@@ -182,7 +182,6 @@ const plugin: PluginDefinition = {
   version: '1.0.0',
   author: 'TileTopia-HQ',
   icon: <IconCircle size={14} />,
-  category: 'tools',
   Panel: ShapeToolsPanel,
 };
 

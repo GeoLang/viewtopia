@@ -235,7 +235,6 @@ const plugin: PluginDefinition = {
   version: '1.0.0',
   author: 'TileTopia-HQ',
   icon: <IconBuildingEstate size={14} />,
-  category: 'plugins',
   Panel: RealEstatePanel,
   settings: [
     { key: 'parcelBranchId', label: 'Parcels Branch ID', type: 'text', description: 'UUID of the branch containing parcel data (blank = auto-discover parcels, then demo_parcels)' },

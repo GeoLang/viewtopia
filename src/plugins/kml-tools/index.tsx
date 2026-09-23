@@ -172,7 +172,6 @@ const plugin: PluginDefinition = {
   version: '1.0.0',
   author: 'TileTopia-HQ',
   icon: <IconFile size={14} />,
-  category: 'data',
   Panel: KmlToolsPanel,
 };
 

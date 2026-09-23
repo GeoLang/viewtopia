@@ -202,7 +202,6 @@ const plugin: PluginDefinition = {
   version: '1.0.0',
   author: 'TileTopia-HQ',
   icon: <IconPanoramaHorizontal size={14} />,
-  category: 'tools',
   Panel: PanoramaxPanel,
   settings: [
     {

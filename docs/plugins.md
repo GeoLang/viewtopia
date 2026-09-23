@@ -32,7 +32,6 @@ const plugin: PluginDefinition = {
   id: 'my-plugin',
   name: 'My Plugin',
   version: '1.0.0',
-  category: 'plugins',
   Panel: MyPanel,
 }
 
@@ -97,7 +96,6 @@ interface PluginDefinition {
   version: string       // semver
   author?: string
   icon?: ReactNode      // an @tabler/icons-react icon
-  category?: 'analysis' | 'simulate' | 'tools' | 'data' | 'plugins'
   Panel: React.ComponentType<{ ctx: PluginContext }>
   settings?: PluginSettingField[]   // rendered in the Settings panel
 }
@@ -130,12 +128,6 @@ ctx.map.addGeoJsonLayer('my-layer', geojson, {
   fit: true,          // whether adding it moves the camera, true by default
 })
 ```
-
-## Category Placement
-
-The toolbar ignores `category`. Every plugin, built-in or runtime, is listed
-under Plugins in the toolbar menu and in the command palette, whatever its
-category says.
 
 ## Events
 

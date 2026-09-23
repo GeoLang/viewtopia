@@ -89,7 +89,6 @@ const plugin: PluginDefinition = {
   version: '1.0.0',
   author: 'TileTopia-HQ',
   icon: <IconAntenna size={14} />,
-  category: 'plugins',
   Panel: TelecomPanel,
   settings: [
     { key: 'towerBranchId', label: 'Towers Branch ID', type: 'text', description: 'Branch containing tower point features' },

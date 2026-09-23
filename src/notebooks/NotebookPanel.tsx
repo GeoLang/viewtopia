@@ -25,9 +25,7 @@ import {
   IconTrash,
   IconArrowUp,
   IconArrowDown,
-  IconCode,
   IconMarkdown,
-  IconMapPin,
   IconChevronDown,
   IconChevronRight,
   IconNotebook,
@@ -152,9 +150,7 @@ function Cell({
   }[cell.status];
 
   const typeIcon = {
-    code: <IconCode size={14} />,
     markdown: <IconMarkdown size={14} />,
-    'map-action': <IconMapPin size={14} />,
     python: <IconBrandPython size={14} />,
     sql: <IconDatabase size={14} />,
   }[cell.type];
@@ -360,9 +356,6 @@ export function NotebookPanel({ onClose }: { onClose: () => void }) {
 
       {/* Add cell buttons */}
       <Group justify="center" gap={8}>
-        <Button size="xs" variant="light" leftSection={<IconCode size={14} />} onClick={() => addCell(activeNotebook.id, 'code')}>
-          + Code
-        </Button>
         <Button size="xs" variant="light" color="yellow" leftSection={<IconBrandPython size={14} />} onClick={() => addCell(activeNotebook.id, 'python')}>
           + Python
         </Button>
@@ -371,9 +364,6 @@ export function NotebookPanel({ onClose }: { onClose: () => void }) {
         </Button>
         <Button size="xs" variant="light" leftSection={<IconMarkdown size={14} />} onClick={() => addCell(activeNotebook.id, 'markdown')}>
           + Markdown
-        </Button>
-        <Button size="xs" variant="light" leftSection={<IconMapPin size={14} />} onClick={() => addCell(activeNotebook.id, 'map-action')}>
-          + Map Action
         </Button>
       </Group>
     </Stack>

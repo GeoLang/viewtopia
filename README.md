@@ -743,7 +743,6 @@ export default {
   id: 'my-plugin',
   name: 'My Plugin',
   version: '1.0.0',
-  category: 'plugins',
   Panel: MyPanel,
   settings: [
     { key: 'apiKey', label: 'API Key', type: 'text', defaultValue: '' },

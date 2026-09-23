@@ -86,7 +86,6 @@ const plugin: PluginDefinition = {
   version: '1.0.0',
   author: 'TileTopia-HQ',
   icon: <IconPlant size={14} />,
-  category: 'plugins',
   Panel: AgriculturePanel,
   settings: [
     { key: 'fieldBranchId', label: 'Fields Branch ID', type: 'text', description: 'Branch containing field polygon features' },

@@ -238,7 +238,6 @@ const plugin: PluginDefinition = {
   version: '1.0.0',
   author: 'TileTopia-HQ',
   icon: <IconEye size={14} />,
-  category: 'tools',
   Panel: StreetViewPanel,
   settings: [
     { key: 'defaultProvider', label: 'Default Provider', type: 'select', defaultValue: 'mapillary', options: [{ value: 'mapillary', label: 'Mapillary' }, { value: 'google', label: 'Google Street View' }] },

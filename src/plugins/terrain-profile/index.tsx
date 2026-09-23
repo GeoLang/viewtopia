@@ -121,7 +121,6 @@ const plugin: PluginDefinition = {
   version: '1.0.0',
   author: 'TileTopia-HQ',
   icon: <IconChartLine size={14} />,
-  category: 'analysis',
   Panel: TerrainProfilePanel,
   settings: [
     { key: 'elevationApi', label: 'Elevation API', type: 'select', defaultValue: 'open-elevation', options: [{ value: 'open-elevation', label: 'Open-Elevation' }, { value: 'mapzen', label: 'Mapzen Terrain Tiles' }] },

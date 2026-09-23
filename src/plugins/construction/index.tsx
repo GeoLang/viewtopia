@@ -83,7 +83,6 @@ const plugin: PluginDefinition = {
   version: '1.0.0',
   author: 'TileTopia-HQ',
   icon: <IconCrane size={14} />,
-  category: 'plugins',
   Panel: ConstructionPluginPanel,
   settings: [
     { key: 'surveyBranchId', label: 'Survey Branch ID', type: 'text', description: 'Branch with survey point cloud features' },

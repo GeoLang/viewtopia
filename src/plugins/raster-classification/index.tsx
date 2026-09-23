@@ -309,7 +309,6 @@ const plugin: PluginDefinition = {
   version: '1.0.0',
   author: 'TileTopia-HQ',
   icon: <IconCategory size={14} />,
-  category: 'analysis',
   Panel: RasterClassificationPanel,
   settings: [
     { key: 'maxIterations', label: 'Max Iterations', type: 'number', defaultValue: 50, min: 10, max: 200 },

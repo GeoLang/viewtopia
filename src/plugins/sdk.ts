@@ -106,8 +106,6 @@ export interface PluginDefinition {
   author?: string;
   /** Icon component (from @tabler/icons-react or custom SVG) */
   icon?: ReactNode;
-  /** Which toolbar menu to add this plugin to: 'analysis' | 'simulate' | 'tools' | 'data' | 'plugins' */
-  category?: 'analysis' | 'simulate' | 'tools' | 'data' | 'plugins';
   /** The panel component — receives PluginContext as props */
   Panel: React.ComponentType<{ ctx: PluginContext }>;
   /** Optional: run on plugin load (e.g. register event listeners) */

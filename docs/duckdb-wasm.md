@@ -27,7 +27,7 @@ src/duckdb/
   index.ts          query(sql), queryRows(sql), exec(sql), close(), re-exports getDb and getConnection
   worker.ts         the AsyncDuckDB singleton, bundle selection, spatial extension loading
   spatial.ts        queryAsGeoJson(sql)
-  loaders.ts        attachParquetUrl, attachCsvUrl, registerGeoJson
+  loaders.ts        attachParquetUrl, attachCsvUrl
   importVector.ts   binary vector file import
   exportFile.ts     exportQuery(sql, 'csv' | 'parquet')
   sqlCommand.ts     the sql_query viewer command
@@ -79,8 +79,7 @@ The viewer:
 - Returning SQL result rows to the agent for follow-up reasoning. The summary
   goes to a window event and the ring buffer, both read by the UI, never sent
   back to the model as a turn.
-- Attaching a map layer that did not come from a DuckDB import. `registerGeoJson`
-  exists in `loaders.ts` but nothing calls it.
+- Attaching a map layer that did not come from a DuckDB import.
 - PMTiles in SQL, an OPFS-persistent catalog, and write-back to Ptolemy.
 
 ## Bundle size

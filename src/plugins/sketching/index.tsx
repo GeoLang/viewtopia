@@ -305,7 +305,6 @@ const plugin: PluginDefinition = {
   version: '1.0.0',
   author: 'TileTopia-HQ',
   icon: <IconPencil size={14} />,
-  category: 'tools',
   Panel: AdvancedSketchingPanel,
 };
 

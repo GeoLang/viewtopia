@@ -79,10 +79,6 @@ exercises it.
 - Returning DuckDB result rows to the agent for follow-up reasoning. A query
   publishes a summary to a window event and a global ring buffer, which is
   read by the UI, not sent back to the model as a turn.
-- Notebook JavaScript and map-action cells. Nothing calls the notebook store's
-  `setRuntime`, so both answer "No runtime available". Nothing records map
-  operations into a map-action cell, and the animated `replayNotebook` has no
-  caller. SQL, Python and Markdown cells work.
 
 ## Source of truth
 

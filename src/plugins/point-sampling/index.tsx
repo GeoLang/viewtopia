@@ -237,7 +237,6 @@ const plugin: PluginDefinition = {
   version: '1.0.0',
   author: 'TileTopia-HQ',
   icon: <IconPointFilled size={14} />,
-  category: 'analysis',
   Panel: PointSamplingPanel,
 };
 

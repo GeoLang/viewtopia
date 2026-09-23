@@ -2,8 +2,8 @@
  * Notebook store — CRUD for notebooks, active notebook, cell execution.
  */
 import { create } from 'zustand';
-import type { Notebook, NotebookCell, CellOutput, CellType, MapAction } from './types';
-import { executeCodeCell, executeMapAction, executeSqlCell, type NotebookRuntime } from './runtime';
+import type { Notebook, NotebookCell, CellOutput, CellType } from './types';
+import { executeSqlCell, type NotebookRuntime } from './runtime';
 import { getKernelClient, createKernelClient, loadKernelConfig, type JupyterOutput } from './jupyter';
 
 // IndexedDB storage for notebooks
@@ -107,9 +107,6 @@ export interface NotebookStoreActions {
   /** Run all cells up to (and including) a specific cell */
   runUpTo: (notebookId: string, cellId: string) => Promise<void>;
 
-  /** Record a map action as a new cell */
-  recordAction: (notebookId: string, action: MapAction) => Promise<void>;
-
   /** Clear all outputs */
   clearOutputs: (notebookId: string) => Promise<void>;
 
@@ -154,7 +151,6 @@ export const useNotebookStore = create<NotebookStoreState & NotebookStoreActions
       name,
       cells: [
         { id: crypto.randomUUID(), type: 'markdown', source: `# ${name}\n\nDescribe your workflow here.`, outputs: [], status: 'idle', executionCount: 0, collapsed: false },
-        { id: crypto.randomUUID(), type: 'code', source: '// Your code here\nprint("Hello, ViewTopia!");', outputs: [], status: 'idle', executionCount: 0, collapsed: false },
       ],
       createdAt: now,
       updatedAt: now,
@@ -188,7 +184,7 @@ export const useNotebookStore = create<NotebookStoreState & NotebookStoreActions
     const cell: NotebookCell = {
       id: crypto.randomUUID(),
       type,
-      source: type === 'markdown' ? '' : type === 'code' ? '' : '',
+      source: '',
       outputs: [],
       status: 'idle',
       executionCount: 0,
@@ -244,7 +240,6 @@ export const useNotebookStore = create<NotebookStoreState & NotebookStoreActions
   },
 
   async runCell(notebookId, cellId) {
-    const { runtime } = get();
     const nb = get().notebooks.find((n) => n.id === notebookId);
     if (!nb) return;
     const cellIdx = nb.cells.findIndex((c) => c.id === cellId);
@@ -261,14 +256,8 @@ export const useNotebookStore = create<NotebookStoreState & NotebookStoreActions
     if (cell.type === 'python') {
       // Execute via Jupyter kernel
       outputs = await executePythonCell(cell);
-    } else if (cell.type === 'sql') {
-      outputs = await executeSqlCell(cell);
-    } else if (cell.type === 'map-action' && cell.action) {
-      if (!runtime) { outputs = [{ type: 'error', data: 'No runtime available', timestamp: Date.now() }]; }
-      else { outputs = await executeMapAction(cell.action, runtime); }
     } else {
-      if (!runtime) { outputs = [{ type: 'error', data: 'No runtime available', timestamp: Date.now() }]; }
-      else { outputs = await executeCodeCell(cell, runtime); }
+      outputs = await executeSqlCell(cell);
     }
 
     const hasError = outputs.some((o) => o.type === 'error');
@@ -300,25 +289,6 @@ export const useNotebookStore = create<NotebookStoreState & NotebookStoreActions
       }
       if (cell.id === cellId) break;
     }
-  },
-
-  async recordAction(notebookId, action) {
-    const nb = get().notebooks.find((n) => n.id === notebookId);
-    if (!nb) return;
-    const cell: NotebookCell = {
-      id: crypto.randomUUID(),
-      type: 'map-action',
-      source: `${action.command}(${JSON.stringify(action.params)})`,
-      action,
-      outputs: [],
-      status: 'idle',
-      executionCount: 0,
-      collapsed: false,
-    };
-    const cells = [...nb.cells, cell];
-    const updated = { ...nb, cells, updatedAt: Date.now() };
-    await saveNotebook(updated);
-    set((s) => ({ notebooks: s.notebooks.map((n) => (n.id === notebookId ? updated : n)) }));
   },
 
   async clearOutputs(notebookId) {

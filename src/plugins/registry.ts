@@ -102,11 +102,9 @@ export function usePluginRegistryVersion(): number {
   );
 }
 
-/** Get all plugins as an array, optionally filtered by category */
-export function getPlugins(category?: string): PluginDefinition[] {
-  const all = Array.from(pluginRegistry.values());
-  if (!category) return all;
-  return all.filter((p) => (p.category || 'plugins') === category);
+/** Get all plugins as an array */
+export function getPlugins(): PluginDefinition[] {
+  return Array.from(pluginRegistry.values());
 }
 
 /** Get a single plugin by ID */

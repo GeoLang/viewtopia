@@ -173,7 +173,6 @@ const plugin: PluginDefinition = {
   version: '1.0.0',
   author: 'TileTopia-HQ',
   icon: <IconMapPin size={14} />,
-  category: 'data',
   Panel: OsmDownloaderPanel,
   settings: [
     { key: 'overpassUrl', label: 'Overpass API URL', type: 'text', defaultValue: 'https://overpass-api.de/api/interpreter' },

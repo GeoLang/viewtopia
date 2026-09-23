@@ -17,7 +17,6 @@ const plugin: PluginDefinition = {
   version: '1.0.0',
   author: 'TileTopia-HQ',
   icon: <IconDeviceDesktopAnalytics size={14} />,
-  category: 'plugins',
   Panel: EnvironmentalPanel,
   settings: [
     { key: 'sensorBranchId', label: 'Sensors Branch ID', type: 'text', description: 'UUID of the branch containing sensor features' },

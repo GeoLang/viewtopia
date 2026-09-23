@@ -76,7 +76,6 @@ const plugin: PluginDefinition = {
   version: '1.0.0',
   author: 'TileTopia-HQ',
   icon: <IconTruck size={14} />,
-  category: 'plugins',
   Panel: LogisticsPanel,
   settings: [
     { key: 'maxStops', label: 'Max Delivery Stops', type: 'number', defaultValue: 50, min: 2, max: 500 },

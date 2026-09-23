@@ -123,7 +123,6 @@ const plugin: PluginDefinition = {
   version: '1.0.0',
   author: 'TileTopia-HQ',
   icon: <IconAlertTriangle size={14} />,
-  category: 'plugins',
   Panel: EmergencyPanel,
   settings: [
     { key: 'incidentBranchId', label: 'Incidents Branch ID', type: 'text', description: 'Branch containing incident features' },

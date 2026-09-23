@@ -192,7 +192,6 @@ const plugin: PluginDefinition = {
   version: '1.0.0',
   author: 'TileTopia-HQ',
   icon: <IconMap2 size={14} />,
-  category: 'data',
   Panel: BasemapCatalogPanel,
   settings: [
     { key: 'activeBasemap', label: 'Active Basemap', type: 'text', defaultValue: 'osm-standard' },
