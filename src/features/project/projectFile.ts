@@ -14,6 +14,8 @@ import { useSplitViewStore, asPaneRenderer, type Pane } from '../../store/splitV
 import { captureCameraState, flyToCameraState, type CameraState } from '../../store/cameraViews';
 import { getActiveCesiumViewer, getActiveMapLibre } from '../../viewer/registry';
 import { getSharedCamera, setSharedCamera } from '../../hooks/sharedCamera';
+import { readDeal, type Deal } from '../deals/deal';
+import { useDealStore } from '../deals/store';
 
 /**
  * The whole workspace as one file: what is on screen and where the camera is.
@@ -40,6 +42,7 @@ export interface ViewtopiaProject {
    * project saved to the server, in a ptolemy project attachment the entry names.
    */
   imageOverlays: ImageOverlayEntry[];
+  deal?: Deal;
 }
 
 export type ImageOverlayEntry = Omit<AgentRasterLayer, 'url'>;
@@ -92,6 +95,7 @@ export function serializeProject(name: string): ViewtopiaProject {
   const app = useAppStore.getState();
   const agent = useAgentLayerStore.getState();
   const split = useSplitViewStore.getState();
+  const { deal } = useDealStore.getState();
   return {
     app: 'viewtopia',
     schemaVersion: 1,
@@ -113,6 +117,7 @@ export function serializeProject(name: string): ViewtopiaProject {
     // a dropped .pmtiles is a browser File the protocol resolves in this
     // session only, so saving its entry would only produce a dead layer
     ogcLayers: useOgcLayerStore.getState().layers.filter((l) => !l.pmtiles?.local),
+    ...(deal ? { deal } : {}),
   };
 }
 
@@ -193,6 +198,7 @@ export function parseProject(text: string): ViewtopiaProject {
     markers: requireArray(p.markers, 'markers') as AgentMarker[],
     ogcLayers: requireArray(p.ogcLayers, 'ogcLayers') as OGCLayer[],
     imageOverlays: requireArray(p.imageOverlays, 'imageOverlays') as ImageOverlayEntry[],
+    ...(p.deal === undefined ? {} : { deal: readDeal(p.deal) }),
   };
 }
 
@@ -330,6 +336,8 @@ export function applyProject(project: ViewtopiaProject, projectId?: string): voi
   const ogc = useOgcLayerStore.getState();
   for (const layer of [...ogc.layers]) ogc.removeLayer(layer.id);
   for (const saved of project.ogcLayers) restoreOgcLayer(saved);
+
+  useDealStore.getState().setDeal(project.deal ?? null);
 
   applyCamera(project.camera);
 }

@@ -59,6 +59,8 @@ import type { ImageOverlayEntry, ViewtopiaProject } from '../../src/features/pro
 import { useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers';
 import { useAppStore } from '../../src/store/app';
 import { useOgcLayerStore } from '../../src/store/ogcLayers';
+import { startDeal, type Deal } from '../../src/features/deals/deal';
+import { useDealStore } from '../../src/features/deals/store';
 
 const PROJECT = 'project-1';
 
@@ -132,6 +134,7 @@ beforeEach(() => {
   useAppStore.setState({ renderer: 'maplibre', basemap: 'liberty', layers: [] });
   useAgentLayerStore.setState({ layers: [], rasterLayers: [], markers: [], generation: 0 });
   useOgcLayerStore.setState({ layers: [] });
+  useDealStore.setState({ deal: null });
 });
 
 afterEach(() => {
@@ -281,6 +284,36 @@ describe('saving on a debounce', () => {
     await vi.runAllTimersAsync();
 
     expect(api.putProjectState).not.toHaveBeenCalled();
+  });
+});
+
+describe('the project deal', () => {
+  const shortlisted: Deal = {
+    name: 'Queen West expansion',
+    status: 'shortlisted',
+    shortlist: [{ featureId: 'parcel-1', label: '100 King St W' }],
+    commentIds: ['thread-1'],
+  };
+
+  it('goes to the server when it changes', async () => {
+    watch(activeProject);
+
+    useDealStore.getState().setDeal(startDeal('Queen West expansion'));
+    await vi.runAllTimersAsync();
+
+    expect(api.putProjectState).toHaveBeenCalledOnce();
+    const [, , saved] = api.putProjectState.mock.calls[0] as [string, string, ViewtopiaProject];
+    expect(saved.deal).toEqual(startDeal('Queen West expansion'));
+  });
+
+  it('comes back from the server when the project loads after a reload', async () => {
+    api.getProjectState.mockResolvedValue({
+      value: { ...snapshot('2026-09-23T10:00:00.000Z'), deal: shortlisted },
+    });
+
+    await loadProjectMap(PROJECT);
+
+    expect(useDealStore.getState().deal).toEqual(shortlisted);
   });
 });
 

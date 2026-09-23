@@ -19,6 +19,7 @@ import { useAppStore } from '../store/app';
 import { useAgentLayerStore } from '../store/agentLayers';
 import { useOgcLayerStore } from '../store/ogcLayers';
 import { useSplitViewStore } from '../store/splitView';
+import { useDealStore } from '../features/deals/store';
 import { subscribeSharedCamera } from '../hooks/sharedCamera';
 import { deleteProjectAttachment, getProjectState, putProjectState } from './api';
 
@@ -201,6 +202,7 @@ export function watchMapForSaving(
     useAgentLayerStore.subscribe(onChange),
     useOgcLayerStore.subscribe(onChange),
     useSplitViewStore.subscribe(onChange),
+    useDealStore.subscribe(onChange),
     subscribeSharedCamera(onChange),
   ];
   const onOnline = () => {
