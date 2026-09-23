@@ -9,7 +9,7 @@
 > Ranked 2026-08-21 against the DESIGN.md goal: ship the viewer, the agent, and
 > the services that make a shared map, not more surface. Pick from **Do next**.
 > Do not start at a parked item.
-> Last brought current: **2026-09-19**.
+> Last brought current: **2026-09-23**.
 >
 > Verify an entry against the code before working it, and do not trust the
 > mechanism it names. Three items in this file were already closed when someone
@@ -17,6 +17,80 @@
 > existed.
 
 ---
+
+## Doc sweep 2026-09-23, code defects found
+
+Every README and Pages site was checked against the code and pushed. The docs
+now describe these as they are. The code is what is left.
+
+Security:
+
+- [ ] geolang: an MCP token opens every gated route. `platform_token_error`
+  refuses `token_use` and `agora_use` tokens but not `geolang_use`, so a
+  30-day MCP token reaches `/chat/agui`, `/upload` and `POST /mcp/token`, and
+  can mint its own replacement forever. Route to pilot-security.
+
+Broken for a user today:
+
+- [ ] geolang `docker-compose.yml` gives sibyl neither `PLATFORM_JWT_SECRET`
+  nor `SIBYL_ALLOW_UNAUTHENTICATED`, so sibyl exits at startup on the
+  standalone stack. It also drops the `SIBYL_LOCAL2_*` variables.
+- [ ] geolang writes `.shares.json` under `TOOL_EXEC_DIR` on no mounted volume
+  in the platform compose, so share links die on a container rebuild.
+- [ ] geogit `ggt resolve --with-file` writes raw GeoJSON over a MessagePack
+  feature blob. `--spatial-filter` is stored and excludes nothing, because
+  `feature_in_bbox` reads WKT text and every import stores binary geometry.
+  `export --ref` drops the CRS. `diff` parses its dataset filters and ignores
+  them. CLI messages say `geogit` where the binary is `ggt`.
+- [ ] tiletopia tiles point clouds without reprojection: the tiling job never
+  calls `crs_detect`. The `tile` subcommand's help claims GeoTIFF, glTF and
+  CityGML and reads point clouds only.
+- [ ] tiletopia's dashboard sends no Authorization header, so its asset list,
+  upload and annotations answer 401 with auth on, and `gui/src/agent-chat.js`
+  posts to a dead endpoint. Same for ptolemy's `/review` and `/conflicts`
+  pages: their write buttons fail with auth on.
+- [ ] ptolemy Helm chart: `image.repository: ptolemy` is published nowhere,
+  it never sets `PLATFORM_JWT_SECRET` so the pod crash-loops, and
+  `postgresql.enabled` and `postgis.enabled` are read by nothing.
+- [ ] ptolemy `buffer_analysis` ignores the branch in its path and buffers the
+  newest version of the feature from any branch. `repair_geometries` reports
+  `features_fixed: 1` whenever anything was repaired.
+- [ ] itinera `docker-compose.yml` mounts `./data` read-only, so the
+  entrypoint's first-start import fails.
+- [ ] fluvius `Event.properties` has no serde default, so an event without
+  `"properties":{}` is rejected. The watermark drops an event only at twice
+  `max_lateness_secs`.
+- [ ] collecta's server-side sync queue never leaves `Pending`, so
+  `/sync/status` only ever reports pending.
+- [ ] viewtopia `scripts/clone-geolang.ps1` clones geolang from the retired
+  gitlab alias and adds `letta`. Neither clone script fetches `verne`.
+- [ ] infrastructure `profiles/platform.tfvars` gives the executor 4096 MiB
+  and still allows two concurrent 3072 MiB tool runs.
+
+Facade and dead code, delete or build:
+
+- [ ] tiletopia route groups that answer built-in rows or fixed input:
+  `/features`, `/issues`, `/workspaces`, `/mobile`,
+  `/classification/classes`, `/collaboration/sessions`, `/plugins`,
+  `/flight-planning/generate`, `/scan-registration/demo`, `/osm-buildings/*`,
+  `/api/v1/demo/*`, every `*/demo` route, routing on a built-in San Francisco
+  graph, grid isochrones, and `/map-matching/match` on a fixed trace. Also
+  `tiletopia_core::gpu`, which has no caller.
+- [ ] ptolemy topology simplify computes an edge and discards it,
+  attribute-rule validate answers `valid: true` for any non-empty string, and
+  the `/review` map panel draws no changes.
+- [ ] viewtopia notebook JavaScript and map-action cells (nothing calls
+  `setRuntime`), `replayNotebook` with no caller, `registerGeoJson` with no
+  caller, and `PluginDefinition.category`, which nothing reads.
+- [ ] geodukt-core exports `cache`, `cdc`, `streaming`, `template`, `testing`
+  and `visual`, and nothing in the workspace uses them.
+
+Wrong claims left in code (rustdoc, Cargo descriptions, help text): ptolemy's
+and fenestra's workspace `description` name other products, tiletopia's
+oversells routing, terrano's netcdf module claims NetCDF-4, panoptes'
+satellite and cog modules claim calibration and remote reads it lacks,
+terravista's crate doc names UniFFI, collecta's pattern constraint says regex,
+and em dashes sit in crate docs across most Rust repos.
 
 ## Doc audit 2026-09-02, findings to address
 
@@ -104,10 +178,6 @@ against a stack pulled from those images alone. Pins live in
       and the reads match. Passes from a ptolemy built at v0.1.0 to master
       (2026-09-22). The next release runs it forwards on the new pins, and agora
       once it has a second tag.
-- [ ] **Tag ptolemy before the next terraform apply.** `infrastructure/main.tf`
-      now passes `PLATFORM_JWT_SECRET` to ptolemy, which the v0.2.0 image does
-      not read. Roll a ptolemy tag carrying the rename into `preview.tfvars`
-      in the same apply.
 
 ## Do next
 
