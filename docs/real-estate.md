@@ -130,6 +130,19 @@ the name lookup is skipped.
   ST_Split. Merge unions the polygons with turf in the browser
 - Ptolemy topology validation is not implemented
 
+### Deal (DealPanel)
+- One deal per project: a name, a status and a shortlist of candidate parcels
+- Status is one of Prospecting, Shortlisted, Letter of intent, Closed and
+  Dropped. Each status offers only its next moves, a closed deal stays closed
+  and a dropped deal reopens into Prospecting
+- Add parcels to the selection from the Parcels tab, then add the selection to
+  the shortlist
+- Attach comment threads from the live map. The deal keeps their ids, so their
+  text shows while that live map is joined
+- The deal saves with the project map and in a saved `.viewtopia.json` file, so
+  every project member, including one who joined from an invite link, opens the
+  same deal
+
 ### Additional Tools
 - **Geocoding**: address search powered by geokode (self-hosted, no API keys)
 - **Travel Time**: drive-time bands from itinera, 5, 10 and 15 minutes by default

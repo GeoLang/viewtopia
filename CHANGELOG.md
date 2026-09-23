@@ -84,6 +84,13 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-09-23: **a deal per project.** The real-estate plugin's Deal tab keeps
+  a named deal with a status (prospecting, shortlisted, letter of intent,
+  closed, dropped), a shortlist of parcels taken from the Parcels tab's
+  selection, and the live map comment threads it cites by id. It is the
+  project snapshot's `deal` field, so it saves to ptolemy with the map,
+  travels in a `.viewtopia.json` file and comes back on reload.
+
 - 2026-09-20: **the chat starts a live map.** `live.start` creates a live map
   with a name and joins it, what the toolbar's Live control does on Start,
   so "create a live session" no longer has the model guessing an action name.

@@ -759,7 +759,12 @@ and there are no dead buttons in the default UI.
   clearing it. Switching inside a live document imports the project into it, because the
   outbound sync watches the stores `applyProject` writes. Dashboards sit in the same store under
   the project's `dashboards` state key rather than in localStorage, so they follow the project
-  rather than the browser. OGC layers are the one thing a
+  rather than the browser. A project holds at most one deal, the snapshot's optional `deal`
+  field: a name, a status, a shortlist of parcel feature ids each with a label, and the ids of
+  the live map comment threads behind it. `DEAL_STATUSES` in `features/deals/deal.ts` lists the
+  five statuses and the moves each allows, so a closed deal stays closed and a dropped one only
+  reopens into prospecting. The comments stay in agora and the deal holds only their ids, so
+  their text shows only while a live map holding them is joined. OGC layers are the one thing a
   document cannot hold, see DESIGN_TODO.
 - Imports carrying timestamps (CSV/GeoJSON properties, GPX `coordTimes`) become playable CZML
   with availability, so Timeline Fit-to-Data works through the UI.

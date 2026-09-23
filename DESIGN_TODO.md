@@ -743,9 +743,6 @@ their reaction order the rest.
       compare a shortlist does not exist.
 - [ ] **A site report export.** A PDF with the map, the trade area table and
       the comparables. Today the outputs are a GeoPackage and a dashboard.
-- [ ] **A deal as a unit of work.** One project per candidate set with a
-      shortlist, a status and the comments already built, so the shared map
-      is the record of the decision.
 - [ ] **Eval tasks written for site selection prompts,** so model quality
       is measured on this workflow and not only the general suite.
 
