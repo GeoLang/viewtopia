@@ -738,11 +738,6 @@ their reaction order the rest.
       it, composed from the isochrone, population grid and OSM tools into
       one tool with one result table. Chaining is where the model slips
       (see the weak eval tasks under **Do next**).
-- [ ] **Side-by-side site comparison with adjustable weights.**
-      `score_sites` takes weights as an argument, the panel to move them and
-      compare a shortlist does not exist.
-- [ ] **A site report export.** A PDF with the map, the trade area table and
-      the comparables. Today the outputs are a GeoPackage and a dashboard.
 - [ ] **Eval tasks written for site selection prompts,** so model quality
       is measured on this workflow and not only the general suite.
 
@@ -867,10 +862,6 @@ and the hosted preview has not been loaded.
 
 Left for after the POC:
 
-- [~] the weights panel: a shortlist panel in the real-estate plugin that
-      moves `score_sites` weights and re-ranks side by side.
-- [~] the site report: a PDF with the map, the trade area table and the
-      comparables.
 - [~] the deal as a project: one project per candidate set with a shortlist,
       a status and the existing comments.
 - [~] the demo landing page: a static page on the CloudFront hostname with a

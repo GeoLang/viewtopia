@@ -143,6 +143,25 @@ the name lookup is skipped.
   every project member, including one who joined from an invite link, opens the
   same deal
 
+### Sites (SiteWeightsPanel)
+- Reads the newest `score_sites` or `trade_area` layer the agent drew
+- One weight slider per criterion. Moving one re-ranks the sites in the browser
+  as a weighted mean of their 0 to 100 criterion scores, the formula
+  `score_sites` uses, with no call to the agent
+- A `score_sites` layer brings its per-criterion scores and the weights the
+  agent ranked with. A `trade_area` layer has raw figures only, so each numeric
+  column is scaled 0 to 100 across the sites, fewer competitors scoring higher.
+  A column missing for any site is left out
+- With a deal shortlist, only the shortlisted sites are ranked. The layer rows
+  carry no feature id, so a deal site matches the row named like its label,
+  ignoring case. Shortlisted sites the layer does not hold are named under the
+  weights
+- **Site report** saves an A4 landscape PDF with the map as it is on screen,
+  the ranking and its weights, the newest `trade_area` layer's figures per site
+  and the sales the Comps tab last found. Everything is built in the browser.
+  The Leaflet 2D map cannot be read back, so on that tab the report goes out
+  without the map
+
 ### Additional Tools
 - **Geocoding**: address search powered by geokode (self-hosted, no API keys)
 - **Travel Time**: drive-time bands from itinera, 5, 10 and 15 minutes by default

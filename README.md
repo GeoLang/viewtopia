@@ -105,7 +105,7 @@ classification/RBAC.
 ### Industry Verticals (Plugins)
 | Plugin | Description |
 |--------|-------------|
-| **Real Estate** | Parcel search (APN/address/owner), comparable sales, split/merge editing |
+| **Real Estate** | Parcel search (APN/address/owner), comparable sales, split/merge editing, a deal per project, site weights that re-rank scored sites, a PDF site report |
 | **Logistics** | Multi-stop delivery ordering. The fleet tab has no vehicle feed and shows an empty state |
 | **Environmental** | Sensor inventory from a configured sensors dataset, server-reported status, filter by type, fly to a sensor |
 | **Construction** | Survey comparison, cut/fill volumes, milestone tracking |

@@ -107,6 +107,12 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-09-23: **site weights and a site report.** The real-estate plugin's
+  Sites tab ranks the sites of the newest `score_sites` or `trade_area` layer,
+  or the deal's shortlisted ones, with a weight slider per criterion that
+  re-ranks them in the browser. Its Site report button saves a PDF with the
+  map on screen, the ranking, the trade area figures and the comparable sales
+  the Comps tab found.
 - 2026-09-23: **a deal per project.** The real-estate plugin's Deal tab keeps
   a named deal with a status (prospecting, shortlisted, letter of intent,
   closed, dropped), a shortlist of parcels taken from the Parcels tab's
