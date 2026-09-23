@@ -18,6 +18,25 @@
 
 ---
 
+## Preview spend cap, 100 USD a month
+
+- [~] sibyl model spend cap. `SIBYL_MONTHLY_SPEND_LIMIT_USD` (50 on the
+  preview) and `SIBYL_MODEL_PRICES` (`model=input/output` in USD per million
+  tokens, from the AWS price list). `Client::chat` refuses a call once the
+  month's total is reached, asks for `stream_options.include_usage` and adds
+  the reported cost to a `model_spend` row per UTC month in sibyl.db. The
+  input estimate is charged before the call, so a call cut off by a client
+  leaving still counts, then corrected to the reported usage. A priced cap
+  refuses a model with no price. Eval runs on the preview count against it.
+- [~] infrastructure `spend_cap.tf`: a 100 USD monthly cost budget without
+  credits, an email at 80 percent through the `spend-cap` SNS topic, and an
+  automatic budget action at 100 percent that attaches a deny on `bedrock:*`
+  and `bedrock-mantle:*` to the `geolang-sibyl-bedrock` user. Budgets data
+  lags 8 to 12 hours, so this is the backstop, not the cap. ECS, RDS and EFS
+  keep running after it fires.
+- [ ] owner: `aws sns subscribe` an email to the `spend-cap` topic, tag sibyl
+  v0.1.1, bump the pin, plan and apply.
+
 ## Doc sweep 2026-09-23, code defects found
 
 Every README and Pages site was checked against the code and pushed. The
