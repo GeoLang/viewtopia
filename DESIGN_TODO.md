@@ -25,38 +25,44 @@ now describe these as they are. The code is what is left.
 
 Security:
 
-- [ ] geolang: an MCP token opens every gated route. `platform_token_error`
-  refuses `token_use` and `agora_use` tokens but not `geolang_use`, so a
-  30-day MCP token reaches `/chat/agui`, `/upload` and `POST /mcp/token`, and
-  can mint its own replacement forever. Route to pilot-security.
+- [ ] aavaaz (`/home/aaron/src/Aavaaz`, outside GeoLang) accepts any HS256
+  token signed with the shared secret: MCP, tool and agora feed tokens alike,
+  and `verify_token` does not require `exp`. It has no roles, so any of them
+  gets full access. Owner call pending.
+- [ ] geolang `POST /upload` has no size, count, per-caller or rate limit,
+  reads the whole body into memory, and extracts a `.zip` with
+  `zipfile.extractall` with no cap on total size or entry count. CSV and
+  vector parsing run in the API process. Tiletopia signup is open, so any
+  stranger with a token reaches it on the hosted preview. Fix before a public
+  demo.
+
+Rollout pending:
+
+- [ ] the chat spend caps (geolang 3778aa8, infrastructure 062c159) take effect
+  only once a geolang image carrying them is tagged, the `geolang-api` pin in
+  `profiles/preview.tfvars` moves past v0.1.4, and the preview is applied.
+  Counts reset on every deploy and hold only while geolang-api runs as one
+  task.
 
 Broken for a user today:
 
-- [ ] geolang `docker-compose.yml` gives sibyl neither `PLATFORM_JWT_SECRET`
-  nor `SIBYL_ALLOW_UNAUTHENTICATED`, so sibyl exits at startup on the
-  standalone stack. It also drops the `SIBYL_LOCAL2_*` variables.
-- [ ] geolang writes `.shares.json` under `TOOL_EXEC_DIR` on no mounted volume
-  in the platform compose, so share links die on a container rebuild.
-- [ ] geogit `ggt resolve --with-file` writes raw GeoJSON over a MessagePack
-  feature blob. `--spatial-filter` is stored and excludes nothing, because
-  `feature_in_bbox` reads WKT text and every import stores binary geometry.
-  `export --ref` drops the CRS. `diff` parses its dataset filters and ignores
-  them. CLI messages say `geogit` where the binary is `ggt`.
-- [ ] tiletopia tiles point clouds without reprojection: the tiling job never
-  calls `crs_detect`. The `tile` subcommand's help claims GeoTIFF, glTF and
-  CityGML and reads point clouds only.
+- [ ] geogit `export --ref` checks the ref out into the working tree and back
+  to HEAD, which throws away uncommitted edits to that dataset, drops
+  `description`, and leaves an unused temp directory. A `dataset:pk` filter on
+  `commit` commits nothing (`ds.starts_with(filter)`). Importing a second table
+  whose GeoPackage identifier is already used fails with "FOREIGN KEY
+  constraint failed" from `INSERT OR REPLACE INTO gpkg_contents`.
+- [ ] tiletopia point clouds: an uploaded LAS with no GeoKey record stays
+  unplaced, because the upload's `crs` field is ignored for point clouds and an
+  upload carries no `.prj`. Heights are taken as ellipsoidal, so orthometric
+  LAS heights are off by the geoid undulation.
 - [ ] tiletopia's dashboard sends no Authorization header, so its asset list,
   upload and annotations answer 401 with auth on, and `gui/src/agent-chat.js`
   posts to a dead endpoint. Same for ptolemy's `/review` and `/conflicts`
   pages: their write buttons fail with auth on.
-- [ ] ptolemy Helm chart: `image.repository: ptolemy` is published nowhere,
-  it never sets `PLATFORM_JWT_SECRET` so the pod crash-loops, and
-  `postgresql.enabled` and `postgis.enabled` are read by nothing.
 - [ ] ptolemy `buffer_analysis` ignores the branch in its path and buffers the
   newest version of the feature from any branch. `repair_geometries` reports
   `features_fixed: 1` whenever anything was repaired.
-- [ ] itinera `docker-compose.yml` mounts `./data` read-only, so the
-  entrypoint's first-start import fails.
 - [ ] fluvius `Event.properties` has no serde default, so an event without
   `"properties":{}` is rejected. The watermark drops an event only at twice
   `max_lateness_secs`.
@@ -664,15 +670,13 @@ granting edit to guests. Nothing in sibyl or geolang-api limits what one
 caller can spend beyond `SIBYL_RUN_BUDGET_SECS` per run, so an open demo has
 no ceiling on model tokens or executor time. The plan, in payoff order:
 
-- [ ] **Spend caps in geolang-api, before anything public.** A global daily
-      chat run budget and a per-caller cap (JWT subject, share-link guest id,
-      or client address for anonymous callers), counted where `/chat/agui`
-      starts a sibyl run, with a plain reply when either trips: "the demo
-      budget for today is used up". Both limits are environment variables
-      with the defaults spelled out in the README. Guests also get an upload
-      size and count cap at the tiletopia and ptolemy attachment routes. The
-      risk is a script in a loop, not a curious user: one chat run on
-      `openai.gpt-oss-120b` costs well under a cent.
+- [ ] **Spend caps.** Built: `GEOLANG_CHAT_RUNS_PER_DAY` and
+      `GEOLANG_CHAT_RUNS_PER_CALLER_PER_DAY` at `/chat/agui`, keyed on the JWT
+      subject, preview values 300 and 40. Rollout is under **Doc sweep**. Share
+      link guests hold agora session tokens with an `aud`, which geolang,
+      ptolemy and tiletopia all refuse, so there is no guest path to cap. The
+      open part is `/upload`, listed under **Doc sweep** security, and open
+      tiletopia signup, which lets one person hold many subjects.
 - [ ] **Wake on demand instead of always on.** A static landing page on the
       CloudFront hostname (S3 origin, no task) stays up at no cost. Its
       "start the demo" button calls a Lambda behind a function URL that runs
