@@ -20,80 +20,93 @@
 
 ## Doc sweep 2026-09-23, code defects found
 
-Every README and Pages site was checked against the code and pushed. The docs
-now describe these as they are. The code is what is left. Fan-out
-2026-09-23: every `[~]` item in this section, the gpt-oss eval item and the
-four post-POC site-selection items are with agents, one worktree per repo
-under `/tmp/geolang-worktrees/`, merged to master by the orchestrating
-session. The security items go to pilot-security.
+Every README and Pages site was checked against the code and pushed. The
+defects the sweep found were fixed or deleted on 2026-09-23, see each repo's
+CHANGELOG. What is left:
 
-Security:
+Rollout pending, owner-run:
 
-- [~] aavaaz (`/home/aaron/src/Aavaaz`, outside GeoLang) accepts any HS256
-  token signed with the shared secret: MCP, tool and agora feed tokens alike,
-  and `verify_token` does not require `exp`. It has no roles, so any of them
-  gets full access. Owner call pending.
-- [~] geolang `POST /upload` has no size, count, per-caller or rate limit,
-  reads the whole body into memory, and extracts a `.zip` with
-  `zipfile.extractall` with no cap on total size or entry count. CSV and
-  vector parsing run in the API process. Tiletopia signup is open, so any
-  stranger with a token reaches it on the hosted preview. Fix before a public
-  demo.
+- [ ] geolang v0.1.7 is tagged locally at 9441eef and not pushed. It carries
+  the chat spend caps, the `/upload` caps, the viewer eval fixes and the
+  `score_sites` weight columns. infrastructure cd1452c pins it and passes the
+  upload caps, and the demo landing page, wake Lambdas and morning scale-up
+  from d03ee8d are unapplied. Push the tag, wait for the release workflow,
+  then plan and apply `profiles/preview.tfvars`. Unverified until the plan:
+  the CloudFront origin added by dynamic blocks, the demo bucket name, the
+  CORS answer of the wake function URL, and that the geolang-api log group
+  holds the `POST /chat/agui` lines the idle metric filter counts.
+- [ ] tiletopia and ptolemy changed today and their preview pins (v0.4.0,
+  v0.2.1) did not. A viewtopia image roll is needed for the deal, the site
+  panel, the catalogue rename and the `/try` service worker exclusion.
+- [ ] re-score the viewer eval on gpt-oss from geolang master. The 0.92
+  baseline (20260922T192650) is not comparable any more: the harness sent
+  false "<param> is required" follow-ups on nearly every task (fixed in
+  evals/viewer_replies.py), the system prompt gained one line per hidden
+  tool, and seven catalogue parameters were renamed from `name`. The
+  commands are in the 2026-09-23 handoff and need the owner's security-group
+  change. Sign up a fresh eval user per sweep, one user's outputs carried
+  between tasks.
 
-Rollout pending:
+Decisions:
 
-- [~] the chat spend caps (geolang 3778aa8, infrastructure 062c159) take effect
-  only once a geolang image carrying them is tagged, the `geolang-api` pin in
-  `profiles/preview.tfvars` moves past v0.1.4, and the preview is applied.
-  Counts reset on every deploy and hold only while geolang-api runs as one
-  task.
+- [ ] tiletopia mesh tiles lose precision before the tiler runs: both
+  `MeshData` types, ifc-lite and tobj hold f32 positions, so a per-tile RTC
+  centre in the GLB writer recovers nothing. The fix is f64 positions through
+  both `MeshData` types and the mesh tree, a per-tile f64 glTF node
+  translation with f32 offsets, recentring before `simplify_mesh`, and
+  ifc-lite's `set_rtc_offset`, about ten files. Separately the native path
+  places meshes with an ENU root at a longitude and latitude, so a model in
+  projected metres lands in the wrong place regardless.
+- [ ] tiletopia dashboard demo panels: the measure, anomaly and clash panels,
+  the `/demo/rbac` users table, the `/demo/stories` fallback and
+  `gui/osm-buildings-demo.html` call routes deleted in 048e362 and get 404.
+  The agent's removal was refused by the permission layer twice, so the
+  owner makes or allows this edit. The e2e nav count drops from 11 to 8.
+- [ ] viewtopia SQL cell "Show on map" always fails with "No runtime
+  available", nothing calls `setRuntime`. Connect the runtime or remove the
+  button. `src/duckdb/loaders.ts` has no importer either.
+- [ ] geolang `/upload` zip caps are off unless set, so a self-hosted stack is
+  open to zip bombs by default. Give `GEOLANG_UPLOAD_MAX_ZIP_ENTRIES` and
+  `GEOLANG_UPLOAD_MAX_UNZIPPED_MEGABYTES` built-in defaults, or accept it.
+- [ ] the demo wake function URL is public and CORS stops only browsers, so a
+  script posting every thirty minutes keeps the preview up at about 5.50 USD
+  a day. The landing prompt names Toronto parcels that are not loaded on the
+  preview, and the viewer has no field for a pre-filled prompt, so the page
+  copies it to the clipboard.
+- [ ] a deal is invisible to agora live-link guests, who have no project.
+  Covering them means a `deals` namespace in agora synced through
+  `documentBridge`, about the size of the feature again.
+- [ ] aavaaz refuses every tool token. The alternative is accepting one with
+  an aavaaz scope, as agora does, and no such scope exists.
 
-Broken for a user today:
+Found while fixing, small:
 
-- [~] geogit `export --ref` checks the ref out into the working tree and back
-  to HEAD, which throws away uncommitted edits to that dataset, drops
-  `description`, and leaves an unused temp directory. A `dataset:pk` filter on
-  `commit` commits nothing (`ds.starts_with(filter)`). Importing a second table
-  whose GeoPackage identifier is already used fails with "FOREIGN KEY
-  constraint failed" from `INSERT OR REPLACE INTO gpkg_contents`.
-- [~] tiletopia point clouds: an uploaded LAS with no GeoKey record stays
-  unplaced, because the upload's `crs` field is ignored for point clouds and an
-  upload carries no `.prj`. Heights are taken as ellipsoidal, so orthometric
-  LAS heights are off by the geoid undulation.
-- [~] tiletopia's dashboard sends no Authorization header, so its asset list,
-  upload and annotations answer 401 with auth on, and `gui/src/agent-chat.js`
-  posts to a dead endpoint. Same for ptolemy's `/review` and `/conflicts`
-  pages: their write buttons fail with auth on.
-- [~] ptolemy `buffer_analysis` ignores the branch in its path and buffers the
-  newest version of the feature from any branch. `repair_geometries` reports
-  `features_fixed: 1` whenever anything was repaired.
-- [~] fluvius `Event.properties` has no serde default, so an event without
-  `"properties":{}` is rejected. The watermark drops an event only at twice
-  `max_lateness_secs`.
-- [~] collecta's server-side sync queue never leaves `Pending`, so
-  `/sync/status` only ever reports pending.
-- [~] viewtopia `scripts/clone-geolang.ps1` clones geolang from the retired
-  gitlab alias and adds `letta`. Neither clone script fetches `verne`.
-- [~] infrastructure `profiles/platform.tfvars` gives the executor 4096 MiB
-  and still allows two concurrent 3072 MiB tool runs.
-
-Facade and dead code, delete or build:
-
-- [~] tiletopia route groups that answer built-in rows or fixed input:
-  `/features`, `/issues`, `/workspaces`, `/mobile`,
-  `/classification/classes`, `/collaboration/sessions`, `/plugins`,
-  `/flight-planning/generate`, `/scan-registration/demo`, `/osm-buildings/*`,
-  `/api/v1/demo/*`, every `*/demo` route, routing on a built-in San Francisco
-  graph, grid isochrones, and `/map-matching/match` on a fixed trace. Also
-  `tiletopia_core::gpu`, which has no caller.
-- [~] ptolemy topology simplify computes an edge and discards it,
-  attribute-rule validate answers `valid: true` for any non-empty string, and
-  the `/review` map panel draws no changes.
-- [~] viewtopia notebook JavaScript and map-action cells (nothing calls
-  `setRuntime`), `replayNotebook` with no caller, `registerGeoJson` with no
-  caller, and `PluginDefinition.category`, which nothing reads.
-- [~] geodukt-core exports `cache`, `cdc`, `streaming`, `template`, `testing`
-  and `visual`, and nothing in the workspace uses them.
+- [ ] geogit: `export --ref` spawns one `git show` per feature (use
+  `cat-file --batch`), CSV export wraps values in literal quotes and cuts
+  them at 47 characters, and a commit with nothing to commit fails with an
+  empty "git commit failed:" because only stderr is read.
+- [ ] ptolemy: creating a dataset whose name exists answers 500 not 409, the
+  review detail shows "Created Invalid Date", and `test_buffer_analysis`
+  accepts a 500 as passing.
+- [ ] viewtopia: the site report captures a blank map when clicked before
+  tiles load, sites match deal entries by name because `score_sites` rows
+  carry no feature id (`resolve_sites` could pass one through), and four
+  unit test files time out under machine load (raster-cog-panel,
+  settings-panel, indoor-panel, dataset-editor-panel), each passing alone.
+- [ ] tiletopia facades still standing: `/classification/models` lists
+  models nothing runs, `/terrain-analysis/operations`,
+  `/multispectral/indices` and `/sensors` are static lists,
+  `compute_slope`, `compute_ndvi`, `compute_evi` and `classify_ndvi` have no
+  route caller, `geostatistics::morans_i` is only called from tests, and
+  `tiletopia_core::measurement`, `anomaly` and `clash_detection` lost their
+  only caller. Orthometric LAS heights are still off by the geoid
+  undulation, no geoid grid ships (TODO in crs_detect.rs).
+- [ ] collecta: `DROP TABLE IF EXISTS sync_queue` on startup has not run
+  against a database that still holds the old table.
+- [ ] geolang eval: a run cut off mid `run_qgis_algorithm` left the executor
+  at its limit of two tool runs for the rest of the sweep. tab-to-leaflet
+  fails one run in three on the model itself, the catalogue already maps
+  leaflet to `view.set_tab`.
 
 Wrong claims left in code (rustdoc, Cargo descriptions, help text): ptolemy's
 and fenestra's workspace `description` name other products, tiletopia's
@@ -364,11 +377,10 @@ reached 0.73 on the reworded viewer instructions. With those instructions,
 pointing a dotted action name at viewer_control, the gpt-oss baseline on the
 rolled preview is 0.92 over 76 tasks (report 20260922T192650).
 
-- [~] five viewer eval tasks still fail on gpt-oss:
-      `scenario-compare-branches`, `scenario-compare-within-25-metres`,
-      `dataset-draw-widening-branch` and `tab-to-leaflet` draw no
-      viewer_control call at all, and `history-show-live` answers with
-      `live.join`.
+- [ ] the five gpt-oss viewer eval failures: history-show-live was a broken
+      fixture (fixed 2026-09-23), tab-to-leaflet is the model, and the three
+      dataset and scenario tasks now get one system prompt line per hidden
+      tool. Re-score pending, under **Doc sweep**.
 
 Accepted as is: the Bedrock key stays a long-term key (expires 2027-09-19,
 rotate by hand before then, noted in the infrastructure README); the refresh
@@ -674,29 +686,21 @@ granting edit to guests. Nothing in sibyl or geolang-api limits what one
 caller can spend beyond `SIBYL_RUN_BUDGET_SECS` per run, so an open demo has
 no ceiling on model tokens or executor time. The plan, in payoff order:
 
-- [ ] **Spend caps.** Built: `GEOLANG_CHAT_RUNS_PER_DAY` and
-      `GEOLANG_CHAT_RUNS_PER_CALLER_PER_DAY` at `/chat/agui`, keyed on the JWT
-      subject, preview values 300 and 40. Rollout is under **Doc sweep**. Share
-      link guests hold agora session tokens with an `aud`, which geolang,
-      ptolemy and tiletopia all refuse, so there is no guest path to cap. The
-      open part is `/upload`, listed under **Doc sweep** security, and open
-      tiletopia signup, which lets one person hold many subjects.
-- [ ] **Wake on demand instead of always on.** A static landing page on the
-      CloudFront hostname (S3 origin, no task) stays up at no cost. Its
-      "start the demo" button calls a Lambda behind a function URL that runs
-      the scale-up, the page polls `/health` and hands over when the proxy
-      answers, about two to three minutes. An idle timer (no `/chat/agui`
-      call for thirty minutes, read from the proxy access log or a
-      CloudWatch metric) scales back down. The floor is then the load
-      balancer, secrets and EFS.
+- [ ] **Spend caps.** Built, chat and upload, pinned in geolang v0.1.7.
+      Rollout is under **Doc sweep**. Open tiletopia signup still lets one
+      person hold many subjects, so the global caps are the ceiling.
+- [ ] **Wake on demand.** Built in infrastructure d03ee8d as
+      `enable_demo_landing_page`: the page at `/try/`, a wake Lambda behind a
+      function URL, and an idle Lambda that reads `POST /chat/agui` counts
+      from a log metric filter. Unapplied, under **Doc sweep**.
 - [ ] **Let Aurora pause while the tasks are up.** The cluster pauses only
       when ptolemy's five-second delivery poll and agora's thirty-second
       watch tick stop. Both pollers back off to a few minutes after a quiet
       period so the cluster can pause between sessions, and the first
       request after a pause pays the fifteen-second resume.
-- [ ] **Demo hours as the no-code fallback.** A morning scale-up schedule
-      beside the nightly scale-down in `infrastructure/nightly_scale_down.tf`,
-      with the hours on the landing page. Halves the up-cost, no code.
+- [ ] **Demo hours.** Built in infrastructure d03ee8d as
+      `morning_scale_up_hour`, 08:00 Toronto by default, and the idle
+      scale-down only runs outside 08:00 to 23:00. Unapplied.
 - [ ] **When the AWS credits end,** the nine services fit the self-host
       compose bundle on one small VPS at about a tenth of the monthly cost.
       The caps above carry over unchanged, wake on demand does not apply.
@@ -860,13 +864,9 @@ estimate of 4 to 6 minutes. Open: whether Toronto keeps `PARCELID` stable
 across daily rebuilds, the NL eval tests have not run against a live model,
 and the hosted preview has not been loaded.
 
-Left for after the POC:
-
-- [~] the deal as a project: one project per candidate set with a shortlist,
-      a status and the existing comments.
-- [~] the demo landing page: a static page on the CloudFront hostname with a
-      typed prompt, a sample report and the wake-on-demand button from
-      **Public demo on the hosted preview**.
+The four post-POC items (weights panel, site report, deal as a project, demo
+landing page) landed 2026-09-23. The landing page is unapplied and its
+prompt needs the Toronto data loaded on the preview, see **Doc sweep**.
 
 Foot traffic, if it is ever wanted, in this order:
 
