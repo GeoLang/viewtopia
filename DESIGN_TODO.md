@@ -21,15 +21,19 @@
 ## Doc sweep 2026-09-23, code defects found
 
 Every README and Pages site was checked against the code and pushed. The docs
-now describe these as they are. The code is what is left.
+now describe these as they are. The code is what is left. Fan-out
+2026-09-23: every `[~]` item in this section, the gpt-oss eval item and the
+four post-POC site-selection items are with agents, one worktree per repo
+under `/tmp/geolang-worktrees/`, merged to master by the orchestrating
+session. The security items go to pilot-security.
 
 Security:
 
-- [ ] aavaaz (`/home/aaron/src/Aavaaz`, outside GeoLang) accepts any HS256
+- [~] aavaaz (`/home/aaron/src/Aavaaz`, outside GeoLang) accepts any HS256
   token signed with the shared secret: MCP, tool and agora feed tokens alike,
   and `verify_token` does not require `exp`. It has no roles, so any of them
   gets full access. Owner call pending.
-- [ ] geolang `POST /upload` has no size, count, per-caller or rate limit,
+- [~] geolang `POST /upload` has no size, count, per-caller or rate limit,
   reads the whole body into memory, and extracts a `.zip` with
   `zipfile.extractall` with no cap on total size or entry count. CSV and
   vector parsing run in the API process. Tiletopia signup is open, so any
@@ -38,7 +42,7 @@ Security:
 
 Rollout pending:
 
-- [ ] the chat spend caps (geolang 3778aa8, infrastructure 062c159) take effect
+- [~] the chat spend caps (geolang 3778aa8, infrastructure 062c159) take effect
   only once a geolang image carrying them is tagged, the `geolang-api` pin in
   `profiles/preview.tfvars` moves past v0.1.4, and the preview is applied.
   Counts reset on every deploy and hold only while geolang-api runs as one
@@ -46,49 +50,49 @@ Rollout pending:
 
 Broken for a user today:
 
-- [ ] geogit `export --ref` checks the ref out into the working tree and back
+- [~] geogit `export --ref` checks the ref out into the working tree and back
   to HEAD, which throws away uncommitted edits to that dataset, drops
   `description`, and leaves an unused temp directory. A `dataset:pk` filter on
   `commit` commits nothing (`ds.starts_with(filter)`). Importing a second table
   whose GeoPackage identifier is already used fails with "FOREIGN KEY
   constraint failed" from `INSERT OR REPLACE INTO gpkg_contents`.
-- [ ] tiletopia point clouds: an uploaded LAS with no GeoKey record stays
+- [~] tiletopia point clouds: an uploaded LAS with no GeoKey record stays
   unplaced, because the upload's `crs` field is ignored for point clouds and an
   upload carries no `.prj`. Heights are taken as ellipsoidal, so orthometric
   LAS heights are off by the geoid undulation.
-- [ ] tiletopia's dashboard sends no Authorization header, so its asset list,
+- [~] tiletopia's dashboard sends no Authorization header, so its asset list,
   upload and annotations answer 401 with auth on, and `gui/src/agent-chat.js`
   posts to a dead endpoint. Same for ptolemy's `/review` and `/conflicts`
   pages: their write buttons fail with auth on.
-- [ ] ptolemy `buffer_analysis` ignores the branch in its path and buffers the
+- [~] ptolemy `buffer_analysis` ignores the branch in its path and buffers the
   newest version of the feature from any branch. `repair_geometries` reports
   `features_fixed: 1` whenever anything was repaired.
-- [ ] fluvius `Event.properties` has no serde default, so an event without
+- [~] fluvius `Event.properties` has no serde default, so an event without
   `"properties":{}` is rejected. The watermark drops an event only at twice
   `max_lateness_secs`.
-- [ ] collecta's server-side sync queue never leaves `Pending`, so
+- [~] collecta's server-side sync queue never leaves `Pending`, so
   `/sync/status` only ever reports pending.
-- [ ] viewtopia `scripts/clone-geolang.ps1` clones geolang from the retired
+- [~] viewtopia `scripts/clone-geolang.ps1` clones geolang from the retired
   gitlab alias and adds `letta`. Neither clone script fetches `verne`.
-- [ ] infrastructure `profiles/platform.tfvars` gives the executor 4096 MiB
+- [~] infrastructure `profiles/platform.tfvars` gives the executor 4096 MiB
   and still allows two concurrent 3072 MiB tool runs.
 
 Facade and dead code, delete or build:
 
-- [ ] tiletopia route groups that answer built-in rows or fixed input:
+- [~] tiletopia route groups that answer built-in rows or fixed input:
   `/features`, `/issues`, `/workspaces`, `/mobile`,
   `/classification/classes`, `/collaboration/sessions`, `/plugins`,
   `/flight-planning/generate`, `/scan-registration/demo`, `/osm-buildings/*`,
   `/api/v1/demo/*`, every `*/demo` route, routing on a built-in San Francisco
   graph, grid isochrones, and `/map-matching/match` on a fixed trace. Also
   `tiletopia_core::gpu`, which has no caller.
-- [ ] ptolemy topology simplify computes an edge and discards it,
+- [~] ptolemy topology simplify computes an edge and discards it,
   attribute-rule validate answers `valid: true` for any non-empty string, and
   the `/review` map panel draws no changes.
-- [ ] viewtopia notebook JavaScript and map-action cells (nothing calls
+- [~] viewtopia notebook JavaScript and map-action cells (nothing calls
   `setRuntime`), `replayNotebook` with no caller, `registerGeoJson` with no
   caller, and `PluginDefinition.category`, which nothing reads.
-- [ ] geodukt-core exports `cache`, `cdc`, `streaming`, `template`, `testing`
+- [~] geodukt-core exports `cache`, `cdc`, `streaming`, `template`, `testing`
   and `visual`, and nothing in the workspace uses them.
 
 Wrong claims left in code (rustdoc, Cargo descriptions, help text): ptolemy's
@@ -360,7 +364,7 @@ reached 0.73 on the reworded viewer instructions. With those instructions,
 pointing a dotted action name at viewer_control, the gpt-oss baseline on the
 rolled preview is 0.92 over 76 tasks (report 20260922T192650).
 
-- [ ] five viewer eval tasks still fail on gpt-oss:
+- [~] five viewer eval tasks still fail on gpt-oss:
       `scenario-compare-branches`, `scenario-compare-within-25-metres`,
       `dataset-draw-widening-branch` and `tab-to-leaflet` draw no
       viewer_control call at all, and `history-show-live` answers with
@@ -864,8 +868,17 @@ estimate of 4 to 6 minutes. Open: whether Toronto keeps `PARCELID` stable
 across daily rebuilds, the NL eval tests have not run against a live model,
 and the hosted preview has not been loaded.
 
-Left for after the POC: the weights panel, the PDF report, the deal as a
-project, and the demo landing page.
+Left for after the POC:
+
+- [~] the weights panel: a shortlist panel in the real-estate plugin that
+      moves `score_sites` weights and re-ranks side by side.
+- [~] the site report: a PDF with the map, the trade area table and the
+      comparables.
+- [~] the deal as a project: one project per candidate set with a shortlist,
+      a status and the existing comments.
+- [~] the demo landing page: a static page on the CloudFront hostname with a
+      typed prompt, a sample report and the wake-on-demand button from
+      **Public demo on the hosted preview**.
 
 Foot traffic, if it is ever wanted, in this order:
 
