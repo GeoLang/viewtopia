@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GeoLang — Natural Language GIS Platform</title>
-<meta name="description" content="Enterprise geospatial platform powered by natural language. Ask questions, get maps. No GIS training required.">
+<title>GeoLang, open source GIS you drive in plain language</title>
+<meta name="description" content="Open source geospatial platform. A chat agent runs the spatial analysis you ask for and draws the result on the map.">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#0a0e14;--card:#131820;--border:#1e2a3a;--text:#b8c4d0;--heading:#eaf0f6;--accent:#7c5cf5;--accent2:#00c896;--muted:#6b7a8d;--white:#fff}
@@ -31,7 +31,6 @@ a{color:var(--accent);text-decoration:none}
 .demo p{color:var(--muted);margin-bottom:40px;font-size:1.1rem}
 .demo-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:40px;max-width:800px;margin:0 auto;text-align:left}
 .demo-prompt{background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'SF Mono',Monaco,Consolas,monospace;font-size:.95rem;color:var(--accent2);margin-bottom:24px}
-.demo-prompt::before{content:'💬 ';font-size:1.1rem}
 .demo-response{display:grid;grid-template-columns:1fr 1fr;gap:20px}
 .demo-map{background:linear-gradient(135deg,#1a2332,#0d1a2a);border-radius:8px;height:200px;display:flex;align-items:center;justify-content:center;color:var(--muted);border:1px solid var(--border)}
 .demo-table{background:#0d1117;border-radius:8px;padding:16px;font-size:.85rem;border:1px solid var(--border)}
@@ -59,7 +58,6 @@ a{color:var(--accent);text-decoration:none}
 .features .subtitle{text-align:center;color:var(--muted);margin-bottom:48px;font-size:1.1rem}
 .feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
 .feature-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px}
-.feature-card .icon{font-size:1.8rem;margin-bottom:12px}
 .feature-card h3{font-size:1.1rem;color:var(--heading);margin-bottom:8px}
 .feature-card p{font-size:.9rem;color:var(--muted);line-height:1.6}
 
@@ -88,7 +86,6 @@ a{color:var(--accent);text-decoration:none}
 .stack h2{font-size:2rem;color:var(--heading);text-align:center;margin-bottom:40px}
 .stack-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;max-width:960px;margin:0 auto}
 .stack-item{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px 20px;display:flex;align-items:center;gap:12px}
-.stack-item .emoji{font-size:1.3rem}
 .stack-item .name{font-weight:600;color:var(--heading);font-size:.9rem}
 .stack-item .desc{font-size:.78rem;color:var(--muted)}
 
@@ -114,8 +111,8 @@ footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color
 <section class="hero">
 <div class="container">
 <h1>GeoLang</h1>
-<p class="tagline">Enterprise GIS. Natural Language.</p>
-<p class="sub">Ask questions in plain English. The agent runs the spatial work and draws the answer on the map. No GIS training. No licence fees.</p>
+<p class="tagline">Open source GIS you drive in plain language.</p>
+<p class="sub">Ask a question in plain English. The agent runs the spatial work and draws the answer on the map. The whole platform is AGPL and self-hosted, with no licence fees.</p>
 <div class="hero-cta">
 <a href="#pricing" class="btn-primary">Get Started Free</a>
 <a href="https://github.com/GeoLang" class="btn-secondary">View on GitHub</a>
@@ -131,7 +128,7 @@ footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color
 <div class="demo-box">
 <div class="demo-prompt">Show me all parcels within 500m of the new transit stop that are zoned commercial and under 50% lot coverage</div>
 <div class="demo-response">
-<div class="demo-map">🗺️ The matching parcels, drawn as a layer you can restyle and export</div>
+<div class="demo-map">The matching parcels, drawn as a layer you can restyle and export</div>
 <div class="demo-table">
 <table>
 <tr><th>APN</th><th>Zone</th><th>Coverage</th><th>Area</th></tr>
@@ -154,12 +151,12 @@ footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color
 <div class="compare-card old">
 <h3>The Old Way</h3>
 <ul>
-<li>$50K+/yr software licenses</li>
-<li>6 months training to be productive</li>
-<li>Click through 20 menus for one analysis</li>
-<li>Hire a GIS specialist for every question</li>
-<li>Vendor lock-in to proprietary formats</li>
-<li>Desktop-only, no real-time collaboration</li>
+<li>Per-seat software licences</li>
+<li>Months of training before you are productive</li>
+<li>A chain of menus for one analysis</li>
+<li>A GIS specialist for every question</li>
+<li>Data held in proprietary formats</li>
+<li>Desktop-only, no shared live map</li>
 </ul>
 </div>
 <div class="compare-card new">
@@ -170,7 +167,7 @@ footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color
 <li>A sentence gets you an analysis and a map layer</li>
 <li>Anyone on the team can ask spatial questions</li>
 <li>Open formats, open source, no lock-in</li>
-<li>Real-time collaboration, web-native</li>
+<li>Live maps shared in the browser</li>
 </ul>
 </div>
 </div>
@@ -181,50 +178,41 @@ footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color
 <section class="features">
 <div class="container">
 <h2>Platform Capabilities</h2>
-<p class="subtitle">23 open-source modules. Rust, apart from the Python agent API and the TypeScript viewer. One unified platform.</p>
+<p class="subtitle">23 open source modules, all Rust apart from the Python agent API and the TypeScript viewer.</p>
 <div class="feature-grid">
 <div class="feature-card">
-<div class="icon">🤖</div>
 <h3>Natural Language Analysis</h3>
 <p>The GeoLang AI agent translates your questions into spatial operations. The agent loop runs in sibyl, which keeps each session's history in sqlite.</p>
 </div>
 <div class="feature-card">
-<div class="icon">🎨</div>
-<h3>Answers that draw themselves</h3>
+<h3>Answers drawn on the map</h3>
 <p>The agent answers with a map spec and the viewer draws it in place. A layer it adds is an ordinary layer you can restyle, reorder and export. The agent can also emit a table or an image spec, which the viewer stores on the reply and does not draw.</p>
 </div>
 <div class="feature-card">
-<div class="icon">🗄️</div>
 <h3>Enterprise Geodatabase</h3>
 <p>Git-like versioning for spatial data. Branch, commit, merge, diff. Role-based access, OIDC SSO, audit trails. PostGIS-powered.</p>
 </div>
 <div class="feature-card">
-<div class="icon">🔬</div>
 <h3>Geoprocessing</h3>
-<p>19+ spatial analysis tools: buffer, clip, intersect, dissolve, voronoi, spatial join, nearest neighbor, distance matrix, and more.</p>
+<p>Ptolemy runs clip, intersect, difference, dissolve, spatial join, Voronoi, nearest neighbour and a distance matrix on the server. The viewer's Geoprocessing panel runs buffer, overlay, dissolve, grids and joins in the browser.</p>
 </div>
 <div class="feature-card">
-<div class="icon">🌐</div>
 <h3>3D / Digital Twin</h3>
-<p>3D Tiles, terrain, point cloud visualization. Indoor venue maps, and a position estimated by k-nearest-neighbour over signal readings your app collects. Interiora does no BLE or WiFi scanning itself. Real-time streaming for IoT/sensor data.</p>
+<p>3D Tiles, terrain, point cloud visualization. Indoor venue maps, and a position estimated by k-nearest-neighbour over signal readings your app collects. Interiora does no BLE or WiFi scanning itself. Sensor feeds recolour the assets on a live map as readings arrive.</p>
 </div>
 <div class="feature-card">
-<div class="icon">🚗</div>
 <h3>Routing & Navigation</h3>
-<p>Shortest path, isochrones, fleet optimization, indoor wayfinding with wheelchair-accessible routing. OpenStreetMap-powered.</p>
+<p>Shortest path, isochrones and delivery stop ordering over an OpenStreetMap extract, plus indoor wayfinding with wheelchair-accessible routing.</p>
 </div>
 <div class="feature-card">
-<div class="icon">📡</div>
 <h3>Field Collection</h3>
-<p>Custom forms, offline-first sync, photo/document attachments. Collect data in the field, sync to the geodatabase automatically.</p>
+<p>Form schemas with GPS fields, submissions from ODK Collect over OpenRosa, and photo and document attachments. The viewer draws the submissions and publishes them into a geodatabase dataset.</p>
 </div>
 <div class="feature-card">
-<div class="icon">📱</div>
 <h3>Mobile SDK</h3>
-<p>Rust mobile map core consumed from Kotlin over a flat C FFI. Camera and viewport math, gesture recognition, tile caching, offline feature storage, on-device turn-by-turn. Android only, and the host does the fetching and the drawing.</p>
+<p>A Rust map core behind a flat C FFI and a Kotlin <code>MapView</code>. Camera math, gestures, tile caching, MVT decoding, offline regions and turn-by-turn over a precomputed route. The Kotlin library fetches the tiles and draws them on Canvas. Android only.</p>
 </div>
 <div class="feature-card">
-<div class="icon">🛰️</div>
 <h3>AI/ML Imagery</h3>
 <p>Panoptes segments satellite and aerial imagery with an ONNX model, either the published building weights or your own, and traces the result as vectors. Change detection is pixel differencing. Land cover has no weights, and object detection is a library result type with no command behind it.</p>
 </div>
@@ -236,7 +224,7 @@ footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color
 <section class="pricing" id="pricing">
 <div class="container">
 <h2>Pricing</h2>
-<p class="subtitle">Self-hosted, and that is the only way to run it. There is no hosted offering.</p>
+<p class="subtitle">Free and self-hosted.</p>
 <div class="pricing-grid">
 <div class="price-card">
 <h3>Community</h3>
@@ -260,36 +248,36 @@ footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color
 <div class="container">
 <h2>Built on 23 Open-Source Modules</h2>
 <div class="stack-list">
-<div class="stack-item"><span class="emoji">🏗️</span><div><div class="name">TileTopia</div><div class="desc">3D Tiles server</div></div></div>
-<div class="stack-item"><span class="emoji">🌍</span><div><div class="name">ViewTopia</div><div class="desc">Unified viewer + AI chat</div></div></div>
-<div class="stack-item"><span class="emoji">🗄️</span><div><div class="name">Ptolemy</div><div class="desc">Enterprise geodatabase</div></div></div>
-<div class="stack-item"><span class="emoji">🚗</span><div><div class="name">Itinera</div><div class="desc">Routing + isochrones</div></div></div>
-<div class="stack-item"><span class="emoji">📍</span><div><div class="name">Geokode</div><div class="desc">Geocoding</div></div></div>
-<div class="stack-item"><span class="emoji">⛰️</span><div><div class="name">Terrano</div><div class="desc">Terrain analysis</div></div></div>
-<div class="stack-item"><span class="emoji">☁️</span><div><div class="name">Nubis</div><div class="desc">Point cloud</div></div></div>
-<div class="stack-item"><span class="emoji">👁️</span><div><div class="name">Panoptes</div><div class="desc">AI/ML imagery</div></div></div>
-<div class="stack-item"><span class="emoji">🔄</span><div><div class="name">Geodukt</div><div class="desc">ETL pipeline</div></div></div>
-<div class="stack-item"><span class="emoji">🌊</span><div><div class="name">Fluvius</div><div class="desc">Real-time streaming</div></div></div>
-<div class="stack-item"><span class="emoji">📐</span><div><div class="name">Projicio</div><div class="desc">CRS transforms</div></div></div>
-<div class="stack-item"><span class="emoji">🖨️</span><div><div class="name">Jung</div><div class="desc">Cartographic rendering</div></div></div>
-<div class="stack-item"><span class="emoji">📜</span><div><div class="name">GeoGit</div><div class="desc">Versioned geodata</div></div></div>
-<div class="stack-item"><span class="emoji">📐</span><div><div class="name">Topoi</div><div class="desc">Computational geometry</div></div></div>
-<div class="stack-item"><span class="emoji">🏢</span><div><div class="name">Interiora</div><div class="desc">Indoor mapping</div></div></div>
-<div class="stack-item"><span class="emoji">📋</span><div><div class="name">Collecta</div><div class="desc">Field data collection</div></div></div>
-<div class="stack-item"><span class="emoji">📱</span><div><div class="name">TerraVista</div><div class="desc">Mobile SDK</div></div></div>
-<div class="stack-item"><span class="emoji">🌐</span><div><div class="name">Fenestra</div><div class="desc">OGC services</div></div></div>
-<div class="stack-item"><span class="emoji">🤖</span><div><div class="name">GeoLang</div><div class="desc">AI agent tools</div></div></div>
-<div class="stack-item"><span class="emoji">🔮</span><div><div class="name">Sibyl</div><div class="desc">Agent loop</div></div></div>
-<div class="stack-item"><span class="emoji">🤝</span><div><div class="name">Agora</div><div class="desc">Live maps and presence</div></div></div>
-<div class="stack-item"><span class="emoji">🔧</span><div><div class="name">GeoPlumb</div><div class="desc">Windowed compute</div></div></div>
-<div class="stack-item"><span class="emoji">🧳</span><div><div class="name">Verne</div><div class="desc">Migration from ArcGIS, KML, file geodatabases</div></div></div>
+<div class="stack-item"><div><div class="name">TileTopia</div><div class="desc">3D Tiles server</div></div></div>
+<div class="stack-item"><div><div class="name">ViewTopia</div><div class="desc">Unified viewer + AI chat</div></div></div>
+<div class="stack-item"><div><div class="name">Ptolemy</div><div class="desc">Enterprise geodatabase</div></div></div>
+<div class="stack-item"><div><div class="name">Itinera</div><div class="desc">Routing + isochrones</div></div></div>
+<div class="stack-item"><div><div class="name">Geokode</div><div class="desc">Geocoding</div></div></div>
+<div class="stack-item"><div><div class="name">Terrano</div><div class="desc">Terrain analysis</div></div></div>
+<div class="stack-item"><div><div class="name">Nubis</div><div class="desc">Point cloud</div></div></div>
+<div class="stack-item"><div><div class="name">Panoptes</div><div class="desc">AI/ML imagery</div></div></div>
+<div class="stack-item"><div><div class="name">Geodukt</div><div class="desc">ETL pipeline</div></div></div>
+<div class="stack-item"><div><div class="name">Fluvius</div><div class="desc">Real-time streaming</div></div></div>
+<div class="stack-item"><div><div class="name">Projicio</div><div class="desc">CRS transforms</div></div></div>
+<div class="stack-item"><div><div class="name">Jung</div><div class="desc">Cartographic rendering</div></div></div>
+<div class="stack-item"><div><div class="name">GeoGit</div><div class="desc">Versioned geodata</div></div></div>
+<div class="stack-item"><div><div class="name">Topoi</div><div class="desc">Computational geometry</div></div></div>
+<div class="stack-item"><div><div class="name">Interiora</div><div class="desc">Indoor mapping</div></div></div>
+<div class="stack-item"><div><div class="name">Collecta</div><div class="desc">Field data collection</div></div></div>
+<div class="stack-item"><div><div class="name">TerraVista</div><div class="desc">Mobile SDK</div></div></div>
+<div class="stack-item"><div><div class="name">Fenestra</div><div class="desc">OGC services</div></div></div>
+<div class="stack-item"><div><div class="name">GeoLang</div><div class="desc">AI agent tools</div></div></div>
+<div class="stack-item"><div><div class="name">Sibyl</div><div class="desc">Agent loop</div></div></div>
+<div class="stack-item"><div><div class="name">Agora</div><div class="desc">Live maps and presence</div></div></div>
+<div class="stack-item"><div><div class="name">GeoPlumb</div><div class="desc">Windowed compute</div></div></div>
+<div class="stack-item"><div><div class="name">Verne</div><div class="desc">Migration from ArcGIS, KML, file geodatabases</div></div></div>
 </div>
 <p style="margin-top:24px;color:var(--muted,#8b949e);max-width:720px">
-<strong>Your data is just PostGIS.</strong> Ptolemy stores features in plain PostGIS
+<strong>Your data is PostGIS.</strong> Ptolemy stores features in plain PostGIS
 tables: a <code>geometry</code> column, JSONB properties, standard
-<code>pg_dump</code> backups. psql, GDAL, and QGIS read the database directly,
-even with every GeoLang service switched off. No lock-in, no export step.
-<a href="https://github.com/GeoLang/ptolemy#your-data-is-just-postgis">Details&nbsp;→</a>
+<code>pg_dump</code> backups. psql, GDAL and QGIS read the database directly,
+even with every GeoLang service switched off, so leaving needs no export step.
+<a href="https://github.com/GeoLang/ptolemy#your-data-is-postgis">Details&nbsp;→</a>
 </p>
 </div>
 </section>
@@ -297,7 +285,7 @@ even with every GeoLang service switched off. No lock-in, no export step.
 <!-- CTA -->
 <section class="cta">
 <div class="container">
-<h2>Ready to simplify GIS?</h2>
+<h2>Run it yourself</h2>
 <p>Take the <code>geolang-platform</code> bundle off the releases page. Generate two secrets, fetch an OSM extract for your region, then bring the stack up from published images. Five commands, no source checkouts, Docker Engine with Compose v2 the only prerequisite.</p>
 <div class="hero-cta">
 <a href="https://github.com/GeoLang/viewtopia/releases" class="btn-primary">Get the release bundle</a>

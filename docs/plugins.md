@@ -1,8 +1,11 @@
-# Viewtopia Plugin System
+# ViewTopia Plugin System
 
 ## Overview
 
-Viewtopia supports third-party plugins that add custom panels to the UI. Plugins are auto-discovered at build time — just drop a folder into `src/plugins/` and it appears in the toolbar.
+A plugin adds a panel to ViewTopia. Built-in plugins are discovered at build
+time: a folder in `src/plugins/` with an `index.tsx` that default-exports a
+`PluginDefinition` appears in the toolbar. Runtime plugins are installed from a
+registry while the app runs, see [Runtime Plugins](#runtime-plugins).
 
 ## Quick Start
 
@@ -10,19 +13,19 @@ Viewtopia supports third-party plugins that add custom panels to the UI. Plugins
 2. Create `index.tsx`:
 
 ```tsx
-import { Paper, Text, Button } from '@mantine/core';
-import type { PluginDefinition, PluginContext } from '../sdk';
+import { Paper, Text, Button } from '@mantine/core'
+import type { PluginDefinition, PluginContext } from '../sdk'
 
 function MyPanel({ ctx }: { ctx: PluginContext }) {
   return (
     <Paper p="md" withBorder>
-      <Text>Hello from my plugin!</Text>
+      <Text>Hello from my plugin</Text>
       <Button onClick={() => ctx.map.flyTo(-73.98, 40.75, 14)}>
         Go to NYC
       </Button>
       <Button onClick={ctx.close}>Close</Button>
     </Paper>
-  );
+  )
 }
 
 const plugin: PluginDefinition = {
@@ -31,44 +34,45 @@ const plugin: PluginDefinition = {
   version: '1.0.0',
   category: 'plugins',
   Panel: MyPanel,
-};
+}
 
-export default plugin;
+export default plugin
 ```
 
-3. Run `pnpm run dev` — your plugin appears in the **Plugins** toolbar menu.
+3. Run `pnpm run dev`. The plugin appears under **Plugins** in the toolbar.
 
 ## Plugin Context API
 
-Every plugin panel receives a `ctx: PluginContext` prop with four namespaces:
+Every plugin panel receives a `ctx: PluginContext` prop with four namespaces
+and `close()`.
 
-### `ctx.map` — Map Controls
+### `ctx.map`, map controls
 
 | Method | Description |
 |--------|-------------|
 | `flyTo(lng, lat, zoom?)` | Fly camera to location |
-| `getCursorCoords()` | Get current cursor lat/lng/elevation |
+| `getCursorCoords()` | Current cursor lat, lng and elevation |
 | `onMapClick(cb)` | Subscribe to map clicks in geographic coords, returns an unsubscribe |
 | `addGeoJsonLayer(id, geojson, options?)` | Add a GeoJSON layer |
 | `removeLayer(id)` | Remove a layer |
 | `fitBounds([west, south, east, north])` | Fit view to bounds |
 
-### `ctx.store` — Application State
+### `ctx.store`, application state
 
 | Method | Description |
 |--------|-------------|
-| `getLayers()` | Get all map layers |
-| `getActivePanel()` | Current active panel name |
+| `getLayers()` | Every map layer |
+| `getActivePanel()` | Id of the open panel |
 | `getBasemap()` | Current basemap: `osm`, `satellite`, `topo`, `dark`, `liberty`, `bright`, `positron`, `selfhosted`, `custom` or `local` |
 | `setCustomBasemap({url, attr})` | Switch the viewers to custom raster tiles |
 | `getRenderer()` | Current renderer: `cesium` or `maplibre` |
 | `getSettings()` | All app settings |
 
-### `ctx.api` — Backend API
+### `ctx.api`, backend API
 
 | Method | Description |
 |--------|-------------|
-| `fetch(path, options?)` | Proxied fetch (adds base URL + headers) |
+| `fetch(path, options?)` | Proxied fetch that adds the base URL and auth headers |
 | `baseUrl` | The platform API base URL |
 
 ### `ctx.settings`, per-plugin persistence
@@ -79,21 +83,23 @@ Every plugin panel receives a `ctx: PluginContext` prop with four namespaces:
 | `set(key, value)` | Write one setting to localStorage |
 | `getAll()` | Every setting for this plugin |
 
-### `ctx.close()` — Close the plugin panel
+### `ctx.close()`
+
+Closes the plugin panel.
 
 ## Plugin Definition
 
 ```typescript
 interface PluginDefinition {
-  id: string;           // Unique kebab-case ID
-  name: string;         // Display name
-  description?: string;
-  version: string;      // Semver
-  author?: string;
-  icon?: ReactNode;     // @tabler/icons-react icon
-  category?: 'analysis' | 'simulate' | 'tools' | 'data' | 'plugins';
-  Panel: React.ComponentType<{ ctx: PluginContext }>;
-  settings?: PluginSettingField[];   // rendered in the Settings panel
+  id: string            // unique kebab-case id
+  name: string          // display name
+  description?: string
+  version: string       // semver
+  author?: string
+  icon?: ReactNode      // an @tabler/icons-react icon
+  category?: 'analysis' | 'simulate' | 'tools' | 'data' | 'plugins'
+  Panel: React.ComponentType<{ ctx: PluginContext }>
+  settings?: PluginSettingField[]   // rendered in the Settings panel
 }
 ```
 
@@ -122,17 +128,14 @@ ctx.map.addGeoJsonLayer('my-layer', geojson, {
   extruded: false,
   zIndex: 10,
   fit: true,          // whether adding it moves the camera, true by default
-});
+})
 ```
 
 ## Category Placement
 
-Set `category` to control where your plugin appears:
-- `'analysis'` — Analysis menu
-- `'simulate'` — Simulate menu
-- `'tools'` — Tools menu
-- `'data'` — Data menu
-- `'plugins'` (default) — Plugins menu
+The toolbar ignores `category`. Every plugin, built-in or runtime, is listed
+under Plugins in the toolbar menu and in the command palette, whatever its
+category says.
 
 ## Events
 
@@ -146,21 +149,22 @@ The app dispatches these on `window`:
 
 ## Available Libraries
 
-Plugins can import from any dependency in `package.json`:
-- `@mantine/core` — UI components
-- `@mantine/hooks` — Utility hooks
-- `@tabler/icons-react` — Icons
-- `react` / `react-dom`
-- Any npm package you add to the project
+A built-in plugin can import any dependency in `package.json`, among them:
+
+- `@mantine/core` and `@mantine/hooks`
+- `@tabler/icons-react`
+- `react` and `react-dom`
 
 ## Runtime Plugins
 
-Plugins can also be installed while the app is running, from **More → Plugin Manager**. Installs
-only ever come from a registry document, never from a URL a user pastes.
+Plugins can also be installed while the app is running, from **More, Plugin
+Manager**. Installs only ever come from a registry document, never from a URL a
+user pastes.
 
 ### Registry document
 
-JSON served over https (http is allowed on `localhost` and `127.0.0.1` for development):
+JSON served over https. http is allowed on `localhost`, `127.0.0.1` and `[::1]`
+for development.
 
 ```json
 {
@@ -197,9 +201,9 @@ configured.
 
 A runtime plugin default-exports the same `PluginDefinition` as a built-in one, but it must render
 with the host's React: a second copy of React in the page breaks hooks. Externalize `react`,
-`react/jsx-runtime` and the SDK, and resolve them to `window.__viewtopiaPluginHost`. Everything
-else, Mantine and icons included, has to be bundled in, so a runtime plugin is best kept to plain
-elements and its own styles.
+`react/jsx-runtime` and the SDK, and resolve them to `window.__viewtopiaPluginHost`, which holds
+`react`, `jsxRuntime` and `sdk`. Everything else, Mantine and icons included, has to be bundled
+in, so a runtime plugin is best kept to plain elements and its own styles.
 
 ```js
 // vite.config.js for a plugin
@@ -207,19 +211,19 @@ const hostModules = {
   react: 'react',
   'react/jsx-runtime': 'jsxRuntime',
   '@viewtopia/plugin-sdk': 'sdk',
-};
+}
 
 const hostGlobals = {
   name: 'viewtopia-host-globals',
   resolveId: (id) => (id in hostModules ? `\0host:${id}` : null),
   load(id) {
-    if (!id.startsWith('\0host:')) return null;
-    const key = hostModules[id.slice('\0host:'.length)];
-    return `const m = window.__viewtopiaPluginHost.${key};
-export default m;
-export const { ${key === 'jsxRuntime' ? 'jsx, jsxs, Fragment' : 'useState, useEffect, useMemo, useRef, useCallback, createElement'} } = m;`;
+    if (!id.startsWith('\0host:')) return null
+    const key = hostModules[id.slice('\0host:'.length)]
+    return `const m = window.__viewtopiaPluginHost.${key}
+export default m
+export const { ${key === 'jsxRuntime' ? 'jsx, jsxs, Fragment' : 'useState, useEffect, useMemo, useRef, useCallback, createElement'} } = m`
   },
-};
+}
 
 export default {
   plugins: [hostGlobals],
@@ -227,8 +231,10 @@ export default {
     lib: { entry: 'src/index.tsx', formats: ['es'], fileName: 'my-plugin' },
     rollupOptions: { external: Object.keys(hostModules) },
   },
-};
+}
 ```
+
+The config maps the `@viewtopia/plugin-sdk` import to the host's SDK at load time.
 
 The `id` the bundle exports must match the `id` the registry lists, or the load is refused.
 
@@ -239,15 +245,17 @@ retried until the next reload, and it never blocks the rest of the app.
 
 ```
 src/plugins/
-├── sdk.ts                    # Type definitions (DO NOT MODIFY)
-├── registry.ts               # Auto-discovery (DO NOT MODIFY)
-├── PluginHost.tsx            # Panel renderer (DO NOT MODIFY)
-├── PluginSettings.tsx        # Settings-schema renderer (DO NOT MODIFY)
-├── runtime/                  # Registry client and bundle loader (DO NOT MODIFY)
+├── sdk.ts                    # type definitions (host code)
+├── registry.ts               # build-time discovery (host code)
+├── PluginHost.tsx            # panel renderer (host code)
+├── PluginSettings.tsx        # settings-schema renderer (host code)
+├── runtime/                  # registry client and bundle loader (host code)
 ├── example-plugin/
-│   └── index.tsx             # Working example
+│   └── index.tsx             # working example
 └── your-plugin/
-    ├── index.tsx             # Entry point (required)
-    ├── components/           # Optional sub-components
-    └── utils.ts              # Optional helpers
+    ├── index.tsx             # entry point (required)
+    ├── components/           # optional sub-components
+    └── utils.ts              # optional helpers
 ```
+
+A plugin only adds its own folder. The host code is shared by every plugin.

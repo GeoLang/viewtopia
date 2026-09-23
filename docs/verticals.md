@@ -6,23 +6,22 @@ Each vertical leverages the same underlying platform with specialized panels.
 These pages describe integration targets, not complete products. The built-in
 plugins read configured datasets or demo data. They do not supply sensor,
 incident, fleet, parcel, or industry data. Live feeds require a matching
-backend. Panoptes has no published model weights, and Fluvius checkpointing and
-metrics are library-only.
+backend. Panoptes publishes weights for building segmentation only.
 
 ## Environmental Monitoring
 
 ### Components
 - **SensorPanel**: sensor inventory and the last reading from the `sensors` dataset. The plugin declares a `wsUrl` setting but nothing reads it, so there is no live stream
-- **WeatherPanel** (existing) — current conditions and hourly forecast from open-meteo, optional temperature/precipitation grid overlay
-- **FloodPanel** (existing) — flood zone analysis
-- **HeatmapPanel** (existing) — sensor density/intensity visualization
-- **TimelinePanel** (existing) — temporal playback of sensor history
+- **WeatherPanel** (existing): current conditions and hourly forecast from open-meteo, optional temperature/precipitation grid overlay
+- **FloodPanel** (existing): flood level modelled over terrain
+- **HeatmapPanel** (existing): sensor density/intensity visualization
+- **TimelinePanel** (existing): Cesium clock playback over time-tagged data
 
 ### Backend: fluvius + collecta + terrano + panoptes
 - fluvius: automated data pipeline from IoT devices, windowing over the live sensor stream
 - collecta: field observation forms, submission ingestion and storage
 - terrano: terrain analysis, watershed delineation
-- panoptes: imagery feature extraction, ONNX segmentation and pixel-difference change detection (weights are yours to supply, none ship)
+- panoptes: imagery feature extraction, ONNX segmentation and pixel-difference change detection (building weights are published, other models are yours to supply)
 
 ### Use Cases
 - Water quality monitoring (rivers, treatment plants)
@@ -35,17 +34,18 @@ metrics are library-only.
 ## Construction & Civil Engineering
 
 ### Components
-- **ConstructionPanel** — survey comparison, cut/fill volumes, progress tracking
-- **TerrainProfilePanel** (existing) — cross-section analysis
-- **VolumePanel** (existing) — 3D volume calculations
-- **CrossSectionPanel** (existing) — road/pipeline cross-sections
+- **ConstructionPanel**: survey comparison, cut/fill volumes, progress tracking
+- **TerrainProfilePanel** (existing): cross-section analysis
+- **VolumePanel** (existing): 3D volume calculations
+- **CrossSectionPanel** (existing): road/pipeline cross-sections
 - **ModelImportPanel** (existing): glTF and GLB models. An IFC file goes to the server through the Assets panel instead
-- **MeasurementPanel** (existing) — distance, area, elevation
+- **MeasurementPanel** (existing): distance, area, elevation
 
-### Backend: tiletopia + nubis + terrano
+### Backend: tiletopia + nubis + terrano + ptolemy
 - tiletopia: 3D Tiles serving for BIM models and point clouds
-- nubis: LAS point cloud processing (formats 0–3; LAZ is tiletopia's ingest crate)
-- terrano: terrain models, GeoTIFF, cut/fill calculations
+- nubis: LAS point cloud processing (formats 0 to 3, LAZ is read by tiletopia's ingest crate)
+- terrano: terrain models, GeoTIFF
+- ptolemy: survey comparison with cut and fill volumes (`POST /surveys/compare`)
 
 ### Use Cases
 - Earthwork volume tracking (cut/fill)
@@ -59,16 +59,16 @@ metrics are library-only.
 ## Agriculture / Precision Farming
 
 ### Components
-- **FieldPanel** — crop zones, NDVI health index, soil moisture, growth status
+- **FieldPanel**: crop zones, NDVI health index, soil moisture, growth status
 - **RasterPanel** (existing): NDVI and other band math over a loaded GeoTIFF
-- **DronePanel** (existing) — drone flight planning
-- **TimelapsePanel** (existing) — crop growth over time
-- **SpatialStatsPanel** (existing) — yield statistics by zone
+- **DronePanel** (existing): drone flight planning
+- **TimelapsePanel** (existing): crop growth over time
+- **SpatialStatsPanel** (existing): yield statistics by zone
 
 ### Backend: terrano + fluvius + panoptes + topoi
 - terrano: GeoTIFF raster processing (NDVI, thermal)
 - fluvius: sensor monitoring (soil moisture, weather stations) over MQTT and Kafka
-- panoptes: field feature extraction from imagery, ONNX segmentation and pixel-difference change detection (weights are yours to supply, none ship)
+- panoptes: field feature extraction from imagery, ONNX segmentation and pixel-difference change detection (building weights are published, other models are yours to supply)
 - topoi: field boundary management, zone operations
 
 ### Use Cases
@@ -83,10 +83,10 @@ metrics are library-only.
 ## Telecom / Network Planning
 
 ### Components
-- **CoveragePanel** — tower inventory, signal simulation, site planning
-- **ViewshedPanel** (existing) — line-of-sight analysis
-- **TerrainAnalysisPanel** (existing) — elevation profiles
-- **BuildingsPanel** (existing) — 3D building obstruction
+- **CoveragePanel**: tower inventory, a coverage footprint from each tower's radius or radio horizon, terrain viewshed from a candidate site
+- **ViewshedPanel** (existing): line-of-sight analysis
+- **TerrainAnalysisPanel** (existing): elevation profiles
+- **BuildingsPanel** (existing): 3D building obstruction
 
 ### Backend: terrano + topoi
 - terrano: terrain elevation models for propagation modeling
@@ -104,11 +104,11 @@ metrics are library-only.
 ## Emergency Management / SAR
 
 ### Components
-- **IncidentPanel** — incident reporting, dispatch, evacuation routes, affected area display
-- **GeofencePanel** (existing) — exclusion zones, perimeters
-- **FloodPanel** (existing) — flood inundation
-- **RoutingPanel** (existing) — fastest route to incident
-- **TrafficPanel** (existing) — user-provided traffic tiles or a demo mode over OSM roads (no live global feed without a key)
+- **IncidentPanel**: incident reporting, dispatch, evacuation routes, affected area display
+- **GeofencePanel** (existing): exclusion zones, perimeters
+- **FloodPanel** (existing): flood level modelled over terrain
+- **RoutingPanel** (existing): fastest route to incident
+- **TrafficPanel** (existing): user-provided traffic tiles or a demo mode over OSM roads (no live global feed without a key)
 
 ### Backend: itinera + geokode + ptolemy
 - itinera: evacuation route calculation, isochrones
@@ -129,18 +129,18 @@ metrics are library-only.
 
 | Capability | Esri | Mapbox | GeoLang |
 |-----------|------|--------|-----------|
-| Environmental monitoring | ✅ | ❌ | partial |
-| Construction progress | ✅ | ❌ | partial |
-| Precision agriculture | ✅ | ❌ | partial |
-| Telecom planning | ✅ | ❌ | partial |
-| Emergency management | ✅ | ❌ | partial |
-| Fleet/logistics | ✅ | ✅ | partial |
-| Real estate | ✅ | ❌ | partial |
-| Self-hosted | ❌ | ❌ | ✅ |
-| No per-seat licensing | ❌ | ❌ | ✅ |
-| Open source | ❌ | partial | ✅ |
-| 3D visualization | ✅ | ✅ | ✅ |
+| Environmental monitoring | yes | no | partial |
+| Construction progress | yes | no | partial |
+| Precision agriculture | yes | no | partial |
+| Telecom planning | yes | no | partial |
+| Emergency management | yes | no | partial |
+| Fleet/logistics | yes | yes | partial |
+| Real estate | yes | no | partial |
+| Self-hosted | no | no | yes |
+| No per-seat licensing | no | no | yes |
+| Open source | no | partial | yes |
+| 3D visualization | yes | yes | yes |
 
 ## License
 
-AGPL-3.0-or-later — all verticals included.
+AGPL-3.0-or-later, all verticals included.

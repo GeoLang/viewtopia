@@ -39,14 +39,19 @@ breached threshold fails the caller.
 | env | default | meaning |
 | --- | --- | --- |
 | `LOADTEST_BASE_URL` | `http://localhost:5174` | the nginx front, so numbers include the real proxy path |
-| `LOADTEST_FENESTRA_URL` | `<base>/ogc` | fenestra's proxy mount; set to `http://localhost:3003` to bypass nginx |
+| `LOADTEST_FENESTRA_URL` | `<base>/ogc` | fenestra's proxy mount. Set `http://localhost:3003` to bypass nginx |
 | `LOADTEST_FENESTRA_LAYER` | shallowest seeded chain | any ptolemy dataset name |
 | `LOADTEST_DEPTHS` | `100,1000,10000` | which chain datasets the scenarios target |
 | `LOADTEST_RATE` | `20` | iterations started per second |
 | `LOADTEST_VUS` | `5` | VUs pre-allocated to sustain that rate (max is 10x) |
 | `LOADTEST_DURATION` | `30s` | run length per scenario |
 | `LOADTEST_P95_SCALE` | `1` | multiplier on every p95 budget, for slower box classes (CI sets 6) |
+| `LOADTEST_OUT` | `out` | summary directory, relative to `loadtest/` |
 | `K6_IMAGE` | `grafana/k6:2.1.0` | pinned, k6 2.0 was a breaking major |
+
+`run.sh` also mints an editor token from `PLATFORM_JWT_SECRET` and passes it as
+`LOADTEST_TOKEN`, so the reads take the authenticated path a signed-in viewer
+takes.
 
 `LOADTEST_DEPTHS` must match what the seeder actually created. A depth with no
 dataset is skipped with a warning rather than failing the run, so a mismatch
@@ -55,10 +60,9 @@ shows up as missing rows in the summary, not as a red build.
 ## Load shape
 
 Scenarios use k6's `constant-arrival-rate`: `LOADTEST_RATE` iterations are started
-every second regardless of how fast they finish. That is deliberate. Looping VUs
-with no think time do not measure latency, they measure how fast the box can be
-saturated, and unpaced they push about 2900 req/s through the proxy, at which
-point nginx sheds connections and the 502s read as if a service regressed.
+every second regardless of how fast they finish. Looping VUs with no think time
+measure how fast the box saturates rather than latency, and unpaced they push
+nginx into shedding connections, so the 502s read as if a service regressed.
 
 One iteration issues every op in the scenario, so requests per second is roughly
 `LOADTEST_RATE` times the op count.
@@ -83,16 +87,10 @@ comparing isolated runs would not be.
   never walks the chain, so it should stay flat as depth grows. If `bbox` climbs
   and `item` does not, the CTE is the cost.
 
-Two things confound the `filter` numbers, both worth knowing before reading them:
-
-- `filter` runs against the `features` SQL view, and that view's recursive CTE
-  walks **every branch in the database**, not just the queried one, before the
-  `branch_id` predicate is applied. So `filter` on `chain-100` gets slower merely
-  because `chain-10000` exists alongside it. Read `filter` as a function of total
-  changeset count in the database, not of one branch's depth. `bbox` does not
-  have this problem, it walks the queried branch only.
-- `external` is a registered external PostGIS table, so it has no changesets at
-  all. It is the floor: what these reads cost with versioning out of the picture.
+`bbox` and `filter` both resolve the queried branch only, so a deep chain in the
+database does not slow reads of a shallow one. `external` is a registered
+external PostGIS table with no changesets at all. It is the floor: what these
+reads cost with versioning out of the picture.
 
 **tiletopia** serves `tileset.json` and one content tile from `loadtest-tileset.ply`,
 the asset the seeder uploads. The scenario resolves it by name and ignores every
@@ -132,25 +130,21 @@ sub-metric thresholds tagged by op and target, so a breach names the exact
 op/target pair. Each scenario file builds its thresholds from the same spec table
 it iterates, so a target cannot be added without a budget attached.
 
-The committed p95 values reflect the 2026-07-26 baseline below: roughly 2x the
-measured p95, rounded up to a clean number, with a 50ms floor so ops that run in
-single-digit milliseconds do not flake on scheduler noise. 2x leaves room for
-normal run-to-run variance on shared CI hardware while still catching a real
-regression.
+The committed p95 values are roughly 2x the measured p95 in the baseline below,
+rounded up to a clean number, with a 50ms floor so ops that run in single-digit
+milliseconds do not flake on scheduler noise.
 
 ## Baseline numbers
 
-First full baseline, 2026-07-26. Code state: ptolemy at `0ee367c` (branch-scoped
-reads). Filled from `loadtest/out/*.json`.
+Measured with `loadtest/run.sh` against ptolemy at `0ee367c` and read from
+`loadtest/out/*.json`.
 
-Box spec disclosure: a latency number without the machine it came from is not a
-number. Record the CPU model and core count, RAM, disk type, docker version, and
-whether the stack and the load generator shared the box. **They do share it
-here**. `run.sh` uses `--network host` and k6 runs on the same host as the
-services, so every figure includes generator contention and proxy overhead on
-purpose. That is the shape a single-box deployment actually has. Numbers from a
-GitHub-hosted runner and numbers from a workstation are not comparable, so label
-which is which.
+With any new baseline, record the CPU model and core count, RAM, disk type,
+docker version, and whether the stack and the load generator shared the box.
+Here they do share it: `run.sh` uses `--network host` and k6 runs on the same
+host as the services, so every figure includes generator contention and proxy
+overhead, as a single-box deployment would. Numbers from a GitHub-hosted runner
+and from a workstation are not comparable, so label which is which.
 
 Box: workstation, AMD Ryzen 9 6900HX (16 threads), 27 GB RAM, single machine
 running the full docker compose stack and k6 together. Load shape: k6
@@ -207,12 +201,12 @@ queries, nor a fixture name from the name a scenario looks up.
   and says so, because the two do not measure the same read path.
 - `loadtest-tileset.ply`: a 200-point ascii PLY uploaded to tiletopia. Point-cloud
   uploads tile on arrival, so this needs no separate job request, and the seeder
-  polls the asset until it reports `ready` (bounded at 120s, so a wedged tiling
-  worker fails the seed instead of hanging CI). The `.ply` in the name is required,
-  not cosmetic: tiletopia stores the upload under its asset name and the tiler picks
-  its reader from that path's extension. A rerun keeps the asset that is already
-  `ready` and deletes any other asset under the same name, so an interrupted seed
-  self-heals rather than leaving two candidates behind.
+  polls the asset until it reports `ready` (bounded at 120s, so a stuck tiling
+  worker fails the seed instead of hanging CI). The `.ply` in the name is required:
+  tiletopia stores the upload under its asset name and the tiler picks its reader
+  from that path's extension. A rerun keeps the asset that is already `ready` and
+  deletes any other asset under the same name, so an interrupted seed does not
+  leave two candidates behind.
 
 ## Teardown
 
@@ -243,30 +237,19 @@ on push or pull request. The nightly seeds depths 100 and 1000 only, depth 10000
 is dispatch-only behind the `full` input. It starts the data plane without
 geolang, since the agent is not under test and is the slowest image to build. It
 records the runner's box spec to `loadtest/out/box.txt` and uploads
-`loadtest/out/` as an artifact. Thresholds are the gate, there is no separate
-comparison step and no stored history yet.
+`loadtest/out/` as an artifact, with `loadtest/out/during-load.txt` from a
+probe that runs alongside the load. Thresholds are the gate, there is no
+separate comparison step and no stored history.
 
-The runner is a different box class from the workstation baseline: 4 vCPUs
-running the stack, postgres and k6 together. At the baseline rate of 20/s the
-ptolemy scenario asks for ~240 req/s, which saturates the box and reports
-seconds of queueing delay as if it were service latency (the first two nightly
-runs did exactly that). So CI runs at `LOADTEST_RATE=5` and widens the budgets
-with `LOADTEST_P95_SCALE=6`. The depth comparison the harness exists for
-(chain-100 vs chain-1000) is unaffected: both depths still run in the same
-iteration under the same load.
+The runner is a smaller box than the workstation baseline: 4 vCPUs running the
+stack, postgres and k6 together. At the baseline rate the ptolemy scenario
+saturates it and reports queueing delay as if it were service latency. So CI
+runs at `LOADTEST_RATE=3` and widens the budgets with `LOADTEST_P95_SCALE=6`.
+The depth comparison the harness exists for (chain-100 against chain-1000) is
+unaffected, since both depths still run in the same iteration under the same
+load.
 
 The workflow runs `ANALYZE` after seeding. A freshly bulk-seeded postgres has
-no planner statistics, and the recursive changeset walk picks plans that pin
-every runner core at a fraction of the target rate (found 2026-07-28 via the
-in-run sidecar probe, `loadtest/out/during-load.txt` in the artifact). The same
-cliff would hit any deployment that bulk-imports and immediately serves reads,
-until autoanalyze catches up. Ptolemy now issues that ANALYZE itself after
-bulk writes, but the workflow keeps its own as a belt for older checkouts.
-
-Even with statistics, the ptolemy ops cost ~10x more db CPU per request on
-runner vCPUs than on the workstation, so rate 5 ran the db at ~290% of 4
-cores. That is the capacity knee: a slightly slow runner tips into queueing
-collapse and every op reads as seconds. Rate 3 keeps the db around 60%
-utilization so run-to-run runner variance cannot flip the verdict. Signal for
-the materialized-branch-heads question: on 4 vCPUs a depth-1000 walk costs
-~100ms p50 even healthy, ~20x the workstation.
+no planner statistics, and the recursive changeset walk then picks plans that
+pin every runner core. Ptolemy runs `ANALYZE` itself after a bulk write, and
+the workflow runs its own too.

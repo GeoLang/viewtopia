@@ -1,30 +1,24 @@
-# Data Directory
+# data
 
-This directory holds data files for the platform demo.
+The platform compose file mounts this directory into geokode and itinera at
+`/data`. Everything here except this README and `addresses.csv` is generated
+and gitignored.
 
-## Required Files
+| File | What it is |
+|------|------------|
+| `region.osm.pbf` | The OSM extract. geokode imports its addresses from it, itinera builds its routing graph from it. `scripts/platform-up.sh` downloads it, Monaco by default |
+| `graph.bin` | itinera's routing graph. itinera builds it on start only when it is missing, so delete it after swapping the extract |
+| `.region-url` | The extract URL `platform-up.sh` last fetched. A different URL on the next run triggers a new download and graph build |
+| `addresses.csv` | Sample addresses in OpenAddresses form, `LON,LAT,NUMBER,STREET,CITY,REGION,POSTCODE`. geokode reads it only when its `--data` flag is pointed at it |
+| `toronto/` | Source downloads and `toronto_census_da.gpkg` from `scripts/load-toronto.py` |
 
-### `addresses.csv` (included)
-Sample address data for geocoding. Format: `address,lat,lng,city,state,zip`
-
-### `region.osm.pbf` (you must download)
-OpenStreetMap road network data for routing/delivery optimization.
-
-**Download a region extract from [Geofabrik](https://download.geofabrik.de/):**
+To swap the extract by hand:
 
 ```bash
-# Small test region (~50MB):
-wget -O data/region.osm.pbf https://download.geofabrik.de/europe/luxembourg-latest.osm.pbf
-
-# Or for UK (matches sample data coordinates):
-wget -O data/region.osm.pbf https://download.geofabrik.de/europe/great-britain/england/west-midlands-latest.osm.pbf
+scripts/fetch-osm-extract.sh https://download.geofabrik.de/europe/luxembourg-latest.osm.pbf data/region.osm.pbf
+rm -f data/graph.bin
+docker compose --env-file .env.platform -f docker-compose.platform.yml restart geokode itinera
 ```
 
-The itinera service will build a routing graph from this file on startup.
-
-## Without OSM Data
-
-If you skip the OSM file, the platform still works:
-- All ptolemy endpoints (parcels, comps, sensors, towers, fields, incidents) work fully
-- Delivery optimization uses haversine (straight-line) distances instead of road network
-- The `/api/route` and `/api/isochrone` endpoints will not be available
+Without `region.osm.pbf` and `graph.bin`, itinera's container starts no server,
+so routing, isochrones, travel time and delivery ordering all fail.

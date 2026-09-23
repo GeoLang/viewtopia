@@ -27,25 +27,27 @@ resulting geometry at commit time.
 
 ## Quick Start
 
-### Prerequisites
+### 1. Start the stack
 
-- Docker & Docker Compose
-- Node.js 20+
-- Rust 1.85+ (for backend services)
-
-### 1. Start backend services
+The panels reach ptolemy, geokode and itinera through the platform stack's
+nginx on 5174, so bring up the whole stack from the `viewtopia/` checkout.
+It needs Docker Engine with Compose v2 and the sibling repos, see the
+[README](../README.md#requirements).
 
 ```bash
-cd ptolemy
-docker compose up -d
+bash scripts/platform-up.sh
 ```
+
+Open http://localhost:5174, or run `pnpm run dev` for the dev server on 5173,
+which proxies to the stack.
 
 ### 2. Load parcel data
 
 The plugin looks for a parcels dataset named `parcels`, paired with `sales`, and
 falls back to `demo_parcels`, paired with `demo_sales`. It takes the branch called
 `main`. `scripts/seed-parcels.mjs` creates the two demo datasets against a
-running ptolemy, anchored on the region the stack imported.
+running ptolemy, anchored on the region the stack imported. `platform-up.sh`
+already runs it, so this is only needed to seed again:
 
 ```bash
 node scripts/seed-parcels.mjs
@@ -68,14 +70,12 @@ address point inside the polygon and `address_count` for how many fell in it,
 `land_use`, `area_sqm`, `sqft`, `acres`, `lat`, `lng` and `source`. Dissemination areas get `population`,
 the three age bands, `median_income` and `median_household_income`.
 
-It downloads 2.87 GB the first time: 160 MB of property boundaries, 208 MB of
-address points, 51 MB of zoning, 197 MB of StatCan boundaries and a 2.25 GB
-census profile zip. Files already on disk are kept, so later runs download
-nothing. The downtown bbox above takes about 100 s once the files are local,
-and 92 s of that goes to scanning the 8.8 GB Ontario census CSV. The whole
-city should take 4 to 6 minutes, an estimate from the per-feature rates, not
-a measured run. A second run refuses to write over a
-dataset that already has features unless you pass `--replace`.
+The first run downloads several GB of source files into `data/toronto/`, most
+of it the StatCan census profile. Files already there are kept, so later runs
+download nothing. A second run refuses to write over a dataset that already has
+features unless you pass `--replace`. `--skip-parcels` and `--skip-census` load
+one half only, `--data-dir` moves the download directory, and `--ptolemy-url`
+points at a ptolemy other than `http://localhost:3000`.
 
 The loader also writes `data/toronto/toronto_census_da.gpkg`, which you can drop
 straight onto the map.
@@ -104,16 +104,6 @@ or point the plugin at existing branches: Settings, Real Estate, then
 `parcelBranchId` and `salesBranchId`. A branch id set there is used directly and
 the name lookup is skipped.
 
-### 3. Start the frontend
-
-```bash
-cd viewtopia
-pnpm install
-pnpm run dev
-```
-
-Open http://localhost:5173
-
 ## Features
 
 ### Parcel Lookup (ParcelPanel)
@@ -141,11 +131,11 @@ Open http://localhost:5173
 - Ptolemy topology validation is not implemented
 
 ### Additional Tools
-- **Geocoding** — address search powered by geokode (self-hosted, no API keys)
-- **Routing** — drive-time isochrones from itinera (how far in 5/10/15 min?)
-- **Flood Analysis**: FEMA flood zone overlay when that layer is available
-- **Measurement** — measure lot frontage, depth, area
-- **Print/Export** — PDF map reports for clients
+- **Geocoding**: address search powered by geokode (self-hosted, no API keys)
+- **Travel Time**: drive-time bands from itinera, 5, 10 and 15 minutes by default
+- **Flood**: the Flood panel models a water level over terrain. There is no FEMA flood zone overlay, only the parcel's own `flood_zone` badge
+- **Measurement**: measure lot frontage, depth, area
+- **Print Layout**: a PDF page with title, scale bar, north arrow and legend
 
 ## Data Sources
 
@@ -185,21 +175,21 @@ services:
 
 | Feature | Esri ArcGIS | GeoLang RE |
 |---------|------------|--------------|
-| Parcel viewer | ✅ | ✅ |
-| Geocoding | ✅ (hosted) | ✅ (self-hosted) |
-| Comparable sales | ✅ (add-on) | partial |
-| Parcel split/merge | ✅ | partial |
-| Drive-time analysis | ✅ | partial |
-| Flood zone overlay | ✅ | partial |
-| Print/PDF export | ✅ | partial |
-| Shapefile/GPKG import | ✅ | ✅ |
-| Self-hosted | ❌ | ✅ |
-| No vendor lock-in | ❌ | ✅ |
-| No per-seat licensing | ❌ | ✅ (AGPL) |
-| Mobile app | ✅ | ⚠️ (responsive web) |
-| Demographics | ✅ | ⚠️ (Census API manual) |
-| 3D buildings | ✅ | ✅ (via tiletopia) |
+| Parcel viewer | yes | yes |
+| Geocoding | yes (hosted) | yes (self-hosted) |
+| Comparable sales | yes (add-on) | partial |
+| Parcel split/merge | yes | partial |
+| Drive-time analysis | yes | partial |
+| Flood zone overlay | yes | no |
+| Print/PDF export | yes | partial |
+| Shapefile/GPKG import | yes | yes |
+| Self-hosted | no | yes |
+| No vendor lock-in | no | yes |
+| No per-seat licensing | no | yes (AGPL) |
+| Mobile app | yes | responsive web only |
+| Demographics | yes | Toronto census areas from `load-toronto.py` |
+| 3D buildings | yes | yes (via tiletopia) |
 
 ## License
 
-AGPL-3.0-or-later — free to use, modify, and self-host. Network use requires source disclosure.
+AGPL-3.0-or-later. Free to use, modify and self-host. Network use requires source disclosure.

@@ -1,118 +1,89 @@
-# DuckDB-WASM in ViewTopia — design
+# DuckDB-WASM in ViewTopia
 
-## Motivation
+ViewTopia runs DuckDB with the spatial extension in a Web Worker. Notebook SQL
+cells, the SQL workspace tab, file import, format conversion and the agent's
+`sql_query` command all share the one database.
 
-ViewTopia has an in-browser DuckDB Spatial worker, SQL notebook cells, a map
-bridge, and an agent command. This document records the path as built and the
-one piece that is missing.
+## Where it is used
 
-## Why it's a fit, not a graft
+- **Notebook SQL cells** (`'sql'` in `CellType`, run by `executeSqlCell` in
+  [runtime.ts](../src/notebooks/runtime.ts)). A result with geometry gets a
+  Show on map button.
+- **SQL workspace**, the SQL tab of the Data Sources panel
+  ([SqlWorkspaceTab.tsx](../src/features/dataSources/SqlWorkspaceTab.tsx)).
+  It attaches a `.parquet` or `.csv` URL as a view, draws a result on the map,
+  and exports a result as CSV or GeoParquet.
+- **File import** ([importVector.ts](../src/duckdb/importVector.ts)). A dropped
+  GeoPackage, Shapefile (loose or zipped), FlatGeobuf or GeoParquet file is
+  read through `ST_Read` from an in-memory buffer and kept as a table, so SQL
+  can query it after it is drawn.
+- **Convert** writes GeoParquet through `COPY ... (FORMAT PARQUET)`.
+- **Agent**: the `sql_query` viewer command, and the `sql.attach_url` action.
 
-- `runtime.data.query(sql)` calls the DuckDB worker.
-- `apache-arrow` is already a dependency. DuckDB-WASM returns Arrow natively, so no new transitive cost.
-- `idb` is already wired for IndexedDB persistence.
-- The notebook system ([src/notebooks/](../src/notebooks/)) already has cell types, an execution model, and an output renderer — adding a `'sql'` cell is the path of least resistance.
+## Modules
 
-## Strategic angle vs GeoLibre
+```
+src/duckdb/
+  index.ts          query(sql), queryRows(sql), exec(sql), close(), re-exports getDb and getConnection
+  worker.ts         the AsyncDuckDB singleton, bundle selection, spatial extension loading
+  spatial.ts        queryAsGeoJson(sql)
+  loaders.ts        attachParquetUrl, attachCsvUrl, registerGeoJson
+  importVector.ts   binary vector file import
+  exportFile.ts     exportQuery(sql, 'csv' | 'parquet')
+  sqlCommand.ts     the sql_query viewer command
+```
 
-GeoLibre exposes DuckDB as a generic SQL pad. ViewTopia can do better:
+- One `AsyncDuckDB` and one shared connection, created on first use.
+- The `eh` and `mvp` bundles are served from the app origin, not a CDN.
+  `duckdb.selectBundle` picks between them.
+- The spatial extension is vendored. `scripts/fetch-duckdb-extensions.mjs`
+  (the `prebuild` hook, also `pnpm run fetch:duckdb-extensions`) downloads it
+  for the DuckDB version compiled into the wasm binary into
+  `public/duckdb-extensions/`. The worker installs it from the app origin and
+  falls back to extensions.duckdb.org when the vendored copy is missing. If
+  both fail, SQL without spatial functions still works.
 
-1. **Map ↔ SQL bridge**: a query with a geometry column becomes an agent layer, which every renderer draws.
-2. **Agent tool** — register `sql_query` on the AI agent so NL queries get translated to DuckDB SQL and rendered without a Ptolemy round-trip.
+`queryAsGeoJson` finds the geometry in a result by, in order: a DuckDB
+`GEOMETRY` column, a text column named `geom`, `geometry`, `the_geom`, `wkt` or
+`shape` holding WKT, or a `lon`/`lng`/`long`/`longitude`/`x` and
+`lat`/`latitude`/`y` column pair.
 
-These two make DuckDB a force multiplier rather than a side panel.
+## The `sql_query` viewer command
 
-## Implemented scope
-
-### Phase 1: foundation
-1. Add `@duckdb/duckdb-wasm` dependency.
-2. New module `src/duckdb/`:
-   - `index.ts` — public API: `getDb()`, `query(sql)`, `attachLayer(layerId)`, `close()`.
-   - `worker.ts` — owns the `AsyncDuckDB` instance, runs in a Web Worker, lazy-initialised on first call.
-   - `loaders.ts` — helpers to attach GeoJSON / GeoParquet / FlatGeobuf / current map layers as tables.
-   - `spatial.ts` — ensures `INSTALL spatial; LOAD spatial;` runs once per connection.
-3. Wire `runtime.data.query()` in [runtime.ts](../src/notebooks/runtime.ts) to call into the module.
-
-### Phase 2: notebook SQL cells
-4. Add `'sql'` to `CellType` in [types.ts](../src/notebooks/types.ts).
-5. Add `executeSqlCell()` in `runtime.ts`.
-6. Render Arrow result tables in [NotebookPanel.tsx](../src/notebooks/NotebookPanel.tsx) using the existing data-table component.
-
-### Phase 3: map bridge
-7. `queryAsGeoJson` in [spatial.ts](../src/duckdb/spatial.ts) detects geometry columns (WKB/WKT or lon/lat pairs).
-8. "Show on map" button on SQL cell results when a geometry column is detected.
-
-### Phase 4: agent integration
-9. Registered `sql_query` viewer command in [sqlCommand.ts](../src/duckdb/sqlCommand.ts). The GeoLang agent emits this over its SSE `viewer_cmd` channel.
-
-**Protocol — `sql_query` viewer command**
+The agent sends it as an AG-UI custom event named `viewer_cmd`:
 
 ```json
 {
-  "type": "viewer_cmd",
-  "cmd": {
-    "action": "sql_query",
-    "params": {
-      "sql": "SELECT name, ST_Point(lon, lat) AS geom FROM parcels WHERE acres > 10",
-      "show_on_map": true,
-      "color": "#ff8800",
-      "fit": true
-    }
+  "action": "sql_query",
+  "params": {
+    "sql": "SELECT name, ST_Point(lon, lat) AS geom FROM parcels WHERE acres > 10",
+    "show_on_map": true,
+    "color": "#ff8800",
+    "fit": true
   }
 }
 ```
 
-Frontend behaviour:
-- Runs the SQL against the in-browser DuckDB.
-- If `show_on_map` (default `true`), converts to GeoJSON via `queryAsGeoJson` and adds it to the agent layer store, which Cesium, MapLibre and Leaflet all draw (auto-fits when `fit: true`).
-- Stashes a result summary (`sql`, `rowCount`, `columns`, `sample` first 5 rows) on `window.__viewtopiaSqlResults` (ring buffer of 20).
-- Dispatches a `viewtopia:sql_result` or `viewtopia:sql_error` CustomEvent for any UI/agent-roundtrip code to hook.
+The viewer:
 
-Server-side note: the GeoLang agent needs a `sql_query` tool that returns this command. Round-tripping result rows back to the agent for follow-up reasoning is not yet implemented — the agent would need to either re-emit a refined SQL or call a new HTTP endpoint that reads `window.__viewtopiaSqlResults`. Defer until the use case demands it.
-
-### Phase 5: standalone workbench
-10. [SqlWorkspaceTab.tsx](../src/features/dataSources/SqlWorkspaceTab.tsx), a tab in the Data Sources panel. It shares the notebook's DuckDB instance and exports a result as CSV or GeoParquet.
-
-## Architecture
-
-```
-src/duckdb/
-  index.ts            // public API
-  worker.ts           // AsyncDuckDB owner, bundle selection (eh vs mvp)
-  loaders.ts          // attach helpers
-  spatial.ts          // spatial extension bootstrap
-```
-
-- **Singleton AsyncDuckDB** in a Web Worker. Lazy init.
-- **Bundle selection**: prefer the `eh` (exception-handling) build, fall back to `mvp`. Use Vite's worker/url imports.
-- **Spatial extension**: `INSTALL spatial; LOAD spatial;` on connect.
-- **Concurrency**: a single shared connection is fine for v1. Per-query connections later if needed.
-
-## Data ingress
-
-| Source | Path |
-|---|---|
-| Current map layers | `attachLayer(layerId)` — in-memory GeoJSON → Arrow → registered table |
-| GeoParquet URL | `read_parquet('https://...')` direct |
-| FlatGeobuf / Shapefile | spatial extension `ST_Read(...)` |
-| GeoJSON URL | fetch + register as Arrow |
-| Ptolemy / Fenestra | use existing `backends.js` / `ogc-layers.js`, register response as Arrow |
-| PMTiles | deferred — requires custom UDF or local extract |
-
-## Deferred / out of scope
-
-- OPFS-persistent dataset catalog
-- Write-back to Ptolemy
-- Python interop via DuckDB (we have Jupyter at [jupyter.ts](../src/notebooks/jupyter.ts) for that need)
-
-## Risks
-
-- **Bundle size**: DuckDB-WASM is ~5 MB. Mitigation: load only on first SQL use (worker is lazy).
-- **Cross-origin isolation**: DuckDB-WASM needs SharedArrayBuffer for some features. Verify Vite dev server and the deployed CDN headers (`COOP`/`COEP`). Fall back to non-SAB mode if needed.
-- **Spatial extension availability**: hosted ourselves. `scripts/fetch-duckdb-extensions.mjs` (the `prebuild` hook) downloads spatial for the pinned DuckDB version into `public/duckdb-extensions/`, and the worker points `custom_extension_repository` at the app origin, falling back to extensions.duckdb.org only if the origin copy is missing.
+- runs the SQL against the in-browser DuckDB
+- when `show_on_map` is not `false`, converts the result with `queryAsGeoJson`
+  and adds it as an agent layer, which Cesium, MapLibre and Leaflet all draw,
+  framing it unless `fit` is `false`
+- keeps a summary (`sql`, `rowCount`, `columns`, the first 5 rows as `sample`)
+  in `window.__viewtopiaSqlResults`, a ring buffer of 20
+- dispatches `viewtopia:sql_result` or `viewtopia:sql_error` on `window`
 
 ## Not implemented
 
-Returning SQL result rows to the agent for follow-up reasoning. A query
-publishes a summary to a window event and a global ring buffer, both read by the
-UI, never sent back to the model as a turn.
+- Returning SQL result rows to the agent for follow-up reasoning. The summary
+  goes to a window event and the ring buffer, both read by the UI, never sent
+  back to the model as a turn.
+- Attaching a map layer that did not come from a DuckDB import. `registerGeoJson`
+  exists in `loaders.ts` but nothing calls it.
+- PMTiles in SQL, an OPFS-persistent catalog, and write-back to Ptolemy.
+
+## Bundle size
+
+DuckDB-WASM is several MB. The worker only starts on the first query, and the
+service worker leaves the DuckDB workers out of its precache.

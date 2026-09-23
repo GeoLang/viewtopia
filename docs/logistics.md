@@ -24,28 +24,18 @@ created locally and read by one Space-Time analysis.
 
 ## Quick Start
 
-### 1. Start services
+The panels call `/api/geocode/forward` and `/api/delivery/optimize`
+same-origin, and only the platform stack's nginx on 5174 routes those to
+geokode and itinera. So bring up the stack on the region you deliver in, from
+the `viewtopia/` checkout:
 
 ```bash
-cd ptolemy && docker compose up -d
-
-# Start routing service
-cd itinera && cargo run --release -p itinera-server -- --port 3002
-
-# Start geocoding service (import address data first)
-cd geokode && cargo run --release -p geokode-server -- --port 3001
+bash scripts/platform-up.sh https://download.geofabrik.de/europe/monaco-latest.osm.pbf
 ```
 
-### 2. Start frontend
-
-```bash
-cd viewtopia
-pnpm install && pnpm run dev
-```
-
-There is nothing to configure. The panels call `/api/geocode/forward` and
-`/api/delivery/optimize` same-origin, and the dev server proxies those to the
-platform stack. The plugin declares one setting, `maxStops`.
+Open http://localhost:5174, or run `pnpm run dev` for the dev server on 5173,
+which proxies to the stack. There is nothing to configure. The plugin declares
+one setting, `maxStops`, which nothing reads.
 
 ## Features
 
@@ -57,16 +47,18 @@ platform stack. The plugin declares one setting, `maxStops`.
 
 ### Delivery Management (DeliveryPanel)
 - **Create delivery routes** with multiple stops
-- **Address geocoding** — type address, auto-resolve coordinates
-- **Route optimization** — reorders stops for shortest path (TSP/VRP via itinera)
-- **Progress tracking** — check off completed deliveries
+- **Address geocoding**: type address, auto-resolve coordinates
+- **Route optimization**: itinera reorders the stops by nearest neighbour plus 2-opt over great-circle distances
+- **Progress tracking**: check off completed deliveries
 - **Distance & time estimates** after optimization
 - Click any stop to fly to it on map
 
-### Route Optimization (itinera VRP)
-- `POST /api/delivery/optimize` returns a visit order and a haversine distance
+### Route Optimization (itinera)
+- `POST /api/delivery/optimize` returns a visit order and a haversine distance,
+  and a duration at a fixed 30 km/h
 - No road geometry comes back, so the drawn line is straight segments
-- The stop count is capped by the plugin's `maxStops` setting, 50 by default
+- The plugin declares a `maxStops` setting, 50 by default, but nothing reads it,
+  so the stop count has no cap
 
 ### Geofencing (GeofencePanel)
 - Name a fence and give it a centre and a radius
@@ -77,27 +69,27 @@ platform stack. The plugin declares one setting, `maxStops`.
 - No renderer draws a fence
 
 ### Additional Tools (existing)
-- **RoutingPanel** — turn-by-turn directions
-- **TrafficPanel** — traffic overlay from your own provider tiles (TomTom/HERE key), or a zero-config demo mode coloring OSM roads by synthetic congestion
-- **HeatmapPanel** — delivery density visualization
-- **Isochrones** — service area planning (5/10/15 min drive-time)
+- **RoutingPanel**: a route line with distance and duration, from itinera or the public OSRM demo. There are no turn-by-turn instructions
+- **TrafficPanel**: traffic overlay from your own provider tiles (TomTom/HERE key), or a zero-config demo mode coloring OSM roads by synthetic congestion
+- **HeatmapPanel**: delivery density visualization
+- **Travel Time**: service area bands from itinera, 5, 10 and 15 minutes by default
 
 ## Comparison with Alternatives
 
 | Feature | Esri Fleet | HERE Fleet | Samsara | GeoLang |
 |---------|-----------|-----------|---------|-----------|
-| Real-time tracking | ✅ | ✅ | ✅ | ❌ |
-| Route optimization | ✅ | ✅ | ✅ | ✅ |
-| Geofencing | ✅ | ✅ | ✅ | partial |
-| Multi-stop delivery | ✅ | ✅ | ✅ | ✅ |
-| Drive-time isochrones | ✅ | ✅ | ❌ | ✅ |
-| Self-hosted | ❌ | ❌ | ❌ | ✅ |
-| No per-vehicle fee | ❌ | ❌ | ❌ | ✅ |
-| Open source | ❌ | ❌ | ❌ | ✅ |
-| Custom GPS hardware | ⚠️ | ⚠️ | ✅ | ❌ |
-| Traffic overlay | ✅ | ✅ | ✅ | partial |
-| Address lookup | ✅ | ✅ | ❌ | ✅ |
-| 3D visualization | ✅ | ❌ | ❌ | ✅ |
+| Real-time tracking | yes | yes | yes | no |
+| Route optimization | yes | yes | yes | partial |
+| Geofencing | yes | yes | yes | partial |
+| Multi-stop delivery | yes | yes | yes | yes |
+| Drive-time isochrones | yes | yes | no | yes |
+| Self-hosted | no | no | no | yes |
+| No per-vehicle fee | no | no | no | yes |
+| Open source | no | no | no | yes |
+| Custom GPS hardware | limited | limited | yes | no |
+| Traffic overlay | yes | yes | yes | partial |
+| Address lookup | yes | yes | no | yes |
+| 3D visualization | yes | no | no | yes |
 
 ## License
 

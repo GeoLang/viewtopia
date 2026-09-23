@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ViewTopia — Unified Geospatial Viewer</title>
+<title>ViewTopia, the GeoLang web viewer</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#c9d1d9;--heading:#f0f6fc;--accent:#a78bfa;--accent2:#3fb950;--muted:#8b949e;--red:#f85149;--purple:#7c3aed}
@@ -51,7 +51,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <header>
 <div class="container">
 <h1>ViewTopia</h1>
-<p class="tagline">Unified geospatial viewer: tiletopia's 3D globe and geolang's AI spatial analysis in one interface.</p>
+<p class="tagline">The GeoLang web viewer: a Cesium globe, MapLibre and Leaflet maps, a chat agent that drives the map, and analysis tools that run in the browser.</p>
 <div class="badges">
 <a href="https://github.com/GeoLang/viewtopia"><img src="https://img.shields.io/github/stars/GeoLang/viewtopia?style=flat-square&color=7c3aed" alt="Stars"></a>
 <a href="https://github.com/GeoLang/viewtopia/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-7c3aed?style=flat-square" alt="License"></a>
@@ -74,8 +74,8 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <div class="stat"><div class="num">3</div><div class="label">Renderers</div></div>
 <div class="stat"><div class="num">20</div><div class="label">Plugins</div></div>
 <div class="stat"><div class="num">11</div><div class="label">QGIS Ports</div></div>
-<div class="stat"><div class="num">4</div><div class="label">Space-Time panel surfaces</div></div>
-<div class="stat"><div class="num">2384</div><div class="label">Unit Tests</div></div>
+<div class="stat"><div class="num">8</div><div class="label">Space-Time analyses</div></div>
+<div class="stat"><div class="num">58</div><div class="label">Chat actions</div></div>
 <div class="stat"><div class="num">$0</div><div class="label">Per month</div></div>
 </div>
 </div>
@@ -86,7 +86,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <h2>Features</h2>
 <div class="grid">
 <div class="card">
-<h3>🌍 3D Globe</h3>
+<h3>3D Globe</h3>
 <ul>
 <li>CesiumJS with real-time tile streaming</li>
 <li>deck.gl layers interleaved into MapLibre</li>
@@ -97,18 +97,18 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 </ul>
 </div>
 <div class="card">
-<h3>🗺️ 2D Map</h3>
+<h3>2D Map</h3>
 <ul>
 <li>Leaflet with dark basemap</li>
 <li>GeoJSON layers with popups</li>
 <li>Marker clustering</li>
 <li>Choropleth styling &amp; legends</li>
 <li>Draw tools (polygon, line, rectangle)</li>
-<li>Click-to-query AI integration</li>
+<li>The picked feature's attributes go to the agent</li>
 </ul>
 </div>
 <div class="card">
-<h3>🤖 AI Chat Agent</h3>
+<h3>AI Chat Agent</h3>
 <ul>
 <li>Natural language spatial analysis</li>
 <li>AG-UI event stream from <code>/chat/agui</code></li>
@@ -116,12 +116,14 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <li>SQL, routing, and any QGIS processing algorithm by id</li>
 <li>Agent loop runs in sibyl (Rust)</li>
 <li>Auto-renders maps from chat</li>
-<li>55 typed viewer actions the chat can run</li>
+<li>58 typed viewer actions the chat can run</li>
+<li>Replies render as Markdown</li>
+<li>A dropped file is also uploaded for the agent's tools</li>
 <li>Chat-only mode at <code>?mode=chat</code></li>
 </ul>
 </div>
 <div class="card">
-<h3>💾 Session Persistence</h3>
+<h3>Session Persistence</h3>
 <ul>
 <li>Chat history survives refresh</li>
 <li>Click any old response to replay</li>
@@ -131,7 +133,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 </ul>
 </div>
 <div class="card">
-<h3>🔄 2D ↔ 3D Sync</h3>
+<h3>2D ↔ 3D Sync</h3>
 <ul>
 <li>Layers auto-sync between views</li>
 <li>Camera position transfers on tab switch</li>
@@ -140,7 +142,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 </ul>
 </div>
 <div class="card">
-<h3>📊 Multi-Format Data</h3>
+<h3>Multi-Format Data</h3>
 <ul>
 <li>Drop GeoJSON, GeoPackage, Shapefile, CSV, KML, GPX</li>
 <li>FlatGeobuf and GeoParquet through DuckDB spatial</li>
@@ -151,7 +153,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 </ul>
 </div>
 <div class="card">
-<h3>🎨 Multi-Renderer</h3>
+<h3>Multi-Renderer</h3>
 <ul>
 <li>CesiumJS (globe, terrain, 3D Tiles)</li>
 <li>MapLibre GL (vector tiles, deck.gl overlays interleaved)</li>
@@ -161,7 +163,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 </ul>
 </div>
 <div class="card">
-<h3>📐 Drawing &amp; Measurement</h3>
+<h3>Drawing &amp; Measurement</h3>
 <ul>
 <li>Polygon, polyline, rectangle, marker</li>
 <li>Area &amp; distance measurement</li>
@@ -170,16 +172,16 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 </ul>
 </div>
 <div class="card">
-<h3>📍 Click-to-Query</h3>
+<h3>Feature Info</h3>
 <ul>
-<li>Click any map location to analyze</li>
-<li>Sends lat/lon to AI agent</li>
-<li>Elevation, flood risk, amenities</li>
-<li>Toast notification on click</li>
+<li>Click a feature to list its attributes</li>
+<li>The agent is told which feature you picked last</li>
+<li>Right-click: copy coordinates, drop a pin, route from or to here</li>
+<li>Isochrone from a point, bookmark the view</li>
 </ul>
 </div>
 <div class="card">
-<h3>🔍 Map Search</h3>
+<h3>Map Search</h3>
 <ul>
 <li>Search through geokode, public Nominatim as fallback</li>
 <li>Fly to searched location</li>
@@ -188,7 +190,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 </ul>
 </div>
 <div class="card">
-<h3>🌙 Dark Interface</h3>
+<h3>Dark Interface</h3>
 <ul>
 <li>Custom dark theme for all components</li>
 <li>Purple accent throughout</li>
@@ -197,7 +199,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 </ul>
 </div>
 <div class="card">
-<h3>📸 Export &amp; Sharing</h3>
+<h3>Export &amp; Sharing</h3>
 <ul>
 <li>PNG screenshot of current view</li>
 <li>Basemap selector (Streets/Satellite/Topo)</li>
@@ -206,17 +208,17 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 </ul>
 </div>
 <div class="card">
-<h3>🦆 In-Browser SQL</h3>
+<h3>In-Browser SQL</h3>
 <ul>
 <li>DuckDB-WASM with the spatial extension</li>
-<li>Query GeoJSON, Parquet, and CSV in place</li>
+<li>Query imported files and Parquet or CSV URLs</li>
 <li>Results render straight to the map</li>
-<li>SQL notebook cells</li>
-<li>Agent emits <code>sql_query</code> over SSE</li>
+<li>SQL notebook cells, export to CSV or GeoParquet</li>
+<li>The agent runs SQL through the <code>sql_query</code> command</li>
 </ul>
 </div>
 <div class="card">
-<h3>⛰️ Terrain Analysis</h3>
+<h3>Terrain Analysis</h3>
 <ul>
 <li>Viewshed and flood level modelling</li>
 <li>Slope, aspect, hillshade, contours</li>
@@ -225,16 +227,16 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 </ul>
 </div>
 <div class="card">
-<h3>📓 Notebooks &amp; Dashboards</h3>
+<h3>Notebooks &amp; Dashboards</h3>
 <ul>
-<li>JavaScript and SQL cells run in the browser</li>
+<li>SQL cells run DuckDB in the browser</li>
 <li>Python cells on the bundled Jupyter service</li>
 <li>Dashboard chart and map widgets, stored against the project</li>
 <li>Portal item catalog with sharing levels</li>
 </ul>
 </div>
 <div class="card">
-<h3>🌦️ Live Context Layers</h3>
+<h3>Live Context Layers</h3>
 <ul>
 <li>Weather and wind via open-meteo (no key)</li>
 <li>Routing via itinera, OSRM demo fallback</li>
@@ -248,11 +250,11 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 
 <section>
 <div class="container">
-<h2>🤝 Real-Time Collaboration</h2>
+<h2>Real-Time Collaboration</h2>
 <p style="color:var(--muted)">Two separate things: a room for presence and chat, and a live map that peers hold together.</p>
 <div class="grid">
 <div class="card">
-<h3>👥 Rooms</h3>
+<h3>Rooms</h3>
 <ul>
 <li>Enter a display name and any room id to join</li>
 <li>Online user list with coloured indicators</li>
@@ -261,25 +263,27 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 </ul>
 </div>
 <div class="card">
-<h3>👁️ Live maps and camera-follow</h3>
+<h3>Live maps and camera-follow</h3>
 <ul>
 <li>Peer cursors and camera-follow belong to a live map, not a room</li>
 <li>Start a live session, then click a peer avatar in the header to follow</li>
 <li>Every member loads the same layers and tilesets</li>
 <li>A share link carries view or edit access</li>
+<li>Comment threads pinned to the map, with mentions</li>
+<li>Editors undo their own edits with Ctrl+Z</li>
 </ul>
 </div>
 <div class="card">
-<h3>⚙️ Configuration</h3>
+<h3>Configuration</h3>
 <ul>
-<li>The tiletopia API URL goes in the Settings panel</li>
+<li>The tiletopia API URL in Settings defaults to <code>/api/v1</code> on the stack</li>
 <li>Rooms connect to tiletopia's <code>/api/v1/realtime/{room}</code> socket</li>
 <li>The session JWT rides in the subprotocol, <code>['bearer', jwt]</code></li>
 <li>The server stamps <code>user_id</code> from the JWT <code>sub</code> on every relayed frame</li>
 </ul>
 </div>
 <div class="card">
-<h3>🔭 Region watch</h3>
+<h3>Region watch</h3>
 <ul>
 <li>Draw a region over a geoplumb layer and pick a reducer</li>
 <li>Agora runs it on its own schedule and keeps the readings</li>
@@ -293,11 +297,11 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 
 <section>
 <div class="container">
-<h2>🔌 Plugin System</h2>
-<p style="color:var(--muted)">Extensible file-based plugin architecture. Build-time discovery finds folders in <code>src/plugins/</code>, then the runtime loads their panels.</p>
+<h2>Plugin System</h2>
+<p style="color:var(--muted)">Build-time discovery finds plugin folders in <code>src/plugins/</code>, and the Plugin Manager installs more from a registry while the app runs.</p>
 <div class="grid">
 <div class="card">
-<h3>⚡ Zero Config</h3>
+<h3>Zero Config</h3>
 <ul>
 <li>Create folder + index.tsx → done</li>
 <li>Vite import.meta.glob build-time discovery</li>
@@ -306,16 +310,16 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 </ul>
 </div>
 <div class="card">
-<h3>🧰 Plugin SDK</h3>
+<h3>Plugin SDK</h3>
 <ul>
-<li><code>ctx.map</code> — flyTo, addGeoJsonLayer, fitBounds</li>
-<li><code>ctx.store</code> — layers, basemap, renderer state</li>
-<li><code>ctx.api</code> — proxied fetch to backends</li>
-<li><code>ctx.settings</code> — persisted key-value per plugin</li>
+<li><code>ctx.map</code>: flyTo, addGeoJsonLayer, fitBounds, onMapClick</li>
+<li><code>ctx.store</code>: layers, basemap, renderer state</li>
+<li><code>ctx.api</code>: proxied fetch to backends</li>
+<li><code>ctx.settings</code>: persisted key-value per plugin</li>
 </ul>
 </div>
 <div class="card">
-<h3>⚙️ Settings Schema</h3>
+<h3>Settings Schema</h3>
 <ul>
 <li>Declare settings in plugin definition</li>
 <li>Auto-rendered UI in Settings panel</li>
@@ -324,9 +328,9 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 </ul>
 </div>
 <div class="card">
-<h3>🏢 Built-in Plugins</h3>
+<h3>Built-in Plugins</h3>
 <ul>
-<li>Real Estate — parcels, comps, split/merge</li>
+<li>Real Estate: parcels, comps, split/merge</li>
 <li>Logistics, delivery optimization. The fleet tab has no feed to show</li>
 <li>Environmental, sensor inventory from a configured dataset</li>
 <li>Construction, Agriculture, Telecom, Emergency</li>
@@ -334,7 +338,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 </ul>
 </div>
 <div class="card">
-<h3>📦 Runtime Install</h3>
+<h3>Runtime Install</h3>
 <ul>
 <li>More → Plugin Manager installs from a registry document</li>
 <li>Never from a URL a user pastes</li>
@@ -349,14 +353,14 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 
 <section>
 <div class="container">
-<h2>📡 Offline-First & Conflict Resolution</h2>
+<h2>Offline-First & Conflict Resolution</h2>
 <p style="color:var(--muted)">Some browser state survives reloads. The client attempts queued operations when it reconnects. Only Dataset Editor feature edits are queued.</p>
 <div class="grid">
 <div class="card">
 <h3>Local-First Storage</h3>
 <ul>
 <li>Offline browser state uses IndexedDB and localStorage. Not all reads work without network</li>
-<li>Mutations queued in an operation log</li>
+<li>Dataset Editor feature edits queue in an operation log</li>
 <li>API responses cached with TTL for offline fallback</li>
 </ul>
 </div>
@@ -364,9 +368,9 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <h3>Automatic Sync</h3>
 <ul>
 <li>Attempts to push pending changes after reconnect</li>
-<li>FIFO queue with retry and exponential backoff</li>
+<li>Oldest first, and a server error stops the pass until the next sync</li>
 <li>Real-time indicator: pending/synced/offline</li>
-<li>Pre-cache tiles for an area (bbox + zoom range)</li>
+<li>Save basemap tiles for the current view and a few zoom levels deeper</li>
 <li>Tiles are capped at 200 MB, and only tiles outside a saved area are dropped</li>
 </ul>
 </div>
@@ -392,7 +396,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 
 <section>
 <div class="container">
-<h2>📁 Projects & Workspaces</h2>
+<h2>Projects & Workspaces</h2>
 <p style="color:var(--muted)">Ptolemy stores project and workspace metadata, and ViewTopia reads and mutates it through authenticated <code>/api/v1</code> calls. Map snapshots, overlay bitmaps and dashboards are stored against the project too, so every member opens the same map.</p>
 <div class="grid">
 <div class="card">
@@ -421,7 +425,9 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <li>Owners manage direct members, pending invite links, and deletion</li>
 <li>Invite links expire after seven days and grant editor or viewer access</li>
 <li>Only token hashes are stored server-side</li>
-<li>Owners add known users by JWT subject. There is no email delivery or user directory</li>
+<li>Owners add known users by JWT subject. There is no user directory</li>
+<li>With SMTP set on ptolemy, the invite link can be emailed</li>
+<li>A dataset attached to a project takes the project's roles</li>
 <li>The server enforces roles. UI hiding is secondary</li>
 </ul>
 </div>
@@ -487,104 +493,104 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 
 <section>
 <div class="container">
-<h2>🔌 QGIS Plugin Equivalents</h2>
-<p style="color:var(--muted);margin-bottom:20px">Eleven of the most-downloaded QGIS plugins have an equivalent here, and each one runs in the browser with no desktop install.</p>
+<h2>QGIS Plugin Equivalents</h2>
+<p style="color:var(--muted);margin-bottom:20px">Eleven widely used QGIS plugins have an equivalent here, and each one runs in the browser with no desktop install.</p>
 <div class="grid">
 <div class="card">
-<h3>📍 Basemap Catalog</h3>
+<h3>Basemap Catalog</h3>
 <ul>
-<li>30+ tile providers in one click</li>
-<li>Streets, satellite, terrain, topo, dark, specialty</li>
+<li>30 tile providers in one click</li>
+<li>Streets, satellite, terrain, topo, light, dark, specialty</li>
 <li>Category filter + search</li>
-<li>Replaces: QuickMapServices (11.3M downloads)</li>
+<li>Replaces: QuickMapServices</li>
 </ul>
 </div>
 <div class="card">
-<h3>🗺️ OSM Downloader</h3>
+<h3>OSM Downloader</h3>
 <ul>
 <li>Overpass API with 12 preset queries</li>
 <li>Custom Overpass QL editor</li>
 <li>Auto-converts to GeoJSON layers</li>
-<li>Replaces: QuickOSM (3M downloads)</li>
+<li>Replaces: QuickOSM</li>
 </ul>
 </div>
 <div class="card">
-<h3>📍 Point Sampling</h3>
+<h3>Point Sampling</h3>
 <ul>
 <li>Sample several layers at a set of points</li>
 <li>Export the sampled table as CSV</li>
-<li>Replaces: Point Sampling Tool (662K downloads)</li>
+<li>Replaces: Point Sampling Tool</li>
 </ul>
 </div>
 <div class="card">
-<h3>📐 Coordinate Tools</h3>
+<h3>Coordinate Tools</h3>
 <ul>
 <li>Parse & convert DD, DMS, DDM, UTM, Geohash</li>
 <li>WKT and GeoJSON output formats</li>
 <li>Click-to-copy, fly-to, pick from map</li>
-<li>Replaces: Lat Lon Tools (1.7M downloads)</li>
+<li>Replaces: Lat Lon Tools</li>
 </ul>
 </div>
 <div class="card">
-<h3>📈 Terrain Profile</h3>
+<h3>Terrain Profile</h3>
 <ul>
 <li>Elevation profile with SVG mini-chart</li>
 <li>Distance, gain, loss statistics</li>
 <li>Open-Elevation API for DEM lookup</li>
-<li>Replaces: Profile tool (1.6M downloads)</li>
+<li>Replaces: Profile tool</li>
 </ul>
 </div>
 <div class="card">
-<h3>🖼️ Export Map</h3>
+<h3>Export Map</h3>
 <ul>
 <li>PNG or JPEG of the current view</li>
 <li>Standalone HTML with an embed snippet</li>
-<li>Replaces: qgis2web (1.6M downloads)</li>
+<li>Replaces: qgis2web</li>
 </ul>
 </div>
 <div class="card">
-<h3>🔬 Raster Classification</h3>
+<h3>Raster Classification</h3>
 <ul>
 <li>K-means clustering in the browser</li>
 <li>The ISODATA option is that k-means with twice the iterations</li>
 <li>Class statistics and color-mapped output</li>
-<li>Replaces: Semi-Auto Classification (2.6M downloads)</li>
+<li>Replaces: Semi-Auto Classification</li>
 </ul>
 </div>
 <div class="card">
-<h3>📷 Street View</h3>
+<h3>Street View</h3>
 <ul>
 <li>Google Street View + Mapillary integration</li>
 <li>Embedded viewer with heading/pitch/FOV</li>
 <li>Synced with map click location</li>
-<li>Replaces: Street View (901K downloads)</li>
+<li>Replaces: Street View</li>
 </ul>
 </div>
 <div class="card">
-<h3>📂 KML Tools</h3>
+<h3>KML Tools</h3>
 <ul>
 <li>Import KML, KMZ, and GPX files</li>
 <li>Export GeoJSON as KML for Google Earth</li>
 <li>Auto-zoom to imported extent</li>
-<li>Replaces: KML Tools (771K downloads)</li>
+<li>Replaces: KML Tools</li>
 </ul>
 </div>
 <div class="card">
-<h3>⭕ Shape Tools</h3>
+<h3>Shape Tools</h3>
 <ul>
 <li>Geodesic circles, ellipses, sectors, arcs</li>
 <li>Lines of bearing, stars, regular polygons</li>
 <li>Configurable units and color</li>
-<li>Replaces: Shape Tools (669K downloads)</li>
+<li>Replaces: Shape Tools</li>
 </ul>
 </div>
 <div class="card">
-<h3>✏️ Advanced Sketching</h3>
+<h3>Advanced Sketching</h3>
 <ul>
 <li>Split and merge polygons</li>
 <li>Parallel offset, Bezier smooth, densify, simplify</li>
 <li>Reshape, orthogonalize, extend/trim and snap are shown disabled</li>
-<li>Replaces: Sketching Tools (669K downloads)</li>
+<li>Replaces: Sketching Tools</li>
 </ul>
 </div>
 </div>
@@ -601,14 +607,12 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <tr><th>Capability</th><th>ViewTopia</th><th>Cesium Ion Viewer</th><th>QGIS</th><th>kepler.gl</th><th>Google Earth</th></tr>
 </thead>
 <tbody>
-<tr><td>3D Globe (CesiumJS)</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="check">✅</td></tr>
-<tr><td>2D Map (Leaflet)</td><td class="check">✅</td><td class="cross">❌</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td></tr>
-<tr><td>AI chat agent</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
-<tr><td>MapLibre vector globe</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="check">✅ (deck.gl)</td><td class="cross">❌</td></tr>
-<tr><td>Open source</td><td class="check">✅ AGPL-3.0</td><td class="cross">❌</td><td class="check">✅ GPL</td><td class="check">✅ MIT</td><td class="cross">❌</td></tr>
-<tr><td>Self-hosted / offline</td><td class="check">✅</td><td class="cross">❌</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td></tr>
-<tr><td>Web-based (no install)</td><td class="check">✅</td><td class="cross">❌ (desktop)</td><td class="cross">❌</td><td class="check">✅</td><td class="cross">❌</td></tr>
-<tr><td><strong>Price</strong></td><td class="check"><strong>$0</strong></td><td class="cross">$150+/mo</td><td class="check">$0</td><td class="check">$0</td><td class="cross">$0 (limited)</td></tr>
+<tr><td>3D Globe (CesiumJS)</td><td class="check">yes</td><td class="check">yes</td><td class="cross">no</td><td class="cross">no</td><td class="check">yes</td></tr>
+<tr><td>2D Map (Leaflet)</td><td class="check">yes</td><td class="cross">no</td><td class="check">yes</td><td class="cross">no</td><td class="cross">no</td></tr>
+<tr><td>AI chat agent</td><td class="check">yes</td><td class="cross">no</td><td class="cross">no</td><td class="cross">no</td><td class="cross">no</td></tr>
+<tr><td>MapLibre vector globe</td><td class="check">yes</td><td class="cross">no</td><td class="cross">no</td><td class="check">yes (deck.gl)</td><td class="cross">no</td></tr>
+<tr><td>Open source</td><td class="check">yes, AGPL-3.0</td><td class="cross">no</td><td class="check">yes, GPL</td><td class="check">yes, MIT</td><td class="cross">no</td></tr>
+<tr><td>Self-hosted / offline</td><td class="check">yes</td><td class="cross">no</td><td class="check">yes</td><td class="check">yes</td><td class="cross">no</td></tr>
 </tbody>
 </table>
 </div>
@@ -617,31 +621,28 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <div class="card">
 <h3>vs Cesium Ion Viewer</h3>
 <ul>
-<li>Ion = cloud-only, no self-hosting</li>
-<li>No 2D map view or Leaflet integration</li>
+<li>No Leaflet map view</li>
 <li>No AI agent or chat interface</li>
-<li>No draw tools or click-to-query</li>
-<li>$150+/month — ViewTopia is free</li>
+<li>ViewTopia is free and self-hosted</li>
 </ul>
 </div>
 <div class="card">
 <h3>vs QGIS</h3>
 <ul>
-<li>QGIS = desktop GIS, not web-based</li>
-<li>Eleven of the most-downloaded QGIS plugins have an equivalent here</li>
-<li>AI-driven analysis + notebooks</li>
-<li>Real-time collaboration built-in</li>
-<li>ViewTopia runs in the browser — no install</li>
+<li>QGIS is desktop GIS, not web-based</li>
+<li>Eleven widely used QGIS plugins have an equivalent here</li>
+<li>AI-driven analysis and notebooks</li>
+<li>Live maps shared between members</li>
+<li>ViewTopia runs in the browser with no install</li>
 </ul>
 </div>
 <div class="card">
 <h3>vs kepler.gl</h3>
 <ul>
-<li>kepler.gl = deck.gl-only, no globe</li>
+<li>kepler.gl draws with deck.gl only</li>
 <li>No AI chat or natural language</li>
 <li>No CesiumJS or 3D Tiles</li>
-<li>No session management</li>
-<li>ViewTopia has 3 renderers + AI</li>
+<li>ViewTopia has 3 renderers and a chat agent</li>
 </ul>
 </div>
 </div>
@@ -695,24 +696,24 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 │   ├── components/
 │   │   ├── ViewerArea.tsx   # Renderer host, 2D ↔ 3D switching
 │   │   ├── ChatPanel.tsx    # AI chat over AG-UI, with persistence
-│   │   ├── tools/           # Tool panels (measure, terrain, SQL, …)
+│   │   ├── tools/           # Tool panels (measure, terrain, routing, …)
 │   │   └── layers/          # Layer tree and styling
 │   ├── viewer/
 │   │   ├── registry.ts      # Live Cesium/MapLibre/deck instances
 │   │   ├── commands.ts      # Unified agent command protocol
 │   │   ├── addTileset.ts    # 3D Tiles and terrain onto the globe
 │   │   └── uiSpec.ts        # Draw the agent's map spec. A table or image spec is dropped
-│   ├── actions/             # The 55 named viewer actions the chat runs
+│   ├── actions/             # The 58 named viewer actions the chat runs
 │   ├── services/            # geocode.ts, route.ts: backend clients
 │   ├── duckdb/              # DuckDB-WASM: SQL over local data
 │   ├── toolbox/             # Geoprocessing ops, topoi compiled to WASM
 │   ├── raster/              # COG loader, NDVI, hillshade, contours
-│   ├── live/                # Live maps, sensor feeds, region watches
+│   ├── live/                # Live maps, comments, sensor feeds, region watches
 │   ├── offline/             # IndexedDB, operation queue, conflict resolver
 │   ├── projects/            # Projects, workspaces, sharing, map sync
 │   ├── overlay/             # Image and PDF overlays, world files
 │   ├── speech/              # Dictation over the aavaaz service
-│   ├── notebooks/           # JS / SQL / Python (Jupyter) cells
+│   ├── notebooks/           # SQL, Python (Jupyter) and Markdown cells
 │   ├── features/
 │   │   ├── spacetime/       # Entities, tracks, analysis algorithms
 │   │   ├── dashboards/      # Chart + map widgets
@@ -729,7 +730,9 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 │   ├── unit/                # vitest
 │   └── e2e/                 # Playwright (react + live platform)
 └── docs/
-    └── index.html           # This page</pre>
+    ├── index.html           # This page
+    ├── platform.html        # The GeoLang platform page
+    └── *.md                 # Plugin, DuckDB and vertical guides</pre>
 </div>
 </section>
 
@@ -747,20 +750,16 @@ pnpm install
 pnpm run dev
 
 <span style="color:#475569"># Open http://localhost:5173</span>
-<span style="color:#475569"># Backends are optional — viewer adapts to what's available</span>
+<span style="color:#475569"># With no stack behind it the viewer still loads and probes each backend's health route</span>
 
-<span style="color:#475569"># Full platform: clone every repo, then one command for the rest</span>
-<span style="color:#475569"># (downloads an OSM extract, builds, waits healthy, seeds demo data)</span>
+<span style="color:#475569"># Full platform from source: clone every repo, then one script for the rest</span>
+<span style="color:#475569"># (writes the secrets, downloads an OSM extract, builds, waits, seeds demo data)</span>
 scripts/clone-geolang.sh ~/src/GeoLang
-<span style="color:#475569"># it skips agora and geoplumb, which the compose file builds: clone both by hand</span>
+cd ~/src/GeoLang/viewtopia
+touch ../geolang/.env   <span style="color:#475569"># model keys go here, it may stay empty</span>
 scripts/platform-up.sh
-
-<span style="color:#475569"># Or run a single backend: tiletopia (3D Tiles, terrain, analysis)</span>
-<span style="color:#475569"># it refuses to start without TILETOPIA_JWT_SECRET (32+ bytes)</span>
-cd ../tiletopia &amp;&amp; cargo run -- serve --port 3000
-
-<span style="color:#475569"># Or the AI agent: geolang serves the tools, sibyl runs the agent loop</span>
-cd ../geolang &amp;&amp; docker compose up -d --build</pre>
+<span style="color:#475569"># Open http://localhost:5174</span></pre>
+<p style="margin-top:12px">To run the platform without building it, take the <code>geolang-platform</code> bundle from the <a href="https://github.com/GeoLang/viewtopia/releases">releases page</a>. It runs every service from published images and its README has the five commands.</p>
 </div>
 </section>
 

@@ -252,11 +252,11 @@ Properties the panel reads:
 |---|---|---|
 | `area_sqft` | number | used only when the row's `sqft` is absent |
 | `land_use` | string | blank |
-| `assessed_value` | number | `0` |
-| `market_value` | number | `0` |
+| `assessed_value` | number | hidden |
+| `market_value` | number | hidden |
 | `year_built` | number | hidden |
 | `building_sqft` | number | hidden |
-| `flood_zone` | string | `X` |
+| `flood_zone` | string | no flood badge |
 | `acres` | number | `0`, summed when merging parcels |
 
 `scripts/load-toronto.py` writes `apn`, `address`, `address_count`, `zoning`,
@@ -285,7 +285,7 @@ its centroid becomes the search origin.
 
 | Key | Type | Default | Read by the plugin |
 |---|---|---|---|
-| `parcelBranchId` | text | empty, meaning discover `demo_parcels` | yes |
+| `parcelBranchId` | text | empty, meaning discover `parcels`, then `demo_parcels` | yes |
 | `salesBranchId` | text | empty, meaning the sales dataset paired with the parcels dataset | yes |
 | `defaultRadius` | number | `1600` | no, the panel's radius slider starts at 0.5 miles |
 | `maxDays` | number | `365` | no, the panel's age input starts at 6 months |

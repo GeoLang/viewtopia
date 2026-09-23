@@ -76,9 +76,9 @@ separate Aavaaz checkout, so the bundle leaves that service out.
 - Whether the database connection verifies TLS rests on the connection string
   an operator sets, and `sslmode=require` buys encryption with no
   authentication because it accepts any certificate.
-- Four of the Rust services carry `cargo deny check advisories` findings with
-  no upstream fix published: ptolemy `rsa`, geodukt `quick-xml`, geokode
-  `protobuf` and itinera `bincode`.
+- Three of the Rust services carry `cargo deny check advisories` findings with
+  no upstream fix published: ptolemy `rsa`, geokode `protobuf` and itinera
+  `bincode`.
 
 ## What is in here
 
@@ -89,7 +89,11 @@ separate Aavaaz checkout, so the bundle leaves that service out.
   file. The stack bind-mounts these, so keep the directory beside the compose
   files.
 - `data/`, where the OSM extract goes. Routing writes its graph here too.
+- `.env.platform.example`, the two secrets with a comment each, if you would
+  rather fill them in by hand than run step 1.
+- `geolang.env.example`, the model settings, see [The agent](#the-agent).
 - `scripts/fetch-osm-extract.sh`, a geofabrik download checked against the
   published md5.
 - `scripts/seed-parcels.mjs`, an optional demo dataset of parcels and sales on
   your region: `node scripts/seed-parcels.mjs`. Node only, no install step.
+  `ptolemy-seed.mjs` and `platform-token.mjs` beside it are what it imports.
