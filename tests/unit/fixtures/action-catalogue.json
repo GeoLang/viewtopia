@@ -269,7 +269,7 @@
           "type": "object",
           "description": "The GeoJSON itself: a FeatureCollection, a Feature, or a bare geometry."
         },
-        "name": {
+        "layer_name": {
           "type": "string",
           "description": "Name for the layer."
         },
@@ -306,7 +306,7 @@
           "type": "string",
           "description": "Service URL. WMTS and XYZ take a {z}/{x}/{y} tile template."
         },
-        "name": {
+        "layer_name": {
           "type": "string",
           "description": "Name for the layer."
         }
@@ -314,7 +314,7 @@
       "required": [
         "type",
         "url",
-        "name"
+        "layer_name"
       ]
     },
     "reads": false,
@@ -330,7 +330,7 @@
           "type": "string",
           "description": "URL of the tileset.json to load."
         },
-        "name": {
+        "layer_name": {
           "type": "string",
           "description": "Name for the layer in the layer list."
         }
@@ -380,7 +380,7 @@
           "type": "string",
           "description": "URL of the file to import."
         },
-        "name": {
+        "layer_name": {
           "type": "string",
           "description": "Name for the layer, the file name by default."
         },
@@ -742,7 +742,7 @@
     "parameters": {
       "type": "object",
       "properties": {
-        "name": {
+        "feed_name": {
           "type": "string",
           "description": "What the feed is called."
         },
@@ -752,7 +752,7 @@
         }
       },
       "required": [
-        "name",
+        "feed_name",
         "interval_seconds"
       ]
     },
@@ -896,7 +896,7 @@
           "type": "number",
           "description": "How often to read the region, in seconds, 60 at the least. 3600 by default."
         },
-        "name": {
+        "watch_name": {
           "type": "string",
           "description": "What the watch is called. Named after the layer by default."
         },
@@ -1279,7 +1279,7 @@
           "type": "string",
           "description": "URL of the .csv or .parquet file."
         },
-        "name": {
+        "table_name": {
           "type": "string",
           "description": "Name to query it as, the file name by default."
         },

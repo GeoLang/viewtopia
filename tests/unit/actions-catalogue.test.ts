@@ -9,6 +9,8 @@ import { actionCatalogue } from '../../src/actions';
  * UPDATE_ACTION_CATALOGUE=1 to rewrite it after changing an action.
  */
 const FIXTURE = resolve('tests/unit/fixtures/action-catalogue.json');
+// viewer_control reads these as fields of its own call
+const VIEWER_CONTROL_FIELDS = ['action', 'name', 'args'];
 
 describe('the action catalogue fixture', () => {
   it('matches what the viewer sends with every chat message', () => {
@@ -28,5 +30,14 @@ describe('the action catalogue fixture', () => {
     expect(names).toContain('scenario.compare');
     expect(names).toContain('find_feature');
     expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('names no parameter after a field of the viewer_control call itself', () => {
+    const colliding = actionCatalogue().flatMap((entry) =>
+      Object.keys(entry.parameters.properties)
+        .filter((parameter) => VIEWER_CONTROL_FIELDS.includes(parameter))
+        .map((parameter) => `${entry.name}.${parameter}`),
+    );
+    expect(colliding).toEqual([]);
   });
 });

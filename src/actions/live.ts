@@ -169,7 +169,7 @@ registerAction({
   name: 'live.create_feed',
   description: 'Create a producer that may send readings into the live map.',
   parameters: {
-    name: { type: 'string', description: 'What the feed is called.', required: true },
+    feed_name: { type: 'string', description: 'What the feed is called.', required: true },
     interval_seconds: {
       type: 'number',
       description: 'How often the producer reports, in seconds.',
@@ -178,7 +178,7 @@ registerAction({
   },
   run: async (args) => {
     const documentId = joinedDocumentId();
-    const name = (args.name as string).trim();
+    const name = (args.feed_name as string).trim();
     const intervalSeconds = args.interval_seconds as number;
     if (name === '') throw new ActionError('a feed needs a name');
     if (intervalSeconds < MIN_FEED_INTERVAL_SECONDS) {
@@ -222,7 +222,7 @@ registerAction({
       type: 'number',
       description: `How often to read the region, in seconds, ${MINIMUM_WATCH_INTERVAL_SECONDS} at the least. ${DEFAULT_WATCH_INTERVAL_SECONDS} by default.`,
     },
-    name: { type: 'string', description: 'What the watch is called. Named after the layer by default.' },
+    watch_name: { type: 'string', description: 'What the watch is called. Named after the layer by default.' },
     bbox: {
       type: 'array',
       description:
@@ -246,7 +246,7 @@ registerAction({
       );
     }
     const watch = await createWatch(documentId, {
-      name: ((args.name as string) ?? `${reducer} of ${layer}`).trim(),
+      name: ((args.watch_name as string) ?? `${reducer} of ${layer}`).trim(),
       layer,
       region: watchRegion(args.bbox),
       reducer,

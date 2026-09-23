@@ -168,7 +168,7 @@ describe('live actions', () => {
       jsonResponse({ id: 'f-3', name: 'pumps', intervalSeconds: 15, token: 'feed-token' }),
     );
 
-    const result = await runAction('live.create_feed', { name: 'pumps', interval_seconds: 15 });
+    const result = await runAction('live.create_feed', { feed_name: 'pumps', interval_seconds: 15 });
 
     const [init] = requestsTo('/agora/documents/doc-1/feeds');
     expect(init.method).toBe('POST');
@@ -178,7 +178,7 @@ describe('live actions', () => {
 
   it('refuses a feed with no name', async () => {
     joined();
-    await expect(runAction('live.create_feed', { name: '  ', interval_seconds: 15 })).rejects.toThrow(
+    await expect(runAction('live.create_feed', { feed_name: '  ', interval_seconds: 15 })).rejects.toThrow(
       'a feed needs a name',
     );
   });
@@ -244,7 +244,7 @@ describe('live actions', () => {
       layer: 'ndvi_2026',
       reducer: 'mean',
       interval_seconds: 900,
-      name: 'ndvi drop',
+      watch_name: 'ndvi drop',
       bbox: [10, 40, 11, 41],
       threshold_op: 'lt',
       threshold_value: 0.3,

@@ -99,7 +99,7 @@ registerAction({
   description: 'Import a data file from a URL and draw it on the map.',
   parameters: {
     url: { type: 'string', description: 'URL of the file to import.', required: true },
-    name: { type: 'string', description: 'Name for the layer, the file name by default.' },
+    layer_name: { type: 'string', description: 'Name for the layer, the file name by default.' },
     format: {
       type: 'string',
       description: "The file's format, read from the URL by default.",
@@ -110,7 +110,7 @@ registerAction({
     const url = fetchableUrl(args.url as string);
     const fileName = importFileName(
       url,
-      args.name as string | undefined,
+      args.layer_name as string | undefined,
       args.format as string | undefined,
     );
     const status = await importUrlIntoViewer(url, fileName);
@@ -132,13 +132,13 @@ registerAction({
         'The GeoJSON itself: a FeatureCollection, a Feature, or a bare geometry.',
       required: true,
     },
-    name: { type: 'string', description: 'Name for the layer.' },
+    layer_name: { type: 'string', description: 'Name for the layer.' },
     color: { type: 'string', description: 'CSS colour for the features, blue by default.' },
   },
   run: (args) => {
     const geojson = toFeatureCollection(args.geojson);
     if (!geojson) throw new ActionError('that is not GeoJSON I can draw');
-    const name = typeof args.name === 'string' ? args.name : 'GeoJSON';
+    const name = typeof args.layer_name === 'string' ? args.layer_name : 'GeoJSON';
     useAgentLayerStore.getState().addLayer({
       id: crypto.randomUUID(),
       name,
@@ -164,11 +164,11 @@ registerAction({
       description: 'Service URL. WMTS and XYZ take a {z}/{x}/{y} tile template.',
       required: true,
     },
-    name: { type: 'string', description: 'Name for the layer.', required: true },
+    layer_name: { type: 'string', description: 'Name for the layer.', required: true },
   },
   run: async (args) => ({
     text: await addOgcService(
-      args.name as string,
+      args.layer_name as string,
       fetchableUrl(args.url as string),
       args.type as AddableServiceType,
     ),
@@ -180,12 +180,12 @@ registerAction({
   description: 'Load a 3D tileset from its URL onto the globe and fly the camera to it.',
   parameters: {
     url: { type: 'string', description: 'URL of the tileset.json to load.', required: true },
-    name: { type: 'string', description: 'Name for the layer in the layer list.' },
+    layer_name: { type: 'string', description: 'Name for the layer in the layer list.' },
   },
   run: async (args) => {
     const { name, failure } = await addTilesetToGlobe(
       fetchableUrl(args.url as string),
-      args.name as string | undefined,
+      args.layer_name as string | undefined,
     );
     if (failure === 'no-globe') throw new ActionError(NO_CESIUM_GLOBE);
     if (failure === 'not-drawn') {
@@ -308,7 +308,7 @@ registerAction({
   description: 'Attach a remote CSV or Parquet file as a table SQL can query.',
   parameters: {
     url: { type: 'string', description: 'URL of the .csv or .parquet file.', required: true },
-    name: { type: 'string', description: 'Name to query it as, the file name by default.' },
+    table_name: { type: 'string', description: 'Name to query it as, the file name by default.' },
     format: {
       type: 'string',
       description: "The file's format, read from the URL by default.",
@@ -318,7 +318,7 @@ registerAction({
   run: async (args) => {
     const view = await attachUrl(
       fetchableUrl(args.url as string),
-      args.name as string | undefined,
+      args.table_name as string | undefined,
       args.format as AttachFormat | undefined,
     );
     return { text: `Attached, query it as ${view}.` };

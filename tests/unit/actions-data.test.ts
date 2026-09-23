@@ -138,7 +138,7 @@ describe('data.import_url', () => {
   it('names the file from the given name and format when the URL carries neither', async () => {
     await runAction('data.import_url', {
       url: 'https://example.org/data/download?id=7',
-      name: 'roads',
+      layer_name: 'roads',
       format: '.geojson',
     });
 
@@ -164,7 +164,7 @@ describe('data.add_service', () => {
     const result = await runAction('data.add_service', {
       type: 'wms',
       url: 'https://example.org/wms',
-      name: 'Imagery',
+      layer_name: 'Imagery',
     });
 
     const layers = useOgcLayerStore.getState().layers;
@@ -177,7 +177,7 @@ describe('data.add_service', () => {
     const result = await runAction('data.add_service', {
       type: 'wfs',
       url: WFS_URL,
-      name: 'Parcels',
+      layer_name: 'Parcels',
     });
 
     expect(requested()[0]).toContain('request=GetFeature');
@@ -190,7 +190,7 @@ describe('data.add_service', () => {
       runAction('data.add_service', {
         type: 'wfs',
         url: 'https://example.org/absent',
-        name: 'Nothing',
+        layer_name: 'Nothing',
       }),
     ).rejects.toThrow('WFS returned 404');
 
@@ -200,7 +200,7 @@ describe('data.add_service', () => {
 
   it('refuses a service kind nobody can add by URL', async () => {
     await expect(
-      runAction('data.add_service', { type: 'tileset', url: WFS_URL, name: 'Built' }),
+      runAction('data.add_service', { type: 'tileset', url: WFS_URL, layer_name: 'Built' }),
     ).rejects.toThrow('type must be one of');
   });
 });
@@ -233,7 +233,7 @@ describe('data.add_tileset', () => {
   it('puts the tileset in the layers and flies the camera to it', async () => {
     const globe = onTheGlobe();
 
-    const running = runAction('data.add_tileset', { url: TILESET_URL, name: 'Quarry' });
+    const running = runAction('data.add_tileset', { url: TILESET_URL, layer_name: 'Quarry' });
     const layer = useTiles3dLayerStore.getState().layers[0];
     useTiles3dLayerStore.getState().setLoaded(layer.id, DRAWN);
     const result = await running;
@@ -258,7 +258,7 @@ describe('data.add_tileset', () => {
     onTheGlobe();
     vi.useFakeTimers();
 
-    const running = runAction('data.add_tileset', { url: TILESET_URL, name: 'Quarry' });
+    const running = runAction('data.add_tileset', { url: TILESET_URL, layer_name: 'Quarry' });
     const refused = expect(running).rejects.toThrow(
       `Quarry has not drawn within ${CHAT_TILESET_WAIT_SECONDS} seconds and is still loading in the layer list`,
     );
@@ -293,7 +293,7 @@ describe('data.add_tileset', () => {
 
   it('refuses a call with no URL', async () => {
     onTheGlobe();
-    await expect(runAction('data.add_tileset', { name: 'Quarry' })).rejects.toThrow('url is required');
+    await expect(runAction('data.add_tileset', { layer_name: 'Quarry' })).rejects.toThrow('url is required');
     expect(useTiles3dLayerStore.getState().layers).toEqual([]);
   });
 });
@@ -413,7 +413,7 @@ describe('data.add_geojson', () => {
   it('draws a bare geometry under the name it was given', async () => {
     const result = await runAction('data.add_geojson', {
       geojson: TRIANGLE,
-      name: 'Survey area',
+      layer_name: 'Survey area',
     });
 
     expect(layerNames()).toEqual(['Survey area']);
@@ -429,7 +429,7 @@ describe('data.add_geojson', () => {
           { type: 'Feature', geometry: TRIANGLE, properties: {} },
         ],
       },
-      name: 'Two areas',
+      layer_name: 'Two areas',
     });
 
     expect(useAgentLayerStore.getState().layers[0].geojson.features).toHaveLength(2);
@@ -456,7 +456,7 @@ describe('sql.attach_url', () => {
   it('takes the format and the name from the arguments', async () => {
     await runAction('sql.attach_url', {
       url: 'https://example.com/export',
-      name: 'Trips 2026',
+      table_name: 'Trips 2026',
       format: 'csv',
     });
 
@@ -505,7 +505,7 @@ describe('the URL scheme check', () => {
 
   describe('data.add_service', () => {
     it('adds a service at an https URL', async () => {
-      await runAction('data.add_service', { type: 'wfs', url: WFS_URL, name: 'Parcels' });
+      await runAction('data.add_service', { type: 'wfs', url: WFS_URL, layer_name: 'Parcels' });
 
       expect(requested()[0]).toContain(WFS_URL);
       expect(layerNames()).toEqual(['Parcels']);
@@ -514,7 +514,7 @@ describe('the URL scheme check', () => {
     for (const [shape, url] of refused('wfs')) {
       it(`refuses ${shape}`, async () => {
         await expect(
-          runAction('data.add_service', { type: 'wfs', url, name: 'Parcels' }),
+          runAction('data.add_service', { type: 'wfs', url, layer_name: 'Parcels' }),
         ).rejects.toThrow(REFUSAL);
 
         expect(fetchMock).not.toHaveBeenCalled();
@@ -538,7 +538,7 @@ describe('the URL scheme check', () => {
     it('loads a tileset at an https URL', async () => {
       const url = 'https://example.org/tiles/quarry/tileset.json';
 
-      const running = runAction('data.add_tileset', { url, name: 'Quarry' });
+      const running = runAction('data.add_tileset', { url, layer_name: 'Quarry' });
       const layer = useTiles3dLayerStore.getState().layers[0];
       useTiles3dLayerStore.getState().setLoaded(layer.id, DRAWN);
       await running;
@@ -548,7 +548,7 @@ describe('the URL scheme check', () => {
 
     for (const [shape, url] of refused('tileset.json')) {
       it(`refuses ${shape}`, async () => {
-        await expect(runAction('data.add_tileset', { url, name: 'Quarry' })).rejects.toThrow(
+        await expect(runAction('data.add_tileset', { url, layer_name: 'Quarry' })).rejects.toThrow(
           REFUSAL,
         );
 

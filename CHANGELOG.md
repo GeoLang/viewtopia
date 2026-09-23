@@ -21,6 +21,14 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-09-23: **no action parameter is called `name`.** viewer_control spends
+  `name` on the action itself, so a layer, feed, watch or table name sent as a
+  plain field replaced the action name and the viewer answered "There is no
+  viewer action named Soils". The parameter is now `layer_name` on
+  data.import_url, data.add_geojson, data.add_service and data.add_tileset,
+  `feed_name` on live.create_feed, `watch_name` on live.watch_region and
+  `table_name` on sql.attach_url. A catalogue test refuses `action`, `name`
+  and `args` as parameter names.
 - 2026-09-19: **the viewer image starts without its compose neighbours.** The
   Dockerfile's nginx resolved `tiletopia` and `geolang` at startup, so the image
   exited on any host where those names do not exist, Fargate included. The
