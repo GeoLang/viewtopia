@@ -2,11 +2,13 @@ import { useMemo, useState } from 'react';
 import { Button, Paper, ScrollArea, Slider, Stack, Table, Text } from '@mantine/core';
 import { IconFileTypePdf } from '@tabler/icons-react';
 import type { CompSale } from '../../components/tools/CompsPanel';
+import { useDealStore } from '../../features/deals/store';
 import { CAPTURE_REFUSAL, activeMapCapture } from '../../features/printLayout/capture';
 import { mapImageDataUrl } from '../../features/printLayout/imageExport';
 import { useAgentLayerStore } from '../../store/agentLayers';
 import {
   criterionLabel,
+  dealSiteScores,
   rankSites,
   siteShortlist,
   tradeAreaTable,
@@ -35,7 +37,10 @@ function liveMapImage(): MapImage | null {
 function ShortlistWeights({ shortlist, comps }: { shortlist: SiteShortlist; comps: CompSale[] }) {
   const [weights, setWeights] = useState(shortlist.weights);
   const [status, setStatus] = useState<string | null>(null);
-  const ranked = rankSites(shortlist.sites, weights);
+  const deal = useDealStore((s) => s.deal);
+  const dealScores =
+    deal && deal.shortlist.length > 0 ? dealSiteScores(shortlist.sites, deal.shortlist) : null;
+  const ranked = rankSites(dealScores?.sites ?? shortlist.sites, weights);
   const sliderMaximum = Math.max(MAXIMUM_WEIGHT, ...Object.values(shortlist.weights));
 
   const handleReport = () => {
@@ -58,8 +63,15 @@ function ShortlistWeights({ shortlist, comps }: { shortlist: SiteShortlist; comp
   return (
     <Stack gap="xs">
       <Text size="xs" c="dimmed">
-        {shortlist.layerName}
+        {dealScores
+          ? `The ${deal?.name} shortlist, scored from ${shortlist.layerName}.`
+          : `Every site in ${shortlist.layerName}. A deal shortlist narrows this to its sites.`}
       </Text>
+      {dealScores && dealScores.unscored.length > 0 && (
+        <Text size="xs" c="dimmed">
+          Not in {shortlist.layerName}: {dealScores.unscored.map((site) => site.label).join(', ')}
+        </Text>
+      )}
       {shortlist.criteria.map((criterion) => (
         <div key={criterion}>
           <Text size="xs">

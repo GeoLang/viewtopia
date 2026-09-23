@@ -1,3 +1,4 @@
+import type { ShortlistedSite } from '../../features/deals/deal';
 import type { AgentLayer } from '../../store/agentLayers';
 
 type SiteProperties = Record<string, unknown>;
@@ -167,6 +168,28 @@ export function rankSites(
     })
     .sort((first, second) => second.total - first.total)
     .map((site, index) => ({ ...site, rank: index + 1 }));
+}
+
+export interface DealSiteScores {
+  sites: ScoredSite[];
+  unscored: ShortlistedSite[];
+}
+
+function siteKey(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+// the tool rows carry no feature id, so a deal site matches the row named like its label
+export function dealSiteScores(scored: ScoredSite[], dealSites: ShortlistedSite[]): DealSiteScores {
+  const byName = new Map(scored.map((site) => [siteKey(site.name), site]));
+  const sites: ScoredSite[] = [];
+  const unscored: ShortlistedSite[] = [];
+  for (const dealSite of dealSites) {
+    const match = byName.get(siteKey(dealSite.label));
+    if (match) sites.push(match);
+    else unscored.push(dealSite);
+  }
+  return { sites, unscored };
 }
 
 export function criterionLabel(criterion: string): string {

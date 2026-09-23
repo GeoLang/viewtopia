@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AgentLayer } from '../../src/store/agentLayers';
 import {
+  dealSiteScores,
   rankSites,
   siteShortlist,
   tradeAreaTable,
@@ -103,5 +104,19 @@ describe('tradeAreaTable', () => {
 
     expect(table?.columns).toEqual(Object.keys(TRADE_AREA_ROWS[0]).filter((column) => column !== 'site'));
     expect(table?.rows.map((row) => row.site)).toEqual(['King West', 'Leslieville', 'Junction']);
+  });
+});
+
+describe('dealSiteScores', () => {
+  it('keeps the deal sites whose label names a scored site and lists the rest as unscored', () => {
+    const shortlist = siteShortlist([layer('site_scores', SCORE_SITES_ROWS)]);
+    const matched = dealSiteScores(shortlist?.sites ?? [], [
+      { featureId: 'parcel-1', label: ' junction ' },
+      { featureId: 'parcel-2', label: 'Liberty Village' },
+      { featureId: 'parcel-3', label: 'King West' },
+    ]);
+
+    expect(matched.sites.map((site) => site.name)).toEqual(['Junction', 'King West']);
+    expect(matched.unscored).toEqual([{ featureId: 'parcel-2', label: 'Liberty Village' }]);
   });
 });
