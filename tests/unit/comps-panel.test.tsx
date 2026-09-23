@@ -30,7 +30,7 @@ const SUBJECT_LAT = 43.653;
 const SUBJECT_LNG = -79.383;
 
 const onFlyTo = vi.fn();
-const onHighlightComps = vi.fn();
+const onCompsFound = vi.fn();
 
 const renderPanel = () =>
   render(
@@ -41,7 +41,7 @@ const renderPanel = () =>
         subjectLat={SUBJECT_LAT}
         subjectLng={SUBJECT_LNG}
         onFlyTo={onFlyTo}
-        onHighlightComps={onHighlightComps}
+        onCompsFound={onCompsFound}
       />
     </MantineProvider>,
   );
@@ -52,7 +52,7 @@ describe('CompsPanel', () => {
   beforeEach(() => {
     network.searchComps.mockReset();
     onFlyTo.mockReset();
-    onHighlightComps.mockReset();
+    onCompsFound.mockReset();
   });
 
   it('says a search found no sales, naming the radius and period it used', async () => {
@@ -97,6 +97,8 @@ describe('CompsPanel', () => {
 
     expect(await screen.findByText('12 Rue Grimaldi')).toBeInTheDocument();
     expect(screen.queryByText(/No sales within/)).not.toBeInTheDocument();
-    expect(onHighlightComps).toHaveBeenCalledWith([{ lat: 43.7384, lng: 7.4246 }]);
+    expect(onCompsFound).toHaveBeenCalledWith([
+      expect.objectContaining({ address: '12 Rue Grimaldi', lat: 43.7384, lng: 7.4246 }),
+    ]);
   });
 });

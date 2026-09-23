@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { IconBuildingEstate, IconX } from '@tabler/icons-react';
 import { ParcelPanel } from '../../components/tools/ParcelPanel';
-import { CompsPanel } from '../../components/tools/CompsPanel';
+import { CompsPanel, type CompSale } from '../../components/tools/CompsPanel';
 import { ParcelEditPanel } from '../../components/tools/ParcelEditPanel';
 import { DealPanel } from '../../features/deals/DealPanel';
 import { Tabs, ActionIcon } from '@mantine/core';
@@ -17,6 +17,7 @@ import {
   discoverParcelSource,
   type ParcelRecord,
 } from '../../lib/realEstate';
+import { SiteWeightsPanel } from './SiteWeightsPanel';
 
 const PARCEL_LAYER = 'real-estate-parcel';
 const COMPS_LAYER = 'real-estate-comps';
@@ -29,6 +30,7 @@ function RealEstatePanel({ ctx }: { ctx: PluginContext }) {
   const [salesDataset, setSalesDataset] = useState<string | null>(null);
   const [subject, setSubject] = useState<{ lat: number; lng: number } | null>(null);
   const [selected, setSelected] = useState<ParcelRecord[]>([]);
+  const [comps, setComps] = useState<CompSale[]>([]);
 
   // the plugin context is rebuilt on every app-store change, so map calls made
   // outside render go through a ref instead of an effect dependency
@@ -159,9 +161,10 @@ function RealEstatePanel({ ctx }: { ctx: PluginContext }) {
     );
   };
 
-  const highlightComps = (comps: Array<{ lat: number; lng: number }>) => {
+  const showComps = (found: CompSale[]) => {
+    setComps(found);
     // sales without coordinates in their properties can't be mapped
-    const located = comps.filter((c) => c.lat !== 0 || c.lng !== 0);
+    const located = found.filter((c) => c.lat !== 0 || c.lng !== 0);
     if (located.length === 0) {
       ctx.map.removeLayer(COMPS_LAYER);
       return;
@@ -188,6 +191,7 @@ function RealEstatePanel({ ctx }: { ctx: PluginContext }) {
         <Tabs.Tab value="comps" size="xs">Comps</Tabs.Tab>
         <Tabs.Tab value="edit" size="xs">Edit</Tabs.Tab>
         <Tabs.Tab value="deal" size="xs">Deal</Tabs.Tab>
+        <Tabs.Tab value="sites" size="xs">Sites</Tabs.Tab>
         <ActionIcon size="sm" variant="subtle" ml="auto" aria-label="Close" onClick={ctx.close}>
           <IconX size={14} />
         </ActionIcon>
@@ -208,7 +212,7 @@ function RealEstatePanel({ ctx }: { ctx: PluginContext }) {
           subjectLat={subject?.lat ?? null}
           subjectLng={subject?.lng ?? null}
           onFlyTo={(lat, lng, zoom) => ctx.map.flyTo(lng, lat, zoom)}
-          onHighlightComps={highlightComps}
+          onCompsFound={showComps}
         />
       </Tabs.Panel>
       <Tabs.Panel value="edit">
@@ -224,6 +228,9 @@ function RealEstatePanel({ ctx }: { ctx: PluginContext }) {
       <Tabs.Panel value="deal">
         <DealPanel selectedParcels={selected} />
       </Tabs.Panel>
+      <Tabs.Panel value="sites">
+        <SiteWeightsPanel comps={comps} />
+      </Tabs.Panel>
     </Tabs>
   );
 }
@@ -231,7 +238,7 @@ function RealEstatePanel({ ctx }: { ctx: PluginContext }) {
 const plugin: PluginDefinition = {
   id: 'real-estate',
   name: 'Real Estate',
-  description: 'Parcel search, comparable sales analysis, and parcel split/merge tools',
+  description: 'Parcel search, comparable sales analysis, parcel split/merge tools, and site weights with a PDF site report',
   version: '1.0.0',
   author: 'TileTopia-HQ',
   icon: <IconBuildingEstate size={14} />,

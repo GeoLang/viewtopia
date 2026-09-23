@@ -24,7 +24,7 @@ import { missingDatasetMessage } from '../../lib/verticals';
 
 const METERS_PER_MILE = 1609.34;
 
-interface CompSale {
+export interface CompSale {
   address: string;
   saleDate: string;
   salePrice: number;
@@ -44,7 +44,7 @@ interface CompsPanelProps {
   subjectLat: number | null;
   subjectLng: number | null;
   onFlyTo: (lat: number, lng: number, zoom?: number) => void;
-  onHighlightComps: (comps: Array<{ lat: number; lng: number }>) => void;
+  onCompsFound: (comps: CompSale[]) => void;
   /** omitted when embedded in the real-estate plugin tabs, which has its own close */
   onClose?: () => void;
 }
@@ -55,7 +55,7 @@ export function CompsPanel({
   subjectLat,
   subjectLng,
   onFlyTo,
-  onHighlightComps,
+  onCompsFound,
   onClose,
 }: CompsPanelProps) {
   const [radius, setRadius] = useState(0.5); // miles
@@ -123,7 +123,7 @@ export function CompsPanel({
       });
       setComps(results);
       if (results.length === 0) setEmptyResult({ radiusMiles: radius, months });
-      onHighlightComps(results.map((c) => ({ lat: c.lat, lng: c.lng })));
+      onCompsFound(results);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Search failed');
     } finally {
