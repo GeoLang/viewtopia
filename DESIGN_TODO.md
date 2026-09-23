@@ -37,6 +37,39 @@
 - [ ] owner: `aws sns subscribe` an email to the `spend-cap` topic, tag sibyl
   v0.1.1, bump the pin, plan and apply.
 
+## Demo hardening, 2026-09-23
+
+Goal: a random signed-up user cannot easily spend the budget, take the
+service from others, or damage shared state. Found by a read-only review of
+the preview. Three agents, one per repo group, so no repo has two writers.
+
+Done and pushed: provider settings need the admin role in sibyl, a moved base
+drops the stored key (sibyl 8010ea1). The wake Lambda is limited to one run at
+a time (infrastructure), which applies only after the account Lambda quota is
+raised from 10.
+
+- [~] sibyl, viewtopia (agent A). Per-user model: `PUT /model` sets the
+  caller's own profile, `GET /models` shows it, runs use it, an admin-only
+  route sets the default. `SIBYL_LOCKED_PROFILE` pins every run to one
+  profile and refuses switches, `GET /models` says `locked`, the viewer greys
+  out the picker. `SIBYL_RUNS_PER_USER_PER_DAY` (40) and
+  `SIBYL_TOKENS_PER_USER_PER_DAY` (2000000) in sibyl.db. Ships as v0.1.2.
+- [~] geolang (agent B). Forward the bearer on `GET /models` and
+  `PUT /model`, delete the in-memory chat caps sibyl replaces. Direct tool
+  calls and workflow approvals get a per-user daily run cap and one tool run
+  at a time per user, tool outputs a per-user daily byte cap. An allowlist for
+  `run_qgis_algorithm`. `/agent/share` gets a body cap and one file per share.
+  `user_data` gets the outputs retention. Nominatim and Overpass calls share
+  one process-wide rate.
+- [~] ptolemy, tiletopia (agent C). Per-user attachment byte and count quota
+  in ptolemy. A global signup rate and a per-account failed-login lockout in
+  tiletopia.
+- [ ] infrastructure, after A to C: EFS file system policy requiring access
+  points, `natural_earth` read-only on the executor, the new settings in
+  `preview.tfvars`, image pins.
+- [ ] open: a WAF rate rule per IP on CloudFront, about 7 USD a month.
+- [ ] later: sibyl message retention.
+
 ## Doc sweep 2026-09-23, code defects found
 
 Every README and Pages site was checked against the code and pushed. The
