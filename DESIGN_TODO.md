@@ -92,6 +92,62 @@ satellite and cog modules claim calibration and remote reads it lacks,
 terravista's crate doc names UniFFI, collecta's pattern constraint says regex,
 and em dashes sit in crate docs across most Rust repos.
 
+### Claims the sweep removed or marked not built
+
+Each was in a README or on a Pages site and the code does not do it. Build one
+only when a user asks for it. Items already listed above are not repeated.
+
+- [ ] viewtopia: project-scoped notebooks (`create` never gets a projectId),
+  recording map operations into a notebook, a Hata propagation model for
+  telecom coverage (it is a radius or radio-horizon footprint plus a terrain
+  viewshed), click-to-query that sends a lat/lon to the agent, sync retry with
+  exponential backoff, the `maxStops` cap in logistics (nothing reads it),
+  turn-by-turn directions in RoutingPanel, and a FEMA flood zone overlay in
+  real estate.
+- [ ] geolang: `geopandas_api` running arbitrary GeoPandas (it takes
+  `read_file`, `sjoin`, `proximity_analysis` and `filter`), and `pyqgis_api`
+  running arbitrary PyQGIS (it loads a layer or runs a `native:` or `qgis:`
+  algorithm with `uri` and `layer_name` only).
+- [ ] ptolemy: k-means for `similarity/cluster` (it is `ntile` over cosine
+  distance to the mean embedding), TopoGeometry support, edge and face
+  adjacency queries, and a Helm chart that runs an in-cluster postgres.
+- [ ] tiletopia: the viewer commands `set_view`, `add_marker`, `classify`,
+  `add_geojson`, `set_time`, `clear_entities` and `screenshot`, which exist in
+  neither geolang nor viewtopia. `POST /api/v1/catalog/{id}/add` queues a URL
+  the job queue cannot read. CityJSON tiling, which the upload route does not
+  accept. Cesium for Unreal and Unity compatibility, dropped as unverified.
+- [ ] terravista: a configurable off-route threshold (50 m is hard-coded),
+  continuous zoom interpolation, a pitch gesture and pitched drawing,
+  zoom-interpolated widths and opacity (only colours interpolate), a
+  `_destroy` per opaque pointer (only `tv_map_destroy` and `tv_string_free`),
+  `TV_GESTURE_ZOOM`, `_ROTATE` and `_PITCH` results (never returned), and the
+  offline vector store and TVPK packages over FFI (Rust API only).
+- [ ] jung: the full Mapbox GL expression language and drop-in style
+  compatibility (a listed subset), a style layer matching its `source`, `type`
+  or `filter` (every layer draws every feature), data-driven values for any
+  property, a real map projection in the Vello renderer (a linear bbox
+  mapping), DEM processing, and polygon fill opacity (only the stroke takes
+  `line-opacity`).
+- [ ] terrano: GRIB2 beyond simple packing, and NetCDF-4 (classic and 64-bit
+  offset files only).
+- [ ] nubis: fitting the exponential and gaussian variogram models (only
+  `fit_spherical` exists).
+- [ ] projicio: projections exact to the published formulas. Transverse
+  Mercator is a series, 0.8 mm off at a UTM zone edge at 60°N.
+- [ ] panoptes: "pure Rust" (ONNX needs a system ONNX Runtime), and a CLI path
+  to the ONNX detection engine (the library has it, no command reaches it).
+- [ ] geoplumb: a layer-file `cog` source read over HTTP range requests. It
+  takes a local path, and range reads are library-only.
+- [ ] collecta: glob patterns in the pattern constraint. It takes one leading
+  or trailing `*`, otherwise an exact match.
+- [ ] interiora: full multi-floor support, reworded to what the code does.
+
+Comparison tables removed because nobody here can source the competitor side:
+itinera against OSRM, Valhalla and GraphHopper, fluvius against Kafka Streams,
+Flink and GeoEvent, geogit's Kart column, and viewtopia's price, web-based and
+QGIS download rows. tiletopia's index.html still has unverified Mapbox,
+Google, Bentley, Trimble and Potree columns.
+
 ## Doc audit 2026-09-02, findings to address
 
 README.md and docs/index.html in every repo were compared against the code on
