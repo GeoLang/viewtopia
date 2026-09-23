@@ -26,15 +26,9 @@ CHANGELOG. What is left:
 
 Rollout pending, owner-run:
 
-- [ ] geolang v0.1.7 is tagged locally at 9441eef and not pushed. It carries
-  the chat spend caps, the `/upload` caps, the viewer eval fixes and the
-  `score_sites` weight columns. infrastructure cd1452c pins it and passes the
-  upload caps, and the demo landing page, wake Lambdas and morning scale-up
-  from d03ee8d are unapplied. Push the tag, wait for the release workflow,
-  then plan and apply `profiles/preview.tfvars`. Unverified until the plan:
-  the CloudFront origin added by dynamic blocks, the demo bucket name, the
-  CORS answer of the wake function URL, and that the geolang-api log group
-  holds the `POST /chat/agui` lines the idle metric filter counts.
+- [ ] the idle scale-down counts `POST /chat/agui` lines in the geolang-api
+  log group. Nobody has checked that those lines land there, so confirm the
+  metric filter sees a chat before trusting the 30 minute scale-down.
 - [ ] tiletopia and ptolemy changed today and their preview pins (v0.4.0,
   v0.2.1) did not. A viewtopia image roll is needed for the deal, the site
   panel, the catalogue rename and the `/try` service worker exclusion.
