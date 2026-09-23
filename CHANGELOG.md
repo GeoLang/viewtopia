@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Removed
+
+- 2026-09-23: **notebook JavaScript and map-action cells.** `executeCodeCell`,
+  `executeMapAction` and `replayNotebook` in `src/notebooks/runtime.ts`
+  (last held at 46750570), the `code` and `map-action` cell types and
+  `MapAction` in `src/notebooks/types.ts` (46750570), `recordAction` in
+  `src/notebooks/notebookStore.ts` (4feec260), and the + Code and + Map Action
+  buttons in `src/notebooks/NotebookPanel.tsx` (25fad70e). Nothing calls
+  `setRuntime`, so both cell kinds answered "No runtime available".
+- 2026-09-23: **`registerGeoJson`** in `src/duckdb/loaders.ts` (46750570), which
+  had no caller.
+- 2026-09-23: **`PluginDefinition.category`** in `src/plugins/sdk.ts`
+  (2f37b6bd) and the category filter of `getPlugins` in
+  `src/plugins/registry.ts` (9a435155), which no caller passed.
+
 ### Changed
 
 - 2026-09-19: **the viewer image starts without its compose neighbours.** The
