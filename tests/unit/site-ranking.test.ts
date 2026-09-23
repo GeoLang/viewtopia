@@ -99,10 +99,19 @@ describe('rankSites', () => {
 });
 
 describe('tradeAreaTable', () => {
-  it('keeps every trade_area column but the site name, one row per site', () => {
+  it('keeps the trade_area figures without the site name and location, one row per site', () => {
     const table = tradeAreaTable([layer('trade_areas', TRADE_AREA_ROWS), layer('site_scores', SCORE_SITES_ROWS)]);
 
-    expect(table?.columns).toEqual(Object.keys(TRADE_AREA_ROWS[0]).filter((column) => column !== 'site'));
+    expect(table?.columns).toEqual([
+      'minutes',
+      'mode',
+      'area_km2',
+      'population',
+      'population_source',
+      'competitors',
+      'anchor_transit',
+      'median_income',
+    ]);
     expect(table?.rows.map((row) => row.site)).toEqual(['King West', 'Leslieville', 'Junction']);
   });
 });

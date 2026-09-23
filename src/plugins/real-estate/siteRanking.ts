@@ -21,6 +21,7 @@ const TRADE_AREA_UNRATED_COLUMNS = new Set([
   'population_source',
 ]);
 const FEWER_IS_BETTER_CRITERIA = new Set(['competitors']);
+const TRADE_AREA_LOCATION_COLUMNS = new Set([TRADE_AREA_SITE_COLUMN, 'lat', 'lon']);
 
 export interface ScoredSite {
   name: string;
@@ -147,7 +148,7 @@ export function tradeAreaTable(layers: AgentLayer[]): TradeAreaTable | null {
   if (!layer) return null;
   const rows = layerProperties(layer);
   return {
-    columns: Object.keys(rows[0]).filter((column) => column !== TRADE_AREA_SITE_COLUMN),
+    columns: Object.keys(rows[0]).filter((column) => !TRADE_AREA_LOCATION_COLUMNS.has(column)),
     rows: rows.map((values) => ({ site: String(values[TRADE_AREA_SITE_COLUMN]), values })),
   };
 }

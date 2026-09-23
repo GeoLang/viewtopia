@@ -29,8 +29,7 @@ const BODY_FONT_SIZE = 9;
 const LINE_HEIGHT_MM = 6;
 const SECTION_GAP_MM = 6;
 const MAP_MAXIMUM_HEIGHT_MM = 110;
-const FIRST_COLUMN_SHARE = 0.3;
-const CELL_PADDING_MM = 2;
+const COLUMN_GAP_MM = 4;
 
 function figure(value: unknown): string {
   if (typeof value === 'number') {
@@ -135,19 +134,27 @@ export function siteReportPdf(report: SiteReport, mapImage: MapImage | null, cre
     makeRoom(LINE_HEIGHT_MM * 3);
     writeLine(table.title, HEADING_FONT_SIZE, true);
 
-    const otherColumns = table.headers.length - 1;
-    const firstWidth = otherColumns > 0 ? contentWidth * FIRST_COLUMN_SHARE : contentWidth;
-    const otherWidth = otherColumns > 0 ? (contentWidth - firstWidth) / otherColumns : 0;
+    doc.setFontSize(BODY_FONT_SIZE);
+    doc.setFont('helvetica', 'bold');
+    const naturalWidths = table.headers.map(
+      (header, column) =>
+        Math.max(...[header, ...table.rows.map((row) => row[column])].map((text) => doc.getTextWidth(text))) +
+        COLUMN_GAP_MM,
+    );
+    const shrink = Math.min(1, contentWidth / naturalWidths.reduce((sum, width) => sum + width, 0));
+    const widths = naturalWidths.map((width) => width * shrink);
+    const starts = widths.map((_, column) =>
+      widths.slice(0, column).reduce((sum, width) => sum + width, MARGIN_MM),
+    );
     const writeRow = (cells: string[], bold: boolean) => {
       doc.setFontSize(BODY_FONT_SIZE);
       doc.setFont('helvetica', bold ? 'bold' : 'normal');
       y += LINE_HEIGHT_MM;
-      cells.forEach((cell, index) => {
-        const width = index === 0 ? firstWidth : otherWidth;
-        const x = index === 0 ? MARGIN_MM : MARGIN_MM + firstWidth + otherWidth * (index - 1);
+      cells.forEach((cell, column) => {
         // a wrapped cell would run into the row below
-        const [firstLine] = doc.splitTextToSize(cell, width - CELL_PADDING_MM) as string[];
-        doc.text(firstLine ?? '', x, y);
+        const fitted =
+          shrink < 1 ? (doc.splitTextToSize(cell, widths[column] - COLUMN_GAP_MM) as string[])[0] : cell;
+        doc.text(fitted ?? '', starts[column], y);
       });
     };
 
