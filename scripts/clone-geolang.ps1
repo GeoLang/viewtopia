@@ -4,9 +4,8 @@
   clone-geolang.sh, for developing natively on Windows).
 
 .DESCRIPTION
-  Clones the 20 GeoLang GitHub repos + the geolang private-GitLab repo + the
-  upstream letta fork into a target folder. Idempotent: existing repos are left
-  alone (or pulled with -Pull).
+  Clones the GeoLang GitHub repos into a target folder. Idempotent: existing
+  repos are left alone (or pulled with -Pull).
 
 .PARAMETER Target
   Destination folder (default: GeoLang).
@@ -24,9 +23,6 @@
   .\clone-geolang.ps1 -Pull C:\src\GeoLang
 
 .NOTES
-  * geolang is on a private GitLab reached via the 'gitlab-rsa' SSH host alias —
-    configure %USERPROFILE%\.ssh\config for it, or that one clone is skipped with
-    a warning (the rest still clone).
   * Requires git on PATH (Git for Windows).
 #>
 [CmdletBinding()]
@@ -41,13 +37,12 @@ $GithubRepos = @(
     "agora", "collecta", "fenestra", "fluvius", "geodukt", "geogit", "geokode",
     "GeoLang.github.io", "geoplumb", "infrastructure", "interiora", "itinera",
     "jung", "nubis", "panoptes", "projicio", "ptolemy", "sibyl", "terrano",
-    "terravista", "tiletopia", "topoi", "viewtopia"
+    "terravista", "tiletopia", "topoi", "verne", "viewtopia"
 )
 
 # Repos that don't live in the GeoLang GitHub org.
 $ExternalRepos = @(
-    @{ Name = "geolang"; Url = "gitlab-rsa:geolanghq/geolang.git" },   # private GitLab (SSH alias)
-    @{ Name = "letta";   Url = "https://github.com/letta-ai/letta.git" } # upstream Letta (third-party)
+    @{ Name = "geolang"; Url = "https://github.com/GeoLang/geolang.git" }
 )
 
 function Get-GithubUrl([string]$Name) {
@@ -95,6 +90,6 @@ foreach ($repo in $ExternalRepos) { Invoke-CloneOne $repo.Name $repo.Url }
 Write-Host "`nDone - $($script:Ok) ok, $($script:Skip) skipped, $($script:Fail) failed."
 if ($script:Fail -gt 0) {
     Write-Warning "Failed: $($script:Failed -join ', ')"
-    Write-Warning "(SSH repos need your key on file; geolang needs the 'gitlab-rsa' SSH host alias.)"
+    Write-Warning "(SSH repos need your key on file.)"
     exit 1
 }

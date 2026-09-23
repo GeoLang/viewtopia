@@ -361,9 +361,7 @@ From Git Bash:
 scripts/clone-geolang.sh /c/src/GeoLang
 ```
 
-`scripts/clone-geolang.ps1` also exists, but it clones geolang from a private
-GitLab SSH alias (`gitlab-rsa`) instead of GitHub and adds a `letta` checkout,
-so use the bash script.
+`scripts/clone-geolang.ps1` clones the same repos from PowerShell.
 Then create `C:\src\GeoLang\geolang\.env`, see [Requirements](#requirements).
 
 ### 3a. Frontend only

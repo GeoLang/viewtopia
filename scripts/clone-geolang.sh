@@ -64,6 +64,7 @@ GITHUB_REPOS=(
   terravista
   tiletopia
   topoi
+  verne
   viewtopia
 )
 
@@ -123,6 +124,6 @@ echo
 echo "Done — $OK ok, $SKIP skipped, $FAIL failed."
 if [ "$FAIL" -gt 0 ]; then
   echo "Failed: ${FAILED[*]}" >&2
-  echo "(SSH repos need your key on file; geolang needs the 'gitlab-rsa' SSH host alias.)" >&2
+  echo "(SSH repos need your key on file.)" >&2
   exit 1
 fi
