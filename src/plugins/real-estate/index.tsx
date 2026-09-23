@@ -7,6 +7,7 @@ import { IconBuildingEstate, IconX } from '@tabler/icons-react';
 import { ParcelPanel } from '../../components/tools/ParcelPanel';
 import { CompsPanel } from '../../components/tools/CompsPanel';
 import { ParcelEditPanel } from '../../components/tools/ParcelEditPanel';
+import { DealPanel } from '../../features/deals/DealPanel';
 import { Tabs, ActionIcon } from '@mantine/core';
 import type { PluginDefinition, PluginContext, PluginMapContext } from '../sdk';
 import {
@@ -186,6 +187,7 @@ function RealEstatePanel({ ctx }: { ctx: PluginContext }) {
         <Tabs.Tab value="parcels" size="xs">Parcels</Tabs.Tab>
         <Tabs.Tab value="comps" size="xs">Comps</Tabs.Tab>
         <Tabs.Tab value="edit" size="xs">Edit</Tabs.Tab>
+        <Tabs.Tab value="deal" size="xs">Deal</Tabs.Tab>
         <ActionIcon size="sm" variant="subtle" ml="auto" aria-label="Close" onClick={ctx.close}>
           <IconX size={14} />
         </ActionIcon>
@@ -218,6 +220,9 @@ function RealEstatePanel({ ctx }: { ctx: PluginContext }) {
           onConfirmMerge={handleMerge}
           onCancel={clearSelection}
         />
+      </Tabs.Panel>
+      <Tabs.Panel value="deal">
+        <DealPanel selectedParcels={selected} />
       </Tabs.Panel>
     </Tabs>
   );
