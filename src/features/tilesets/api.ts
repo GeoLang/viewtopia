@@ -72,8 +72,10 @@ function tileJsonUrl(sourceId: string): string {
 
 /** Whether a URL is one tiletopia checks the platform JWT on. */
 export function isMartinUrl(url: string): boolean {
-  const path = url.startsWith('http') ? new URL(url).pathname : url;
-  return path.startsWith(`${MARTIN_URL}/`);
+  const resolved = new URL(url, window.location.origin);
+  return (
+    resolved.origin === window.location.origin && resolved.pathname.startsWith(`${MARTIN_URL}/`)
+  );
 }
 
 /**

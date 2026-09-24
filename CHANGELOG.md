@@ -6,6 +6,15 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-09-24: **the map sends the bearer token only to its own origin.**
+  The MapLibre request transform added the platform JWT to any URL whose path
+  started with `/martin/`, whatever the host, so a tile layer saved in a
+  shared project could collect the token of everyone who opened it.
+  `isMartinUrl` now also requires the viewer's origin.
+- 2026-09-24: **the dashboard text widget renders plain text.** It put
+  `config.html` from shared project state into the page as HTML, so a project
+  member could run script in other members' browsers. It now shows the text
+  content only. Nothing in the viewer authors formatting for it.
 - 2026-09-23: **sign-in and signup show the server's reason.** A refused
   login or signup read `message`, which tiletopia never sends, so every
   refusal said "Registration failed" or "Invalid credentials". The store now

@@ -9,7 +9,6 @@ import {
   ActionIcon,
   TextInput,
   SimpleGrid,
-  Box,
   Progress,
   Collapse,
 } from '@mantine/core';
@@ -28,7 +27,12 @@ const WIDGET_TYPES: { type: WidgetType; label: string; desc: string }[] = [
   { type: 'richtext', label: '📝 Rich Text', desc: 'Formatted text block' },
 ];
 
-function WidgetContent({ widget }: { widget: DashboardWidget }) {
+// a DOMParser document runs no script and fetches nothing
+function richTextContent(html: string): string {
+  return new DOMParser().parseFromString(html, 'text/html').body.textContent ?? '';
+}
+
+export function WidgetContent({ widget }: { widget: DashboardWidget }) {
   const c = widget.config;
   switch (widget.type) {
     case 'indicator':
@@ -69,12 +73,9 @@ function WidgetContent({ widget }: { widget: DashboardWidget }) {
       );
     case 'richtext':
       return (
-        <Box
-          fz="xs"
-          c="gray.4"
-          // biome-ignore lint/security/noDangerouslySetInnerHtml: user's own localStorage content, no backend
-          dangerouslySetInnerHTML={{ __html: (c.html as string) || '' }}
-        />
+        <Text size="xs" c="gray.4" style={{ whiteSpace: 'pre-wrap' }}>
+          {richTextContent((c.html as string) || '')}
+        </Text>
       );
     case 'chart':
       return (

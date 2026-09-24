@@ -97,8 +97,13 @@ describe('tileset eligibility', () => {
 
   it('marks only the martin routes as needing the bearer', () => {
     expect(isMartinUrl('/martin/ts-1/3/4/5')).toBe(true);
-    expect(isMartinUrl('https://viewer.example/martin/ts-1')).toBe(true);
+    expect(isMartinUrl(`${window.location.origin}/martin/ts-1`)).toBe(true);
     expect(isMartinUrl('/tiles/v1/terrain/rgb/3/4/5.png')).toBe(false);
+  });
+
+  it('never marks another origin as a martin route', () => {
+    expect(isMartinUrl('https://attacker.example/martin/ts-1/3/4/5')).toBe(false);
+    expect(isMartinUrl('//attacker.example/martin/ts-1/3/4/5')).toBe(false);
   });
 
   it('gives a martin tile request an absolute url and the bearer, others neither', () => {
@@ -115,8 +120,15 @@ describe('tileset eligibility', () => {
       url: `${window.location.origin}/martin/ts-1/3/4/5`,
       headers: { Authorization: 'Bearer jwt-abc' },
     });
+    expect(martinRequest(`${window.location.origin}/martin/ts-1/3/4/5`)).toEqual({
+      url: `${window.location.origin}/martin/ts-1/3/4/5`,
+      headers: { Authorization: 'Bearer jwt-abc' },
+    });
     expect(martinRequest('https://tiles.example/basemap/3/4/5.png')).toEqual({
       url: 'https://tiles.example/basemap/3/4/5.png',
+    });
+    expect(martinRequest('https://attacker.example/martin/{z}/{x}/{y}.png')).toEqual({
+      url: 'https://attacker.example/martin/{z}/{x}/{y}.png',
     });
   });
 });
