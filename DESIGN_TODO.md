@@ -24,17 +24,43 @@ Goal: a signed-up demo user cannot spend the budget, take the service from
 others, or damage shared state. The limits that shipped are under **Hosted
 preview** below.
 
-- [~] committed, not pushed or applied: an EFS file system policy that denies
-  mounts without an access point or TLS, IAM mounts, one role per untrusted
-  service (infrastructure b0a5ee1), and a read-only `natural_earth` on the
-  executor, which needs the download fallback in geolang ad114fd. Apply with
-  `-target=module.ecs` first, then a full apply, as the infrastructure README
-  says. The same apply sets the wake Lambda's reserved concurrency, which the
-  live function lacks.
-- [ ] a read-only review of the preview for demo-user damage runs 2026-09-24,
-  findings in `/home/aaron/src/GeoLang/demo-review-2026-09-24.md`. Known
-  before it: two executor slots shared by every user, a global signup rate a
-  single IP can use up, and the public wake URL.
+Review of 2026-09-24, full findings and fixes in
+`/home/aaron/src/GeoLang/demo-review-2026-09-24.md` (not in any repo).
+
+- [~] pushed, not released or applied:
+  - infrastructure b0a5ee1, f2db859, 21f376d: an EFS policy denying mounts
+    without an access point or TLS, IAM mounts, one role per untrusted
+    service, read-only `natural_earth` on the executor, a WAF auth limit on
+    any path containing `/v1/auth/`, a CloudFront origin secret the ALB
+    requires, and the viewer address passed through to tiletopia.
+  - ptolemy c2bc8aa: ids decoded before the visibility check.
+  - viewtopia 49964b2d: the bearer goes only to same-origin `/martin/`, the
+    dashboard rich text widget renders plain text.
+  - tiletopia 8f1a315: login lockout per account and address, argon2 off the
+    async runtime, terrain builds bounded by memory.
+  - geolang ad114fd, 3c6faba: Natural Earth fallback, `filter_query` through
+    an ast evaluator, QGIS `|` suffix limited to `layername=`, upload stem
+    check, export size and concurrency caps.
+- [ ] owner: tag geolang, tiletopia, viewtopia and ptolemy, rebuild the proxy
+  image, bump the pins, `terraform init` for the random provider, apply
+  `-target=module.ecs`, wait for stable services, then a full apply. The same
+  apply sets the wake Lambda's reserved concurrency.
+- [ ] the ALB listener default action still answers 200 with a JSON body. A
+  403 edit was refused by the permission layer, so the owner makes it.
+- [ ] a CSP on CloudFront. Deferred because a wrong one breaks the viewer and
+  it needs a running stack to test.
+- [ ] shared caps, needs an owner call on per-account against global: two
+  executor slots for every user (a run holds one up to 840 s), a global
+  signup rate one address can use up, global daily tool and upload caps about
+  ten accounts exhaust, and the 50 USD model cap as one counter.
+- [ ] the public wake function URL keeps the stack up for any caller.
+- [ ] medium and low review findings not yet fixed: large messages held in
+  memory by sibyl chat, ptolemy `/ws/rooms`, attachment upload and agora
+  resume, tiletopia realtime 64 MiB messages, ptolemy exports and OGC items
+  with no limit or statement timeout, `POST /draw` with no body limit, remote
+  images in chat markdown, and editor-only cross-tenant paths (ptolemy
+  voronoi SQL, external dataset registration, geodukt paths and GeoPackage
+  SQL, run_workflow path rewrite) that turn critical if a user is promoted.
 - [ ] later: sibyl message retention.
 
 ## Geokode replaces Nominatim, 2026-09-24
