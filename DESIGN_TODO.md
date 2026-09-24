@@ -75,7 +75,9 @@ Overpass. tiletopia's `/api/v1/geocoding/*` routes and demo fallback are
 deleted. No Nominatim fallback anywhere, a geokode miss is a miss.
 
 Live on the preview since the 2026-09-24 apply, index `planet-260914-v2`
-(65.35 M records, 7.4 GB, built on hercules in `~/geokode-planet/`).
+(65.35 M records, 7.4 GB). It was built on hercules, shut down 2026-09-24.
+The build scripts and timings are in `/home/aaron/geokode-data/`, and a
+rebuild needs about 40 GB RAM and 110 GB disk, a spot `r6i.2xlarge` does it.
 Ranking thresholds and measurements are in
 `/home/aaron/src/GeoLang/geokode-work-2026-09-24.md`.
 
@@ -332,14 +334,15 @@ Ordered 2026-08-30, hosting excluded.
    The Qwen3.8 sweep (0.87, 20260902T000529) is a comparison only. No weak task
    has been scored yet against the geolang-api container carrying the trimmed
    `viewer_control` manifest, so the standing per-task numbers predate it.
-   Next: the full 72-task Qwen3.5 sweep at `--repeat 3` against
-   20260901T004124, blocked on hercules being down; sibyl is on Qwen3.8 until
-   then, because switching back was refused while the provider was unreachable.
-   Still weak, cause read from transcripts:
+   Hercules was shut down on 2026-09-24, so the `local:Qwen3.5-35B-A3B`
+   profile is gone and the 0.82 baseline cannot be re-scored. The standing
+   baseline is gpt-oss on the preview, 0.92 over 76 tasks (20260922T192650),
+   with the re-score pending under **Doc sweep**. Weakness is now read off
+   that profile. Still weak, cause read from transcripts:
    - scenario-compare-within-25-metres and find-before-flying: the task
      prompt and the `find_feature` reads fixture were fixed in geolang
-     5ad6d5c (2026-09-16), unscored until a model server is back. If either
-     is still weak after the next sweep the cause is the model, not the task.
+     5ad6d5c (2026-09-16), unscored until the gpt-oss re-score. If either
+     is still weak after it the cause is the model, not the task.
    - dataset ids: the model writes `road_network` or `ds_roads` for Road
      Network in about half the dataset runs, some after inventing a
      dataset.list result inside its own turn.
