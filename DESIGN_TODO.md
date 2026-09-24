@@ -9,7 +9,7 @@
 > Ranked 2026-08-21 against the DESIGN.md goal: ship the viewer, the agent, and
 > the services that make a shared map, not more surface. Pick from **Do next**.
 > Do not start at a parked item.
-> Last brought current: **2026-09-23**.
+> Last brought current: **2026-09-24**.
 >
 > Verify an entry against the code before working it, and do not trust the
 > mechanism it names. Three items in this file were already closed when someone
@@ -18,56 +18,17 @@
 
 ---
 
-## Preview spend cap, 100 USD a month
+## Demo hardening
 
-- [~] sibyl model spend cap. `SIBYL_MONTHLY_SPEND_LIMIT_USD` (50 on the
-  preview) and `SIBYL_MODEL_PRICES` (`model=input/output` in USD per million
-  tokens, from the AWS price list). `Client::chat` refuses a call once the
-  month's total is reached, asks for `stream_options.include_usage` and adds
-  the reported cost to a `model_spend` row per UTC month in sibyl.db. The
-  input estimate is charged before the call, so a call cut off by a client
-  leaving still counts, then corrected to the reported usage. A priced cap
-  refuses a model with no price. Eval runs on the preview count against it.
-- [~] infrastructure `spend_cap.tf`: a 100 USD monthly cost budget without
-  credits, an email at 80 percent through the `spend-cap` SNS topic, and an
-  automatic budget action at 100 percent that attaches a deny on `bedrock:*`
-  and `bedrock-mantle:*` to the `geolang-sibyl-bedrock` user. Budgets data
-  lags 8 to 12 hours, so this is the backstop, not the cap. ECS, RDS and EFS
-  keep running after it fires.
-- [ ] owner: `aws sns subscribe` an email to the `spend-cap` topic, tag sibyl
-  v0.1.1, bump the pin, plan and apply.
+Goal: a signed-up demo user cannot spend the budget, take the service from
+others, or damage shared state. The limits that shipped are under **Hosted
+preview** below.
 
-## Demo hardening, 2026-09-23
-
-Goal: a random signed-up user cannot easily spend the budget, take the
-service from others, or damage shared state. Found by a read-only review of
-the preview. Three agents, one per repo group, so no repo has two writers.
-
-Done and pushed: provider settings need the admin role in sibyl, a moved base
-drops the stored key (sibyl 8010ea1). The wake Lambda is limited to one run at
-a time (infrastructure), which applies only after the account Lambda quota is
-raised from 10.
-
-- [~] sibyl, viewtopia (agent A). Per-user model: `PUT /model` sets the
-  caller's own profile, `GET /models` shows it, runs use it, an admin-only
-  route sets the default. `SIBYL_LOCKED_PROFILE` pins every run to one
-  profile and refuses switches, `GET /models` says `locked`, the viewer greys
-  out the picker. `SIBYL_RUNS_PER_USER_PER_DAY` (40) and
-  `SIBYL_TOKENS_PER_USER_PER_DAY` (2000000) in sibyl.db. Ships as v0.1.2.
-- [~] geolang (agent B). Forward the bearer on `GET /models` and
-  `PUT /model`, delete the in-memory chat caps sibyl replaces. Direct tool
-  calls and workflow approvals get a per-user daily run cap and one tool run
-  at a time per user, tool outputs a per-user daily byte cap. An allowlist for
-  `run_qgis_algorithm`. `/agent/share` gets a body cap and one file per share.
-  `user_data` gets the outputs retention. Nominatim and Overpass calls share
-  one process-wide rate.
-- [~] ptolemy, tiletopia (agent C). Per-user attachment byte and count quota
-  in ptolemy. A global signup rate and a per-account failed-login lockout in
-  tiletopia.
-- [ ] infrastructure, after A to C: EFS file system policy requiring access
-  points, `natural_earth` read-only on the executor, the new settings in
-  `preview.tfvars`, image pins.
-- [ ] open: a WAF rate rule per IP on CloudFront, about 7 USD a month.
+- [ ] infrastructure: an EFS file system policy requiring access points, and
+  `natural_earth` mounted read-only on geolang-api and the executor.
+- [ ] owner: plan and apply again. The live `geolang-prod-demo-wake` has no
+  reserved concurrency although `demo_wake_concurrency` is 1, the account
+  Lambda quota is now 1000.
 - [ ] later: sibyl message retention.
 
 ## Doc sweep 2026-09-23, code defects found
@@ -78,12 +39,6 @@ CHANGELOG. What is left:
 
 Rollout pending, owner-run:
 
-- [ ] the idle scale-down counts `POST /chat/agui` lines in the geolang-api
-  log group. Nobody has checked that those lines land there, so confirm the
-  metric filter sees a chat before trusting the 30 minute scale-down.
-- [ ] tiletopia and ptolemy changed today and their preview pins (v0.4.0,
-  v0.2.1) did not. A viewtopia image roll is needed for the deal, the site
-  panel, the catalogue rename and the `/try` service worker exclusion.
 - [ ] re-score the viewer eval on gpt-oss from geolang master. The 0.92
   baseline (20260922T192650) is not comparable any more: the harness sent
   false "<param> is required" follow-ups on nearly every task (fixed in
@@ -392,8 +347,9 @@ Shape, all in `infrastructure` (README has the detail):
 - no NAT gateway: tasks run in the public subnets with public IPs.
 - Fargate Spot for every service, ptolemy health check on `/api/v1/healthz`.
 - ghcr images for seven services, ECR builds for the Caddy proxy and viewtopia.
-- `scripts/platform-scale.sh up|down`, plus a nightly scale-down at 23:00
-  America/Toronto with no morning schedule.
+- `scripts/platform-scale.sh up|down`, a nightly scale-down at 23:00
+  America/Toronto, a morning scale-up at 08:00, and a scale-down after 30
+  minutes without a `POST /chat/agui` line (the `DemoActivity` metric).
 - Sibyl calls `https://bedrock-mantle.us-east-1.api.aws/v1` with
   `openai.gpt-oss-120b` (active) and `qwen.qwen3-235b-a22b-2507`. Bedrock has
   no Qwen3.5 or 3.8, so the 0.82 eval baseline does not carry over.
@@ -414,6 +370,17 @@ refresh Lambda; a forced master password rotation was run and ptolemy and
 agora came back healthy with no authentication failures. Watch out: the
 23:00 Toronto scale-down fired in the middle of that test, so do not roll
 services near 23:00.
+
+Spend and abuse limits, live since the 2026-09-23 apply (geolang v0.1.8,
+sibyl v0.1.2, ptolemy v0.2.2, tiletopia v0.4.1, viewtopia v0.1.6), values in
+`infrastructure/profiles/preview.tfvars`: sibyl refuses model calls past 50
+USD a month, a 100 USD AWS budget emails the `spend-cap` topic at 80 percent
+and denies `bedrock:*` at 100, every run is locked to gpt-oss, and each user
+gets daily run and token caps in sibyl, tool run, output and upload caps in
+geolang-api, attachment and membership quotas in ptolemy, and a signup rate
+and login lockout in tiletopia. Provider settings are admin only. A CloudFront
+WAF blocks an address past 3000 requests, or 20 under `/api/v1/auth/`, in
+five minutes.
 
 Model picked 2026-09-22 (geolang 4898def, live on the preview): the hosted
 default is `cloud:openai.gpt-oss-120b`, 0.80 against 0.45 for
