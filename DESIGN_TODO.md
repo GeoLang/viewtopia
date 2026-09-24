@@ -29,39 +29,42 @@ Review of 2026-09-24, full findings and fixes in
 high findings are fixed and live, see the 2026-09-24 apply under **Hosted
 preview**.
 
-- [ ] check on the preview what the apply could not show: a successful login
-  still works and the lockout counts the real client address
-  (`TILETOPIA_TRUSTED_PROXY_HOPS=3`), and a chat run reads the read-only
-  `natural_earth` mount.
-- [ ] the ALB default action answers 200 with
-  `{"service":"geolang","status":"healthy"}` on both listeners
-  (`modules/loadbalancer/main.tf`), so a request without the CloudFront
-  origin secret gets a 200. Owner call 2026-09-24: answer 403 with a short
-  body on both. Target group health checks use their own paths and are not
-  affected. The owner makes the edit and the apply.
+- [ ] owner apply, pushed in infrastructure: the ALB default action answers
+  403 on both listeners instead of the healthy 200 (owner call 2026-09-24,
+  target group health checks use their own paths), and the global per-day
+  caps in `preview.tfvars` sit at per-caller times `TILETOPIA_MAX_USERS`
+  (review finding F7: 9 accounts reached the old 10000 tool runs and locked
+  everyone out until midnight UTC). The monthly spend caps bound cost. The
+  50 USD model cap stays one counter, it is the budget ceiling.
 - [ ] a CSP on CloudFront. Deferred because a wrong one breaks the viewer and
   it needs a running stack to test.
-- [ ] shared caps. The per-caller daily caps already exist. The lockout comes
-  from the global per-day caps behind them in geolang-api: 9 accounts reach
-  `GEOLANG_TOOL_RUNS_PER_DAY` 10000, 11 reach `GEOLANG_UPLOAD_MEGABYTES_PER_DAY`
-  2048 and 15 reach `GEOLANG_UPLOAD_FILES_PER_DAY` 300, then every user is
-  refused until midnight UTC. The counters are in memory per worker process,
-  so a restart resets them. Owner call 2026-09-24 (review finding F7): keep
-  the per-caller caps, raise the global per-day caps far above per-caller
-  times `TILETOPIA_MAX_USERS` (500) and let the monthly spend caps bound cost.
-  A global cap that stays keeps its counter in the database. The 50 USD model
-  cap stays one counter, it is the budget ceiling. Not decided: the two
-  executor slots every user shares (a run holds one up to 840 s) and the
-  global signup rate of 30 accounts an hour, which one address can use up and
-  which lets a script reach the 50 USD cap within a day.
+- [ ] caps not decided: the two executor slots every user shares (a run holds
+  one up to 840 s), the global signup rate of 30 accounts an hour, which one
+  address can use up and which lets a script reach the 50 USD cap within a
+  day, and whether a global daily counter moves to the database (today a
+  restart resets it).
 - [ ] the public wake function URL keeps the stack up for any caller.
-- [ ] medium and low review findings not yet fixed: large messages held in
-  memory by sibyl chat, ptolemy `/ws/rooms`, attachment upload and agora
-  resume, tiletopia realtime 64 MiB messages, ptolemy exports and OGC items
-  with no limit or statement timeout, `POST /draw` with no body limit, remote
-  images in chat markdown, and editor-only cross-tenant paths (ptolemy
-  voronoi SQL, external dataset registration, geodukt paths and GeoPackage
-  SQL, run_workflow path rewrite) that turn critical if a user is promoted.
+- [~] medium and low review findings, one agent per repo, each on master
+  with CI-exact lint, see the review file for evidence lines:
+  - geolang F6: `/draw` reads its body through `bounded_request` and charges
+    `upload_budget` like `/upload`.
+  - tiletopia F9: `max_message_size` and `max_frame_size` 64 KB on the
+    realtime upgrade.
+  - sibyl F13 and F14: `RunRequest.message` capped at 32 KB, the history
+    query gets a LIMIT, and a per-user monthly token allowance small enough
+    that `TILETOPIA_MAX_USERS` times it fits the 50 USD cap.
+  - ptolemy F14 and F15: `max_message_size` on the `/ws/rooms` relay, the
+    project role checked before the attachment body is read, export and OGC
+    item limits clamped like `list_features`, and a `statement_timeout`.
+  - agora F14: websocket resume replay capped by total bytes, snapshot past
+    about 4 MB.
+  - viewtopia F16: chat markdown renders no `img`.
+- [ ] F17, the editor-only cross-tenant paths (ptolemy voronoi envelope
+  bound as a parameter, external dataset registration admin only with no
+  main-pool fallback, geodukt paths confined under the caller's root and
+  identifiers limited to `[A-Za-z0-9_]+`, `run_workflow` confining the parsed
+  manifest, a ptolemy database role that is not the Aurora master). Low
+  today because signup mints viewer, critical the day a user is promoted.
 - [ ] later: sibyl message retention.
 
 ## Geokode replaces Nominatim, 2026-09-24
