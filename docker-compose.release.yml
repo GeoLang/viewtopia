@@ -45,7 +45,7 @@ services:
 
   sibyl:
     build: !reset null
-    image: ghcr.io/geolang/sibyl:v0.1.0
+    image: ghcr.io/geolang/sibyl:v0.1.3
     # without !override the list appends and keeps the ../geolang/.env entry
     env_file: !override
       - path: ./geolang.env
