@@ -25,34 +25,35 @@ others, or damage shared state. The limits that shipped are under **Hosted
 preview** below.
 
 Review of 2026-09-24, full findings and fixes in
-`/home/aaron/src/GeoLang/demo-review-2026-09-24.md` (not in any repo).
+`/home/aaron/src/GeoLang/demo-review-2026-09-24.md` (not in any repo). The
+high findings are fixed and live, see the 2026-09-24 apply under **Hosted
+preview**.
 
-- [~] pushed, not released or applied:
-  - infrastructure b0a5ee1, f2db859, 21f376d: an EFS policy denying mounts
-    without an access point or TLS, IAM mounts, one role per untrusted
-    service, read-only `natural_earth` on the executor, a WAF auth limit on
-    any path containing `/v1/auth/`, a CloudFront origin secret the ALB
-    requires, and the viewer address passed through to tiletopia.
-  - ptolemy c2bc8aa: ids decoded before the visibility check.
-  - viewtopia 49964b2d: the bearer goes only to same-origin `/martin/`, the
-    dashboard rich text widget renders plain text.
-  - tiletopia 8f1a315: login lockout per account and address, argon2 off the
-    async runtime, terrain builds bounded by memory.
-  - geolang ad114fd, 3c6faba: Natural Earth fallback, `filter_query` through
-    an ast evaluator, QGIS `|` suffix limited to `layername=`, upload stem
-    check, export size and concurrency caps.
-- [ ] owner: tag geolang, tiletopia, viewtopia and ptolemy, rebuild the proxy
-  image, bump the pins, `terraform init` for the random provider, apply
-  `-target=module.ecs`, wait for stable services, then a full apply. The same
-  apply sets the wake Lambda's reserved concurrency.
-- [ ] the ALB listener default action still answers 200 with a JSON body. A
-  403 edit was refused by the permission layer, so the owner makes it.
+- [ ] check on the preview what the apply could not show: a successful login
+  still works and the lockout counts the real client address
+  (`TILETOPIA_TRUSTED_PROXY_HOPS=3`), and a chat run reads the read-only
+  `natural_earth` mount.
+- [ ] the ALB default action answers 200 with
+  `{"service":"geolang","status":"healthy"}` on both listeners
+  (`modules/loadbalancer/main.tf`), so a request without the CloudFront
+  origin secret gets a 200. Owner call 2026-09-24: answer 403 with a short
+  body on both. Target group health checks use their own paths and are not
+  affected. The owner makes the edit and the apply.
 - [ ] a CSP on CloudFront. Deferred because a wrong one breaks the viewer and
   it needs a running stack to test.
-- [ ] shared caps, needs an owner call on per-account against global: two
-  executor slots for every user (a run holds one up to 840 s), a global
-  signup rate one address can use up, global daily tool and upload caps about
-  ten accounts exhaust, and the 50 USD model cap as one counter.
+- [ ] shared caps. The per-caller daily caps already exist. The lockout comes
+  from the global per-day caps behind them in geolang-api: 9 accounts reach
+  `GEOLANG_TOOL_RUNS_PER_DAY` 10000, 11 reach `GEOLANG_UPLOAD_MEGABYTES_PER_DAY`
+  2048 and 15 reach `GEOLANG_UPLOAD_FILES_PER_DAY` 300, then every user is
+  refused until midnight UTC. The counters are in memory per worker process,
+  so a restart resets them. Owner call 2026-09-24 (review finding F7): keep
+  the per-caller caps, raise the global per-day caps far above per-caller
+  times `TILETOPIA_MAX_USERS` (500) and let the monthly spend caps bound cost.
+  A global cap that stays keeps its counter in the database. The 50 USD model
+  cap stays one counter, it is the budget ceiling. Not decided: the two
+  executor slots every user shares (a run holds one up to 840 s) and the
+  global signup rate of 30 accounts an hour, which one address can use up and
+  which lets a script reach the 50 USD cap within a day.
 - [ ] the public wake function URL keeps the stack up for any caller.
 - [ ] medium and low review findings not yet fixed: large messages held in
   memory by sibyl chat, ptolemy `/ws/rooms`, attachment upload and agora
@@ -71,27 +72,13 @@ regions. download_osm_data takes the OSM id from geokode and the outline from
 Overpass. tiletopia's `/api/v1/geocoding/*` routes and demo fallback are
 deleted. No Nominatim fallback anywhere, a geokode miss is a miss.
 
-Pushed: viewtopia 6980292b (place search on geokode only) and tiletopia
-18e2dc5 (routes deleted, Cesium search on geokode). Local, not pushed:
-geokode c85c2ff..887d8b4 and the duplicate-address fix, geolang 3082c66
-(every place lookup on geokode and Overpass, including osmnx's hidden
-Nominatim calls), viewtopia 2ad09e48 (compose files on `geokode build` and
-`serve --index`), infrastructure f55bb0a (geokode on the preview from an S3
-index copied to task-local disk).
+Live on the preview since the 2026-09-24 apply, index `planet-260914-v2`
+(65.35 M records, 7.4 GB, built on hercules in `~/geokode-planet/`).
+Ranking thresholds and measurements are in
+`/home/aaron/src/GeoLang/geokode-work-2026-09-24.md`.
 
-- [~] the planet build on hercules: `~/geokode-planet/`, planet-260914 from
-  the FAU mirror plus the Toronto extract as addresses, `run-build.sh` logs
-  `build.time` and `build.status` there. Swiss measurement and the planet
-  projection (about 60 M records, 6.5 GB index) are in
-  `/home/aaron/src/GeoLang/geokode-work-2026-09-24.md`.
-- [ ] release, in this order: push geokode, tag it, publish its image; bump
-  the geokode pin in viewtopia's `docker-compose.release.yml` and add a
-  `geokode-index` entry with the same image (master's release overlay breaks
-  until then, since v0.3.1 has no `serve --index`); push viewtopia 2ad09e48
-  and geolang 3082c66; apply once so the tiles bucket exists; run
-  `publish-geokode-index.sh`; set `geokode_index_version`,
-  `enable_geokode = true` and the geokode image pin in `preview.tfvars`;
-  plan and apply.
+- [ ] no OSM diff updates: a refresh is a full 95 GB planet download and a
+  20 minute build, then a new `geokode_index_version` and an apply.
 - [ ] `profiles/platform.tfvars` enables geokode and now fails validation
   until it names an index version.
 - [ ] the shared trusted role's S3 policy grants write on every
@@ -442,6 +429,18 @@ geolang-api, attachment and membership quotas in ptolemy, and a signup rate
 and login lockout in tiletopia. Provider settings are admin only. A CloudFront
 WAF blocks an address past 3000 requests, or 20 under `/api/v1/auth/`, in
 five minutes.
+
+Demo hardening and geokode, live since the 2026-09-24 apply (geokode
+v0.4.0, geolang v0.1.9, ptolemy v0.2.3, tiletopia v0.4.2, proxy and viewtopia
+v0.1.7): an EFS policy denies mounts without an access point or TLS, every
+task mounts through IAM, the executor mounts `natural_earth` read-only, each
+untrusted service has its own role, the ALB requires a CloudFront origin
+secret, tiletopia locks out logins per account and client address, the wake
+Lambda has reserved concurrency 1, and a tenth service, geokode, answers
+`/api/geocode/*` from the planet index copied from S3 to task-local disk.
+Verified the same day: all ten services stable, "Eiffel Tower" geocodes
+through CloudFront, a bad login answers 401, the EFS policy and executor
+mounts read back as applied.
 
 Model picked 2026-09-22 (geolang 4898def, live on the preview): the hosted
 default is `cloud:openai.gpt-oss-120b`, 0.80 against 0.45 for
