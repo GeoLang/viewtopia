@@ -13,6 +13,10 @@ All notable changes to this project will be documented in this file.
 
 ### Removed
 
+- 2026-09-24: **the public Nominatim fallback in place search.** `geocode`
+  in `src/services/geocode.ts` only asks geokode now, so a geokode miss or
+  error returns no hits. It sends `limit`, labels hits with geokode's
+  `display_name` and takes the hit type from its `kind`.
 - 2026-09-23: **notebook JavaScript and map-action cells.** `executeCodeCell`,
   `executeMapAction` and `replayNotebook` in `src/notebooks/runtime.ts`
   (last held at 46750570), the `code` and `map-action` cell types and

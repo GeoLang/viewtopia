@@ -180,7 +180,7 @@ and CC-BY-SA licence shown.
 |---------|-------------|
 | **Keyboard Shortcuts** | one-letter draw and measure tools, see [Keyboard Shortcuts](#keyboard-shortcuts) |
 | **Dark/Light Theme** | Toggle with persistence |
-| **Geocoding** | Place search through geokode, falling back to public Nominatim |
+| **Geocoding** | Place search through geokode |
 | **Coordinate Readout** | Live lat/lon/height under cursor |
 | **Right-Click Menu** | Context actions at any location |
 | **Minimap** | Overview map with viewport rectangle |

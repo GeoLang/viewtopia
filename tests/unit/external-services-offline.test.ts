@@ -1,11 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-/**
- * Geocoding and routing prefer the platform's own geokode and itinera, and only
- * reach for the public endpoint when the platform one is not there. Offline,
- * the platform answer can come from the cache and the public fallback is never
- * attempted, so the caller gets a message that says "offline".
- */
+// geocoding only asks geokode, routing falls back to the public OSRM when itinera is not there
 
 const store = vi.hoisted(() => {
   const entries = new Map<string, { url: string; status: number; headers: Record<string, string>; body: string }>();
@@ -33,16 +28,33 @@ import { useNetworkStore } from '../../src/offline/network';
 const GEOKODE_HIT = {
   results: [
     {
-      address: { house_number: '10', street: 'Downing St', city: 'London', full: '10 Downing St, London' },
+      name: null,
+      display_name: '10 Downing Street, Westminster, London',
+      address: {
+        house_number: '10',
+        street: 'Downing St',
+        city: 'London',
+        state: null,
+        postcode: 'SW1A 2AA',
+        country: 'United Kingdom',
+        full: '10 Downing St, London',
+      },
+      country_code: 'gb',
       lat: 51.5034,
       lon: -0.1276,
+      bbox: null,
+      kind: 'address',
+      osm_type: 'node',
+      osm_id: 1,
+      osm_key: null,
+      osm_value: null,
+      admin_level: null,
+      population: null,
       confidence: 0.95,
       match_type: 'exact',
     },
   ],
 };
-
-const NOMINATIM_HIT = [{ lat: '48.8584', lon: '2.2945', display_name: 'Eiffel Tower', type: 'attraction' }];
 
 const ITINERA_ROUTE = {
   distance_m: 2400,
@@ -101,43 +113,53 @@ afterEach(() => {
 });
 
 describe('geocoding', () => {
-  it('answers from geokode without ever asking Nominatim', async () => {
+  const expectSameOriginOnly = () => {
+    for (const url of fetchedUrls()) expect(url.startsWith('/') && !url.startsWith('//')).toBe(true);
+  };
+
+  it('answers from geokode with its display name and kind', async () => {
     servePlatform({ '/api/geocode/forward': GEOKODE_HIT });
 
     const hits = await geocode('10 Downing St', 1);
 
     expect(hits).toEqual([
-      { lat: 51.5034, lng: -0.1276, label: '10 Downing St, London', type: 'address' },
+      { lat: 51.5034, lng: -0.1276, label: '10 Downing Street, Westminster, London', type: 'address' },
     ]);
-    expect(fetchedUrls().some((url) => url.includes('nominatim'))).toBe(false);
+    expectSameOriginOnly();
   });
 
-  it('falls back to Nominatim where geokode is not deployed', async () => {
-    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url.startsWith('/api/geocode/')) return json({ error: 'no such service' }, 404);
-      if (url.includes('nominatim')) return json(NOMINATIM_HIT);
-      throw new Error(`unexpected fetch ${url}`);
-    });
+  it('asks geokode for the requested number of results', async () => {
+    servePlatform({ '/api/geocode/forward': GEOKODE_HIT });
 
-    const hits = await geocode('Eiffel Tower', 1);
+    await geocode('10 Downing St', 8);
 
-    expect(hits).toEqual([
-      { lat: 48.8584, lng: 2.2945, label: 'Eiffel Tower', type: 'attraction' },
-    ]);
+    expect(fetchedUrls()).toHaveLength(1);
+    expect(new URL(fetchedUrls()[0], 'http://viewer').searchParams.get('limit')).toBe('8');
+    expectSameOriginOnly();
   });
 
-  it('falls back to Nominatim when geokode is deployed but down', async () => {
-    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url.startsWith('/api/geocode/')) throw new Error('connection refused');
-      if (url.includes('nominatim')) return json(NOMINATIM_HIT);
-      throw new Error(`unexpected fetch ${url}`);
-    });
+  it('returns no hits on a geokode miss without asking anyone else', async () => {
+    servePlatform({ '/api/geocode/forward': { results: [] } });
 
-    const hits = await geocode('Eiffel Tower', 1);
+    expect(await geocode('Eiffel Tower', 1)).toEqual([]);
+    expect(fetchedUrls()).toHaveLength(1);
+    expectSameOriginOnly();
+  });
 
-    expect(hits[0].label).toBe('Eiffel Tower');
+  it('returns no hits where geokode is not deployed without asking anyone else', async () => {
+    servePlatform({});
+
+    expect(await geocode('Eiffel Tower', 1)).toEqual([]);
+    expect(fetchedUrls()).toHaveLength(1);
+    expectSameOriginOnly();
+  });
+
+  it('returns no hits when geokode is deployed but down without asking anyone else', async () => {
+    fetchMock.mockRejectedValue(new Error('connection refused'));
+
+    expect(await geocode('Eiffel Tower', 1)).toEqual([]);
+    expect(fetchedUrls()).toHaveLength(1);
+    expectSameOriginOnly();
   });
 
   it('serves a repeat query from the offline cache', async () => {
@@ -148,17 +170,15 @@ describe('geocoding', () => {
     fetchMock.mockRejectedValue(new Error('network down'));
     const hits = await geocode('10 Downing St', 1);
 
-    expect(hits[0].label).toBe('10 Downing St, London');
+    expect(hits[0].label).toBe('10 Downing Street, Westminster, London');
   });
 
-  it('says it is offline rather than reporting no such place', async () => {
+  it('returns no hits offline for a query it has not cached, without touching the network', async () => {
     setOffline(true);
     fetchMock.mockRejectedValue(new Error('network down'));
 
-    await expect(geocode('Eiffel Tower', 1)).rejects.toThrow(
-      'You are offline, and place search needs a network connection.',
-    );
-    expect(fetchedUrls().some((url) => url.includes('nominatim'))).toBe(false);
+    expect(await geocode('Eiffel Tower', 1)).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 

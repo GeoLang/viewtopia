@@ -5,12 +5,7 @@ import { notifications } from '@mantine/notifications';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { geocode } from '../services/geocode';
 
-/**
- * Always-visible "Fly to place…" box (restores the vanilla map-search box).
- * Accepts a place name (geocoded via the platform geokode service, with a
- * Nominatim fallback) or raw "lat, lng" coordinates, and flies the active
- * renderer there via the shared flyTo pipeline.
- */
+/** Flies to a place name geocoded by geokode, or to raw "lat, lng" coordinates. */
 export function FlyToSearch() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
