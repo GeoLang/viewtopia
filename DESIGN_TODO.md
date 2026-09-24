@@ -44,20 +44,20 @@ preview**.
   day, and whether a global daily counter moves to the database (today a
   restart resets it).
 - [ ] the public wake function URL keeps the stack up for any caller.
-- [~] medium and low review findings, one agent per repo, each on master
-  with CI-exact lint, see the review file for evidence lines:
-  - geolang F6: `/draw` reads its body through `bounded_request` and charges
-    `upload_budget` like `/upload`.
-  - tiletopia F9: `max_message_size` and `max_frame_size` 64 KB on the
-    realtime upgrade.
-  - sibyl F13 and F14: `RunRequest.message` capped at 32 KB, the history
-    query gets a LIMIT, and a per-user monthly token allowance small enough
-    that `TILETOPIA_MAX_USERS` times it fits the 50 USD cap.
-  - ptolemy F14 and F15: `max_message_size` on the `/ws/rooms` relay, the
-    project role checked before the attachment body is read, export and OGC
-    item limits clamped like `list_features`, and a `statement_timeout`.
-  - agora F14: websocket resume replay capped by total bytes, snapshot past
-    about 4 MB.
+- [ ] owner release: the medium and low findings F6, F9, F13, F14, F15 and
+  F16 are fixed and pushed on master (geolang a2c3ba3, tiletopia 5489430,
+  sibyl af72107 released as v0.1.3 and pinned, ptolemy 0811306, agora
+  0f2ebe1, viewtopia 97a57ac5), each with a test that failed on the old
+  code, see each CHANGELOG. Geolang, tiletopia, ptolemy and agora need a
+  tag, a ghcr image and a pin bump in `preview.tfvars` and viewtopia's
+  `docker-compose.release.yml` before they reach the preview.
+- [ ] residuals the fixes left, in priority order: the ptolemy `/ws/rooms`
+  relay still keeps 256 messages a room and checks no room membership (the
+  viewer never connects to it, tiletopia's realtime is the live one); rooms
+  are limited per creator, so enough signups can still pin tiletopia's 1 GB
+  at 64 MiB an account; ptolemy's external dataset pool and the admin CLI
+  commands run with no statement timeout; a slow realtime client now drops
+  chat lines past 32 unread instead of 256.
 - [ ] F17, the editor-only cross-tenant paths (ptolemy voronoi envelope
   bound as a parameter, external dataset registration admin only with no
   main-pool fallback, geodukt paths confined under the caller's root and
