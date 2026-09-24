@@ -599,17 +599,6 @@ docker run -e PLATFORM_JWT_SECRET="$SECRET" -e TILETOPIA_JWT_SECRET="$SECRET" \
 # Ptolemy :3000, Fenestra :3003, TileTopia :3100, PostGIS :5432
 ```
 
-### Admin dashboard
-
-A separate Next.js app with its own lockfile:
-
-```bash
-cd dashboard
-pnpm install
-pnpm run dev
-# http://localhost:4000: service health, container logs, metrics, migrations, config
-```
-
 ---
 
 ## Architecture

@@ -302,6 +302,10 @@ Wire one only when a user asks for the feature.
   `GET /api/v1/tiles/*`. `crates/tiletopia-server/src/map_tiles.rs` above the
   martin module at 79ba8fb. Tiles from built tilesets are served under
   `/martin`.
+- [ ] viewtopia admin dashboard, removed 2026-09-24: a separate Next.js app
+  on port 4000 for service health, container logs, metrics, migrations and
+  config, with its own lockfile that nothing built or deployed and that
+  carried ten npm advisories. `dashboard/` at 37bce6d5.
 
 ## Self-host preview release, follow-ups
 
