@@ -10,7 +10,7 @@ services:
 
   tiletopia:
     build: !reset null
-    image: ghcr.io/geolang/tiletopia:v0.4.2
+    image: ghcr.io/geolang/tiletopia:v0.4.3
 
   fenestra:
     build: !reset null
