@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- 2026-09-23: **sign-in and signup show the server's reason.** A refused
+  login or signup read `message`, which tiletopia never sends, so every
+  refusal said "Registration failed" or "Invalid credentials". The store now
+  reads tiletopia's `error`, so a full demo or a locked account says so.
+
 ### Removed
 
 - 2026-09-23: **notebook JavaScript and map-action cells.** `executeCodeCell`,

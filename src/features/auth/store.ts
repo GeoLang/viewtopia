@@ -81,7 +81,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         return true;
       }
       const err = await res.json().catch(() => ({ message: 'Login failed' }));
-      set({ error: err.message || 'Invalid credentials' });
+      set({ error: err.error || err.message || 'Invalid credentials' });
       return false;
     } catch (e) {
       set({ error: `Connection error: ${(e as Error).message}` });
@@ -105,7 +105,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         return true;
       }
       const err = await res.json().catch(() => ({ message: 'Registration failed' }));
-      set({ error: err.message || 'Registration failed' });
+      set({ error: err.error || err.message || 'Registration failed' });
       return false;
     } catch (e) {
       set({ error: `Connection error: ${(e as Error).message}` });
