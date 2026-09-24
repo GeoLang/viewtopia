@@ -459,9 +459,9 @@ bash scripts/platform-up.sh \
 builds its routing graph on first start), and seeds the real-estate demo.
 
 Run it again with a different extract URL and it downloads the new pbf, deletes
-`data/graph.bin` so itinera rebuilds it, recreates geokode so it re-imports its
-addresses, and moves the demo parcels to the new region. The same URL again
-skips all of that. A city or state extract keeps the download and graph build
+`data/graph.bin` so itinera rebuilds it, rebuilds the geokode index, and moves
+the demo parcels to the new region. The same URL again skips the download, the
+graph build and the parcel move. The geokode index is rebuilt on every run. A city or state extract keeps the download and graph build
 short, a country or continent takes much longer.
 
 Every later compose command needs the secrets file, or ptolemy and tiletopia
@@ -506,7 +506,7 @@ bash scripts/platform-up.sh       # from the viewtopia/ checkout
 |---------|-----------|-------|
 | PostGIS | 5432 | PostgreSQL + PostGIS |
 | Ptolemy | 3000 | Versioned feature store |
-| Geokode | 3001 | Geocoder, imports `data/region.osm.pbf` |
+| Geokode | 3001 | Geocoder, serves the index that the one-shot `geokode-index` builds from `data/region.osm.pbf` |
 | Itinera | 3002 | Router and isochrones, builds `data/graph.bin` from `data/region.osm.pbf` |
 | Fenestra | 3003 | WMS, WFS, WMTS and WCS gateway |
 | TileTopia | 3100 | 3D Tiles, terrain, assets, auth, portal, terrain analysis, realtime rooms |
@@ -549,8 +549,13 @@ yourself:
 ```bash
 scripts/fetch-osm-extract.sh https://download.geofabrik.de/europe/monaco-latest.osm.pbf data/region.osm.pbf
 rm -f data/graph.bin   # itinera only rebuilds a missing graph
-docker compose --env-file .env.platform -f docker-compose.platform.yml restart geokode itinera
+docker compose --env-file .env.platform -f docker-compose.platform.yml stop geokode
+docker compose --env-file .env.platform -f docker-compose.platform.yml up -d geokode
+docker compose --env-file .env.platform -f docker-compose.platform.yml restart itinera
 ```
+
+Starting geokode reruns `geokode-index`, which rebuilds the index from the new
+extract. Stop geokode first, since the build rewrites the files it is serving.
 
 Seed data, each against a running stack:
 
@@ -560,8 +565,9 @@ node scripts/seed-twin.mjs      # digital twin demo: twelve assets, a live map w
 uv run scripts/load-toronto.py  # City of Toronto parcels and 2021 census areas, see docs/real-estate.md
 ```
 
-Geokode also reads an OpenAddresses CSV (`LON,LAT,NUMBER,STREET,CITY,REGION,POSTCODE`)
-when its `--data` flag points at one. A sample is at `data/addresses.csv`.
+The geokode index also takes an OpenAddresses CSV (`LON,LAT,NUMBER,STREET,CITY,REGION,POSTCODE`)
+through another `--addresses` entry in the `geokode-index` command. A sample is at
+`data/addresses.csv`.
 
 **Troubleshooting:**
 

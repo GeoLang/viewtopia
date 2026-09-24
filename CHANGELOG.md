@@ -41,6 +41,14 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-09-24: **geokode serves a prebuilt index.** The platform, re and
+  verticals compose files run a one-shot `geokode-index` service that runs
+  `geokode build` into the `geokode-index` volume, and `geokode` waits for it
+  and runs `serve --index`. Both use the `geokode-platform:latest` image that
+  `geokode` builds. The platform index takes addresses from
+  `data/region.osm.pbf`, the re and verticals indexes from
+  `data/addresses.csv`. docker-compose.release.yml still pins geokode v0.3.1,
+  which only has `serve --data`.
 - 2026-09-23: **a locked model shows as locked.** When `GET /agent/models`
   reports `locked: true`, the Settings model picker is disabled, says the
   model is fixed on this deployment, and never sends `PUT /agent/model`.

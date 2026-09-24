@@ -122,20 +122,37 @@ services:
 
   # ── Spatial Services ──────────────────────────────────────────────
 
+  geokode-index:
+    image: geokode-platform:latest
+    # the image's geokode user cannot write a fresh named volume
+    user: "0:0"
+    volumes:
+      - ./data:/data:ro
+      - geokode-index:/index
+    command:
+      - build
+      - --pbf
+      - /data/region.osm.pbf
+      - --addresses
+      - /data/region.osm.pbf
+      - --out
+      - /index/region
+
   geokode:
     build:
       context: ../geokode
+    image: geokode-platform:latest
+    depends_on:
+      geokode-index:
+        condition: service_completed_successfully
     ports:
       - "3001:3000"
     volumes:
-      - ./data:/data:ro
+      - geokode-index:/index:ro
     command:
       - serve
-      - --data
-      # Real Monaco addresses from the OSM extract (geokode's PBF importer),
-      # aligned with the itinera routing graph. Swap for an OpenAddresses CSV
-      # or a larger Geofabrik .pbf to widen coverage.
-      - /data/region.osm.pbf
+      - --index
+      - /index/region
       - --bind
       - "0.0.0.0:3000"
 
@@ -528,3 +545,4 @@ volumes:
   interiora-data:
   geoplumb-cache:
   collecta-data:
+  geokode-index:

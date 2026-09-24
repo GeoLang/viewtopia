@@ -53,7 +53,7 @@ fi
 mkdir -p data
 # Marker of the region the derived data was built from. When the requested pbf
 # differs (or the pbf is missing), re-fetch and invalidate the stale routing
-# graph so itinera rebuilds it; geokode re-ingests the pbf on the recreate below.
+# graph so itinera rebuilds it. geokode-index rebuilds its index on the up below.
 # Same region requested again -> keep the pbf and graph.bin, no rebuild.
 REGION_MARKER=data/.region-url
 REGION_CHANGED=0

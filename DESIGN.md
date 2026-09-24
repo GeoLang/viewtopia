@@ -946,7 +946,7 @@ deletion, so an attribute-only placemark needs its own convention.
 |---------|-------|-------------|
 | geokode + itinera | `data/region.osm.pbf` (OSM extract, Monaco for the demo) | `scripts/platform-up.sh` fetches it |
 | itinera | `data/graph.bin` (built from the `.pbf`) | built by `platform-up.sh` |
-| geokode | exactly one `--data` path, dispatched on the extension over `.csv`, `.geojson`, `.json` and `.pbf` | compose passes `/data/region.osm.pbf`, so an address CSV is an alternative source the platform stack never reads |
+| geokode | an index directory, built by the one-shot `geokode-index` service into the `geokode-index` volume from one `--pbf` and any number of `--addresses` inputs (`.pbf`, `.csv`, `.geojson`, `.json`) | the platform file passes `data/region.osm.pbf` as both, the re and verticals files pass it with `data/addresses.csv` as the addresses |
 | geolang | LLM key (`SIBYL_CLOUD_API_KEY`) and optional local model pair. Settings can switch local/cloud and paste a replacement cloud key, which sibyl stores in sqlite | `geolang/.env` via `env_file`, or Settings → AI Model |
 | aavaaz (optional, `speech` profile) | NVIDIA GPU + nvidia container runtime, checkout at `../../Aavaaz/aavaaz` | sibling repo beside GeoLang, `platform-up.sh` opts in when both are present |
 | fenestra WCS | `COVERAGE_DIR` of `.tif`/`.tiff` (optional) | operator-supplied |

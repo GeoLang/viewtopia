@@ -9,6 +9,7 @@
 #   - ptolemy:   Spatial feature server + RE + vertical endpoints (port 3000)
 #   - itinera:   Routing + delivery optimization (port 3002)
 #   - geokode:   Geocoding (port 3001)
+#   - geokode-index: One-shot geokode index build from data/region.osm.pbf and data/addresses.csv
 #   - viewtopia: Frontend (port 5174)
 #   - data-init: One-shot container that loads sample vertical data (seed profile only)
 
@@ -65,17 +66,37 @@ services:
       - --osm
       - /data/region.osm.pbf
 
+  geokode-index:
+    image: geokode-platform:latest
+    # the image's geokode user cannot write a fresh named volume
+    user: "0:0"
+    volumes:
+      - ./data:/data:ro
+      - geokode-index:/index
+    command:
+      - build
+      - --pbf
+      - /data/region.osm.pbf
+      - --addresses
+      - /data/addresses.csv
+      - --out
+      - /index/region
+
   geokode:
     build:
       context: ../geokode
+    image: geokode-platform:latest
+    depends_on:
+      geokode-index:
+        condition: service_completed_successfully
     ports:
       - "3001:3000"
     volumes:
-      - ./data:/data:ro
+      - geokode-index:/index:ro
     command:
       - serve
-      - --data
-      - /data/addresses.csv
+      - --index
+      - /index/region
       - --bind
       - "0.0.0.0:3000"
 
@@ -198,3 +219,4 @@ services:
 
 volumes:
   pgdata:
+  geokode-index:
