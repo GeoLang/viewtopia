@@ -24,11 +24,13 @@ import { jwtClaims } from '../lib/jwt';
  * and says nothing about this socket, so we neither re-join nor reconnect on it.
  */
 
-// tiletopia's ROOM_LIMIT_CLOSE_CODE: the account already holds its 32 concurrent
-// rooms and this one would be a new room (joining someone else's never counts).
-// A retry gets the same refusal, so we stay closed and say which limit it was.
+// tiletopia's ROOM_LIMIT_CLOSE_CODE: the account already holds its 8 concurrent
+// rooms and this one would be a new room (joining someone else's never counts),
+// or the Join carried a name over MAX_USER_NAME_CHARS.
+// A retry gets the same refusal, so we stay closed and name both limits.
 const ROOM_LIMIT_CLOSE_CODE = 4029;
-const ROOM_LIMIT_ERROR = 'Too many collaboration rooms open. Leave one first.';
+export const MAX_USER_NAME_CHARS = 64;
+const ROOM_LIMIT_ERROR = `Too many collaboration rooms open, or your name is over ${MAX_USER_NAME_CHARS} characters. Leave a room or shorten your name.`;
 const UNREACHABLE_ERROR = 'Could not reach the realtime service.';
 
 /**

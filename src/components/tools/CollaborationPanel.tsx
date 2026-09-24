@@ -12,7 +12,7 @@ import {
 } from '@mantine/core';
 import { IconUsers, IconSend } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../PanelCard';
-import { useCollabStore } from '../../store/collaboration';
+import { MAX_USER_NAME_CHARS, useCollabStore } from '../../store/collaboration';
 import { useAuthStore } from '../../features/auth/store';
 
 export function CollaborationPanel({ onClose }: { onClose: () => void }) {
@@ -87,6 +87,7 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
               size="xs"
               label="Your Name"
               placeholder="Anonymous"
+              maxLength={MAX_USER_NAME_CHARS}
               value={nameInput}
               onChange={(e) => setNameInput(e.currentTarget.value)}
             />

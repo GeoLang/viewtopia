@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-09-24: **the collaboration name is capped at 64 characters.** tiletopia
+  closes a Join with a longer name with 4029, and the refusal text now names
+  that limit next to the 8-room one.
 - 2026-09-24: **chat replies render no images.** A markdown image in a reply
   loaded its remote URL with no click, so text planted in data the agent read
   could send layer contents out. `ChatPanel` now drops every `img`.
