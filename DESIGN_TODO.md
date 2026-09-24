@@ -36,14 +36,28 @@ preview**.
   (review finding F7: 9 accounts reached the old 10000 tool runs and locked
   everyone out until midnight UTC). The monthly spend caps bound cost. The
   50 USD model cap stays one counter, it is the budget ceiling.
-- [ ] a CSP on CloudFront. Deferred because a wrong one breaks the viewer and
-  it needs a running stack to test.
-- [ ] caps not decided: the two executor slots every user shares (a run holds
-  one up to 840 s), the global signup rate of 30 accounts an hour, which one
-  address can use up and which lets a script reach the 50 USD cap within a
-  day, and whether a global daily counter moves to the database (today a
-  restart resets it).
-- [ ] the public wake function URL keeps the stack up for any caller.
+- [~] second pass, owner go 2026-09-24, one agent per repo plus
+  infrastructure by hand:
+  - tiletopia: `TILETOPIA_SIGNUPS_PER_ADDRESS_PER_HOUR`, keyed on the same
+    client address as the login lockout, 3 on the preview, under the global
+    30 an hour that one address can use up today. A server-wide room cap so
+    many signups cannot pin the task's memory at 64 MiB an account.
+  - ptolemy: the statement timeout on the external dataset pool too, and
+    the voronoi envelope bound as a parameter instead of spliced into SQL
+    (the one F17 item that is a one-line change).
+  - infrastructure: a CloudFront response headers policy with
+    `Content-Security-Policy-Report-Only` first (`script-src 'self'
+    'wasm-unsafe-eval' blob:`, `object-src 'none'`, `base-uri 'self'`,
+    `frame-ancestors 'none'`, image, connect and worker sources open because
+    users add their own tile hosts), checked in a headed Chromium against
+    the preview, then enforced. The tool timeout from 840 s to 300 s, since
+    a third executor slot does not fit the 8 GiB task.
+  - then tag geolang, tiletopia, ptolemy and agora, bump the pins, one
+    apply.
+- [ ] accepted 2026-09-24: the public wake function URL. A script keeping
+  the stack up costs the 5.50 USD a day it costs anyway and the 100 USD
+  budget alarm catches it. A global daily counter stays in memory, a restart
+  resets it.
 - [ ] owner release: the medium and low findings F6, F9, F13, F14, F15 and
   F16 are fixed and pushed on master (geolang a2c3ba3, tiletopia 5489430,
   sibyl af72107 released as v0.1.3 and pinned, ptolemy 0811306, agora
