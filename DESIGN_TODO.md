@@ -29,55 +29,44 @@ Review of 2026-09-24, full findings and fixes in
 high findings are fixed and live, see the 2026-09-24 apply under **Hosted
 preview**.
 
-- [ ] owner apply, pushed in infrastructure: the ALB default action answers
-  403 on both listeners instead of the healthy 200 (owner call 2026-09-24,
-  target group health checks use their own paths), and the global per-day
-  caps in `preview.tfvars` sit at per-caller times `TILETOPIA_MAX_USERS`
-  (review finding F7: 9 accounts reached the old 10000 tool runs and locked
-  everyone out until midnight UTC). The monthly spend caps bound cost. The
-  50 USD model cap stays one counter, it is the budget ceiling.
-- [~] second pass, owner go 2026-09-24, one agent per repo plus
-  infrastructure by hand:
-  - tiletopia: `TILETOPIA_SIGNUPS_PER_ADDRESS_PER_HOUR`, keyed on the same
-    client address as the login lockout, 3 on the preview, under the global
-    30 an hour that one address can use up today. A server-wide room cap so
-    many signups cannot pin the task's memory at 64 MiB an account.
-  - ptolemy: the statement timeout on the external dataset pool too, and
-    the voronoi envelope bound as a parameter instead of spliced into SQL
-    (the one F17 item that is a one-line change).
-  - infrastructure: a CloudFront response headers policy with
-    `Content-Security-Policy-Report-Only` first (`script-src 'self'
-    'wasm-unsafe-eval' blob:`, `object-src 'none'`, `base-uri 'self'`,
-    `frame-ancestors 'none'`, image, connect and worker sources open because
-    users add their own tile hosts), checked in a headed Chromium against
-    the preview, then enforced. The tool timeout from 840 s to 300 s, since
-    a third executor slot does not fit the 8 GiB task.
-  - then tag geolang, tiletopia, ptolemy and agora, bump the pins, one
-    apply.
+- [ ] owner apply, everything pushed and pinned in infrastructure master
+  (`AWS_PROFILE=geolang terraform apply -var-file=profiles/preview.tfvars`,
+  not near 23:00 Toronto). It carries: geolang v0.1.10 (`/draw` bounded and
+  charged to the upload budget), tiletopia v0.4.3 (16 KiB realtime
+  messages, 32 kept a room, 8 rooms an account, 512 server-wide, names at 64
+  characters, `TILETOPIA_SIGNUPS_PER_ADDRESS_PER_HOUR` 3 under the global
+  30, names escaped in its own collaboration page), ptolemy v0.2.4 (relay
+  cap, role before the attachment body, export and OGC limits at 10000, 30 s
+  `statement_timeout` on the serve and external pools, geoprocessing values
+  bound), agora v0.1.1 (4 MB replay cap), sibyl v0.1.3 (32 KB messages, 200
+  message history window, 500k tokens a month per non-admin), the ALB
+  default action 403, the global daily caps at per-caller times 500, the
+  tool timeout 300 s, and a CloudFront response headers policy sending the
+  viewer a `Content-Security-Policy-Report-Only` (scripts from the bundle
+  and blob urls only, data sources open) plus nosniff and a referrer policy.
+  Each fix has a test that failed on the old code, see each CHANGELOG.
+- [ ] after that apply: load the viewer in a headed Chromium, read the
+  console for CSP violations, then set `content_security_policy_enforced =
+  true` in `preview.tfvars` and apply again.
 - [ ] accepted 2026-09-24: the public wake function URL. A script keeping
   the stack up costs the 5.50 USD a day it costs anyway and the 100 USD
   budget alarm catches it. A global daily counter stays in memory, a restart
   resets it.
-- [ ] owner release: the medium and low findings F6, F9, F13, F14, F15 and
-  F16 are fixed and pushed on master (geolang a2c3ba3, tiletopia 5489430,
-  sibyl af72107 released as v0.1.3 and pinned, ptolemy 0811306, agora
-  0f2ebe1, viewtopia 97a57ac5), each with a test that failed on the old
-  code, see each CHANGELOG. Geolang, tiletopia, ptolemy and agora need a
-  tag, a ghcr image and a pin bump in `preview.tfvars` and viewtopia's
-  `docker-compose.release.yml` before they reach the preview.
-- [ ] residuals the fixes left, in priority order: the ptolemy `/ws/rooms`
-  relay still keeps 256 messages a room and checks no room membership (the
-  viewer never connects to it, tiletopia's realtime is the live one); rooms
-  are limited per creator, so enough signups can still pin tiletopia's 1 GB
-  at 64 MiB an account; ptolemy's external dataset pool and the admin CLI
-  commands run with no statement timeout; a slow realtime client now drops
-  chat lines past 32 unread instead of 256.
-- [ ] F17, the editor-only cross-tenant paths (ptolemy voronoi envelope
-  bound as a parameter, external dataset registration admin only with no
-  main-pool fallback, geodukt paths confined under the caller's root and
-  identifiers limited to `[A-Za-z0-9_]+`, `run_workflow` confining the parsed
-  manifest, a ptolemy database role that is not the Aurora master). Low
-  today because signup mints viewer, critical the day a user is promoted.
+- [ ] residuals, in priority order: tiletopia realtime presence is still
+  unbounded per account, joining a room someone else created is free and
+  connections per account have no limit, so enough accounts joining every
+  room push the roster broadcasts past the 256 MiB budget (a cap on
+  connections per account or members per room closes it); the ptolemy
+  `/ws/rooms` relay keeps 256 messages a room and checks no room membership
+  (the viewer never connects to it); ptolemy's `migrate` and admin CLI
+  commands run with no statement timeout by choice; a slow realtime client
+  drops chat lines past 32 unread.
+- [ ] F17, the editor-only cross-tenant paths still open: external dataset
+  registration admin only with no main-pool fallback, geodukt paths
+  confined under the caller's root and identifiers limited to
+  `[A-Za-z0-9_]+`, `run_workflow` confining the parsed manifest, a ptolemy
+  database role that is not the Aurora master. Low today because signup
+  mints viewer, critical the day a user is promoted.
 - [ ] later: sibyl message retention.
 
 ## Geokode replaces Nominatim, 2026-09-24
