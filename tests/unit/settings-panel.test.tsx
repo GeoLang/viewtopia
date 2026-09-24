@@ -148,6 +148,21 @@ describe('SettingsPanel AI model section', () => {
     expect(screen.getByLabelText('Qwen3.5-9B-Q4_K_M')).toBeChecked();
   });
 
+  it('disables the picker and never puts when the model is locked', async () => {
+    const fetchMock = mockAgent({
+      models: { ...MODELS, active: 'cloud:grok-4-1-fast-reasoning', locked: true },
+    });
+    renderPanel();
+
+    await waitFor(() => expect(screen.getByTestId('ai-model-locked')).toBeInTheDocument());
+    expect(screen.getByTestId('ai-model-locked')).toHaveTextContent('The model is fixed on this deployment.');
+    expect(screen.getByLabelText('grok-4-1-fast-reasoning')).toBeChecked();
+    expect(screen.getByLabelText('Qwen3.5-9B-Q4_K_M')).toBeDisabled();
+    fireEvent.click(screen.getByLabelText('Qwen3.5-9B-Q4_K_M'));
+
+    expect(fetchMock.mock.calls.some(([url]) => url === '/agent/model')).toBe(false);
+  });
+
   it('degrades to an inert control when the models fetch fails', async () => {
     mockAgent({ getOk: false });
     renderPanel();

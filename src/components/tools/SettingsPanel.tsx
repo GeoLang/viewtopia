@@ -160,6 +160,8 @@ interface ModelProvider {
 
 interface ModelsResponse {
   active?: string;
+  default?: string;
+  locked?: boolean;
   profiles?: ModelProfile[];
   providers?: ModelProvider[];
 }
@@ -208,6 +210,7 @@ function AiModelSelect() {
   const [profiles, setProfiles] = useState<ModelProfile[] | null>(null);
   const [providers, setProviders] = useState<ModelProvider[]>([]);
   const [active, setActive] = useState<string | null>(null);
+  const [locked, setLocked] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState<FormMode | null>(null);
@@ -221,6 +224,7 @@ function AiModelSelect() {
     setProfiles(body.profiles ?? []);
     setProviders(body.providers ?? []);
     setActive(body.active ?? null);
+    setLocked(body.locked === true);
   }, []);
 
   useEffect(() => {
@@ -249,7 +253,7 @@ function AiModelSelect() {
   };
 
   const switchModel = async (id: string | null) => {
-    if (!id || id === active) return false;
+    if (!id || id === active || locked) return false;
     const previous = active;
     setActive(id);
     setError(null);
@@ -384,6 +388,11 @@ function AiModelSelect() {
       <Text size="xs" c="dimmed">
         A switch applies to new messages only. Several cloud APIs and local servers can be saved.
       </Text>
+      {locked && (
+        <Text size="xs" c="dimmed" data-testid="ai-model-locked">
+          The model is fixed on this deployment.
+        </Text>
+      )}
       {error && (
         <Text size="xs" c="red" data-testid="ai-model-error">
           {error}
@@ -432,7 +441,7 @@ function AiModelSelect() {
                 {provider.models.map((model) => {
                   const id = profileId(provider.id, model);
                   const profile = listed.find((item) => item.id === id);
-                  const disabled = busy || (profile ? !isUsable(profile) : provider.server === 'cloud' && !provider.has_key) || down;
+                  const disabled = busy || locked || (profile ? !isUsable(profile) : provider.server === 'cloud' && !provider.has_key) || down;
                   return (
                     <Radio
                       key={id}

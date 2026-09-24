@@ -21,6 +21,9 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-09-23: **a locked model shows as locked.** When `GET /agent/models`
+  reports `locked: true`, the Settings model picker is disabled, says the
+  model is fixed on this deployment, and never sends `PUT /agent/model`.
 - 2026-09-23: **no action parameter is called `name`.** viewer_control spends
   `name` on the action itself, so a layer, feed, watch or table name sent as a
   plain field replaced the action name and the viewer answered "There is no
