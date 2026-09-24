@@ -218,6 +218,22 @@ describe('layers.shade_by', () => {
       'It carries: risk, name',
     );
   });
+
+  it('gives each of many names its own category', async () => {
+    const countries = Array.from({ length: 50 }, (_, i) => point(i, `country ${i}`));
+    useAgentLayerStore.setState({
+      layers: [{ id: 'agent-europe', name: 'Europe Countries', geojson: { type: 'FeatureCollection', features: countries } }],
+    });
+    await runAction('layers.shade_by', { layer: 'Europe Countries', column: 'name' });
+    const symbology = useAgentLayerStore.getState().layers[0].symbology;
+    expect(symbology?.kind === 'categorized' && symbology.categories).toHaveLength(50);
+  });
+
+  it('says a column with one value has nothing to separate', async () => {
+    await expect(runAction('layers.shade_by', { layer: 'Road works', column: 'name' })).rejects.toThrow(
+      'name is depot on every feature of Road works, and shading needs at least two values',
+    );
+  });
 });
 
 describe('the layer visualizations', () => {

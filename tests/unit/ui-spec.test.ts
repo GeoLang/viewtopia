@@ -243,6 +243,7 @@ describe('a ui_spec layer that names a column to shade by', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.mocked(notifications.show).mockClear();
     useAgentLayerStore.setState({ layers: [], markers: [], generation: 0 });
   });
 
@@ -258,6 +259,7 @@ describe('a ui_spec layer that names a column to shade by', () => {
     expect(layer.symbology).toMatchObject({ kind: 'graduated', field: 'gap_score' });
     const fills = layer.geojson.features.map((f) => f.properties?.fill);
     expect(new Set(fills).size).toBe(3);
+    expect(notifications.show).not.toHaveBeenCalled();
   });
 
   it('leaves the layer unshaded when the file has no such column', async () => {
@@ -272,7 +274,14 @@ describe('a ui_spec layer that names a column to shade by', () => {
     expect(layer.symbology).toBeUndefined();
     expect(layer.geojson.features).toHaveLength(3);
     expect(layer.geojson.features[0].properties?.fill).toBeUndefined();
+    expect(notifications.show).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Layer drawn in one colour',
+        message: 'Service gaps has no column overall_risk. It carries: gap_score, cell_id',
+      }),
+    );
   });
+
 
   it('lets the user drop the suggestion again', async () => {
     serveCells();

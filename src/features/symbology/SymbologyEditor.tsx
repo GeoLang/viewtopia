@@ -186,7 +186,7 @@ export function SymbologyLegend({ sym }: { sym: Symbology }) {
   const symField = symbologyField(sym);
   const field = symField && columnLabel(symField);
   return (
-    <Group gap={2} wrap="nowrap" data-testid="agent-layer-legend">
+    <Group gap={2} data-testid="agent-layer-legend">
       {legendEntries(sym).map((entry) => (
         <div
           key={`${entry.color}-${entry.label}`}

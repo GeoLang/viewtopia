@@ -715,7 +715,7 @@
   },
   {
     "name": "layers.shade_by",
-    "description": "Colour one vector layer by the values in a column.",
+    "description": "Colour one vector layer by the values in a column. A numeric column gives a choropleth (QGIS graduated symbology), a colour ramp over its range. A text column gives a categorized (unique values) rendering with one colour per distinct value, which is how to colour each country or region differently. The 12 category colours repeat past 12 values.",
     "parameters": {
       "type": "object",
       "properties": {

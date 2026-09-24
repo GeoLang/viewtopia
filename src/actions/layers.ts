@@ -1,6 +1,5 @@
-import { suggestSymbology, type Symbology } from '../features/symbology/symbology';
+import { CATEGORY_PALETTE, columnSymbology, type Symbology } from '../features/symbology/symbology';
 import { asColor } from '../lib/color';
-import { propertyKeys } from '../lib/geojsonSources';
 import { pointWeight } from '../lib/mapHeatmap';
 import { collectPoints, type PointRecord } from '../lib/pointData';
 import { type AgentLayer, useAgentLayerStore } from '../store/agentLayers';
@@ -51,11 +50,6 @@ function shadedColumn(symbology: Symbology | undefined): string | undefined {
   if (!symbology) return undefined;
   const shadesByColumn = symbology.kind === 'graduated' || symbology.kind === 'categorized';
   return shadesByColumn ? symbology.field : undefined;
-}
-
-/** The features a layer was styled from, which is what its columns come from. */
-function baseGeojson(layer: AgentLayer): GeoJSON.FeatureCollection {
-  return layer.sourceGeojson ?? layer.geojson;
 }
 
 /** Later in a list draws on top, so the last entry is the top of the stack. */
@@ -293,7 +287,12 @@ registerAction({
 
 registerAction({
   name: 'layers.shade_by',
-  description: 'Colour one vector layer by the values in a column.',
+  description:
+    'Colour one vector layer by the values in a column. A numeric column gives a choropleth ' +
+    '(QGIS graduated symbology), a colour ramp over its range. A text column gives a categorized ' +
+    '(unique values) rendering with one colour per distinct value, which is how to colour each ' +
+    `country or region differently. The ${CATEGORY_PALETTE.length} category colours repeat past ` +
+    `${CATEGORY_PALETTE.length} values.`,
   parameters: {
     layer: LAYER_PARAMETER,
     column: { type: 'string', description: 'The feature property to shade by.', required: true },
@@ -305,16 +304,9 @@ registerAction({
     if (shadedColumn(vector.symbology) === column) {
       throw new ActionError(`${layer.name} is already shaded by ${column}.`);
     }
-
-    const columns = propertyKeys({ id: vector.id, name: vector.name, geojson: baseGeojson(vector) });
-    if (!columns.includes(column)) {
-      throw new ActionError(`${layer.name} has no column ${column}. It carries: ${columns.join(', ')}`);
-    }
-    const symbology = suggestSymbology(vector, column);
-    if (!symbology) {
-      throw new ActionError(`${column} has too few distinct values in ${layer.name} to shade by`);
-    }
-    useAgentLayerStore.getState().setSymbology(layer.id, symbology);
+    const shading = columnSymbology(vector, column);
+    if ('refusal' in shading) throw new ActionError(shading.refusal);
+    useAgentLayerStore.getState().setSymbology(layer.id, shading.symbology);
     return { text: `${layer.name} is shaded by ${column}.` };
   },
 });

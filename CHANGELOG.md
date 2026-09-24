@@ -70,6 +70,16 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-09-23: **a text column with many values shades by category.**
+  `layers.shade_by NAME` on 50 European countries answered "NAME has too few
+  distinct values" because categorized (unique values) symbology stopped at 12
+  values. It now gives every distinct value a category, and the 12 palette
+  colours repeat past 12. A refusal names the missing column, the single value
+  a column holds, or that it holds no text or numbers. A ui_spec `shade_by`
+  that cannot apply shows a "Layer drawn in one colour" notification with that
+  reason instead of drawing one colour silently. The `layers.shade_by`
+  description names choropleth (graduated) for numbers and categorized
+  (unique values) for text.
 - 2026-09-20: **Toronto parcels never read the Monaco demo sales.** The comps
   panel paired every parcels dataset with `demo_sales`, so a Toronto parcel
   searched sales seeded in Monaco. Each parcels dataset now has its own sales

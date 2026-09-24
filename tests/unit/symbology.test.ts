@@ -6,11 +6,11 @@ import {
   categoricalFields,
   classOf,
   clearSymbology,
+  columnSymbology,
   legendEntries,
   migrateLegacyChoropleth,
   numericFields,
-  suggestSymbology,
-  CATEGORY_CAP,
+  CATEGORY_PALETTE,
   type RuleSymbology,
 } from '../../src/features/symbology/symbology';
 import { sampleRamp } from '../../src/raster/renderer';
@@ -172,6 +172,10 @@ describe('graduated symbology', () => {
   });
 });
 
+const COUNTRY_COUNT = 50;
+const countries = () =>
+  layerOf(Array.from({ length: COUNTRY_COUNT }, (_, i) => polygon(i, `country ${i}`)));
+
 describe('categorized symbology', () => {
   it('gives each distinct value its own colour, most frequent first', () => {
     const layer = layerOf([polygon(1, 'b'), polygon(2, 'a'), polygon(3, 'a')]);
@@ -191,41 +195,64 @@ describe('categorized symbology', () => {
     expect(props[0].fill).not.toBe(props[1].fill);
   });
 
-  it('offers only fields whose values are few enough to each get a colour', () => {
+  it('offers every field that varies, however many values it has', () => {
     const layer = layerOf([polygon(1, 'a'), polygon(2, 'b')]);
     // label is constant, risk and name both vary with two values each
     expect(categoricalFields(layer)).toEqual(['risk', 'name']);
+    expect(categoricalFields(countries())).toEqual(['risk', 'name']);
+  });
 
-    const many = layerOf(
-      Array.from({ length: CATEGORY_CAP + 1 }, (_, i) => polygon(i, `n${i}`)),
-    );
-    expect(categoricalFields(many)).toEqual([]);
+  it('colours every one of many values, repeating the palette', () => {
+    const layer = countries();
+    const sym = buildCategorized(layer, 'name');
+    expect(sym?.categories).toHaveLength(COUNTRY_COUNT);
+
+    const styled = applySymbology(layer, sym as NonNullable<typeof sym>);
+    const fills = styled.geojson.features.map((f) => f.properties?.fill);
+    expect(fills.every((fill) => typeof fill === 'string')).toBe(true);
+    expect(new Set(fills).size).toBe(CATEGORY_PALETTE.length);
+    expect(legendEntries(sym as NonNullable<typeof sym>)).toHaveLength(COUNTRY_COUNT);
   });
 });
 
 describe('a column the agent named', () => {
   it('shades a numeric column with an ordered ramp', () => {
-    const sym = suggestSymbology(scored(), 'risk');
-    expect(sym).toMatchObject({ kind: 'graduated', field: 'risk' });
+    const shading = columnSymbology(scored(), 'risk');
+    expect(shading).toMatchObject({ symbology: { kind: 'graduated', field: 'risk' } });
   });
 
   it('gives a text column one colour per value', () => {
     const layer = layerOf([polygon(1, 'a'), polygon(2, 'b'), polygon(3, 'a')]);
-    const sym = suggestSymbology(layer, 'name');
-    expect(sym).toMatchObject({ kind: 'categorized', field: 'name' });
+    const shading = columnSymbology(layer, 'name');
+    expect(shading).toMatchObject({ symbology: { kind: 'categorized', field: 'name' } });
   });
 
-  it('suggests nothing for a column the file does not carry', () => {
-    expect(suggestSymbology(scored(), 'gap_score')).toBeNull();
+  it('gives a text column with more values than colours one category per value', () => {
+    const shading = columnSymbology(countries(), 'name');
+    expect(shading).toMatchObject({ symbology: { kind: 'categorized', field: 'name' } });
+    expect('symbology' in shading && legendEntries(shading.symbology)).toHaveLength(COUNTRY_COUNT);
   });
 
-  it('suggests nothing for a column that never varies', () => {
-    expect(suggestSymbology(scored(), 'label')).toBeNull();
+  it('names the columns the file does carry when it lacks the one asked for', () => {
+    expect(columnSymbology(scored(), 'gap_score')).toEqual({
+      refusal: 'Flood risk has no column gap_score. It carries: risk, name, label',
+    });
   });
 
-  it('suggests nothing for text with more values than there are colours', () => {
-    const many = layerOf(Array.from({ length: CATEGORY_CAP + 1 }, (_, i) => polygon(i, `n${i}`)));
-    expect(suggestSymbology(many, 'name')).toBeNull();
+  it('says a column that never varies has only one value', () => {
+    expect(columnSymbology(scored(), 'label')).toEqual({
+      refusal: 'label is same on every feature of Flood risk, and shading needs at least two values',
+    });
+  });
+
+  it('says a column with no text or numbers has nothing to shade by', () => {
+    const layer = layerOf([
+      { ...polygon(1, 'a'), properties: { risk: 1, flag: true } },
+      { ...polygon(2, 'b'), properties: { risk: 2, flag: false } },
+    ]);
+    expect(columnSymbology(layer, 'flag')).toEqual({
+      refusal: 'flag holds no text or number values in Flood risk to shade by',
+    });
   });
 });
 

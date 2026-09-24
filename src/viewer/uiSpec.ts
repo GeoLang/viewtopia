@@ -7,7 +7,7 @@
  * (which converts to GeoJSON) and render it on the Cesium globe.
  */
 import { notifications } from '@mantine/notifications';
-import { applySymbology, suggestSymbology } from '../features/symbology/symbology';
+import { applySymbology, columnSymbology } from '../features/symbology/symbology';
 import { authHeaders, noticeRefusal } from '../lib/apiAuth';
 import { offlineFetch } from '../offline/cache';
 import { useAppStore } from '../store/app';
@@ -61,6 +61,7 @@ export async function renderUISpec(spec: UiSpec): Promise<void> {
   let unauthorized = 0;
   let missing = 0;
   let failed = 0;
+  const shadingRefusals: string[] = [];
 
   for (let i = 0; i < specLayers.length; i++) {
     const layer = specLayers[i];
@@ -92,8 +93,10 @@ export async function renderUISpec(spec: UiSpec): Promise<void> {
         geojson,
         path: source,
       };
-      const suggested = layer.shade_by ? suggestSymbology(agentLayer, layer.shade_by) : null;
-      loaded.push(suggested ? applySymbology(agentLayer, suggested) : agentLayer);
+      const shading = layer.shade_by ? columnSymbology(agentLayer, layer.shade_by) : null;
+      if (shading && 'refusal' in shading) shadingRefusals.push(shading.refusal);
+      const shaded = shading && 'symbology' in shading;
+      loaded.push(shaded ? applySymbology(agentLayer, shading.symbology) : agentLayer);
     } catch (e) {
       failed++;
       console.error('renderUISpec: failed to load layer', layer, e);
@@ -119,6 +122,14 @@ export async function renderUISpec(spec: UiSpec): Promise<void> {
       title: 'Layers failed to load',
       message: `Could not load ${failed} layer${failed === 1 ? '' : 's'}.`,
       color: 'red',
+    });
+  }
+
+  if (shadingRefusals.length) {
+    notifications.show({
+      title: 'Layer drawn in one colour',
+      message: shadingRefusals.join('. '),
+      color: 'yellow',
     });
   }
 

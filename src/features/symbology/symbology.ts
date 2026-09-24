@@ -15,8 +15,6 @@ import { evaluateExpression, parseExpression } from './expression';
 
 export const GRADUATED_CLASSES = 5;
 export const GRADUATED_RAMP: ColorRamp = 'viridis';
-/** More distinct values than this and a field stops being a category. */
-export const CATEGORY_CAP = 12;
 
 export const CATEGORY_PALETTE = [
   '#4e79a7', '#f28e2b', '#e15759', '#76b7b2', '#59a14f', '#edc948',
@@ -170,13 +168,12 @@ function distinctValues(geojson: GeoJSON.FeatureCollection, field: string): (str
     .map(([v]) => v);
 }
 
-/** Fields whose distinct values are few enough to each get a colour. */
+/** Fields with more than one distinct value, each value getting a colour. */
 export function categoricalFields(layer: AgentLayer): string[] {
   const geojson = baseGeojson(layer);
-  return propertyKeys({ id: layer.id, name: layer.name, geojson }).filter((key) => {
-    const n = distinctValues(geojson, key).length;
-    return n > 1 && n <= CATEGORY_CAP;
-  });
+  return propertyKeys({ id: layer.id, name: layer.name, geojson }).filter(
+    (key) => distinctValues(geojson, key).length > 1,
+  );
 }
 
 /** Index of the class a value falls in, given the classes' lower bounds. */
@@ -309,7 +306,7 @@ export function buildExpression(
 
 export function buildCategorized(layer: AgentLayer, field: string): CategorizedSymbology | null {
   const values = distinctValues(baseGeojson(layer), field);
-  if (values.length < 2 || values.length > CATEGORY_CAP) return null;
+  if (values.length < 2) return null;
   return {
     kind: 'categorized',
     field,
@@ -320,13 +317,24 @@ export function buildCategorized(layer: AgentLayer, field: string): CategorizedS
   };
 }
 
-/**
- * The renderer a column the agent named wants: an ordered ramp for numbers,
- * one colour per value for text. Null when the file has no such column, or too
- * little in it to separate, and the layer keeps its single colour.
- */
-export function suggestSymbology(layer: AgentLayer, field: string): Symbology | null {
-  return buildGraduated(layer, field) ?? buildCategorized(layer, field);
+export function columnSymbology(
+  layer: AgentLayer,
+  field: string,
+): { symbology: Symbology } | { refusal: string } {
+  const geojson = baseGeojson(layer);
+  const columns = propertyKeys({ id: layer.id, name: layer.name, geojson });
+  if (!columns.includes(field)) {
+    return { refusal: `${layer.name} has no column ${field}. It carries: ${columns.join(', ')}` };
+  }
+  const symbology = buildGraduated(layer, field) ?? buildCategorized(layer, field);
+  if (symbology) return { symbology };
+  const [only] = distinctValues(geojson, field);
+  if (only === undefined) {
+    return { refusal: `${field} holds no text or number values in ${layer.name} to shade by` };
+  }
+  return {
+    refusal: `${field} is ${only} on every feature of ${layer.name}, and shading needs at least two values`,
+  };
 }
 
 function matchesRule(props: GeoJSON.GeoJsonProperties, rule: SymbologyRule): boolean {
@@ -361,17 +369,13 @@ const NO_STYLE: FeatureStyle = { color: null, radius: null };
 
 function classColor(
   feature: GeoJSON.Feature,
-  sym: GraduatedSymbology | CategorizedSymbology | RuleSymbology,
+  sym: GraduatedSymbology | RuleSymbology,
 ): string | null {
   const props = feature.properties;
   switch (sym.kind) {
     case 'graduated': {
       const value = props?.[sym.field];
       return isNumber(value) ? sym.colors[classOf(value, sym.breaks)] : null;
-    }
-    case 'categorized': {
-      const value = props?.[sym.field];
-      return sym.categories.find((c) => c.value === value)?.color ?? null;
     }
     case 'rules':
       return sym.rules.find((r) => matchesRule(props, r))?.color ?? null;
@@ -398,6 +402,11 @@ function expressionStyler(sym: ExpressionSymbology): (feature: GeoJSON.Feature) 
  */
 export function featureStyler(sym: Symbology): (feature: GeoJSON.Feature) => FeatureStyle {
   if (sym.kind === 'expression') return expressionStyler(sym);
+  if (sym.kind === 'categorized') {
+    // a unique-id column has one category per feature
+    const colors = new Map(sym.categories.map((category) => [category.value, category.color]));
+    return (feature) => ({ color: colors.get(feature.properties?.[sym.field]) ?? null, radius: null });
+  }
   return (feature) => ({ color: classColor(feature, sym), radius: null });
 }
 
