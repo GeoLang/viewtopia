@@ -58,7 +58,6 @@ preview**.
     item limits clamped like `list_features`, and a `statement_timeout`.
   - agora F14: websocket resume replay capped by total bytes, snapshot past
     about 4 MB.
-  - viewtopia F16: chat markdown renders no `img`.
 - [ ] F17, the editor-only cross-tenant paths (ptolemy voronoi envelope
   bound as a parameter, external dataset registration admin only with no
   main-pool fallback, geodukt paths confined under the caller's root and

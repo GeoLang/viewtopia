@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-09-24: **chat replies render no images.** A markdown image in a reply
+  loaded its remote URL with no click, so text planted in data the agent read
+  could send layer contents out. `ChatPanel` now drops every `img`.
 - 2026-09-24: **the map sends the bearer token only to its own origin.**
   The MapLibre request transform added the platform JWT to any URL whose path
   started with `/martin/`, whatever the host, so a tile layer saved in a

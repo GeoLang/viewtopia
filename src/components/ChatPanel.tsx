@@ -10,7 +10,7 @@ import {
   Loader,
 } from '@mantine/core';
 import { IconSend, IconPlus, IconTrash, IconSquare } from '@tabler/icons-react';
-import Markdown from 'react-markdown';
+import Markdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { interceptConfirmReply } from '../actions/dispatch';
@@ -24,6 +24,9 @@ import { DictationButton } from '../speech/DictationButton';
 import { useDictation } from '../speech/useDictation';
 import { useSpeechAvailability } from '../speech/availability';
 import { withTypedPrefix } from '../speech/segments';
+
+// a remote image url in a reply would send data out with no click
+const markdownWithoutImages: Components = { img: () => null };
 
 /** Re-run everything a reply did to the map: its viewer commands, then its map spec. */
 function replayMessage(msg: Message) {
@@ -248,7 +251,9 @@ export function ChatPanel() {
                 }}
               >
                 {msg.role === 'assistant' ? (
-                  <Markdown remarkPlugins={[remarkGfm]}>{msg.content}</Markdown>
+                  <Markdown remarkPlugins={[remarkGfm]} components={markdownWithoutImages}>
+                    {msg.content}
+                  </Markdown>
                 ) : (
                   msg.content
                 )}
