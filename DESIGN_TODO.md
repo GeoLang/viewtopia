@@ -71,21 +71,31 @@ regions. download_osm_data takes the OSM id from geokode and the outline from
 Overpass. tiletopia's `/api/v1/geocoding/*` routes and demo fallback are
 deleted. No Nominatim fallback anywhere, a geokode miss is a miss.
 
-- [~] geokode: named-object ingest with OSM type, id, key and value, admin
-  containment for city, state, country and country code, name variants,
-  `limit` on `/forward`, request caps, and `geokode build` writing an on-disk
-  index that `geokode serve` maps. Measured on a Switzerland extract first.
-- [~] geolang: geocode_place, batch_geocode, assess_environmental_risk and
-  download_osm_data on geokode, the Nominatim pacing entry and the static
-  page's Nominatim call removed.
-- [~] viewtopia: `services/geocode.ts` on geokode only.
-- [~] tiletopia: geocoding routes deleted, the GUI search bar on geokode.
-- [!] the planet build, blocked on hercules (no route to host 2026-09-24).
-  The local box has 99 GB free, less than a planet PBF plus its index.
-- [ ] deploy: geokode on the preview (`enable_geokode`, index location, task
-  memory from the measurement), compose files and helm on `geokode build`
-  and `serve --index`, then push every repo together. Nothing that drops
-  Nominatim is pushed before geokode serves the planet index on the preview.
+Pushed: viewtopia 6980292b (place search on geokode only) and tiletopia
+18e2dc5 (routes deleted, Cesium search on geokode). Local, not pushed:
+geokode c85c2ff..887d8b4 and the duplicate-address fix, geolang 3082c66
+(every place lookup on geokode and Overpass, including osmnx's hidden
+Nominatim calls), viewtopia 2ad09e48 (compose files on `geokode build` and
+`serve --index`), infrastructure f55bb0a (geokode on the preview from an S3
+index copied to task-local disk).
+
+- [~] the planet build on hercules: `~/geokode-planet/`, planet-260914 from
+  the FAU mirror plus the Toronto extract as addresses, `run-build.sh` logs
+  `build.time` and `build.status` there. Swiss measurement and the planet
+  projection (about 60 M records, 6.5 GB index) are in
+  `/home/aaron/src/GeoLang/geokode-work-2026-09-24.md`.
+- [ ] release, in this order: push geokode, tag it, publish its image; bump
+  the geokode pin in viewtopia's `docker-compose.release.yml` and add a
+  `geokode-index` entry with the same image (master's release overlay breaks
+  until then, since v0.3.1 has no `serve --index`); push viewtopia 2ad09e48
+  and geolang 3082c66; apply once so the tiles bucket exists; run
+  `publish-geokode-index.sh`; set `geokode_index_version`,
+  `enable_geokode = true` and the geokode image pin in `preview.tfvars`;
+  plan and apply.
+- [ ] `profiles/platform.tfvars` enables geokode and now fails validation
+  until it names an index version.
+- [ ] the shared trusted role's S3 policy grants write on every
+  `geolang-prod-*` bucket, so any trusted service can overwrite the index.
 
 ## Doc sweep 2026-09-23, code defects found
 
