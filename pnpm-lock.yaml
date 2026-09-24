@@ -76,8 +76,8 @@ importers:
         specifier: ^7.3.5
         version: 7.4.0
       '@types/three':
-        specifier: ^0.185.0
-        version: 0.185.1
+        specifier: ^0.186.0
+        version: 0.186.0
       apache-arrow:
         specifier: ^21.1.0
         version: 21.2.0
@@ -142,8 +142,8 @@ importers:
         specifier: 4.0.1
         version: 4.0.1(supports-color@7.2.0)
       three:
-        specifier: ^0.185.0
-        version: 0.185.1
+        specifier: ^0.186.0
+        version: 0.186.0
       vt-pbf:
         specifier: ^3.1.3
         version: 3.1.3
@@ -2358,8 +2358,8 @@ packages:
   '@types/three@0.134.0':
     resolution: {integrity: sha512-4YB+99Rgqq27EjiYTItEoZtdjLnTh8W9LxowgpC9eWsjaQJIL4Kn/ZcUKAnW3gB/jS4hqGN8iqmid+RcUZDzpA==}
 
-  '@types/three@0.185.1':
-    resolution: {integrity: sha512-db1xTb+EgYF2didW+eudSvVPtn75zo+fGsY8ShQrJY/B5ZBmC2Fiaykv3aImHAlCNEGuMPkPGXBJGLwzu5mC7A==}
+  '@types/three@0.186.0':
+    resolution: {integrity: sha512-mxYSBpDC+D0pLfSP6sW4WZTcT+nrtmZcimMqnVmy36Hte3XpeYSrvgg4TRdaM1GemGog1AWzI5qL2VoIfMXbJQ==}
 
   '@types/trusted-types@2.0.7':
     resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
@@ -4301,6 +4301,9 @@ packages:
 
   three@0.185.1:
     resolution: {integrity: sha512-5aojFCXKwnjBRZvUnt3WFfEcvUJgkN5LlijRFN95hMy8WVkG4I0QNcJE+OuWvuJ0bOdStrbfXn0pkd6/QyiAlg==}
+
+  three@0.186.0:
+    resolution: {integrity: sha512-cr/fIM2ddMSVbYVgkfD4jLJv7Fh/8ZTjvo+7gQeSVGUZHxpx9FDwoL5iC7hUz/LiRA8wMbqfnb90xKfm1/HHkQ==}
 
   tinybench@2.9.0:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
@@ -7988,7 +7991,7 @@ snapshots:
 
   '@types/three@0.134.0': {}
 
-  '@types/three@0.185.1':
+  '@types/three@0.186.0':
     dependencies:
       '@dimforge/rapier3d-compat': 0.12.0
       '@tweenjs/tween.js': 23.1.3
@@ -10392,6 +10395,8 @@ snapshots:
   three@0.134.0: {}
 
   three@0.185.1: {}
+
+  three@0.186.0: {}
 
   tinybench@2.9.0: {}
 
