@@ -24,12 +24,42 @@ Goal: a signed-up demo user cannot spend the budget, take the service from
 others, or damage shared state. The limits that shipped are under **Hosted
 preview** below.
 
-- [ ] infrastructure: an EFS file system policy requiring access points, and
-  `natural_earth` mounted read-only on geolang-api and the executor.
-- [ ] owner: plan and apply again. The live `geolang-prod-demo-wake` has no
-  reserved concurrency although `demo_wake_concurrency` is 1, the account
-  Lambda quota is now 1000.
+- [~] committed, not pushed or applied: an EFS file system policy that denies
+  mounts without an access point or TLS, IAM mounts, one role per untrusted
+  service (infrastructure b0a5ee1), and a read-only `natural_earth` on the
+  executor, which needs the download fallback in geolang ad114fd. Apply with
+  `-target=module.ecs` first, then a full apply, as the infrastructure README
+  says. The same apply sets the wake Lambda's reserved concurrency, which the
+  live function lacks.
+- [ ] a read-only review of the preview for demo-user damage runs 2026-09-24,
+  findings in `/home/aaron/src/GeoLang/demo-review-2026-09-24.md`. Known
+  before it: two executor slots shared by every user, a global signup rate a
+  single IP can use up, and the public wake URL.
 - [ ] later: sibyl message retention.
+
+## Geokode replaces Nominatim, 2026-09-24
+
+Owner calls: the whole planet filtered to named objects (places, admin
+boundaries, named POIs, named streets) plus house addresses only for loaded
+regions. download_osm_data takes the OSM id from geokode and the outline from
+Overpass. tiletopia's `/api/v1/geocoding/*` routes and demo fallback are
+deleted. No Nominatim fallback anywhere, a geokode miss is a miss.
+
+- [~] geokode: named-object ingest with OSM type, id, key and value, admin
+  containment for city, state, country and country code, name variants,
+  `limit` on `/forward`, request caps, and `geokode build` writing an on-disk
+  index that `geokode serve` maps. Measured on a Switzerland extract first.
+- [~] geolang: geocode_place, batch_geocode, assess_environmental_risk and
+  download_osm_data on geokode, the Nominatim pacing entry and the static
+  page's Nominatim call removed.
+- [~] viewtopia: `services/geocode.ts` on geokode only.
+- [~] tiletopia: geocoding routes deleted, the GUI search bar on geokode.
+- [!] the planet build, blocked on hercules (no route to host 2026-09-24).
+  The local box has 99 GB free, less than a planet PBF plus its index.
+- [ ] deploy: geokode on the preview (`enable_geokode`, index location, task
+  memory from the measurement), compose files and helm on `geokode build`
+  and `serve --index`, then push every repo together. Nothing that drops
+  Nominatim is pushed before geokode serves the planet index on the preview.
 
 ## Doc sweep 2026-09-23, code defects found
 
@@ -58,11 +88,6 @@ Decisions:
   ifc-lite's `set_rtc_offset`, about ten files. Separately the native path
   places meshes with an ENU root at a longitude and latitude, so a model in
   projected metres lands in the wrong place regardless.
-- [ ] tiletopia dashboard demo panels: the measure, anomaly and clash panels,
-  the `/demo/rbac` users table, the `/demo/stories` fallback and
-  `gui/osm-buildings-demo.html` call routes deleted in 048e362 and get 404.
-  The agent's removal was refused by the permission layer twice, so the
-  owner makes or allows this edit. The e2e nav count drops from 11 to 8.
 - [ ] viewtopia SQL cell "Show on map" always fails with "No runtime
   available", nothing calls `setRuntime`. Connect the runtime or remove the
   button. `src/duckdb/loaders.ts` has no importer either.
