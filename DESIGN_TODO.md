@@ -325,10 +325,8 @@ other documents citing "P0 item 5" still land on the right one.
 7. **Chat-only viewer mode: a typed prompt reaches every capability that does
    not need the mouse.** Repositories: `viewtopia`, `geolang`. Owner call
    2026-08-25, plan under **Chat-only viewer mode** in the plans section.
-   - [x] Panels were unreachable from the chat: `panel.open` and
-     `panel.close` landed 2026-09-20 and chat-only mode draws a panel the
-     chat opened. File import from chat still needs a URL (`data.import_url`),
-     a local file has no path the chat can name.
+   - [ ] File import from chat needs a URL (`data.import_url`), a local file
+     has no path the chat can name.
    - [ ] A chat result's layer id is `spec-<file>`, and for "show layers"
      grok passed that id to the map tool as the file name, then recovered
      through `list_outputs`. One wasted call, not a wrong result. The
