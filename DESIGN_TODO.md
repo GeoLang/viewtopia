@@ -21,22 +21,12 @@
 ## Demo hardening
 
 Goal: a signed-up demo user cannot spend the budget, take the service from
-others, or damage shared state. The limits that shipped are under **Hosted
-preview** below.
+others, or damage shared state. What is in place is DESIGN.md §2.9. Finding
+numbers refer to `/home/aaron/src/GeoLang/demo-review-2026-09-24.md` (not in
+any repo).
 
-Review of 2026-09-24, full findings and fixes in
-`/home/aaron/src/GeoLang/demo-review-2026-09-24.md` (not in any repo). The
-high findings are fixed and live, see the 2026-09-24 apply under **Hosted
-preview**.
-
-- [ ] owner apply: `content_security_policy_enforced = true` is pushed in
-  infrastructure master after a report-only pass (headless shell load plus
-  the owner's signed-in click-through) showed no violations. The CSP is
-  enforced once that apply runs, see **Hosted preview** for the policy.
-- [ ] accepted 2026-09-24: the public wake function URL. A script keeping
-  the stack up costs the 5.50 USD a day it costs anyway and the 100 USD
-  budget alarm catches it. A global daily counter stays in memory, a restart
-  resets it.
+- [ ] owner apply: `content_security_policy_enforced = true` in
+  `preview.tfvars` is pushed, not applied.
 - [ ] residuals, in priority order: tiletopia realtime presence is still
   unbounded per account, joining a room someone else created is free and
   connections per account have no limit, so enough accounts joining every
@@ -54,23 +44,12 @@ preview**.
   mints viewer, critical the day a user is promoted.
 - [ ] later: sibyl message retention.
 
-## Geokode replaces Nominatim, 2026-09-24
-
-Owner calls: the whole planet filtered to named objects (places, admin
-boundaries, named POIs, named streets) plus house addresses only for loaded
-regions. download_osm_data takes the OSM id from geokode and the outline from
-Overpass. tiletopia's `/api/v1/geocoding/*` routes and demo fallback are
-deleted. No Nominatim fallback anywhere, a geokode miss is a miss.
-
-Live on the preview since the 2026-09-24 apply, index `planet-260914-v2`
-(65.35 M records, 7.4 GB). It was built on hercules, shut down 2026-09-24.
-The build scripts and timings are in `/home/aaron/geokode-data/`, and a
-rebuild needs about 40 GB RAM and 110 GB disk, a spot `r6i.2xlarge` does it.
-Ranking thresholds and measurements are in
-`/home/aaron/src/GeoLang/geokode-work-2026-09-24.md`.
+## Geokode planet index
 
 - [ ] no OSM diff updates: a refresh is a full 95 GB planet download and a
-  20 minute build, then a new `geokode_index_version` and an apply.
+  20 minute build on a box with 40 GB RAM and 110 GB disk (a spot
+  `r6i.2xlarge`, the scripts are in `/home/aaron/geokode-data/`), then a
+  new `geokode_index_version` and an apply.
 - [ ] `profiles/platform.tfvars` enables geokode and now fails validation
   until it names an index version.
 - [ ] the shared trusted role's S3 policy grants write on every
@@ -362,120 +341,6 @@ other documents citing "P0 item 5" still land on the right one.
      it, because the spacetime co-travel analysis already produces paired
      entity segments and is the source it would draw from. Give it a
      layer-referencing action the day that pairing is exposed as a layer.
-
-## Before any public deploy
-
-### Hosted preview, live since 2026-09-19
-
-Owner calls 2026-09-19: AWS account 000152811496 in us-east-1 (the owner is in
-Toronto) under IAM user `geolang-deploy` (CLI profile `geolang`), nine services
-(proxy, viewtopia, ptolemy, tiletopia, agora, geolang-api, executor, sibyl,
-geodukt), no domain, Sibyl on Amazon Bedrock. Low cost is the constraint.
-
-Live at https://d2dkw27j378mpo.cloudfront.net, applied from
-`infrastructure/profiles/preview.tfvars` (138 resources, state in the
-`geolang-terraform-state-000152811496` bucket in us-west-2). Verified the same
-day: every enabled route answers through CloudFront, all nine tasks healthy on
-Fargate Spot, a signup on tiletopia yields a token that ptolemy, agora and
-geolang-api accept, and one chat run ("Fly the map to Monaco") geocoded,
-downloaded Natural Earth into EFS and returned a map spec. The viewer loads in
-headless Chromium with its canvas and toolbar.
-
-Shape, all in `infrastructure` (README has the detail):
-
-- one Aurora Serverless v2 PostgreSQL 17.10 cluster, min 0 ACU, auto-pause
-  after 300 s, `rds.force_ssl` on, RDS Data API on. Ptolemy and agora are two
-  databases on it with the master credential (the compose layout), the refresh
-  Lambda created `agora` through the Data API on its first run. Ptolemy's
-  delivery worker polls every 5 s and agora's watch tick every 30 s, so the
-  cluster only pauses while the tasks are scaled to zero.
-- no NAT gateway: tasks run in the public subnets with public IPs.
-- Fargate Spot for every service, ptolemy health check on `/api/v1/healthz`.
-- ghcr images for seven services, ECR builds for the Caddy proxy and viewtopia.
-- `scripts/platform-scale.sh up|down`, a nightly scale-down at 23:00
-  America/Toronto, a morning scale-up at 08:00, and a scale-down after 30
-  minutes without a `POST /chat/agui` line (the `DemoActivity` metric).
-- Sibyl calls `https://bedrock-mantle.us-east-1.api.aws/v1` with
-  `openai.gpt-oss-120b` (active) and `qwen.qwen3-235b-a22b-2507`. Bedrock has
-  no Qwen3.5 or 3.8, so the 0.82 eval baseline does not carry over.
-
-Cost, us-east-1 list prices: about 5.50 USD a day while up, about 1.10 a day
-scaled to zero (ALB, secrets, storage).
-
-Owner calls 2026-09-19 (evening): no domain yet, the nightly scale-down
-stays with manual scale-up, share links keep granting edit to guests.
-
-Hardening shipped 2026-09-20 (geolang aa5a003, infrastructure 78af6d5,
-live on the preview): every tool run happens in a pre-warmed worker
-process with `GEOLANG_TOOL_MEMORY_LIMIT_MB`, `GEOLANG_TOOL_TIMEOUT_SECONDS`
-and `GEOLANG_TOOL_MAX_CONCURRENT` (defaults 3072, 840, 2) and the executor
-task runs at 8 GiB; closed `/api/*` gates answer 501 before ptolemy's
-catch-all; agora connects with its own database role, moved across by the
-refresh Lambda; a forced master password rotation was run and ptolemy and
-agora came back healthy with no authentication failures. Watch out: the
-23:00 Toronto scale-down fired in the middle of that test, so do not roll
-services near 23:00.
-
-Spend and abuse limits, live since the 2026-09-23 apply (geolang v0.1.8,
-sibyl v0.1.2, ptolemy v0.2.2, tiletopia v0.4.1, viewtopia v0.1.6), values in
-`infrastructure/profiles/preview.tfvars`: sibyl refuses model calls past 50
-USD a month, a 100 USD AWS budget emails the `spend-cap` topic at 80 percent
-and denies `bedrock:*` at 100, every run is locked to gpt-oss, and each user
-gets daily run and token caps in sibyl, tool run, output and upload caps in
-geolang-api, attachment and membership quotas in ptolemy, and a signup rate
-and login lockout in tiletopia. Provider settings are admin only. A CloudFront
-WAF blocks an address past 3000 requests, or 20 under `/api/v1/auth/`, in
-five minutes.
-
-Demo hardening and geokode, live since the 2026-09-24 apply (geokode
-v0.4.0, geolang v0.1.9, ptolemy v0.2.3, tiletopia v0.4.2, proxy and viewtopia
-v0.1.7): an EFS policy denies mounts without an access point or TLS, every
-task mounts through IAM, the executor mounts `natural_earth` read-only, each
-untrusted service has its own role, the ALB requires a CloudFront origin
-secret, tiletopia locks out logins per account and client address, the wake
-Lambda has reserved concurrency 1, and a tenth service, geokode, answers
-`/api/geocode/*` from the planet index copied from S3 to task-local disk.
-Verified the same day: all ten services stable, "Eiffel Tower" geocodes
-through CloudFront, a bad login answers 401, the EFS policy and executor
-mounts read back as applied.
-
-Second apply the same evening, the medium and low review findings plus the
-second pass: geolang v0.1.10 (`/draw` bounded and charged to the upload
-budget), tiletopia v0.4.3 (16 KiB realtime messages, 32 kept a room, 8
-rooms an account, 512 server-wide, names at 64 characters,
-`TILETOPIA_SIGNUPS_PER_ADDRESS_PER_HOUR` 3 under the global 30, names
-escaped in its own collaboration page), ptolemy v0.2.4 (relay cap, role
-before the attachment body, export and OGC limits at 10000, 30 s
-`statement_timeout` on the serve and external pools, geoprocessing values
-bound), agora v0.1.1 (4 MB replay cap), sibyl v0.1.3 (32 KB messages, 200
-message history window, 500k tokens a month per non-admin), the ALB default
-action 403, the global daily caps at per-caller times 500, the tool timeout
-300 s, and a CloudFront response headers policy on the viewer: nosniff, a
-referrer policy, and a CSP with `script-src 'self' 'unsafe-eval'
-'wasm-unsafe-eval' blob:` (`unsafe-eval` because Cesium's bundled Knockout
-evaluates a string at load, `blob:` for verified plugin bundles), `object-src
-'none'`, `base-uri 'self'`, `frame-ancestors 'none'`, and image, connect,
-media and worker sources open because users add their own tile hosts.
-Each fix has a test that failed on the old code, see each CHANGELOG.
-
-Model picked 2026-09-22 (geolang 4898def, live on the preview): the hosted
-default is `cloud:openai.gpt-oss-120b`, 0.80 against 0.45 for
-`qwen.qwen3-235b-a22b-2507` on the viewer eval at `--repeat 3`, and Qwen
-reached 0.73 on the reworded viewer instructions. With those instructions,
-`compare_layers` and `ptolemy_query` behind their viewer actions, and a 404
-pointing a dotted action name at viewer_control, the gpt-oss baseline on the
-rolled preview is 0.92 over 76 tasks (report 20260922T192650).
-
-- [ ] the five gpt-oss viewer eval failures: history-show-live was a broken
-      fixture (fixed 2026-09-23), tab-to-leaflet is the model, and the three
-      dataset and scenario tasks now get one system prompt line per hidden
-      tool. Re-score pending, under **Doc sweep**.
-
-Accepted as is: the Bedrock key stays a long-term key (expires 2027-09-19,
-rotate by hand before then, noted in the infrastructure README); the refresh
-Lambda has no reserved concurrency because the account quota is 10, and an
-overlapping run is a no-op by the equality check.
-
 
 ## Wait for demand
 

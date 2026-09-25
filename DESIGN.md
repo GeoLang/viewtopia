@@ -712,10 +712,13 @@ and there are no dead buttons in the default UI.
   street-view needs a Google Maps API key for the embed. Neither keyed host is contacted
   before its key is set.
 - Analysis panels read the shown renderer's view and draw results on it (`viewBounds.ts`).
-- **External services.** Geocoding and routing prefer the platform's own geokode and itinera
-  over the proxy (`/api/geocode/forward`, `/api/route`), through the offline API cache, so a
-  query asked before still answers with no network. Nominatim and the public OSRM stay as the
-  fallback for a stack that has neither deployed, and offline they are not attempted at all:
+- **External services.** Geocoding is geokode only (`/api/geocode/forward`). Its planet
+  index holds named objects (places, admin boundaries, named POIs, named streets) plus house
+  addresses for loaded regions, and a miss is a miss: nothing on the platform falls back to
+  Nominatim, and geolang's download_osm_data takes the OSM id from geokode and the outline
+  from Overpass. Routing prefers itinera (`/api/route`) with the public OSRM as the fallback
+  for a stack without it. Both go through the offline API cache, so a query asked before
+  still answers with no network, and offline the OSRM fallback is not attempted at all:
   `services/geocode.ts` and `services/route.ts` raise instead, so the panel says the user is
   offline rather than reporting an empty result. Open-elevation, open-meteo and Overpass are
   online only, because every one of them is keyed by a fresh line, view or camera bbox that no
@@ -961,6 +964,61 @@ the platform at a database it does not own.
 `loadtest/` holds the load-test harness (nightly in CI) with a published baseline. Its
 tiletopia scenario measures a harness-owned seeded tileset so it is idempotent and skips
 honestly after teardown. Its fenestra scenario measures the proxy route by default.
+
+### 2.9 Hosted preview (AWS)
+
+The public demo runs the platform layout on AWS from the `infrastructure` repo, profile
+`profiles/preview.tfvars` (its README has the detail): ten Fargate Spot services (the Caddy
+proxy, viewtopia, ptolemy, tiletopia, agora, geolang-api, the tool executor, sibyl, geodukt,
+geokode) behind an ALB and a CloudFront distribution with no domain, one Aurora Serverless v2
+PostgreSQL cluster (min 0 ACU, auto-pause, ptolemy and agora as two databases on it), EFS for
+the shared data mounts, and no NAT gateway, tasks have public IPs. The Rust and Python
+services run ghcr images, the proxy and viewtopia are ECR builds. Sibyl calls Bedrock through
+the mantle endpoint, locked to `openai.gpt-oss-120b` (viewer eval 0.92 over 76 tasks, the
+Qwen models Bedrock offers score lower and it has no Qwen3.5 or 3.8). A static landing page
+in a private S3 bucket sits behind the same distribution with a public wake Lambda URL
+(reserved concurrency 1) that scales the stack up. A nightly scale-down at 23:00 Toronto, a
+morning scale-up at 08:00 and a scale-down after 30 minutes without chat activity keep cost
+at about 5.50 USD a day up and 1.10 scaled to zero. Never roll services near 23:00 Toronto,
+the scale-down cuts a rollout in half.
+
+Isolation and edge: an EFS policy denies any mount without an access point and TLS, every
+task mounts through IAM with its own access points, the executor mounts `natural_earth`
+read-only, each untrusted service has its own task role, and geokode serves the planet index
+copied from S3 to task-local disk at start. CloudFront sends a secret origin header the ALB
+listener rule requires and the ALB default action is a 403, so the proxy is reachable only
+through the distribution. A CloudFront WAF blocks an address past 3000 requests, or 20 under
+any `/v1/auth/` path, in five minutes. The CloudFront to ALB hop stays plain HTTP until a
+domain gives the ALB a certificate.
+
+Spend and abuse limits, values in `preview.tfvars`: sibyl refuses model calls past 50 USD a
+month (one global counter, the budget ceiling), a 100 USD AWS budget alarms at 80 percent
+and denies `bedrock:*` at 100, every run is locked to gpt-oss, and each account gets daily
+run and token caps plus a monthly token allowance in sibyl (admins are exempt from the
+monthly one), daily tool run, output and upload caps in geolang-api with the global daily
+caps at per-caller times the user limit, attachment and membership quotas in ptolemy, and in
+tiletopia a user limit, a global and a per-address signup rate, and a login lockout per
+account and per client address. The client address is the X-Forwarded-For entry
+`TILETOPIA_TRUSTED_PROXY_HOPS` places from the right, 3 on the preview because CloudFront,
+the ALB and the proxy each append one. Every tool run happens in a pre-warmed worker with a
+memory limit, a timeout and two shared slots on an 8 GiB executor task. Request bodies,
+websocket messages, resume replays, export limits and statement timeouts are bounded per
+service, see each service's README.
+
+The viewer response carries `X-Content-Type-Options: nosniff`, a
+`strict-origin-when-cross-origin` referrer policy and a Content-Security-Policy
+(`content_security_policy_enforced` chooses enforced or report-only): `script-src 'self'
+'unsafe-eval' 'wasm-unsafe-eval' blob:` (`unsafe-eval` because Cesium's bundled Knockout
+evaluates a string at load, `blob:` for verified plugin bundles, `wasm-unsafe-eval` for
+DuckDB), `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors
+'none'`, and image, connect, media and worker sources open because users add their own tile
+hosts.
+
+Accepted as is: no domain, share links grant edit to guests, the Bedrock key is a long-term
+key rotated by hand (expiry noted in the infrastructure README), the refresh Lambda has no
+reserved concurrency (the account quota is 10 and an overlapping run is a no-op), a script
+hitting the wake URL costs at most the always-up rate and the budget alarm catches it, and
+the global daily counters in geolang-api are in memory so a restart resets them.
 
 ---
 
