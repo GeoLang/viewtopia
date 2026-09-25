@@ -29,25 +29,10 @@ Review of 2026-09-24, full findings and fixes in
 high findings are fixed and live, see the 2026-09-24 apply under **Hosted
 preview**.
 
-- [ ] owner apply, everything pushed and pinned in infrastructure master
-  (`AWS_PROFILE=geolang terraform apply -var-file=profiles/preview.tfvars`,
-  not near 23:00 Toronto). It carries: geolang v0.1.10 (`/draw` bounded and
-  charged to the upload budget), tiletopia v0.4.3 (16 KiB realtime
-  messages, 32 kept a room, 8 rooms an account, 512 server-wide, names at 64
-  characters, `TILETOPIA_SIGNUPS_PER_ADDRESS_PER_HOUR` 3 under the global
-  30, names escaped in its own collaboration page), ptolemy v0.2.4 (relay
-  cap, role before the attachment body, export and OGC limits at 10000, 30 s
-  `statement_timeout` on the serve and external pools, geoprocessing values
-  bound), agora v0.1.1 (4 MB replay cap), sibyl v0.1.3 (32 KB messages, 200
-  message history window, 500k tokens a month per non-admin), the ALB
-  default action 403, the global daily caps at per-caller times 500, the
-  tool timeout 300 s, and a CloudFront response headers policy sending the
-  viewer a `Content-Security-Policy-Report-Only` (scripts from the bundle
-  and blob urls only, data sources open) plus nosniff and a referrer policy.
-  Each fix has a test that failed on the old code, see each CHANGELOG.
-- [ ] after that apply: load the viewer in a headed Chromium, read the
-  console for CSP violations, then set `content_security_policy_enforced =
-  true` in `preview.tfvars` and apply again.
+- [ ] owner apply: `content_security_policy_enforced = true` is pushed in
+  infrastructure master after a report-only pass (headless shell load plus
+  the owner's signed-in click-through) showed no violations. The CSP is
+  enforced once that apply runs, see **Hosted preview** for the policy.
 - [ ] accepted 2026-09-24: the public wake function URL. A script keeping
   the stack up costs the 5.50 USD a day it costs anyway and the 100 USD
   budget alarm catches it. A global daily counter stays in memory, a restart
@@ -453,6 +438,25 @@ Lambda has reserved concurrency 1, and a tenth service, geokode, answers
 Verified the same day: all ten services stable, "Eiffel Tower" geocodes
 through CloudFront, a bad login answers 401, the EFS policy and executor
 mounts read back as applied.
+
+Second apply the same evening, the medium and low review findings plus the
+second pass: geolang v0.1.10 (`/draw` bounded and charged to the upload
+budget), tiletopia v0.4.3 (16 KiB realtime messages, 32 kept a room, 8
+rooms an account, 512 server-wide, names at 64 characters,
+`TILETOPIA_SIGNUPS_PER_ADDRESS_PER_HOUR` 3 under the global 30, names
+escaped in its own collaboration page), ptolemy v0.2.4 (relay cap, role
+before the attachment body, export and OGC limits at 10000, 30 s
+`statement_timeout` on the serve and external pools, geoprocessing values
+bound), agora v0.1.1 (4 MB replay cap), sibyl v0.1.3 (32 KB messages, 200
+message history window, 500k tokens a month per non-admin), the ALB default
+action 403, the global daily caps at per-caller times 500, the tool timeout
+300 s, and a CloudFront response headers policy on the viewer: nosniff, a
+referrer policy, and a CSP with `script-src 'self' 'unsafe-eval'
+'wasm-unsafe-eval' blob:` (`unsafe-eval` because Cesium's bundled Knockout
+evaluates a string at load, `blob:` for verified plugin bundles), `object-src
+'none'`, `base-uri 'self'`, `frame-ancestors 'none'`, and image, connect,
+media and worker sources open because users add their own tile hosts.
+Each fix has a test that failed on the old code, see each CHANGELOG.
 
 Model picked 2026-09-22 (geolang 4898def, live on the preview): the hosted
 default is `cloud:openai.gpt-oss-120b`, 0.80 against 0.45 for
