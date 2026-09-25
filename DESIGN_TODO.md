@@ -25,8 +25,6 @@ others, or damage shared state. What is in place is DESIGN.md §2.9. Finding
 numbers refer to `/home/aaron/src/GeoLang/demo-review-2026-09-24.md` (not in
 any repo).
 
-- [ ] owner apply: `content_security_policy_enforced = true` in
-  `preview.tfvars` is pushed, not applied.
 - [ ] residuals, in priority order: tiletopia realtime presence is still
   unbounded per account, joining a room someone else created is free and
   connections per account have no limit, so enough accounts joining every
