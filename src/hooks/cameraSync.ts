@@ -1,7 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { Cartesian3, Math as CesiumMath, type Viewer } from 'cesium';
 import type { Map as MapLibreMap } from 'maplibre-gl';
-import { getSharedCamera, subscribeSharedCamera, type SharedCamera } from './sharedCamera';
+import {
+  getSharedCamera,
+  sameSharedCamera,
+  subscribeSharedCamera,
+  type SharedCamera,
+} from './sharedCamera';
 
 /**
  * The one place the renderer camera conversions live: shared camera state is
@@ -64,13 +69,7 @@ export function applyMapLibreCamera(map: MapLibreMap, c: SharedCamera) {
  * its own move.
  */
 export function sameCamera(a: SharedCamera, b: SharedCamera): boolean {
-  return (
-    Math.abs(a.longitude - b.longitude) < 1e-6 &&
-    Math.abs(a.latitude - b.latitude) < 1e-6 &&
-    Math.abs(a.zoom - b.zoom) < 1e-4 &&
-    Math.abs(a.pitch - b.pitch) < 1e-3 &&
-    Math.abs(a.bearing - b.bearing) < 1e-3
-  );
+  return sameSharedCamera(a, b);
 }
 
 /**

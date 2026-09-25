@@ -34,12 +34,32 @@ export function getSharedCamera(): SharedCamera {
   return { ...state };
 }
 
+export function sameSharedCamera(a: SharedCamera, b: SharedCamera): boolean {
+  return (
+    Math.abs(a.longitude - b.longitude) < 1e-6 &&
+    Math.abs(a.latitude - b.latitude) < 1e-6 &&
+    Math.abs(a.zoom - b.zoom) < 1e-4 &&
+    Math.abs(a.pitch - b.pitch) < 1e-3 &&
+    Math.abs(a.bearing - b.bearing) < 1e-3
+  );
+}
+
 export function setSharedCamera(c: Partial<SharedCamera>) {
-  if (c.longitude !== undefined) state.longitude = c.longitude;
-  if (c.latitude !== undefined) state.latitude = c.latitude;
-  if (c.zoom !== undefined) state.zoom = c.zoom;
-  if (c.pitch !== undefined) state.pitch = c.pitch;
-  if (c.bearing !== undefined) state.bearing = c.bearing;
+  const next: SharedCamera = {
+    longitude: c.longitude !== undefined ? c.longitude : state.longitude,
+    latitude: c.latitude !== undefined ? c.latitude : state.latitude,
+    zoom: c.zoom !== undefined ? c.zoom : state.zoom,
+    pitch: c.pitch !== undefined ? c.pitch : state.pitch,
+    bearing: c.bearing !== undefined ? c.bearing : state.bearing,
+  };
+  // resize fires move without the center changing
+  if (sameSharedCamera(state, next)) return;
+
+  state.longitude = next.longitude;
+  state.latitude = next.latitude;
+  state.zoom = next.zoom;
+  state.pitch = next.pitch;
+  state.bearing = next.bearing;
 
   if (notifying || listeners.size === 0) return;
   notifying = true;
