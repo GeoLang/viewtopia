@@ -30,7 +30,7 @@ geokode and itinera. So bring up the stack on the region you deliver in, from
 the `viewtopia/` checkout:
 
 ```bash
-bash scripts/platform-up.sh https://download.geofabrik.de/europe/monaco-latest.osm.pbf
+bash scripts/platform-up.sh https://download.geofabrik.de/europe/monaco-260101.osm.pbf
 ```
 
 Open http://localhost:5174, or run `pnpm run dev` for the dev server on 5173,

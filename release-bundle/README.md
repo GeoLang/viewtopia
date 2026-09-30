@@ -28,7 +28,7 @@ a new secret invalidates every session.
 and the file name is fixed.
 
 ```sh
-scripts/fetch-osm-extract.sh https://download.geofabrik.de/europe/monaco-latest.osm.pbf data/region.osm.pbf
+scripts/fetch-osm-extract.sh https://download.geofabrik.de/europe/monaco-260101.osm.pbf data/region.osm.pbf
 ```
 
 3. Start the stack.

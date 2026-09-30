@@ -547,7 +547,7 @@ anywhere but `localhost:5174` needs `FENESTRA_PUBLIC_URL=<origin>/ogc`.
 yourself:
 
 ```bash
-scripts/fetch-osm-extract.sh https://download.geofabrik.de/europe/monaco-latest.osm.pbf data/region.osm.pbf
+scripts/fetch-osm-extract.sh https://download.geofabrik.de/europe/monaco-260101.osm.pbf data/region.osm.pbf
 rm -f data/graph.bin   # itinera only rebuilds a missing graph
 docker compose --env-file .env.platform -f docker-compose.platform.yml stop geokode
 docker compose --env-file .env.platform -f docker-compose.platform.yml up -d geokode

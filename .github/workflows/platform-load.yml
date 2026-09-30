@@ -73,7 +73,7 @@ jobs:
         working-directory: viewtopia
         run: |
           scripts/fetch-osm-extract.sh \
-            https://download.geofabrik.de/europe/monaco-latest.osm.pbf \
+            https://download.geofabrik.de/europe/monaco-260101.osm.pbf \
             data/region.osm.pbf
 
       - name: Build platform images (data plane only)

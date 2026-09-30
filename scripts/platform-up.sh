@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-PBF_URL="${1:-https://download.geofabrik.de/europe/monaco-latest.osm.pbf}"
+PBF_URL="${1:-https://download.geofabrik.de/europe/monaco-260101.osm.pbf}"
 
 if [ ! -d ../geolang ]; then
   echo "missing sibling repos; run scripts/clone-geolang.sh first" >&2
