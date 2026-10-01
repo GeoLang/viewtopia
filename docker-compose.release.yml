@@ -6,11 +6,11 @@
 services:
   ptolemy:
     build: !reset null
-    image: ghcr.io/geolang/ptolemy:v0.2.4
+    image: ghcr.io/geolang/ptolemy:v0.2.5
 
   tiletopia:
     build: !reset null
-    image: ghcr.io/geolang/tiletopia:v0.4.3
+    image: ghcr.io/geolang/tiletopia:v0.4.4
 
   fenestra:
     build: !reset null
@@ -57,15 +57,15 @@ services:
 
   geolang-data-init:
     build: !reset null
-    image: ghcr.io/geolang/geolang:v0.1.10
+    image: ghcr.io/geolang/geolang:v0.1.11
 
   geolang-executor:
     build: !reset null
-    image: ghcr.io/geolang/geolang:v0.1.10
+    image: ghcr.io/geolang/geolang:v0.1.11
 
   geolang-api:
     build: !reset null
-    image: ghcr.io/geolang/geolang:v0.1.10
+    image: ghcr.io/geolang/geolang:v0.1.11
     env_file: !override
       - path: ./geolang.env
         required: false
