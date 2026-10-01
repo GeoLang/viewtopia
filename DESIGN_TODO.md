@@ -77,10 +77,8 @@ Decisions:
   ifc-lite's `set_rtc_offset`, about ten files. Separately the native path
   places meshes with an ENU root at a longitude and latitude, so a model in
   projected metres lands in the wrong place regardless.
-- [ ] geolang `/upload` runs the zip caps only on a `.zip` suffix. A `.shz`
-  goes straight to `gpd.read_file`, which GDAL decompresses in memory with no
-  entry or size cap. An upload suffix allowlist, or the zip check on `.shz`,
-  closes it. Other GDAL formats that open compressed files are unchecked.
+- [ ] roll a geolang image carrying 2cdb498 to the preview, then work
+  finding F18 in the 2026-09-24 review file.
 - [ ] geolang `/upload`: a zip whose CRC does not match passes the pre-check,
   `extractall` raises, the client gets 500, and the raw zip plus an empty
   entry stay in `user_data` with the daily budget charged. Unzipping into a
