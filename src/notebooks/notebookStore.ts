@@ -3,7 +3,8 @@
  */
 import { create } from 'zustand';
 import type { Notebook, NotebookCell, CellOutput, CellType } from './types';
-import { executeSqlCell, type NotebookRuntime } from './runtime';
+import { executeSqlCell } from './runtime';
+import { addGeoJsonLayer } from '../lib/mapLayers';
 import { getKernelClient, createKernelClient, loadKernelConfig, type JupyterOutput } from './jupyter';
 
 // IndexedDB storage for notebooks
@@ -73,12 +74,10 @@ export interface NotebookStoreState {
   notebooks: Notebook[];
   activeNotebookId: string | null;
   loading: boolean;
-  runtime: NotebookRuntime | null;
 }
 
 export interface NotebookStoreActions {
   load: () => Promise<void>;
-  setRuntime: (runtime: NotebookRuntime) => void;
   setActive: (id: string | null) => void;
   getActive: () => Notebook | null;
 
@@ -118,7 +117,6 @@ export const useNotebookStore = create<NotebookStoreState & NotebookStoreActions
   notebooks: [],
   activeNotebookId: null,
   loading: false,
-  runtime: null,
 
   async load() {
     set({ loading: true });
@@ -128,10 +126,6 @@ export const useNotebookStore = create<NotebookStoreState & NotebookStoreActions
     } catch {
       set({ notebooks: [], loading: false });
     }
-  },
-
-  setRuntime(runtime: NotebookRuntime) {
-    set({ runtime });
   },
 
   setActive(id: string | null) {
@@ -301,45 +295,13 @@ export const useNotebookStore = create<NotebookStoreState & NotebookStoreActions
   },
 
   async showSqlAsLayer(sql, layerId) {
-    const { runtime } = get();
-    if (!runtime) throw new Error('No runtime available — open a map view before running map-bound queries.');
     const { queryAsGeoJson } = await import('../duckdb');
-    const fc = await queryAsGeoJson(sql);
-    runtime.map.addGeoJsonLayer(layerId, fc);
-    if (fc.features.length > 0) {
-      const bbox = featureCollectionBbox(fc);
-      if (bbox) runtime.map.fitBounds(bbox);
-    }
-    return { featureCount: fc.features.length };
+    const collection = await queryAsGeoJson(sql);
+    const featureCount = collection.features.length;
+    addGeoJsonLayer(layerId, collection, { fit: featureCount > 0 });
+    return { featureCount };
   },
 }));
-
-function featureCollectionBbox(fc: import('geojson').FeatureCollection): [number, number, number, number] | null {
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  const visit = (coords: unknown): void => {
-    if (typeof coords === 'number') return;
-    if (Array.isArray(coords)) {
-      if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
-        const [x, y] = coords as [number, number];
-        if (x < minX) minX = x; if (y < minY) minY = y;
-        if (x > maxX) maxX = x; if (y > maxY) maxY = y;
-        return;
-      }
-      for (const c of coords) visit(c);
-    }
-  };
-  for (const f of fc.features) {
-    const g = f.geometry as { type: string; coordinates?: unknown; geometries?: unknown[] } | null;
-    if (!g) continue;
-    if (g.type === 'GeometryCollection' && Array.isArray(g.geometries)) {
-      for (const sub of g.geometries) visit((sub as { coordinates?: unknown }).coordinates);
-    } else {
-      visit(g.coordinates);
-    }
-  }
-  if (!isFinite(minX)) return null;
-  return [minX, minY, maxX, maxY];
-}
 
 // ─── Python cell execution via Jupyter ────────────────────────────────
 
