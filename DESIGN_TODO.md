@@ -80,9 +80,15 @@ Decisions:
   ifc-lite's `set_rtc_offset`, about ten files. Separately the native path
   places meshes with an ENU root at a longitude and latitude, so a model in
   projected metres lands in the wrong place regardless.
-- [ ] geolang `/upload` zip caps are off unless set, so a self-hosted stack is
-  open to zip bombs by default. Give `GEOLANG_UPLOAD_MAX_ZIP_ENTRIES` and
-  `GEOLANG_UPLOAD_MAX_UNZIPPED_MEGABYTES` built-in defaults, or accept it.
+- [ ] geolang `/upload` runs the zip caps only on a `.zip` suffix. A `.shz`
+  goes straight to `gpd.read_file`, which GDAL decompresses in memory with no
+  entry or size cap. An upload suffix allowlist, or the zip check on `.shz`,
+  closes it. Other GDAL formats that open compressed files are unchecked.
+- [ ] geolang `/upload`: a zip whose CRC does not match passes the pre-check,
+  `extractall` raises, the client gets 500, and the raw zip plus an empty
+  entry stay in `user_data` with the daily budget charged. Unzipping into a
+  temporary sibling folder fixes it but changes how a re-upload with the same
+  stem merges with the old files, which needs a decision.
 - [ ] the demo wake function URL is public and CORS stops only browsers, so a
   script posting every thirty minutes keeps the preview up at about 5.50 USD
   a day. The landing prompt names Toronto parcels that are not loaded on the
