@@ -97,9 +97,9 @@ Decisions:
 
 Found while fixing, small:
 
-- [ ] ptolemy: creating a dataset whose name exists answers 500 not 409, the
-  review detail shows "Created Invalid Date", and `test_buffer_analysis`
-  accepts a 500 as passing.
+- [ ] ptolemy: `Dataset`, `Branch` and `Changeset` serialize `created_at` as
+  a `time` array, not RFC 3339, so any client calling `new Date()` on it gets
+  Invalid Date. Reviews and comments were fixed in 9611d90.
 - [ ] viewtopia: the site report captures a blank map when clicked before
   tiles load, sites match deal entries by name because `score_sites` rows
   carry no feature id (`resolve_sites` could pass one through), and four
