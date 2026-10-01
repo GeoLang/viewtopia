@@ -982,7 +982,9 @@ in a private S3 bucket sits behind the same distribution with a public wake Lamb
 (reserved concurrency 1) that scales the stack up. A nightly scale-down at 23:00 Toronto, a
 morning scale-up at 08:00 and a scale-down after 30 minutes without chat activity keep cost
 at about 5.50 USD a day up and 1.10 scaled to zero. Never roll services near 23:00 Toronto,
-the scale-down cuts a rollout in half.
+the scale-down cuts a rollout in half. The preview is paused: `service_defaults.desired_count`
+is 0, so the morning schedule and the wake URL start nothing, and setting it back to 1 and
+applying resumes it on geolang v0.1.11, ptolemy v0.2.5 and tiletopia v0.4.4.
 
 Isolation and edge: an EFS policy denies any mount without an access point and TLS, every
 task mounts through IAM with its own access points, the executor mounts `natural_earth`
