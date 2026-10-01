@@ -80,9 +80,6 @@ Decisions:
   ifc-lite's `set_rtc_offset`, about ten files. Separately the native path
   places meshes with an ENU root at a longitude and latitude, so a model in
   projected metres lands in the wrong place regardless.
-- [ ] viewtopia SQL cell "Show on map" always fails with "No runtime
-  available", nothing calls `setRuntime`. Connect the runtime or remove the
-  button. `src/duckdb/loaders.ts` has no importer either.
 - [ ] geolang `/upload` zip caps are off unless set, so a self-hosted stack is
   open to zip bombs by default. Give `GEOLANG_UPLOAD_MAX_ZIP_ENTRIES` and
   `GEOLANG_UPLOAD_MAX_UNZIPPED_MEGABYTES` built-in defaults, or accept it.
@@ -99,10 +96,6 @@ Decisions:
 
 Found while fixing, small:
 
-- [ ] geogit: `export --ref` spawns one `git show` per feature (use
-  `cat-file --batch`), CSV export wraps values in literal quotes and cuts
-  them at 47 characters, and a commit with nothing to commit fails with an
-  empty "git commit failed:" because only stderr is read.
 - [ ] ptolemy: creating a dataset whose name exists answers 500 not 409, the
   review detail shows "Created Invalid Date", and `test_buffer_analysis`
   accepts a 500 as passing.

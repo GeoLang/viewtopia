@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-10-01: **a notebook SQL cell's "Show on map" draws the result.** It
+  read a notebook runtime nothing ever set, so every click failed with "No
+  runtime available". It now adds the result through `addGeoJsonLayer` and
+  frames the map on it.
 - 2026-09-24: **the collaboration name is capped at 64 characters.** tiletopia
   closes a Join with a longer name with 4029, and the refusal text now names
   that limit next to the 8-room one.
