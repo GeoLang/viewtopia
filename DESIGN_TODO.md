@@ -25,15 +25,12 @@ others, or damage shared state. What is in place is DESIGN.md §2.9. Finding
 numbers refer to `/home/aaron/src/GeoLang/demo-review-2026-09-24.md` (not in
 any repo).
 
-- [ ] residuals, in priority order: tiletopia realtime presence is still
-  unbounded per account, joining a room someone else created is free and
-  connections per account have no limit, so enough accounts joining every
-  room push the roster broadcasts past the 256 MiB budget (a cap on
-  connections per account or members per room closes it); the ptolemy
-  `/ws/rooms` relay keeps 256 messages a room and checks no room membership
-  (the viewer never connects to it); ptolemy's `migrate` and admin CLI
-  commands run with no statement timeout by choice; a slow realtime client
-  drops chat lines past 32 unread.
+- [ ] residuals, in priority order: the ptolemy `/ws/rooms` relay keeps 256
+  messages a room and checks no room membership (the viewer never connects
+  to it), ptolemy's `migrate` and admin CLI commands run with no statement
+  timeout by choice, a slow realtime client drops chat lines past 32 unread,
+  a relayed tiletopia chat line can exceed 16 KiB by up to 255 bytes once
+  `user_id` is stamped, and no test covers the 400 for an over-long `sub`.
 - [ ] F17, the editor-only cross-tenant paths still open: external dataset
   registration admin only with no main-pool fallback, geodukt paths
   confined under the caller's root and identifiers limited to

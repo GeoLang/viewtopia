@@ -826,9 +826,11 @@ bounded per terrain request. The viewer takes its token from the session, opens 
 signed out, and keys identity off the JWT `sub` because a presence roster has no self marker and
 names are spoofable. The socket URL is built from an absolute `tiletopiaUrl` (http → ws,
 https → wss, root-relative unchanged). Server-side: presence is refcounted per connection so two
-tabs of one account survive one closing, rooms are reclaimed when empty, and room creation is
-capped at 32 per user with refusals closing as 4029, which the client surfaces as "too many rooms
-open" without reconnecting into the same refusal.
+tabs of one account survive one closing, rooms are reclaimed when empty. An account creates at
+most 8 rooms and holds at most 16 connections, a room takes at most 23 connections so its
+roster fits one 16 KiB message, and a `sub` over 255 JSON bytes is refused with 400. Every other
+refusal closes as 4029 with a reason per limit, which the client shows as its own message
+without reconnecting into the same refusal.
 
 **`src/` module groups:** `components/` + `features/`, `features/spacetime/` (21 space-time
 modules), `plugins/` (file-discovered + built-ins), `notebooks/`, `raster/`, `offline/`

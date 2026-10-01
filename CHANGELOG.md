@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-10-01: **a refused collaboration room names its limit.** tiletopia now
+  caps connections per room and per account, and the viewer shows one message
+  per close reason (room limit, room full, too many connections, name too
+  long) instead of one combined text.
 - 2026-10-01: **a notebook SQL cell's "Show on map" draws the result.** It
   read a notebook runtime nothing ever set, so every click failed with "No
   runtime available". It now adds the result through `addGeoJsonLayer` and
