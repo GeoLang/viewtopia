@@ -52,11 +52,11 @@ class FakeSocket {
     this.sent.push(data);
   }
 
-  close(code = 1000) {
+  close(code = 1000, reason = '') {
     if (this.closed) return;
     this.closed = true;
     this.readyState = FakeSocket.CLOSED;
-    this.emit('close', { code });
+    this.emit('close', { code, reason });
   }
 
   private emit(type: string, evt: unknown) {
@@ -178,8 +178,30 @@ describe('socket url from the tiletopiaUrl setting', () => {
 });
 
 describe('room limit refusal', () => {
-  /** tiletopia's ROOM_LIMIT_CLOSE_CODE, sent when a 33rd room creation is refused. */
+  /** tiletopia's ROOM_LIMIT_CLOSE_CODE, sent with a reason naming the limit. */
   const ROOM_LIMIT = 4029;
+
+  it.each([
+    ['room limit', /too many collaboration rooms open\. leave a room/i],
+    ['user name too long', /your name is over 64 characters\. shorten it/i],
+    ['room full', /this room is full/i],
+    ['too many connections', /too many collaboration connections/i],
+  ])('names the %s limit on its own', (reason, message) => {
+    signIn();
+    joinRoom('room-1').close(ROOM_LIMIT, reason);
+    const error = useCollabStore.getState().error;
+    expect(error).toMatch(message);
+    // one limit, not the combined fallback that names two
+    expect(error).not.toMatch(/ or your name/i);
+  });
+
+  it('falls back to naming the room and name limits for a reason it does not know', () => {
+    signIn();
+    joinRoom('room-1').close(ROOM_LIMIT, 'constructor');
+    expect(useCollabStore.getState().error).toMatch(
+      /too many collaboration rooms open, or your name is over 64 characters/i,
+    );
+  });
 
   it('names the limit and does not reconnect into the same refusal', () => {
     signIn();

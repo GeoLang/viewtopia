@@ -24,13 +24,23 @@ import { jwtClaims } from '../lib/jwt';
  * and says nothing about this socket, so we neither re-join nor reconnect on it.
  */
 
-// tiletopia's ROOM_LIMIT_CLOSE_CODE: the account already holds its 8 concurrent
-// rooms and this one would be a new room (joining someone else's never counts),
-// or the Join carried a name over MAX_USER_NAME_CHARS.
-// A retry gets the same refusal, so we stay closed and name both limits.
+// tiletopia's ROOM_LIMIT_CLOSE_CODE, a retry gets the same refusal
 const ROOM_LIMIT_CLOSE_CODE = 4029;
 export const MAX_USER_NAME_CHARS = 64;
 const ROOM_LIMIT_ERROR = `Too many collaboration rooms open, or your name is over ${MAX_USER_NAME_CHARS} characters. Leave a room or shorten your name.`;
+// keyed on the close reason tiletopia sends with ROOM_LIMIT_CLOSE_CODE
+const ROOM_LIMIT_ERRORS_BY_REASON = new Map([
+  ['room limit', 'Too many collaboration rooms open. Leave a room and try again.'],
+  [
+    'user name too long',
+    `Your name is over ${MAX_USER_NAME_CHARS} characters. Shorten it and join again.`,
+  ],
+  ['room full', 'This room is full. Try again when someone leaves.'],
+  [
+    'too many connections',
+    'This account has too many collaboration connections open. Close a tab or leave a room.',
+  ],
+]);
 const UNREACHABLE_ERROR = 'Could not reach the realtime service.';
 
 /**
@@ -47,8 +57,10 @@ function realtimeUrl(base: string, roomId: string): string {
 }
 
 /** What a closed socket means for the panel: null when we simply left the room. */
-function closeError(code: number | undefined, opened: boolean): string | null {
-  if (code === ROOM_LIMIT_CLOSE_CODE) return ROOM_LIMIT_ERROR;
+function closeError(event: CloseEvent, opened: boolean): string | null {
+  if (event.code === ROOM_LIMIT_CLOSE_CODE) {
+    return ROOM_LIMIT_ERRORS_BY_REASON.get(event.reason) ?? ROOM_LIMIT_ERROR;
+  }
   return opened ? null : UNREACHABLE_ERROR;
 }
 
@@ -166,7 +178,7 @@ export const useCollabStore = create<CollabState>()((set, get) => ({
         roomId: null,
         users: [],
         userId: null,
-        error: closeError(event.code, opened),
+        error: closeError(event, opened),
       });
     });
 
