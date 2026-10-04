@@ -21,6 +21,8 @@ overrides:
   fast-uri: "^3.1.8"
   maplibre-gl: "^6.10.0"
   fflate: "^0.8.3"
+  # texture-compressor is a node-only encoder nothing here runs
+  image-size: "^2.0.3"
 
 # flatgeobuf ships an OpenLayers adapter we never import, and it drags in
 # openlayers, a geotiff beta and zarrita. only the geojson module is used.

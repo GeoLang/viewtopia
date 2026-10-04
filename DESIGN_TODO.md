@@ -31,8 +31,9 @@ any repo).
   timeout by choice, a slow realtime client drops chat lines past 32 unread,
   a relayed tiletopia chat line can exceed 16 KiB by up to 255 bytes once
   `user_id` is stamped, and no test covers the 400 for an over-long `sub`.
-- [ ] F17 and F18 rollout, owner-run, the code is in the working trees of
-  geolang, geodukt, ptolemy, infrastructure and viewtopia:
+- [ ] F17 and F18 rollout, owner-run. The code is on master: geodukt
+  d1d7606, ptolemy c452f35, geolang 294f692, infrastructure dc1fc28,
+  viewtopia 46ecf5a5.
   1. tag geodukt v0.2.1 (`docker-compose.release.yml` and `preview.tfvars`
      already pin it), geolang v0.1.12 and a ptolemy release, and bump the
      geolang and ptolemy pins.
@@ -62,6 +63,30 @@ any repo).
     migration 015 and has to follow it by hand.
   - the Lambda's master-credential path (`role_name = ""`) has no caller.
   - geolang's QGIS input check has only run without QGIS bindings.
+- [ ] not done after the F17 and F18 push:
+  - the load test and the golden path have not run locally against the
+    stack with the geodukt caller roots and ptolemy's external pool
+    change. CI is green on all five commits, the golden path on 46ecf5a5
+    included. The nightly load workflow has not run since.
+  - external datasets are off on the platform compose stack and the
+    preview, neither sets `PTOLEMY_EXTERNAL_DATABASE_URL`. Turning them
+    on needs a SELECT-only role, and on Aurora a `GRANT CONNECT` since
+    PUBLIC connect on the `ptolemy` database is revoked.
+  - a geodukt GeoPackage sink refuses OSM keys like `addr:street`, and
+    a source layer named with a hyphen or a space cannot be read.
+    Nothing renames them on the way in.
+  - `run_qgis_algorithm` and `pyqgis_api` refuse a `.csv` input.
+  - geolang `a2ui.py` reads a layer with `rows=0` to get its columns,
+    and geopandas reads every row for `rows=0`.
+  - the image does not pin pyogrio, so the `GeoJSON:` and `GPKG:` path
+    prefixes are tested on the GDAL that CI installs, not the image's.
+  - the F18 entry in the review file still says the fix is uncommitted.
+- [ ] three stale Dependabot alerts on viewtopia to dismiss by hand: 26
+  (fflate) and 27 (maplibre-gl) name `package-lock.json`, deleted 2026-06-20,
+  and 28 names maplibre-gl in `package.json`, which has been `^6.10.0` since
+  2d936ec9. The installed tree has fflate 0.8.3 and maplibre-gl 6.10.0.
+  Alert 29 (image-size) should close by itself once the `image-size`
+  override in `pnpm-workspace.yaml` is on master.
 - [ ] later: sibyl message retention.
 
 ## Geokode planet index
