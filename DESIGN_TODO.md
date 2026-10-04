@@ -34,9 +34,8 @@ any repo).
 - [ ] F17 and F18 rollout, owner-run. The code is on master: geodukt
   d1d7606, ptolemy c452f35, geolang 294f692, infrastructure dc1fc28,
   viewtopia 46ecf5a5.
-  1. tag geodukt v0.2.1 (`docker-compose.release.yml` and `preview.tfvars`
-     already pin it), geolang v0.1.12 and a ptolemy release, and bump the
-     geolang and ptolemy pins.
+  1. tagged 2026-10-04 and pinned in `docker-compose.release.yml` and
+     `preview.tfvars`: geodukt v0.2.1, geolang v0.1.12, ptolemy v0.2.6.
   2. apply with ptolemy at 0 tasks, then invoke
      `geolang-prod-database-secret-refresh` once. Expect ptolemy
      `changed: true`, agora `false`.
