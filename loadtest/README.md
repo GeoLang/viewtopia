@@ -199,6 +199,8 @@ queries, nor a fixture name from the name a scenario looks up.
   does not expose. The seeder creates it with `psql` inside the compose `db`
   container. Without docker access it substitutes an ordinary versioned dataset
   and says so, because the two do not measure the same read path.
+  ptolemy must be started with `PTOLEMY_EXTERNAL_DATABASE_URL` set (the load
+  workflow points it at the compose `db`), or registration answers 400.
 - `loadtest-tileset.ply`: a 200-point ascii PLY uploaded to tiletopia. Point-cloud
   uploads tile on arrival, so this needs no separate job request, and the seeder
   polls the asset until it reports `ready` (bounded at 120s, so a stuck tiling

@@ -65,6 +65,7 @@ services:
     environment:
       DATABASE_URL: postgres://ptolemy:${POSTGRES_PASSWORD:-ptolemy}@db/ptolemy
       RUST_LOG: info,ptolemy_api=debug
+      PTOLEMY_EXTERNAL_DATABASE_URL: ${PTOLEMY_EXTERNAL_DATABASE_URL:-}
       PLATFORM_JWT_SECRET: ${PLATFORM_JWT_SECRET:-}
     ports:
       - "3000:3000"
@@ -337,6 +338,10 @@ services:
       - serve
       - --bind
       - "0.0.0.0:8100"
+      - --caller-root
+      - outputs
+      - --caller-root
+      - user_data
 
   # Tool code runs here rather than in geolang-api, which holds
   # PLATFORM_JWT_SECRET: a tool hands caller-written arguments to geopandas,

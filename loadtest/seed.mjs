@@ -46,6 +46,8 @@ const TILES = `${BASE}/tiles/v1`;
 // tiletopia scopes asset delete to the JWT `sub` that uploaded it, so every run
 // has to present the same subject or teardown cannot reach its own fixture.
 const AUTH = platformAuthHeaders({ role: 'editor', sub: 'loadtest' });
+// ptolemy registers an external dataset for an instance admin only
+const ADMIN_AUTH = platformAuthHeaders({ role: 'admin', sub: 'loadtest' });
 
 // One commit carries at most this many operations. Ptolemy applies operations
 // one statement at a time inside the transaction, so a single 50k-op commit
@@ -113,11 +115,12 @@ async function findDataset(name) {
   return datasets.find((d) => d.name === name) ?? null;
 }
 
-async function ensureDataset(name, body) {
+async function ensureDataset(name, body, headers = {}) {
   const found = await findDataset(name);
   if (found) return found.id;
   const created = await api('/datasets', {
     method: 'POST',
+    headers,
     body: JSON.stringify({ name, srid: 4326, created_by: 'loadtest', ...body }),
   });
   return created.id;
@@ -325,7 +328,7 @@ async function seedExternal() {
     external_table: `public.${EXTERNAL_TABLE}`,
     external_id_column: 'gid',
     external_geometry_column: 'geom',
-  });
+  }, ADMIN_AUTH);
   console.log(`${EXTERNAL_DATASET}: registered over ${EXTERNAL_TABLE} (${EXTERNAL.features} rows)`);
   return { name: EXTERNAL_DATASET, datasetId, mode: 'external' };
 }

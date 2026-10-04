@@ -31,12 +31,37 @@ any repo).
   timeout by choice, a slow realtime client drops chat lines past 32 unread,
   a relayed tiletopia chat line can exceed 16 KiB by up to 255 bytes once
   `user_id` is stamped, and no test covers the 400 for an over-long `sub`.
-- [ ] F17, the editor-only cross-tenant paths still open: external dataset
-  registration admin only with no main-pool fallback, geodukt paths
-  confined under the caller's root and identifiers limited to
-  `[A-Za-z0-9_]+`, `run_workflow` confining the parsed manifest, a ptolemy
-  database role that is not the Aurora master. Low today because signup
-  mints viewer, critical the day a user is promoted.
+- [ ] F17 and F18 rollout, owner-run, the code is in the working trees of
+  geolang, geodukt, ptolemy, infrastructure and viewtopia:
+  1. tag geodukt v0.2.1 (`docker-compose.release.yml` and `preview.tfvars`
+     already pin it), geolang v0.1.12 and a ptolemy release, and bump the
+     geolang and ptolemy pins.
+  2. apply with ptolemy at 0 tasks, then invoke
+     `geolang-prod-database-secret-refresh` once. Expect ptolemy
+     `changed: true`, agora `false`.
+  3. as master, `SELECT datname, pg_get_userbyid(datdba) FROM pg_database`.
+     ptolemy must be owned by `ptolemy_app` and agora by `agora`. The old
+     `REASSIGN OWNED` gave agora every database the master owned, so hand
+     any other database back with `ALTER DATABASE <name> OWNER TO ptolemy`.
+  4. rotate the master password, then scale up and check a ptolemy topology
+     create and an upload.
+  Unverified until then: the Data API accepting the multi-line `DO` block,
+  and master creating all 13 extensions on Aurora (`pg_partman` in doubt).
+- [ ] F17 leftovers, each low:
+  - geodukt `project.incremental` and `project.lineage` write
+    `.geodukt/*.json` in the working directory every caller shares.
+  - geodukt checks a shapefile's main path only, not its `.shx`, `.dbf`
+    and `.prj`.
+  - ptolemy `PgStore::create_dataset` still writes external columns with no
+    probe. No caller passes one.
+  - ptolemy's H3 and 3D routes now read external datasets on the external
+    pool, untested because CI has neither extension.
+  - nothing stops an operator pointing `PTOLEMY_EXTERNAL_DATABASE_URL` at
+    the main role. The load workflow does exactly that.
+  - the extension list in `database_secret_refresh.tf` copies ptolemy
+    migration 015 and has to follow it by hand.
+  - the Lambda's master-credential path (`role_name = ""`) has no caller.
+  - geolang's QGIS input check has only run without QGIS bindings.
 - [ ] later: sibyl message retention.
 
 ## Geokode planet index
@@ -77,9 +102,6 @@ Decisions:
   ifc-lite's `set_rtc_offset`, about ten files. Separately the native path
   places meshes with an ENU root at a longitude and latitude, so a model in
   projected metres lands in the wrong place regardless.
-- [ ] finding F18, the remainder: geolang's raster reads (`rasterio.open`)
-  and QGIS algorithm inputs still let GDAL choose the driver from file
-  content, and only `GDAL_SKIP` covers them. Vector reads name their driver.
 - [ ] rotate `PLATFORM_JWT_SECRET` and the provider keys before the preview
   resumes, see F18.
 - [ ] geolang `/upload`: a zip whose CRC does not match passes the pre-check,

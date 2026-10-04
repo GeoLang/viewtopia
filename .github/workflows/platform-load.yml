@@ -86,6 +86,9 @@ jobs:
       # start, so there is no separate graph-build step.
       - name: Start the stack
         working-directory: viewtopia
+        env:
+          # the seeder registers a table in ptolemy's own database
+          PTOLEMY_EXTERNAL_DATABASE_URL: postgres://ptolemy:ptolemy@db/ptolemy
         run: |
           docker compose -f docker-compose.platform.yml down --remove-orphans
           docker compose -f docker-compose.platform.yml up -d \
