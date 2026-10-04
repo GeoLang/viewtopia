@@ -77,7 +77,9 @@ Decisions:
   ifc-lite's `set_rtc_offset`, about ten files. Separately the native path
   places meshes with an ENU root at a longitude and latitude, so a model in
   projected metres lands in the wrong place regardless.
-- [ ] finding F18 in the 2026-09-24 review file, before the preview resumes.
+- [ ] finding F18, the remainder: geolang's raster reads (`rasterio.open`)
+  and QGIS algorithm inputs still let GDAL choose the driver from file
+  content, and only `GDAL_SKIP` covers them. Vector reads name their driver.
 - [ ] rotate `PLATFORM_JWT_SECRET` and the provider keys before the preview
   resumes, see F18.
 - [ ] geolang `/upload`: a zip whose CRC does not match passes the pre-check,
