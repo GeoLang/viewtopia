@@ -25,9 +25,8 @@ others, or damage shared state. What is in place is DESIGN.md §2.9. Finding
 numbers refer to `/home/aaron/src/GeoLang/demo-review-2026-09-24.md` (not in
 any repo).
 
-- [ ] residuals, in priority order: the ptolemy `/ws/rooms` relay keeps 256
-  messages a room and checks no room membership (the viewer never connects
-  to it), ptolemy's `migrate` and admin CLI commands run with no statement
+- [ ] residuals, in priority order: ptolemy's `migrate` and admin CLI
+  commands run with no statement
   timeout by choice, a slow realtime client drops chat lines past 32 unread,
   a relayed tiletopia chat line can exceed 16 KiB by up to 255 bytes once
   `user_id` is stamped, and no test covers the 400 for an over-long `sub`.
@@ -52,6 +51,8 @@ any repo).
     `.geodukt/*.json` in the working directory every caller shares.
   - ptolemy `PgStore::create_dataset` still writes external columns with no
     probe. No caller passes one.
+  - geodukt's GeoPackage sink drops the keys `fid` and `geom` by exact match,
+    so `Fid` or `GEOM` passes its checks and fails at `CREATE TABLE`.
   - ptolemy's H3 and 3D routes now read external datasets on the external
     pool, untested because CI has neither extension.
   - nothing stops an operator pointing `PTOLEMY_EXTERNAL_DATABASE_URL` at
@@ -145,13 +146,7 @@ Found while fixing, small:
 - [ ] itinera steps carry no location, so RoutingPanel cannot fly to one,
   slight turns along one road stay separate rows, and `route_from_path`
   overwrites the last edge's turn with Arrive instead of appending one.
-- [ ] tiletopia facades still standing: `/classification/models` lists
-  models nothing runs, `/terrain-analysis/operations`,
-  `/multispectral/indices` and `/sensors` are static lists,
-  `compute_slope`, `compute_ndvi`, `compute_evi` and `classify_ndvi` have no
-  route caller, `geostatistics::morans_i` is only called from tests, and
-  `tiletopia_core::measurement`, `anomaly` and `clash_detection` lost their
-  only caller. Orthometric LAS heights are still off by the geoid
+- [ ] tiletopia: orthometric LAS heights are still off by the geoid
   undulation, no geoid grid ships (TODO in crs_detect.rs).
 - [ ] collecta: `DROP TABLE IF EXISTS sync_queue` on startup has not run
   against a database that still holds the old table.
@@ -304,6 +299,24 @@ Wire one only when a user asks for the feature.
   on port 4000 for service health, container logs, metrics, migrations and
   config, with its own lockfile that nothing built or deployed and that
   carried ten npm advisories. `dashboard/` at 37bce6d5.
+
+### Modules removed 2026-10-19, rebuild from history if wanted
+
+Same owner call as above: no caller, so deleted and recorded by path and the
+last commit that still has the file.
+
+- [ ] ptolemy websocket support, which was only the `/ws/rooms/{room_id}`
+  relay: every text frame a client sent went to every other client in the
+  room, 256 messages kept per room, no membership check. Nothing in the
+  platform connected to it. `crates/ptolemy-api/src/room_relay.rs`, the
+  `/ws/` rule and bearer subprotocol token in `crates/ptolemy-api/src/auth.rs`,
+  and the handshake tests in `api_integration.rs`, all at 9a6353e.
+- [ ] tiletopia facades: `/classification/models`, `/terrain-analysis/operations`,
+  `/multispectral/indices` and `/multispectral/sensors` were static lists of
+  operations nothing served, and the modules behind them had no other caller.
+  `crates/tiletopia-server/src/{terrain_analysis,multispectral,classification}.rs`,
+  `crates/tiletopia-core/src/{measurement,anomaly,clash_detection}.rs` and
+  `geostatistics::morans_i` at 483ed94.
 
 ## Self-host preview release, follow-ups
 
