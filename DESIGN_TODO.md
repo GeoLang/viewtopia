@@ -150,9 +150,6 @@ Found while fixing, small:
   in raster-cog-panel and settings-panel pass the 15 s test timeout. All pass
   at 32 loops. A profile shows React and Mantine development rendering and
   `getByLabelText` walking the whole jsdom tree, no single fault.
-- [ ] viewtopia offline sync retries a 0, 429 or 5xx forever at the 60 s cap,
-  and logs "Giving up on op after 5 attempts" on every pass after the fifth.
-  Decide whether auto retry stops at five attempts.
 - [ ] itinera steps carry no location, so RoutingPanel cannot fly to one,
   slight turns along one road stay separate rows, and `route_from_path`
   overwrites the last edge's turn with Arrive instead of appending one.

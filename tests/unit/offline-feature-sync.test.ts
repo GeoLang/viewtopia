@@ -452,18 +452,35 @@ describe('a sync that a retry can fix retries with exponential backoff', () => {
     expect(delaysBetween(requestTimes)).toEqual([2_000, 4_000]);
   });
 
-  it('waits 2, 4, 8, 16, 32 and then at most 60 seconds between commits', async () => {
-    // every pass after the fifth failed attempt warns that it skips past the op
+  it('waits 2, 4, 8 and 16 seconds between commits, then stops after five attempts', async () => {
+    // the fifth failure warns that automatic retries stop
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     const { commitTimes } = commitWith(() => 503);
 
     await queueEdit();
     await firstSync();
-    await vi.advanceTimersByTimeAsync(2_000 + 4_000 + 8_000 + 16_000 + 32_000 + 60_000 + 60_000);
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
 
-    expect(delaysBetween(commitTimes)).toEqual([2_000, 4_000, 8_000, 16_000, 32_000, 60_000, 60_000]);
+    expect(delaysBetween(commitTimes)).toEqual([2_000, 4_000, 8_000, 16_000]);
     expect(db.ops.size).toBe(1);
     expect(getSyncState().status).toBe('error');
+  });
+
+  it('sends a given-up op again on Sync Now', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    let commitStatus = 503;
+    const { commitTimes } = commitWith(() => commitStatus);
+
+    await queueEdit();
+    await firstSync();
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+    expect(commitTimes).toHaveLength(5);
+
+    commitStatus = 200;
+    await syncNow();
+
+    expect(commitTimes).toHaveLength(6);
+    expect(db.ops.size).toBe(0);
   });
 
   it.each([429, 500, 502])('retries a %i', async (status) => {

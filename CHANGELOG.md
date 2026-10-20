@@ -7,8 +7,9 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - 2026-10-19: **offline sync retries with exponential backoff.** A sync that
-  got no response, a 429 or a 5xx runs again after 2 s, then 4, 8, 16 and 32 s,
-  then every 60 s. A sync with none of those starts the delay over. A 4xx
+  got no response, a 429 or a 5xx runs again after 2 s, then 4, 8 and 16 s,
+  five attempts in all, after which the edit waits for a reconnect, a new
+  edit or Sync Now. A sync with none of those starts the delay over. A 4xx
   refusal and a merge conflict never schedule a retry.
 - 2026-10-19: **RoutingPanel lists turn-by-turn directions.** An itinera route
   shows each step's instruction and distance, with the edges of one road

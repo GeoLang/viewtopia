@@ -175,11 +175,12 @@ function scheduleSyncSoon() {
 }
 
 const RETRY_BASE_DELAY_MS = 2000;
-const RETRY_MAX_DELAY_MS = 60_000;
+// after this many failures an op waits for a reconnect, a new edit or Sync Now
+const MAX_SYNC_ATTEMPTS = 5;
 let retriesSinceSuccess = 0;
 
 function scheduleRetry() {
-  const delay = Math.min(RETRY_BASE_DELAY_MS * 2 ** retriesSinceSuccess, RETRY_MAX_DELAY_MS);
+  const delay = RETRY_BASE_DELAY_MS * 2 ** retriesSinceSuccess;
   retriesSinceSuccess += 1;
   if (syncTimer) clearTimeout(syncTimer);
   syncTimer = setTimeout(() => syncNow(), delay);
@@ -231,14 +232,13 @@ export async function syncNow(): Promise<void> {
         continue;
       }
       const message = err instanceof Error ? err.message : String(err);
+      const failures = op.attempts + 1;
       await pendingOps.updateAttempts(op.id, message);
-      if (isRetryableError(err)) retryableFailure = true;
-
-      // If too many attempts, skip and continue with others
-      if (op.attempts >= 5) {
-        console.warn(`[sync] Giving up on op ${op.id} after 5 attempts: ${message}`);
+      if (failures >= MAX_SYNC_ATTEMPTS) {
+        console.warn(`[sync] no more automatic retries for op ${op.id} after ${failures} attempts: ${message}`);
         continue;
       }
+      if (isRetryableError(err)) retryableFailure = true;
       // Stop on first transient error (server might be down)
       if (isTransientError(err)) {
         setState({ status: 'error', lastError: message });

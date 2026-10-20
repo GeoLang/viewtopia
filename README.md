@@ -197,7 +197,7 @@ and CC-BY-SA licence shown.
 |---------|-------------|
 | **Local-first storage** | Offline browser state uses IndexedDB and localStorage. Not all data is available without network |
 | **Operation queue** | A Dataset Editor feature edit queues locally and commits to its Ptolemy branch on sync. Other resources have no server path and are not queued |
-| **Auto-sync** | Attempts to push queued operations when the browser reconnects. A sync that got no response, a 429 or a 5xx runs again after 2 seconds, doubling up to one minute |
+| **Auto-sync** | Attempts to push queued operations when the browser reconnects. A sync that got no response, a 429 or a 5xx runs again after 2 seconds, doubling, five attempts in all |
 | **API response cache** | GET responses cached with TTL for offline fallback |
 | **Offline areas** | The Offline panel downloads basemap tiles for the current view, from the current zoom a few levels deeper. Tiles are capped at 200 MB, and only tiles outside a saved area are dropped to get under it |
 | **Sync indicator** | Real-time UI showing pending/synced/offline status |

@@ -631,8 +631,8 @@ status 0, 502, 503 and 504 ("<service> is unreachable"), a layer that failed car
 reason and a Retry on its own row in the Layers, Data Sources and tileset lists, a commit
 the server refuses is dropped from the sync queue and shown once rather than retried, and
 the header lists the services that answered no health probe. A sync that got no response, a
-429 or a 5xx runs again after 2 s, doubling up to 60 s, and the delay starts over after a
-sync with none of those.
+429 or a 5xx runs again after 2 s, doubling, five attempts in all, and the delay starts over
+after a sync with none of those.
 
 **Agent UI.** Chat panel plus a registered viewer command protocol. The agent emits commands
 (flyTo, addLayer, measure, deck layers, style-by-*, ~20 tool commands) that execute
