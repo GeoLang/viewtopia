@@ -50,8 +50,6 @@ any repo).
 - [ ] F17 leftovers, each low:
   - geodukt `project.incremental` and `project.lineage` write
     `.geodukt/*.json` in the working directory every caller shares.
-  - geodukt checks a shapefile's main path only, not its `.shx`, `.dbf`
-    and `.prj`.
   - ptolemy `PgStore::create_dataset` still writes external columns with no
     probe. No caller passes one.
   - ptolemy's H3 and 3D routes now read external datasets on the external
@@ -71,12 +69,6 @@ any repo).
     preview, neither sets `PTOLEMY_EXTERNAL_DATABASE_URL`. Turning them
     on needs a SELECT-only role, and on Aurora a `GRANT CONNECT` since
     PUBLIC connect on the `ptolemy` database is revoked.
-  - a geodukt GeoPackage sink refuses OSM keys like `addr:street`, and
-    a source layer named with a hyphen or a space cannot be read.
-    Nothing renames them on the way in.
-  - `run_qgis_algorithm` and `pyqgis_api` refuse a `.csv` input.
-  - geolang `a2ui.py` reads a layer with `rows=0` to get its columns,
-    and geopandas reads every row for `rows=0`.
   - the image does not pin pyogrio, so the `GeoJSON:` and `GPKG:` path
     prefixes are tested on the GDAL that CI installs, not the image's.
   - the F18 entry in the review file still says the fix is uncommitted.
@@ -163,10 +155,11 @@ Found while fixing, small:
   undulation, no geoid grid ships (TODO in crs_detect.rs).
 - [ ] collecta: `DROP TABLE IF EXISTS sync_queue` on startup has not run
   against a database that still holds the old table.
-- [ ] geolang eval: a run cut off mid `run_qgis_algorithm` left the executor
-  at its limit of two tool runs for the rest of the sweep. tab-to-leaflet
-  fails one run in three on the model itself, the catalogue already maps
-  leaflet to `view.set_tab`.
+- [ ] geolang executor: nothing cancels a tool worker when its caller goes
+  away, so a run cut off mid `run_qgis_algorithm` holds one of the two slots
+  until the 840 s worker timeout. Seen once in an eval sweep, no repro kept.
+  tab-to-leaflet fails one run in three on the model itself, the catalogue
+  already maps leaflet to `view.set_tab`.
 
 Wrong claims left in code (rustdoc, Cargo descriptions, help text): ptolemy's
 and fenestra's workspace `description` name other products, tiletopia's
