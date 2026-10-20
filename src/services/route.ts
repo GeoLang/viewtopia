@@ -140,12 +140,9 @@ export async function route(
   to: { lat: number; lng: number },
   profile = 'car',
 ): Promise<RouteResult | null> {
-  try {
-    const r = await itineraRoute(from, to, profile);
-    if (r) return r;
-  } catch {
-    /* itinera unavailable, fall through to OSRM */
-  }
+  // an unreachable itinera answers 503 from offlineFetch, so only a bad reply throws
+  const r = await itineraRoute(from, to, profile);
+  if (r) return r;
   requireOnline('routing');
   try {
     return await osrmRoute(from, to);

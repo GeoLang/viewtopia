@@ -29,6 +29,12 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-10-19: **a routing reply the viewer cannot read is reported.** `route()`
+  no longer swallows an itinera parse error and asks OSRM instead. An
+  unreachable itinera still falls back to OSRM.
+- 2026-10-19: **a cleared plugin number setting is not stored.** The settings
+  form kept `''` for it, which logistics read as a full route. The plugin now
+  reads its default until a number is typed.
 - 2026-10-19: **map exports wait for tiles.** The site report, Print Layout's
   image export and its live-view PDF page wait for the current view's tiles
   before reading the canvas, which was blank when clicked early.

@@ -51,6 +51,14 @@ export function PluginSettingsPanel() {
   );
 }
 
+// a cleared number field holds '' while it is edited, which no plugin can read as a number
+function persistedValues(values: Record<string, unknown>, fields: PluginSettingField[]): Record<string, unknown> {
+  const blankNumbers = new Set(
+    fields.filter((field) => field.type === 'number' && values[field.key] === '').map((field) => field.key),
+  );
+  return Object.fromEntries(Object.entries(values).filter(([key]) => !blankNumbers.has(key)));
+}
+
 function PluginSettingsFields({ pluginId, fields }: { pluginId: string; fields: PluginSettingField[] }) {
   const storageKey = `viewtopia-plugin-settings:${pluginId}`;
   const [values, setValues] = useState<Record<string, unknown>>(() => {
@@ -62,8 +70,8 @@ function PluginSettingsFields({ pluginId, fields }: { pluginId: string; fields: 
   });
 
   useEffect(() => {
-    localStorage.setItem(storageKey, JSON.stringify(values));
-  }, [values, storageKey]);
+    localStorage.setItem(storageKey, JSON.stringify(persistedValues(values, fields)));
+  }, [values, fields, storageKey]);
 
   const setValue = (key: string, value: unknown) => {
     setValues((prev) => ({ ...prev, [key]: value }));

@@ -249,6 +249,18 @@ describe('routing', () => {
     expect(result?.steps).toEqual([]);
   });
 
+  it('reports an itinera reply it cannot phrase instead of asking OSRM', async () => {
+    servePlatform({
+      '/api/route': {
+        ...ITINERA_ROUTE,
+        steps: [{ distance_m: 10, duration_s: 1, name: null, maneuver: 'Teleport' }],
+      },
+    });
+
+    await expect(route(from, to)).rejects.toThrow('Teleport');
+    expect(fetchedUrls().some((url) => url.includes('project-osrm'))).toBe(false);
+  });
+
   it('falls back to the public OSRM when itinera is deployed but down', async () => {
     fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);

@@ -146,9 +146,6 @@ Decisions:
 
 Found while fixing, small:
 
-- [ ] ptolemy: `Dataset`, `Branch` and `Changeset` serialize `created_at` as
-  a `time` array, not RFC 3339, so any client calling `new Date()` on it gets
-  Invalid Date. Reviews and comments were fixed in 9611d90.
 - [ ] viewtopia: with 96 busy loops on 16 cores, six render-heavy unit tests
   in raster-cog-panel and settings-panel pass the 15 s test timeout. All pass
   at 32 loops. A profile shows React and Mantine development rendering and
@@ -156,13 +153,9 @@ Found while fixing, small:
 - [ ] viewtopia offline sync retries a 0, 429 or 5xx forever at the 60 s cap,
   and logs "Giving up on op after 5 attempts" on every pass after the fifth.
   Decide whether auto retry stops at five attempts.
-- [ ] viewtopia `route()` falls back to OSRM on any itinera error through a
-  bare `catch`, including a maneuver `itineraSteps` cannot phrase.
 - [ ] itinera steps carry no location, so RoutingPanel cannot fly to one,
   slight turns along one road stay separate rows, and `route_from_path`
   overwrites the last edge's turn with Arrive instead of appending one.
-- [ ] viewtopia: a cleared number field in plugin settings stores `''`, so
-  logistics reads `maxStops` as `''` and every route counts as full.
 - [ ] tiletopia facades still standing: `/classification/models` lists
   models nothing runs, `/terrain-analysis/operations`,
   `/multispectral/indices` and `/sensors` are static lists,
