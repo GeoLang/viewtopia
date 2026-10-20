@@ -18,7 +18,10 @@ export interface ViewerLayer {
   visible: boolean;
   /** unset for a kind that draws at one opacity only */
   opacity?: number;
+  // the name a tool takes the layer's file by, which its id is not
+  file?: string;
 }
+
 
 /**
  * Every layer, listed once. addGeoJsonLayer puts one id in both the app store
@@ -42,6 +45,7 @@ export function listViewerLayers(): ViewerLayer[] {
       kind: 'agent',
       visible: layer.visible !== false,
       opacity: layerStyle(layer).opacity,
+      ...(layer.path ? { file: layer.path.split('/').pop() } : {}),
     });
   }
   for (const layer of agent.rasterLayers) {

@@ -174,6 +174,17 @@ function scheduleSyncSoon() {
   syncTimer = setTimeout(() => syncNow(), 1000);
 }
 
+const RETRY_BASE_DELAY_MS = 2000;
+const RETRY_MAX_DELAY_MS = 60_000;
+let retriesSinceSuccess = 0;
+
+function scheduleRetry() {
+  const delay = Math.min(RETRY_BASE_DELAY_MS * 2 ** retriesSinceSuccess, RETRY_MAX_DELAY_MS);
+  retriesSinceSuccess += 1;
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => syncNow(), delay);
+}
+
 /** Manually trigger sync (e.g. user clicks "Sync Now") */
 export async function syncNow(): Promise<void> {
   if (isSyncing) return;
@@ -190,6 +201,7 @@ export async function syncNow(): Promise<void> {
   ops.sort((a, b) => a.createdAt - b.createdAt);
 
   let allSucceeded = true;
+  let retryableFailure = false;
   let refusal: string | null = null;
   const conflicts: MergeConflict[] = [];
 
@@ -220,6 +232,7 @@ export async function syncNow(): Promise<void> {
       }
       const message = err instanceof Error ? err.message : String(err);
       await pendingOps.updateAttempts(op.id, message);
+      if (isRetryableError(err)) retryableFailure = true;
 
       // If too many attempts, skip and continue with others
       if (op.attempts >= 5) {
@@ -244,6 +257,11 @@ export async function syncNow(): Promise<void> {
   });
 
   isSyncing = false;
+  if (retryableFailure) {
+    scheduleRetry();
+  } else {
+    retriesSinceSuccess = 0;
+  }
 }
 
 function statusAfterSync(conflictCount: number, allSucceeded: boolean): SyncStatus {
@@ -300,6 +318,11 @@ function isTransientError(err: unknown): boolean {
   return err instanceof PtolemyRequestError && isUnreachableStatus(err.status);
 }
 
+function isRetryableError(err: unknown): boolean {
+  if (!(err instanceof PtolemyRequestError)) return false;
+  return err.status === 0 || err.status === 429 || err.status >= 500;
+}
+
 const REFUSAL_STATUSES = new Set([401, 403]);
 const NO_WRITE_ACCESS = 'you do not have write access to this branch';
 
@@ -338,6 +361,8 @@ export function initSync(): void {
 /** Discard all pending operations (e.g. user wants to reset) */
 export async function discardPending(): Promise<void> {
   await pendingOps.clear();
+  if (syncTimer) clearTimeout(syncTimer);
+  retriesSinceSuccess = 0;
   setState({ pendingCount: 0, status: 'idle', lastError: null, conflicts: [] });
 }
 

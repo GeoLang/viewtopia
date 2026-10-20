@@ -8,6 +8,7 @@ const SCORE_SUFFIX = '_score';
 const WEIGHT_SUFFIX = '_weight';
 const TOTAL_SCORE_COLUMN = 'total_score';
 const TRADE_AREA_SITE_COLUMN = 'site';
+const FEATURE_ID_COLUMN = 'feature_id';
 const MAXIMUM_CRITERION_SCORE = 100;
 // score_sites gives every site this when their raw values are all equal
 const UNDIVIDED_CRITERION_SCORE = 50;
@@ -21,10 +22,11 @@ const TRADE_AREA_UNRATED_COLUMNS = new Set([
   'population_source',
 ]);
 const FEWER_IS_BETTER_CRITERIA = new Set(['competitors']);
-const TRADE_AREA_LOCATION_COLUMNS = new Set([TRADE_AREA_SITE_COLUMN, 'lat', 'lon']);
+const TRADE_AREA_UNREPORTED_COLUMNS = new Set([TRADE_AREA_SITE_COLUMN, 'lat', 'lon', FEATURE_ID_COLUMN]);
 
 export interface ScoredSite {
   name: string;
+  featureId: string | null;
   scores: Record<string, number>;
 }
 
@@ -75,6 +77,12 @@ function finiteNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
+// only sites the tools read from a ptolemy layer carry one
+function featureIdOf(row: SiteProperties): string | null {
+  const featureId = row[FEATURE_ID_COLUMN];
+  return typeof featureId === 'string' ? featureId : null;
+}
+
 function scoreSitesShortlist(layer: AgentLayer): SiteShortlist {
   const rows = layerProperties(layer);
   const criteria = Object.keys(rows[0])
@@ -88,6 +96,7 @@ function scoreSitesShortlist(layer: AgentLayer): SiteShortlist {
   );
   const sites = rows.map((row) => ({
     name: String(row.name),
+    featureId: featureIdOf(row),
     scores: Object.fromEntries(
       criteria.map((criterion) => [criterion, finiteNumber(row[criterion + SCORE_SUFFIX]) ?? 0]),
     ),
@@ -124,6 +133,7 @@ function tradeAreaShortlist(layer: AgentLayer): SiteShortlist {
   );
   const sites = rows.map((row, index) => ({
     name: String(row[TRADE_AREA_SITE_COLUMN]),
+    featureId: featureIdOf(row),
     scores: Object.fromEntries(
       criteria.map((criterion) => [criterion, scoresByCriterion[criterion][index]]),
     ),
@@ -148,7 +158,7 @@ export function tradeAreaTable(layers: AgentLayer[]): TradeAreaTable | null {
   if (!layer) return null;
   const rows = layerProperties(layer);
   return {
-    columns: Object.keys(rows[0]).filter((column) => !TRADE_AREA_LOCATION_COLUMNS.has(column)),
+    columns: Object.keys(rows[0]).filter((column) => !TRADE_AREA_UNREPORTED_COLUMNS.has(column)),
     rows: rows.map((values) => ({ site: String(values[TRADE_AREA_SITE_COLUMN]), values })),
   };
 }
@@ -180,13 +190,14 @@ function siteKey(name: string): string {
   return name.trim().toLowerCase();
 }
 
-// the tool rows carry no feature id, so a deal site matches the row named like its label
+// a row geocoded from a typed name has no feature id
 export function dealSiteScores(scored: ScoredSite[], dealSites: ShortlistedSite[]): DealSiteScores {
-  const byName = new Map(scored.map((site) => [siteKey(site.name), site]));
+  const byFeatureId = new Map(scored.flatMap((site) => (site.featureId ? [[site.featureId, site] as const] : [])));
+  const byName = new Map(scored.filter((site) => !site.featureId).map((site) => [siteKey(site.name), site]));
   const sites: ScoredSite[] = [];
   const unscored: ShortlistedSite[] = [];
   for (const dealSite of dealSites) {
-    const match = byName.get(siteKey(dealSite.label));
+    const match = byFeatureId.get(dealSite.featureId) ?? byName.get(siteKey(dealSite.label));
     if (match) sites.push(match);
     else unscored.push(dealSite);
   }

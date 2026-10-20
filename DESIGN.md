@@ -83,7 +83,8 @@ service owning composition documents in its own Postgres database on the shared
 instance. A document is the map composition, not the feature data: the layer
 list (order as base62 fractional indexes, visibility, opacity, style overrides,
 layers referenced by id, with a `source` for data that must travel: inline
-GeoJSON under the op cap, a URL peers fetch, for an image overlay its four
+GeoJSON under the op cap, a URL peers fetch (a larger layer goes up as an
+agora `application/geo+json` attachment and travels as its url), for an image overlay its four
 corners plus an agora attachment url holding the bitmap, for an OGC service
 the handle every member requests for themselves, or for a 3D model the
 tileset.json url every member loads), annotations, camera
@@ -629,7 +630,9 @@ A layer that cannot load says which of those failed. Every client names the serv
 status 0, 502, 503 and 504 ("<service> is unreachable"), a layer that failed carries the
 reason and a Retry on its own row in the Layers, Data Sources and tileset lists, a commit
 the server refuses is dropped from the sync queue and shown once rather than retried, and
-the header lists the services that answered no health probe.
+the header lists the services that answered no health probe. A sync that got no response, a
+429 or a 5xx runs again after 2 s, doubling up to 60 s, and the delay starts over after a
+sync with none of those.
 
 **Agent UI.** Chat panel plus a registered viewer command protocol. The agent emits commands
 (flyTo, addLayer, measure, deck layers, style-by-*, ~20 tool commands) that execute

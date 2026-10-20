@@ -50,12 +50,14 @@ interface DeliveryPanelProps {
   onFlyTo: (lat: number, lng: number, zoom?: number) => void;
   onShowRoute: (stops: Array<{ lat: number; lng: number }>) => void;
   onClose: () => void;
+  maxStops: number;
 }
 
 export function DeliveryPanel({
   onFlyTo,
   onShowRoute,
   onClose,
+  maxStops,
 }: DeliveryPanelProps) {
   const [routes, setRoutes] = useState<DeliveryRoute[]>([]);
   const [activeRoute, setActiveRoute] = useState<string | null>(null);
@@ -64,6 +66,7 @@ export function DeliveryPanel({
   const [error, setError] = useState<string | null>(null);
 
   const currentRoute = routes.find((r) => r.id === activeRoute);
+  const routeFull = currentRoute !== undefined && currentRoute.stops.length >= maxStops;
 
   const handleCreateRoute = () => {
     const route: DeliveryRoute = {
@@ -80,7 +83,7 @@ export function DeliveryPanel({
   };
 
   const handleAddStop = async () => {
-    if (!newStop.trim() || !activeRoute) return;
+    if (!newStop.trim() || !activeRoute || routeFull) return;
     setError(null);
 
     // Geocode the address via geokode (nginx /api/geocode → geokode /forward).
@@ -269,12 +272,18 @@ export function DeliveryPanel({
                 value={newStop}
                 onChange={(e) => setNewStop(e.currentTarget.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddStop()}
+                disabled={routeFull}
                 style={{ flex: 1 }}
               />
-              <ActionIcon aria-label="Add delivery stop" size="sm" onClick={handleAddStop}>
+              <ActionIcon aria-label="Add delivery stop" size="sm" onClick={handleAddStop} disabled={routeFull}>
                 <IconPlus size={14} />
               </ActionIcon>
             </Group>
+            {routeFull && (
+              <Text size="xs" c="dimmed">
+                This route has the maximum of {maxStops} stops set in the Logistics plugin settings.
+              </Text>
+            )}
 
             {/* Optimize button */}
             <Button

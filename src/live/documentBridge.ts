@@ -58,18 +58,26 @@ const SERVICE_LAYER_TYPE: LayerItem['type'] = 'raster';
 const TILES_3D_LAYER_TYPE: LayerItem['type'] = 'tiles3d';
 
 /**
- * How far an overlay's bitmap has got towards the document. `unavailable` is
+ * How far an attachment has got towards the document. `unavailable` is
  * where a session that may not upload ends up, and it stays there, so a member
  * who cannot publish an overlay is told once rather than on every corner drag.
  */
-type OverlayBitmap = { url: string } | 'uploading' | 'unavailable';
+type AttachmentUpload = { url: string } | 'uploading' | 'unavailable';
+
+// compared against the layer to spot an edit
+interface LayerAttachment {
+  geojson: GeoJSON.FeatureCollection;
+  state: AttachmentUpload;
+}
+
+const GEOJSON_CONTENT_TYPE = 'application/geo+json';
 
 let applyingFromDocument = false;
 let stateForNewDocument: LocalState | null = null;
 /** the source each layer id carries in the document, as far as this bridge knows */
 const documentSources = new Map<string, LiveLayerSource>();
-const oversizedLayerIds = new Set<string>();
-const overlayBitmaps = new Map<string, OverlayBitmap>();
+const layerAttachments = new Map<string, LayerAttachment>();
+const overlayBitmaps = new Map<string, AttachmentUpload>();
 
 function applyFromDocument(apply: () => void): void {
   applyingFromDocument = true;
@@ -248,18 +256,43 @@ function agentLayerEntry(
   };
 }
 
-function warnOversized(layer: AgentLayer): void {
-  if (oversizedLayerIds.has(layer.id)) return;
-  oversizedLayerIds.add(layer.id);
-  console.warn(
-    `live layer "${layer.name}" is over ${MAXIMUM_INLINE_SOURCE_BYTES} bytes and stays local`,
-  );
+function layerStaysLocal(layer: AgentLayer, geojson: GeoJSON.FeatureCollection, message: string): void {
+  layerAttachments.set(layer.id, { geojson, state: 'unavailable' });
+  notifications.show({
+    title: `"${layer.name}" stays on your screen`,
+    message,
+    color: 'gray',
+  });
+}
+
+async function publishLayerData(layer: AgentLayer, geojson: GeoJSON.FeatureCollection): Promise<void> {
+  const { documentId, guest } = useLiveStore.getState();
+  if (documentId === null) return;
+  if (guest) {
+    layerStaysLocal(layer, geojson, 'Joining by share link cannot upload a layer this large.');
+    return;
+  }
+  layerAttachments.set(layer.id, { geojson, state: 'uploading' });
+  try {
+    const bytes = new TextEncoder().encode(JSON.stringify(geojson));
+    if (bytes.length > MAXIMUM_ATTACHMENT_BYTES) {
+      layerStaysLocal(layer, geojson, 'The layer is too large to share.');
+      return;
+    }
+    const stored = await uploadAttachment(documentId, GEOJSON_CONTENT_TYPE, bytes);
+    // the session may have moved on, or the layer changed, while the bytes were in flight
+    if (useLiveStore.getState().documentId !== documentId) return;
+    if (layerAttachments.get(layer.id)?.geojson !== geojson) return;
+    layerAttachments.set(layer.id, { geojson, state: { url: attachmentSourceUrl(stored.url) } });
+    syncAgentLayerSourcesToDocument(useAgentLayerStore.getState().layers);
+  } catch (failure) {
+    layerStaysLocal(layer, geojson, agoraErrorText(failure, 'The layer could not be shared.'));
+  }
 }
 
 /**
  * Agent layers hold their own features, so they travel as inline sources. A
- * layer too large to inline is left out whole rather than sent as metadata
- * peers could not draw.
+ * layer too large to inline goes up as an attachment and travels as its url.
  */
 function syncAgentLayerSourcesToDocument(layers: AgentLayer[]): void {
   const entries = useLiveStore.getState().document.layers;
@@ -267,25 +300,29 @@ function syncAgentLayerSourcesToDocument(layers: AgentLayer[]): void {
   const operations: LiveOperation[] = [];
 
   for (const [id, entry] of Object.entries(entries)) {
-    // a url source we could not fetch is missing locally too, so only an
-    // inline source disappearing means the member deleted the layer
-    if (entry.source?.kind !== 'geojson') continue;
+    // a url source we could not fetch is missing locally too
+    if (entry.source?.kind !== 'geojson' && !layerAttachments.has(id)) continue;
     if (present.has(id) || !documentSources.has(id)) continue;
     documentSources.delete(id);
+    layerAttachments.delete(id);
     operations.push({ key: documentKey('layers', id), value: null });
   }
 
   let previousOrder = lastOrder(entries);
   for (const layer of layers) {
     const known = documentSources.get(layer.id);
-    if (known?.kind === 'url') continue;
-    const source = inlineSourceOf(layer);
+    const attachment = layerAttachments.get(layer.id);
+    if (known?.kind === 'url' && !attachment) continue;
+    const geojson = layer.sourceGeojson ?? layer.geojson;
+    const uploaded = attachment?.geojson === geojson ? attachment.state : null;
+    if (uploaded === 'uploading' || uploaded === 'unavailable') continue;
+    const source: LiveLayerSource = uploaded ? { kind: 'url', url: uploaded.url, format: 'geojson' } : inlineSourceOf(layer);
     if (sameJson(known, source)) continue;
     const current = entries[layer.id];
     const order = current?.order ?? generateIndexBetween(previousOrder, null);
     const entry = agentLayerEntry(layer, current, order, source);
-    if (!withinInlineLimit(entry)) {
-      warnOversized(layer);
+    if (!uploaded && !withinInlineLimit(entry)) {
+      void publishLayerData(layer, geojson);
       continue;
     }
     if (!current) previousOrder = order;
@@ -831,9 +868,6 @@ function publishLocalState(local: LocalState): void {
 /**
  * Hold what this browser has on screen so the first snapshot of a document we
  * just created starts from it instead of wiping it.
- *
- * TODO: a stored project in IndexedDB, and any layer too large to inline, stay
- * behind. Only what the running session holds and what fits travels.
  */
 export function captureStateForNewDocument(): void {
   const { layers, bookmarks } = useAppStore.getState();
@@ -893,7 +927,7 @@ export function startDocumentBridge(): () => void {
       if (previous.documentId !== null) {
         stateForNewDocument = null;
         documentSources.clear();
-        oversizedLayerIds.clear();
+        layerAttachments.clear();
         overlayBitmaps.clear();
         applyFromDocument(() => {
           useAnnotationStore.getState().setAnnotations(loadStoredAnnotations());

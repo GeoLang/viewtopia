@@ -16,6 +16,7 @@ export const CAPTURE_REFUSAL =
 export interface MapCapture {
   /** draw a fresh frame, so the canvas holds what is on screen right now */
   renderFrame(): void;
+  settle(): Promise<void>;
   canvas(): HTMLCanvasElement;
   camera(): SharedCamera;
   /** snapshot the camera, handing back the call that puts it where it was */
@@ -50,6 +51,10 @@ export function maplibreCapture(map: MapLibreMap): MapCapture {
   return {
     renderFrame() {
       map.redraw();
+    },
+    // an idle map fires no further `idle`
+    settle() {
+      return map.loaded() ? Promise.resolve() : maplibreSettled(map);
     },
     canvas() {
       return map.getCanvas();
@@ -93,6 +98,9 @@ function cesiumCapture(viewer: Viewer): MapCapture {
   return {
     renderFrame() {
       viewer.render();
+    },
+    settle() {
+      return cesiumSettled(viewer);
     },
     canvas() {
       return viewer.canvas;

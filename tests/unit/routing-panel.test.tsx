@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
-import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, waitFor, within } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 
 vi.mock('../../src/services/geocode', () => ({
@@ -21,6 +21,12 @@ window.matchMedia = vi.fn().mockReturnValue({
   addEventListener: vi.fn(),
   removeEventListener: vi.fn(),
 });
+// the step list scrolls in a ScrollArea, which measures itself
+globalThis.ResizeObserver = class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
 
 const GEOMETRY: [number, number][] = [
   [10, 45],
@@ -52,6 +58,7 @@ beforeEach(() => {
     distance: 2000,
     duration: 300,
     geometry: GEOMETRY,
+    steps: [],
     source: 'itinera',
   });
 });
@@ -74,5 +81,40 @@ describe('RoutingPanel', () => {
     );
 
     expect(screen.queryByRole('button', { name: 'Fly This Route' })).toBeNull();
+  });
+
+  it('lists each step with its instruction and distance', async () => {
+    vi.mocked(route).mockResolvedValue({
+      distance: 1700,
+      duration: 300,
+      geometry: GEOMETRY,
+      steps: [
+        { instruction: 'Head out on Via Roma', distance: 200 },
+        { instruction: 'Turn left onto Corso Italia', distance: 1500 },
+      ],
+      source: 'itinera',
+    });
+
+    await findRoute();
+
+    const directions = screen.getByRole('list', { name: 'Directions' });
+    expect(within(directions).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Head out on Via Roma 200 m',
+      'Turn left onto Corso Italia 1.5 km',
+    ]);
+  });
+
+  it('shows no directions for a route that came without steps', async () => {
+    vi.mocked(route).mockResolvedValue({
+      distance: 3100,
+      duration: 420,
+      geometry: GEOMETRY,
+      steps: [],
+      source: 'osrm',
+    });
+
+    await findRoute();
+
+    expect(screen.queryByRole('list', { name: 'Directions' })).toBeNull();
   });
 });

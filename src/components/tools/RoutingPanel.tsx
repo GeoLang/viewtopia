@@ -6,6 +6,8 @@ import {
   TextInput,
   Button,
   Badge,
+  List,
+  ScrollArea,
 } from '@mantine/core';
 import { IconRoute, IconMapPin, IconMovie } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
@@ -18,6 +20,11 @@ import { useFlythroughStore } from '../../store/flythrough';
 
 const routingFailed = (message: string) =>
   notifications.show({ title: 'Routing failed', message, color: 'red' });
+
+function stepDistanceLabel(meters: number): string {
+  if (meters >= 1000) return `${(meters / 1000).toFixed(1)} km`;
+  return `${Math.round(meters)} m`;
+}
 
 export function RoutingPanel({ onClose }: { onClose: () => void }) {
   const setActivePanel = useAppStore((s) => s.setActivePanel);
@@ -119,6 +126,20 @@ export function RoutingPanel({ onClose }: { onClose: () => void }) {
             >
               Fly This Route
             </Button>
+            {result.steps.length > 0 && (
+              <ScrollArea.Autosize mah={240}>
+                <List type="ordered" size="xs" spacing={2} aria-label="Directions">
+                  {result.steps.map((step, index) => (
+                    <List.Item key={index}>
+                      {step.instruction}{' '}
+                      <Text span size="xs" c="dimmed">
+                        {stepDistanceLabel(step.distance)}
+                      </Text>
+                    </List.Item>
+                  ))}
+                </List>
+              </ScrollArea.Autosize>
+            )}
           </Stack>
         )}
       </Stack>

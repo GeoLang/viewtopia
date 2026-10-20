@@ -38,7 +38,8 @@ import {
 } from '@tabler/icons-react';
 import { Table as MantineTable } from '@mantine/core';
 import { PanelCard, PanelHeader } from '../components/PanelCard';
-import { useNotebookStore } from './notebookStore';
+import { useProjectsStore } from '../projects/projectsStore';
+import { notebooksInProject, useNotebookStore } from './notebookStore';
 import type { NotebookCell } from './types';
 
 function formatCell(value: unknown): string {
@@ -235,17 +236,19 @@ export function NotebookPanel({ onClose }: { onClose: () => void }) {
     runAll,
     clearOutputs,
   } = useNotebookStore();
+  const activeProjectId = useProjectsStore((state) => state.activeProjectId);
   const [newName, setNewName] = useState('');
+  const projectNotebooks = notebooksInProject(notebooks, activeProjectId);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const activeNotebook = notebooks.find((n) => n.id === activeNotebookId);
+  const activeNotebook = projectNotebooks.find((n) => n.id === activeNotebookId);
 
   async function handleCreate() {
     const name = newName.trim() || 'Untitled Notebook';
-    const nb = await create(name);
+    const nb = await create(name, activeProjectId);
     setActive(nb.id);
     setNewName('');
   }
@@ -274,12 +277,12 @@ export function NotebookPanel({ onClose }: { onClose: () => void }) {
 
         {loading && <Text size="sm" c="dimmed">Loading...</Text>}
 
-        {notebooks.length === 0 && !loading && (
+        {projectNotebooks.length === 0 && !loading && (
           <Text size="sm" c="dimmed">No notebooks yet. Create one to start recording workflows.</Text>
         )}
 
         <Stack gap={8}>
-          {notebooks.map((nb) => (
+          {projectNotebooks.map((nb) => (
             <Paper key={nb.id} p="sm" withBorder style={{ cursor: 'pointer' }} onClick={() => setActive(nb.id)}>
               <Group justify="space-between">
                 <div>

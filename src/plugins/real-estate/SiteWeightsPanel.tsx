@@ -22,7 +22,7 @@ const SHORTLIST_HEIGHT_PX = 240;
 const REPORT_FILE_NAME = 'site-report.pdf';
 const ISO_DATE_LENGTH = 10;
 
-function liveMapImage(): MapImage | null {
+async function liveMapImage(): Promise<MapImage | null> {
   const capture = activeMapCapture();
   if (!capture) return null;
   const canvas = capture.canvas();
@@ -31,21 +31,23 @@ function liveMapImage(): MapImage | null {
     width: canvas.clientWidth || canvas.width,
     height: canvas.clientHeight || canvas.height,
   };
-  return { dataUrl: mapImageDataUrl(capture, 'png', size), ...size };
+  return { dataUrl: await mapImageDataUrl(capture, 'png', size), ...size };
 }
 
 function ShortlistWeights({ shortlist, comps }: { shortlist: SiteShortlist; comps: CompSale[] }) {
   const [weights, setWeights] = useState(shortlist.weights);
   const [status, setStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const deal = useDealStore((s) => s.deal);
   const dealScores =
     deal && deal.shortlist.length > 0 ? dealSiteScores(shortlist.sites, deal.shortlist) : null;
   const ranked = rankSites(dealScores?.sites ?? shortlist.sites, weights);
   const sliderMaximum = Math.max(MAXIMUM_WEIGHT, ...Object.values(shortlist.weights));
 
-  const handleReport = () => {
+  const handleReport = async () => {
+    setBusy(true);
     try {
-      const mapImage = liveMapImage();
+      const mapImage = await liveMapImage();
       const report = siteReport(
         ranked,
         weights,
@@ -57,6 +59,8 @@ function ShortlistWeights({ shortlist, comps }: { shortlist: SiteShortlist; comp
       setStatus(mapImage ? 'Report saved.' : `Report saved without the map. ${CAPTURE_REFUSAL}`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Report failed, the map canvas may be cross-origin tainted');
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -114,7 +118,7 @@ function ShortlistWeights({ shortlist, comps }: { shortlist: SiteShortlist; comp
           </Table.Tbody>
         </Table>
       </ScrollArea>
-      <Button size="xs" leftSection={<IconFileTypePdf size={14} />} onClick={handleReport}>
+      <Button size="xs" leftSection={<IconFileTypePdf size={14} />} onClick={handleReport} loading={busy}>
         Site report
       </Button>
       {status && (

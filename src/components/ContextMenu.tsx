@@ -9,10 +9,12 @@ import {
   IconRoute,
   IconInfoCircle,
   IconClock,
+  IconMessageQuestion,
 } from '@tabler/icons-react';
 import { canEditLiveDocument } from '../live/liveStore';
 import { useMapCommentsStore } from '../live/mapCommentsStore';
 import { useAppStore } from '../store/app';
+import { useChatStore } from '../store/chat';
 
 interface MenuAction {
   icon: React.ReactNode;
@@ -127,6 +129,16 @@ export function ContextMenu() {
       label: 'What\'s here?',
       onClick: () => {
         togglePanel('geocoding');
+        hideContextMenu();
+      },
+    },
+    {
+      icon: <IconMessageQuestion size={14} />,
+      label: 'Ask the chat about this place',
+      onClick: () => {
+        useChatStore
+          .getState()
+          .queuePrompt(`What is at latitude ${lat.toFixed(6)}, longitude ${lng.toFixed(6)}?`);
         hideContextMenu();
       },
     },

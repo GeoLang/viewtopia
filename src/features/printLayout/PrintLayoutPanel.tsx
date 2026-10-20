@@ -99,7 +99,7 @@ export function PrintLayoutPanel({ onClose }: { onClose: () => void }) {
     setBusy(true);
     try {
       if (format !== 'pdf') {
-        const dataUrl = mapImageDataUrl(capture, format, imageSize);
+        const dataUrl = await mapImageDataUrl(capture, format, imageSize);
         if (!dataUrl || dataUrl === 'data:,') {
           setStatus('Export returned an empty image');
           return;

@@ -59,7 +59,10 @@ function pageFor(capture: MapCapture, options: PrintOptions, title: string): Pdf
  * ours to leave somewhere else.
  */
 async function composePages(capture: MapCapture, options: PrintOptions): Promise<PdfPage[]> {
-  if (!options.atlas) return [pageFor(capture, options, options.title)];
+  if (!options.atlas) {
+    await capture.settle();
+    return [pageFor(capture, options, options.title)];
+  }
 
   const restore = capture.saveView();
   try {

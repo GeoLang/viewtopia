@@ -6,7 +6,6 @@ import {
 import { useLiveStore } from '../../src/live/liveStore';
 import {
   emptyLiveDocument,
-  MAXIMUM_INLINE_SOURCE_BYTES,
   type LiveLayerEntry,
   type LiveLayerSource,
 } from '../../src/live/types';
@@ -43,21 +42,15 @@ function agentLayer(id: string): AgentLayer {
   };
 }
 
-function featureCollection(count: number, note = ''): GeoJSON.FeatureCollection {
+function featureCollection(count: number): GeoJSON.FeatureCollection {
   return {
     type: 'FeatureCollection',
     features: Array.from({ length: count }, (_, index) => ({
       type: 'Feature',
       geometry: { type: 'Point', coordinates: [index / 10, 2] },
-      properties: { x: index, note },
+      properties: { x: index },
     })),
   };
-}
-
-function oversizedAgentLayer(id: string): AgentLayer {
-  const note = 'x'.repeat(256);
-  const features = Math.ceil(MAXIMUM_INLINE_SOURCE_BYTES / note.length) + 1;
-  return { id, name: id, color: '#ff0000', geojson: featureCollection(features, note) };
 }
 
 function sourceEntry(
@@ -565,30 +558,6 @@ describe('live document bridge', () => {
 
     expect(useAgentLayerStore.getState().layers).toEqual([]);
     expect(warn).toHaveBeenCalledTimes(1);
-  });
-
-  it('keeps a layer too large to inline local and writes nothing for it', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    goLive();
-    const sent = server.connection.editsSent.length;
-    useAgentLayerStore.getState().addLayer(oversizedAgentLayer('census'), false);
-
-    expect(server.document.layers.census).toBeUndefined();
-    expect(server.connection.editsSent).toHaveLength(sent);
-    expect(useAgentLayerStore.getState().layers.map((layer) => layer.id)).toEqual(['census']);
-    expect(warn).toHaveBeenCalledTimes(1);
-  });
-
-  it('seeds a new document with the agent layers that fit inline', () => {
-    useAgentLayerStore.getState().addLayer(agentLayer('parks'), false);
-    useAgentLayerStore.getState().addLayer(oversizedAgentLayer('census'), false);
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-    captureStateForNewDocument();
-    goLive();
-
-    expect(Object.keys(server.document.layers)).toEqual(['parks']);
-    expect(server.document.layers.parks.source).toMatchObject({ kind: 'geojson' });
   });
 
   it('restores the stored annotations when the session ends', () => {

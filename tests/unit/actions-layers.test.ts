@@ -67,6 +67,24 @@ function seed(): void {
 describe('the viewer layer list', () => {
   beforeEach(seed);
 
+  it('names the file behind an agent layer read from one, beside its id', () => {
+    useAgentLayerStore.getState().addLayer(
+      {
+        id: 'spec-venice_env_risk.gpkg',
+        name: 'Venice risk',
+        path: 'outputs/venice_env_risk.gpkg',
+        geojson: { type: 'FeatureCollection', features: [point(5, 'lagoon')] },
+      },
+      false,
+    );
+    const listed = listViewerLayers();
+
+    expect(listed.find((layer) => layer.id === 'spec-venice_env_risk.gpkg')?.file).toBe(
+      'venice_env_risk.gpkg',
+    );
+    expect(listed.find((layer) => layer.id === 'agent-roads')).not.toHaveProperty('file');
+  });
+
   it('lists every store once, with the drawing store reporting a shared id', () => {
     const listed = listViewerLayers();
     expect(listed.map((layer) => layer.id)).toEqual([

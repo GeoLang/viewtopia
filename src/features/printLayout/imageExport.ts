@@ -29,11 +29,12 @@ export function exportPixelSize(
  * The live frame scaled to the output size, so a bigger export is the same view
  * rather than more detail.
  */
-export function mapImageDataUrl(
+export async function mapImageDataUrl(
   capture: MapCapture,
   format: ImageFormat,
   size: { width: number; height: number },
-): string {
+): Promise<string> {
+  await capture.settle();
   capture.renderFrame();
   const out = document.createElement('canvas');
   out.width = size.width;

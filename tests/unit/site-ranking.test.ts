@@ -45,6 +45,7 @@ describe('siteShortlist', () => {
     expect(shortlist?.weights).toEqual({ population: 3, competition: 1 });
     expect(shortlist?.sites[1]).toEqual({
       name: 'Leslieville',
+      featureId: null,
       scores: { population: 50, competition: 50 },
     });
   });
@@ -127,5 +128,22 @@ describe('dealSiteScores', () => {
 
     expect(matched.sites.map((site) => site.name)).toEqual(['Junction', 'King West']);
     expect(matched.unscored).toEqual([{ featureId: 'parcel-2', label: 'Liberty Village' }]);
+  });
+
+  it('matches a site read from a ptolemy layer by its feature id, whatever its label says', () => {
+    const rows = SCORE_SITES_ROWS.map((row, index) => ({ ...row, feature_id: `parcel-${index + 1}` }));
+    const shortlist = siteShortlist([layer('site_scores', rows)]);
+    const matched = dealSiteScores(shortlist?.sites ?? [], [
+      { featureId: 'parcel-3', label: '12 Dundas St W' },
+      { featureId: 'parcel-9', label: 'King West' },
+    ]);
+
+    expect(matched.sites.map((site) => site.name)).toEqual(['Junction']);
+    expect(matched.unscored).toEqual([{ featureId: 'parcel-9', label: 'King West' }]);
+  });
+
+  it('leaves the feature id out of the report table', () => {
+    const rows = TRADE_AREA_ROWS.map((row, index) => ({ ...row, feature_id: `parcel-${index + 1}` }));
+    expect(tradeAreaTable([layer('trade_areas', rows)])?.columns).not.toContain('feature_id');
   });
 });

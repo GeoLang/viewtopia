@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // jsdom has no indexeddb and fake-indexeddb is not a dependency, so the stores
 // are the seam: the queue coalescing, the three-way merge and the requests the
@@ -401,5 +401,120 @@ describe('a both-sides edit of one property surfaces as a conflict', () => {
       operations: [{ properties: { name: 'mine' } }],
     });
     expect(db.ops.size).toBe(0);
+  });
+});
+
+describe('a sync that a retry can fix retries with exponential backoff', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(async () => {
+    await discardPending();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  // vi.useFakeTimers also fakes Date.now
+  function commitWith(statusOfCommit: () => number) {
+    const commitTimes: number[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        if (!init?.method) return { ok: false, status: 404, statusText: 'Not Found' } as Response;
+        commitTimes.push(Date.now());
+        const status = statusOfCommit();
+        return { ok: status < 300, status, text: async () => 'failed' } as unknown as Response;
+      }),
+    );
+    return { commitTimes };
+  }
+
+  // queueing an edit starts a sync one second later
+  const firstSync = () => vi.advanceTimersByTimeAsync(1_000);
+
+  const delaysBetween = (times: number[]) => times.slice(1).map((time, index) => time - times[index]);
+
+  it('retries a request that never got a response after 2 then 4 seconds', async () => {
+    const requestTimes: number[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        requestTimes.push(Date.now());
+        throw new TypeError('Load failed');
+      }),
+    );
+
+    await queueEdit();
+    await firstSync();
+    await vi.advanceTimersByTimeAsync(2_000 + 4_000);
+
+    expect(delaysBetween(requestTimes)).toEqual([2_000, 4_000]);
+  });
+
+  it('waits 2, 4, 8, 16, 32 and then at most 60 seconds between commits', async () => {
+    // every pass after the fifth failed attempt warns that it skips past the op
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { commitTimes } = commitWith(() => 503);
+
+    await queueEdit();
+    await firstSync();
+    await vi.advanceTimersByTimeAsync(2_000 + 4_000 + 8_000 + 16_000 + 32_000 + 60_000 + 60_000);
+
+    expect(delaysBetween(commitTimes)).toEqual([2_000, 4_000, 8_000, 16_000, 32_000, 60_000, 60_000]);
+    expect(db.ops.size).toBe(1);
+    expect(getSyncState().status).toBe('error');
+  });
+
+  it.each([429, 500, 502])('retries a %i', async (status) => {
+    const { commitTimes } = commitWith(() => status);
+
+    await queueEdit();
+    await firstSync();
+    await vi.advanceTimersByTimeAsync(2_000);
+
+    expect(commitTimes).toHaveLength(2);
+  });
+
+  it('starts again from two seconds once a sync succeeds', async () => {
+    let commitStatus = 503;
+    const { commitTimes } = commitWith(() => commitStatus);
+
+    await queueEdit();
+    await firstSync();
+    await vi.advanceTimersByTimeAsync(2_000);
+    commitStatus = 200;
+    await vi.advanceTimersByTimeAsync(4_000);
+    expect(db.ops.size).toBe(0);
+
+    commitStatus = 503;
+    await queueEdit();
+    await firstSync();
+    await vi.advanceTimersByTimeAsync(2_000);
+
+    expect(delaysBetween(commitTimes).slice(0, 2)).toEqual([2_000, 4_000]);
+    expect(delaysBetween(commitTimes).at(-1)).toBe(2_000);
+  });
+
+  it.each([400, 404, 409, 422])('never retries a %i, which the server answers the same way again', async (status) => {
+    const { commitTimes } = commitWith(() => status);
+
+    await queueEdit();
+    await firstSync();
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+
+    expect(commitTimes).toHaveLength(1);
+    expect(db.ops.size).toBe(1);
+  });
+
+  it('never retries a conflict', async () => {
+    const { calls } = serveBranch({ name: 'theirs' });
+
+    await queueFeatureUpdate(BRANCH_ID, { id: FEATURE_ID, properties: { name: 'mine' }, geometry: POINT }, opened({ name: 'synced' }));
+    await firstSync();
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+
+    expect(calls).toHaveLength(1);
+    expect(getSyncState().status).toBe('conflicts');
   });
 });

@@ -10,6 +10,7 @@ import type { PluginDefinition, PluginContext } from '../sdk';
 
 const STOPS_LAYER = 'logistics-route-stops';
 const SEQUENCE_LAYER = 'logistics-route-sequence';
+const MAX_STOPS_DEFAULT = 50;
 
 function LogisticsPanel({ ctx }: { ctx: PluginContext }) {
   // itinera's optimizer returns the visit order and a haversine distance, no road
@@ -64,7 +65,7 @@ function LogisticsPanel({ ctx }: { ctx: PluginContext }) {
         <Tabs.Tab value="delivery" size="xs">Delivery</Tabs.Tab>
       </Tabs.List>
       <Tabs.Panel value="fleet"><FleetPanel onClose={ctx.close} onFlyTo={(lat, lng) => ctx.map.flyTo(lng, lat)} onTrackVehicle={() => {}} /></Tabs.Panel>
-      <Tabs.Panel value="delivery"><DeliveryPanel onClose={ctx.close} onFlyTo={(lat, lng) => ctx.map.flyTo(lng, lat)} onShowRoute={showRoute} /></Tabs.Panel>
+      <Tabs.Panel value="delivery"><DeliveryPanel onClose={ctx.close} onFlyTo={(lat, lng) => ctx.map.flyTo(lng, lat)} onShowRoute={showRoute} maxStops={ctx.settings.get('maxStops', MAX_STOPS_DEFAULT)} /></Tabs.Panel>
     </Tabs>
   );
 }
@@ -78,7 +79,7 @@ const plugin: PluginDefinition = {
   icon: <IconTruck size={14} />,
   Panel: LogisticsPanel,
   settings: [
-    { key: 'maxStops', label: 'Max Delivery Stops', type: 'number', defaultValue: 50, min: 2, max: 500 },
+    { key: 'maxStops', label: 'Max Delivery Stops', type: 'number', defaultValue: MAX_STOPS_DEFAULT, min: 2, max: 500 },
   ],
 };
 

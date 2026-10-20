@@ -171,6 +171,39 @@ describe('vertical plugin map callbacks', () => {
     vi.unstubAllGlobals();
   });
 
+  it('logistics stops adding stops at the maxStops plugin setting', async () => {
+    localStorage.setItem('viewtopia-plugin-settings:logistics', JSON.stringify({ maxStops: 2 }));
+    let call = 0;
+    const geocode = vi.fn(async () => {
+      call++;
+      return {
+        ok: true,
+        json: async () => ({ results: [{ lat: 50 + call, lon: 10, address: { full: `stop ${call}` } }] }),
+      } as Response;
+    });
+    vi.stubGlobal('fetch', geocode);
+
+    renderPlugin('logistics');
+    fireEvent.click(screen.getByRole('tab', { name: /delivery/i }));
+    fireEvent.click(screen.getByRole('button', { name: /new route/i }));
+
+    const input = screen.getByPlaceholderText(/add delivery address/i);
+    for (const n of [1, 2]) {
+      fireEvent.change(input, { target: { value: `address ${n}` } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+      await screen.findByText(`stop ${n}`);
+    }
+
+    expect(input).toBeDisabled();
+    expect(screen.getByRole('button', { name: /add delivery stop/i })).toBeDisabled();
+    expect(screen.getByText(/maximum of 2 stops/i)).toBeInTheDocument();
+    fireEvent.change(input, { target: { value: 'address 3' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(geocode).toHaveBeenCalledTimes(2);
+    localStorage.removeItem('viewtopia-plugin-settings:logistics');
+    vi.unstubAllGlobals();
+  });
+
   it('real estate highlights the found parcel and splits it along the drawn line', async () => {
     vi.mocked(searchParcels).mockResolvedValue([parcel]);
 

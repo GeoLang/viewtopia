@@ -108,11 +108,19 @@ export function ChatPanel() {
   // a read action's result, or an action's failure, goes back to the model as
   // its own turn, once the run that produced it has finished
   const followUp = useChatStore((s) => s.followUp);
+  const queuedPrompt = useChatStore((s) => s.queuedPrompt);
   useEffect(() => {
-    if (!followUp || streaming) return;
-    const prompt = useChatStore.getState().takeFollowUp();
-    if (prompt) void send(prompt, { followUp: true });
-  }, [followUp, streaming, send]);
+    if (streaming) return;
+    // sending the queued prompt clears the follow-up
+    if (followUp) {
+      const prompt = useChatStore.getState().takeFollowUp();
+      if (prompt) void send(prompt, { followUp: true });
+      return;
+    }
+    if (!queuedPrompt) return;
+    useChatStore.getState().clearQueuedPrompt();
+    void send(queuedPrompt);
+  }, [followUp, queuedPrompt, streaming, send]);
 
   const handleSend = () => {
     const prompt = input.trim();

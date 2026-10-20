@@ -4,8 +4,39 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- 2026-10-19: **offline sync retries with exponential backoff.** A sync that
+  got no response, a 429 or a 5xx runs again after 2 s, then 4, 8, 16 and 32 s,
+  then every 60 s. A sync with none of those starts the delay over. A 4xx
+  refusal and a merge conflict never schedule a retry.
+- 2026-10-19: **RoutingPanel lists turn-by-turn directions.** An itinera route
+  shows each step's instruction and distance, with the edges of one road
+  driven straight on folded into one step. An OSRM route has no steps and
+  shows no list.
+- 2026-10-19: **a live layer over the inline cap reaches the document.** It
+  goes up as an agora `application/geo+json` attachment and travels as its
+  url. A share link guest, or a layer over 16 MiB, keeps it local with one
+  notice.
+- 2026-10-19: **notebooks belong to the active project.** A notebook made with
+  no project active is listed in every project.
+- 2026-10-19: **ask the chat about a map point.** The right-click menu sends
+  the clicked latitude and longitude to the agent as a prompt.
+- 2026-10-19: **logistics reads `maxStops`.** A route at the cap takes no more
+  stops.
+- 2026-10-19: **agent layers in the viewer state name their file**, beside the
+  `spec-` id the agent passed to tools as a file name.
+
 ### Fixed
 
+- 2026-10-19: **map exports wait for tiles.** The site report, Print Layout's
+  image export and its live-view PDF page wait for the current view's tiles
+  before reading the canvas, which was blank when clicked early.
+- 2026-10-19: **deal sites match by feature id.** A `score_sites` or
+  `trade_area` row read from a ptolemy layer matches the deal site with the
+  same feature id, where it matched by name.
+- 2026-10-19: **unit tests wait up to 10 s.** Testing Library's 1 s default
+  failed the dataset editor test on a loaded machine.
 - 2026-10-01: **a refused collaboration room names its limit.** tiletopia now
   caps connections per room and per account, and the viewer shows one message
   per close reason (room limit, room full, too many connections, name too

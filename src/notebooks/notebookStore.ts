@@ -82,7 +82,7 @@ export interface NotebookStoreActions {
   getActive: () => Notebook | null;
 
   /** Create a new empty notebook */
-  create: (name: string, projectId?: string) => Promise<Notebook>;
+  create: (name: string, projectId: string | null) => Promise<Notebook>;
   /** Delete a notebook */
   remove: (id: string) => Promise<void>;
   /** Rename a notebook */
@@ -113,6 +113,11 @@ export interface NotebookStoreActions {
   showSqlAsLayer: (sql: string, layerId: string) => Promise<{ featureCount: number }>;
 }
 
+// a notebook made with no project active stays listed in every project
+export function notebooksInProject(notebooks: Notebook[], projectId: string | null): Notebook[] {
+  return notebooks.filter((notebook) => notebook.projectId === undefined || notebook.projectId === projectId);
+}
+
 export const useNotebookStore = create<NotebookStoreState & NotebookStoreActions>((set, get) => ({
   notebooks: [],
   activeNotebookId: null,
@@ -141,7 +146,7 @@ export const useNotebookStore = create<NotebookStoreState & NotebookStoreActions
     const now = Date.now();
     const notebook: Notebook = {
       id: crypto.randomUUID(),
-      projectId,
+      projectId: projectId ?? undefined,
       name,
       cells: [
         { id: crypto.randomUUID(), type: 'markdown', source: `# ${name}\n\nDescribe your workflow here.`, outputs: [], status: 'idle', executionCount: 0, collapsed: false },

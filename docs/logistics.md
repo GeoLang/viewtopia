@@ -69,7 +69,7 @@ one setting, `maxStops`, which nothing reads.
 - No renderer draws a fence
 
 ### Additional Tools (existing)
-- **RoutingPanel**: a route line with distance and duration, from itinera or the public OSRM demo. There are no turn-by-turn instructions
+- **RoutingPanel**: a route line with distance and duration, from itinera or the public OSRM demo. An itinera route lists its turn-by-turn steps with the distance of each. An OSRM route has no steps
 - **TrafficPanel**: traffic overlay from your own provider tiles (TomTom/HERE key), or a zero-config demo mode coloring OSM roads by synthetic congestion
 - **HeatmapPanel**: delivery density visualization
 - **Travel Time**: service area bands from itinera, 5, 10 and 15 minutes by default

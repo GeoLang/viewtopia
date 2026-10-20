@@ -149,11 +149,20 @@ Found while fixing, small:
 - [ ] ptolemy: `Dataset`, `Branch` and `Changeset` serialize `created_at` as
   a `time` array, not RFC 3339, so any client calling `new Date()` on it gets
   Invalid Date. Reviews and comments were fixed in 9611d90.
-- [ ] viewtopia: the site report captures a blank map when clicked before
-  tiles load, sites match deal entries by name because `score_sites` rows
-  carry no feature id (`resolve_sites` could pass one through), and four
-  unit test files time out under machine load (raster-cog-panel,
-  settings-panel, indoor-panel, dataset-editor-panel), each passing alone.
+- [ ] viewtopia: with 96 busy loops on 16 cores, six render-heavy unit tests
+  in raster-cog-panel and settings-panel pass the 15 s test timeout. All pass
+  at 32 loops. A profile shows React and Mantine development rendering and
+  `getByLabelText` walking the whole jsdom tree, no single fault.
+- [ ] viewtopia offline sync retries a 0, 429 or 5xx forever at the 60 s cap,
+  and logs "Giving up on op after 5 attempts" on every pass after the fifth.
+  Decide whether auto retry stops at five attempts.
+- [ ] viewtopia `route()` falls back to OSRM on any itinera error through a
+  bare `catch`, including a maneuver `itineraSteps` cannot phrase.
+- [ ] itinera steps carry no location, so RoutingPanel cannot fly to one,
+  slight turns along one road stay separate rows, and `route_from_path`
+  overwrites the last edge's turn with Arrive instead of appending one.
+- [ ] viewtopia: a cleared number field in plugin settings stores `''`, so
+  logistics reads `maxStops` as `''` and every route counts as full.
 - [ ] tiletopia facades still standing: `/classification/models` lists
   models nothing runs, `/terrain-analysis/operations`,
   `/multispectral/indices` and `/sensors` are static lists,
@@ -181,13 +190,9 @@ and em dashes sit in crate docs across most Rust repos.
 Each was in a README or on a Pages site and the code does not do it. Build one
 only when a user asks for it. Items already listed above are not repeated.
 
-- [ ] viewtopia: project-scoped notebooks (`create` never gets a projectId),
-  recording map operations into a notebook, a Hata propagation model for
-  telecom coverage (it is a radius or radio-horizon footprint plus a terrain
-  viewshed), click-to-query that sends a lat/lon to the agent, sync retry with
-  exponential backoff, the `maxStops` cap in logistics (nothing reads it),
-  turn-by-turn directions in RoutingPanel, and a FEMA flood zone overlay in
-  real estate.
+- [ ] viewtopia: recording map operations into a notebook, a Hata propagation
+  model for telecom coverage (it is a radius or radio-horizon footprint plus a
+  terrain viewshed), and a FEMA flood zone overlay in real estate.
 - [ ] geolang: `geopandas_api` running arbitrary GeoPandas (it takes
   `read_file`, `sjoin`, `proximity_analysis` and `filter`), and `pyqgis_api`
   running arbitrary PyQGIS (it loads a layer or runs a `native:` or `qgis:`
@@ -370,10 +375,6 @@ other documents citing "P0 item 5" still land on the right one.
    2026-08-25, plan under **Chat-only viewer mode** in the plans section.
    - [ ] File import from chat needs a URL (`data.import_url`), a local file
      has no path the chat can name.
-   - [ ] A chat result's layer id is `spec-<file>`, and for "show layers"
-     grok passed that id to the map tool as the file name, then recovered
-     through `list_outputs`. One wasted call, not a wrong result. The
-     snapshot could carry the file beside the id if it keeps happening.
    - [ ] `add_arcs` still has no catalogue entry, so the agent cannot reach it.
      It needs paired source and target points and no layer carries them. Owner
      call 2026-08-27: leave the handler in place unreached rather than delete

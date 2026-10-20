@@ -198,9 +198,40 @@ describe('routing', () => {
         [10, 45],
         [10.02, 45.01],
       ],
+      steps: [],
       source: 'itinera',
     });
     expect(fetchedUrls().some((url) => url.includes('project-osrm'))).toBe(false);
+  });
+
+  it('phrases itinera steps and folds the edges of one road driven straight on into one step', async () => {
+    const step = (distance_m: number, name: string | null, maneuver: string) => ({
+      distance_m,
+      duration_s: 10,
+      name,
+      maneuver,
+    });
+    servePlatform({
+      '/api/route': {
+        ...ITINERA_ROUTE,
+        steps: [
+          step(120, 'Via Roma', 'Depart'),
+          step(80, 'Via Roma', 'Continue'),
+          step(200, 'Corso Italia', 'TurnLeft'),
+          step(300, null, 'Continue'),
+          step(40, null, 'Arrive'),
+        ],
+      },
+    });
+
+    const result = await route(from, to);
+
+    expect(result?.steps).toEqual([
+      { instruction: 'Head out on Via Roma', distance: 200 },
+      { instruction: 'Turn left onto Corso Italia', distance: 200 },
+      { instruction: 'Continue', distance: 300 },
+      { instruction: 'Arrive at the destination', distance: 40 },
+    ]);
   });
 
   it('falls back to the public OSRM where itinera is not deployed', async () => {
@@ -215,6 +246,7 @@ describe('routing', () => {
 
     expect(result?.source).toBe('osrm');
     expect(result?.distance).toBe(3100);
+    expect(result?.steps).toEqual([]);
   });
 
   it('falls back to the public OSRM when itinera is deployed but down', async () => {

@@ -51,6 +51,7 @@ interface ChatState {
   followUp: string | null;
   /** follow-up sends since the last prompt the user typed */
   followUpCount: number;
+  queuedPrompt: string | null;
 
   // Session management
   createSession: (name?: string) => string;
@@ -82,6 +83,10 @@ interface ChatState {
   startPromptTurn: () => void;
   countFollowUp: () => void;
 
+  // Prompts from outside the chat box
+  queuePrompt: (prompt: string) => void;
+  clearQueuedPrompt: () => void;
+
   // Computed
   activeSession: () => Session | undefined;
   activeMessages: () => Message[];
@@ -95,6 +100,7 @@ export const useChatStore = create<ChatState>()(
       streaming: false,
       followUp: null,
       followUpCount: 0,
+      queuedPrompt: null,
 
       createSession: (name) => {
         const id = crypto.randomUUID();
@@ -300,6 +306,10 @@ export const useChatStore = create<ChatState>()(
       startPromptTurn: () => set({ followUp: null, followUpCount: 0 }),
 
       countFollowUp: () => set((s) => ({ followUpCount: s.followUpCount + 1 })),
+
+      queuePrompt: (queuedPrompt) => set({ queuedPrompt }),
+
+      clearQueuedPrompt: () => set({ queuedPrompt: null }),
 
       activeSession: () => {
         const s = get();

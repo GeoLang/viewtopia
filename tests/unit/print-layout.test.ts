@@ -11,7 +11,7 @@ vi.mock('../../src/features/printLayout/printMap', async (importOriginal) => ({
 
 import { MAX_ATLAS_PAGES, atlasFields, atlasPages, expandBounds } from '../../src/features/printLayout/atlas';
 import { buildPdfPages } from '../../src/features/printLayout/build';
-import type { MapCapture } from '../../src/features/printLayout/capture';
+import { type MapCapture, maplibreCapture } from '../../src/features/printLayout/capture';
 import {
   composePage,
   fitRect,
@@ -262,6 +262,7 @@ describe('buildPdfPages', () => {
     } as unknown as HTMLCanvasElement;
     const capture: MapCapture = {
       renderFrame: vi.fn(),
+      settle: vi.fn(async () => {}),
       canvas: () => canvas,
       camera: () => CAMERA,
       saveView: vi.fn(() => restore),
@@ -336,6 +337,24 @@ describe('buildPdfPages', () => {
     expect(pick(pages[0].elements, 'title')?.text).toBe('Overview');
   });
 
+  it('draws the live page only once the tiles for the view have loaded', async () => {
+    const { capture } = fakeCapture();
+    let tilesLoaded = () => {};
+    vi.mocked(capture.settle).mockReturnValue(
+      new Promise((resolve) => {
+        tilesLoaded = resolve;
+      }),
+    );
+
+    const pages = buildPdfPages(capture, options);
+    await vi.waitFor(() => expect(capture.settle).toHaveBeenCalled());
+    expect(capture.renderFrame).not.toHaveBeenCalled();
+
+    tilesLoaded();
+    await pages;
+    expect(capture.renderFrame).toHaveBeenCalledTimes(1);
+  });
+
   it('fits, captures and titles each atlas page, then puts the view back', async () => {
     const { capture, restore } = fakeCapture();
     const atlas = [
@@ -366,5 +385,42 @@ describe('buildPdfPages', () => {
       }),
     ).rejects.toThrow('tiles gone');
     expect(restore).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('maplibreCapture settle', () => {
+  function fakeMap(loaded: boolean) {
+    const idle: Array<() => void> = [];
+    const map = {
+      loaded: () => loaded,
+      once: vi.fn((_event: string, listener: () => void) => idle.push(listener)),
+      off: vi.fn(),
+    };
+    const fireIdle = () => {
+      for (const listener of idle) listener();
+    };
+    return { map, fireIdle };
+  }
+
+  it('resolves at once on a map whose tiles have all loaded', async () => {
+    const { map } = fakeMap(true);
+    await maplibreCapture(map as unknown as Parameters<typeof maplibreCapture>[0]).settle();
+    expect(map.once).not.toHaveBeenCalled();
+  });
+
+  it('waits for idle while tiles are still loading', async () => {
+    const { map, fireIdle } = fakeMap(false);
+    let settled = false;
+    const settle = maplibreCapture(map as unknown as Parameters<typeof maplibreCapture>[0])
+      .settle()
+      .then(() => {
+        settled = true;
+      });
+
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    fireIdle();
+    await settle;
+    expect(settled).toBe(true);
   });
 });
