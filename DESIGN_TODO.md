@@ -914,6 +914,15 @@ verticals, not a description of what exists.
 See **Wait for demand**. Android fetches and draws on Canvas, including MVT.
 Metal/Vulkan is unstarted.
 
+### geoplumb against GDAL
+
+See `geoplumb/docs/gdal-gap-plan.md`: a feature-gated `gdal` source first,
+then `RangeRead` by shared reference, windowed point and vector sources, the
+small items, and the GPU tensor path last. Its last section answers whether
+GDAL can go to nothing: yes for the stack's own paths over two to three
+years, driven by what the gated source opens in production, never for every
+file a public user brings.
+
 ### verne, the next adapter
 
 Rationale: lock-in, not features, is what stops an org moving off an incumbent
