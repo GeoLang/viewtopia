@@ -70,7 +70,7 @@
     "@turf/turf": "^7.3.5",
     "@types/three": "^0.185.0",
     "apache-arrow": "^21.1.0",
-    "cesium": "^1.123.0",
+    "cesium": "^1.147.0",
     "fflate": "^0.8.3",
     "flatgeobuf": "4.6.1",
     "geojson-vt": "^4.0.3",

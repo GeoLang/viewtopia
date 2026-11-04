@@ -83,8 +83,8 @@ importers:
         specifier: ^21.1.0
         version: 21.2.0
       cesium:
-        specifier: ^1.123.0
-        version: 1.146.0
+        specifier: ^1.147.0
+        version: 1.147.0
       fflate:
         specifier: ^0.8.3
         version: 0.8.3
@@ -202,7 +202,7 @@ importers:
         version: 6.4.5(@types/node@26.1.2)(terser@5.49.2)
       vite-plugin-cesium:
         specifier: ^1.2.23
-        version: 1.2.23(cesium@1.146.0)(rollup@2.80.0)(supports-color@7.2.0)(vite@6.4.5(@types/node@26.1.2)(terser@5.49.2))
+        version: 1.2.23(cesium@1.147.0)(rollup@2.80.0)(supports-color@7.2.0)(vite@6.4.5(@types/node@26.1.2)(terser@5.49.2))
       vite-plugin-pwa:
         specifier: ^1.3.0
         version: 1.3.0(supports-color@7.2.0)(vite@6.4.5(@types/node@26.1.2)(terser@5.49.2))(workbox-build@7.4.1(@types/babel__core@7.20.5)(supports-color@7.2.0))(workbox-window@7.4.1)
@@ -2661,9 +2661,9 @@ packages:
   ccount@2.0.1:
     resolution: {integrity: sha512-eyrF0jiFpY+3drT6383f1qhkbGsLSifNAjA61IUjZjmLCWjItY6LB9ft9YhoDgwfmclB2zhu51Lc7+95b8NRAg==}
 
-  cesium@1.146.0:
-    resolution: {integrity: sha512-hvKkURnmc8OZ8qKNrwawl/YijwAItaWLbpAdIVNAUXODCLMjpod4PbdLuwo8Ab6ETL915MUGV2NocHFCRCeqqA==}
-    engines: {node: '>=22.0.0'}
+  cesium@1.147.0:
+    resolution: {integrity: sha512-gY5TF0rSyIMtnSIFHUuiHnrCuhdKaHUzLWFcjxytsdheKfKtYYOWicIWMypGjwYfnmJrgPgNF7HNjO9SK/JIkw==}
+    engines: {node: '>=22.17.0'}
 
   chai@6.2.2:
     resolution: {integrity: sha512-NUPRluOfOiTKBKvWPtSD4PhFvWCqOi0BGStNWs57X9js7XGTprSmFoz5F0tWhR4WPjNeR9jXqdC7/UpSJTnlRg==}
@@ -8363,10 +8363,11 @@ snapshots:
 
   ccount@2.0.1: {}
 
-  cesium@1.146.0:
+  cesium@1.147.0:
     dependencies:
       '@cesium/core': 0.1.1
       '@cesium/engine': 26.5.0
+      '@cesium/gltf': 0.1.1
       '@cesium/widgets': 16.3.1
       protobufjs: 8.8.0
 
@@ -10713,9 +10714,9 @@ snapshots:
       x-is-array: 0.1.0
       x-is-string: 0.1.0
 
-  vite-plugin-cesium@1.2.23(cesium@1.146.0)(rollup@2.80.0)(supports-color@7.2.0)(vite@6.4.5(@types/node@26.1.2)(terser@5.49.2)):
+  vite-plugin-cesium@1.2.23(cesium@1.147.0)(rollup@2.80.0)(supports-color@7.2.0)(vite@6.4.5(@types/node@26.1.2)(terser@5.49.2)):
     dependencies:
-      cesium: 1.146.0
+      cesium: 1.147.0
       fs-extra: 9.1.0
       rollup-plugin-external-globals: 0.6.1(rollup@2.80.0)
       serve-static: 1.16.3(supports-color@7.2.0)
