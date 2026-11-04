@@ -9,7 +9,7 @@
 > Ranked 2026-08-21 against the DESIGN.md goal: ship the viewer, the agent, and
 > the services that make a shared map, not more surface. Pick from **Do next**.
 > Do not start at a parked item.
-> Last brought current: **2026-09-24**.
+> Last brought current: **2026-11-03**.
 >
 > Verify an entry against the code before working it, and do not trust the
 > mechanism it names. Three items in this file were already closed when someone
@@ -27,9 +27,7 @@ any repo).
 
 - [ ] residuals, in priority order: ptolemy's `migrate` and admin CLI
   commands run with no statement
-  timeout by choice, a slow realtime client drops chat lines past 32 unread,
-  a relayed tiletopia chat line can exceed 16 KiB by up to 255 bytes once
-  `user_id` is stamped, and no test covers the 400 for an over-long `sub`.
+  timeout by choice, and a slow realtime client drops chat lines past 32 unread.
 - [ ] F17 and F18 rollout, owner-run. The code is on master: geodukt
   d1d7606, ptolemy c452f35, geolang 294f692, infrastructure dc1fc28,
   viewtopia 46ecf5a5.
@@ -65,20 +63,13 @@ any repo).
   - the load test and the golden path have not run locally against the
     stack with the geodukt caller roots and ptolemy's external pool
     change. CI is green on all five commits, the golden path on 46ecf5a5
-    included. The nightly load workflow has not run since.
+    included.
   - external datasets are off on the platform compose stack and the
     preview, neither sets `PTOLEMY_EXTERNAL_DATABASE_URL`. Turning them
     on needs a SELECT-only role, and on Aurora a `GRANT CONNECT` since
     PUBLIC connect on the `ptolemy` database is revoked.
   - the image does not pin pyogrio, so the `GeoJSON:` and `GPKG:` path
     prefixes are tested on the GDAL that CI installs, not the image's.
-  - the F18 entry in the review file still says the fix is uncommitted.
-- [ ] three stale Dependabot alerts on viewtopia to dismiss by hand: 26
-  (fflate) and 27 (maplibre-gl) name `package-lock.json`, deleted 2026-06-20,
-  and 28 names maplibre-gl in `package.json`, which has been `^6.10.0` since
-  2d936ec9. The installed tree has fflate 0.8.3 and maplibre-gl 6.10.0.
-  Alert 29 (image-size) should close by itself once the `image-size`
-  override in `pnpm-workspace.yaml` is on master.
 - [ ] later: sibyl message retention.
 
 ## Geokode planet index
@@ -143,25 +134,16 @@ Found while fixing, small:
   in raster-cog-panel and settings-panel pass the 15 s test timeout. All pass
   at 32 loops. A profile shows React and Mantine development rendering and
   `getByLabelText` walking the whole jsdom tree, no single fault.
-- [ ] itinera steps carry no location, so RoutingPanel cannot fly to one,
-  slight turns along one road stay separate rows, and `route_from_path`
-  overwrites the last edge's turn with Arrive instead of appending one.
+- [ ] itinera steps carry no location, so RoutingPanel cannot fly to one, and
+  slight turns along one road stay separate rows.
 - [ ] tiletopia: orthometric LAS heights are still off by the geoid
   undulation, no geoid grid ships (TODO in crs_detect.rs).
 - [ ] collecta: `DROP TABLE IF EXISTS sync_queue` on startup has not run
   against a database that still holds the old table.
-- [ ] geolang executor: nothing cancels a tool worker when its caller goes
-  away, so a run cut off mid `run_qgis_algorithm` holds one of the two slots
-  until the 840 s worker timeout. Seen once in an eval sweep, no repro kept.
-  tab-to-leaflet fails one run in three on the model itself, the catalogue
+- [ ] tab-to-leaflet fails one run in three on the model itself, the catalogue
   already maps leaflet to `view.set_tab`.
 
-Wrong claims left in code (rustdoc, Cargo descriptions, help text): ptolemy's
-and fenestra's workspace `description` name other products, tiletopia's
-oversells routing, terrano's netcdf module claims NetCDF-4, panoptes'
-satellite and cog modules claim calibration and remote reads it lacks,
-terravista's crate doc names UniFFI, collecta's pattern constraint says regex,
-and em dashes sit in crate docs across most Rust repos.
+Em dashes sit in Rust comments and crate docs across most repos, about 230 files.
 
 ### Claims the sweep removed or marked not built
 
@@ -683,11 +665,11 @@ no ceiling on model tokens or executor time. The plan, in payoff order:
       `enable_demo_landing_page`: the page at `/try/`, a wake Lambda behind a
       function URL, and an idle Lambda that reads `POST /chat/agui` counts
       from a log metric filter. Unapplied, under **Doc sweep**.
-- [ ] **Let Aurora pause while the tasks are up.** The cluster pauses only
-      when ptolemy's five-second delivery poll and agora's thirty-second
-      watch tick stop. Both pollers back off to a few minutes after a quiet
-      period so the cluster can pause between sessions, and the first
-      request after a pause pays the fifteen-second resume.
+- [ ] **Let Aurora pause while the tasks are up.** Built in ptolemy and agora:
+      pollers tick every 30 minutes after 10 quiet minutes, pools hold no idle
+      connection past 60 seconds. Untested on Aurora and not deployed. A resume
+      after 24 paused hours can take over 30 s, which exceeds sqlx's
+      `acquire_timeout`, so the first query after one may fail.
 - [ ] **Demo hours.** Built in infrastructure d03ee8d as
       `morning_scale_up_hour`, 08:00 Toronto by default, and the idle
       scale-down only runs outside 08:00 to 23:00. Unapplied.
@@ -916,9 +898,7 @@ Metal/Vulkan is unstarted.
 
 ### geoplumb against GDAL
 
-See `geoplumb/docs/gdal-gap-plan.md`: a feature-gated `gdal` source first,
-then `RangeRead` by shared reference, windowed point and vector sources, the
-small items, and the GPU tensor path last. Its last section answers whether
+See `geoplumb/docs/gdal-gap-plan.md`, which has no open boxes. Its last section answers whether
 GDAL can go to nothing: yes for the stack's own paths over two to three
 years, driven by what the gated source opens in production, never for every
 file a public user brings.

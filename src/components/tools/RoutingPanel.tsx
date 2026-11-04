@@ -132,9 +132,11 @@ export function RoutingPanel({ onClose }: { onClose: () => void }) {
                   {result.steps.map((step, index) => (
                     <List.Item key={index}>
                       {step.instruction}{' '}
-                      <Text span size="xs" c="dimmed">
-                        {stepDistanceLabel(step.distance)}
-                      </Text>
+                      {step.distance > 0 && (
+                        <Text span size="xs" c="dimmed">
+                          {stepDistanceLabel(step.distance)}
+                        </Text>
+                      )}
                     </List.Item>
                   ))}
                 </List>
