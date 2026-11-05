@@ -241,7 +241,7 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
             size="lg"
             variant="light"
             color="violet"
-            aria-label="Download GeoTIFF"
+            title="Download GeoTIFF" aria-label="Download GeoTIFF"
             onClick={() => isLive && download(analysis as LiveOp)}
             disabled={!isLive || needsSignIn}
             loading={exporting !== null && exporting === analysis}
@@ -264,7 +264,7 @@ export function TerrainAnalysisPanel({ onClose }: { onClose: () => void }) {
             size="lg"
             variant="light"
             color="green"
-            aria-label="Download NDVI GeoTIFF"
+            title="Download NDVI GeoTIFF" aria-label="Download NDVI GeoTIFF"
             onClick={() => download('ndvi')}
             disabled={needsSignIn}
             loading={exporting === 'ndvi'}

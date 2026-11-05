@@ -9,6 +9,7 @@ import {
   type LiveCommentMention,
   type LiveOperation,
 } from './types';
+import { randomUuid } from '../lib/randomUuid';
 
 /**
  * What the compose box accepts. The service caps an op value at 64 KiB, which is
@@ -144,7 +145,7 @@ export function postComment({ text, parentId, anchor, mentions }: NewComment): L
   const author = currentCommentAuthor();
   if (!author || trimmed.length === 0 || trimmed.length > COMMENT_TEXT_LIMIT) return null;
   const comment: LiveComment = {
-    id: crypto.randomUUID(),
+    id: randomUuid(),
     actor: author.actor,
     authorName: author.name,
     text: trimmed,

@@ -16,6 +16,7 @@ import { fetchDatasetStyle, PTOLEMY_SOURCE_LAYER } from '../../lib/datasetStyle'
 import { fetchDatasetFields } from '../../lib/datasetSchema';
 import { useDatasetSchemaStore } from '../../store/datasetSchemas';
 import { decodeStyleImage, decodeStyleImages } from '../../lib/styleImages';
+import { randomUuid } from '../../lib/randomUuid';
 
 interface VTSource {
   id: string;
@@ -71,7 +72,7 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
 
   const handleAdd = async () => {
     if (!name.trim() || !url.trim()) return;
-    const id = `vt-${crypto.randomUUID()}`;
+    const id = `vt-${randomUuid()}`;
     // ptolemy hardcodes its MVT layer name, so a dataset id settles the source layer
     const layer = dataset ? PTOLEMY_SOURCE_LAYER : sourceLayer.trim() || 'default';
     const style = dataset ? await fetchDatasetStyle(dataset, id, layer) : null;
@@ -203,7 +204,7 @@ export function VectorTilesPanel({ onClose }: { onClose: () => void }) {
               <Text size="xs" c="white" lineClamp={1}>
                 {s.name}
               </Text>
-              <ActionIcon aria-label="Remove vector tile source" size="xs" variant="subtle" color="red" onClick={() => handleRemove(s.id)}>
+              <ActionIcon title="Remove vector tile source" aria-label="Remove vector tile source" size="xs" variant="subtle" color="red" onClick={() => handleRemove(s.id)}>
                 <IconTrash size={12} />
               </ActionIcon>
             </Group>

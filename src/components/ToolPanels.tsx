@@ -1,10 +1,8 @@
 import { useEffect } from 'react';
-import { Badge } from '@mantine/core';
-import { useAppStore, type ToolPanel } from '../store/app';
+import { useAppStore } from '../store/app';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { useDrawStore } from '../store/draw';
 import { useMeasureStore } from '../store/measure';
-import { isPreviewPanel } from './toolMenus';
 import { PluginPanel } from '../plugins/PluginHost';
 import { PluginManagerPanel } from '../plugins/runtime/PluginManagerPanel';
 import { MeasurementPanel } from './tools/MeasurementPanel';
@@ -29,6 +27,8 @@ import { BookmarkPanel } from './tools/BookmarkPanel';
 import { LayerManager } from './layers/LayerManager';
 import { LegendPanel } from '../features/symbology/LegendPanel';
 import { ClippingPanel } from './tools/ClippingPanel';
+import { TilesetSectionPanel } from '../features/scene/TilesetSectionPanel';
+import { ElementPanel } from '../features/elements/ElementPanel';
 import { CrossSectionPanel } from './tools/CrossSectionPanel';
 import { HeatmapPanel } from './tools/HeatmapPanel';
 import { TimelapsePanel } from './tools/TimelapsePanel';
@@ -78,26 +78,6 @@ import { RunHistoryPanel } from '../features/runs/RunHistoryPanel';
 import { PrintLayoutPanel } from '../features/printLayout/PrintLayoutPanel';
 import { NotebookPanel } from '../notebooks/NotebookPanel';
 
-/** floating marker over unfinished tools so they never pass as shipped features */
-function PreviewMarker({ panel }: { panel: ToolPanel }) {
-  if (!isPreviewPanel(panel)) return null;
-  return (
-    <Badge
-      size="sm"
-      color="orange"
-      style={{
-        position: 'absolute',
-        top: 68,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 400,
-      }}
-    >
-      Preview: not functional yet
-    </Badge>
-  );
-}
-
 export function ToolPanels() {
   const {
     activePanel,
@@ -136,14 +116,7 @@ export function ToolPanels() {
     return () => window.removeEventListener('keydown', onKey);
   }, [activePanel, spaceTimeOpen, setActivePanel, closeSpaceTime]);
 
-  const panel = renderPanel();
-  if (!panel) return null;
-  return (
-    <>
-      {panel}
-      <PreviewMarker panel={activePanel} />
-    </>
-  );
+  return renderPanel();
 
   function renderPanel() {
     switch (activePanel) {
@@ -211,6 +184,10 @@ export function ToolPanels() {
       return <ProjectPanel onClose={close} />;
     case 'clipping':
       return <ClippingPanel onClose={close} />;
+    case 'modelSection':
+      return <TilesetSectionPanel onClose={close} />;
+    case 'modelElements':
+      return <ElementPanel onClose={close} />;
     case 'crossSection':
       return <CrossSectionPanel onClose={close} />;
     case 'heatmap':

@@ -1,14 +1,16 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import type { MutableRefObject } from 'react';
 import type * as maplibregl from 'maplibre-gl';
 import {
+  drawToolClicks,
   useDrawStore,
   geometryVertices,
   geometryWithMovedVertex,
-  type DrawMode,
   type DrawnFeature,
 } from '../store/draw';
 import { useAppStore } from '../store/app';
+import { lineWithVertexFeatures, setToolGeoJson } from './toolLayersMapLibre';
+import { useToolClicksMapLibre } from './useToolClicksMapLibre';
 
 const SRC = 'draw-features';
 const SRC_PENDING = 'draw-pending';
@@ -62,116 +64,13 @@ function featuresToGeoJSON(features: DrawnFeature[]): GeoJSON.FeatureCollection 
   return { type: 'FeatureCollection', features: geoFeatures };
 }
 
-function pendingToGeoJSON(pending: [number, number][]): GeoJSON.FeatureCollection {
-  const features: GeoJSON.Feature[] = [];
-  if (pending.length >= 2) {
-    features.push({
-      type: 'Feature',
-      properties: {},
-      geometry: { type: 'LineString', coordinates: pending },
-    });
-  }
-  for (const p of pending) {
-    features.push({
-      type: 'Feature',
-      properties: {},
-      geometry: { type: 'Point', coordinates: p },
-    });
-  }
-  return { type: 'FeatureCollection', features };
-}
-
 export function useDrawMapLibre(
   mapRef: MutableRefObject<maplibregl.Map | null>,
 ) {
-  const handlerRef = useRef<((e: maplibregl.MapMouseEvent) => void) | null>(null);
-  const dblHandlerRef = useRef<((e: maplibregl.MapMouseEvent) => void) | null>(null);
-  // A renderer switch destroys and rebuilds the map, so rebind to the new one —
-  // handlers and layers left on the old instance are dead.
+  useToolClicksMapLibre(mapRef, useDrawStore, drawToolClicks);
+  // renderer switches destroy and rebuild the map, which drops layers on the old instance
   const renderer = useAppStore((s) => s.renderer);
   const activeTab = useAppStore((s) => s.activeTab);
-
-  // Click handler: register/unregister based on draw mode
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    // Clean up previous
-    if (handlerRef.current) {
-      map.off('click', handlerRef.current);
-      handlerRef.current = null;
-    }
-    if (dblHandlerRef.current) {
-      map.off('dblclick', dblHandlerRef.current);
-      dblHandlerRef.current = null;
-    }
-
-    const sync = (state: { mode: DrawMode }) => {
-      const map = mapRef.current;
-      if (!map) return;
-
-      // Register handlers when mode is set
-      if (state.mode && !handlerRef.current) {
-        const clickHandler = (e: maplibregl.MapMouseEvent) => {
-          const { mode, addPendingPoint, finishFeature, pending } = useDrawStore.getState();
-          if (!mode) return;
-
-          addPendingPoint(e.lngLat.lng, e.lngLat.lat);
-
-          // Point mode: finish immediately
-          if (mode === 'point') {
-            finishFeature();
-          }
-          // Circle/rectangle: finish on second click
-          if ((mode === 'circle' || mode === 'rectangle') && pending.length >= 1) {
-            // pending already has the first point, addPendingPoint just added second
-            setTimeout(() => finishFeature(), 0);
-          }
-        };
-
-        const dblClickHandler = (e: maplibregl.MapMouseEvent) => {
-          e.preventDefault();
-          const { mode, finishFeature } = useDrawStore.getState();
-          if (mode === 'line' || mode === 'polygon') {
-            finishFeature();
-          }
-        };
-
-        map.on('click', clickHandler);
-        map.on('dblclick', dblClickHandler);
-        handlerRef.current = clickHandler;
-        dblHandlerRef.current = dblClickHandler;
-
-        map.getCanvas().style.cursor = 'crosshair';
-      }
-
-      // Unregister handlers when mode is cleared
-      if (!state.mode && handlerRef.current) {
-        map.off('click', handlerRef.current);
-        handlerRef.current = null;
-        if (dblHandlerRef.current) {
-          map.off('dblclick', dblHandlerRef.current);
-          dblHandlerRef.current = null;
-        }
-        map.getCanvas().style.cursor = '';
-      }
-    };
-
-    // Apply the mode that's already set: after a renderer switch the store won't
-    // fire again for a tool the user turned on before the switch.
-    sync(useDrawStore.getState());
-    const unsub = useDrawStore.subscribe(sync);
-
-    return () => {
-      unsub();
-      const map = mapRef.current;
-      if (!map) return;
-      if (handlerRef.current) map.off('click', handlerRef.current);
-      if (dblHandlerRef.current) map.off('dblclick', dblHandlerRef.current);
-      handlerRef.current = null;
-      dblHandlerRef.current = null;
-    };
-  }, [mapRef, renderer, activeTab]);
 
   // Render drawn features + pending onto the map
   useEffect(() => {
@@ -180,16 +79,9 @@ export function useDrawMapLibre(
 
     const render = () => {
       const { features, pending } = useDrawStore.getState();
-      const geojson = featuresToGeoJSON(features);
-      const pendGeo = pendingToGeoJSON(pending);
-
       // Completed features
-      const src = map.getSource(SRC) as maplibregl.GeoJSONSource | undefined;
-      if (src) {
-        src.setData(geojson);
-      } else {
-        map.addSource(SRC, { type: 'geojson', data: geojson });
-        map.addLayer({
+      setToolGeoJson(map, SRC, featuresToGeoJSON(features), [
+        {
           id: FILL_LAYER,
           type: 'fill',
           source: SRC,
@@ -198,8 +90,8 @@ export function useDrawMapLibre(
             'fill-color': ['get', 'color'],
             'fill-opacity': 0.25,
           },
-        });
-        map.addLayer({
+        },
+        {
           id: LINE_LAYER,
           type: 'line',
           source: SRC,
@@ -208,8 +100,8 @@ export function useDrawMapLibre(
             'line-color': ['get', 'color'],
             'line-width': ['get', 'width'],
           },
-        });
-        map.addLayer({
+        },
+        {
           id: POINT_LAYER,
           type: 'circle',
           source: SRC,
@@ -220,39 +112,40 @@ export function useDrawMapLibre(
             'circle-stroke-width': 2,
             'circle-stroke-color': '#fff',
           },
-        });
-      }
+        },
+      ]);
 
       // Pending shape preview
-      const pendSrc = map.getSource(SRC_PENDING) as maplibregl.GeoJSONSource | undefined;
-      if (pendSrc) {
-        pendSrc.setData(pendGeo);
-      } else {
-        map.addSource(SRC_PENDING, { type: 'geojson', data: pendGeo });
-        map.addLayer({
-          id: PENDING_LINE,
-          type: 'line',
-          source: SRC_PENDING,
-          filter: ['==', '$type', 'LineString'],
-          paint: {
-            'line-color': '#ffffff',
-            'line-width': 2,
-            'line-dasharray': [4, 4],
+      setToolGeoJson(
+        map,
+        SRC_PENDING,
+        { type: 'FeatureCollection', features: lineWithVertexFeatures(pending) },
+        [
+          {
+            id: PENDING_LINE,
+            type: 'line',
+            source: SRC_PENDING,
+            filter: ['==', '$type', 'LineString'],
+            paint: {
+              'line-color': '#ffffff',
+              'line-width': 2,
+              'line-dasharray': [4, 4],
+            },
           },
-        });
-        map.addLayer({
-          id: PENDING_POINT,
-          type: 'circle',
-          source: SRC_PENDING,
-          filter: ['==', '$type', 'Point'],
-          paint: {
-            'circle-radius': 5,
-            'circle-color': '#ffffff',
-            'circle-stroke-width': 1,
-            'circle-stroke-color': '#a78bfa',
+          {
+            id: PENDING_POINT,
+            type: 'circle',
+            source: SRC_PENDING,
+            filter: ['==', '$type', 'Point'],
+            paint: {
+              'circle-radius': 5,
+              'circle-color': '#ffffff',
+              'circle-stroke-width': 1,
+              'circle-stroke-color': '#a78bfa',
+            },
           },
-        });
-      }
+        ],
+      );
     };
 
     // Render whenever store changes

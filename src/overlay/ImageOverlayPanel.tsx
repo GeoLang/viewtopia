@@ -30,6 +30,7 @@ import {
   type OverlayPlacement,
   type OverlaySource,
 } from './importOverlay';
+import { randomUuid } from '../lib/randomUuid';
 
 type CornerPicking = 'off' | 'first' | 'second';
 
@@ -45,7 +46,7 @@ export function ImageOverlayPanel({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const layerId = useRef(crypto.randomUUID());
+  const layerId = useRef(randomUuid());
   const kept = useRef(false);
   const addRasterLayer = useAgentLayerStore((s) => s.addRasterLayer);
   const setEditingRaster = useAgentLayerStore((s) => s.setEditingRaster);

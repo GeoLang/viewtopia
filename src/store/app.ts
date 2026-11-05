@@ -45,6 +45,8 @@ export type ToolPanel =
   | 'sqlWorkspace'
   | 'project'
   | 'clipping'
+  | 'modelSection'
+  | 'modelElements'
   | 'crossSection'
   | 'heatmap'
   | 'timelapse'
@@ -136,8 +138,6 @@ export interface Bookmark {
 interface Settings {
   showMinimap: boolean;
   showCoordReadout: boolean;
-  /** reveal unfinished preview tools in the toolbar menus */
-  showPreviewTools: boolean;
   defaultRenderer: Renderer;
   defaultBasemap: Basemap;
   /** MapLibre style JSON or .pmtiles URL for the 'selfhosted' basemap */
@@ -226,7 +226,6 @@ interface AppState {
 const DEFAULT_SETTINGS: Settings = {
   showMinimap: false,
   showCoordReadout: true,
-  showPreviewTools: false,
   defaultRenderer: 'maplibre',
   defaultBasemap: DEFAULT_BASEMAP,
   selfHostedBasemapUrl: '',

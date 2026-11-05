@@ -160,7 +160,7 @@ function Cell({
     <Paper p="sm" withBorder style={{ borderLeft: `3px solid var(--mantine-color-${statusColor}-6)` }}>
       <Group justify="space-between" mb={cell.collapsed ? 0 : 8}>
         <Group gap={6}>
-          <ActionIcon aria-label="Toggle cell" size="xs" variant="subtle" onClick={() => toggleCellCollapse(notebookId, cell.id)}>
+          <ActionIcon title="Toggle cell" aria-label="Toggle cell" size="xs" variant="subtle" onClick={() => toggleCellCollapse(notebookId, cell.id)}>
             {cell.collapsed ? <IconChevronRight size={12} /> : <IconChevronDown size={12} />}
           </ActionIcon>
           {typeIcon}
@@ -183,13 +183,13 @@ function Cell({
               </Tooltip>
             </>
           )}
-          <ActionIcon aria-label="Move cell up" size="sm" variant="subtle" onClick={() => moveCell(notebookId, cell.id, 'up')} disabled={index === 0}>
+          <ActionIcon title="Move cell up" aria-label="Move cell up" size="sm" variant="subtle" onClick={() => moveCell(notebookId, cell.id, 'up')} disabled={index === 0}>
             <IconArrowUp size={14} />
           </ActionIcon>
-          <ActionIcon aria-label="Move cell down" size="sm" variant="subtle" onClick={() => moveCell(notebookId, cell.id, 'down')} disabled={index === totalCells - 1}>
+          <ActionIcon title="Move cell down" aria-label="Move cell down" size="sm" variant="subtle" onClick={() => moveCell(notebookId, cell.id, 'down')} disabled={index === totalCells - 1}>
             <IconArrowDown size={14} />
           </ActionIcon>
-          <ActionIcon aria-label="Delete cell" size="sm" variant="subtle" color="red" onClick={() => removeCell(notebookId, cell.id)}>
+          <ActionIcon title="Delete cell" aria-label="Delete cell" size="sm" variant="subtle" color="red" onClick={() => removeCell(notebookId, cell.id)}>
             <IconTrash size={14} />
           </ActionIcon>
         </Group>
@@ -291,7 +291,7 @@ export function NotebookPanel({ onClose }: { onClose: () => void }) {
                     {nb.cells.length} cells · {new Date(nb.updatedAt).toLocaleDateString()}
                   </Text>
                 </div>
-                <ActionIcon aria-label="Delete notebook"
+                <ActionIcon title="Delete notebook" aria-label="Delete notebook"
                   size="sm"
                   variant="subtle"
                   color="red"
@@ -314,7 +314,7 @@ export function NotebookPanel({ onClose }: { onClose: () => void }) {
       <Stack gap="sm">
       <Group justify="space-between">
         <Group gap={8}>
-          <ActionIcon aria-label="Back to notebooks" size="sm" variant="subtle" onClick={() => setActive(null)}>
+          <ActionIcon title="Back to notebooks" aria-label="Back to notebooks" size="sm" variant="subtle" onClick={() => setActive(null)}>
             ←
           </ActionIcon>
           <Text fw={600} size="sm">{activeNotebook.name}</Text>
@@ -333,7 +333,7 @@ export function NotebookPanel({ onClose }: { onClose: () => void }) {
           </Tooltip>
           <Menu shadow="md" width={160}>
             <Menu.Target>
-              <ActionIcon aria-label="Notebook actions" size="sm" variant="subtle">
+              <ActionIcon title="Notebook actions" aria-label="Notebook actions" size="sm" variant="subtle">
                 <IconDotsVertical size={14} />
               </ActionIcon>
             </Menu.Target>

@@ -25,6 +25,7 @@ import {
   IconEyeCheck,
   IconFlame,
   IconFolders,
+  IconHierarchy2,
   IconHistory,
   IconLayoutColumns,
   IconLayoutDashboard,
@@ -51,6 +52,7 @@ import {
   IconSearch,
   IconSettings,
   IconScissors,
+  IconSlice,
   IconSolarPanel,
   IconStack2,
   IconSun,
@@ -66,15 +68,10 @@ import {
 } from '@tabler/icons-react';
 import type { ToolPanel } from '../store/app';
 
-/**
- * Data-driven registry for the toolbar dropdown menus. Entries marked
- * `preview` are UI-only stubs, hidden unless settings.showPreviewTools is on.
- */
 export interface ToolMenuItem {
   panel: NonNullable<ToolPanel>;
   label: string;
   icon: Icon;
-  preview?: boolean;
   /** extra terms the command palette searches, for names the label drops */
   keywords?: string[];
 }
@@ -99,6 +96,7 @@ export const ANALYSIS_MENU: ToolMenuItem[][] = [
   [
     { panel: 'travelTime', label: 'Travel Time', icon: IconClockHour4 },
     { panel: 'clipping', label: 'Clip', icon: IconScissors },
+    { panel: 'modelSection', label: 'Model Section', icon: IconSlice, keywords: ['bim', 'ifc', 'clip', 'cut'] },
     { panel: 'crossSection', label: 'Section', icon: IconRuler2 },
     { panel: 'heatmap', label: 'Heatmap', icon: IconFlame },
     { panel: 'timelapse', label: 'Timelapse', icon: IconClock },
@@ -171,6 +169,12 @@ export const DATA_MENU: ToolMenuItem[][] = [
   [
     { panel: 'assets', label: 'Assets', icon: IconPackage },
     {
+      panel: 'modelElements',
+      label: 'Model Elements',
+      icon: IconHierarchy2,
+      keywords: ['bim', 'ifc', 'storey', 'property set', 'isolate', 'hide', 'walk', 'interior'],
+    },
+    {
       panel: 'dataSources',
       label: 'Data Sources',
       icon: IconDatabase,
@@ -226,11 +230,3 @@ export const TOOLBAR_PANEL_ITEMS: ToolMenuItem[] = [
   { panel: 'legend', label: 'Legend', icon: IconListDetails },
   { panel: 'settings', label: 'Settings', icon: IconSettings },
 ];
-
-export function visibleToolItems(items: ToolMenuItem[], showPreview: boolean): ToolMenuItem[] {
-  return showPreview ? items : items.filter((item) => !item.preview);
-}
-
-export function isPreviewPanel(panel: ToolPanel): boolean {
-  return ALL_TOOL_MENU_ITEMS.some((item) => item.panel === panel && item.preview);
-}

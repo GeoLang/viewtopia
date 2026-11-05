@@ -15,6 +15,7 @@ import { getActiveCesiumViewer } from '../../viewer/registry';
 import { getSharedCamera } from '../../hooks/sharedCamera';
 import { captureCameraState, flyToCameraState } from '../../store/cameraViews';
 import { useAccessibilityStore } from '../../store/accessibility';
+import { randomUuid } from '../../lib/randomUuid';
 
 export function BookmarkPanel({ onClose }: { onClose: () => void }) {
   const bookmarks = useAppStore((s) => s.bookmarks);
@@ -31,7 +32,7 @@ export function BookmarkPanel({ onClose }: { onClose: () => void }) {
     const camera = viewer ? captureCameraState(viewer) : null;
     const cam = getSharedCamera();
     addBookmark({
-      id: crypto.randomUUID(),
+      id: randomUuid(),
       name: name.trim(),
       lat: camera?.lat ?? cam.latitude,
       lng: camera?.lng ?? cam.longitude,
@@ -85,7 +86,7 @@ export function BookmarkPanel({ onClose }: { onClose: () => void }) {
           color="violet"
           onClick={handleSave}
           disabled={!name.trim()}
-          aria-label="Save bookmark"
+          title="Save bookmark" aria-label="Save bookmark"
         >
           <IconCamera size={14} />
         </ActionIcon>
@@ -120,7 +121,7 @@ export function BookmarkPanel({ onClose }: { onClose: () => void }) {
                     {bm.lat.toFixed(4)}, {bm.lng.toFixed(4)}
                   </Text>
                 </Stack>
-                <ActionIcon aria-label="Remove bookmark"
+                <ActionIcon title="Remove bookmark" aria-label="Remove bookmark"
                   size="xs"
                   variant="subtle"
                   color="red"

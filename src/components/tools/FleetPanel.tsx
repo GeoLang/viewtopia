@@ -14,9 +14,6 @@ interface FleetPanelProps {
   onClose: () => void;
 }
 
-// The platform has no live vehicle-position feed: ptolemy's only WebSocket channel
-// broadcasts branch commit/merge events (/ws/branches/{id}), and there is no fleet
-// REST endpoint. Rather than connect to a non-existent socket, the panel says so.
 export function FleetPanel({ onClose }: FleetPanelProps) {
   return (
     <Paper p="sm" radius="md" withBorder>
@@ -26,7 +23,7 @@ export function FleetPanel({ onClose }: FleetPanelProps) {
             <IconTruck size={18} />
             <Text fw={600} size="sm">Fleet Tracking</Text>
           </Group>
-          <ActionIcon aria-label="Close fleet tracking" size="sm" variant="subtle" onClick={onClose}><IconX size={14} /></ActionIcon>
+          <ActionIcon title="Close fleet tracking" aria-label="Close fleet tracking" size="sm" variant="subtle" onClick={onClose}><IconX size={14} /></ActionIcon>
         </Group>
 
         <Stack gap="xs" align="center" py="xl">

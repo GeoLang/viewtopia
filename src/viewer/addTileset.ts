@@ -5,6 +5,8 @@
  */
 import { loadedTileset, useTiles3dLayerStore } from '../store/tiles3dLayers';
 import { getActiveCesiumViewer } from './registry';
+import { flyToTileset } from './flyToTileset';
+import { randomUuid } from '../lib/randomUuid';
 
 export const DEFAULT_TILESET_NAME = 'Tileset';
 
@@ -35,13 +37,13 @@ export async function addTilesetToGlobe(url: string, wanted?: string): Promise<A
   if (!viewer) {
     return { name, failure: 'no-globe' };
   }
-  const id = crypto.randomUUID();
+  const id = randomUuid();
   // the layer row stays behind on a failed load, since it is what says why
   useTiles3dLayerStore.getState().putLayer({ id, name, url, visible: true });
   const tileset = await loadedTileset(id, CHAT_TILESET_WAIT_SECONDS * MILLISECONDS_PER_SECOND);
   if (!tileset) {
     return { name, failure: 'not-drawn' };
   }
-  await viewer.flyTo(tileset);
+  await flyToTileset(viewer, tileset);
   return { name, failure: null };
 }

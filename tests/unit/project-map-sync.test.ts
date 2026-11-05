@@ -56,11 +56,16 @@ import {
   SAVE_DEBOUNCE_MS,
 } from '../../src/projects/mapSync';
 import type { ImageOverlayEntry, ViewtopiaProject } from '../../src/features/project/projectFile';
+import type { SavedModelState } from '../../src/features/project/modelStates';
 import { useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers';
 import { useAppStore } from '../../src/store/app';
 import { useOgcLayerStore } from '../../src/store/ogcLayers';
+import { useTiles3dLayerStore } from '../../src/store/tiles3dLayers';
 import { startDeal, type Deal } from '../../src/features/deals/deal';
 import { useDealStore } from '../../src/features/deals/store';
+import { useElementStore } from '../../src/features/elements/store';
+import { applyTilesetSection } from '../../src/features/scene/tilesetSection';
+import type { Cesium3DTileset } from 'cesium';
 
 const PROJECT = 'project-1';
 
@@ -274,6 +279,40 @@ describe('saving on a debounce', () => {
     expect(key).toBe(MAP_STATE_KEY);
     expect(saved.agentLayers.map((layer) => layer.id)).toEqual(['canals']);
     expect(saved.basemap).toBe('dark');
+  });
+
+  it('saves a 3D model layer added to the map', async () => {
+    const model = { id: 'a1b2', name: 'tower.ifc', url: '/tiles/v1/assets/a1b2/tileset.json', visible: true };
+    watch(activeProject);
+
+    useTiles3dLayerStore.getState().putLayer(model);
+    await vi.runAllTimersAsync();
+
+    const saved = api.putProjectState.mock.calls[0][2] as ViewtopiaProject;
+    expect(saved.tiles3dLayers).toEqual([model]);
+    useTiles3dLayerStore.setState({ layers: [], loaded: {} });
+  });
+
+  it('saves when the element selection or the model section of a 3D model changes', async () => {
+    const model = { id: 'a1b2', name: 'tower.ifc', url: '/tiles/v1/assets/a1b2/tileset.json', visible: true };
+    const tileset = { clippingPlanes: undefined } as unknown as Cesium3DTileset;
+    useTiles3dLayerStore.setState({ layers: [model], loaded: { a1b2: tileset } });
+    useElementStore.getState().openModel(model);
+    watch(activeProject);
+
+    useElementStore.getState().selectElements(['wall-1']);
+    await vi.runAllTimersAsync();
+    applyTilesetSection(tileset, { axis: 'z', position: 2, flip: false, enabled: true }, () => undefined);
+    await vi.runAllTimersAsync();
+
+    const saves = api.putProjectState.mock.calls.map(
+      (call) => (call[2] as ViewtopiaProject).modelStatesByAsset as Record<string, SavedModelState> | undefined,
+    );
+    expect(saves).toHaveLength(2);
+    expect(saves[0]?.a1b2.selected).toEqual(['wall-1']);
+    expect(saves[1]?.a1b2.section).toEqual({ axis: 'z', position: 2, flip: false, enabled: true, outlined: true });
+    useElementStore.setState({ model: null, selected: new Set(), hidden: new Set(), isolated: null, focused: null });
+    useTiles3dLayerStore.setState({ layers: [], loaded: {} });
   });
 
   it('writes nothing while no project is active', async () => {

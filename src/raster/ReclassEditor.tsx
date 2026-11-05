@@ -82,7 +82,7 @@ export function ReclassEditor({
             size="sm"
             variant="subtle"
             color="gray"
-            aria-label={`Remove class ${i + 1}`}
+            title={`Remove class ${i + 1}`} aria-label={`Remove class ${i + 1}`}
             onClick={() => onChange(classes.filter((_, j) => j !== i))}
           >
             <IconTrash size={13} />

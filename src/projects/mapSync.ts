@@ -19,7 +19,11 @@ import { useAppStore } from '../store/app';
 import { useAgentLayerStore } from '../store/agentLayers';
 import { useOgcLayerStore } from '../store/ogcLayers';
 import { useSplitViewStore } from '../store/splitView';
+import { useTiles3dLayerStore } from '../store/tiles3dLayers';
 import { useDealStore } from '../features/deals/store';
+import { useBimModeStore } from '../features/bim/store';
+import { useElementStore } from '../features/elements/store';
+import { subscribeTilesetSections } from '../features/scene/tilesetSection';
 import { subscribeSharedCamera } from '../hooks/sharedCamera';
 import { deleteProjectAttachment, getProjectState, putProjectState } from './api';
 
@@ -201,8 +205,12 @@ export function watchMapForSaving(
     useAppStore.subscribe(onChange),
     useAgentLayerStore.subscribe(onChange),
     useOgcLayerStore.subscribe(onChange),
+    useTiles3dLayerStore.subscribe(onChange),
     useSplitViewStore.subscribe(onChange),
     useDealStore.subscribe(onChange),
+    useElementStore.subscribe(onChange),
+    useBimModeStore.subscribe(onChange),
+    subscribeTilesetSections(onChange),
     subscribeSharedCamera(onChange),
   ];
   const onOnline = () => {

@@ -24,6 +24,7 @@ import {
   IconMapPin,
 } from '@tabler/icons-react';
 import { optimizeDelivery } from '../../lib/verticals';
+import { randomUuid } from '../../lib/randomUuid';
 
 interface DeliveryStop {
   id: string;
@@ -70,7 +71,7 @@ export function DeliveryPanel({
 
   const handleCreateRoute = () => {
     const route: DeliveryRoute = {
-      id: crypto.randomUUID(),
+      id: randomUuid(),
       name: `Route ${routes.length + 1}`,
       vehicleId: null,
       stops: [],
@@ -99,7 +100,7 @@ export function DeliveryPanel({
         return;
       }
       const stop: DeliveryStop = {
-        id: crypto.randomUUID(),
+        id: randomUuid(),
         address: result.address?.full || newStop,
         lat: result.lat,
         lng: result.lon,
@@ -198,7 +199,7 @@ export function DeliveryPanel({
               Deliveries
             </Text>
           </Group>
-          <ActionIcon aria-label="Close deliveries" size="sm" variant="subtle" onClick={onClose}>
+          <ActionIcon title="Close deliveries" aria-label="Close deliveries" size="sm" variant="subtle" onClick={onClose}>
             <IconX size={14} />
           </ActionIcon>
         </Group>
@@ -216,7 +217,7 @@ export function DeliveryPanel({
               {r.name}
             </Badge>
           ))}
-          <ActionIcon aria-label="Add route" size="xs" variant="light" onClick={handleCreateRoute}>
+          <ActionIcon title="Add route" aria-label="Add route" size="xs" variant="light" onClick={handleCreateRoute}>
             <IconPlus size={12} />
           </ActionIcon>
         </Group>
@@ -275,7 +276,7 @@ export function DeliveryPanel({
                 disabled={routeFull}
                 style={{ flex: 1 }}
               />
-              <ActionIcon aria-label="Add delivery stop" size="sm" onClick={handleAddStop} disabled={routeFull}>
+              <ActionIcon title="Add delivery stop" aria-label="Add delivery stop" size="sm" onClick={handleAddStop} disabled={routeFull}>
                 <IconPlus size={14} />
               </ActionIcon>
             </Group>
@@ -328,7 +329,7 @@ export function DeliveryPanel({
                         </Group>
                       </Table.Td>
                       <Table.Td w={30}>
-                        <ActionIcon aria-label="Remove stop"
+                        <ActionIcon title="Remove stop" aria-label="Remove stop"
                           size="xs"
                           variant="subtle"
                           color="red"

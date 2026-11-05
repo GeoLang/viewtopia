@@ -11,6 +11,7 @@ import {
 import { cornersToLonLat, registerDroppedGrid } from './projicio';
 import { resampleNorthUp } from './rasterize';
 import { imageCorners, overlayFileKind, parseWorldFile } from './worldFile';
+import { randomUuid } from '../lib/randomUuid';
 
 /** An image or PDF page decoded and ready to drape. */
 export interface OverlaySource {
@@ -107,7 +108,7 @@ export function centerCorners(source: OverlaySource): Corners {
  * Drop an overlay on the middle of the view and open its corner handles, which
  * is what a plain image with no world file needs before it means anything.
  */
-export function addOverlayAtCenter(source: OverlaySource, id = crypto.randomUUID()): string {
+export function addOverlayAtCenter(source: OverlaySource, id = randomUuid()): string {
   const store = useAgentLayerStore.getState();
   store.addRasterLayer({
     id,

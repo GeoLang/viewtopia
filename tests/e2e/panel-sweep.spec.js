@@ -12,8 +12,7 @@ import {
  * Every tool panel in the registry, opened through the real menu path.
  *
  * The tool list comes from toolMenus.ts itself, so a tool added to a menu shows
- * up here as a new test case with no edit to this file. Preview tools are hidden
- * by default, so the persisted setting is written before the app boots.
+ * up here as a new test case with no edit to this file.
  *
  * Targets the platform stack on :5174, i.e. the production bundle. React only
  * logs its dev warnings in a dev build, so against `vite` this sweep can find

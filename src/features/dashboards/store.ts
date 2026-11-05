@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { getProjectState, putProjectState } from '../../projects/api';
 import { useProjectsStore } from '../../projects/projectsStore';
 import type { Dashboard, WidgetType } from './types';
+import { randomUuid } from '../../lib/randomUuid';
 
 /**
  * Dashboard builder. A dashboard belongs to the active project and lives under
@@ -145,7 +146,7 @@ export const useDashboardsStore = create<DashboardsState>((set, get) => {
       if (!get().projectId) return;
       const now = new Date().toISOString();
       const dashboard: Dashboard = {
-        id: crypto.randomUUID(),
+        id: randomUuid(),
         title: 'Untitled Dashboard',
         description: '',
         widgets: [],
@@ -186,7 +187,7 @@ export const useDashboardsStore = create<DashboardsState>((set, get) => {
                 widgets: [
                   ...d.widgets,
                   {
-                    id: crypto.randomUUID(),
+                    id: randomUuid(),
                     type,
                     title: `New ${type}`,
                     config: defaultConfig(type),

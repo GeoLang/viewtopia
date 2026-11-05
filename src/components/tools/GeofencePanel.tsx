@@ -15,6 +15,7 @@ import { IconMapPins, IconPlus, IconTrash } from '@tabler/icons-react';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { useSpaceTimeStore } from '../../features/spacetime/store';
 import type { Geofence } from '../../features/spacetime/types';
+import { randomUuid } from '../../lib/randomUuid';
 
 export function GeofencePanel({ onClose }: { onClose: () => void }) {
   const { geofences, addGeofence, removeGeofence } = useSpaceTimeStore();
@@ -27,7 +28,7 @@ export function GeofencePanel({ onClose }: { onClose: () => void }) {
   const handleAdd = () => {
     if (!name.trim()) return;
     const fence: Geofence = {
-      id: crypto.randomUUID(),
+      id: randomUuid(),
       name: name.trim(),
       type,
       active: true,
@@ -145,7 +146,7 @@ export function GeofencePanel({ onClose }: { onClose: () => void }) {
                     {f.name}
                   </Text>
                 </Group>
-                <ActionIcon aria-label="Delete geofence"
+                <ActionIcon title="Delete geofence" aria-label="Delete geofence"
                   size="xs"
                   variant="subtle"
                   color="red"

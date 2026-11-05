@@ -162,7 +162,7 @@ export function IncidentPanel({ onShowEvacRoutes, onShowAffectedArea, onClose }:
             <IconUrgent size={18} />
             <Text fw={600} size="sm">Incidents</Text>
           </Group>
-          <ActionIcon aria-label="Close incidents" size="sm" variant="subtle" onClick={onClose}><IconX size={14} /></ActionIcon>
+          <ActionIcon title="Close incidents" aria-label="Close incidents" size="sm" variant="subtle" onClick={onClose}><IconX size={14} /></ActionIcon>
         </Group>
 
         <Button size="xs" onClick={handleLoad} loading={loading}>Load Incidents</Button>
@@ -186,7 +186,7 @@ export function IncidentPanel({ onShowEvacRoutes, onShowAffectedArea, onClose }:
         <Group gap="xs">
           <NumberInput size="xs" placeholder="Lat" value={newLat} onChange={setNewLat} decimalScale={6} style={{ flex: 1 }} />
           <NumberInput size="xs" placeholder="Lng" value={newLng} onChange={setNewLng} decimalScale={6} style={{ flex: 1 }} />
-          <ActionIcon aria-label="Report incident" size="sm" onClick={handleReport} disabled={!newDesc.trim() || newLat === '' || newLng === ''}><IconPlus size={14} /></ActionIcon>
+          <ActionIcon title="Report incident" aria-label="Report incident" size="sm" onClick={handleReport} disabled={!newDesc.trim() || newLat === '' || newLng === ''}><IconPlus size={14} /></ActionIcon>
         </Group>
 
         {loaded && !error && activeIncidents.length === 0 && (

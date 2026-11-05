@@ -142,7 +142,8 @@ services:
           -H 'Content-Type: application/json' -H 'Authorization: Bearer init' \
           -d "{\"message\":\"parcels\",\"author\":\"init\",\"operations\":[
             {\"type\":\"insert\",\"geometry_wkb_hex\":\"0103000020E610000001000000050000009A9999999999F1BF9A999999999940409A9999999999F1BF0000000000004A4000000000000004400000000000004A40000000000000044000000000000040409A9999999999F1BF9A99999999994040\",\"properties\":{\"apn\":\"123-456-001\",\"address\":\"100 Main St\",\"owner\":\"Smith Trust\",\"zoning\":\"R-1\",\"sqft\":8500,\"lng\":-1.1,\"lat\":52.2}},
-            {\"type\":\"insert\",\"geometry_wkb_hex\":\"0103000020E6100000010000000500000000000000000004400000000000004040000000000000044000000000000049400000000000001440000000000000494000000000000014400000000000004040000000000000044000000000000040400\",\"properties\":{\"apn\":\"123-456-002\",\"address\":\"102 Main St\",\"owner\":\"Jones LLC\",\"zoning\":\"R-1\",\"sqft\":7200,\"lng\":-1.0,\"lat\":52.2}}
+            {\"type\":\"insert\",\"geometry_wkb_hex\":\"0103000020E6100000010000000500000000000000000004400000000000004040000000000000044000000000000049400000000000001440000000000000494000000000000014400000000000004040000000000000044000000000000040400\",\"properties\":{\"apn\":\"123-456-002\",\"address\":\"102 Main St\",\"owner\":\"Jones LLC\",\"zoning\":\"R-1\",\"sqft\":7200,\"lng\":-1.0,\"lat\":52.2}},
+            {\"type\":\"insert\",\"geometry_wkb_hex\":\"0103000020E610000001000000050000000000000000001440000000000000404000000000000014400000000000004940000000000000244000000000000049400000000000002440000000000000404000000000000014400000000000004040\",\"properties\":{\"apn\":\"123-456-003\",\"address\":\"200 Oak Ave\",\"owner\":\"City of Demo\",\"zoning\":\"C-2\",\"sqft\":15000,\"lng\":-0.9,\"lat\":52.3}}
           ]}"
         echo "Parcels branch: $$BR_ID"
 
@@ -159,7 +160,8 @@ services:
           -H 'Content-Type: application/json' -H 'Authorization: Bearer init' \
           -d "{\"message\":\"sales\",\"author\":\"init\",\"operations\":[
             {\"type\":\"insert\",\"geometry_wkb_hex\":\"0101000020E61000009A9999999999F1BF9A99999999994040\",\"properties\":{\"address\":\"100 Main St\",\"sale_price\":425000,\"sale_date\":\"2024-06-15\",\"sqft\":8500,\"lng\":-1.1,\"lat\":52.2}},
-            {\"type\":\"insert\",\"geometry_wkb_hex\":\"0101000020E6100000000000000000F0BF0000000000004A40\",\"properties\":{\"address\":\"105 Main St\",\"sale_price\":390000,\"sale_date\":\"2024-03-20\",\"sqft\":7800,\"lng\":-1.0,\"lat\":52.0}}
+            {\"type\":\"insert\",\"geometry_wkb_hex\":\"0101000020E6100000000000000000F0BF0000000000004A40\",\"properties\":{\"address\":\"105 Main St\",\"sale_price\":390000,\"sale_date\":\"2024-03-20\",\"sqft\":7800,\"lng\":-1.0,\"lat\":52.0}},
+            {\"type\":\"insert\",\"geometry_wkb_hex\":\"0101000020E610000000000000000004400000000000004940\",\"properties\":{\"address\":\"210 Oak Ave\",\"sale_price\":750000,\"sale_date\":\"2024-09-01\",\"sqft\":15200,\"lng\":-0.9,\"lat\":52.3}}
           ]}"
         echo "Sales branch: $$SBR_ID"
 
@@ -216,6 +218,8 @@ services:
         echo ""
         echo "=== All vertical demo data loaded ==="
         echo "Endpoints available at http://localhost:3000/api/v1/"
+        echo "Try: curl 'http://localhost:3000/api/v1/parcels/search?branch_id=$$BR_ID&type=apn&q=123'"
+        echo "Try: curl 'http://localhost:3000/api/v1/comps/search?branch_id=$$SBR_ID&lng=-1.0&lat=52.2&radius_m=50000'"
 
 volumes:
   pgdata:

@@ -147,7 +147,7 @@ export function FieldsSection({
                   size="xs"
                   variant="transparent"
                   color="violet"
-                  aria-label={`Remove ${f.name}`}
+                  title={`Remove ${f.name}`} aria-label={`Remove ${f.name}`}
                   onClick={() => onRemoveVirtual(f.name)}
                 >
                   <IconTrash size={10} />

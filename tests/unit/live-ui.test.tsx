@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
-import type { ReactNode } from 'react';
 import { useAuthStore } from '../../src/features/auth/store';
 import { AssetTimeBar } from '../../src/live/AssetTimeBar';
 import { useAssetStateStore } from '../../src/live/assetState';
@@ -17,17 +16,7 @@ import { emptyLiveDocument, type AssetRule } from '../../src/live/types';
 import { useAppStore } from '../../src/store/app';
 import { setActiveMapLibre } from '../../src/viewer/registry';
 import { FakeAgoraServer } from './stubs/fakeAgoraServer';
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
-
-function draw(ui: ReactNode) {
-  return render(<MantineProvider>{ui}</MantineProvider>);
-}
+import { draw, jsonResponse, stubMantineBrowserGlobals } from './stubs/liveTestHelpers';
 
 function noContentResponse(): Response {
   return new Response(null, { status: 204 });
@@ -59,21 +48,7 @@ let fetchMock: ReturnType<typeof vi.fn>;
 
 describe('live session ui', () => {
   beforeEach(() => {
-    vi.stubGlobal(
-      'matchMedia',
-      vi.fn().mockReturnValue({
-        matches: false,
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-      }),
-    );
-    globalThis.ResizeObserver = class {
-      observe() {}
-      unobserve() {}
-      disconnect() {}
-    };
+    stubMantineBrowserGlobals();
     fetchMock = vi.fn(async () => jsonResponse({}));
     vi.stubGlobal('fetch', fetchMock);
     useAuthStore.setState({ token: 'jwt-token' });

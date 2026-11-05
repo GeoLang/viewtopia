@@ -6,6 +6,7 @@ import { toFeatureCollection, useAgentLayerStore } from '../../store/agentLayers
 import { loadPmtilesLayer, useOgcLayerStore } from '../../store/ogcLayers';
 import { assetAction, fetchStac, type StacAsset } from './client';
 import { useStacStore } from './store';
+import { randomUuid } from '../../lib/randomUuid';
 
 const ASSET_LAYER_COLOR = '#38bdf8';
 
@@ -41,6 +42,6 @@ export async function addStacAsset(itemId: string, asset: StacAsset): Promise<st
   if (!geojson || geojson.features.length === 0) throw new Error('the asset holds no features');
   useAgentLayerStore
     .getState()
-    .addLayer({ id: crypto.randomUUID(), name, color: ASSET_LAYER_COLOR, geojson }, true);
+    .addLayer({ id: randomUuid(), name, color: ASSET_LAYER_COLOR, geojson }, true);
   return `${name}: ${geojson.features.length} features`;
 }

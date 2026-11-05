@@ -48,14 +48,6 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           onChange={(e) => updateSettings({ showCoordReadout: e.currentTarget.checked })}
           color="violet"
         />
-        <Switch
-          size="xs"
-          label="Show Preview Tools"
-          description="Reveal unfinished tools, marked with a Preview badge"
-          checked={settings.showPreviewTools}
-          onChange={(e) => updateSettings({ showPreviewTools: e.currentTarget.checked })}
-          color="violet"
-        />
         <Divider color="var(--mantine-color-dark-5)" />
         <Text size="xs" c="dimmed" fw={600}>Defaults</Text>
 
@@ -427,7 +419,7 @@ function AiModelSelect() {
                 )}
               </Group>
               <ActionIcon
-                aria-label={`Edit ${provider.label}`}
+                title={`Edit ${provider.label}`} aria-label={`Edit ${provider.label}`}
                 size="xs"
                 variant="subtle"
                 disabled={busy}
@@ -558,7 +550,7 @@ function AiModelSelect() {
             </Button>
             {form.kind === 'edit' && (
               <ActionIcon
-                aria-label="Delete provider"
+                title="Delete provider" aria-label="Delete provider"
                 size="sm"
                 color="red"
                 variant="subtle"

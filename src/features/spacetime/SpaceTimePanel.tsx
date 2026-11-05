@@ -29,6 +29,7 @@ import { EntityList } from './components/EntityList';
 import { TrackPlayer } from './components/TrackPlayer';
 import { CreateLinkDialog } from './components/CreateLinkDialog';
 import type { Entity, Track } from './types';
+import { randomUuid } from '../../lib/randomUuid';
 
 const ANALYSIS_BUTTONS: { kind: AnalysisKind; label: string }[] = [
   { kind: 'colocation', label: 'Colocation Detection' },
@@ -145,7 +146,7 @@ export function SpaceTimePanel() {
       let entityCount = 0;
       const builtTracks: Track[] = [];
       for (const [name, rows] of entityRows) {
-        const entityId = crypto.randomUUID();
+        const entityId = randomUuid();
         const kind = (rows[0].kind || 'person') as Entity['kind'];
         addEntity({
           id: entityId,
@@ -164,7 +165,7 @@ export function SpaceTimePanel() {
           .filter((r) => !isNaN(r.lat) && !isNaN(r.lng))
           .sort((a, b) => a.timestamp - b.timestamp)
           .map((r) => ({
-            id: crypto.randomUUID(),
+            id: randomUuid(),
             entityId,
             lat: r.lat,
             lng: r.lng,
@@ -172,7 +173,7 @@ export function SpaceTimePanel() {
           }));
 
         if (events.length > 0) {
-          builtTracks.push({ id: crypto.randomUUID(), entityId, events });
+          builtTracks.push({ id: randomUuid(), entityId, events });
         }
       }
 

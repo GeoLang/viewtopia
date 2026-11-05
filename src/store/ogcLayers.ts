@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { useAgentLayerStore, toFeatureCollection } from './agentLayers';
 import { addRemotePmtiles, type PmtilesInfo } from '../features/pmtiles/source';
+import { randomUuid } from '../lib/randomUuid';
 
 /**
  * OGC services the user added (OgcServicesTab). Raster services (WMS, WMTS, XYZ)
@@ -194,7 +195,7 @@ export async function loadWfsLayer(layer: OGCLayer): Promise<number> {
 export const useOgcLayerStore = create<OGCLayerState>((set, get) => ({
   layers: [],
   addLayer: (name, url, type) => {
-    const layer: OGCLayer = { id: crypto.randomUUID(), name, url, type };
+    const layer: OGCLayer = { id: randomUuid(), name, url, type };
     set((s) => ({ layers: [...s.layers, layer] }));
     return layer;
   },

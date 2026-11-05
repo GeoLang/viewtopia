@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { CesiumTerrainProvider } from 'cesium';
+import { NO_CESIUM_GLOBE } from '../../src/actions/globe';
 import { runViewerAction } from '../../src/actions/dispatch';
 import { listViewerLayers } from '../../src/actions/layerIndex';
 import { runAction } from '../../src/actions/registry';
@@ -93,9 +95,18 @@ function fakeMapLibre() {
   };
 }
 
-const registry = vi.hoisted(() => ({ map: null as ReturnType<typeof fakeMapLibre> | null }));
+// only the network read is replaced, the rest of cesium stays real
+vi.mock('cesium', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('cesium')>()),
+  CesiumTerrainProvider: { fromUrl: vi.fn(async (url: string) => ({ terrain: url })) },
+}));
+
+const registry = vi.hoisted(() => ({
+  map: null as ReturnType<typeof fakeMapLibre> | null,
+  viewer: null as { terrainProvider: unknown } | null,
+}));
 vi.mock('../../src/viewer/registry', () => ({
-  getActiveCesiumViewer: () => null,
+  getActiveCesiumViewer: () => registry.viewer,
   getActiveMapLibre: () => registry.map,
   getActiveDeckOverlay: () => null,
 }));
@@ -105,6 +116,7 @@ function fakeBackend(input: RequestInfo | URL, init?: RequestInit) {
   const url = String(input);
   const body = init?.body ? JSON.parse(String(init.body)) : null;
   requests.push({ url, body });
+  if (url.endsWith('/layer.json')) return Promise.resolve(layerJsonResponse());
   if (url.includes('/analysis/viewshed')) return jsonResponse(VISIBLE_SQUARE);
   if (url.includes('/analysis/flood')) return jsonResponse(FLOODED_AREA);
   if (url.includes('api.open-elevation.com')) {
@@ -120,6 +132,7 @@ function jsonResponse(payload: unknown): Promise<Response> {
 }
 
 let requests: { url: string; body: unknown }[];
+let layerJsonResponse: () => Response;
 
 const TWO_POINTS = { start_lon: 0, start_lat: 0, end_lon: 0.1, end_lat: 0, samples: 10 };
 
@@ -129,7 +142,9 @@ const PROFILE_TEXT =
 
 beforeEach(() => {
   requests = [];
+  layerJsonResponse = () => new Response('{}', { status: 200 });
   registry.map = fakeMapLibre();
+  registry.viewer = null;
   vi.stubGlobal('fetch', vi.fn(fakeBackend));
   useAppStore.setState({ renderer: 'maplibre', layers: [] });
   useAgentLayerStore.setState({ layers: [], rasterLayers: [], markers: [], generation: 0 });
@@ -329,5 +344,87 @@ describe('analysis.cross_section', () => {
     const line = drawn?.geojson.features[0].geometry as GeoJSON.LineString;
     expect(line.coordinates).toHaveLength(TWO_POINTS.samples + 1);
     expect(line.coordinates[0]).toEqual([0, 0]);
+  });
+});
+
+describe('terrain.set_asset', () => {
+  const ASSET_ID = '0b9c6d3e-4f1a-4c2b-9e8d-7a6b5c4d3e2f';
+  const BUNDLE_URL = `/tiles/v1/terrain/bundles/${ASSET_ID}/`;
+
+  it('sets the bundle a DEM upload wrote as the globe terrain', async () => {
+    registry.viewer = { terrainProvider: null };
+
+    const result = await runAction('terrain.set_asset', { asset_id: ASSET_ID });
+
+    expect(requests.map((request) => request.url)).toEqual([`${BUNDLE_URL}layer.json`]);
+    expect(CesiumTerrainProvider.fromUrl).toHaveBeenCalledWith(BUNDLE_URL);
+    expect(registry.viewer.terrainProvider).toEqual({ terrain: BUNDLE_URL });
+    expect(result.text).toBe(`The globe's terrain is asset ${ASSET_ID}.`);
+  });
+
+  it('refuses an id that is not an asset id, which would leave the bundle directory', async () => {
+    registry.viewer = { terrainProvider: null };
+    vi.mocked(CesiumTerrainProvider.fromUrl).mockClear();
+
+    await expect(runAction('terrain.set_asset', { asset_id: '..' })).rejects.toThrow(
+      '.. is not an asset id, which is a uuid',
+    );
+    expect(CesiumTerrainProvider.fromUrl).not.toHaveBeenCalled();
+  });
+
+  it('fails on the empty 404 tiletopia answers for a bundle that is not there', async () => {
+    registry.viewer = { terrainProvider: null };
+    vi.mocked(CesiumTerrainProvider.fromUrl).mockClear();
+    layerJsonResponse = () => new Response(null, { status: 404 });
+
+    await expect(runAction('terrain.set_asset', { asset_id: ASSET_ID })).rejects.toThrow(
+      new Error(
+        `terrain ${ASSET_ID} did not load: ${BUNDLE_URL}layer.json answered HTTP 404`,
+      ),
+    );
+    expect(CesiumTerrainProvider.fromUrl).not.toHaveBeenCalled();
+    expect(registry.viewer.terrainProvider).toBeNull();
+  });
+
+  it('fails with the message of a plain text refusal', async () => {
+    registry.viewer = { terrainProvider: null };
+    layerJsonResponse = () => new Response('the disk is full\n', { status: 500 });
+
+    await expect(runAction('terrain.set_asset', { asset_id: ASSET_ID })).rejects.toThrow(
+      new Error(`terrain ${ASSET_ID} did not load: the disk is full`),
+    );
+  });
+
+  it('names the status instead of showing an html error page', async () => {
+    registry.viewer = { terrainProvider: null };
+    layerJsonResponse = () =>
+      new Response('<html>Bad Gateway</html>', {
+        status: 502,
+        headers: { 'Content-Type': 'text/html' },
+      });
+
+    await expect(runAction('terrain.set_asset', { asset_id: ASSET_ID })).rejects.toThrow(
+      new Error(`terrain ${ASSET_ID} did not load: ${BUNDLE_URL}layer.json answered HTTP 502`),
+    );
+  });
+
+  it('names the first line of the reason when cesium rejects the layer.json it read', async () => {
+    registry.viewer = { terrainProvider: null };
+    vi.mocked(CesiumTerrainProvider.fromUrl).mockRejectedValueOnce(
+      new Error(`An error occurred while accessing ${BUNDLE_URL}layer.json.\nundefined`),
+    );
+
+    await expect(runAction('terrain.set_asset', { asset_id: ASSET_ID })).rejects.toThrow(
+      new Error(
+        `terrain ${ASSET_ID} did not load: An error occurred while accessing ${BUNDLE_URL}layer.json.`,
+      ),
+    );
+    expect(registry.viewer.terrainProvider).toBeNull();
+  });
+
+  it('asks for the Cesium globe when another renderer is drawing', async () => {
+    await expect(runAction('terrain.set_asset', { asset_id: ASSET_ID })).rejects.toThrow(
+      NO_CESIUM_GLOBE,
+    );
   });
 });

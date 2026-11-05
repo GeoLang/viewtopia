@@ -713,8 +713,8 @@ test.describe('Data panels', () => {
       const url = route.request().url();
       if (!url.endsWith('layer.json')) {
         // Cesium asks for the two root tiles whatever the availability says, and
-        // this url is a live one: tiletopia answers those 400, which would fail
-        // this test on the terrain service rather than on the panel
+        // this url is a live one: answering them here keeps tiletopia's DEM
+        // stores out of a test of the panel
         return route.fulfill({ status: 200, contentType: 'application/octet-stream', body: '' });
       }
       if (answer === 'terrain') {

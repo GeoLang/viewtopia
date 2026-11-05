@@ -13,6 +13,7 @@ import {
 import { IconSearch, IconPlus, IconTrash } from '@tabler/icons-react';
 import { useSpaceTimeStore } from '../store';
 import type { EntityKind } from '../types';
+import { randomUuid } from '../../../lib/randomUuid';
 
 const KIND_COLORS: Record<EntityKind, string> = {
   person: 'violet',
@@ -53,7 +54,7 @@ export function EntityList() {
   const handleAdd = () => {
     if (!newName.trim()) return;
     addEntity({
-      id: crypto.randomUUID(),
+      id: randomUuid(),
       name: newName.trim(),
       kind: newKind,
       aliases: [],
@@ -132,7 +133,7 @@ export function EntityList() {
                   >
                     {entity.kind}
                   </Badge>
-                  <ActionIcon aria-label="Delete entity"
+                  <ActionIcon title="Delete entity" aria-label="Delete entity"
                     size="xs"
                     variant="subtle"
                     color="red"

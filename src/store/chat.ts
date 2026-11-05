@@ -4,6 +4,7 @@ import { deleteBackendSession, renameBackendSession } from '../lib/agentSessions
 import type { WorkflowPlan, WorkflowRunReport } from '../features/workflow/plan';
 import type { UiSpec } from '../viewer/uiSpec';
 import type { ViewerCommand } from '../viewer/commands';
+import { randomUuid } from '../lib/randomUuid';
 
 export interface Message {
   id: string;
@@ -103,7 +104,7 @@ export const useChatStore = create<ChatState>()(
       queuedPrompt: null,
 
       createSession: (name) => {
-        const id = crypto.randomUUID();
+        const id = randomUuid();
         const session: Session = {
           id,
           name: name || `Session ${get().sessions.length + 1}`,
@@ -154,7 +155,7 @@ export const useChatStore = create<ChatState>()(
         set((s) => {
           const full: Message = {
             ...msg,
-            id: crypto.randomUUID(),
+            id: randomUuid(),
             timestamp: Date.now(),
           };
           return {

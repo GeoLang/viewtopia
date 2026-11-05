@@ -1,4 +1,5 @@
 import { getConnection, getDb } from './worker';
+import { randomUuid } from '../lib/randomUuid';
 
 export type ExportFormat = 'csv' | 'parquet';
 
@@ -30,7 +31,7 @@ export async function exportQuery(
 ): Promise<Uint8Array> {
   const handle = target ?? { db: await getDb(), conn: await getConnection() };
   const body = sql.trim().replace(/;+\s*$/, '');
-  const name = `viewtopia-export-${crypto.randomUUID()}.${format}`;
+  const name = `viewtopia-export-${randomUuid()}.${format}`;
   await handle.conn.query(`COPY (${body}) TO '${name}' ${COPY_OPTIONS[format]}`);
   try {
     return await handle.db.copyFileToBuffer(name);

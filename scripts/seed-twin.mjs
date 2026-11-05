@@ -6,12 +6,17 @@
 //
 // Talks to ptolemy (PTOLEMY_URL, default http://localhost:3000) and to agora
 // through the SPA's proxy (AGORA_URL, default http://localhost:5174/agora).
+// With --from-asset the assets are the elements of a tiletopia IFC model, read
+// through the SPA's proxy too (TILETOPIA_URL, default http://localhost:5174).
 //
 //   node scripts/seed-twin.mjs
+//   node scripts/seed-twin.mjs --from-asset <tiletopia asset id> [--class IfcPump]...
 
 import { randomUUID } from 'node:crypto';
+import { parseArgs } from 'node:util';
 import { mintToken } from './platform-token.mjs';
 import {
+  branchFeatures,
   commit,
   ensureBranch,
   ensureDataset,
@@ -22,6 +27,13 @@ import {
 } from './ptolemy-seed.mjs';
 
 const DEFAULT_AGORA_URL = 'http://localhost:5174/agora';
+const DEFAULT_TILETOPIA_URL = 'http://localhost:5174';
+
+// tiletopia refuses a `top` above 1000
+const ELEMENT_PAGE_SIZE = 1000;
+
+// ptolemy keeps axum's 2 MiB request body limit on commits
+const OPERATIONS_PER_COMMIT = 500;
 
 /** Who the seed writes as, in ptolemy and in agora. */
 const SEED_SUBJECT = 'twin-seed';
@@ -162,20 +174,127 @@ function sendOperations(agoraUrl, documentId, token, operations) {
   });
 }
 
-async function seedAssetFeatures(api, features) {
-  const datasetId = await ensureDataset(api, DATASET_NAME, 'point');
-  const branchId = await ensureBranch(api, datasetId, BRANCH_NAME);
-  const have = await existingKeys(api, branchId, 'asset_id');
-  const operations = features
-    .filter((feature) => !have.has(feature.properties.asset_id))
+function insertOperations(features, presentAssetIds) {
+  return features
+    .filter((feature) => !presentAssetIds.has(feature.properties.asset_id))
     .map((feature) => ({
       type: 'insert',
       feature_id: randomUUID(),
       geometry_wkb_hex: pointWkbHex(...feature.geometry.coordinates),
       properties: feature.properties,
     }));
+}
+
+async function seedAssetFeatures(api, features) {
+  const datasetId = await ensureDataset(api, DATASET_NAME, 'point');
+  const branchId = await ensureBranch(api, datasetId, BRANCH_NAME);
+  const operations = insertOperations(features, await existingKeys(api, branchId, 'asset_id'));
   if (operations.length > 0) await commit(api, branchId, `seed ${DATASET_NAME}`, operations);
   return { datasetId, branchId, inserted: operations.length };
+}
+
+const WKB_POINT = 1;
+
+function rowPosition(row) {
+  // ptolemy serves a row's geometry as the bytes of PostGIS ST_AsBinary
+  const view = new DataView(Uint8Array.from(row.geometry_wkb).buffer);
+  const littleEndian = view.getUint8(0) === 1;
+  const type = view.getUint32(1, littleEndian);
+  if (type !== WKB_POINT) throw new Error(`row ${row.id} has WKB type ${type}, not a 2D point`);
+  return [view.getFloat64(5, littleEndian), view.getFloat64(13, littleEndian)];
+}
+
+// one ten-millionth of a degree is about one centimetre on the ground
+const POSITION_TOLERANCE_DEGREES = 1e-7;
+
+export function rowUpdate(row, feature) {
+  const fieldsDiffer = Object.entries(feature.properties).some(
+    ([key, value]) => row.properties[key] !== value,
+  );
+  const [longitude, latitude] = feature.geometry.coordinates;
+  const [rowLongitude, rowLatitude] = rowPosition(row);
+  const moved =
+    Math.abs(longitude - rowLongitude) > POSITION_TOLERANCE_DEGREES ||
+    Math.abs(latitude - rowLatitude) > POSITION_TOLERANCE_DEGREES;
+  if (!fieldsDiffer && !moved) return null;
+  // ptolemy updates replace the whole properties object
+  return {
+    type: 'update',
+    feature_id: row.id,
+    ...(fieldsDiffer ? { properties: { ...row.properties, ...feature.properties } } : {}),
+    ...(moved ? { geometry_wkb_hex: pointWkbHex(longitude, latitude) } : {}),
+  };
+}
+
+export async function syncAssetFeatures(api, datasetName, features) {
+  const datasetId = await ensureDataset(api, datasetName, 'point');
+  const branchId = await ensureBranch(api, datasetId, BRANCH_NAME);
+  const rows = await branchFeatures(api, branchId);
+  const modelFeatures = new Map(features.map((feature) => [feature.properties.asset_id, feature]));
+  const deletes = rows
+    .filter((row) => !modelFeatures.has(row.properties.asset_id))
+    .map((row) => ({ type: 'delete', feature_id: row.id }));
+  const keptRows = rows.filter((row) => modelFeatures.has(row.properties.asset_id));
+  const updates = keptRows
+    .map((row) => rowUpdate(row, modelFeatures.get(row.properties.asset_id)))
+    .filter((update) => update !== null);
+  const inserts = insertOperations(features, new Set(rows.map((row) => row.properties.asset_id)));
+  const operations = [...deletes, ...updates, ...inserts];
+  for (let start = 0; start < operations.length; start += OPERATIONS_PER_COMMIT) {
+    const chunk = operations.slice(start, start + OPERATIONS_PER_COMMIT);
+    await commit(api, branchId, `seed ${datasetName} from its model`, chunk);
+  }
+  return {
+    datasetId,
+    branchId,
+    inserted: inserts.length,
+    updated: updates.length,
+    deleted: deletes.length,
+    unchanged: keptRows.length - updates.length,
+  };
+}
+
+export async function assetElements({ tiletopiaUrl, assetId, ifcClasses, token }) {
+  const path = `/v1/assets/${encodeURIComponent(assetId)}/elements`;
+  const query = new URLSearchParams({ top: String(ELEMENT_PAGE_SIZE) });
+  if (ifcClasses.length > 0) {
+    query.set('filter', JSON.stringify({ '@classFullName': { $in: ifcClasses } }));
+  }
+  const elements = [];
+  let continuationToken;
+  do {
+    if (continuationToken) query.set('continuationToken', continuationToken);
+    const response = await fetch(`${tiletopiaUrl.replace(/\/$/, '')}${path}?${query}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const text = await response.text();
+    if (!response.ok) throw new Error(`GET ${path} -> ${response.status}: ${text}`);
+    const page = JSON.parse(text);
+    elements.push(...page.items);
+    continuationToken = page.continuationToken;
+  } while (continuationToken);
+  return elements;
+}
+
+export function elementFeatures(elements) {
+  // tiletopia locates only elements with geometry, the same ones the tiles carry
+  const placed = elements.filter((element) => element.location);
+  return {
+    features: placed.map((element) => ({
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: [element.location.center.longitude, element.location.center.latitude],
+      },
+      properties: {
+        asset_id: element.id,
+        name: element.label,
+        class: element.ifcClass,
+        storey: element.storey,
+      },
+    })),
+    unplaced: elements.length - placed.length,
+  };
 }
 
 function seedToken() {
@@ -221,6 +340,30 @@ export async function seedTwinModel({
   return { documentId: document.id, modelLayerId: MODEL_LAYER_ID };
 }
 
+async function publishTwinDocument({ agoraUrl, token, documentId, assetLayerSource, tilesetUrl }) {
+  const layerEntry = {
+    layerId: LAYER_ID,
+    name: 'Twin assets',
+    type: 'geojson',
+    visible: true,
+    opacity: 1,
+    order: FIRST_LAYER_ORDER,
+    source: assetLayerSource,
+  };
+  const ruleLayerId = tilesetUrl ? MODEL_LAYER_ID : LAYER_ID;
+  await sendOperations(agoraUrl, documentId, token, [
+    { key: `layers/${LAYER_ID}`, value: layerEntry },
+    ...(tilesetUrl ? [{ key: `layers/${MODEL_LAYER_ID}`, value: modelLayerEntry(tilesetUrl) }] : []),
+    { key: 'assets/rule', value: temperatureRule(ruleLayerId) },
+  ]);
+
+  const feed = await agoraRequest(agoraUrl, `/documents/${documentId}/feeds`, token, {
+    method: 'POST',
+    body: JSON.stringify({ name: FEED_NAME, intervalSeconds: FEED_INTERVAL_SECONDS }),
+  });
+  return { feedId: feed.id, feedToken: feed.token, ruleLayerId };
+}
+
 /**
  * Writes the whole demo and answers what a test needs to drive it. The document
  * is new on every run, so readings from an earlier run never colour this one.
@@ -243,42 +386,82 @@ export async function seedTwin({
   const dataset = await seedAssetFeatures(api, features);
 
   const document = await createDocument(agoraUrl, token, projectId);
-
-  const layerEntry = {
-    layerId: LAYER_ID,
-    name: 'Twin assets',
-    type: 'geojson',
-    visible: true,
-    opacity: 1,
-    order: FIRST_LAYER_ORDER,
-    source: { kind: 'geojson', geojson: { type: 'FeatureCollection', features } },
-  };
-  const ruleLayerId = tilesetUrl ? MODEL_LAYER_ID : LAYER_ID;
-  await sendOperations(agoraUrl, document.id, token, [
-    { key: `layers/${LAYER_ID}`, value: layerEntry },
-    ...(tilesetUrl ? [{ key: `layers/${MODEL_LAYER_ID}`, value: modelLayerEntry(tilesetUrl) }] : []),
-    { key: 'assets/rule', value: temperatureRule(ruleLayerId) },
-  ]);
-
-  const feed = await agoraRequest(agoraUrl, `/documents/${document.id}/feeds`, token, {
-    method: 'POST',
-    body: JSON.stringify({ name: FEED_NAME, intervalSeconds: FEED_INTERVAL_SECONDS }),
-  });
+  const assetLayerSource = { kind: 'geojson', geojson: { type: 'FeatureCollection', features } };
+  const feed = await publishTwinDocument({ agoraUrl, token, documentId: document.id, assetLayerSource, tilesetUrl });
 
   return {
     documentId: document.id,
-    feedId: feed.id,
-    feedToken: feed.token,
+    ...feed,
     assetIds: features.map((feature) => feature.properties.asset_id),
     layerId: LAYER_ID,
-    ruleLayerId,
     ...(tilesetUrl ? { modelLayerId: MODEL_LAYER_ID } : {}),
     dataset,
   };
 }
 
+export async function seedTwinFromAsset({
+  assetId,
+  ifcClasses = [],
+  tiletopiaUrl = process.env.TILETOPIA_URL ?? DEFAULT_TILETOPIA_URL,
+  ptolemyUrl,
+  agoraUrl = process.env.AGORA_URL ?? DEFAULT_AGORA_URL,
+  projectId,
+}) {
+  const base = ptolemyUrl ? `${ptolemyUrl.replace(/\/$/, '')}/api/v1` : undefined;
+  const api = ptolemyClient(SEED_SUBJECT, base);
+  const token = seedToken();
+
+  // tiletopia shows an owned asset's elements only to its owner and to admins
+  const elementToken = mintToken({ role: 'admin', sub: SEED_SUBJECT });
+  const elements = await assetElements({ tiletopiaUrl, assetId, ifcClasses, token: elementToken });
+  const { features, unplaced } = elementFeatures(elements);
+  if (features.length === 0) {
+    const classes = ifcClasses.length > 0 ? ` of class ${ifcClasses.join(', ')}` : '';
+    throw new Error(`asset ${assetId} has no elements${classes} with a location`);
+  }
+  const dataset = await syncAssetFeatures(api, `${DATASET_NAME}-${assetId}`, features);
+
+  const document = await createDocument(agoraUrl, token, projectId);
+  // agora refuses an operation value over 64 KiB
+  const attachment = await agoraRequest(agoraUrl, `/documents/${document.id}/attachments`, token, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/geo+json' },
+    body: JSON.stringify({ type: 'FeatureCollection', features }),
+  });
+  const agoraPath = new URL(agoraUrl).pathname.replace(/\/$/, '');
+  const assetLayerSource = { kind: 'url', url: `${agoraPath}${attachment.url}`, format: 'geojson' };
+  // browsers read tiles same-origin through nginx
+  const tilesetUrl = `/tiles/v1/assets/${assetId}/tileset.json`;
+  const feed = await publishTwinDocument({ agoraUrl, token, documentId: document.id, assetLayerSource, tilesetUrl });
+
+  return {
+    documentId: document.id,
+    ...feed,
+    assetIds: features.map((feature) => feature.properties.asset_id),
+    unplaced,
+    layerId: LAYER_ID,
+    modelLayerId: MODEL_LAYER_ID,
+    dataset,
+  };
+}
+
+function seedFromCommandLine() {
+  const { values } = parseArgs({
+    options: {
+      'from-asset': { type: 'string' },
+      class: { type: 'string', multiple: true },
+    },
+  });
+  if (values['from-asset'] === undefined) {
+    if (values.class) throw new Error('--class needs --from-asset');
+    return seedTwin();
+  }
+  return seedTwinFromAsset({ assetId: values['from-asset'], ifcClasses: values.class ?? [] });
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
-  seedTwin()
+  Promise.resolve()
+    .then(seedFromCommandLine)
     .then((result) => console.log(JSON.stringify(result, null, 2)))
     .catch((failure) => {
       console.error(failure.message);

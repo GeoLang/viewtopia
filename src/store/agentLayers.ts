@@ -3,6 +3,7 @@ import { agentLayersBounds, type LayerBounds } from '../hooks/agentLayerBounds';
 import { applySymbology, clearSymbology, type Symbology } from '../features/symbology/symbology';
 import { asColor } from '../lib/color';
 import type { Corners } from '../overlay/georeference';
+import { randomUuid } from '../lib/randomUuid';
 
 /** Fallback for a layer or marker colour the browser cannot read. */
 export const DEFAULT_LAYER_COLOR = '#38bdf8';
@@ -346,7 +347,7 @@ export const useAgentLayerStore = create<AgentLayerState>((set) => ({
       return {
         markers: [
           ...s.markers,
-          { ...marker, color: asColor(marker.color, DEFAULT_LAYER_COLOR), id: crypto.randomUUID() },
+          { ...marker, color: asColor(marker.color, DEFAULT_LAYER_COLOR), id: randomUuid() },
         ],
       };
     }),

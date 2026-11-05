@@ -32,6 +32,7 @@ jobs:
     # editor/admin tokens from the same value (scripts/platform-token.mjs reads it).
     env:
       PLATFORM_JWT_SECRET: ci-platform-panels-secret-not-for-production-use
+      TILETOPIA_ION_BASE_URL: http://localhost:5174
     steps:
       - name: Checkout viewtopia
         uses: actions/checkout@v4
@@ -54,46 +55,11 @@ jobs:
         uses: actions/checkout@v4
         with: { repository: GeoLang/itinera, path: itinera }
 
-      - name: Download OSM extract for routing and geocoding
-        working-directory: viewtopia
-        run: |
-          scripts/fetch-osm-extract.sh \
-            https://download.geofabrik.de/europe/monaco-260101.osm.pbf \
-            data/region.osm.pbf
-
-      - name: Build platform images (data plane only)
-        working-directory: viewtopia
-        run: |
-          docker compose -f docker-compose.platform.yml build \
-            ptolemy tiletopia fenestra geokode itinera viewtopia
-
-      # itinera's entrypoint builds data/graph.bin from the extract on first
-      # start, so there is no separate graph-build step.
-      - name: Start the stack
-        working-directory: viewtopia
-        run: |
-          docker compose -f docker-compose.platform.yml down --remove-orphans
-          docker compose -f docker-compose.platform.yml up -d \
-            ptolemy tiletopia fenestra geokode itinera viewtopia
-
-      - name: Wait for all services healthy
-        working-directory: viewtopia
-        run: |
-          services="ptolemy tiletopia fenestra geokode itinera"
-          deadline=$(( $(date +%s) + 600 ))   # itinera builds its routing graph on first boot
-          while :; do
-            pending=""
-            for s in $services; do
-              cid=$(docker compose -f docker-compose.platform.yml ps -q "$s")
-              st=$(docker inspect --format '{{.State.Health.Status}}' "$cid" 2>/dev/null || echo none)
-              [ "$st" = "healthy" ] || pending="$pending $s($st)"
-            done
-            # viewtopia has no healthcheck, so probe its port directly
-            curl -sf -o /dev/null http://localhost:5174/ || pending="$pending viewtopia(down)"
-            [ -z "$pending" ] && { echo "all healthy"; break; }
-            [ "$(date +%s)" -ge "$deadline" ] && { echo "TIMEOUT waiting for:$pending"; exit 1; }
-            echo "waiting for:$pending"; sleep 5
-          done
+      - uses: ./viewtopia/.github/actions/platform-stack-up
+        with:
+          build-services: ptolemy tiletopia fenestra geokode itinera viewtopia
+          start-services: ptolemy tiletopia fenestra geokode itinera viewtopia
+          health-services: ptolemy tiletopia fenestra geokode itinera
 
       - uses: pnpm/action-setup@v4
         with:

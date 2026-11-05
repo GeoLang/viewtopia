@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Cesium3DTileStyle, type Cesium3DTileset } from 'cesium';
+import type { Cesium3DTileset } from 'cesium';
 import {
   useAssetStateStore,
   colorForAsset,
@@ -9,16 +9,11 @@ import {
 import { useLiveStore } from '../live/liveStore';
 import { ASSET_ID_PROPERTY, ASSET_RULE_ID, type AssetRule } from '../live/types';
 import { useTiles3dLayerStore } from '../store/tiles3dLayers';
+import { setTilesetStyleInputs } from '../viewer/tilesetStyle';
 import { repaintPickedTileFeature } from './useFeaturePickerCesium';
 
 /** What a tile feature no asset names keeps, when the tileset had no colour of its own. */
 const DEFAULT_TILE_COLOR = 'color("white")';
-
-/** The colour expression the tileset painted before the rule took it over. */
-function fallbackColor(style: Cesium3DTileStyle | undefined): string {
-  const color = (style?.style as { color?: unknown } | undefined)?.color;
-  return typeof color === 'string' ? color : DEFAULT_TILE_COLOR;
-}
 
 /**
  * The rule's colours as a 3D Tiles style: one condition per asset the store
@@ -39,15 +34,9 @@ export function assetColorConditions(
   return conditions;
 }
 
-/** What the tileset the rule names was styled with before we wrote over it. */
-interface StyledTileset {
-  tileset: Cesium3DTileset;
-  previous: Cesium3DTileStyle | undefined;
-}
-
-function restore(styled: StyledTileset | null): void {
-  if (!styled || styled.tileset.isDestroyed()) return;
-  styled.tileset.style = styled.previous;
+function dropAssetColors(tileset: Cesium3DTileset | null): void {
+  if (!tileset || tileset.isDestroyed()) return;
+  setTilesetStyleInputs(tileset, { assetColorConditions: undefined });
 }
 
 /**
@@ -59,21 +48,19 @@ export function useAssetColorsCesium() {
   const rule = useLiveStore((state) => state.document.assets[ASSET_RULE_ID]);
   const assets = useAssetStateStore(visibleAssets);
   const loaded = useTiles3dLayerStore((state) => state.loaded);
-  const styledRef = useRef<StyledTileset | null>(null);
+  const styledRef = useRef<Cesium3DTileset | null>(null);
 
   useEffect(() => {
     const tileset = rule ? loaded[rule.layerId] : undefined;
-    const styled = styledRef.current;
-    if (styled && styled.tileset !== tileset) {
-      restore(styled);
+    if (styledRef.current && styledRef.current !== tileset) {
+      dropAssetColors(styledRef.current);
       styledRef.current = null;
     }
     if (!rule || !tileset || tileset.isDestroyed()) return;
-    const previous = styledRef.current?.previous ?? tileset.style;
-    tileset.style = new Cesium3DTileStyle({
-      color: { conditions: assetColorConditions(rule, assets, fallbackColor(previous)) },
+    setTilesetStyleInputs(tileset, {
+      assetColorConditions: (fallback) => assetColorConditions(rule, assets, fallback),
     });
-    styledRef.current = { tileset, previous };
+    styledRef.current = tileset;
     // a new style re-evaluates every feature's colour, which takes the picker's
     // highlight off the feature under it
     repaintPickedTileFeature();
@@ -81,7 +68,7 @@ export function useAssetColorsCesium() {
 
   useEffect(
     () => () => {
-      restore(styledRef.current);
+      dropAssetColors(styledRef.current);
       styledRef.current = null;
     },
     [],

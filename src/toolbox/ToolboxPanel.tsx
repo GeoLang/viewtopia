@@ -33,6 +33,7 @@ import { propertyKeys, useGeoJsonSources } from '../lib/geojsonSources';
 import { useAgentLayerStore } from '../store/agentLayers';
 import { useColumnLabels } from '../store/datasetSchemas';
 import { getViewBounds } from '../lib/viewBounds';
+import { randomUuid } from '../lib/randomUuid';
 
 type Fc = GeoJSON.FeatureCollection;
 
@@ -210,7 +211,7 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
     setSteps((prev) => [
       ...prev,
       {
-        id: crypto.randomUUID(),
+        id: randomUuid(),
         tool,
         from: prev.length > 0 ? [`step:${prev.length - 1}`] : from,
         second,
@@ -248,7 +249,7 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
   function addAsLayer(id: ToolId, output: ToolOutput) {
     if (output.kind !== 'features') return;
     addLayer({
-      id: crypto.randomUUID(),
+      id: randomUuid(),
       name: TOOLS[id].label,
       color: '#9b59b6',
       geojson: output.geojson,
@@ -510,7 +511,7 @@ export function ToolboxPanel({ onClose }: { onClose: () => void }) {
                       size="sm"
                       variant="subtle"
                       color="gray"
-                      aria-label={`Remove step ${i + 1}`}
+                      title={`Remove step ${i + 1}`} aria-label={`Remove step ${i + 1}`}
                       onClick={() => removeStep(i)}
                     >
                       <IconX size={12} />

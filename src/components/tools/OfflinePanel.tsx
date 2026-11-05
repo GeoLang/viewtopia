@@ -25,6 +25,7 @@ import { getViewBounds } from '../../lib/viewBounds';
 import { getSharedCamera } from '../../hooks/sharedCamera';
 import { isVectorBasemap, rasterTiles } from '../../hooks/basemapTiles';
 import { useAppStore } from '../../store/app';
+import { randomUuid } from '../../lib/randomUuid';
 
 /** a full world view at any zoom is far past this, so the cap has to bite early */
 const MAX_TILES = 2000;
@@ -89,7 +90,7 @@ export function OfflinePanel({ onClose }: { onClose: () => void }) {
         setTotal(t);
       });
       await cachedRegions.put({
-        id: crypto.randomUUID(),
+        id: randomUuid(),
         name:
           name.trim() ||
           `${view.centerLat.toFixed(2)}, ${view.centerLng.toFixed(2)} z${zoomRange.min}-${zoomRange.max}`,
@@ -204,7 +205,7 @@ export function OfflinePanel({ onClose }: { onClose: () => void }) {
                   size="xs"
                   variant="subtle"
                   color="red"
-                  aria-label={`Delete ${r.name}`}
+                  title={`Delete ${r.name}`} aria-label={`Delete ${r.name}`}
                   onClick={() => handleDelete(r)}
                 >
                   <IconTrash size={12} />

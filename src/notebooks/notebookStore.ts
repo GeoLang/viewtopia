@@ -6,6 +6,7 @@ import type { Notebook, NotebookCell, CellOutput, CellType } from './types';
 import { executeSqlCell } from './runtime';
 import { addGeoJsonLayer } from '../lib/mapLayers';
 import { getKernelClient, createKernelClient, loadKernelConfig, type JupyterOutput } from './jupyter';
+import { randomUuid } from '../lib/randomUuid';
 
 // IndexedDB storage for notebooks
 const DB_NAME = 'viewtopia-notebooks';
@@ -145,11 +146,11 @@ export const useNotebookStore = create<NotebookStoreState & NotebookStoreActions
   async create(name, projectId) {
     const now = Date.now();
     const notebook: Notebook = {
-      id: crypto.randomUUID(),
+      id: randomUuid(),
       projectId: projectId ?? undefined,
       name,
       cells: [
-        { id: crypto.randomUUID(), type: 'markdown', source: `# ${name}\n\nDescribe your workflow here.`, outputs: [], status: 'idle', executionCount: 0, collapsed: false },
+        { id: randomUuid(), type: 'markdown', source: `# ${name}\n\nDescribe your workflow here.`, outputs: [], status: 'idle', executionCount: 0, collapsed: false },
       ],
       createdAt: now,
       updatedAt: now,
@@ -181,7 +182,7 @@ export const useNotebookStore = create<NotebookStoreState & NotebookStoreActions
     const nb = get().notebooks.find((n) => n.id === notebookId);
     if (!nb) return;
     const cell: NotebookCell = {
-      id: crypto.randomUUID(),
+      id: randomUuid(),
       type,
       source: '',
       outputs: [],

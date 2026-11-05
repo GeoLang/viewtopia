@@ -20,9 +20,9 @@ calls. Several surfaces are local-only or depend on configured services:
 - Dashboard definitions belong to the active project and are stored on the server.
 - Only feature property and geometry edits from the Dataset Editor go through
   the offline operation queue. No other resource is queued.
-- The Geofences panel creates and lists fences, and the Space-Time Analysis tab
-  finds track crossings of them. A polygon fence is stored with no vertices, so
-  only a circle fence matches a point. No renderer draws a fence on the map.
+- The Space-Time Analysis tab has a Geofence Crossings analysis, but no menu,
+  palette entry or action opens `GeofencePanel`, the only code that adds a fence.
+  The fence list stays empty, so that analysis finds no crossings.
 - Vertical plugins read configured service datasets. They do not provide those
   datasets.
 - Notebook SQL, Python and Markdown cells work. JavaScript and map action cells
@@ -42,10 +42,10 @@ calls. Several surfaces are local-only or depend on configured services:
 ### AI Agent
 | Feature | Description |
 |---------|-------------|
-| **Natural language queries** | "Fly to London and classify the point cloud" |
+| **Natural language queries** | "Fly to London and switch to the satellite basemap" |
 | **Session persistence** | Chat history saved and replayable |
 | **GeoLang agent** | sibyl runs the agent loop and geolang serves the tools, among them `sql_query`, `ptolemy_query`, `list_tilesets`, `compute_route`, `run_qgis_algorithm` and `viewer_control` |
-| **Typed actions** | 58 named viewer actions with validated parameters (panels, camera, renderer, basemap, split view, view tabs, layers, tilesets, scene, terrain, flood, travel time and spatial stats analysis, markers, data import and export, SQL attach, STAC, projects, datasets, live maps, history, scenario compare, feature search). The model is sent the catalogue and a snapshot of what the map is showing with every message, including the attributes of the feature you last clicked. A destructive action asks for a confirming reply first. Every action that takes a URL refuses anything but an absolute `http` or `https` one |
+| **Typed actions** | 59 named viewer actions with validated parameters (panels, camera, renderer, basemap, split view, view tabs, layers, tilesets, scene, terrain, flood, travel time and spatial stats analysis, markers, data import and export, SQL attach, STAC, projects, datasets, live maps, history, scenario compare, feature search). The model is sent the catalogue and a snapshot of what the map is showing with every message, including the attributes of the feature you last clicked. A destructive action asks for a confirming reply first. Every action that takes a URL refuses anything but an absolute `http` or `https` one, or a path under `/tiles/` on the viewer's own origin |
 | **Markdown replies** | Replies render as GitHub-flavoured Markdown, tables and lists included |
 | **File hand-off** | A dropped GeoJSON, JSON, GeoPackage, zip or CSV file is drawn in the browser and, when you are signed in, also posted to `/agent/upload` so the agent's tools can read it |
 | **Chat-only mode** | `?mode=chat`, the header icon or the command palette hides the header, dock and toolbars and leaves the chat as the only control. Drawing, measuring with the cursor and picking by click still need the mouse |
@@ -75,9 +75,10 @@ The panel tracks entities and their positions over time.
 
 The Analysis tab runs eight analyses in a worker and draws each result on the map and in the cube: colocation (meeting markers), co-travel (paired track segments over a sustained window), geofence crossings (an entry or exit point per crossing), pattern-of-life (dwell rings and off-pattern events), network metrics (ranked entity list), behavioral clustering (tracks recolored by cluster), predictive location (ghost marker and projected path), and data quality (issues marked at their events).
 
-The Geofences panel creates a named fence and lists the fences. The Geofence
-Crossings analysis above is what reads them. A polygon fence is stored with no
-vertices, so only a circle fence matches a point, and no renderer draws a fence.
+The Geofence Crossings analysis reads the fence list in the Space-Time store. Only
+`GeofencePanel` adds to that list and nothing opens that panel, so the analysis
+finds no crossings. `GeofencePanel` stores a polygon fence with no vertices, and no
+renderer draws a fence.
 
 Not implemented: ontology, CDR import, entity resolution, case management, and
 classification/RBAC.
@@ -147,6 +148,7 @@ and CC-BY-SA licence shown.
 | Feature | Description |
 |---------|-------------|
 | **Asset Catalogue** | Browse TileTopia tilesets, and add one to the globe as a layer with a row of its own. In a live map every member loads it too |
+| **BIM mode** | Entered from the Model Elements panel of an IFC model on the Cesium globe. Orbit turns about a double-clicked point. Walk stands 1.6 m above a clicked floor and moves with W A S D or the arrow keys, with drag to look. It stops 0.3 m from walls or slides along them, steps up to 0.3 m, drops to lower floors, and passes through hidden elements. A click on a wall does not set a floor |
 | **Cesium Ion** | Connect your Ion account and load assets |
 | **OGC Layers** | Import WMS, WMTS, WFS, and XYZ tile services |
 | **Image Overlay** | Drop a site plan image or PDF, place it by world file + `.prj` (projicio wasm) or two clicks, keep it as a layer |
@@ -167,7 +169,7 @@ and CC-BY-SA licence shown.
 |---------|-------------|
 | **Heatmaps** | MapLibre native heatmap layer |
 | **Hex Bins** | Hexagonal aggregation. Asked for in the chat, no panel offers it |
-| **Arc Diagrams** | Origin-destination arcs. Asked for in the chat, no panel offers it |
+| **Arc Diagrams** | Origin-destination arcs. The `add_arcs` viewer command has no catalogue action, so the agent cannot reach it, and no panel offers it |
 | **Scatter Plots** | Point-based scatter, from the chat or the Wind and Space-Time panels |
 | **Density Grid** | Square aggregation grid in the Spatial Stats panel |
 | **Style Editor** | Color by property/height/classification |
@@ -400,7 +402,7 @@ cd viewtopia
 pnpm install
 pnpm run dev
 # http://localhost:5173, which proxies /agent, /agora, /api, /ogc, /plumb,
-# /tiles, /jupyter, /ws and /speech to a platform stack on 5174
+# /tiles, /jupyter and /speech to a platform stack on 5174
 ```
 
 The viewer loads with no stack behind it. It probes each backend's health route
@@ -453,8 +455,9 @@ bash scripts/platform-up.sh \
 # http://localhost:5174
 ```
 
-`platform-up.sh` writes `PLATFORM_JWT_SECRET` and `GEOLANG_EXECUTOR_SECRET` into
-`.env.platform` on first run and reuses them after, fetches the extract to
+`platform-up.sh` writes `PLATFORM_JWT_SECRET`, `GEOLANG_EXECUTOR_SECRET` and
+`TILETOPIA_ION_BASE_URL=http://localhost:5174` into `.env.platform` on first run
+and reuses them after, fetches the extract to
 `data/region.osm.pbf`, builds, waits for geokode and itinera to answer (itinera
 builds its routing graph on first start), and seeds the real-estate demo.
 
@@ -464,8 +467,9 @@ the demo parcels to the new region. The same URL again skips the download, the
 graph build and the parcel move. The geokode index is rebuilt on every run. A city or state extract keeps the download and graph build
 short, a country or continent takes much longer.
 
-Every later compose command needs the secrets file, or ptolemy and tiletopia
-refuse to start:
+Every later compose command needs that file. Compose stops without
+`TILETOPIA_ION_BASE_URL`, and ptolemy and tiletopia refuse to start without the
+secret:
 
 ```bash
 docker compose --env-file .env.platform -f docker-compose.platform.yml up -d --build
@@ -511,7 +515,7 @@ bash scripts/platform-up.sh       # from the viewtopia/ checkout
 | Fenestra | 3003 | WMS, WFS, WMTS and WCS gateway |
 | TileTopia | 3100 | 3D Tiles, terrain, assets, auth, portal, terrain analysis, realtime rooms |
 | GeoLang API | 8080 | Agent API. Tool code runs in `geolang-executor`, which has no host port |
-| Sibyl | 8090 | Agent loop, published for the admin dashboard's health probe |
+| Sibyl | 8090 | Agent loop |
 | ViewTopia | 5174 | Web app and the nginx proxy in front of everything |
 | Agora | none | Live maps, presence, sensor feeds and region watches |
 | GeoPlumb | none | Windowed raster and vector compute |
@@ -525,9 +529,10 @@ The app only talks to nginx on 5174, same-origin. Routes:
 
 | Path | Service |
 |------|---------|
-| `/api/`, `/ws/`, `/api/v1/sse`, `/api/v1/auth/oidc/` | Ptolemy |
+| `/api/`, `/api/v1/auth/oidc/` | Ptolemy |
 | `/api/v1/auth/`, `/api/v1/portal/`, `/api/v1/realtime/` | TileTopia |
 | `/tiles/` (including `/tiles/v1/analysis`), `/martin/` | TileTopia |
+| `/api/v1/assets`, `/api/v1/terrain/`, `/v1/assets`, `/tiletopia_ion_uploads/` | TileTopia, path unchanged |
 | `/api/route`, `/api/isochrone`, `/api/network/`, `/api/delivery/` | Itinera |
 | `/api/geocode/` | Geokode |
 | `/agent/` | GeoLang API |
@@ -542,6 +547,33 @@ The app only talks to nginx on 5174, same-origin. Routes:
 
 Fenestra's WMTS and OGC API responses carry absolute URLs, so serving the stack
 anywhere but `localhost:5174` needs `FENESTRA_PUBLIC_URL=<origin>/ogc`.
+
+TileTopia's WMTS and TMS documents, Ion answers and Ion upload location carry
+absolute URLs too, so set `TILETOPIA_ION_BASE_URL=<origin>` in `.env.platform`,
+with no trailing slash. It has no default and compose stops on an empty value.
+`platform-up.sh` writes `http://localhost:5174` when the file has no value, so
+change that line on any other host. A proxy in front of nginx must pass the `Host`
+header unchanged, because an Ion upload's signature covers it.
+
+Global terrain is optional. `/tiles/v1/terrain/global/` answers 503 and the Global
+Terrain panel shows the message until `.env.platform` sets these three:
+
+- `TILETOPIA_GLOBAL_TERRAIN_DEM_URL`: root of the Copernicus GLO-30 COGs,
+  `https://copernicus-dem-30m.s3.amazonaws.com` for the AWS Open Data bucket.
+- `TILETOPIA_GLOBAL_TERRAIN_GEOID_URL`: a geoid COG, `https://cdn.proj.org/us_nga_egm96_15.tif`
+  for EGM96.
+- `TILETOPIA_GLOBAL_TERRAIN_CACHE_DIR`: where tiles are written, `/data/global-terrain` to
+  keep them on the `tiletopia-data` volume.
+
+`TILETOPIA_GLOBAL_TERRAIN_CACHE_MB` caps that directory, 1024 by default.
+`TILETOPIA_GLOBAL_TERRAIN_ION_ASSET_ID` names an Ion asset id that resolves to this layer.
+
+The IDS tab of the Model Elements panel checks an IFC model against an `.ids`
+file. tiletopia runs the check in the `ids-check` service, built from
+`../tiletopia/sidecars/ids-check`, which reads the stored models from the
+`tiletopia-data` volume. The compose file sets
+`TILETOPIA_IDS_CHECK_URL=http://ids-check:8000` on tiletopia. Without that
+variable, an IDS check answers 503 and the tab shows the message.
 
 **Data by hand.** `platform-up.sh` does all of this. To change the region
 yourself:
@@ -564,6 +596,27 @@ node scripts/seed-parcels.mjs   # demo parcels and sales, anchored on the region
 node scripts/seed-twin.mjs      # digital twin demo: twelve assets, a live map with a temperature rule, a feed token
 uv run scripts/load-toronto.py  # City of Toronto parcels and 2021 census areas, see docs/real-estate.md
 ```
+
+To build the digital twin from an IFC model instead of the twelve demo assets,
+upload the model to tiletopia, wait for its tiling job to finish, and pass the
+asset id:
+
+```bash
+node scripts/seed-twin.mjs --from-asset <tiletopia asset id>
+node scripts/seed-twin.mjs --from-asset <tiletopia asset id> --class IfcPump --class IfcFan
+```
+
+Every element of the model with a location becomes an asset row in the ptolemy
+dataset `twin-assets-<asset id>`. The row's `asset_id` is the element's
+GlobalId, which is the `asset_id` the tiles carry, so readings sent for that id
+colour the tile feature. The row also has the element's name, IFC class and
+storey. `--class` keeps only elements of the given classes. Running it again
+inserts rows for new elements, deletes rows for elements no longer in the
+model or no longer matching `--class`, and updates rows whose element changed
+name, class, storey or position by more than 1e-7 degrees. The printed
+`dataset` counts the rows inserted, updated, deleted and left unchanged. Each
+run makes a new live map with the model, the asset points, the temperature
+rule and a feed token. The elements are read from `TILETOPIA_URL`, default `http://localhost:5174`.
 
 The geokode index also takes an OpenAddresses CSV (`LON,LAT,NUMBER,STREET,CITY,REGION,POSTCODE`)
 through another `--addresses` entry in the `geokode-index` command. A sample is at
@@ -589,12 +642,14 @@ docker compose --env-file .env.platform -f docker-compose.platform.yml exec view
 Ptolemy, Fenestra, TileTopia and PostGIS in one image, with no agent and no
 viewer. Build it from the directory that holds the ptolemy, fenestra, tiletopia
 and viewtopia checkouts. Ptolemy and TileTopia refuse to start without a JWT
-secret of 32 bytes or more, so pass the same one under both names:
+secret of 32 bytes or more, so pass the same one under both names. No proxy runs
+in this image, so `TILETOPIA_ION_BASE_URL` is TileTopia's own published address:
 
 ```bash
 docker build -f viewtopia/Dockerfile.allinone -t geolang-allinone .
 SECRET=$(openssl rand -base64 48)
 docker run -e PLATFORM_JWT_SECRET="$SECRET" -e TILETOPIA_JWT_SECRET="$SECRET" \
+  -e TILETOPIA_ION_BASE_URL=http://localhost:3100 \
   -p 3000:3000 -p 3003:3003 -p 3100:3100 -p 5432:5432 geolang-allinone
 # Ptolemy :3000, Fenestra :3003, TileTopia :3100, PostGIS :5432
 ```
@@ -807,6 +862,7 @@ scripts/upgrade-test.sh OLD_IMAGE NEW_IMAGE     # write a dataset with one ptole
 scripts/fetch-basemap-assets.sh                 # refresh the vendored protomaps glyphs and sprites in public/basemaps-assets
 node scripts/seed-parcels.mjs                   # real-estate demo data only
 node scripts/seed-twin.mjs                      # digital twin demo
+node scripts/seed-twin.mjs --from-asset ID      # digital twin from the elements of a tiletopia IFC asset
 uv run scripts/load-toronto.py                  # Toronto parcels and census areas
 ```
 
@@ -843,7 +899,7 @@ keys and `Ctrl+B`.
 
 - **Frontend:** Vite, React + Mantine UI, CesiumJS, deck.gl, MapLibre GL, Leaflet, DuckDB-WASM, Apache Arrow
 - **Backend:** [tiletopia](https://github.com/GeoLang/tiletopia), [ptolemy](https://github.com/GeoLang/ptolemy), [agora](https://github.com/GeoLang/agora), [itinera](https://github.com/GeoLang/itinera), [geokode](https://github.com/GeoLang/geokode), [fenestra](https://github.com/GeoLang/fenestra), [geoplumb](https://github.com/GeoLang/geoplumb), [interiora](https://github.com/GeoLang/interiora), [collecta](https://github.com/GeoLang/collecta), [geodukt](https://github.com/GeoLang/geodukt) (Rust) + [geolang](https://github.com/GeoLang/geolang) (Python)
-- **AI:** [sibyl](https://github.com/GeoLang/sibyl) agent loop (Rust), geolang's tools, and the viewer's 58 actions
+- **AI:** [sibyl](https://github.com/GeoLang/sibyl) agent loop (Rust), geolang's tools, and the viewer's 63 actions
 - **In the browser:** topoi, projicio and terrano compiled to WASM (vendored under `src/toolbox/wasm`, `src/overlay/wasm` and `src/raster/wasm`)
 - **Deploy:** Docker Compose here. The Terraform for AWS is in [infrastructure](https://github.com/GeoLang/infrastructure)
 

@@ -66,6 +66,8 @@ jobs:
 
       - name: Build platform Docker images (excluding optional services)
         working-directory: viewtopia
+        env:
+          TILETOPIA_ION_BASE_URL: http://localhost:5174
         run: |
           # Create stub Dockerfile for unavailable repos so compose can parse
           if [ ! -f ../geolang/Dockerfile ]; then

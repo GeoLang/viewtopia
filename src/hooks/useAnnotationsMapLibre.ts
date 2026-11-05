@@ -35,6 +35,23 @@ export function annotationMarkerElement(annotation: Annotation): HTMLElement {
   return element;
 }
 
+export function syncAnnotationMarkers<Marker extends { remove: () => unknown }>(
+  markers: Map<string, Marker>,
+  annotations: Annotation[],
+  createMarker: (annotation: Annotation) => Marker,
+) {
+  const listed = new Set(annotations.map((a) => a.id));
+  for (const [id, marker] of markers) {
+    if (listed.has(id)) continue;
+    marker.remove();
+    markers.delete(id);
+  }
+  for (const annotation of annotations) {
+    if (markers.has(annotation.id)) continue;
+    markers.set(annotation.id, createMarker(annotation));
+  }
+}
+
 export function useAnnotationsMapLibre(mapRef: MutableRefObject<maplibregl.Map | null>) {
   const markersRef = useRef(new Map<string, maplibregl.Marker>());
   const handlerRef = useRef<((e: maplibregl.MapMouseEvent) => void) | null>(null);
@@ -49,26 +66,15 @@ export function useAnnotationsMapLibre(mapRef: MutableRefObject<maplibregl.Map |
     const render = () => {
       const map = mapRef.current;
       if (!map) return;
-      const { annotations } = useAnnotationStore.getState();
-      const listed = new Set(annotations.map((a) => a.id));
-      for (const [id, marker] of markers) {
-        if (listed.has(id)) continue;
-        marker.remove();
-        markers.delete(id);
-      }
-      for (const annotation of annotations) {
-        if (markers.has(annotation.id)) continue;
-        markers.set(
-          annotation.id,
-          new maplibregl.Marker({
-            element: annotationMarkerElement(annotation),
-            anchor: 'left',
-            offset: MARKER_OFFSET,
-          })
-            .setLngLat([annotation.lng, annotation.lat])
-            .addTo(map),
-        );
-      }
+      syncAnnotationMarkers(markers, useAnnotationStore.getState().annotations, (annotation) =>
+        new maplibregl.Marker({
+          element: annotationMarkerElement(annotation),
+          anchor: 'left',
+          offset: MARKER_OFFSET,
+        })
+          .setLngLat([annotation.lng, annotation.lat])
+          .addTo(map),
+      );
     };
 
     const unsubscribe = useAnnotationStore.subscribe(render);

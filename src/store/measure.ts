@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { randomUuid } from '../lib/randomUuid';
 
 export type MeasureMode = 'distance' | 'area' | 'elevation' | null;
 
@@ -109,7 +110,7 @@ export const useMeasureStore = create<MeasureState>((set, get) => ({
     }
 
     const result: MeasureResult = {
-      id: crypto.randomUUID(),
+      id: randomUuid(),
       mode: mode as 'distance' | 'area' | 'elevation',
       value,
       unit,
@@ -126,3 +127,14 @@ export const useMeasureStore = create<MeasureState>((set, get) => ({
   removeResult: (id) =>
     set((s) => ({ results: s.results.filter((r) => r.id !== id) })),
 }));
+
+export const measureToolClicks = {
+  onClick: (lng: number, lat: number) => {
+    const { mode, addPoint } = useMeasureStore.getState();
+    if (mode) addPoint(lng, lat);
+  },
+  onDoubleClick: () => {
+    const { mode, finishMeasure } = useMeasureStore.getState();
+    if (mode) finishMeasure();
+  },
+};

@@ -11,6 +11,7 @@ import { serialize as serializeFgb } from 'flatgeobuf/lib/mjs/geojson.js';
 import { exportQuery, type ExportTarget } from '../../duckdb/exportFile';
 import { getConnection, getDb } from '../../duckdb/worker';
 import { geojsonToPmtiles } from '../pmtiles/writer';
+import { randomUuid } from '../../lib/randomUuid';
 
 export type ConvertFormat = 'geoparquet' | 'flatgeobuf' | 'pmtiles' | 'geojson';
 
@@ -52,7 +53,7 @@ export async function geojsonToGeoParquet(
     db: (await getDb()) as unknown as ConvertTarget['db'],
     conn: await getConnection(),
   };
-  const name = `viewtopia-convert-${crypto.randomUUID()}.geojson`;
+  const name = `viewtopia-convert-${randomUuid()}.geojson`;
   await handle.db.registerFileText(name, JSON.stringify(geojson));
   try {
     return await exportQuery(`SELECT * FROM ST_Read('${name}')`, 'parquet', handle);

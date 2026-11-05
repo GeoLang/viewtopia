@@ -36,6 +36,7 @@ import {
   openStoryPresenterWindow,
   type StoryPresenterChannel,
 } from '../../lib/storyPresenter';
+import { randomUuid } from '../../lib/randomUuid';
 
 function sharedAsCamera(): CameraState {
   const cam = getSharedCamera();
@@ -123,7 +124,7 @@ export function StoriesPanel({ onClose }: { onClose: () => void }) {
     const camera = (viewer && captureCameraState(viewer)) || sharedAsCamera();
     setSteps((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), title: title.trim(), description: description.trim(), camera },
+      { id: randomUuid(), title: title.trim(), description: description.trim(), camera },
     ]);
     setTitle('');
     setDescription('');
@@ -244,7 +245,7 @@ export function StoriesPanel({ onClose }: { onClose: () => void }) {
                     </Text>
                   )}
                 </UnstyledButton>
-                <ActionIcon aria-label="Delete step"
+                <ActionIcon title="Delete step" aria-label="Delete step"
                   size="xs"
                   variant="subtle"
                   color="red"

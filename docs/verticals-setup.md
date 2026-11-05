@@ -169,7 +169,7 @@ shows its message as soon as the panel opens.
 | Key | Type | Default | Read by the plugin |
 |---|---|---|---|
 | `sensorBranchId` | text | none | no |
-| `wsUrl` | text | `/ws/sensors` | no |
+| `wsUrl` | text | `/ws/sensors`, a path no service answers | no |
 | `alertThreshold` | number | `90` | no |
 
 ## Telecom

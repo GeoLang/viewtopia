@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { isLiveDocumentActive } from '../live/liveStore';
+import { randomUuid } from '../lib/randomUuid';
 
 export interface Annotation {
   id: string;
@@ -52,7 +53,7 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
     set((s) => {
       if (!s.pendingPlacement) return s;
       const annotation: Annotation = {
-        id: crypto.randomUUID(),
+        id: randomUuid(),
         label: s.pendingPlacement.label,
         color: s.pendingPlacement.color,
         lat,

@@ -13,7 +13,7 @@ import { mintToken } from '../../scripts/platform-token.mjs';
  * upgrade on /agora/, agora's fan-out, and both directions of the viewtopia
  * client.
  *
- * Run: docker compose -f docker-compose.platform.yml up -d && npm run test:e2e:platform
+ * Run: docker compose -f docker-compose.platform.yml --env-file .env.platform up -d && npm run test:e2e:platform
  */
 
 /** `sub` of the browser's platform token, and the name its own avatar shows. */

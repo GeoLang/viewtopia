@@ -151,7 +151,7 @@ export function DashboardPanel({ onClose }: { onClose: () => void }) {
                   <ActionIcon
                     variant="subtle"
                     color="red"
-                    aria-label="Delete dashboard"
+                    title="Delete dashboard" aria-label="Delete dashboard"
                     onClick={(e) => {
                       e.stopPropagation();
                       remove(d.id);
@@ -177,7 +177,7 @@ export function DashboardPanel({ onClose }: { onClose: () => void }) {
         // ---- Editor view ----
         <Stack gap="sm">
           <Group gap="xs" wrap="nowrap">
-            <ActionIcon variant="subtle" color="gray" aria-label="Back" onClick={back}>
+            <ActionIcon variant="subtle" color="gray" title="Back" aria-label="Back" onClick={back}>
               <IconArrowLeft size={16} />
             </ActionIcon>
             <TextInput
@@ -242,7 +242,7 @@ export function DashboardPanel({ onClose }: { onClose: () => void }) {
                           size="xs"
                           variant="subtle"
                           color="gray"
-                          aria-label="Widget settings"
+                          title="Widget settings" aria-label="Widget settings"
                           onClick={() => setEditingId((id) => (id === w.id ? null : w.id))}
                         >
                           <IconSettings size={12} />
@@ -252,7 +252,7 @@ export function DashboardPanel({ onClose }: { onClose: () => void }) {
                         size="xs"
                         variant="subtle"
                         color="red"
-                        aria-label="Remove widget"
+                        title="Remove widget" aria-label="Remove widget"
                         onClick={() => removeWidget(w.id)}
                       >
                         <IconTrash size={12} />

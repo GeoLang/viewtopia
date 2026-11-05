@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 // E2E for the FULL platform stack (docker-compose.platform.yml), NOT the dev server.
 // Bring the stack up first:
-//   docker compose -f docker-compose.platform.yml up -d
+//   docker compose -f docker-compose.platform.yml --env-file .env.platform up -d
 // then:
 //   npm run test:e2e:platform
 //
@@ -22,6 +22,7 @@ export default defineConfig({
     'project-map-state.spec.js',
     'project-datasets.spec.js',
     'tileset-import.spec.js',
+    'assets-rows.spec.js',
     'digital-twin.spec.js',
     'digital-twin-3d.spec.js',
     'digital-twin-scenario.spec.js',

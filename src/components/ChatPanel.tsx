@@ -329,11 +329,11 @@ export function ChatPanel() {
           <DictationButton state={dictation.state} disabled={streaming} onToggle={toggleDictation} />
         )}
         {streaming ? (
-          <ActionIcon aria-label="Stop generating" variant="filled" color="red" size="lg" onClick={abort}>
+          <ActionIcon title="Stop generating" aria-label="Stop generating" variant="filled" color="red" size="lg" onClick={abort}>
             <IconSquare size={14} />
           </ActionIcon>
         ) : (
-          <ActionIcon aria-label="Send message"
+          <ActionIcon title="Send message" aria-label="Send message"
             variant="filled"
             color="violet"
             size="lg"

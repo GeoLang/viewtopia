@@ -22,6 +22,21 @@ async function loadStore(persisted: unknown) {
   return useAppStore.getState();
 }
 
+describe('retired settings', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    window.location.hash = '';
+  });
+
+  it('loads settings persisted with the removed showPreviewTools key', async () => {
+    const state = await loadStore({
+      settings: { showPreviewTools: true, showMinimap: true },
+    });
+    expect(state.settings.showMinimap).toBe(true);
+    expect(state.settings.showCoordReadout).toBe(true);
+  });
+});
+
 describe('retired deck.gl renderer', () => {
   beforeEach(() => {
     localStorage.clear();

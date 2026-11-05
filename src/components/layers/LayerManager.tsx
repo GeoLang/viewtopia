@@ -287,7 +287,7 @@ function RasterLayerRow({
               size="sm"
               variant="subtle"
               color="gray"
-              aria-label={`Move ${layer.name} down`}
+              title={`Move ${layer.name} down`} aria-label={`Move ${layer.name} down`}
               disabled={index === 0}
               onClick={(e) => {
                 e.stopPropagation();
@@ -300,7 +300,7 @@ function RasterLayerRow({
               size="sm"
               variant="subtle"
               color="gray"
-              aria-label={`Move ${layer.name} up`}
+              title={`Move ${layer.name} up`} aria-label={`Move ${layer.name} up`}
               disabled={index === count - 1}
               onClick={(e) => {
                 e.stopPropagation();

@@ -17,6 +17,9 @@ import {
 import { useLiveStore } from '../../src/live/liveStore';
 import type { LiveComment, LiveRole } from '../../src/live/types';
 import { FakeAgoraServer } from './stubs/fakeAgoraServer';
+import { randomUuid } from '../../src/lib/randomUuid';
+
+vi.mock('../../src/lib/randomUuid', () => ({ randomUuid: vi.fn(() => globalThis.crypto.randomUUID()) }));
 
 const DOCUMENT_ID = 'doc-1';
 const TOKEN = 'jwt-token';
@@ -95,7 +98,7 @@ describe('live comment writes', () => {
     useAuthStore.setState({ user: null, token: TOKEN });
     setSharedCamera({ longitude: 0, latitude: 20, zoom: 2 });
     useSpaceTimeStore.setState({ flyToTarget: null });
-    vi.spyOn(crypto, 'randomUUID').mockReturnValue('11111111-2222-3333-4444-555555555555');
+    vi.mocked(randomUuid).mockReturnValueOnce('11111111-2222-3333-4444-555555555555');
     vi.spyOn(Date, 'now').mockReturnValue(1000);
   });
 
@@ -269,7 +272,7 @@ describe('comment mentions', () => {
     server.install();
     useAuthStore.setState({ user: null, token: TOKEN });
     setSharedCamera({ longitude: 0, latitude: 20, zoom: 2 });
-    vi.spyOn(crypto, 'randomUUID').mockReturnValue('11111111-2222-3333-4444-555555555555');
+    vi.mocked(randomUuid).mockReturnValueOnce('11111111-2222-3333-4444-555555555555');
     vi.spyOn(Date, 'now').mockReturnValue(1000);
   });
 

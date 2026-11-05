@@ -180,7 +180,7 @@ export function CollectaPanel({ onClose }: { onClose: () => void }) {
             size="sm"
             variant="subtle"
             color="gray"
-            aria-label="Refresh forms"
+            title="Refresh forms" aria-label="Refresh forms"
             loading={loading}
             onClick={() => void refresh()}
           >

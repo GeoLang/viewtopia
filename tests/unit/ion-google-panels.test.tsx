@@ -7,16 +7,41 @@ import type { ReactElement } from 'react';
 // only the ion/google plumbing is under test, so the WebGL bundle stays out
 vi.mock('cesium', () => ({
   Cesium3DTileset: {
-    fromIonAssetId: vi.fn(async (assetId: number) => ({ assetId })),
+    fromIonAssetId: vi.fn(async (assetId: number) => ({ assetId, boundingSphere: { radius: 10 } })),
     fromUrl: vi.fn(async (url: string, options?: unknown) => ({ url, options })),
   },
   CesiumTerrainProvider: {
     fromIonAssetId: vi.fn(async (assetId: number) => ({ terrain: assetId })),
   },
+  CzmlDataSource: class {
+    name: string;
+    document: unknown;
+    constructor(name: string) {
+      this.name = name;
+    }
+    async load(document: unknown) {
+      this.document = document;
+      return this;
+    }
+  },
   EllipsoidTerrainProvider: class {},
+  HeadingPitchRange: class {
+    heading: number;
+    pitch: number;
+    range: number;
+    constructor(heading: number, pitch: number, range: number) {
+      this.heading = heading;
+      this.pitch = pitch;
+      this.range = range;
+    }
+  },
   Ion: { defaultAccessToken: '' },
+  Math: { toRadians: (degrees: number) => degrees },
   IonImageryProvider: {
     fromAssetId: vi.fn(async (assetId: number) => ({ imagery: assetId })),
+  },
+  IonResource: {
+    fromAssetId: vi.fn(async (assetId: number) => ({ ionAsset: assetId })),
   },
 }));
 
@@ -26,7 +51,7 @@ vi.mock('../../src/viewer/registry', () => ({
   getActiveDeckOverlay: vi.fn(() => null),
 }));
 
-import { Cesium3DTileset, Ion, IonImageryProvider } from 'cesium';
+import { Cesium3DTileset, CzmlDataSource, Ion, IonImageryProvider, IonResource } from 'cesium';
 import { CesiumIonPanel } from '../../src/components/tools/CesiumIonPanel';
 import { Google3DPanel } from '../../src/components/tools/Google3DPanel';
 import { getActiveCesiumViewer } from '../../src/viewer/registry';
@@ -52,7 +77,9 @@ function fakeViewer() {
       contains: vi.fn(() => true),
       remove: vi.fn(() => true),
     },
+    dataSources: { add: vi.fn(async () => {}), remove: vi.fn(() => true) },
     flyTo: vi.fn(async () => true),
+    camera: { heading: 0 },
     terrainProvider: null as unknown,
     isDestroyed: () => false,
   };
@@ -64,7 +91,7 @@ const useViewer = (v: FakeViewer | null) =>
   vi.mocked(getActiveCesiumViewer).mockReturnValue(v as never);
 
 const renderPanel = (ui: ReactElement) =>
-  render(<MantineProvider>{ui}</MantineProvider>);
+  render(<MantineProvider env="test">{ui}</MantineProvider>);
 
 const ionResponse = (items: unknown) =>
   vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ items }) }));
@@ -73,6 +100,7 @@ const ASSETS = [
   { id: 11, name: 'Downtown Mesh', type: '3DTILES' },
   { id: 22, name: 'Aerial Imagery', type: 'IMAGERY' },
   { id: 33, name: 'Field Notes', type: 'GEOJSON' },
+  { id: 44, name: 'Flight Path', type: 'CZML' },
 ];
 
 beforeEach(() => {
@@ -151,11 +179,11 @@ describe('CesiumIonPanel', () => {
 
     const removeButton = await screen.findByRole('button', { name: /remove downtown mesh/i });
     expect(Cesium3DTileset.fromIonAssetId).toHaveBeenCalledWith(11);
-    expect(viewer.scene.primitives.add).toHaveBeenCalledWith({ assetId: 11 });
+    expect(viewer.scene.primitives.add).toHaveBeenCalledWith(expect.objectContaining({ assetId: 11 }));
 
     fireEvent.click(removeButton);
 
-    expect(viewer.scene.primitives.remove).toHaveBeenCalledWith({ assetId: 11 });
+    expect(viewer.scene.primitives.remove).toHaveBeenCalledWith(expect.objectContaining({ assetId: 11 }));
     expect(
       await screen.findByRole('button', { name: /add downtown mesh to scene/i }),
     ).toBeInTheDocument();
@@ -174,6 +202,49 @@ describe('CesiumIonPanel', () => {
     await screen.findByRole('button', { name: /remove aerial imagery/i });
     expect(IonImageryProvider.fromAssetId).toHaveBeenCalledWith(22);
     expect(viewer.imageryLayers.addImageryProvider).toHaveBeenCalledWith({ imagery: 22 });
+  });
+
+  it('loads a CZML asset from its resolved ion resource and removes it on demand', async () => {
+    const viewer = fakeViewer();
+    useViewer(viewer);
+    vi.stubGlobal('fetch', ionResponse(ASSETS));
+    renderPanel(<CesiumIonPanel onClose={() => {}} />);
+    await connectIon('tok-abc');
+    await screen.findByTestId('ion-asset-44');
+
+    fireEvent.click(screen.getByRole('button', { name: /add flight path to scene/i }));
+
+    const removeButton = await screen.findByRole('button', { name: /remove flight path/i });
+    const opened = expect.objectContaining({ name: 'Flight Path', document: { ionAsset: 44 } });
+    expect(IonResource.fromAssetId).toHaveBeenCalledWith(44);
+    expect(viewer.dataSources.add).toHaveBeenCalledWith(opened);
+    expect(viewer.flyTo).toHaveBeenCalledWith(opened);
+
+    fireEvent.click(removeButton);
+
+    expect(viewer.dataSources.remove).toHaveBeenCalledWith(opened, true);
+    expect(
+      await screen.findByRole('button', { name: /add flight path to scene/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('reports a CZML asset that will not load and adds nothing', async () => {
+    const viewer = fakeViewer();
+    useViewer(viewer);
+    vi.stubGlobal('fetch', ionResponse(ASSETS));
+    vi.spyOn(CzmlDataSource.prototype, 'load').mockRejectedValueOnce(
+      new Error('Cesium only supports CZML version 1.\nundefined'),
+    );
+    renderPanel(<CesiumIonPanel onClose={() => {}} />);
+    await connectIon('tok-abc');
+    await screen.findByTestId('ion-asset-44');
+
+    fireEvent.click(screen.getByRole('button', { name: /add flight path to scene/i }));
+
+    expect(await screen.findByTestId('ion-error')).toHaveTextContent(
+      /^Flight Path failed to load: Cesium only supports CZML version 1\.$/,
+    );
+    expect(viewer.dataSources.add).not.toHaveBeenCalled();
   });
 
   it('offers no add action for an asset type cesium cannot attach', async () => {

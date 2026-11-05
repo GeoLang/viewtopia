@@ -22,6 +22,7 @@ import type { Cartesian2, Entity, Viewer } from 'cesium';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { useAppStore } from '../../store/app';
+import { randomUuid } from '../../lib/randomUuid';
 
 interface Placed {
   id: string;
@@ -74,7 +75,7 @@ export function ModelImportPanel({ onClose }: { onClose: () => void }) {
         ? scene.pickPosition(click.position)
         : viewer.camera.pickEllipsoid(click.position, scene.globe.ellipsoid);
       if (!position) return;
-      const id = `model-${crypto.randomUUID()}`;
+      const id = `model-${randomUuid()}`;
       const hpr = new HeadingPitchRoll(CesiumMath.toRadians(transform.current.heading), 0, 0);
       entities.current.set(
         id,
@@ -188,7 +189,7 @@ export function ModelImportPanel({ onClose }: { onClose: () => void }) {
                 size="sm"
                 variant="subtle"
                 color="red"
-                aria-label={`Remove ${entry.name}`}
+                title={`Remove ${entry.name}`} aria-label={`Remove ${entry.name}`}
                 onClick={() => removeModel(entry)}
               >
                 <IconTrash size={14} />

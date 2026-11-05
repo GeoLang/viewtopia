@@ -184,7 +184,7 @@ export function TilesetsSection() {
           size="sm"
           variant="subtle"
           color="gray"
-          aria-label="Refresh tilesets"
+          title="Refresh tilesets" aria-label="Refresh tilesets"
           loading={listing}
           onClick={() => void refresh()}
         >

@@ -12,6 +12,7 @@ import {
 import { IconPlus, IconX } from '@tabler/icons-react';
 import { useSpaceTimeStore } from '../store';
 import type { LinkKind } from '../types';
+import { randomUuid } from '../../../lib/randomUuid';
 
 const LINK_KINDS: { value: LinkKind; label: string }[] = [
   { value: 'colocation', label: 'Colocation (met in person)' },
@@ -43,7 +44,7 @@ export function CreateLinkDialog() {
   const handleCreate = () => {
     if (!fromId || !toId || fromId === toId) return;
     addLink({
-      id: crypto.randomUUID(),
+      id: randomUuid(),
       sourceId: fromId,
       targetId: toId,
       kind,
@@ -78,7 +79,7 @@ export function CreateLinkDialog() {
         <Text size="xs" fw={600} c="white">
           Create Link
         </Text>
-        <ActionIcon aria-label="Close" size="xs" variant="subtle" color="gray" onClick={() => setOpen(false)}>
+        <ActionIcon title="Close" aria-label="Close" size="xs" variant="subtle" color="gray" onClick={() => setOpen(false)}>
           <IconX size={12} />
         </ActionIcon>
       </Group>

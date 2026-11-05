@@ -10,6 +10,7 @@ import { useOgcLayerStore } from '../store/ogcLayers';
 import { useTourStore } from '../store/tour';
 import { useEntryPointStore } from './entryPoints';
 import { dismissFirstRun, firstRunDismissed, firstRunVisible, returningVisitor } from './firstRun';
+import { randomUuid } from '../lib/randomUuid';
 
 const DEMO_DATASET_URL = '/demo/sf-landmarks.geojson';
 
@@ -72,7 +73,7 @@ export function FirstRunOverlay() {
       if (!response.ok) throw new Error(`demo dataset: HTTP ${response.status}`);
       const geojson = (await response.json()) as GeoJSON.FeatureCollection;
       useAgentLayerStore.getState().addLayer({
-        id: crypto.randomUUID(),
+        id: randomUuid(),
         name: 'San Francisco landmarks',
         color: '#a78bfa',
         geojson,

@@ -149,7 +149,7 @@ export function WeatherPanel({ onClose }: { onClose: () => void }) {
         title="Weather"
         onClose={handleClose}
         actions={
-          <ActionIcon size="sm" variant="subtle" color="gray" onClick={loadCurrent} aria-label="Refresh weather">
+          <ActionIcon size="sm" variant="subtle" color="gray" onClick={loadCurrent} title="Refresh weather" aria-label="Refresh weather">
             <IconRefresh size={14} />
           </ActionIcon>
         }

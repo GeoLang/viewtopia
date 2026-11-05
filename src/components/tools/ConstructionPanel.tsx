@@ -140,7 +140,7 @@ export function ConstructionPanel({ onLoadSurvey, onCompareSurveys, onClose }: C
             <IconCrane size={18} />
             <Text fw={600} size="sm">Construction</Text>
           </Group>
-          <ActionIcon aria-label="Close construction" size="sm" variant="subtle" onClick={onClose}><IconX size={14} /></ActionIcon>
+          <ActionIcon title="Close construction" aria-label="Close construction" size="sm" variant="subtle" onClick={onClose}><IconX size={14} /></ActionIcon>
         </Group>
 
         <Button size="xs" onClick={handleLoadSurveys} loading={loading} leftSection={<IconCamera size={14} />}>

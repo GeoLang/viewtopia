@@ -190,7 +190,12 @@ function psql(sql) {
       'psql', '-U', 'ptolemy', '-d', 'ptolemy',
       '-v', 'ON_ERROR_STOP=1', '-qtA', '-c', sql,
     ],
-    { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+    {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      // compose stops on an unset required variable before it runs exec
+      env: { ...process.env, TILETOPIA_ION_BASE_URL: 'http://localhost:5174' },
+    },
   ).trim();
 }
 

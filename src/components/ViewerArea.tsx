@@ -21,6 +21,10 @@ import { useHeatmapsMapLibre } from '../hooks/useHeatmapsMapLibre';
 import { useAgentLayersCesium } from '../hooks/useAgentLayersCesium';
 import { useAgentLayersMapLibre } from '../hooks/useAgentLayersMapLibre';
 import { useAssetColorsCesium } from '../hooks/useAssetColorsCesium';
+import { BimModeBadge } from '../features/bim/BimModeBadge';
+import { useBimNavigationCesium } from '../features/bim/useBimNavigationCesium';
+import { useElementStyleCesium } from '../features/elements/useElementStyleCesium';
+import { SectionCapsOnGlobe } from '../features/scene/SectionCaps';
 import { useAssetColorsMapLibre } from '../hooks/useAssetColorsMapLibre';
 import { useAgentLayersLeaflet } from '../hooks/useAgentLayersLeaflet';
 import { useOgcLayersCesium } from '../hooks/useOgcLayersCesium';
@@ -149,6 +153,8 @@ export function ViewerArea() {
   // just drew, so it runs after it.
   useAssetColorsMapLibre(maplibreRef);
   useAssetColorsCesium();
+  useElementStyleCesium();
+  useBimNavigationCesium();
 
   // OGC/XYZ services the user added (raster imagery; no deck.gl equivalent)
   useOgcLayersCesium(cesiumRef);
@@ -323,6 +329,8 @@ export function ViewerArea() {
         />
         {/* cesium has no built-in zoom/compass, so match maplibre's control */}
         {activeTab === 'globe' && renderer === 'cesium' && <CesiumNavControl />}
+        {activeTab === 'globe' && renderer === 'cesium' && <BimModeBadge />}
+        {activeTab === 'globe' && renderer === 'cesium' && <SectionCapsOnGlobe />}
 
         {/* MapLibre GL, with the deck.gl layers interleaved into it */}
         <div

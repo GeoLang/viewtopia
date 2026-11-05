@@ -9,7 +9,7 @@ import { platformAuthHeaders } from '../../scripts/platform-token.mjs';
  * (`/api/...`, `/tiles/...`, `/api/geocode/...`, `/api/route`). It does NOT use the
  * dev server, and is excluded from the default `npm run test:e2e` run.
  *
- * Run: docker compose -f docker-compose.platform.yml up -d && npm run test:e2e:platform
+ * Run: docker compose -f docker-compose.platform.yml --env-file .env.platform up -d && npm run test:e2e:platform
  *
  * The agent NL->map step is intentionally omitted (it spends real LLM credits);
  * see DESIGN_TODO.md Track 1. The tool run and its layer, which need no LLM, are

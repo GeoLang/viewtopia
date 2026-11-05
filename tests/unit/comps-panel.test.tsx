@@ -34,7 +34,7 @@ const onCompsFound = vi.fn();
 
 const renderPanel = () =>
   render(
-    <MantineProvider>
+    <MantineProvider env="test">
       <CompsPanel
         branchId={BRANCH_ID}
         salesDataset="sales"

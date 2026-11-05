@@ -94,7 +94,7 @@ function DealComments({ deal, update }: { deal: Deal; update: (deal: Deal) => vo
             <ActionIcon
               size="xs"
               variant="subtle"
-              aria-label="Detach comment"
+              title="Detach comment" aria-label="Detach comment"
               onClick={() => update(detachComment(deal, commentId))}
             >
               <IconX size={12} />
@@ -161,7 +161,7 @@ export function DealPanel({ selectedParcels }: { selectedParcels: ParcelRecord[]
           <ActionIcon
             size="xs"
             variant="subtle"
-            aria-label={`Remove ${site.label}`}
+            title={`Remove ${site.label}`} aria-label={`Remove ${site.label}`}
             onClick={() => setDeal(removeFromShortlist(deal, site.featureId))}
           >
             <IconX size={12} />

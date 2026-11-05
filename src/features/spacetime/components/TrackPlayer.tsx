@@ -116,7 +116,7 @@ export function TrackPlayer() {
           />
 
           <Group justify="center" gap="xs">
-            <ActionIcon aria-label="Skip to start"
+            <ActionIcon title="Skip to start" aria-label="Skip to start"
               size="sm"
               variant="subtle"
               color="gray"
@@ -124,7 +124,7 @@ export function TrackPlayer() {
             >
               <IconPlayerSkipBack size={14} />
             </ActionIcon>
-            <ActionIcon aria-label={playing ? 'Pause track' : 'Play track'}
+            <ActionIcon title={playing ? 'Pause track' : 'Play track'} aria-label={playing ? 'Pause track' : 'Play track'}
               size="md"
               variant="filled"
               color="violet"
@@ -136,7 +136,7 @@ export function TrackPlayer() {
                 <IconPlayerPlay size={16} />
               )}
             </ActionIcon>
-            <ActionIcon aria-label="Skip to end"
+            <ActionIcon title="Skip to end" aria-label="Skip to end"
               size="sm"
               variant="subtle"
               color="gray"

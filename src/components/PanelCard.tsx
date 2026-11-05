@@ -193,6 +193,7 @@ export function PanelHeader({ icon, title, onClose, actions, badge, closeLabel }
   return (
     <Group
       justify="space-between"
+      wrap="nowrap"
       mb="xs"
       data-panel-handle={inCard ? '' : undefined}
       style={inCard ? HANDLE_STYLE : undefined}
@@ -205,16 +206,16 @@ export function PanelHeader({ icon, title, onClose, actions, badge, closeLabel }
           : undefined
       }
     >
-      <Group gap="xs">
-        <Box c="violet.4" display="flex">
+      <Group gap="xs" wrap="nowrap" style={{ minWidth: 0, overflow: 'hidden' }}>
+        <Box c="violet.4" display="flex" style={{ flexShrink: 0 }}>
           {icon}
         </Box>
-        <Text size="sm" fw={600} c="white">
+        <Text size="sm" fw={600} c="white" truncate="end" title={title} style={{ flexShrink: 0 }}>
           {title}
         </Text>
-        {badge}
+        <Box style={{ minWidth: 0, overflow: 'hidden' }}>{badge}</Box>
       </Group>
-      <Group gap={4}>
+      <Group gap={4} wrap="nowrap" style={{ flexShrink: 0 }}>
         {actions}
         {inCard && (
           <ActionIcon
@@ -222,7 +223,7 @@ export function PanelHeader({ icon, title, onClose, actions, badge, closeLabel }
             variant="subtle"
             color="gray"
             onClick={toggleMinimized}
-            aria-label={minimized ? 'Restore panel' : 'Minimize panel'}
+            title={minimized ? 'Restore panel' : 'Minimize panel'} aria-label={minimized ? 'Restore panel' : 'Minimize panel'}
           >
             {minimized ? <IconChevronDown size={14} /> : <IconChevronUp size={14} />}
           </ActionIcon>
@@ -240,7 +241,7 @@ export function PanelCloseButton({ onClose, label }: { onClose: () => void; labe
       variant="subtle"
       color="gray"
       onClick={onClose}
-      aria-label={label ?? 'Close panel'}
+      title={label ?? 'Close panel'} aria-label={label ?? 'Close panel'}
     >
       <IconX size={14} />
     </ActionIcon>

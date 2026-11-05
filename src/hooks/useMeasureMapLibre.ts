@@ -1,8 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import type { MutableRefObject } from 'react';
 import type * as maplibregl from 'maplibre-gl';
-import { useMeasureStore, type MeasureMode } from '../store/measure';
+import { measureToolClicks, useMeasureStore } from '../store/measure';
 import { useAppStore } from '../store/app';
+import { lineWithVertexFeatures, setToolGeoJson } from './toolLayersMapLibre';
+import { useToolClicksMapLibre } from './useToolClicksMapLibre';
 
 const SRC = 'measure-features';
 const SRC_PENDING = 'measure-pending';
@@ -11,111 +13,13 @@ const POINT_LAYER = 'measure-pts';
 const PENDING_LINE = 'measure-pending-line';
 const PENDING_PT = 'measure-pending-pt';
 
-function resultsToGeoJSON(results: { points: [number, number][] }[]): GeoJSON.FeatureCollection {
-  const features: GeoJSON.Feature[] = [];
-  for (const r of results) {
-    if (r.points.length >= 2) {
-      features.push({
-        type: 'Feature',
-        properties: {},
-        geometry: { type: 'LineString', coordinates: r.points },
-      });
-    }
-    for (const p of r.points) {
-      features.push({
-        type: 'Feature',
-        properties: {},
-        geometry: { type: 'Point', coordinates: p },
-      });
-    }
-  }
-  return { type: 'FeatureCollection', features };
-}
-
-function pendingToGeoJSON(pending: [number, number][]): GeoJSON.FeatureCollection {
-  const features: GeoJSON.Feature[] = [];
-  if (pending.length >= 2) {
-    features.push({
-      type: 'Feature',
-      properties: {},
-      geometry: { type: 'LineString', coordinates: pending },
-    });
-  }
-  for (const p of pending) {
-    features.push({
-      type: 'Feature',
-      properties: {},
-      geometry: { type: 'Point', coordinates: p },
-    });
-  }
-  return { type: 'FeatureCollection', features };
-}
-
 export function useMeasureMapLibre(
   mapRef: MutableRefObject<maplibregl.Map | null>,
 ) {
-  const handlerRef = useRef<((e: maplibregl.MapMouseEvent) => void) | null>(null);
-  const dblHandlerRef = useRef<((e: maplibregl.MapMouseEvent) => void) | null>(null);
-  // A renderer switch destroys and rebuilds the map, so rebind to the new one —
-  // handlers and layers left on the old instance are dead.
+  useToolClicksMapLibre(mapRef, useMeasureStore, measureToolClicks);
+  // renderer switches destroy and rebuild the map, which drops layers on the old instance
   const renderer = useAppStore((s) => s.renderer);
   const activeTab = useAppStore((s) => s.activeTab);
-
-  // Click handler: register/unregister based on measure mode
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    const sync = (state: { mode: MeasureMode }) => {
-      const map = mapRef.current;
-      if (!map) return;
-
-      if (state.mode && !handlerRef.current) {
-        const clickHandler = (e: maplibregl.MapMouseEvent) => {
-          const { mode, addPoint } = useMeasureStore.getState();
-          if (!mode) return;
-          addPoint(e.lngLat.lng, e.lngLat.lat);
-        };
-
-        const dblClickHandler = (e: maplibregl.MapMouseEvent) => {
-          e.preventDefault();
-          const { mode, finishMeasure } = useMeasureStore.getState();
-          if (mode) finishMeasure();
-        };
-
-        map.on('click', clickHandler);
-        map.on('dblclick', dblClickHandler);
-        handlerRef.current = clickHandler;
-        dblHandlerRef.current = dblClickHandler;
-        map.getCanvas().style.cursor = 'crosshair';
-      }
-
-      if (!state.mode && handlerRef.current) {
-        map.off('click', handlerRef.current);
-        handlerRef.current = null;
-        if (dblHandlerRef.current) {
-          map.off('dblclick', dblHandlerRef.current);
-          dblHandlerRef.current = null;
-        }
-        map.getCanvas().style.cursor = '';
-      }
-    };
-
-    // Apply the mode that's already set: after a renderer switch the store won't
-    // fire again for a tool the user turned on before the switch.
-    sync(useMeasureStore.getState());
-    const unsub = useMeasureStore.subscribe(sync);
-
-    return () => {
-      unsub();
-      const map = mapRef.current;
-      if (!map) return;
-      if (handlerRef.current) map.off('click', handlerRef.current);
-      if (dblHandlerRef.current) map.off('dblclick', dblHandlerRef.current);
-      handlerRef.current = null;
-      dblHandlerRef.current = null;
-    };
-  }, [mapRef, renderer, activeTab]);
 
   // Render measurement features
   useEffect(() => {
@@ -124,60 +28,63 @@ export function useMeasureMapLibre(
 
     const render = () => {
       const { results, pending } = useMeasureStore.getState();
-      const geo = resultsToGeoJSON(results);
-      const pendGeo = pendingToGeoJSON(pending);
 
-      const src = map.getSource(SRC) as maplibregl.GeoJSONSource | undefined;
-      if (src) {
-        src.setData(geo);
-      } else {
-        map.addSource(SRC, { type: 'geojson', data: geo });
-        map.addLayer({
-          id: LINE_LAYER,
-          type: 'line',
-          source: SRC,
-          filter: ['==', '$type', 'LineString'],
-          paint: { 'line-color': '#fbbf24', 'line-width': 3 },
-        });
-        map.addLayer({
-          id: POINT_LAYER,
-          type: 'circle',
-          source: SRC,
-          filter: ['==', '$type', 'Point'],
-          paint: {
-            'circle-radius': 5,
-            'circle-color': '#fbbf24',
-            'circle-stroke-width': 2,
-            'circle-stroke-color': '#fff',
+      setToolGeoJson(
+        map,
+        SRC,
+        {
+          type: 'FeatureCollection',
+          features: results.flatMap((result) => lineWithVertexFeatures(result.points)),
+        },
+        [
+          {
+            id: LINE_LAYER,
+            type: 'line',
+            source: SRC,
+            filter: ['==', '$type', 'LineString'],
+            paint: { 'line-color': '#fbbf24', 'line-width': 3 },
           },
-        });
-      }
+          {
+            id: POINT_LAYER,
+            type: 'circle',
+            source: SRC,
+            filter: ['==', '$type', 'Point'],
+            paint: {
+              'circle-radius': 5,
+              'circle-color': '#fbbf24',
+              'circle-stroke-width': 2,
+              'circle-stroke-color': '#fff',
+            },
+          },
+        ],
+      );
 
-      const pendSrc = map.getSource(SRC_PENDING) as maplibregl.GeoJSONSource | undefined;
-      if (pendSrc) {
-        pendSrc.setData(pendGeo);
-      } else {
-        map.addSource(SRC_PENDING, { type: 'geojson', data: pendGeo });
-        map.addLayer({
-          id: PENDING_LINE,
-          type: 'line',
-          source: SRC_PENDING,
-          filter: ['==', '$type', 'LineString'],
-          paint: { 'line-color': '#fbbf24', 'line-width': 2, 'line-dasharray': [4, 4] },
-        });
-        map.addLayer({
-          id: PENDING_PT,
-          type: 'circle',
-          source: SRC_PENDING,
-          filter: ['==', '$type', 'Point'],
-          paint: {
-            'circle-radius': 4,
-            'circle-color': '#fbbf24',
-            'circle-stroke-width': 1,
-            'circle-stroke-color': '#fff',
+      setToolGeoJson(
+        map,
+        SRC_PENDING,
+        { type: 'FeatureCollection', features: lineWithVertexFeatures(pending) },
+        [
+          {
+            id: PENDING_LINE,
+            type: 'line',
+            source: SRC_PENDING,
+            filter: ['==', '$type', 'LineString'],
+            paint: { 'line-color': '#fbbf24', 'line-width': 2, 'line-dasharray': [4, 4] },
           },
-        });
-      }
+          {
+            id: PENDING_PT,
+            type: 'circle',
+            source: SRC_PENDING,
+            filter: ['==', '$type', 'Point'],
+            paint: {
+              'circle-radius': 4,
+              'circle-color': '#fbbf24',
+              'circle-stroke-width': 1,
+              'circle-stroke-color': '#fff',
+            },
+          },
+        ],
+      );
     };
 
     const unsub = useMeasureStore.subscribe(render);

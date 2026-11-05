@@ -132,7 +132,7 @@ export function OgcServicesTab({ layers, onRemove }: OgcServicesTabProps) {
                 <Badge size="xs" variant="light">
                   {layer.type.toUpperCase()}
                 </Badge>
-                <ActionIcon aria-label="Remove layer"
+                <ActionIcon title="Remove layer" aria-label="Remove layer"
                   size="xs"
                   variant="subtle"
                   color="red"

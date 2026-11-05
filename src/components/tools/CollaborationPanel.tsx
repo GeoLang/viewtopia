@@ -162,7 +162,7 @@ export function CollaborationPanel({ onClose }: { onClose: () => void }) {
                 onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
                 style={{ flex: 1 }}
               />
-              <ActionIcon aria-label="Send message"
+              <ActionIcon title="Send message" aria-label="Send message"
                 size="sm"
                 color="violet"
                 onClick={handleSendChat}

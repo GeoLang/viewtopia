@@ -202,7 +202,7 @@ export function IndoorPanel({ onClose }: { onClose: () => void }) {
             size="sm"
             variant="subtle"
             color="gray"
-            aria-label="Refresh venues"
+            title="Refresh venues" aria-label="Refresh venues"
             loading={loading}
             onClick={() => void refresh()}
           >

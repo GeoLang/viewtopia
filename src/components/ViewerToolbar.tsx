@@ -33,7 +33,6 @@ import {
   TOOLS_MENU,
   DATA_MENU,
   MORE_MENU,
-  visibleToolItems,
   type ToolMenuItem,
 } from './toolMenus';
 import { exportMapPng } from './mapExport';
@@ -55,7 +54,6 @@ export function ViewerToolbar({ compact = false }: { compact?: boolean }) {
   const activePaneTab = useActivePaneTab();
   const setActivePaneTab = useSplitViewStore((s) => s.setActivePaneTab);
   const toggleSpaceTime = useSpaceTimeStore((s) => s.togglePanel);
-  const showPreviewTools = useAppStore((s) => s.settings.showPreviewTools);
   const viewOnly = useViewOnlyLive();
   usePluginRegistryVersion();
   const plugins = getPlugins();
@@ -64,18 +62,11 @@ export function ViewerToolbar({ compact = false }: { compact?: boolean }) {
   });
 
   const renderMenuItems = (items: ToolMenuItem[]) =>
-    visibleToolItems(items, showPreviewTools).map((item) => (
+    items.map((item) => (
       <Menu.Item
         key={item.panel}
         leftSection={<item.icon size={14} />}
         onClick={() => togglePanel(item.panel)}
-        rightSection={
-          item.preview ? (
-            <Badge size="xs" variant="light" color="orange">
-              Preview
-            </Badge>
-          ) : undefined
-        }
       >
         {item.label}
       </Menu.Item>

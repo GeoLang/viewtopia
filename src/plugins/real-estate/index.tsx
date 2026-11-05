@@ -192,7 +192,7 @@ function RealEstatePanel({ ctx }: { ctx: PluginContext }) {
         <Tabs.Tab value="edit" size="xs">Edit</Tabs.Tab>
         <Tabs.Tab value="deal" size="xs">Deal</Tabs.Tab>
         <Tabs.Tab value="sites" size="xs">Sites</Tabs.Tab>
-        <ActionIcon size="sm" variant="subtle" ml="auto" aria-label="Close" onClick={ctx.close}>
+        <ActionIcon size="sm" variant="subtle" ml="auto" title="Close" aria-label="Close" onClick={ctx.close}>
           <IconX size={14} />
         </ActionIcon>
       </Tabs.List>

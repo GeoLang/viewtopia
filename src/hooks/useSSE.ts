@@ -10,6 +10,7 @@ import { isUnreachableStatus, unreachableMessage } from '../offline/backends';
 import { useChatStore } from '../store/chat';
 import { executeViewerCommand, type ViewerCommand } from '../viewer/commands';
 import { renderUISpec, type UiSpec } from '../viewer/uiSpec';
+import { randomUuid } from '../lib/randomUuid';
 
 /** a run whose request never got a reply, so there is no status to name */
 const NO_RESPONSE = 0;
@@ -187,9 +188,9 @@ export function useSSE() {
         const threadId =
           useChatStore.getState().activeSession()?.backendId ??
           useChatStore.getState().activeSessionId ??
-          crypto.randomUUID();
+          randomUuid();
         const messages: Message[] = [
-          { id: crypto.randomUUID(), role: 'user', content: prompt },
+          { id: randomUuid(), role: 'user', content: prompt },
         ];
         // the bearer goes with the run: geolang hands it to sibyl, which sends it
         // on every tool call, so the tools reach ptolemy and friends as this user
@@ -203,7 +204,7 @@ export function useSSE() {
           initialState: { viewer: buildViewerSnapshot(), actions: actionCatalogue() },
         });
         await agent.runAgent(
-          { runId: crypto.randomUUID(), abortController: controller },
+          { runId: randomUuid(), abortController: controller },
           buildAgUiSubscriber({
             setLastContent,
             setLastError,

@@ -4,41 +4,16 @@
  * turns a configured tool into its op and positional arguments, so the panel
  * and the batch runner drive it the same way.
  */
+import { createWorkerCall } from '../lib/workerCall';
 import type { ToolId } from './catalog';
 import type { Bbox } from './projection';
 import type { GridKind, JoinPredicate, ValidateReport } from './topoi';
 
 type Fc = GeoJSON.FeatureCollection;
 
-let worker: Worker | null = null;
-let seq = 0;
-const pending = new Map<
-  number,
-  { resolve: (value: unknown) => void; reject: (reason: Error) => void }
->();
-
-function getWorker(): Worker {
-  if (!worker) {
-    worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
-    worker.onmessage = (e: MessageEvent) => {
-      const { id, ok, result, error } = e.data;
-      const p = pending.get(id);
-      if (!p) return;
-      pending.delete(id);
-      if (ok) p.resolve(result);
-      else p.reject(new Error(error));
-    };
-  }
-  return worker;
-}
-
-function call<T>(op: string, args: unknown[]): Promise<T> {
-  const id = ++seq;
-  return new Promise<T>((resolve, reject) => {
-    pending.set(id, { resolve: resolve as (value: unknown) => void, reject });
-    getWorker().postMessage({ id, op, args });
-  });
-}
+const call = createWorkerCall(
+  () => new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' }),
+);
 
 export interface ToolInputs {
   /** primary input, absent only for the grids */

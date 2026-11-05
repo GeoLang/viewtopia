@@ -194,7 +194,7 @@ export function ParcelPanel({
             </Text>
           </Group>
           {onClose && (
-            <ActionIcon aria-label="Close parcels" size="sm" variant="subtle" onClick={onClose}>
+            <ActionIcon title="Close parcels" aria-label="Close parcels" size="sm" variant="subtle" onClick={onClose}>
               <IconX size={14} />
             </ActionIcon>
           )}

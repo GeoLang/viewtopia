@@ -16,6 +16,7 @@ import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { getSharedCamera } from '../../hooks/sharedCamera';
 import { useAnnotationStore } from '../../store/annotations';
+import { randomUuid } from '../../lib/randomUuid';
 
 function placedMessage(lat: number, lng: number): string {
   return `Placed at ${lat.toFixed(3)}, ${lng.toFixed(3)}`;
@@ -52,7 +53,7 @@ export function AnnotatePanel({ onClose }: { onClose: () => void }) {
 
   const addAt = (lng: number, lat: number) => {
     addAnnotation({
-      id: crypto.randomUUID(),
+      id: randomUuid(),
       label: label.trim(),
       color,
       lat,
@@ -163,7 +164,7 @@ export function AnnotatePanel({ onClose }: { onClose: () => void }) {
                   </Text>
                 </Stack>
               </Group>
-              <ActionIcon aria-label="Delete annotation" size="xs" variant="subtle" color="red" onClick={() => handleRemove(a.id)}>
+              <ActionIcon title="Delete annotation" aria-label="Delete annotation" size="xs" variant="subtle" color="red" onClick={() => handleRemove(a.id)}>
                 <IconTrash size={10} />
               </ActionIcon>
             </Group>

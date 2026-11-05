@@ -9,9 +9,10 @@ import react from '@vitejs/plugin-react';
 // rewrites. Proxying to it rather than to each service keeps dev from having to
 // mirror per-service ports, which drift.
 const PLATFORM_STACK = 'http://localhost:5174';
-const BACKEND_PREFIXES = ['/agent', '/agora', '/api', '/ogc', '/plumb', '/tiles', '/jupyter', '/ws', '/speech'];
+const BACKEND_PREFIXES = ['/agent', '/agora', '/api', '/ogc', '/plumb', '/tiles', '/v1/assets', '/v1/change-reports', '/jupyter', '/speech'];
 // the hosted demo landing page, served from s3 behind the same cloudfront host
 const DEMO_LANDING_PAGE_PREFIX = '/try';
+const ION_CLIENT_PREFIXES = ['/v1', '/tiletopia_ion_uploads'];
 
 // everything index.html pulls at boot (entry chunks, styles, fonts, the cesium
 // runtime the bundle binds to as a global), plus all of cesium's lazy-loaded
@@ -73,7 +74,7 @@ export default defineConfig({
         globIgnores: PRECACHE_IGNORED_GLOBS,
         maximumFileSizeToCacheInBytes: MAX_PRECACHED_FILE_BYTES,
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [...BACKEND_PREFIXES, DEMO_LANDING_PAGE_PREFIX].map(
+        navigateFallbackDenylist: [...BACKEND_PREFIXES, DEMO_LANDING_PAGE_PREFIX, ...ION_CLIENT_PREFIXES].map(
           (prefix) => new RegExp(`^${prefix}(/|$)`),
         ),
         cleanupOutdatedCaches: true,

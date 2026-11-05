@@ -64,7 +64,7 @@ export function FlyToSearch() {
         loading ? (
           <Loader size={12} color="violet" />
         ) : (
-          <ActionIcon size="sm" variant="subtle" color="gray" aria-label="Fly to" onClick={go}>
+          <ActionIcon size="sm" variant="subtle" color="gray" title="Fly to" aria-label="Fly to" onClick={go}>
             <IconPlaneTilt size={14} />
           </ActionIcon>
         )

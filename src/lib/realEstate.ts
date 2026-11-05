@@ -5,6 +5,7 @@
 import * as turf from '@turf/turf';
 import { apiHeaders, noticeRefusal } from './apiAuth';
 import { geojsonToWkbHex, wkbHexToGeojson, geometryCentroid } from './wkb';
+import { randomUuid } from './randomUuid';
 
 // each parcels dataset reads only its own sales partner
 export const PARCEL_SOURCES = [
@@ -215,7 +216,7 @@ export async function mergeParcels(
   if (!merged) throw new Error('union produced no geometry');
   const mergedGeometry = merged.geometry as GeoJSON.Geometry;
 
-  const newId = crypto.randomUUID();
+  const newId = randomUuid();
   const newApn = `${parcels[0].apn}-M`;
   const acres = parcels.reduce(
     (s, p) => s + (typeof p.properties.acres === 'number' ? p.properties.acres : 0),
@@ -299,7 +300,7 @@ export async function splitParcel(
   const ops: CommitOp[] = [
     ...fc.features.map((f, i): CommitOp => ({
       type: 'insert',
-      feature_id: crypto.randomUUID(),
+      feature_id: randomUuid(),
       geometry_wkb_hex: geojsonToWkbHex(f.geometry),
       properties: {
         apn: newApns[i],

@@ -386,7 +386,7 @@ export function SymbologyEditor({ layer }: { layer: AgentLayer }) {
                   data-testid="agent-layer-rule-value"
                   style={{ ...TEXT_INPUT_STYLE, width: 54 }}
                 />
-                <ActionIcon aria-label="Remove rule"
+                <ActionIcon title="Remove rule" aria-label="Remove rule"
                   size="xs"
                   variant="subtle"
                   color="gray"

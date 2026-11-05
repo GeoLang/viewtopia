@@ -1,74 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { MantineProvider } from '@mantine/core';
-import type { ReactNode } from 'react';
+import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { useAuthStore } from '../../src/features/auth/store';
 import { useSpaceTimeStore } from '../../src/features/spacetime/store';
 import { setSharedCamera } from '../../src/hooks/sharedCamera';
 import { LiveComments } from '../../src/live/LiveComments';
 import { LiveCommentsPanel } from '../../src/live/LiveCommentsPanel';
 import { useLiveStore } from '../../src/live/liveStore';
-import { emptyLiveDocument, type LiveComment, type LiveRole } from '../../src/live/types';
 import { FakeAgoraServer } from './stubs/fakeAgoraServer';
-
-const OWN_ACTOR = 'ada';
-
-function comment(overrides: Partial<LiveComment> = {}): LiveComment {
-  return {
-    id: 'root-1',
-    actor: OWN_ACTOR,
-    authorName: 'Ada Lovelace',
-    text: 'is this the right coastline',
-    createdAt: 10,
-    resolved: false,
-    ...overrides,
-  };
-}
-
-function draw(ui: ReactNode) {
-  return render(<MantineProvider>{ui}</MantineProvider>);
-}
+import { OWN_ACTOR, comment, draw, joinWith, stubMantineBrowserGlobals } from './stubs/liveTestHelpers';
 
 let server: FakeAgoraServer;
 
-/** a live session with these comments already in the document */
-function joinWith(comments: LiveComment[], role: LiveRole = 'edit') {
-  server.document = {
-    ...emptyLiveDocument('coastline'),
-    comments: Object.fromEntries(comments.map((entry) => [entry.id, entry])),
-  };
-  useLiveStore.getState().connect({ documentId: 'doc-1', token: 'jwt-token', role });
-  const connection = server.connection;
-  connection.acceptHandshake();
-  connection.deliver({
-    type: 'snapshot',
-    seq: 0,
-    state: server.document,
-    actor: OWN_ACTOR,
-    role,
-  });
-  server.sendPeers([{ actor: OWN_ACTOR, name: 'Ada Lovelace', role }]);
-  return connection;
-}
-
 describe('live comments panel', () => {
   beforeEach(() => {
-    vi.stubGlobal(
-      'matchMedia',
-      vi.fn().mockReturnValue({
-        matches: false,
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-      }),
-    );
-    globalThis.ResizeObserver = class {
-      observe() {}
-      unobserve() {}
-      disconnect() {}
-    };
+    stubMantineBrowserGlobals();
     server = new FakeAgoraServer();
     server.install();
     useAuthStore.setState({ user: null, token: 'jwt-token' });
@@ -86,7 +32,7 @@ describe('live comments panel', () => {
   });
 
   it('renders each thread with its replies under it', () => {
-    joinWith([
+    joinWith(server, [
       comment(),
       comment({ id: 'reply-1', parentId: 'root-1', authorName: 'Grace Hopper', text: 'yes it is' }),
       comment({ id: 'root-2', createdAt: 50, text: 'move this label' }),
@@ -101,7 +47,7 @@ describe('live comments panel', () => {
   });
 
   it('hides a resolved thread until the filter is switched on', () => {
-    joinWith([comment(), comment({ id: 'root-2', createdAt: 50, resolved: true })]);
+    joinWith(server, [comment(), comment({ id: 'root-2', createdAt: 50, resolved: true })]);
     draw(<LiveCommentsPanel onClose={() => {}} />);
 
     expect(screen.getAllByTestId('comment-thread')).toHaveLength(1);
@@ -110,13 +56,13 @@ describe('live comments panel', () => {
   });
 
   it('says so when there is nothing to read', () => {
-    joinWith([]);
+    joinWith(server, []);
     draw(<LiveCommentsPanel onClose={() => {}} />);
     expect(screen.getByText('No comments yet.')).toBeInTheDocument();
   });
 
   it('posts what the compose box holds and clears it', () => {
-    const connection = joinWith([]);
+    const connection = joinWith(server, []);
     draw(<LiveCommentsPanel onClose={() => {}} />);
 
     const box = screen.getByLabelText('Leave a comment');
@@ -136,7 +82,7 @@ describe('live comments panel', () => {
   });
 
   it('attaches the map view when the compose button asks for it', () => {
-    const connection = joinWith([]);
+    const connection = joinWith(server, []);
     setSharedCamera({ longitude: 12.5, latitude: -3.25, zoom: 8 });
     draw(<LiveCommentsPanel onClose={() => {}} />);
 
@@ -151,20 +97,20 @@ describe('live comments panel', () => {
   });
 
   it('flies the map to an anchored comment', () => {
-    joinWith([comment({ anchor: { lng: 4, lat: 5, zoom: 9 } })]);
+    joinWith(server, [comment({ anchor: { lng: 4, lat: 5, zoom: 9 } })]);
     draw(<LiveCommentsPanel onClose={() => {}} />);
     fireEvent.click(screen.getByLabelText('Fly to this spot'));
     expect(useSpaceTimeStore.getState().flyToTarget).toEqual({ lng: 4, lat: 5, zoom: 9 });
   });
 
   it('offers no fly to on a comment with no anchor', () => {
-    joinWith([comment()]);
+    joinWith(server, [comment()]);
     draw(<LiveCommentsPanel onClose={() => {}} />);
     expect(screen.queryByLabelText('Fly to this spot')).not.toBeInTheDocument();
   });
 
   it('replies into the thread it was opened from', () => {
-    const connection = joinWith([comment()]);
+    const connection = joinWith(server, [comment()]);
     draw(<LiveCommentsPanel onClose={() => {}} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Reply' }));
@@ -182,7 +128,7 @@ describe('live comments panel', () => {
   });
 
   it('resolves and reopens a thread from its own button', () => {
-    const connection = joinWith([comment()]);
+    const connection = joinWith(server, [comment()]);
     draw(<LiveCommentsPanel onClose={() => {}} />);
 
     fireEvent.click(screen.getByTestId('comment-resolve'));
@@ -200,7 +146,7 @@ describe('live comments panel', () => {
   });
 
   it('deletes a whole thread, replies by other people included', () => {
-    const connection = joinWith([
+    const connection = joinWith(server, [
       comment(),
       comment({
         id: 'reply-1',
@@ -221,14 +167,14 @@ describe('live comments panel', () => {
   });
 
   it('offers delete only on comments this actor wrote', () => {
-    joinWith([comment({ actor: 'grace', authorName: 'Grace Hopper' })]);
+    joinWith(server, [comment({ actor: 'grace', authorName: 'Grace Hopper' })]);
     draw(<LiveCommentsPanel onClose={() => {}} />);
     expect(screen.queryByLabelText('Delete comment by Grace Hopper')).not.toBeInTheDocument();
     expect(screen.getByTestId('comment-resolve')).toBeInTheDocument();
   });
 
   it('reads only with the view role', () => {
-    const connection = joinWith([comment()], 'view');
+    const connection = joinWith(server, [comment()], 'view');
     draw(<LiveCommentsPanel onClose={() => {}} />);
 
     expect(screen.getByTestId('comments-read-only')).toBeInTheDocument();
@@ -241,7 +187,7 @@ describe('live comments panel', () => {
   });
 
   it('closes on request', () => {
-    joinWith([]);
+    joinWith(server, []);
     const onClose = vi.fn();
     draw(<LiveCommentsPanel onClose={onClose} />);
     fireEvent.click(screen.getByLabelText('Close comments'));
@@ -251,21 +197,7 @@ describe('live comments panel', () => {
 
 describe('live comments toggle', () => {
   beforeEach(() => {
-    vi.stubGlobal(
-      'matchMedia',
-      vi.fn().mockReturnValue({
-        matches: false,
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-      }),
-    );
-    globalThis.ResizeObserver = class {
-      observe() {}
-      unobserve() {}
-      disconnect() {}
-    };
+    stubMantineBrowserGlobals();
     server = new FakeAgoraServer();
     server.install();
   });
@@ -278,7 +210,7 @@ describe('live comments toggle', () => {
   });
 
   it('counts the open threads and opens the panel on click', () => {
-    joinWith([comment(), comment({ id: 'root-2', createdAt: 50, resolved: true })]);
+    joinWith(server, [comment(), comment({ id: 'root-2', createdAt: 50, resolved: true })]);
     draw(<LiveComments />);
 
     expect(screen.getByText('1')).toBeInTheDocument();
@@ -294,21 +226,7 @@ describe('live comments toggle', () => {
 
 describe('comment deep link focus and export controls', () => {
   beforeEach(() => {
-    vi.stubGlobal(
-      'matchMedia',
-      vi.fn().mockReturnValue({
-        matches: false,
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-      }),
-    );
-    globalThis.ResizeObserver = class {
-      observe() {}
-      unobserve() {}
-      disconnect() {}
-    };
+    stubMantineBrowserGlobals();
     server = new FakeAgoraServer();
     server.install();
     useAuthStore.setState({ user: null, token: 'jwt-token' });
@@ -326,7 +244,7 @@ describe('comment deep link focus and export controls', () => {
   });
 
   it('rings the deep linked thread, reveals resolved and flies to its anchor', () => {
-    joinWith([
+    joinWith(server, [
       comment({ resolved: true, anchor: { lng: 7.4, lat: 43.7, zoom: 11 } }),
       comment({ id: 'reply-1', parentId: 'root-1', text: 'the reply the link names' }),
     ]);
@@ -339,7 +257,7 @@ describe('comment deep link focus and export controls', () => {
   });
 
   it('offers link copy and export to a view role, but no reply or resolve', () => {
-    joinWith([comment()], 'view');
+    joinWith(server, [comment()], 'view');
     draw(<LiveCommentsPanel onClose={() => {}} />);
 
     expect(screen.getByTestId('comment-copy-link')).toBeInTheDocument();

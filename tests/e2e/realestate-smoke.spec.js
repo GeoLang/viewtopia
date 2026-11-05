@@ -11,7 +11,7 @@ import { platformAuthHeaders } from '../../scripts/platform-token.mjs';
  * Mirrors golden-path.spec.js: all backend calls run from the SPA's browser origin
  * through the same-origin /api/ proxy, exactly like the real panels do.
  *
- *   docker compose -f docker-compose.platform.yml up -d
+ *   docker compose -f docker-compose.platform.yml --env-file .env.platform up -d
  *   node scripts/seed-parcels.mjs   # (also run automatically in beforeAll)
  *   npx playwright test -c playwright.platform.config.js tests/e2e/realestate-smoke.spec.js
  *

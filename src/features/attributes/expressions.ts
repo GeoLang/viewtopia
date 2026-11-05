@@ -7,6 +7,7 @@
  * parsing the shape.
  */
 import { getConnection, getDb } from '../../duckdb/worker';
+import { randomUuid } from '../../lib/randomUuid';
 
 /** Row indexes carried through the SQL, overwriting any column of the same name. */
 const ROW = '__vt_row';
@@ -34,7 +35,7 @@ export interface AttributeTarget {
 
 const quote = (name: string) => `"${name.replace(/"/g, '""')}"`;
 
-const tableName = () => `vt_attr_${crypto.randomUUID().replace(/-/g, '')}`;
+const tableName = () => `vt_attr_${randomUuid().replace(/-/g, '')}`;
 
 /** arrow hands integers back as BigInt, which JSON.stringify refuses */
 const plain = (v: unknown) => (typeof v === 'bigint' ? Number(v) : v);

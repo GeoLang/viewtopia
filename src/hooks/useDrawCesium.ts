@@ -2,22 +2,21 @@ import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import {
   type Viewer,
-  Cartesian2,
-  Cartographic,
-  Math as CesiumMath,
+  type Cartesian2,
   Color,
   PolylineDashMaterialProperty,
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
 } from 'cesium';
 import {
+  drawToolClicks,
   useDrawStore,
   geometryVertices,
   geometryWithMovedVertex,
-  type DrawMode,
 } from '../store/draw';
 import { useAppStore } from '../store/app';
 import { Cartesian3 } from 'cesium';
+import { cartToLngLat, useToolClicksCesium } from './useToolClicksCesium';
 
 /** the entity id carries the vertex path, so a pick says which vertex it hit */
 const VERTEX_ENTITY_PREFIX = 'draw-vertex-';
@@ -30,84 +29,14 @@ function cssToColor(hex: string, alpha = 0.8): Color {
   }
 }
 
-function cartToLngLat(viewer: Viewer, screenX: number, screenY: number): [number, number] | null {
-  const cart = viewer.camera.pickEllipsoid(new Cartesian2(screenX, screenY));
-  if (!cart) return null;
-  const carto = Cartographic.fromCartesian(cart);
-  return [CesiumMath.toDegrees(carto.longitude), CesiumMath.toDegrees(carto.latitude)];
-}
-
 export function useDrawCesium(
   viewerRef: MutableRefObject<Viewer | null>,
 ) {
+  useToolClicksCesium(viewerRef, useDrawStore, drawToolClicks);
   const entityIdsRef = useRef<string[]>([]);
-  const handlerRef = useRef<ScreenSpaceEventHandler | null>(null);
-  // A renderer switch destroys and rebuilds the viewer, so rebind to the new
-  // one — handlers and entities left on the old canvas are dead.
+  // renderer switches destroy and rebuild the viewer, which drops entities on the old canvas
   const renderer = useAppStore((s) => s.renderer);
   const activeTab = useAppStore((s) => s.activeTab);
-
-  // Click handler
-  useEffect(() => {
-    const viewer = viewerRef.current;
-    if (!viewer || viewer.isDestroyed()) return;
-
-    const sync = (state: { mode: DrawMode }) => {
-      const viewer = viewerRef.current;
-      if (!viewer || viewer.isDestroyed()) return;
-
-      if (state.mode && !handlerRef.current) {
-        const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
-
-        handler.setInputAction((click: { position: Cartesian2 }) => {
-          const { mode, addPendingPoint, finishFeature, pending } = useDrawStore.getState();
-          if (!mode) return;
-          const lngLat = cartToLngLat(viewer, click.position.x, click.position.y);
-          if (!lngLat) return;
-
-          addPendingPoint(lngLat[0], lngLat[1]);
-
-          if (mode === 'point') {
-            finishFeature();
-          }
-          if ((mode === 'circle' || mode === 'rectangle') && pending.length >= 1) {
-            setTimeout(() => finishFeature(), 0);
-          }
-        }, ScreenSpaceEventType.LEFT_CLICK);
-
-        handler.setInputAction(() => {
-          const { mode, finishFeature } = useDrawStore.getState();
-          if (mode === 'line' || mode === 'polygon') {
-            finishFeature();
-          }
-        }, ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
-
-        handlerRef.current = handler;
-        viewer.scene.canvas.style.cursor = 'crosshair';
-      }
-
-      if (!state.mode && handlerRef.current) {
-        handlerRef.current.destroy();
-        handlerRef.current = null;
-        if (viewer && !viewer.isDestroyed()) {
-          viewer.scene.canvas.style.cursor = '';
-        }
-      }
-    };
-
-    // Apply the mode that's already set: after a renderer switch the store won't
-    // fire again for a tool the user turned on before the switch.
-    sync(useDrawStore.getState());
-    const unsub = useDrawStore.subscribe(sync);
-
-    return () => {
-      unsub();
-      if (handlerRef.current) {
-        handlerRef.current.destroy();
-        handlerRef.current = null;
-      }
-    };
-  }, [viewerRef, renderer, activeTab]);
 
   // Render drawn features as Cesium entities
   useEffect(() => {

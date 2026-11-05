@@ -4,7 +4,7 @@ import { IconArrowBackUp, IconArrowForwardUp } from '@tabler/icons-react';
 import { useCanRedoLive, useCanUndoLive, useLiveStore } from './liveStore';
 
 /** A focused text field has its own undo, which the shortcut must not take. */
-function editingText(target: EventTarget | null): boolean {
+export function editingText(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   if (target.isContentEditable) return true;
   return ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);

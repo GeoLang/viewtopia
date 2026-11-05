@@ -31,6 +31,7 @@ import { showHeatmap } from '../lib/mapHeatmap';
 import { addTilesetToGlobe, CHAT_TILESET_WAIT_SECONDS } from './addTileset';
 import { colorByHeight, colorByClassification, colorByProperty } from './tileStyles';
 import { useMeasureStore, type MeasureMode } from '../store/measure';
+import { randomUuid } from '../lib/randomUuid';
 
 export interface ViewerCommand {
   action: string;
@@ -150,7 +151,7 @@ const handlers: Record<string, Handler> = {
     const geojson = toFeatureCollection(data);
     if (!geojson) return;
     useAgentLayerStore.getState().addLayer({
-      id: crypto.randomUUID(),
+      id: randomUuid(),
       name: typeof p.name === 'string' ? p.name : 'GeoJSON',
       color,
       geojson,

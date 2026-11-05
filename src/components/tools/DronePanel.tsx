@@ -30,6 +30,7 @@ import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { useAppStore } from '../../store/app';
 import { pathLength, useCameraFlight } from '../../lib/cameraPath';
+import { randomUuid } from '../../lib/randomUuid';
 
 interface GroundPoint {
   id: string;
@@ -74,7 +75,7 @@ export function DronePanel({ onClose }: { onClose: () => void }) {
       setPoints((prev) => [
         ...prev,
         {
-          id: crypto.randomUUID(),
+          id: randomUuid(),
           longitude: CesiumMath.toDegrees(carto.longitude),
           latitude: CesiumMath.toDegrees(carto.latitude),
           ground: carto.height,

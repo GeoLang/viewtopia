@@ -6,6 +6,7 @@
 import { queryAsGeoJson } from '../../duckdb';
 import { attachCsvUrl, attachParquetUrl } from '../../duckdb/loaders';
 import { useAgentLayerStore } from '../../store/agentLayers';
+import { randomUuid } from '../../lib/randomUuid';
 
 export const ATTACH_FORMATS = ['csv', 'parquet'] as const;
 export type AttachFormat = (typeof ATTACH_FORMATS)[number];
@@ -31,7 +32,7 @@ export async function addQueryLayer(sql: string, name?: string): Promise<QueryLa
   const geojson = await queryAsGeoJson(sql);
   const layerName = name ?? sql.slice(0, QUERY_NAME_LENGTH);
   useAgentLayerStore.getState().addLayer({
-    id: crypto.randomUUID(),
+    id: randomUuid(),
     name: layerName,
     color: QUERY_LAYER_COLOR,
     geojson,

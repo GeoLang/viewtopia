@@ -257,7 +257,7 @@ export function MapCommentsOverlay({
               size="xs"
               variant="subtle"
               color="gray"
-              aria-label="Close comment thread"
+              title="Close comment thread" aria-label="Close comment thread"
               onClick={closeThread}
             >
               <IconX size={12} />
@@ -287,7 +287,7 @@ export function MapCommentsOverlay({
                 size="xs"
                 variant="subtle"
                 color="gray"
-                aria-label="Discard comment"
+                title="Discard comment" aria-label="Discard comment"
                 onClick={discardDraft}
               >
                 <IconX size={12} />

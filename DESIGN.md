@@ -12,9 +12,10 @@
 
 ## 1. State of the suite
 
-GeoLang is ~20 sibling repos under `/home/aaron/src/GeoLang/` (~250k LOC), a full
-Esri/Cesium-class platform, not an "LLM-over-GIS" toy. All repos are **AGPL-3.0** and
-public on GitHub. Every Rust repo carries standardized CI (fmt, clippy, test, cargo-deny,
+GeoLang is 26 sibling repos under `/home/aaron/src/GeoLang/` (~250k LOC) plus a `proj4rs`
+fork that lives only on GitHub, a full Esri/Cesium-class platform, not an "LLM-over-GIS" toy.
+All 27 are public on GitHub. The 26 are **AGPL-3.0** and the fork keeps upstream's MIT or
+Apache-2.0. Every Rust repo carries standardized CI (fmt, clippy, test, cargo-deny,
 coverage, cross-platform). Geolang runs Ruff and its pytest suite in CI.
 
 The three big structural bets are **settled**:
@@ -23,38 +24,44 @@ The three big structural bets are **settled**:
    against the live services, in CI, without stubbing geolang.
 2. **ViewTopia is one stack.** React (`main.tsx`) is the only front-end. There is no
    vanilla `.js` shell.
-3. **The backbone has real tests.** ptolemy carries 704 test functions including conflict-depth,
+3. **The backbone has real tests.** ptolemy carries 722 test functions including conflict-depth,
    write-path and visibility coverage.
 
 Maturity from source-level test declarations (Rust `#[test]`/`#[tokio::test]` attributes,
-`def test_` for geolang, `it(`/`test(` for viewtopia):
+`def test_` for geolang). The viewtopia number is what `vitest run` reports, since `it.each`
+expands at run time:
 
 | Repo | Role | Tests | Read |
 |------|------|-------|------|
-| tiletopia | 3D tiles / terrain / COG | 936 | Mature ✅ |
-| ptolemy | versioned PostGIS backbone | 704 | Hardened ✅ |
+| tiletopia | 3D tiles / terrain / COG | 811 | Mature ✅ |
+| ptolemy | versioned PostGIS backbone | 722 | Hardened ✅ |
 | jung | cartographic rendering library | 338 | Labels render on the default path (style text properties, priority collision, curved along lines, caller-supplied TTF), in the browser via the wasm `Renderer.add_font`, and `{token}` labels read real GeoJSON properties; viewtopia does not use the wasm crate |
 | verne | foreign-format inventory + extractor (§2.7) | 233 | ✅ live-load CI against ptolemy |
-| agora | live shared map documents (§2.0) | 235 | ✅ documents, presence, feeds and region watches in the platform stack |
-| geodukt / fluvius | ETL+workflow / spatial streams | 244 / 209 | geodukt consumed; fluvius not deployed |
-| nubis / topoi | point cloud / geometry | 165 / 258 | nubis via geoplumb; topoi as viewer wasm |
-| geoplumb | pull-based windowed compute engine (§2.0) | 191 | COG, STAC, GeoJSON and LAS layers served as XYZ tiles; agora region watches reduce over its layers |
+| agora | live shared map documents (§2.0) | 240 | ✅ documents, presence, feeds and region watches in the platform stack |
+| geodukt / fluvius | ETL+workflow / spatial streams | 247 / 213 | geodukt consumed; fluvius not deployed |
+| nubis / topoi | point cloud / geometry | 165 / 266 | nubis via geoplumb; topoi as viewer wasm |
+| geoplumb | pull-based windowed compute engine (§2.0) | 238 | COG, STAC, GeoJSON and LAS layers served as XYZ tiles; agora region watches reduce over its layers |
 | terravista | mobile SDK | 130 Rust | Android fetches and draws (Canvas), including MVT; the core has no GPU backend ⚠️ |
-| collecta | field collection | 142 | OpenRosa + attachments + Field Data panel, which publishes a form into a ptolemy dataset |
-| projicio / sibyl | CRS / agent loop (§2.4) | 210 / 142 | ✅ |
+| collecta | field collection | 160 | OpenRosa + attachments + Field Data panel, which publishes a form into a ptolemy dataset |
+| projicio / sibyl | CRS / agent loop (§2.4) | 210 / 181 | ✅ |
 | terrano / fenestra | raster / OGC gateway (WMS/WFS/WMTS/WCS/OGC API) | 180 / 152 | ✅ |
-| geokode / geogit / itinera | geocode / geo VCS / routing | 70 / 82 / 102 | geogit is CLI-only, not in the viewer |
+| geokode / geogit / itinera | geocode / geo VCS / routing | 107 / 124 / 134 | geogit is CLI-only, not in the viewer |
 | interiora | indoor | 82 | ✅ |
-| panoptes | imagery ML | 48 | ONNX path real; building segmentation weights published, other models have none |
-| viewtopia | flagship viewer | 2,068 Vitest tests + 35 platform E2E | registry panels + plugin panels (§2.6) |
-| geolang | NL→GIS agent | 637 pytest functions | wired to ptolemy/itinera/geokode/geodukt (§2.4) |
+| panoptes | imagery ML | 55 | ONNX path real; building segmentation weights published, other models have none |
+| viewtopia | flagship viewer | 2,516 Vitest tests + 35 platform E2E | registry panels + plugin panels (§2.6) |
+| geolang | NL→GIS agent | 790 pytest functions | wired to ptolemy/itinera/geokode/geodukt (§2.4) |
+| infrastructure | Terraform for the AWS deployment (§2.9) | none | `terraform.yml` is its only CI workflow |
+| renovate-config | shared Renovate policy | none | every code repo extends `default.json`, GeoLang.github.io and proj4rs do not |
+| GeoLang.github.io | website and developer documentation | none | static site, no CI workflow |
+| proj4rs | fork of `3liz/proj4rs`, no local checkout | not counted | projicio pins it by git rev under `[patch.crates-io]` for NTv2 parsing on wasm32 |
 
 **Current headline risks:**
 - **terravista has no GPU backend.** The Android library fetches tiles over HTTP and draws
   on Canvas, including MVT. The Rust core only describes the frame: nothing in it uses
-  Metal, Vulkan or wgpu. `android/gradle.properties` declares `VERSION_NAME=0.4.0` while
-  the newest git tag is `v0.2.0`, so JitPack serves 0.2.0. Biggest remaining
-  advertised-vs-real gap on mobile.
+  Metal, Vulkan or wgpu. `android/gradle.properties` declares `VERSION_NAME=0.4.0`, the
+  newest git tag is `v0.4.0`, and JitPack reports a passing build of `0.4.0`, so
+  `com.github.GeoLang:terravista:0.4.0` resolves. Biggest remaining advertised-vs-real gap
+  on mobile.
 - **panoptes ships weights for buildings only.** `panoptes-buildings-v1.onnx` is attached
   to the `weights-buildings-v1` release and `--model buildings` reads it from the working
   directory. Roads, landcover, vegetation and change have no weights, so those need a
@@ -69,8 +76,9 @@ Maturity from source-level test declarations (Rust `#[test]`/`#[tokio::test]` at
   `/tiles/v1/terrain/*`. The Terraform passes `validate` but has not been applied to live
   infrastructure, so the remaining risk is the untested live path.
 - **nginx splits tiletopia.** `/tiles/` rewrites to tiletopia `/api/`. `/api/v1/auth/`,
-  `/api/v1/portal/` and `/api/v1/realtime/` are special locations to tiletopia. Everything
-  else under `/api/` is ptolemy. Asset and export calls must use `/tiles/v1`.
+  `/api/v1/portal/`, `/api/v1/realtime/`, `/api/v1/assets` and `/api/v1/terrain/` are special
+  locations to tiletopia. Everything else under `/api/` is ptolemy. Asset and export calls from
+  the viewer must use `/tiles/v1`.
 
 ---
 
@@ -114,7 +122,7 @@ local camera on each presence viewport it reports until a local camera gesture
 takes it back, told apart from the client's own `jumpTo` by MapLibre only
 setting `originalEvent` on a real gesture. Undo is per-user inverse ops. Feature co-editing is phase two: new
 op types on the same session routed to ptolemy, which stays the feature
-authority. Phoenix/Elixir was considered and rejected, the stack stays Rust.
+authority.
 
 A document also carries live asset readings. An editor creates a feed on the
 document (`POST /agora/documents/{id}/feeds`, a name and an expected interval)
@@ -139,6 +147,152 @@ beside its own. The bottom bar `src/live/AssetTimeBar.tsx` asks `assets/at` for
 one past moment, and the store holds that answer beside the live map so both
 renderers and the inspector paint the past until Live is pressed, while the feed
 keeps updating what Live goes back to.
+
+**Model elements.** A ready IFC asset on the globe is browsed through tiletopia's element API at
+`/v1/assets/{id}/`. `TiletopiaElementService` in `src/features/elements/elementService.ts` subclasses
+CesiumJS's experimental `ElementService` over a Cesium `Resource` that sends the platform token as an
+`Authorization` header, built fresh for each request so a renewed token is used. Search, group-by and
+filter resolution are plain functions beside it. The Model Elements panel loads the spatial tree
+through `tree/children` one node at a time, draws 200 children of a node and offers the rest behind
+Show more, and reads properties through `getElement`, grouped by the text before the first dot of each
+key. A pick in the scene opens the tree to that element through `tree/parents`. Tiletopia's `/jobs`
+is read for a tiling warning only when the panel opens a model or a row's Tiling report is pressed.
+Elements live in one SQLite file with FTS5 per asset in tiletopia, not in ptolemy, because ptolemy
+needs geometry on every insert, caps imports at 50,000 features and has no index on properties.
+
+Choosing an element ends in the ids of elements with a mesh, because only those are in the tiles.
+Ids from the chat are checked with `@id` `$in`, 100 to a request, and the result text gives how many
+were not found or have no mesh. An id with no mesh of its own acts on what is inside it. A storey
+resolves through a `@storey` filter unless another storey has the same name, and every other
+container, or a same-named storey, walks `tree/children`. A choice with no mesh in it is refused and
+leaves the selection alone. A tileset whose loaded tiles have no `asset_id` property is refused too,
+read from `content.hasProperty` on the loaded tiles, since tileset.json lists no feature columns.
+
+`tileset.style` has one writer, `setTilesetStyleInputs` in `src/viewer/tilesetStyle.ts`, which composes
+three inputs per tileset: the base style from `src/viewer/tileStyles.ts`, the asset rule from
+`useAssetColorsCesium` and the element sets from `useElementStyleCesium`. The rule takes the colour
+over the base, and falls back to the base's colour when that is a plain expression. A selected element
+takes the highlight colour over both, and hidden and isolated elements are not drawn. The element sets
+are `Set`s read by custom `show` and `color` objects on the `Cesium3DTileStyle`, because the 3D Tiles
+expression language has no set lookup, so each feature costs one lookup on `asset_id` whatever the set
+size and every tile an element appears in is covered. A feature with no `asset_id` still takes
+`picked.color`. `src/features/elements/store.ts` refuses a set over 100,000 ids and a filter matching
+more, with a message and without truncating. A search chooses at most 1,000 elements.
+
+The Model Section panel and `tileset.section` cut one tileset with one plane through its
+`clippingPlanes`, and that collection is the only state, so a cut stays when the panel closes. Cesium
+measures the plane in `root.computedTransform`, multiplied by an east-north-up frame at the root's
+centre when the root's untransformed centre is above -100 km, so the axes are the model's own.
+Project files and project maps, at schema version 2, save the 3D model layers as `tiles3dLayers`, and
+`modelStatesByAsset` holds, per tiletopia asset id, the selected, hidden and isolated element GlobalIds,
+the model section with its outline, and BIM mode with its navigation and the GlobalId and scope of the
+shown storey. Only the model open in the element store has element sets. A storey view saves the
+isolation from before it, since showing the storey again isolates its elements. `restoreModelStates`
+checks the shape of every saved entry, since a project map from the server reaches `applyProject`
+without `parseProject`. A malformed entry is refused with a note naming the model and the field, and the
+other models are restored. Opening a project waits, with no time limit, until each model's tileset
+loads, its layer is removed, or `useLayerLoadErrorStore` has an error for the layer, which gets a note.
+It then checks the saved ids with `readElementsById`, leaves out the ones tiletopia no
+longer has, and says how many in a notification. Saved empty sets clear the live sets when the model is
+the open one. It applies the section,
+then enters BIM mode and shows the storey directly when a Cesium globe is on screen. A save while a
+tileset is still loading writes the state from the file. A version 1 file reads as version 2 with no
+saved model state. The panel's controls show what `readTilesetSection` answers and write through
+`applyTilesetSection`, and re-render on `subscribeTilesetSections`, so a cut made elsewhere moves them. The
+panel's outline switch sets `edgeWidth`, which paints fragments next to the plane.
+`ClippingPlaneCollection` has no cap fill, so `SectionCapsOnGlobe`, mounted by `ViewerArea` on the Cesium
+globe, re-renders on `subscribeTilesetSections` and, for each tiletopia model with an enabled cut, reads
+the cut polygons from `GET /v1/assets/{id}/section?axis=&position=` 300 ms after the plane stops moving and draws them in one `Primitive` of `CoplanarPolygonGeometry`
+instances, each with the tileset's `root.computedTransform` as its `modelMatrix` and moved 1 cm towards the
+removed side. The panel's axis and position go to tiletopia unchanged, because with the root's
+untransformed centre below -100 km, as for tiletopia's models in local metres, the section frame is
+`root.computedTransform` itself, the frame `root.transform` maps to ECEF. An earth-fixed model's section
+frame is east-north-up at its centre, which is not axis-aligned in the tileset frame, so it gets no caps and
+the panel says so. A newer plane aborts the request in flight and drops its answer. The request state of
+each model is in a zustand store, which the panel reads for its note and error. A cap of a selected
+element takes `tileHighlightColor`, the colour the tile style gives selected features, and a selection
+change redraws the caps from the answer already held. Clicking a cap selects its element as a tile pick
+does. Caps go when the cut turns off or the model leaves the globe. A cut from the panel,
+`tileset.section`, a BCF viewpoint, a project file or a BIM storey cut gets caps the same way, with the
+panel open or closed.
+
+**Issues, versions and IDS checks.** The Model Elements panel has Elements, Issues, Versions and IDS
+tabs, and the last three call tiletopia's coordination routes through `src/features/coordination/api.ts` with `fetch` and the
+platform token as an `Authorization` header. BCF topics belong to the model, so every version reads the
+same ones. `restoreViewpoint` in `src/features/coordination/viewpoint.ts` maps BCF coordinates through
+`tileset.root.computedTransform`, sets the camera with `camera.setView` and an identity `endTransform`,
+checks the selection and visibility exceptions with `resolveElementIds` and puts them in the element
+store, and turns one clipping plane square to an axis of the section frame into the model section. The
+section is turned off for a viewpoint with no plane, several planes or a slanted one. Agora holds the
+viewer's annotations, and BCF topics stay in tiletopia. A change report is polled every two seconds
+until it is complete or has failed. Uploading a version posts to `/tiles/v1/assets` with
+`base_asset_id`, and the panel shows no upload progress. The role is not known in the viewer, so writes
+are offered to everyone and a 403 is shown as a role refusal.
+
+Topic writes go through `PUT /v1/assets/{id}/bcf/topics/{guid}`, which replaces the whole topic. An edit
+or a new comment reads the topic again first and changes only its own fields on that copy, so a comment
+another user added in between stays, and the last writer still wins a race between the read and the
+write. The topic's author is the signed-in user's email, or their name when there is none. Saving a topic
+can add a viewpoint from `captureViewpoint`, the reverse of `restoreViewpoint`: the camera through the
+inverse of `root.computedTransform` with the vertical field of view, the selected set, the hidden set or
+the isolated set as visibility exceptions, and the enabled model section as one clipping plane. A
+captured viewpoint has no snapshot, since tiletopia has no snapshot upload. Snapshots of imported
+viewpoints are read with `fetch` and the bearer header and shown from an object URL, because an `img`
+request sends no `Authorization` header. A change report row resolves its GlobalId in the open version
+with `resolveElementIds`, selects the result and flies to it. An element the open version lacks, such as
+one removed in it, gets a note instead.
+
+The IDS tab posts an `.ids` file to `POST /v1/assets/{id}/ids` and polls `GET /v1/assets/{id}/ids` every
+two seconds while its status is `running`. The `report` field is the output of IfcOpenShell ifctester's
+JSON reporter, and the tab reads only fields that `reporter.Json` writes on both the `v0.8.0` and the
+`master` branch of IfcOpenShell: the totals, and per specification and requirement the status, counts,
+`description` and `failed_entities`. A failed element is selected by its `global_id` the same way as a
+change report row, through `useShowElementInScene` in `src/features/coordination/showElementInScene.ts`.
+A 503 from tiletopia with a JSON message is shown with a hint about `TILETOPIA_IDS_CHECK_URL`, and a 503
+with no JSON message is shown as tiletopia being unreachable, because nginx answers that one. Only a 409
+with the code `IDS_CHECK_RUNNING` shows the running check. A 409 `ASSET_NOT_READY` or `ASSET_NOT_IFC`
+shows tiletopia's message as an error. The tab shows only when the model's name passes `isIfcFileName`,
+the test the Assets panel uses.
+
+**BIM mode.** `enterBimMode` in `src/features/bim/bimMode.ts` records the settings it changes and
+`leaveBimMode` writes them back: `frustum.near` to 0.1 m, `logarithmicDepthBuffer` on,
+`depthTestAgainstTerrain` off, `enableCollisionDetection` off, `minimumZoomDistance` to 0.1 m and spin and
+zoom inertia to zero. The camera stays where it is on leaving. A session ends when its viewer is
+destroyed or its model is removed or replaced in the Model Elements panel. `useBimNavigationCesium` binds
+input while a session runs, and `BimModeBadge` over the viewer shows the controls and a Leave button with
+every panel closed.
+
+Orbit calls `camera.lookAtTransform` with an east-north-up frame at a double-clicked point, and Cesium's
+controller then turns about that point. Its zoom stops one metre from whatever is at the centre of the
+screen. Walk turns off the controller's inputs, takes the floor height from `scene.pickPosition` on a
+clicked model pixel and keeps the camera 1.6 m above the floor. A click sets a floor only when the normal
+from two neighbouring `pickPosition` samples is within 20 degrees of up. Each step casts
+`scene.drillPickFromRay`, which the 1.147 typings leave out as private, along the direction of travel at
+0.5 and 1.3 m. Each cast takes up to three hits, nearest first, and Cesium draws the scene once per hit,
+so a step costs at most fifteen ray pick draws. A hit closer than 0.3 m after the step stops it, or a third cast 20 degrees to the left gives
+the wall line, the step slides along it and a fourth cast checks the slide path. A cast down from 1.8 m
+above the floor at the new position sets the next floor, refuses a surface more than 0.3 m up, and
+refuses a step with no model below. That is three casts on a free step and five on a slide. A cast
+takes the nearest hit on the open tileset whose `class` feature property is not `IfcDoor` or
+`IfcDoorStandardCase`. tiletopia tiles doors as closed leaves, so skipping them lets the user walk through
+a doorway. The globe, other layers, measurement points, labels and pins never block, and a wall behind
+one of them still does. Each ray
+pick renders the scene through a 0.1 m wide orthographic view, where features the element style hides
+have no geometry, so hidden and isolated-out elements do not block. Tiles that are not loaded are not hit. Left clicks in walk do not select elements.
+
+Storeys come from walking `tree/children` through `subject` nodes. A storey view puts the mesh ids from
+`meshedContentsOf` in the element store's isolated set, so the tile style reaches every fragment of each
+element in every tile. A choice with storeys below reads every storey of the same parent and compares the
+median of their elements' `location.center.height`. A storey's top is the `baseHeight` of the next
+higher storey under the same parent, which tiletopia derives from the storey's placement, or from its IFC
+Elevation when it has no placement, as metres above the ellipsoid. The cut at the top is a z section of the model section frame at that height
+above the frame's origin, and is offered only when the frame's z axis is within about 0.1 degrees of
+vertical. With no elevation on the storey or none above it, the panel says why and offers no cut.
+
+CAD edges set `tileset.edgeDisplayMode` to `SURFACES_AND_EDGES`. The switch shows only when the glb of one
+loaded tile has `EXT_mesh_primitive_edge_visibility` on a primitive, since tile content has no public way
+to the `Model` that records this. Cesium's scene keeps its edge framebuffer once a frame has requested it,
+and has no public way to drop it.
 
 A document also carries region watches, which are agora's own schedule rather
 than anything a producer sends. An editor draws a polygon, names a geoplumb
@@ -186,8 +340,8 @@ take effect with `nginx -s reload` instead of a force-recreate.
 └───────┘                                 (agent loop)
 ```
 
-- A variable `proxy_pass` in nginx drops the URI suffix and query string unless the location
-  carries an explicit `rewrite … break`. Every proxied API location depends on that.
+- A variable `proxy_pass` that names no URI passes the request URI as the client sent it, query
+  string included. After a `rewrite … break` it passes the normalized URI and the query string.
 - Compose gates nginx on tiletopia's healthcheck, so a cold bring-up never exposes the
   window between the container starting and the process serving requests.
 - fenestra sits behind `/ogc/` with the prefix stripped, so WMS/WFS/WMTS/WCS are `/ogc/wms`
@@ -196,6 +350,11 @@ take effect with `nginx -s reload` instead of a force-recreate.
   the bind address (`http://0.0.0.0:8080/...`), which is unusable direct and bounces clients
   off the proxy. Compose sets `FENESTRA_PUBLIC_URL=<origin>/ogc`. The `:3003` publish stays
   for dev and is reachable in the loadtest via `LOADTEST_FENESTRA_URL`.
+- tiletopia's WMTS and TMS documents, Ion answers and Ion upload location start with
+  `TILETOPIA_ION_BASE_URL`, the viewer's origin. nginx sends their paths (`/api/v1/assets`,
+  `/api/v1/terrain/`, `/v1/assets`, `/tiletopia_ion_uploads/`) to tiletopia through
+  `$request_uri` with no rewrite. `/tiletopia_ion_uploads/` also passes `$http_host`, because
+  S3 Signature V4 covers the path and the `Host` header with its port.
 - **The agent calls the same backend REST APIs the viewer does.** `geolang-api` is configured
   with `PTOLEMY_URL`/`TILETOPIA_URL`/`GEOKODE_URL`/`ITINERA_URL` plus geodukt. Agent runs
   execute on the `sibyl` service, which calls back into geolang-api's `/tools` endpoints for
@@ -232,9 +391,9 @@ take effect with `nginx -s reload` instead of a force-recreate.
 
 - geodukt's container runs as uid 999 against a host-owned bind mount, so compose pins
   `user:` or every pipeline sink fails.
-- fenestra pins the `terrano` crate at tag `v0.1.0`, so terrano's multi-band
-  work does not reach it until a retag. terrano's single-band GeoTIFF output is
-  byte-identical to before that work (golden fixture), which is what keeps the pin safe.
+- fenestra pins `terrano-core` at tag `v0.2.0` and calls only the single-band
+  `read_geotiff` and `write_geotiff`. terrano master is 0.3.0 with no tag. Its code
+  since `v0.2.0` changes COG range reads, which fenestra does not call.
   tiletopia tracks terrano's master branch: its terrain analysis (slope, aspect,
   hillshade, hydrology, viewshed) and elevation reads come from there, so terrano
   pushes before tiletopia builds.
@@ -402,10 +561,9 @@ ViewTopia sends the active project id when it creates a live document.
   Webhook management is instance-admin: a subscription redirects dataset content to
   a caller-chosen URL. The delivery worker retires settled deliveries and the events
   nothing pending references, hourly in LIMIT-batched deletes
-  (`PTOLEMY_EVENTS_RETENTION_DAYS`, default 30, 0 keeps everything). SSE, WS events,
-  background jobs, the broken rate limiter and lock enforcement are deleted; the
-  `feature_locks` table from shipped migration 006 is orphaned (nothing reads or
-  writes it).
+  (`PTOLEMY_EVENTS_RETENTION_DAYS`, default 30, 0 keeps everything). ptolemy has no
+  SSE, websocket or job routes, no rate limiter and no lock enforcement. Nothing reads
+  or writes the `feature_locks` table from migration 006.
 - collecta: forms carry a creator. Creating a form or submitting needs editor or admin, reading
   submissions is creator-or-admin, and form definitions are instance-readable so collectors can
   discover them. A form id cannot be taken over: the upsert carries the ownership test in the
@@ -436,7 +594,7 @@ camera, project and live document instead of guessing, and it acts through one o
 `viewer_control(action='run', name, args)`, which reaches the viewer as a
 `__VIEWER_CMD__` marker carrying `{action: 'run', params: {name, args}}`. A capability added
 to the viewer's registry needs no geolang change. `run` is the only action geolang knows:
-the action names belong to the viewer's catalogue, and the 72-task set in
+the action names belong to the viewer's catalogue, and the 82-task set in
 `evals/viewer/` is what scores the model against it. Contract details in geolang's
 `docs/api_reference.md`.
 
@@ -493,7 +651,7 @@ unknown one, so a misspelled parameter sitting beside a valid one still validate
 prose. `--repeat` exists because scoring one sample per task let a flaky task report a clean
 sheet. A rejected manifest is not counted as the model's answer. The newest recorded run of
 the 10-task workflow set scores 0.96 aggregate for the local Qwen3.5-35B-A3B model at three
-runs per task, with three tasks flaky. `evals/viewer/` is the separate 72-task set that
+runs per task, with three tasks flaky. `evals/viewer/` is the separate 82-task set that
 scores the viewer action catalogue.
 
 **Tool behaviour worth knowing:**
@@ -503,6 +661,8 @@ scores the viewer action catalogue.
   real async contract (geojson param, task polling, pyramid sum).
 - Area and buffer geometry is computed in UTM, not 3857: Mercator inflated the reported areas
   ~2.7x and shrank the rendered buffers ~40%.
+- `query_elements` reads a BIM model's elements through tiletopia's element API with the
+  caller's bearer token, and reports units and cut-off pages in its answer.
 
 ### 2.5 ptolemy data model
 
@@ -560,8 +720,8 @@ map, plus a synced split view. Picking/draw/measure/agent-layers survive rendere
 
 - Feature picking goes through one map click handler that asks the overlay first
   (`deck.pickObject`), because `queryRenderedFeatures` never returns deck's custom layers.
-- **The globe projection stays** (owner decision), so deck's screen-space aggregation layers
-  (HeatmapLayer, ScreenGridLayer) cannot draw. Heatmaps therefore use MapLibre's native
+- deck's screen-space aggregation layers (HeatmapLayer, ScreenGridLayer) cannot draw on the
+  MapLibre globe projection. Heatmaps therefore use MapLibre's native
   `heatmap` layer type: `src/lib/mapHeatmap.ts` owns the spec store and the
   radius/intensity/weight → `heatmap-*` paint mapping, `useHeatmapsMapLibre` re-adds the layers
   after a basemap swap, and both the Heatmap panel and `add_heatmap` go through it. There is no
@@ -647,14 +807,14 @@ MapLibre marker colours are assigned to `style.background` rather than interpola
 glyphs that never touch the DOM.
 
 **Named actions.** `src/actions/` is the one list of capabilities a typed prompt can reach:
-55 entries, each a name, a description, typed parameters, a `reads` flag and a `destructive`
+63 entries, each a name, a description, typed parameters, a `reads` flag and a `destructive`
 flag, registered by its domain module and run through `runAction`, which coerces the arguments,
 checks the enums and the required ones, drops unknown keys and throws naming every problem.
 The panel offering a capability calls the same function the action does, which is why the
 Scenario panel's compare logic sits in `src/features/scenario/compare.ts`, the asset rule write
 in `src/live/assetRule.ts`, the scrubber's fetch in `src/live/assetHistory.ts`, viewshed,
-flood and the profile sampling in `src/features/terrain/`, shadows and clipping in
-`src/features/scene/`, travel time and the spatial stats grid in `src/features/analysis/`,
+flood and the profile sampling in `src/features/terrain/`, shadows, clipping and model sections in
+`src/features/scene/`, the element selection in `src/features/elements/`, travel time and the spatial stats grid in `src/features/analysis/`,
 and the import, OGC service, SQL workspace and STAC asset paths in
 `src/features/dataSources/` and `src/features/stac/`. The analysis results draw straight on
 the renderer as the `viewshed-result` and `flood-result` sources rather than as layers the
@@ -704,9 +864,7 @@ Analysis, Simulate, Tools, Data and More menus, plus 20 plugin panels (measure,
 feature-picker, geojson/style editors, geocoding, routing via itinera, terrain profile,
 cross-section, heatmap, spatial stats, weather/wind, shadows/lighting, raster/COG,
 space-time, notebooks, the industry verticals wired via plugins to ptolemy `/api/v1/*`).
-Every registry panel is shown by default. The `preview` flag, `isPreviewPanel` and the "Show
-Preview Tools" setting are still in place, but no panel sets the flag, so nothing is gated
-and there are no dead buttons in the default UI.
+Every registry panel is always shown, and there are no dead buttons in the default UI.
 
 - Signed-out and keyless states replace failed requests. Terrain/Flood/Solar and Viewshed
   read the session before POSTing, disabling Run behind a sign-in hint. The catalog panel
@@ -736,7 +894,8 @@ and there are no dead buttons in the default UI.
 - The layer panel lists agent-drawn layers as well as plugin-host layers, with working opacity,
   remove and download. One id can sit in the layer list and in the store the renderers draw
   from, so the panel shows one row per layer, the row whose controls reach what is drawn, and
-  visibility is written to both stores through `store/layerVisibility.ts`.
+  visibility is written to every store holding the id through `setLayerVisible` in
+  `store/layerControls.ts`.
 - A layer or marker colour from the agent or a file is parsed or dropped (`lib/color.ts`).
   Beyond injection, Cesium's `Color.fromCssColorString` answers undefined where its typing
   promises a `Color`, so one unreadable colour would stop the draw of every layer behind it.
@@ -821,7 +980,7 @@ and there are no dead buttons in the default UI.
 - The building-data toggle self-disables on styles with native 3D buildings and re-enables on
   raster styles at `style.load`.
 
-**Collaboration client.** tiletopia mounts the room WebSocket, which now carries chat and the
+**Collaboration client.** tiletopia mounts the room WebSocket, which carries chat and the
 online roster only: peer cursors and camera-follow belong to a live document's agora presence, so
 a room without a live session has neither. The JWT travels in the WebSocket subprotocol and query
 tokens are rejected, sender identity is server-stamped from the JWT `sub`, and SRTM fetches are
@@ -842,9 +1001,9 @@ shell and nothing else, so API responses and tiles stay with `offlineFetch` and 
 `projects/`, `store/` (Zustand),
 `duckdb/` (in-browser analytics). ~465 TypeScript source files.
 
-**Test surface.** A vitest unit suite of 2,068 tests, a 35-test platform E2E suite against the
+**Test surface.** A vitest unit suite of 2,516 tests, a 35-test platform E2E suite against the
 live stack with a strict console-error tripwire and zero 5xx tolerance, a registry-derived panel
-sweep over the 49 panels of the Analysis, Simulate, Tools, Data and More menus, each opened
+sweep over the 54 panels of the Analysis, Simulate, Tools, Data and More menus, each opened
 through its real menu path with an empty fixme list, and a plugin sweep that enumerates the
 plugins the loaded app reports rather than a fixed list. The panels and sweep
 stacks run without an agent, so `openApp` in `tests/e2e/panel-helpers.js` stubs the
@@ -959,9 +1118,11 @@ deletion, so an attribute-only placemark needs its own convention.
 | aavaaz (optional, `speech` profile) | NVIDIA GPU + nvidia container runtime, checkout at `../../Aavaaz/aavaaz` | sibling repo beside GeoLang, `platform-up.sh` opts in when both are present |
 | fenestra WCS | `COVERAGE_DIR` of `.tif`/`.tiff` (optional) | operator-supplied |
 
-One-command bring-up: `docker compose -f docker-compose.platform.yml up -d --build`, then
-open `http://localhost:5174`. `scripts/platform-up.sh` wraps it with data fetch + seeding,
-and also covers one-command regional bring-up for a chosen extract.
+One-command bring-up: `scripts/platform-up.sh`, then open `http://localhost:5174`. It writes
+`.env.platform` on first run, fetches the data, seeds the demo, and also covers regional
+bring-up for a chosen extract. Every later compose command needs that file: compose stops
+without `TILETOPIA_ION_BASE_URL`, and ptolemy and tiletopia refuse to start without the
+secret. `docker compose --env-file .env.platform -f docker-compose.platform.yml up -d --build`.
 
 A read-only external dataset mode exists as an entry point over plain PostGIS, for pointing
 the platform at a database it does not own.
@@ -979,15 +1140,15 @@ geokode) behind an ALB and a CloudFront distribution with no domain, one Aurora 
 PostgreSQL cluster (min 0 ACU, auto-pause, ptolemy and agora as two databases on it), EFS for
 the shared data mounts, and no NAT gateway, tasks have public IPs. The Rust and Python
 services run ghcr images, the proxy and viewtopia are ECR builds. Sibyl calls Bedrock through
-the mantle endpoint, locked to `openai.gpt-oss-120b` (viewer eval 0.92 over 76 tasks, the
-Qwen models Bedrock offers score lower and it has no Qwen3.5 or 3.8). A static landing page
-in a private S3 bucket sits behind the same distribution with a public wake Lambda URL
+the mantle endpoint, locked to `openai.gpt-oss-120b` (viewer eval 0.92 over the 76 tasks
+in report 20260922T192650, the set has 82, the Qwen models Bedrock offers score lower and it
+has no Qwen3.5 or 3.8). A static landing page in a private S3 bucket sits behind the same distribution with a public wake Lambda URL
 (reserved concurrency 1) that scales the stack up. A nightly scale-down at 23:00 Toronto, a
 morning scale-up at 08:00 and a scale-down after 30 minutes without chat activity keep cost
 at about 5.50 USD a day up and 1.10 scaled to zero. Never roll services near 23:00 Toronto,
 the scale-down cuts a rollout in half. The preview is paused: `service_defaults.desired_count`
 is 0, so the morning schedule and the wake URL start nothing, and setting it back to 1 and
-applying resumes it on geolang v0.1.11, ptolemy v0.2.5 and tiletopia v0.4.4.
+applying resumes it on geolang v0.1.12, ptolemy v0.2.6 and tiletopia v0.4.4.
 
 Isolation and edge: an EFS policy denies any mount without an access point and TLS, every
 task mounts through IAM with its own access points, the executor mounts `natural_earth`

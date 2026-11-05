@@ -100,7 +100,7 @@ export function GeoJsonEditorPanel({ onClose }: { onClose: () => void }) {
                     size="xs"
                     variant="subtle"
                     color="red"
-                    aria-label="Delete feature"
+                    title="Delete feature" aria-label="Delete feature"
                     onClick={(e) => {
                       e.stopPropagation();
                       removeFeature(f.id);

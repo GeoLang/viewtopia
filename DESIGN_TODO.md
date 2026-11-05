@@ -9,7 +9,7 @@
 > Ranked 2026-08-21 against the DESIGN.md goal: ship the viewer, the agent, and
 > the services that make a shared map, not more surface. Pick from **Do next**.
 > Do not start at a parked item.
-> Last brought current: **2026-11-03**.
+> Last brought current: **2026-11-04**.
 >
 > Verify an entry against the code before working it, and do not trust the
 > mechanism it names. Three items in this file were already closed when someone
@@ -17,6 +17,191 @@
 > existed.
 
 ---
+
+## In flight: audit fixes and Ion tiling gaps
+
+Started 2026-11-04. Nothing here is committed. Each repo's `git status` is the
+recovery path, and worktree patches are in `/home/aaron/tmp/geolang-fix/patches`.
+Every repo had an independent re-review on 2026-11-05 and its fixes are in the
+working trees, uncompiled. These tiletopia patches are not yet on main: splats,
+cad-vector-inputs, global-data, ion-upload, photogrammetry, jp2.
+The scripted gate is `/home/aaron/tmp/geolang-fix/gate.sh <repo>...` and
+`gate-light.sh`, results in `gate-logs/results.tsv`. The Ion proof harness is
+`/home/aaron/tmp/geolang-fix/ion-proof/run.sh` after a release build of
+`tiletopia-cli`. The publish script is `/home/aaron/tmp/geolang-fix/publish/`.
+
+Open in tiletopia, code being written 2026-11-05:
+
+- [~] streaming imagery tiling, so the decode cap of about 1930x1930 RGBA goes
+  away (owner chose streaming over a larger budget).
+- [~] glTF node transforms: meshes under transformed nodes are tiled at their
+  local origin.
+- [~] per-tile vertex compaction: every tile carries its whole material group's
+  vertices.
+- [~] Ion-created and catalog imagery assets left in `uploading` or `tiling`.
+
+Code-only work until hercules answers ssh, no builds and no tests before then:
+
+- [~] finish ion-upload and photogrammetry in their worktrees and write their
+  patches, restart jp2 from a fresh cut of main.
+- [~] apply splats, cad-vector-inputs and global-data to tiletopia main, then
+  ion-upload, photogrammetry and jp2 as each patch appears. One agent edits main.
+- [~] write `/home/aaron/tmp/geolang-fix/hercules-gate/run.sh` and its README.
+- [~] viewer: CZML assets, global terrain option, WMTS and TMS URLs on imagery
+  rows. `.jp2` in the picker and photo-set upload follow their tiletopia patches.
+- [~] publish prep: CHANGELOG drift and the four stale `publish.sh` rows.
+- [~] `TILETOPIA_ION_BASE_URL` is the viewer origin on every stack, proxies pass
+  `/v1/`, `/tiletopia_ion_uploads/` and the imagery service paths to tiletopia
+  with the path and Host unchanged, and an unset variable is an error.
+- [ ] move the NodeODM wait out of the job queue loop, after photogrammetry and
+  ion-upload are on main.
+- [ ] zip uploads on the Ion route, with path and size protection and a rule for
+  the main file, after ion-upload is on main.
+- [ ] hosted stack, before Ion uploads go live: `complete_multipart_upload` joins
+  parts before it answers, and on EFS a large upload may outlast the CloudFront
+  origin and ALB timeouts. Set `origin_read_timeout` and `idle_timeout`, or answer
+  before the join. Unmeasured.
+- [ ] tiletopia `deploy/terraform`: its CloudFront forwards only `Authorization`
+  and `Origin`, so Ion upload signatures covering `Host` fail through that origin.
+  `ion_base_url` also has no value on a first apply when it is the CloudFront
+  domain. From reading the config, not tested.
+- [ ] terrano: apply COG masks in `CogReader`, masked files are refused at `open`.
+  Honour nonzero tiepoint raster coordinates (I, J).
+- [ ] geoplumb `read_chunk`: uses `pixel_width` for rows and treats overviews as
+  exact ladder multiples, so odd-sized GDAL files may place tiles under one
+  overview pixel off at the far edge, now that terrano selects those overviews.
+  From reading the code, check when geoplumb bumps terrano.
+- [ ] tiletopia Ion zips: a retile reads the absolute input path from the latest
+  job, so it fails after the data directory moves. Keys with subdirectories answer
+  403 at PUT, several models in one upload are refused where Ion merges them, and
+  the 100 to 1 unpack limit refuses mostly-nodata rasters that compress further.
+- [ ] geoplumb `crates/geoplumb/src/elements/stac.rs`: name the asset and href when
+  `CogReader::open` fails in `read_asset` and `open`, through `Error::Source`. Nothing
+  matches on `Error::Terrano` as a pattern.
+- [ ] tiletopia `terrain_bundle.rs` turns a DEM void into elevation 0 with
+  `unwrap_or(0.0)`, with no message on the job.
+- [ ] tiletopia CLI `Edge` prints `target/{}/release/tiletopia-cli` with the `{}`
+  unsubstituted, and the binary is named `tiletopia`.
+- [ ] tiletopia Dockerfile `grok` stage has no cargo, so Grok's mercury fast path
+  compiles to a no-op there, while the CI `jp2` job has cargo and builds it. CI
+  tests a different Grok build from the one the image ships.
+- [ ] tiletopia jp2: `read_layout` takes GML only from `header.asocs`, so a GML
+  document in a plain XML box is refused as having no georeferencing. Check against
+  real GDAL and Kakadu files.
+- [~] second wave, code only, each returning a patch for after the gate:
+  `tiletopia-bim-base` (geometry and tile patches merged, base for slices 2b and 5),
+  `tiletopia-followups` (recorded tiletopia defects), `terrano-masks`, `geodukt-sidecars`,
+  BIM proof harness and fixtures under `/home/aaron/tmp/geolang-fix/bim/proof`, and a
+  read-only security review of the Ion upload, zip and element routes.
+- [~] third wave, code only, patches for after the gate: `tiletopia-access` (owner checks
+  on asset reads, proposed and not yet approved, so the patch stays unapplied until the
+  owner says), `tiletopia-archives` (Ion clip, archive and export),
+  `tiletopia-asset-library` (labels, search, thumbnails, attribution),
+  `tiletopia-terrain-inputs` (terrain mosaics, `.dem`, `.flt`, `.kmz`),
+  `tiletopia-bim-streaming` (slice 2b), `tiletopia-bim-coordination` (slice 5 server side).
+  Viewer slices 3b and 5 start when the viewtopia-bim patch is final.
+- [ ] when hercules is up: run the gate, fix failures, run the Ion proof harness.
+- [~] fourth wave, code only, started 2026-11-05 while the first batch merges to main.
+  Each track is cut by `/home/aaron/tmp/geolang-fix/make-track.sh` from the worktree
+  named in brackets and returns `patches/<track>.patch`:
+  `tiletopia-bim-storey` [bim-base] storey elevation in `tree/children` and `elements/{id}`.
+  `tiletopia-bim-edges` [bim-streaming] CAD edges, memory-mapped IFC.
+  `tiletopia-bim-coordination-roles` [bim-coordination] BCF and version writes need edit rights.
+  `viewtopia-bim-coordination` [viewtopia-bim-mode] slice 5 viewer: BCF, versions, change reports, DXF.
+  `viewtopia-twin-from-elements` [viewtopia main] slice 4 twin rows from the element store.
+  `geolang-bim-evals` [geolang-bim] eval-duplex.ifc and its upload step, BIM mode catalogue entries.
+  `tiletopia-small-fixes` [tiletopia main] DEM void, CLI Edge path, jp2 GML in an XML box,
+  Dockerfile grok cargo, CloudFront Host.
+  `tiletopia-terrain-facades` [terrain-inputs] synthetic relief fallback, UTM export, KML with no Model.
+  `tiletopia-export-zip` [archives] `3dtiles_zip` export reads the asset through the archive code.
+  `geoplumb-stac-chunks` [geoplumb main] STAC href in errors, `read_chunk` row size and overviews.
+  `collecta-blank-secret` [collecta-auth] and `interiora-blank-secret` [interiora-auth] refuse a
+  whitespace-only secret at startup.
+  Two read-only facade audits: tiletopia BIM tracks, and the viewer, geolang and third-wave tracks.
+  Added the same day: `tiletopia-bim-integration` holds bim-base with streaming, coordination,
+  coordination-roles and storey merged, because the coordination worktree was cut from a partial
+  base and does not compile alone. Merge bim-edges into it next. `tiletopia-bim-audit-fixes`
+  [bim-integration] fixes `audits/tiletopia-bim.md`. `terrano-overview-scale` [terrano main]:
+  GDAL overview IFDs carry no pixel scale, so terrano never selects a GDAL overview.
+  platform-auth gets one startup secret check, collecta and interiora call it.
+- [ ] exports in tiletopia, found by the fourth wave, not yet given a track: the terrain export
+  splits the DEM's own extent into tiles labelled `tms` that are not global TMS addresses, with
+  rows counted from the north, and writes voids as the tile minimum. Zipping the tree
+  `write_dem_bundle` builds would fix both. `glb` and `geojson` exports write placeholder
+  output that ignores the asset, `ExportEngine::new` seeds two demo jobs, and only `3dtiles_zip`
+  checks the asset's owner.
+- [ ] platform-auth `check_signing_secret` at startup in the other consumers, which accept a
+  whitespace secret today: tiletopia, ptolemy and agora (own `is_empty` and length checks),
+  geodukt and sibyl (no check), and fenestra, geokode and itinera on the set branch only, where
+  unset means auth off. interiora's lock pins mirror snapshot 857c58d without the function, so its
+  patch builds after `cargo update -p platform-auth` against the published crate.
+- [ ] twin rows from the element store insert and delete only. An element whose name, storey or
+  position changed keeps its old row.
+- [ ] storey `baseHeight` takes IFC Elevation relative to model z 0 and ignores the building's
+  own placement and `ElevationOfRefHeight`.
+
+Gate, then Ion proofs (upload, validator, CesiumJS screenshot per row), then one
+branch per repo and GitHub CI before master.
+
+Next Ion gaps, owner go-ahead 2026-11-05 for all four groups, code now and
+compiled at the gate. Each track works in `.worktrees/tiletopia-<slug>`, cut
+from the main checkout's working tree, and returns
+`/home/aaron/tmp/geolang-fix/patches/tiletopia-<slug>.patch`:
+
+- [~] ion-upload: `POST /v1/assets` answers an upload location,
+  `uploadComplete` queues the job, unknown types refused, stale uploads expire.
+- [~] imagery-services: WMTS and TMS for uploaded imagery beside XYZ.
+- [~] jp2: decode JPEG 2000 uploads through Grok, streaming imagery is on main.
+- [~] cad-vector-inputs: DXF, TopoJSON and CZML.
+- [~] splats: Gaussian splat PLY to 3D Tiles.
+- [~] photogrammetry: images to a textured mesh through an external tool.
+- [~] global-data: global terrain and buildings without an Ion account.
+
+Shared pieces, both new local repos that need creating on GitHub before anything
+that uses them can build in CI:
+
+- [~] `platform-crates`: `platform-auth` for JWT checks and `platform-webhook`
+  for signing and the private address guard from agora.
+- [~] `.github`: reusable Rust CI and release workflows, org profile, default
+  community files.
+
+One agent per repo, in the main checkout:
+
+- [~] agora, ptolemy, fenestra, geokode, itinera, interiora, geodukt, sibyl: use
+  `platform-auth` where the logic matches. agora and ptolemy also use
+  `platform-webhook`.
+- [~] itinera: one search for A* and Dijkstra, one haversine. ptolemy: one
+  haversine.
+- [~] doc fixes from the audit: infrastructure, ptolemy, agora, geodukt, geoplumb,
+  geolang, panoptes, terrano, interiora, GeoLang.github.io.
+- [~] reusable CI in every Rust repo whose `ci.yml` or `release.yml` matches.
+
+tiletopia, each in `.worktrees/tiletopia-<slug>`:
+
+- [~] compress: Draco through `draco-core`, `EXT_meshopt_compression`.
+- [~] ktx2: `KHR_texture_basisu` tile textures through `basisu_c_sys`.
+- [~] validator: CesiumGS `3d-tiles-validator` over fixtures in CI.
+- [~] imagery: uploaded imagery to XYZ tiles through geoplumb.
+- [~] terrain: uploaded DEM to a quantized-mesh bundle.
+- [~] dae: tile DAE uploads.
+- [~] cleanup: geometry on topoi, one haversine, canned routes deleted, docs.
+
+viewtopia, each in `.worktrees/viewtopia-<slug>`:
+
+- [~] docs: README, DESIGN, this file and the changelog against the 2026-11-04
+  audit.
+- [~] dedupe: draw and measure hooks, compose files, dead preview toggle, stale
+  `/ws` proxies.
+- [~] layers: open uploaded imagery and terrain assets in the viewer.
+
+After the gate:
+
+- [ ] natural earth through `run_workflow`, from reading the code and not yet run:
+  geodukt `--caller-root` refuses those paths, neither deployment mounts natural
+  earth on geodukt, and the failure is reported as missing credentials.
+
+Build order after review: push `platform-crates` and `.github`, run `cargo update`
+for `platform-auth` and `platform-webhook` in each consumer, then push the rest.
 
 ## Demo hardening
 
@@ -49,8 +234,6 @@ any repo).
     `.geodukt/*.json` in the working directory every caller shares.
   - ptolemy `PgStore::create_dataset` still writes external columns with no
     probe. No caller passes one.
-  - geodukt's GeoPackage sink drops the keys `fid` and `geom` by exact match,
-    so `Fid` or `GEOM` passes its checks and fails at `CREATE TABLE`.
   - ptolemy's H3 and 3D routes now read external datasets on the external
     pool, untested because CI has neither extension.
   - nothing stops an operator pointing `PTOLEMY_EXTERNAL_DATABASE_URL` at
@@ -78,8 +261,6 @@ any repo).
   20 minute build on a box with 40 GB RAM and 110 GB disk (a spot
   `r6i.2xlarge`, the scripts are in `/home/aaron/geokode-data/`), then a
   new `geokode_index_version` and an apply.
-- [ ] `profiles/platform.tfvars` enables geokode and now fails validation
-  until it names an index version.
 - [ ] the shared trusted role's S3 policy grants write on every
   `geolang-prod-*` bucket, so any trusted service can overwrite the index.
 
@@ -97,19 +278,11 @@ Rollout pending, owner-run:
   evals/viewer_replies.py), the system prompt gained one line per hidden
   tool, and seven catalogue parameters were renamed from `name`. The
   commands are in the 2026-09-23 handoff and need the owner's security-group
-  change. Sign up a fresh eval user per sweep, one user's outputs carried
-  between tasks.
+  change, and the preview is paused, so it has to resume first. Sign up a
+  fresh eval user per sweep, one user's outputs carried between tasks.
 
 Decisions:
 
-- [ ] tiletopia mesh tiles lose precision before the tiler runs: both
-  `MeshData` types, ifc-lite and tobj hold f32 positions, so a per-tile RTC
-  centre in the GLB writer recovers nothing. The fix is f64 positions through
-  both `MeshData` types and the mesh tree, a per-tile f64 glTF node
-  translation with f32 offsets, recentring before `simplify_mesh`, and
-  ifc-lite's `set_rtc_offset`, about ten files. Separately the native path
-  places meshes with an ENU root at a longitude and latitude, so a model in
-  projected metres lands in the wrong place regardless.
 - [ ] rotate `PLATFORM_JWT_SECRET` and the provider keys before the preview
   resumes, see F18.
 - [ ] geolang `/upload`: a zip whose CRC does not match passes the pre-check,
@@ -199,12 +372,6 @@ Trimble Clarity and Potree columns. The dropped tiletopia cells claimed Google
 Maps and Bentley iTwin serve 3D Tiles point clouds, Bentley iTwin has presence,
 chat and 3D annotations, and Potree is self-hosted, open source and has no REST
 API.
-
-- [ ] tiletopia's Cesium Ion column, in the README and on the page, is
-  unverified apart from self-hosting: Ion has no presence or chat, no 3D
-  annotations, no XYZ raster tiles, and "mixed" temporal versioning. Its
-  "Self-hosted: no" was wrong, since Cesium sells Cesium ion Self-Hosted, and
-  is fixed.
 
 ## Doc audit 2026-09-02, findings to address
 
@@ -300,6 +467,52 @@ last commit that still has the file.
   `crates/tiletopia-core/src/{measurement,anomaly,clash_detection}.rs` and
   `geostatistics::morans_i` at 483ed94.
 
+### Modules removed 2026-11-04, rebuild from history if wanted
+
+Same owner call as above: no caller, so deleted and recorded by path and the
+last commit that still has the file.
+
+- [ ] viewtopia `docker-compose.yml` (3355f4b7): the stack could not start, its
+  tiletopia had no `TILETOPIA_JWT_SECRET` and its proxy no `/tiles/` route.
+- [ ] tiletopia facade routes with no caller in viewtopia, geolang or
+  tiletopia's gui. `GET /api/v1/photogrammetry/projects` listed an in-memory
+  engine nothing created a project in, `GET /api/v1/bim4d/projects` one
+  built-in demo project, `GET /api/v1/indoor/buildings` built-in demo
+  buildings, `GET /api/v1/metering/summary` a usage store nothing recorded
+  into, and `GET /api/v1/metering/pricing` three fixed tiers. The routes are in
+  `crates/tiletopia-server/src/premium_routes.rs` at 76c0366, the modules
+  `crates/tiletopia-server/src/photogrammetry.rs` and `bim4d.rs` at 73a6fda,
+  `indoor.rs` at d34c42c and `metering.rs` at 32bdd18. `indoor.rs` also had
+  `find_route`, a petgraph Dijkstra between rooms that no route called, and
+  the `petgraph` dependency went with it, in `Cargo.toml` at eb600b4 and
+  `crates/tiletopia-server/Cargo.toml` at 18e2dc5.
+  `GET /api/v1/photogrammetry/presets` stays.
+- [ ] tiletopia vendored `draco-rs` crate and the optional `draco` feature
+  built on it, with `draco_encode_mesh` and `draco_decode_mesh`.
+  `patches/draco-rs/` at ae61592, `crates/tiletopia-core/src/compression.rs`
+  at 87cc740. Tiles are Draco-compressed through the `draco-gltf` crate now,
+  and nothing in tiletopia decodes Draco.
+- [ ] viewtopia `docker-compose.re.yml`, the real-estate subset of
+  `docker-compose.verticals.yml`, at 2ad09e48. The verticals file seeds the
+  same three parcels and three sales.
+- [ ] viewtopia Show Preview Tools setting, which hid menu entries flagged
+  `preview` when no entry had the flag. `settings.showPreviewTools` in
+  `src/store/app.ts` and `PreviewMarker` in `src/components/ToolPanels.tsx` at
+  25aae306, the switch in `src/components/tools/SettingsPanel.tsx` at
+  4b73cb7a, the `preview` field, `visibleToolItems` and `isPreviewPanel` in
+  `src/components/toolMenus.ts` at 8174a56d, and the Preview badges in
+  `src/components/CommandPalette.tsx` and `ViewerToolbar.tsx` at 8b5a4745.
+- [ ] viewtopia proxies to ptolemy routes that no longer exist: the `/ws/`
+  and `/api/v1/sse` locations in `deploy/nginx-platform.conf` at 07e7dccf,
+  `/ws/` in `deploy/nginx-verticals.conf` at 3bb87e36, and `/ws` in the dev
+  proxy list in `vite.config.js` at 02e59429.
+
+### Modules removed 2026-11-05, rebuild from history if wanted
+
+- [ ] tiletopia annotations store and its routes, removed by the BIM
+  coordination patch because agora holds annotations.
+  `crates/tiletopia-server/src/annotations.rs` at 34f844e.
+
 ## Self-host preview release, follow-ups
 
 The 0.x preview shipped 2026-09-16: every platform repo publishes
@@ -319,17 +532,15 @@ against a stack pulled from those images alone. Pins live in
 
 Ordered 2026-08-30, hosting excluded.
 
-0. **Weak eval tasks, per-task transcript work.** The chat default is
-   Qwen3.5 (owner call 2026-09-01), so weakness is read off the
-   `local:Qwen3.5-35B-A3B` profile against the 0.82 baseline 20260901T004124.
-   The Qwen3.8 sweep (0.87, 20260902T000529) is a comparison only. No weak task
-   has been scored yet against the geolang-api container carrying the trimmed
-   `viewer_control` manifest, so the standing per-task numbers predate it.
-   Hercules was shut down on 2026-09-24, so the `local:Qwen3.5-35B-A3B`
-   profile is gone and the 0.82 baseline cannot be re-scored. The standing
-   baseline is gpt-oss on the preview, 0.92 over 76 tasks (20260922T192650),
-   with the re-score pending under **Doc sweep**. Weakness is now read off
-   that profile. Still weak, cause read from transcripts:
+0. **Weak eval tasks, per-task transcript work.** The standing baseline is
+   `cloud:openai.gpt-oss-120b` on the preview, 0.92 over 76 tasks
+   (20260922T192650), and weakness is read off that profile. `evals/viewer/tasks`
+   has 82 tasks, and the re-score is pending under **Doc sweep**. The 0.82
+   `local:Qwen3.5-35B-A3B` baseline (20260901T004124) and the Qwen3.8 sweep
+   (0.87, 20260902T000529) are comparisons only. Hercules was shut down on
+   2026-09-24 and answers ssh again since 2026-11-03. Whether its resident eval
+   stack and the Qwen3.5 model are still there is unverified. Still weak, cause
+   read from transcripts:
    - scenario-compare-within-25-metres and find-before-flying: the task
      prompt and the `find_feature` reads fixture were fixed in geolang
      5ad6d5c (2026-09-16), unscored until the gpt-oss re-score. If either
@@ -497,8 +708,13 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
       the encoding off.
 
 - [ ] **the offline story's remaining network reads**: DuckDB's spatial
-      extension fetches from extensions.duckdb.org, and the story export fetches
-      MapLibre from unpkg plus tiles from the tile host. The tile cache is
+      extension installs from `/duckdb-extensions`, the copy
+      `scripts/fetch-duckdb-extensions.mjs` vendors at build time, and reaches
+      extensions.duckdb.org only on a deploy that skipped the script. That copy
+      is outside the service worker's `APP_SHELL_GLOBS`, so it is not precached.
+      Only spatial is vendored, so a json or parquet autoload still fetches from
+      extensions.duckdb.org. The story export fetches MapLibre from unpkg plus
+      tiles from the tile host. The tile cache is
       capped at `TILE_CACHE_BUDGET_BYTES` with saved regions pinned and
       `clearBrowsingCache` for the rest, so the cache side is closed.
 
@@ -526,17 +742,49 @@ feature-parity fights with ArcGIS, Felt, GEE, Palantir.
       request behind it.
 
 - [ ] **cloud-scale distributed raster processing.** Dask-style chunked tiles
-      over an SQS job queue, COG output to the S3 tile bucket, outputs
-      registered in the STAC catalog. geoplumb computes windows in parallel
-      inside one process and no job leaves it. The SQS queues and the tiles
-      bucket the platform profile creates have no consumer. No request behind
-      it.
+      over a job queue, COG output to the S3 tile bucket, outputs registered in
+      the STAC catalog. geoplumb computes windows in parallel inside one process
+      and no job leaves it. `infrastructure` defines no `aws_sqs_queue`, and
+      geokode's index copy is the only reader of the tiles bucket there. No
+      request behind it.
 
 - [ ] **NAIP, Planet and Maxar imagery sources.** Three sources named as worth
       supporting: NAIP (COG, US, 0.6m, free), Planet (COG, global, 3-5m, paid)
       and Maxar/WorldView (GeoTIFF, global, 0.3m, paid). geoplumb's STAC source
       reaches any collection on a STAC API, and the platform stack configures
       `cop-dem-glo-30` and `sentinel-2-l2a` only. No request behind it.
+
+- [ ] **fenestra service gaps.** WMS answers GetMap and GetCapabilities with no
+      GetFeatureInfo. WCS 2.0.1 serves one float64 band with no reprojection or
+      scaling. Its OGC API Features has no CQL2 or datetime filter, which
+      ptolemy's OGC API does have.
+
+- [ ] **client packages.** No repo publishes a Python package or an npm
+      package for the platform APIs. `topoi-wasm`, terrano's WASM build and
+      `projicio-wasm` build, and viewtopia vendors them, but none is on a
+      registry.
+
+- [ ] **a collecta field app.** ODK Collect is the only client, through
+      collecta's OpenRosa routes. collecta has a server, a form library and an
+      offline CLI, and no mobile or desktop app that renders a pulled form.
+
+- [ ] **panoptes models beyond buildings.** Roads, landcover, vegetation and
+      change detection have no published weights and read as `planned` in the
+      panoptes README catalog. Change detection runs as pixel differencing
+      only.
+
+- [ ] **ptolemy multi-tenancy.** The ptolemy README lists it as not built.
+      Per-project roles, dataset visibility and dataset-admin delegation exist.
+      Read the README's meaning of multi-tenancy before scoping this.
+
+- [ ] **geogit metadata validation.** ISO 19115 and FGDC XML is stored as
+      given, with no schema check and no search over it.
+
+- [ ] **nubis LAZ and LAS output.** nubis has no LAZ code, so it reads
+      uncompressed LAS only. It writes LAS 1.2 point format 0 only.
+
+- [ ] **jung SLD filters.** SLD import reads no filters, and it matches only
+      the literal `<se:Rule` element name.
 
 ## Open decisions that are not bugs
 
@@ -626,10 +874,9 @@ Deliberate scope calls, each a product decision rather than a defect to fix.
       two datasets disagree.
 
 - [ ] **terrain bundle limits worth knowing** (each deliberate, none blocking):
-      bundles are filesystem only, not S3/GCS, because `LocalStore::list` is one
-      level deep while `S3Store::list` is recursive and un-paginated, so it sees
-      only the S3 default page of 1000 keys and discovery would differ per
-      backend. The availability walk touches every
+      bundles are filesystem only: `terrain_bundle.rs` reads
+      `<data-dir>/terrain_bundles/` directly, and `tiletopia-store` has only
+      `LocalStore`. The availability walk touches every
       tile file, so a large bundle makes the layer.json request slow unless the
       bundle ships its own `available` array.
 
@@ -638,6 +885,63 @@ because no PostGIS build ships `ST_ContourLines`, so that route answers 501
 first.
 
 ## Plans — too big to hand an agent cold
+
+### BIM, IFC first
+
+Not promised: Revit, DWG, DGN or iModel parity. DGN V8 and iModel have no open route,
+ODA SDKs and the iModel native addon are proprietary. Customers export IFC.
+
+- [ ] Set `maximumScreenSpaceError` and cache sizes for BIM tilesets in the viewer,
+  which runs on Cesium's defaults. The first view of `balconies-a2` fetches all 452
+  tileset files, 622 MB, and `restage-demonstrator` fetches 311 of its 359 MB, so
+  check whether the tiler writes coarse parent tiles as well.
+- [ ] Test `TiletopiaElementService` against a running tiletopia. Its unit tests use a
+  fake XHR server.
+- [ ] Walk, orbit and storey views on a real IFC interior, by hand, in a headed
+  Chromium with a GPU.
+- [ ] Run geolang viewer eval tasks 86, 87 and 88 (`query_elements`) at `--repeat 3`.
+- [ ] Annotations with height and element id. They have lat and lng only, and three
+  stores overlap: tiletopia, viewtopia and agora. BCF topics already carry element ids
+  and viewpoints, so check first whether annotations still need them.
+- [ ] Run the IDS check at upload. It runs only when a user starts it.
+- [ ] DXF export of a section as 2D cut linework from the section route. `cutHeight`
+  only clips the model's faces.
+- [ ] Edit an element's property values and write them back to IFC. Read
+  `@ifc-lite/mutations` first, which is known only from its README. Decide where edits
+  live, how they survive a re-tile, and who may make them. Geometry editing stays out.
+- [ ] After That Open Platform launches on 2026-11-23: read its docs and platform and
+  write a feature comparison against what the viewer and tiletopia do.
+- [ ] Size the IFC ingest budget from a measurement. `JOB_BUDGET_BYTES` in
+  tiletopia is a third of a 1 GiB task, 357,913,941 bytes at the assumed 100
+  bytes a vertex. Both large proof models pass that estimate partway through the
+  read, `balconies-a2` at element #2378552 and `restage-demonstrator` at
+  #2076200, and fail ingest. With `TASK_MEMORY_BYTES` raised to 48 GiB the server
+  peaks at 2.44 GB and 1.71 GB resident, so neither fits a 1 GiB task. The
+  benchmark records no vertex count, which bytes a vertex needs.
+- [ ] Load the same two IFC files in That Open Engine (`@thatopen/components` 3.5 with
+  Fragments) and record the same numbers. If the CesiumJS viewer keeps up, build
+  model snapping and property editing in it. If it does not, open large models in a That
+  Open view beside the globe. The CesiumJS side, from `benchmark.sh` on hercules
+  (RTX 2080 Ti, headless Chromium on ANGLE OpenGL ES) with tiletopia 6bea7f7 and
+  `TASK_MEMORY_BYTES` raised to 48 GiB:
+
+  | | balconies-a2 | restage-demonstrator |
+  | - | - | - |
+  | IFC size | 262 MB | 190 MB |
+  | tiling job | 51.7 s | 19.8 s |
+  | server peak resident | 2.44 GB | 1.71 GB |
+  | elements without geometry | 110, failed opening cuts | 14, no triangles |
+  | tileset | 452 files, 622 MB | 142 files, 359 MB |
+  | first visible tile | 1.1 s | 1.2 s |
+  | first view | 9.9 s, 622 MB, 4.9 M triangles | 3.7 s, 311 MB, 1.6 M triangles |
+  | frame rate | 76 fps, 95th percentile 15.1 ms | 247 fps, 95th percentile 5.3 ms |
+- [!] Compare placement and properties against Ion with the BIM proof's
+  `ion-compare.sh`. Needs a `CESIUM_ION_TOKEN`.
+- [!] CAD edges on instanced elements. CesiumJS 1.147 draws none on
+  `EXT_mesh_gpu_instancing`.
+
+Wait for demand: 4D schedules, clash detection, bSDD, and `rvt-rs` as a Revit preview
+(bounding boxes outside 2024 and 2025 files, no built-in parameter names).
 
 ### Chat-only viewer mode
 
@@ -651,28 +955,25 @@ when an action or the snapshot changes. See `geolang/evals/viewer/README.md`.
 
 ### Public demo on the hosted preview
 
-The preview is live (see **Before any public deploy**) and costs about 5.50
-USD a day up, about 1.10 scaled to zero. Owner calls 2026-09-19: no domain
-yet, the nightly scale-down stays with manual scale-up, share links keep
-granting edit to guests. Nothing in sibyl or geolang-api limits what one
-caller can spend beyond `SIBYL_RUN_BUDGET_SECS` per run, so an open demo has
-no ceiling on model tokens or executor time. The plan, in payoff order:
+The preview is paused: `service_defaults.desired_count` is 0 in `preview.tfvars`.
+DESIGN.md §2.9 has its shape and limits. It costs about 1.10 USD a day paused and
+about 5.50 up. Owner calls 2026-09-19: no domain yet, share links keep granting
+edit to guests. Resuming follows the F17 and F18 rollout under **Demo hardening**
+and the secret rotation under **Doc sweep**. The plan, in payoff order:
 
-- [ ] **Spend caps.** Built, chat and upload, pinned in geolang v0.1.7.
-      Rollout is under **Doc sweep**. Open tiletopia signup still lets one
-      person hold many subjects, so the global caps are the ceiling.
-- [ ] **Wake on demand.** Built in infrastructure d03ee8d as
-      `enable_demo_landing_page`: the page at `/try/`, a wake Lambda behind a
-      function URL, and an idle Lambda that reads `POST /chat/agui` counts
-      from a log metric filter. Unapplied, under **Doc sweep**.
-- [ ] **Let Aurora pause while the tasks are up.** Built in ptolemy and agora:
-      pollers tick every 30 minutes after 10 quiet minutes, pools hold no idle
-      connection past 60 seconds. Untested on Aurora and not deployed. A resume
-      after 24 paused hours can take over 30 s, which exceeds sqlx's
-      `acquire_timeout`, so the first query after one may fail.
-- [ ] **Demo hours.** Built in infrastructure d03ee8d as
-      `morning_scale_up_hour`, 08:00 Toronto by default, and the idle
-      scale-down only runs outside 08:00 to 23:00. Unapplied.
+- [ ] **Spend caps across accounts.** sibyl refuses model calls past
+      `SIBYL_MONTHLY_SPEND_LIMIT_USD` (`src/spend.rs`) and caps runs and tokens
+      per user per day and tokens per user per month (`src/daily_limits.rs`).
+      geolang-api caps tool runs and uploads per caller per day. The preview
+      pins sibyl v0.1.3 and geolang v0.1.12, which both carry these. Open
+      tiletopia signup still lets one person hold several accounts, so the
+      monthly spend limit is the real ceiling.
+- [ ] **Let Aurora pause while the tasks are up.** Built on ptolemy and agora
+      master: pollers tick every 30 minutes after 10 quiet minutes, pools hold no
+      idle connection past 60 seconds. No tag carries it, so the preview's
+      ptolemy v0.2.6 and agora v0.1.1 do not have it, and it is untested on
+      Aurora. A resume after 24 paused hours can take over 30 s, which exceeds
+      sqlx's `acquire_timeout`, so the first query after one may fail.
 - [ ] **When the AWS credits end,** the nine services fit the self-host
       compose bundle on one small VPS at about a tenth of the monthly cost.
       The caps above carry over unchanged, wake on demand does not apply.
@@ -725,10 +1026,8 @@ usage, never per seat, which is the complaint about the incumbents.
 
 - [ ] **Make the demo the ad.** A public example map on the preview that
       opens in one click, seeded with the region's parcels and census data,
-      a prompt already typed and a sample report beside it. Depends on the
-      spend caps and a morning scale-up in **Public demo on the hosted
-      preview**: a demo that is off overnight loses everyone west of
-      Toronto and all of Europe.
+      a prompt already typed and a sample report beside it. Needs the preview
+      resumed, see **Public demo on the hosted preview**.
 - [ ] **One case study per region, written as an answer.** "Every vacant
       commercial parcel within ten minutes of a Toronto subway station,
       ranked", with the map embedded and the prompt shown. Post where site
@@ -788,57 +1087,24 @@ economic development offices publishing available sites, and teams outside
 the US where the foot-traffic panels are thin. Do not promise foot
 traffic. On that path the niche revenue bar is plausible over years.
 
-POC build, started 2026-09-20. Owner calls: Toronto is the region, the
-wedge is consultancies and brokers who bring their own candidate sites and
-points of interest, and the POC is the four items below. Found while
-planning: a layer imported into the viewer never reaches a geolang tool. The
-viewer draws it in the browser only, geolang's `POST /upload` and
-`list_user_datasets` exist but nothing in viewtopia calls them, and the only
-own-data path is a ptolemy dataset exported with `ptolemy_query`. So the
-bring-your-own-data hook starts with that bridge.
+Rechecked 2026-11-04, the call stands: the twenty cold emails above are the test.
+Evidence then: viewtopia had 5 views and 4 visitors in 14 days, the org has 2 stars,
+the hosted preview is paused, every migration found goes to desktop QGIS, and no
+buyer evidence exists for browser collaboration plus an agent. A QGIS plugin, a
+consultant PDF report, reviewable agent branches, an Esri exit report and a change
+watch wait until that test gets replies.
 
-- [x] **geolang: `trade_area` tool.** One call: sites from `sites` (names) or
-      `sites_path` (an uploaded or exported layer), a drive, walk or cycle
-      time, then per site the population inside (GHS-POP, WorldPop fallback),
-      competitors and anchors inside (OSM categories or the user's own layer,
-      one Overpass query for all sites), and optional area-weighted
-      demographics from a polygon layer. One polygon GPKG with the numbers
-      as columns and a table in the reply. The isochrone, population and OSM
-      tag code moves out of `calculate_isochrones`, `download_population_grid`
-      and `download_osm_data` into shared modules so the new tool and the
-      old ones run the same code.
-- [x] **geolang: `score_sites` takes `sites_path` and `competitors_path`.**
-      Sites from a layer instead of only geocoded names, competition from the
-      user's own layer instead of only OSM.
-- [x] **viewtopia: imported files reach the agent.** Every file the viewer
-      imports (drop zone, files tab, chat `data.import_url`) is also posted to
-      `/agent/upload` with the session bearer and the chat thread id, so
-      `list_user_datasets` lists it and tools can name it. Formats geolang
-      reads: geojson, gpkg, zipped shapefile, csv with lat and lon. No token,
-      no upload.
-- [x] **Toronto data into ptolemy.** A loader that downloads Toronto property
-      boundaries, zoning and address points and StatCan 2021 dissemination
-      areas with population, income and age, joins zoning onto parcels,
-      writes the datasets the real-estate panels read plus a
-      `toronto_census_da` polygon dataset, through ptolemy's import routes.
-      Sources and fields are pinned in the loader from the research of
-      2026-09-20.
-- [x] **Evals.** NL eval tests that upload a candidate sites CSV and assert
-      the model reaches `trade_area` and `score_sites` with `sites_path`,
-      plus offline unit tests and sweep arguments for the new tool.
+POC build. Owner calls: Toronto is the region, and the wedge is consultancies and
+brokers who bring their own candidate sites and points of interest. The code is
+geolang's `trade_area` and `score_sites`, viewtopia's `uploadToAgent.ts` and
+`scripts/load-toronto.py`. Open:
 
-All five landed 2026-09-20. Facts from the build: the census profile zip
-holds six regional CSVs and Ontario's is 8.8 GB uncompressed, median household
-income is characteristic 243, ptolemy's import routes needed a 64 MiB body
-limit (they took axum's 2 MB default), and the loader was verified on a
-downtown bbox only (3,951 parcels, 89 areas, 102 s), the full city is an
-estimate of 4 to 6 minutes. Open: whether Toronto keeps `PARCELID` stable
-across daily rebuilds, the NL eval tests have not run against a live model,
-and the hosted preview has not been loaded.
-
-The four post-POC items (weights panel, site report, deal as a project, demo
-landing page) landed 2026-09-23. The landing page is unapplied and its
-prompt needs the Toronto data loaded on the preview, see **Doc sweep**.
+- [ ] whether Toronto keeps `PARCELID` stable across daily rebuilds.
+- [ ] the NL eval tests that upload a candidate sites CSV have not run against a
+      live model.
+- [ ] `scripts/load-toronto.py` has run on a downtown bbox only (3,951 parcels, 89
+      areas, 102 s). The full city is an estimate of 4 to 6 minutes, and the hosted
+      preview has not been loaded.
 
 Foot traffic, if it is ever wanted, in this order:
 

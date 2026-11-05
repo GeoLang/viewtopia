@@ -39,6 +39,7 @@ import { addTilesetToGlobe, CHAT_TILESET_WAIT_SECONDS } from '../viewer/addTiles
 import { NO_CESIUM_GLOBE } from './globe';
 import { ActionError, registerAction } from './registry';
 import { resolveOne } from './resolve';
+import { randomUuid } from '../lib/randomUuid';
 
 const EXPORT_FORMATS = CONVERT_FORMATS.map((format) => format.id);
 const DEFAULT_EXPORT_FORMAT: ConvertFormat = 'geojson';
@@ -61,12 +62,23 @@ const CATALOG_PARAMETER = {
   required: true,
 } as const;
 
-/**
- * A URL an action will open, answered back unchanged. Anything that is not an
- * absolute http or https URL is refused here, since a caller reaching the
- * registry directly is not checked anywhere else.
- */
+// nginx decodes percent escapes before it picks a location, and URL reads a backslash as a slash
+const ENCODED_PATH_SYNTAX = /\\|%(25)*(2e|2f|5c)/i;
+
 function fetchableUrl(url: string): string {
+  if (url.startsWith('/tiles/')) {
+    if (ENCODED_PATH_SYNTAX.test(url)) {
+      throw new ActionError(
+        `"${url}" has an encoded dot or slash or a backslash, so give the whole https:// address`,
+      );
+    }
+    // URL resolves dot segments and backslashes, so /tiles/../data reads as /data here
+    if (!new URL(url, window.location.origin).pathname.startsWith('/tiles/')) {
+      throw new ActionError(`"${url}" leaves /tiles/, so give the whole https:// address`);
+    }
+    // URL.href percent-encodes the {z}/{x}/{y} braces of a tile template
+    return `${window.location.origin}${url}`;
+  }
   let scheme: string;
   try {
     scheme = new URL(url).protocol;
@@ -140,7 +152,7 @@ registerAction({
     if (!geojson) throw new ActionError('that is not GeoJSON I can draw');
     const name = typeof args.layer_name === 'string' ? args.layer_name : 'GeoJSON';
     useAgentLayerStore.getState().addLayer({
-      id: crypto.randomUUID(),
+      id: randomUuid(),
       name,
       color: typeof args.color === 'string' ? args.color : '#3388ff',
       geojson,

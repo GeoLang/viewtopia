@@ -9,6 +9,7 @@ import { useAppStore } from '../../src/store/app';
 import { useAgentLayerStore, type AgentLayer } from '../../src/store/agentLayers';
 import { useOgcLayerStore, wfsAgentLayerId } from '../../src/store/ogcLayers';
 import { useSplitViewStore } from '../../src/store/splitView';
+import { useTiles3dLayerStore } from '../../src/store/tiles3dLayers';
 import { setSharedCamera } from '../../src/hooks/sharedCamera';
 import { cornersOfBbox } from '../../src/overlay/georeference';
 
@@ -52,6 +53,7 @@ function resetStores() {
     generation: 0,
   });
   useOgcLayerStore.setState({ layers: [] });
+  useTiles3dLayerStore.setState({ layers: [], loaded: {} });
   useSplitViewStore.setState({
     active: false,
     comparePanes: [{ renderer: 'maplibre', basemap: 'dark' }],
@@ -192,6 +194,66 @@ describe('project round trip', () => {
     expect(parseProject(JSON.stringify(older)).imageOverlays).toEqual([]);
   });
 
+  describe('3D model layers', () => {
+    const MODEL = { id: 'a1b2', name: 'tower.ifc', url: '/tiles/v1/assets/a1b2/tileset.json', visible: false };
+
+    it('come back with their url and visibility', () => {
+      useTiles3dLayerStore.getState().putLayer(MODEL);
+
+      const saved = JSON.stringify(serializeProject('tower'));
+      resetStores();
+      applyProject(parseProject(saved));
+      flushCameraPoll();
+
+      expect(useTiles3dLayerStore.getState().layers).toEqual([MODEL]);
+    });
+
+    it('save only the layer, not the loaded primitive', () => {
+      useTiles3dLayerStore.getState().putLayer(MODEL);
+      useTiles3dLayerStore.getState().setLoaded('a1b2', { name: 'primitive' } as never);
+
+      const saved = JSON.parse(JSON.stringify(serializeProject('tower')));
+
+      expect(saved.tiles3dLayers).toEqual([MODEL]);
+      expect(JSON.stringify(saved)).not.toContain('primitive');
+    });
+
+    it('replace the model layers already present', () => {
+      useTiles3dLayerStore.getState().putLayer({ ...MODEL, id: 'stale' });
+      const project = parseProject(JSON.stringify({ ...serializeProject('p'), tiles3dLayers: [MODEL] }));
+
+      applyProject(project);
+      flushCameraPoll();
+
+      expect(useTiles3dLayerStore.getState().layers).toEqual([MODEL]);
+    });
+
+    it('read as none from a project file written before they were saved', () => {
+      const { tiles3dLayers: _dropped, ...older } = serializeProject('older');
+
+      const project = parseProject(JSON.stringify(older));
+
+      expect(project.tiles3dLayers).toEqual([]);
+      applyProject(project);
+      flushCameraPoll();
+      expect(useTiles3dLayerStore.getState().layers).toEqual([]);
+    });
+
+    it('are absent from an older project map, which reaches applyProject unparsed', () => {
+      const { tiles3dLayers: _dropped, ...older } = serializeProject('older');
+
+      expect(() => applyProject(older)).not.toThrow();
+      flushCameraPoll();
+      expect(useTiles3dLayerStore.getState().layers).toEqual([]);
+    });
+
+    it('refuse a field that is not a list', () => {
+      expect(() =>
+        parseProject(JSON.stringify({ ...serializeProject('p'), tiles3dLayers: 'tower' })),
+      ).toThrow('project file: tiles3dLayers is not a list');
+    });
+  });
+
   it('replaces the ogc layers already present', () => {
     useOgcLayerStore.getState().addLayer('stale', 'https://example.org/old', 'xyz');
     const project = parseProject(
@@ -301,9 +363,26 @@ describe('parseProject', () => {
   });
 
   it('rejects an unsupported schema version', () => {
-    expect(() => parseProject('{"app":"viewtopia","schemaVersion":2}')).toThrow(
-      /schema version 2/,
+    expect(() => parseProject('{"app":"viewtopia","schemaVersion":3}')).toThrow(
+      /schema version 3/,
     );
+  });
+
+  it('migrates a version 1 file to version 2 with no saved model state', () => {
+    const { modelStatesByAsset: _absent, ...current } = serializeProject('older');
+    const older = { ...current, schemaVersion: 1, agentLayers: [venice] };
+
+    const project = parseProject(JSON.stringify(older));
+
+    expect(project.schemaVersion).toBe(2);
+    expect(project.modelStatesByAsset).toEqual({});
+    expect(project.agentLayers.map((layer) => layer.id)).toEqual(['venice']);
+  });
+
+  it('refuses saved model state that is not keyed by asset id', () => {
+    expect(() =>
+      parseProject(JSON.stringify({ ...serializeProject('p'), modelStatesByAsset: [] })),
+    ).toThrow('project file: modelStatesByAsset is not an object keyed by asset id');
   });
 
   it('rejects text that is not json', () => {
@@ -348,7 +427,7 @@ describe('asProject', () => {
   });
 
   it('throws on a project it cannot read, rather than falling through', () => {
-    expect(() => asProject('{"app":"viewtopia","schemaVersion":2}')).toThrow(/schema version/);
+    expect(() => asProject('{"app":"viewtopia","schemaVersion":3}')).toThrow(/schema version/);
   });
 });
 

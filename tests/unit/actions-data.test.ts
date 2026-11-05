@@ -1,7 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // the WebGL bundle stays out, so the view bbox comes from the shared camera
-vi.mock('cesium', () => ({ Math: { toDegrees: (radians: number) => radians } }));
+vi.mock('cesium', () => ({
+  Math: {
+    toDegrees: (radians: number) => radians,
+    toRadians: (degrees: number) => degrees,
+  },
+  HeadingPitchRange: class {
+    heading: number;
+    pitch: number;
+    range: number;
+    constructor(heading: number, pitch: number, range: number) {
+      this.heading = heading;
+      this.pitch = pitch;
+      this.range = range;
+    }
+  },
+}));
 vi.mock('../../src/viewer/registry', () => ({
   getActiveCesiumViewer: vi.fn(() => null),
   getActiveMapLibre: vi.fn(() => null),
@@ -203,17 +218,27 @@ describe('data.add_service', () => {
       runAction('data.add_service', { type: 'tileset', url: WFS_URL, layer_name: 'Built' }),
     ).rejects.toThrow('type must be one of');
   });
+
+  it('adds hosted imagery from a /tiles/ template with its braces intact', async () => {
+    const template = '/tiles/v1/assets/3f1c/imagery/{z}/{x}/{y}.png';
+
+    await runAction('data.add_service', { type: 'xyz', url: template, layer_name: 'Ortho' });
+
+    const layers = useOgcLayerStore.getState().layers;
+    expect(layers.map((layer) => layer.url)).toEqual([`${window.location.origin}${template}`]);
+  });
 });
 
 describe('data.add_tileset', () => {
   const TILESET_URL = 'https://example.org/tiles/quarry/tileset.json';
-  const DRAWN = { root: 'loaded' } as unknown as Cesium3DTileset;
+  const DRAWN = { root: 'loaded', boundingSphere: { radius: 10 } } as unknown as Cesium3DTileset;
   const MILLISECONDS_PER_SECOND = 1000;
   const CHAT_WAIT_MS = CHAT_TILESET_WAIT_SECONDS * MILLISECONDS_PER_SECOND;
 
   function fakeGlobe() {
     return {
       flownTo: [] as unknown[],
+      camera: { heading: 0 },
       async flyTo(tileset: unknown) {
         this.flownTo.push(tileset);
       },
@@ -524,10 +549,10 @@ describe('the URL scheme check', () => {
   });
 
   describe('data.add_tileset', () => {
-    const DRAWN = { root: 'loaded' } as unknown as Cesium3DTileset;
+    const DRAWN = { root: 'loaded', boundingSphere: { radius: 10 } } as unknown as Cesium3DTileset;
 
     beforeEach(() => {
-      const globe = { flyTo: async () => {} };
+      const globe = { flyTo: async () => {}, camera: { heading: 0 } };
       vi.mocked(getActiveCesiumViewer).mockReturnValue(globe as unknown as Viewer);
     });
 
@@ -555,6 +580,43 @@ describe('the URL scheme check', () => {
         expect(useTiles3dLayerStore.getState().layers).toEqual([]);
       });
     }
+
+    it('loads a hosted asset from a /tiles/ path on the app origin', async () => {
+      const path = '/tiles/v1/assets/3f1c/tileset.json';
+
+      const running = runAction('data.add_tileset', { url: path, layer_name: 'Quarry' });
+      const layer = useTiles3dLayerStore.getState().layers[0];
+      useTiles3dLayerStore.getState().setLoaded(layer.id, DRAWN);
+      await running;
+
+      expect(layer.url).toBe(`${window.location.origin}${path}`);
+    });
+
+    it('refuses a /tiles/ path that climbs out of /tiles/', async () => {
+      await expect(
+        runAction('data.add_tileset', { url: '/tiles/../data/tileset.json', layer_name: 'Quarry' }),
+      ).rejects.toThrow(/leaves \/tiles\//);
+
+      expect(useTiles3dLayerStore.getState().layers).toEqual([]);
+    });
+
+    it.each([
+      '/tiles/..%2fdata/tileset.json',
+      '/tiles/..%2Fdata/tileset.json',
+      '/tiles/%2e%2e/data/tileset.json',
+      '/tiles/%2E%2E%2Fdata/tileset.json',
+      '/tiles/%252e%252e/data/tileset.json',
+      '/tiles/..%252fdata/tileset.json',
+      '/tiles/..%5cdata/tileset.json',
+      '/tiles/..\\data/tileset.json',
+      '/tiles/v1\\tileset.json',
+    ])('refuses the encoded traversal or backslash in %s', async (url) => {
+      await expect(
+        runAction('data.add_tileset', { url, layer_name: 'Quarry' }),
+      ).rejects.toThrow(/encoded dot or slash or a backslash/);
+
+      expect(useTiles3dLayerStore.getState().layers).toEqual([]);
+    });
   });
 
   describe('sql.attach_url', () => {

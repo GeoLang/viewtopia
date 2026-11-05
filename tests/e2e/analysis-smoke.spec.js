@@ -6,7 +6,7 @@ import { platformAuthHeaders } from '../../scripts/platform-token.mjs';
  * every call runs from the SPA browser origin through the same-origin /tiles/
  * proxy (nginx rewrites /tiles/(.*) -> tiletopia /api/$1).
  *
- *   docker compose -f docker-compose.platform.yml up -d
+ *   docker compose -f docker-compose.platform.yml --env-file .env.platform up -d
  *   npx playwright test -c playwright.platform.config.js tests/e2e/analysis-smoke.spec.js
  *
  * tiletopia serves /api/v1/analysis/{viewshed,flood,terrain,solar} from the

@@ -11,6 +11,14 @@ services:
   tiletopia:
     build: !reset null
     image: ghcr.io/geolang/tiletopia:v0.4.4
+    # no ids-check image is published, so tiletopia answers IDS checks with 503
+    environment:
+      TILETOPIA_IDS_CHECK_URL: !reset null
+      TILETOPIA_IDS_CHECK_TOKEN: !reset null
+
+  # builds from a tiletopia checkout, so a plain `up` of the bundle skips it
+  ids-check:
+    profiles: [ids-check]
 
   fenestra:
     build: !reset null

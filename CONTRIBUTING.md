@@ -17,7 +17,7 @@ Thank you for your interest in contributing!
 - **Formatting**: Run `cargo fmt --all` before committing
 - **Linting**: `cargo clippy --all-targets --all-features -- -D warnings` must pass cleanly
 - **Testing**: All new functionality must include tests
-- **Documentation**: Public APIs must have doc comments
+- **Comments**: No doc comments. Comment only a fact the code cannot show, such as library behaviour or the measurement behind a constant
 - **Dependencies**: Run `cargo deny check` to verify license compliance
 
 ## Pull Request Process

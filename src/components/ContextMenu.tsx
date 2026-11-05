@@ -15,6 +15,7 @@ import { canEditLiveDocument } from '../live/liveStore';
 import { useMapCommentsStore } from '../live/mapCommentsStore';
 import { useAppStore } from '../store/app';
 import { useChatStore } from '../store/chat';
+import { randomUuid } from '../lib/randomUuid';
 
 interface MenuAction {
   icon: React.ReactNode;
@@ -114,7 +115,7 @@ export function ContextMenu() {
       label: 'Bookmark this view',
       onClick: () => {
         addBookmark({
-          id: crypto.randomUUID(),
+          id: randomUuid(),
           name: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
           lat,
           lng,

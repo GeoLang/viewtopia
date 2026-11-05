@@ -91,6 +91,11 @@ export function Export3DPanel({ onClose }: { onClose: () => void }) {
       if (res) noticeRefusal(res.status);
       if (!res?.ok) {
         stop();
+        setError(
+          res
+            ? `Checking the export failed with HTTP ${res.status}`
+            : 'The export service is unreachable.',
+        );
         return;
       }
       const job = parseJob(await res.json().catch(() => null));
@@ -193,6 +198,11 @@ export function Export3DPanel({ onClose }: { onClose: () => void }) {
     }
     if (res.status === 403) {
       setError('Your account cannot start exports. Ask for edit access.');
+      return;
+    }
+    // tiletopia answers another owner's asset with the 404 of a missing one
+    if (res.status === 404) {
+      setError('That asset was deleted or belongs to another user, so it cannot be exported.');
       return;
     }
     if (!res.ok) {

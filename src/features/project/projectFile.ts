@@ -1,3 +1,4 @@
+import { notifications } from '@mantine/notifications';
 import { useAppStore, asRenderer, type Renderer, type Basemap, type CustomBasemap } from '../../store/app';
 import { BASEMAP_OPTIONS } from '../../hooks/basemapTiles';
 import {
@@ -10,12 +11,16 @@ import { overlayImages } from '../../offline/db';
 import { getProjectAttachmentDataUrl, uploadProjectAttachment } from '../../projects/api';
 import { migrateLegacyChoropleth } from '../symbology/symbology';
 import { useOgcLayerStore, loadPmtilesLayer, type OGCLayer } from '../../store/ogcLayers';
+import { useTiles3dLayerStore, type Tiles3dLayer } from '../../store/tiles3dLayers';
 import { useSplitViewStore, asPaneRenderer, type Pane } from '../../store/splitView';
 import { captureCameraState, flyToCameraState, type CameraState } from '../../store/cameraViews';
 import { getActiveCesiumViewer, getActiveMapLibre } from '../../viewer/registry';
 import { getSharedCamera, setSharedCamera } from '../../hooks/sharedCamera';
 import { readDeal, type Deal } from '../deals/deal';
 import { useDealStore } from '../deals/store';
+import { captureModelStates, readModelStates, restoreModelStates } from './modelStates';
+
+export const PROJECT_SCHEMA_VERSION = 2;
 
 /**
  * The whole workspace as one file: what is on screen and where the camera is.
@@ -24,7 +29,8 @@ import { useDealStore } from '../deals/store';
  */
 export interface ViewtopiaProject {
   app: 'viewtopia';
-  schemaVersion: 1;
+  // project maps saved at version 1 reach applyProject unparsed
+  schemaVersion: 1 | typeof PROJECT_SCHEMA_VERSION;
   name: string;
   savedAt: string;
   renderer: Renderer;
@@ -37,6 +43,10 @@ export interface ViewtopiaProject {
   agentLayers: AgentLayer[];
   markers: AgentMarker[];
   ogcLayers: OGCLayer[];
+  // absent from a project map loadProjectMap reads from ptolemy without parseProject
+  tiles3dLayers?: Tiles3dLayer[];
+  // absent from a version 1 project map, which loadProjectMap reads without parseProject
+  modelStatesByAsset?: Record<string, unknown>;
   /**
    * Draped images, without their bitmaps: those live in IndexedDB and, for a
    * project saved to the server, in a ptolemy project attachment the entry names.
@@ -98,7 +108,7 @@ export function serializeProject(name: string): ViewtopiaProject {
   const { deal } = useDealStore.getState();
   return {
     app: 'viewtopia',
-    schemaVersion: 1,
+    schemaVersion: PROJECT_SCHEMA_VERSION,
     name,
     savedAt: new Date().toISOString(),
     renderer: app.renderer,
@@ -117,6 +127,8 @@ export function serializeProject(name: string): ViewtopiaProject {
     // a dropped .pmtiles is a browser File the protocol resolves in this
     // session only, so saving its entry would only produce a dead layer
     ogcLayers: useOgcLayerStore.getState().layers.filter((l) => !l.pmtiles?.local),
+    tiles3dLayers: useTiles3dLayerStore.getState().layers,
+    modelStatesByAsset: captureModelStates(),
     ...(deal ? { deal } : {}),
   };
 }
@@ -165,7 +177,7 @@ export function parseProject(text: string): ViewtopiaProject {
   if (!p || typeof p !== 'object' || p.app !== 'viewtopia') {
     throw new Error('not a Viewtopia project file');
   }
-  if (p.schemaVersion !== 1) {
+  if (p.schemaVersion !== 1 && p.schemaVersion !== PROJECT_SCHEMA_VERSION) {
     throw new Error(`project file: unsupported schema version ${String(p.schemaVersion)}`);
   }
   const renderer = asRenderer(p.renderer);
@@ -176,7 +188,7 @@ export function parseProject(text: string): ViewtopiaProject {
 
   return {
     app: 'viewtopia',
-    schemaVersion: 1,
+    schemaVersion: PROJECT_SCHEMA_VERSION,
     name: typeof p.name === 'string' ? p.name : 'workspace',
     savedAt: typeof p.savedAt === 'string' ? p.savedAt : '',
     renderer,
@@ -197,6 +209,8 @@ export function parseProject(text: string): ViewtopiaProject {
     ),
     markers: requireArray(p.markers, 'markers') as AgentMarker[],
     ogcLayers: requireArray(p.ogcLayers, 'ogcLayers') as OGCLayer[],
+    tiles3dLayers: requireArray(p.tiles3dLayers, 'tiles3dLayers') as Tiles3dLayer[],
+    modelStatesByAsset: readModelStates(p.modelStatesByAsset),
     imageOverlays: requireArray(p.imageOverlays, 'imageOverlays') as ImageOverlayEntry[],
     ...(p.deal === undefined ? {} : { deal: readDeal(p.deal) }),
   };
@@ -336,6 +350,23 @@ export function applyProject(project: ViewtopiaProject, projectId?: string): voi
   const ogc = useOgcLayerStore.getState();
   for (const layer of [...ogc.layers]) ogc.removeLayer(layer.id);
   for (const saved of project.ogcLayers) restoreOgcLayer(saved);
+
+  const models = useTiles3dLayerStore.getState();
+  for (const layer of [...models.layers]) models.removeLayer(layer.id);
+  for (const saved of project.tiles3dLayers ?? []) models.putLayer(saved);
+  void restoreModelStates(project.modelStatesByAsset)
+    .then((notes) => {
+      if (notes.length === 0) return;
+      notifications.show({ title: 'Saved model state', message: notes.join(' '), color: 'yellow' });
+    })
+    .catch((failure: unknown) => {
+      const message = failure instanceof Error ? failure.message : String(failure);
+      notifications.show({
+        title: 'Saved model state',
+        message: `No saved model state was restored: ${message}`,
+        color: 'red',
+      });
+    });
 
   useDealStore.getState().setDeal(project.deal ?? null);
 

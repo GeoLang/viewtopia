@@ -144,7 +144,7 @@ export function ChartEditor({ widget }: { widget: DashboardWidget }) {
             size="sm"
             variant="subtle"
             color="red"
-            aria-label="Remove point"
+            title="Remove point" aria-label="Remove point"
             onClick={() => setData(data.filter((_, j) => j !== i))}
           >
             <IconTrash size={12} />

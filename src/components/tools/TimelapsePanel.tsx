@@ -554,7 +554,7 @@ export function TimelapsePanel({ onClose }: { onClose: () => void }) {
                       size="sm"
                       variant="subtle"
                       color="red"
-                      aria-label={`Remove ${archive.name}`}
+                      title={`Remove ${archive.name}`} aria-label={`Remove ${archive.name}`}
                       onClick={() => removeArchive(archive.id)}
                     >
                       <IconTrash size={14} />

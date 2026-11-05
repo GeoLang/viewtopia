@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { openDictationSocket, handshake, speechSocketUrl } from '../../src/speech/dictationSocket';
 
+vi.mock('../../src/lib/randomUuid', () => ({ randomUuid: () => 'uid-1' }));
+
 /** A WebSocket the test drives by hand: records sends, fires events on demand. */
 class FakeWebSocket {
   static OPEN = 1;
@@ -39,7 +41,6 @@ const handlers = () => ({
 beforeEach(() => {
   FakeWebSocket.instances = [];
   vi.stubGlobal('WebSocket', FakeWebSocket);
-  vi.stubGlobal('crypto', { randomUUID: () => 'uid-1' });
 });
 
 afterEach(() => {

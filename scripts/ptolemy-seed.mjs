@@ -170,10 +170,26 @@ export async function ensureBranch(api, datasetId, name) {
   return created.id;
 }
 
+// ptolemy clamps a feature page to this many
+const FEATURE_PAGE_LIMIT = 10_000;
+
+export async function branchFeatures(api, branchId) {
+  const features = [];
+  let cursor = null;
+  do {
+    const query = new URLSearchParams({ limit: String(FEATURE_PAGE_LIMIT) });
+    if (cursor) query.set('cursor', cursor);
+    const page = await api(`/branches/${branchId}/features?${query}`);
+    features.push(...page.features);
+    cursor = page.next_cursor;
+  } while (cursor);
+  return features;
+}
+
 export async function existingKeys(api, branchId, keyProp) {
-  const data = await api(`/branches/${branchId}/features`);
+  const features = await branchFeatures(api, branchId);
   return new Set(
-    data.features.map((f) => f.properties?.[keyProp]).filter((k) => k != null),
+    features.map((f) => f.properties?.[keyProp]).filter((k) => k != null),
   );
 }
 

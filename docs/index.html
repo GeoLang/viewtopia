@@ -75,7 +75,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <div class="stat"><div class="num">20</div><div class="label">Plugins</div></div>
 <div class="stat"><div class="num">11</div><div class="label">QGIS Ports</div></div>
 <div class="stat"><div class="num">8</div><div class="label">Space-Time analyses</div></div>
-<div class="stat"><div class="num">58</div><div class="label">Chat actions</div></div>
+<div class="stat"><div class="num">59</div><div class="label">Chat actions</div></div>
 <div class="stat"><div class="num">$0</div><div class="label">Per month</div></div>
 </div>
 </div>
@@ -116,7 +116,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <li>SQL, routing, and any QGIS processing algorithm by id</li>
 <li>Agent loop runs in sibyl (Rust)</li>
 <li>Auto-renders maps from chat</li>
-<li>58 typed viewer actions the chat can run</li>
+<li>59 typed viewer actions the chat can run</li>
 <li>Replies render as Markdown</li>
 <li>A dropped file is also uploaded for the agent's tools</li>
 <li>Chat-only mode at <code>?mode=chat</code></li>
@@ -202,7 +202,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <h3>Export &amp; Sharing</h3>
 <ul>
 <li>PNG screenshot of current view</li>
-<li>Basemap selector (Streets/Satellite/Topo)</li>
+<li>Basemap selector (Liberty/Bright/Positron/Dark/Self-hosted/OSM/Satellite/Topo)</li>
 <li>Layer visibility toggling</li>
 <li>Attribute table modal</li>
 </ul>
@@ -670,7 +670,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 <span class="hl">│                     │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│                     │</span><br>
 <span class="hl">│  • 3D Tiles server  │</span>               <span class="hl">│  • viewer tool subset │</span><br>
 <span class="hl">│  • Terrain mesh     │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • QGIS, GeoPandas  │</span><br>
-<span class="hl">│  • Point clouds     │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • OSM/Nominatim    │</span><br>
+<span class="hl">│  • Point clouds     │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • OSM/Overpass     │</span><br>
 <span class="hl">│  • Classification   │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • Isochrones       │</span><br>
 <span class="hl">│  • REST API         │</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">│  • AG-UI stream     │</span><br>
 <span class="hl">└─────────────────────┘</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="hl">└──────────┬──────────┘</span><br>
@@ -703,7 +703,7 @@ footer{border-top:1px solid var(--border);padding:32px 0;text-align:center;color
 │   │   ├── commands.ts      # Unified agent command protocol
 │   │   ├── addTileset.ts    # 3D Tiles and terrain onto the globe
 │   │   └── uiSpec.ts        # Draw the agent's map spec. A table or image spec is dropped
-│   ├── actions/             # The 58 named viewer actions the chat runs
+│   ├── actions/             # The 59 named viewer actions the chat runs
 │   ├── services/            # geocode.ts, route.ts: backend clients
 │   ├── duckdb/              # DuckDB-WASM: SQL over local data
 │   ├── toolbox/             # Geoprocessing ops, topoi compiled to WASM

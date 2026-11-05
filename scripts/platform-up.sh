@@ -35,6 +35,13 @@ generate_secret() {
 }
 generate_secret PLATFORM_JWT_SECRET
 generate_secret GEOLANG_EXECUTOR_SECRET
+generate_secret TILETOPIA_IDS_CHECK_TOKEN
+# docker-compose.platform.yml publishes the viewer on 5174
+if ! grep -qs "^TILETOPIA_ION_BASE_URL=..*" "$ENV_PLATFORM"; then
+  VIEWER_ORIGIN="${TILETOPIA_ION_BASE_URL:-http://localhost:5174}"
+  echo "setting TILETOPIA_ION_BASE_URL=$VIEWER_ORIGIN in $ENV_PLATFORM, change it if clients open the viewer at another address"
+  echo "TILETOPIA_ION_BASE_URL=$VIEWER_ORIGIN" >> "$ENV_PLATFORM"
+fi
 COMPOSE=(docker compose --env-file "$ENV_PLATFORM" -f docker-compose.platform.yml)
 
 # speech needs both the Aavaaz checkout and a working NVIDIA GPU, so it stays

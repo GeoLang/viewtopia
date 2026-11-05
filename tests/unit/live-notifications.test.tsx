@@ -7,13 +7,7 @@ import type { LiveNotification } from '../../src/live/api';
 import { useLiveStore } from '../../src/live/liveStore';
 import { NotificationsBell } from '../../src/live/NotificationsBell';
 import { FakeAgoraServer } from './stubs/fakeAgoraServer';
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+import { jsonResponse, stubMantineBrowserGlobals } from './stubs/liveTestHelpers';
 
 function notification(overrides: Partial<LiveNotification> = {}): LiveNotification {
   return {
@@ -34,21 +28,7 @@ let fetchMock: ReturnType<typeof vi.fn>;
 
 describe('notifications bell', () => {
   beforeEach(() => {
-    vi.stubGlobal(
-      'matchMedia',
-      vi.fn().mockReturnValue({
-        matches: false,
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-      }),
-    );
-    globalThis.ResizeObserver = class {
-      observe() {}
-      unobserve() {}
-      disconnect() {}
-    };
+    stubMantineBrowserGlobals();
     server = new FakeAgoraServer();
     server.install();
     fetchMock = vi.fn(async (url: string) =>

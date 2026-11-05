@@ -207,6 +207,42 @@ describe('Export3DPanel', () => {
     );
   });
 
+  it('explains the 404 of an asset that is gone or belongs to another user', async () => {
+    respondDefault((url, init) =>
+      url === '/tiles/v1/exports' && init?.method === 'POST' ? jsonOk(null, 404) : null,
+    );
+    await renderPanel();
+
+    await startExport();
+
+    expect(screen.getByTestId('export3d-error')).toHaveTextContent(
+      'That asset was deleted or belongs to another user, so it cannot be exported.',
+    );
+  });
+
+  it('says so and stops polling when a running job answers 404', async () => {
+    respondDefault((url, init) =>
+      url === '/tiles/v1/exports' && init?.method === 'POST'
+        ? jsonOk({ id: JOB_ID, status: 'Processing' }, 201)
+        : null,
+    );
+    await renderPanel();
+    await startExport();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(POLL_MS);
+    });
+    const afterGone = fetchMock.mock.calls.length;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(POLL_MS * 3);
+    });
+
+    expect(fetchMock.mock.calls.length).toBe(afterGone);
+    expect(screen.getByTestId('export3d-error')).toHaveTextContent(
+      'Checking the export failed with HTTP 404',
+    );
+  });
+
   it('reports an unreachable export service', async () => {
     fetchMock.mockRejectedValue(new Error('offline'));
     await renderPanel();

@@ -47,6 +47,7 @@ import {
 import { useAgentLayerStore } from '../../store/agentLayers';
 import { useColumnLabels } from '../../store/datasetSchemas';
 import { useGeoJsonSources } from '../../lib/geojsonSources';
+import { randomUuid } from '../../lib/randomUuid';
 
 const MAX_ROWS = 500;
 const NO_FIELDS: VirtualField[] = [];
@@ -188,7 +189,7 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
     });
     const name = `${storeLayer.name} + ${right.name}`;
     useAgentLayerStore.getState().addLayer(
-      { id: `join-${crypto.randomUUID()}`, name, color: storeLayer.color, geojson },
+      { id: `join-${randomUuid()}`, name, color: storeLayer.color, geojson },
       false,
     );
     return `${name}: ${geojson.features.length} features`;
@@ -256,7 +257,7 @@ export function DataTablePanel({ onClose }: { onClose: () => void }) {
             onChange={(e) => setFilter(e.currentTarget.value)}
             leftSection={<IconSearch size={12} />}
           />
-          <ActionIcon aria-label="Close data table" size="sm" variant="subtle" color="gray" onClick={onClose}>
+          <ActionIcon title="Close data table" aria-label="Close data table" size="sm" variant="subtle" color="gray" onClick={onClose}>
             <IconX size={14} />
           </ActionIcon>
         </Group>

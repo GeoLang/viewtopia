@@ -96,7 +96,7 @@ export function PropertyRows({ rows, onChange, color }: PropertyRowsProps) {
               size="sm"
               variant="subtle"
               color="gray"
-              aria-label="Remove property"
+              title="Remove property" aria-label="Remove property"
               onClick={() => onChange(rows.filter((_, i) => i !== idx))}
             >
               <IconX size={12} />

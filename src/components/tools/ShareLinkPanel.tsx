@@ -50,7 +50,7 @@ export function ShareLinkPanel({ onClose }: { onClose: () => void }) {
             />
             <CopyButton value={shareUrl}>
               {({ copied, copy }) => (
-                <ActionIcon size="sm" variant="filled" color={copied ? 'green' : 'violet'} onClick={copy} aria-label="Copy link">
+                <ActionIcon size="sm" variant="filled" color={copied ? 'green' : 'violet'} onClick={copy} title="Copy link" aria-label="Copy link">
                   {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
                 </ActionIcon>
               )}

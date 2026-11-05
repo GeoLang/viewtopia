@@ -9,12 +9,15 @@ Docker Engine with Compose v2. Nothing else. The images come from
 
 ## Run it
 
-1. Generate the two secrets.
+1. Generate the two secrets and set the viewer's origin. Replace
+   `http://localhost:5174` with the address clients open, with no trailing slash,
+   if the stack is not on this machine.
 
 ```sh
-printf 'PLATFORM_JWT_SECRET=%s\nGEOLANG_EXECUTOR_SECRET=%s\n' \
+printf 'PLATFORM_JWT_SECRET=%s\nGEOLANG_EXECUTOR_SECRET=%s\nTILETOPIA_ION_BASE_URL=%s\n' \
   "$(openssl rand -base64 48 | tr -d '\n')" \
-  "$(openssl rand -base64 48 | tr -d '\n')" > .env.platform
+  "$(openssl rand -base64 48 | tr -d '\n')" \
+  http://localhost:5174 > .env.platform
 ```
 
 `PLATFORM_JWT_SECRET` is one HS256 secret shared by every service that
@@ -23,6 +26,19 @@ that need it refuse to start on an empty value rather than serve
 unauthenticated writes. `GEOLANG_EXECUTOR_SECRET` is what the agent API
 presents to the executor that runs tool code. Generate both once and keep them,
 a new secret invalidates every session.
+
+`TILETOPIA_ION_BASE_URL` is the start of every absolute URL in Tiletopia's WMTS,
+TMS and Ion answers, and of its Ion upload location. Compose stops on an empty
+value. A proxy in front of the stack must pass the `Host` header unchanged,
+because an Ion upload's signature covers it.
+
+The five `TILETOPIA_GLOBAL_TERRAIN_*` variables are optional and serve global
+terrain without an Ion account. Tiletopia's README lists what each one takes.
+Left empty, the global terrain routes answer 503 naming what is missing.
+
+IDS checks of IFC models are off in the bundle. They need the `ids-check`
+service, which has no published image, so `docker-compose.release.yml` leaves
+`TILETOPIA_IDS_CHECK_URL` unset and tiletopia answers an IDS check with 503.
 
 2. Fetch an OSM extract for the region you want. Geocoding and routing read it,
 and the file name is fixed.
@@ -89,8 +105,8 @@ separate Aavaaz checkout, so the bundle leaves that service out.
   file. The stack bind-mounts these, so keep the directory beside the compose
   files.
 - `data/`, where the OSM extract goes. Routing writes its graph here too.
-- `.env.platform.example`, the two secrets with a comment each, if you would
-  rather fill them in by hand than run step 1.
+- `.env.platform.example`, the two secrets and the viewer's origin with a comment
+  each, if you would rather fill them in by hand than run step 1.
 - `geolang.env.example`, the model settings, see [The agent](#the-agent).
 - `scripts/fetch-osm-extract.sh`, a geofabrik download checked against the
   published md5.

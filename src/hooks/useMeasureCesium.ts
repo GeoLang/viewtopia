@@ -2,82 +2,22 @@ import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import {
   type Viewer,
-  Cartesian2,
   Cartesian3,
-  Cartographic,
-  Math as CesiumMath,
   Color,
-  ScreenSpaceEventHandler,
-  ScreenSpaceEventType,
   PolylineDashMaterialProperty,
 } from 'cesium';
-import { useMeasureStore, type MeasureMode } from '../store/measure';
+import { measureToolClicks, useMeasureStore } from '../store/measure';
 import { useAppStore } from '../store/app';
-
-function cartToLngLat(viewer: Viewer, x: number, y: number): [number, number] | null {
-  const cart = viewer.camera.pickEllipsoid(new Cartesian2(x, y));
-  if (!cart) return null;
-  const c = Cartographic.fromCartesian(cart);
-  return [CesiumMath.toDegrees(c.longitude), CesiumMath.toDegrees(c.latitude)];
-}
+import { useToolClicksCesium } from './useToolClicksCesium';
 
 export function useMeasureCesium(
   viewerRef: MutableRefObject<Viewer | null>,
 ) {
+  useToolClicksCesium(viewerRef, useMeasureStore, measureToolClicks);
   const entityIdsRef = useRef<string[]>([]);
-  const handlerRef = useRef<ScreenSpaceEventHandler | null>(null);
-  // A renderer switch destroys and rebuilds the viewer, so rebind to the new
-  // one — handlers and entities left on the old canvas are dead.
+  // renderer switches destroy and rebuild the viewer, which drops entities on the old canvas
   const renderer = useAppStore((s) => s.renderer);
   const activeTab = useAppStore((s) => s.activeTab);
-
-  useEffect(() => {
-    const viewer = viewerRef.current;
-    if (!viewer || viewer.isDestroyed()) return;
-
-    const sync = (state: { mode: MeasureMode }) => {
-      const v = viewerRef.current;
-      if (!v || v.isDestroyed()) return;
-
-      if (state.mode && !handlerRef.current) {
-        const handler = new ScreenSpaceEventHandler(v.scene.canvas);
-
-        handler.setInputAction((click: { position: Cartesian2 }) => {
-          const { mode, addPoint } = useMeasureStore.getState();
-          if (!mode) return;
-          const ll = cartToLngLat(v, click.position.x, click.position.y);
-          if (ll) addPoint(ll[0], ll[1]);
-        }, ScreenSpaceEventType.LEFT_CLICK);
-
-        handler.setInputAction(() => {
-          const { mode, finishMeasure } = useMeasureStore.getState();
-          if (mode) finishMeasure();
-        }, ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
-
-        handlerRef.current = handler;
-        v.scene.canvas.style.cursor = 'crosshair';
-      }
-
-      if (!state.mode && handlerRef.current) {
-        handlerRef.current.destroy();
-        handlerRef.current = null;
-        if (v && !v.isDestroyed()) v.scene.canvas.style.cursor = '';
-      }
-    };
-
-    // Apply the mode that's already set: after a renderer switch the store won't
-    // fire again for a tool the user turned on before the switch.
-    sync(useMeasureStore.getState());
-    const unsub = useMeasureStore.subscribe(sync);
-
-    return () => {
-      unsub();
-      if (handlerRef.current) {
-        handlerRef.current.destroy();
-        handlerRef.current = null;
-      }
-    };
-  }, [viewerRef, renderer, activeTab]);
 
   useEffect(() => {
     const viewer = viewerRef.current;

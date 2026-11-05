@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { Badge } from '@mantine/core';
 import { Spotlight, type SpotlightActionGroupData } from '@mantine/spotlight';
 import {
   IconClick,
@@ -22,14 +21,8 @@ import { toggleInspectPanel } from '../store/featurePicker';
 import { useViewOnlyLive } from '../live/liveStore';
 import { useSpaceTimeStore } from '../features/spacetime/store';
 import { getPlugins, usePluginRegistryVersion } from '../plugins/registry';
-import { TOOL_MENU_GROUPS, visibleToolItems, type ToolMenuItem } from './toolMenus';
+import { TOOL_MENU_GROUPS, type ToolMenuItem } from './toolMenus';
 import { exportMapPng } from './mapExport';
-
-const previewBadge = (
-  <Badge size="xs" variant="light" color="orange">
-    Preview
-  </Badge>
-);
 
 /** Cmd/Ctrl+K palette over the same registries the toolbar menus render. */
 export function CommandPalette() {
@@ -37,7 +30,6 @@ export function CommandPalette() {
   const setActivePaneTab = useSplitViewStore((s) => s.setActivePaneTab);
   const toggleUiHidden = useAppStore((s) => s.toggleUiHidden);
   const setChatMode = useAppStore((s) => s.setChatMode);
-  const showPreviewTools = useAppStore((s) => s.settings.showPreviewTools);
   const toggleSpaceTime = useSpaceTimeStore((s) => s.togglePanel);
   const viewOnly = useViewOnlyLive();
   const pluginRegistryVersion = usePluginRegistryVersion();
@@ -48,7 +40,6 @@ export function CommandPalette() {
       label: item.label,
       keywords: item.keywords,
       leftSection: <item.icon size={18} />,
-      rightSection: item.preview ? previewBadge : undefined,
       onClick: () => togglePanel(item.panel),
     });
 
@@ -127,9 +118,7 @@ export function CommandPalette() {
       },
       ...TOOL_MENU_GROUPS.map((menu) => ({
         group: menu.group,
-        actions: menu.sections.flatMap((section) =>
-          visibleToolItems(section, showPreviewTools).map(toolAction),
-        ),
+        actions: menu.sections.flat().map(toolAction),
       })),
     ];
 
@@ -173,7 +162,6 @@ export function CommandPalette() {
     toggleUiHidden,
     setChatMode,
     toggleSpaceTime,
-    showPreviewTools,
     viewOnly,
     // getPlugins() is read inside, so a runtime install has to rebuild the list
     pluginRegistryVersion,

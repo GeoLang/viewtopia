@@ -1,3 +1,4 @@
+import { randomUuid } from '../lib/randomUuid';
 /**
  * Jupyter Kernel Gateway client — connects to a remote Jupyter kernel
  * via WebSocket (Jupyter Messaging Protocol).
@@ -67,7 +68,7 @@ export class JupyterKernelClient {
 
   constructor(config: KernelConfig) {
     this.config = config;
-    this.sessionId = crypto.randomUUID().replace(/-/g, '');
+    this.sessionId = randomUuid().replace(/-/g, '');
   }
 
   /** Get current kernel status */
@@ -134,7 +135,7 @@ export class JupyterKernelClient {
       throw new Error('Not connected to kernel');
     }
 
-    const msgId = crypto.randomUUID().replace(/-/g, '');
+    const msgId = randomUuid().replace(/-/g, '');
 
     const msg: JupyterMessage = {
       header: {

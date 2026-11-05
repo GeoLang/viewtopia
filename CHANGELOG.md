@@ -6,6 +6,115 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-11-05: section caps follow the cut wherever it was made: the `tileset.section` chat action, a BCF
+  viewpoint, a project file and the BIM storey cut get caps with the Model Section panel closed. The
+  caps of selected elements are drawn in the yellow the tiles use for a selection, and change with the
+  selection without a new request. The panel's controls move when a cut changes from outside it. The
+  `bim.enter` description says that walls stop walk and that steps up to 0.3 m are climbed.
+- 2026-11-05: **3D model state saves with the project.** Project files and project maps, now schema
+  version 2, keep each tiletopia model's selected, hidden and isolated element GlobalIds, its model
+  section and outline, and BIM mode with the navigation and shown storey, under `modelStatesByAsset`.
+  Opening a project applies them once the tileset has loaded, after checking the ids with tiletopia,
+  and a notification says how many saved ids no longer exist. BIM mode and the storey view come back
+  directly when a Cesium globe is on screen. Version 1 files open with no model state applied.
+- 2026-11-05: **IDS checks in the Model Elements panel.** The IDS tab uploads an `.ids` file to
+  tiletopia, polls the check while it runs, and lists each specification and requirement with pass or
+  fail and its counts. Clicking a failed element selects it in the model and flies to it. A failed check
+  shows tiletopia's error text, and a 503 shows tiletopia's message with a hint to set
+  `TILETOPIA_IDS_CHECK_URL`. The platform compose stack has an `ids-check` service built from
+  `../tiletopia/sidecars/ids-check` and points tiletopia at it. The release bundle has no ids-check
+  image, so it leaves the service off and tiletopia answers IDS checks with 503. A JSON 503 from tiletopia
+  on any coordination route now shows tiletopia's message instead of calling tiletopia unreachable.
+- 2026-11-05: Model Section panel: filled caps on the cut of a tiletopia model, read from tiletopia's
+  `GET /v1/assets/{id}/section` once the plane stops moving and drawn in grey on the cut face. They flip
+  with the panel, go when the cut turns off or the model closes, and clicking one selects its element.
+  The panel names how many outlines of the cut did not close, and shows tiletopia's error when the cut
+  cannot be read. Models outside tiletopia and earth-fixed models keep an open cut.
+- 2026-11-05: **BIM walk stops at walls and follows floors.** Each step casts against the model at knee
+  and chest height in the direction of travel and stops 0.3 m from a wall, or slides along it. A cast
+  down from 1.8 m above the floor steps up onto anything up to 0.3 m higher, drops to a lower floor and
+  refuses higher steps and steps off the model. Hidden and isolated-out elements do not block. A click
+  sets a new floor only on a surface within 20 degrees of facing up, so a click on a wall is refused.
+- 2026-11-05: **BCF topic writes, snapshots, change rows in the scene and storey cuts.** The Issues tab
+  creates, edits and deletes topics (title, type, status, description) and adds comments through
+  tiletopia's topic `PUT` and `DELETE`, and saving a topic can add the current camera, selection, hidden
+  or isolated elements and model section as a viewpoint. Viewpoint snapshots show in the topic, read with
+  the bearer token. Clicking a change report row selects its element in the open version and flies to it,
+  or notes that the open version lacks it. In BIM mode a shown storey can be cut at the base height of the
+  storey above, from tiletopia's `baseHeight`.
+- 2026-11-05: **issues and versions in the Model Elements panel.** The Issues tab imports and exports
+  BCF 3.0 through tiletopia, lists the model's topics with their comments, and choosing a topic restores
+  its first viewpoint: camera, selected elements, hidden or isolated elements, and one clipping plane
+  along an axis of the model as the model section. Field of view, orthogonal projection, colouring,
+  lines and space and opening hints are not applied, and the restore text lists what was left out. The
+  Versions tab lists the model's versions, uploads a new one, compares two into a change report with a
+  list of added, removed and changed elements, and exports the open version as DXF, cut at a height or
+  whole. A 403 from tiletopia shows that the user's role cannot make the change. nginx proxies
+  `/v1/change-reports` to tiletopia and takes bodies up to 256 MB on `/v1/assets`.
+- 2026-11-05: **BIM mode in the Cesium viewer**, entered from the Model Elements panel or chat actions
+  `bim.enter`, `bim.leave` and `bim.show_storey`. It sets the near plane to 0.1 m and turns off terrain
+  collision, terrain depth test and camera inertia, and leaving puts them back. Orbit turns about a
+  double-clicked point. Walk takes its height from a clicked floor and moves with W A S D or the arrow
+  keys and drag to look. Storey views isolate one storey, or a
+  storey and those below it, ordered by the middle height of their elements. CAD edges appear only when a tile has `EXT_mesh_primitive_edge_visibility` data,
+  which tiletopia does not write yet.
+- 2026-11-05: Model Section panel: a switch for a red outline along the cut. CesiumJS has no cap fill,
+  so the cut surface stays open.
+- 2026-11-05: **model elements for IFC assets.** The Model Elements panel, opened from a ready IFC row
+  in the Assets panel or from the Data menu, has a lazily loaded spatial tree, search, a filter on
+  class and storey, and properties grouped by set. Selecting in the tree highlights the element in
+  every tile it appears in and flies to it, and picking in the scene opens the tree to it. Shift or
+  Ctrl adds to the selection. Hide, Isolate and Show all work through the tile style on `asset_id`.
+- 2026-11-05: **Model Section panel.** One plane through a tileset along X, Y or Z of the model's own
+  frame, with a flip. The globe's Clip panel is unchanged.
+- 2026-11-05: chat actions `tileset.select_elements`, `tileset.isolate_elements`,
+  `tileset.hide_elements` and `tileset.section`. The first three take `ids` or an element `filter`,
+  check them against the server, act on the contents of a storey or other container, and report back
+  to the model how many elements changed and how many ids were not found.
+- 2026-11-05: project files and project maps save 3D model layers as `tiles3dLayers`. Older files
+  load with none.
+- 2026-11-05: the Assets panel file picker accepts `.ifczip`.
+- 2026-11-05: a ready IFC asset whose tiling job finished with an `error` text, such as elements that
+  lost geometry, shows that text as a yellow warning on its row, when Tiling report is pressed, and in
+  the Model Elements panel. The list makes no job request.
+- 2026-11-05: **digital twin from an IFC model.** `node scripts/seed-twin.mjs
+  --from-asset <id>` pages every element of a tiletopia IFC asset, optionally
+  only some `--class` values, and writes one ptolemy row per located element
+  to `twin-assets-<id>`, keyed by its GlobalId as `asset_id`. A re-run deletes
+  rows for elements gone from the model. The live map carries the model, the
+  asset points as an agora attachment, the temperature rule and a feed.
+- 2026-11-05: the Assets panel file picker accepts `.jp2` and `.j2k` imagery.
+- 2026-11-05: **photo set upload in the Assets panel.** Picking a `.zip` of
+  geotagged JPEG photos shows a preset list from
+  `/tiles/v1/photogrammetry/presets` and Upload photo set, which posts the zip
+  with `photogrammetry_preset` when a preset is chosen. The row then polls the
+  tiling job like any other upload. A failed job's error appears on its row.
+- 2026-11-05: **CZML assets open on the globe.** In the Assets panel a ready
+  CZML asset has Add to globe, which loads tiletopia's
+  `/tiles/v1/assets/{id}/czml` through Cesium's `CzmlDataSource` and flies to
+  it, and Remove from globe takes it off again. The file picker accepts
+  `.czml`. The Cesium Ion panel adds an Ion CZML asset the same way. The data
+  source is not a layer: it is not in the layer list or a live map, and a
+  renderer switch drops it.
+- 2026-11-05: **Global terrain in the Global Terrain panel.** The provider
+  loads tiletopia's `/tiles/v1/terrain/global/` on the Cesium globe. Levels 7
+  to 14 have relief from Copernicus GLO-30, and levels 0 to 6 are the geoid
+  surface with no relief.
+- 2026-11-05: **WMTS and TMS URLs on imagery rows.** A ready imagery asset in
+  the Assets panel has Service URLs, which shows the WMTS capabilities, TMS
+  tile map and TMS tile template URLs on the viewer's origin, each with a copy
+  button.
+- 2026-11-04: **uploaded imagery and DEM assets open in the viewer.** In the
+  Assets panel a ready imagery asset has Add as a map layer, which adds
+  tiletopia's `/tiles/v1/assets/{id}/imagery/{z}/{x}/{y}.png` tiles as one XYZ
+  layer that MapLibre and Cesium both draw. A ready DEM asset has Use as globe
+  terrain, which loads the terrain bundle tiletopia wrote under the asset id as
+  the Cesium terrain and shows the first line of Cesium's error when it does
+  not load. Imagery and terrain rows no longer offer Add to globe, which asked
+  for a `tileset.json` those assets do not have.
+- 2026-11-04: **`terrain.set_asset` sets the globe terrain from a DEM asset
+  id.** An id that is not a uuid is refused, and on another renderer the action
+  asks for the Cesium globe. The catalogue has 59 actions.
 - 2026-10-19: **offline sync retries with exponential backoff.** A sync that
   got no response, a 429 or a 5xx runs again after 2 s, then 4, 8 and 16 s,
   five attempts in all, after which the edit waits for a reconnect, a new
@@ -30,6 +139,79 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-11-05: the IDS tab follows a running check only on tiletopia's 409 `IDS_CHECK_RUNNING`. A 409
+  `ASSET_NOT_READY` or `ASSET_NOT_IFC` shows tiletopia's message as an error. The tab shows only for a
+  model whose name is an `.ifc` or `.ifczip` file, as the Assets panel decides.
+- 2026-11-05: BIM walk passes through doors. tiletopia tiles `IfcDoor` and `IfcDoorStandardCase` as
+  closed leaves, which stopped the user at every door. A wall behind a measurement point, label or pin
+  now stops the step, where the object in front used to hide it. Each cast takes up to three hits.
+- 2026-11-05: opening a project checks each saved model state, from a file or a project map. A malformed
+  entry is refused in a notification that names the model and the field, and the other models are
+  restored. A model whose tileset fails to load gets a note saying so, where it used to hold back the
+  notes of every model for the rest of the session. Saved empty selected, hidden and isolated sets clear
+  the live ones of the open model.
+- 2026-11-05: the viewer starts on a plain http origin other than localhost, such as a LAN address.
+  `crypto.randomUUID` exists only on https and localhost, so a blank grey page with
+  `crypto.randomUUID is not a function` came up there. Ids now come from `crypto.getRandomValues`.
+- 2026-11-05: every icon button without a tooltip shows its name on hover, as the browser's own title.
+- 2026-11-05: reopening a project with a 3D model layer already on the globe left the layer's loaded
+  tileset out of the layer store, so the Model Elements and Model Section panels saw no tileset.
+- 2026-11-05: the Global Terrain panel asks for the bundle list with the bearer,
+  which tiletopia needs to list the caller's own DEM uploads. The Assets and
+  Asset Export panels show a message when a poll or an export start answers
+  404, which tiletopia answers for a deleted asset and for another owner's,
+  in place of a row that stops updating with no reason.
+- 2026-11-05: **terrain reports a missing bundle.** `terrain.set_asset`, the
+  Assets panel and the bundle, platform and global providers of the Global
+  Terrain panel read `layer.json` first and fail on a non-OK answer with
+  tiletopia's message. Cesium's `fromUrl` reads a 404 there as a heightmap
+  tileset and resolves, so a tiling, failed, deleted or non-terrain asset
+  reported success. A custom terrain URL still goes straight to Cesium.
+- 2026-11-05: **deleting an asset takes its layers off.** An imagery layer or a
+  3D tileset that names the asset, added from the panel or from chat, is
+  removed, and the globe goes back to the ellipsoid when its terrain is that
+  asset's bundle.
+- 2026-11-05: **the Assets panel asks where a file goes.** A `.gltf`, `.glb`,
+  `.obj`, `.fbx` or `.dae` needs `longitude` and `latitude` before it uploads,
+  and a `.jpg`, `.jpeg` or `.png` needs `bounds` or `world_file` with `crs`.
+  The same fields are optional on an `.ifc` with site coordinates and on a
+  `.jp2` or `.j2k` with placement boxes. Values are checked before the upload
+  starts. These uploads used to fail in tiling or at tiletopia's refusal.
+- 2026-11-05: a `.zip` in the Assets panel shows `TILETOPIA_NODEODM_URL` and no
+  upload button when the presets route answers `configured: false`.
+- 2026-11-05: a chat action refuses a `/tiles/` path holding a backslash or an
+  encoded dot, slash or backslash, such as `/tiles/..%2fdata`, which nginx
+  decodes before it picks a location.
+- 2026-11-05: `docker-compose.platform.yml` passes `TILETOPIA_GLOBAL_TERRAIN_*`
+  to tiletopia, empty by default, so global terrain can be configured from
+  `.env.platform`.
+- 2026-11-05: re-running `seed-parcels.mjs` or `seed-twin.mjs` against a
+  dataset of more than 100 features no longer inserts duplicates.
+  `existingKeys` read only the first page of the branch, and now pages through
+  all of it.
+- 2026-11-05: re-running `seed-twin.mjs --from-asset` updates the row of an
+  element whose name, class, storey or position changed, which kept its old
+  row before. Positions match within 1e-7 degrees. An update sends only the
+  properties or the geometry that differ, and the output counts inserted,
+  updated, deleted and unchanged rows.
+- 2026-11-05: **Assets panel polls survive a dropped connection.** A failed
+  fetch or a 5xx used to end the poll of a tiling asset, which left its row on
+  tiling until a refresh. The poll now continues, and ends on another non-OK
+  answer. An upload's 400 shows tiletopia's message unchanged, in place of
+  `Upload failed with HTTP 400`.
+- 2026-11-04: **chat actions accept a `/tiles/` path.** A URL that starts with
+  `/tiles/`, such as a hosted `tileset.json` or an imagery tile template, is
+  resolved against the viewer's origin. Since 2026-08-31 every such path was
+  refused as not a full URL. A `/tiles/` path whose `..` segments leave
+  `/tiles/` is refused, and other relative paths and non-http schemes still
+  are.
+- 2026-11-03: **cesium is 1.147.0.** The 1.146.0 lock paired it with
+  `@cesium/engine` 26.5.0, which no longer exports `ForEach` and other names
+  1.146 re-exports. The dependency range of 1.147 matches that engine.
+- 2026-11-03: **a long tool run keeps its connection.** nginx's `/agent/`
+  `proxy_read_timeout` is 900 s, over geolang's 840 s tool worker timeout. It
+  was 300 s.
+- 2026-11-03: **RoutingPanel hides a 0 m step distance.**
 - 2026-10-19: **a routing reply the viewer cannot read is reported.** `route()`
   no longer swallows an itinera parse error and asks OSRM instead. An
   unreachable itinera still falls back to OSRM.
@@ -74,6 +256,20 @@ All notable changes to this project will be documented in this file.
 
 ### Removed
 
+- 2026-11-04: **the Show Preview Tools setting.** No menu entry carried the
+  `preview` flag, so the switch, the Preview badges and the floating "Preview:
+  not functional yet" marker had nothing to act on. `showPreviewTools` in
+  `src/store/app.ts` (25aae306), the `preview` field, `visibleToolItems` and
+  `isPreviewPanel` in `src/components/toolMenus.ts` (8174a56d). Settings saved
+  with the old key still load.
+- 2026-11-04: **`docker-compose.re.yml`** (2ad09e48).
+  `docker-compose.verticals.yml` runs the same services plus itinera, seeds
+  the same three parcels and three sales, and prints a parcel search and a
+  comps search to try.
+- 2026-11-04: **the `/ws/` and `/api/v1/sse` proxies to ptolemy**, which
+  serves neither. They are gone from `deploy/nginx-platform.conf`, `/ws/` from
+  `deploy/nginx-verticals.conf`, and `/ws` from the dev server proxy list in
+  `vite.config.js`. The `/agora/` websocket proxy is unchanged.
 - 2026-09-24: **the public Nominatim fallback in place search.** `geocode`
   in `src/services/geocode.ts` only asks geokode now, so a geokode miss or
   error returns no hits. It sends `limit`, labels hits with geokode's
@@ -90,9 +286,40 @@ All notable changes to this project will be documented in this file.
 - 2026-09-23: **`PluginDefinition.category`** in `src/plugins/sdk.ts`
   (2f37b6bd) and the category filter of `getPlugins` in
   `src/plugins/registry.ts` (9a435155), which no caller passed.
+- 2026-11-05: `docker-compose.yml` (3355f4b7). Its tiletopia had no
+  `TILETOPIA_JWT_SECRET`, so tiletopia's startup check refused to run, and its
+  proxy had no `/tiles/` route. `docker-compose.platform.yml` is the local stack.
 
 ### Changed
 
+- 2026-11-05: **`TILETOPIA_ION_BASE_URL` is the viewer's origin on every compose
+  stack that runs tiletopia.** nginx sends `/api/v1/assets`, `/api/v1/terrain/`,
+  `/v1/assets` and `/tiletopia_ion_uploads/` to tiletopia with the path unchanged,
+  and the upload location keeps the client's `Host` header with its port.
+  `docker-compose.platform.yml` stops on an empty value, so every compose command
+  needs it, a bundle's `.env.platform` included. `platform-up.sh` writes
+  `http://localhost:5174` when the file has no value, and the platform workflows
+  set the same value. The service worker no longer answers navigations under
+  `/v1` and `/tiletopia_ion_uploads`.
+- 2026-11-04: **draw, measure and annotations share their map code.**
+  `useToolClicksMapLibre` and `useToolClicksCesium` bind the click and
+  double-click handlers for both tools, and `drawToolClicks` and
+  `measureToolClicks` in the stores say what a click does.
+  `toolLayersMapLibre.ts` builds the line and vertex features and adds or
+  updates a GeoJSON source, `syncAnnotationMarkers` keeps the MapLibre and
+  Leaflet annotation markers in step with the store, and the raster and
+  toolbox engines share `createWorkerCall` in `src/lib/workerCall.ts`.
+- 2026-11-04: **the platform workflows start the stack through one action.**
+  platform-e2e, platform-load, platform-panels and platform-sweep call
+  `.github/actions/platform-stack-up` with the services to build, start and
+  wait for. platform-e2e writes its executor secret to `GITHUB_ENV`, and
+  platform-load sets `PTOLEMY_EXTERNAL_DATABASE_URL` for the whole job.
+- 2026-11-03: **dependency updates.** maplibre-gl 6.16.0, react and react-dom
+  19.3.1, deck.gl 9.4.1, flatgeobuf 4.6.1, pdfjs-dist 6.4.299, @ag-ui/core
+  0.0.59, dompurify 3.4.17, biome 2.6.4, playwright 1.64.1, vitest 4.1.12,
+  jsdom 30.1.3 and pnpm 11.28.10. vite is 6.4.5, which keeps the 6.4.4 security
+  update.
+- 2026-10-28: **source-map-js is 1.2.2**, a lockfile change only.
 - 2026-09-24: **geokode serves a prebuilt index.** The platform, re and
   verticals compose files run a one-shot `geokode-index` service that runs
   `geokode build` into the `geokode-index` volume, and `geokode` waits for it
@@ -2135,7 +2362,7 @@ All notable changes to this project will be documented in this file.
 - **Map ↔ SQL bridge**
   - `showSqlAsLayer(sql, layerId)` notebook store action
   - "Show on map" button on SQL cell results; auto-detects `GEOMETRY`, WKT strings, or lon/lat pairs and renders to Cesium + Leaflet with auto-fit
-- **Agent `sql_query` viewer command** ([src/viewer-commands.js](src/viewer-commands.js))
+- **Agent `sql_query` viewer command** ([src/viewer/commands.ts](src/viewer/commands.ts))
   - GeoLang agent can emit `{action: "sql_query", params: {sql, show_on_map, color, fit}}` over SSE
   - Results dispatched as `viewtopia:sql_result` / `viewtopia:sql_error` CustomEvents; last 20 summaries stashed on `window.__viewtopiaSqlResults`
 - `add_geojson` viewer command now accepts a direct `params.geojson` object in addition to `params.url`

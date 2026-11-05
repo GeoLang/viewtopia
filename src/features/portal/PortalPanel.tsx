@@ -18,6 +18,7 @@ import { IconPlus, IconTrash } from '@tabler/icons-react';
 import { usePortalStore, openPortalItem } from './store';
 import type { PortalItemType, PortalSharing } from './types';
 import { useAuthStore } from '../auth/store';
+import { randomUuid } from '../../lib/randomUuid';
 
 const TYPE_OPTIONS = [
   { value: 'map', label: 'Maps' },
@@ -69,7 +70,7 @@ export function PortalPanel({ onClose }: { onClose: () => void }) {
     if (!form.title.trim()) return;
     const now = new Date().toISOString();
     await addItem({
-      id: crypto.randomUUID(),
+      id: randomUuid(),
       title: form.title.trim(),
       type: form.type,
       description: form.description,
@@ -146,7 +147,7 @@ export function PortalPanel({ onClose }: { onClose: () => void }) {
                     size="xs"
                     variant="subtle"
                     color="red"
-                    aria-label="Delete item"
+                    title="Delete item" aria-label="Delete item"
                     onClick={(e) => {
                       e.stopPropagation();
                       deleteItem(item.id);

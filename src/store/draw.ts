@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { randomUuid } from '../lib/randomUuid';
 
 export type DrawMode = 'point' | 'line' | 'polygon' | 'circle' | 'rectangle' | null;
 
@@ -155,7 +156,7 @@ export const useDrawStore = create<DrawState>((set, get) => ({
 
     if (mode === 'point' && pending.length >= 1) {
       feature = {
-        id: crypto.randomUUID(),
+        id: randomUuid(),
         type: 'Point',
         coords: [pending[0]],
         color,
@@ -163,7 +164,7 @@ export const useDrawStore = create<DrawState>((set, get) => ({
       };
     } else if (mode === 'line' && pending.length >= 2) {
       feature = {
-        id: crypto.randomUUID(),
+        id: randomUuid(),
         type: 'LineString',
         coords: [...pending],
         color,
@@ -171,7 +172,7 @@ export const useDrawStore = create<DrawState>((set, get) => ({
       };
     } else if (mode === 'polygon' && pending.length >= 3) {
       feature = {
-        id: crypto.randomUUID(),
+        id: randomUuid(),
         type: 'Polygon',
         coords: [...pending],
         color,
@@ -191,7 +192,7 @@ export const useDrawStore = create<DrawState>((set, get) => ({
           Math.sin(dLng / 2) ** 2;
       const radius = R * 2 * Math.asin(Math.sqrt(a));
       feature = {
-        id: crypto.randomUUID(),
+        id: randomUuid(),
         type: 'Circle',
         coords: [pending[0]],
         radius,
@@ -202,7 +203,7 @@ export const useDrawStore = create<DrawState>((set, get) => ({
       const [x1, y1] = pending[0];
       const [x2, y2] = pending[1];
       feature = {
-        id: crypto.randomUUID(),
+        id: randomUuid(),
         type: 'Polygon',
         coords: [
           [x1, y1],
@@ -242,6 +243,29 @@ export const useDrawStore = create<DrawState>((set, get) => ({
 
   stopVertexEdit: () => set({ vertexEdit: null }),
 }));
+
+export const drawToolClicks = {
+  onClick: (lng: number, lat: number) => {
+    const { mode, addPendingPoint, finishFeature, pending } = useDrawStore.getState();
+    if (!mode) return;
+
+    addPendingPoint(lng, lat);
+
+    if (mode === 'point') {
+      finishFeature();
+    }
+    // pending holds the points from before this click
+    if ((mode === 'circle' || mode === 'rectangle') && pending.length >= 1) {
+      setTimeout(() => finishFeature(), 0);
+    }
+  },
+  onDoubleClick: () => {
+    const { mode, finishFeature } = useDrawStore.getState();
+    if (mode === 'line' || mode === 'polygon') {
+      finishFeature();
+    }
+  },
+};
 
 type DrawnGeometry =
   | { type: 'Point'; coordinates: [number, number] }

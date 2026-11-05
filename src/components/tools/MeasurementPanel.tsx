@@ -115,7 +115,7 @@ export function MeasurementPanel({
                 {r.value.toFixed(2)} {r.unit}
               </Text>
             </Group>
-            <ActionIcon aria-label="Delete measurement" size="xs" variant="subtle" color="red" onClick={() => removeResult(r.id)}>
+            <ActionIcon title="Delete measurement" aria-label="Delete measurement" size="xs" variant="subtle" color="red" onClick={() => removeResult(r.id)}>
               <IconTrash size={10} />
             </ActionIcon>
           </Group>

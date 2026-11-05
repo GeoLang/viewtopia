@@ -3,7 +3,7 @@ import type { MutableRefObject } from 'react';
 import L from 'leaflet';
 import { useAnnotationStore, type PendingPlacement } from '../store/annotations';
 import { useAppStore } from '../store/app';
-import { annotationMarkerElement, DOT_CENTRE_OFFSET } from './useAnnotationsMapLibre';
+import { annotationMarkerElement, DOT_CENTRE_OFFSET, syncAnnotationMarkers } from './useAnnotationsMapLibre';
 
 /**
  * useLeaflet destroys the map when the tab changes, so every effect keys on the
@@ -20,28 +20,17 @@ export function useAnnotationsLeaflet(mapRef: MutableRefObject<L.Map | null>) {
     const render = () => {
       const map = mapRef.current;
       if (!map) return;
-      const { annotations } = useAnnotationStore.getState();
-      const listed = new Set(annotations.map((a) => a.id));
-      for (const [id, marker] of markers) {
-        if (listed.has(id)) continue;
-        marker.remove();
-        markers.delete(id);
-      }
-      for (const annotation of annotations) {
-        if (markers.has(annotation.id)) continue;
-        markers.set(
-          annotation.id,
-          L.marker([annotation.lat, annotation.lng], {
-            // leaflet's own .leaflet-div-icon draws a white box, so no className
-            icon: L.divIcon({
-              html: annotationMarkerElement(annotation),
-              className: '',
-              iconAnchor: [DOT_CENTRE_OFFSET, DOT_CENTRE_OFFSET],
-            }),
-            interactive: false,
-          }).addTo(map),
-        );
-      }
+      syncAnnotationMarkers(markers, useAnnotationStore.getState().annotations, (annotation) =>
+        L.marker([annotation.lat, annotation.lng], {
+          // leaflet's own .leaflet-div-icon draws a white box, so no className
+          icon: L.divIcon({
+            html: annotationMarkerElement(annotation),
+            className: '',
+            iconAnchor: [DOT_CENTRE_OFFSET, DOT_CENTRE_OFFSET],
+          }),
+          interactive: false,
+        }).addTo(map),
+      );
     };
 
     const unsubscribe = useAnnotationStore.subscribe(render);

@@ -225,6 +225,69 @@
     "destructive": false
   },
   {
+    "name": "bim.enter",
+    "description": "Turn on BIM mode for an IFC model on the globe, with camera settings for moving inside a building and orbit or walk navigation. Answers with the model's storeys. bim.leave puts every setting back.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "layer": {
+          "type": "string",
+          "description": "The 3D model layer, by id or name. Needed only when more than one model is on the globe."
+        },
+        "navigation": {
+          "type": "string",
+          "description": "orbit circles a point the user double-clicks on the model. walk moves at eye height above a floor the user clicks, with W A S D or the arrow keys and drag to look. In walk, walls stop the camera or turn the move along them, steps up to 0.3 m high are climbed, and higher steps stop it. orbit by default, and a call while BIM mode is on changes it.",
+          "enum": [
+            "orbit",
+            "walk"
+          ]
+        }
+      },
+      "required": []
+    },
+    "reads": true,
+    "destructive": false
+  },
+  {
+    "name": "bim.leave",
+    "description": "Turn off BIM mode and put the camera settings, the tile edge display and any isolation it changed back as they were. The camera stays where it is.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
+    "name": "bim.show_storey",
+    "description": "In BIM mode, show one storey of the model, alone or with the storeys below it, and hide the rest of the model.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "storey": {
+          "type": "string",
+          "description": "Storey name or GlobalId, from the list bim.enter answers with."
+        },
+        "scope": {
+          "type": "string",
+          "description": "only shows that storey. and_below adds the storeys of the same building whose elements sit lower. only by default.",
+          "enum": [
+            "only",
+            "and_below"
+          ]
+        },
+        "clear": {
+          "type": "boolean",
+          "description": "true shows the whole model again instead."
+        }
+      },
+      "required": []
+    },
+    "reads": true,
+    "destructive": false
+  },
+  {
     "name": "camera.fly_to",
     "description": "Fly the camera to a longitude and latitude.",
     "parameters": {
@@ -975,7 +1038,7 @@
       "properties": {
         "panel": {
           "type": "string",
-          "description": "Which panel, by id. layers is Layers, legend is Legend, settings is Settings, draw is Draw, annotate is Annotate, routing is Route, bookmark is Bookmarks, geocoding is Search, buildings is Buildings, geojsonEditor is GeoJSON Editor, datasetEditor is Dataset Editor, scenario is Scenario, styleEditor is Style Editor, travelTime is Travel Time, clipping is Clip, crossSection is Section, heatmap is Heatmap, timelapse is Timelapse, shadows is Shadows, viewshed is Viewshed, volume is Volume, terrainAnalysis is Terrain, terrainProfile is Profile, spatialStats is Statistics, weather is Weather, flood is Flood, wind is Wind, lighting is Lighting, solar is Solar, traffic is Traffic, photo is Photo, offline is Offline, indoor is Indoor, drone is Drone, accessibility is A11y, export3d is Export, flythrough is Flythrough, charts is Charts, dashboards is Dashboards, splitView is Split View, stories is Stories, timeline is Timeline, dataTable is Data Table, collaboration is Collaborate, regionWatch is Region Watch, printLayout is Print Layout, notebooks is Notebooks, portal is Catalog, stacBrowser is STAC Browser, assets is Assets, dataSources is Data Sources, project is Project, modelImport is glTF Models, trackImport is Tracks, collecta is Field Data, vectorTiles is Vector Tiles, rasterViewer is Raster Analysis, imageOverlay is Image Overlay, toolbox is Geoprocessing, runHistory is Run History, convert is Convert, cesiumIon is Cesium Ion, google3d is Google 3D, globalTerrain is Terrain, shareLink is Share Link, tour is Tour, pluginManager is Plugin Manager. A plugin id from the plugins list opens that plugin's panel.",
+          "description": "Which panel, by id. layers is Layers, legend is Legend, settings is Settings, draw is Draw, annotate is Annotate, routing is Route, bookmark is Bookmarks, geocoding is Search, buildings is Buildings, geojsonEditor is GeoJSON Editor, datasetEditor is Dataset Editor, scenario is Scenario, styleEditor is Style Editor, travelTime is Travel Time, clipping is Clip, modelSection is Model Section, crossSection is Section, heatmap is Heatmap, timelapse is Timelapse, shadows is Shadows, viewshed is Viewshed, volume is Volume, terrainAnalysis is Terrain, terrainProfile is Profile, spatialStats is Statistics, weather is Weather, flood is Flood, wind is Wind, lighting is Lighting, solar is Solar, traffic is Traffic, photo is Photo, offline is Offline, indoor is Indoor, drone is Drone, accessibility is A11y, export3d is Export, flythrough is Flythrough, charts is Charts, dashboards is Dashboards, splitView is Split View, stories is Stories, timeline is Timeline, dataTable is Data Table, collaboration is Collaborate, regionWatch is Region Watch, printLayout is Print Layout, notebooks is Notebooks, portal is Catalog, stacBrowser is STAC Browser, assets is Assets, modelElements is Model Elements, dataSources is Data Sources, project is Project, modelImport is glTF Models, trackImport is Tracks, collecta is Field Data, vectorTiles is Vector Tiles, rasterViewer is Raster Analysis, imageOverlay is Image Overlay, toolbox is Geoprocessing, runHistory is Run History, convert is Convert, cesiumIon is Cesium Ion, google3d is Google 3D, globalTerrain is Terrain, shareLink is Share Link, tour is Tour, pluginManager is Plugin Manager. A plugin id from the plugins list opens that plugin's panel.",
           "enum": [
             "layers",
             "legend",
@@ -992,6 +1055,7 @@
             "styleEditor",
             "travelTime",
             "clipping",
+            "modelSection",
             "crossSection",
             "heatmap",
             "timelapse",
@@ -1027,6 +1091,7 @@
             "portal",
             "stacBrowser",
             "assets",
+            "modelElements",
             "dataSources",
             "project",
             "modelImport",
@@ -1359,6 +1424,80 @@
     "destructive": false
   },
   {
+    "name": "terrain.set_asset",
+    "description": "Draw the Cesium globe on the terrain of an uploaded DEM asset whose tiling is done.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "asset_id": {
+          "type": "string",
+          "description": "The id of a terrain asset in the platform tile server, a uuid."
+        }
+      },
+      "required": [
+        "asset_id"
+      ]
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
+    "name": "tileset.hide_elements",
+    "description": "Hide elements of an IFC model on the globe, in every tile they appear in. Adds to what is already hidden.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "layer": {
+          "type": "string",
+          "description": "The 3D model layer, by id or name. Needed only when more than one model is on the globe."
+        },
+        "ids": {
+          "type": "array",
+          "description": "IFC GlobalIds of the elements, as a list of strings. An id of a storey, space, building or site acts on what is inside it. Send this or filter, not both."
+        },
+        "filter": {
+          "type": "object",
+          "description": "Every element this element filter matches, resolved by the viewer, so a large choice costs one call. Send this or ids, not both. For example {\"@classFullName\": \"IfcDoor\", \"@storey\": \"Level 3\"} or {\"Pset_DoorCommon.FireRating\": {\"$like\": \"%60%\"}}. Keys are a property key such as Element.Tag, or @label, @classFullName, @id, @storey. Operators are $eq, $ne, $in, $like, $gt, $gte, $lt, $lte, $and, $or."
+        },
+        "clear": {
+          "type": "boolean",
+          "description": "true shows every hidden element again instead."
+        }
+      },
+      "required": []
+    },
+    "reads": true,
+    "destructive": false
+  },
+  {
+    "name": "tileset.isolate_elements",
+    "description": "Show only these elements of an IFC model on the globe and hide the rest of it. Replaces any earlier isolation.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "layer": {
+          "type": "string",
+          "description": "The 3D model layer, by id or name. Needed only when more than one model is on the globe."
+        },
+        "ids": {
+          "type": "array",
+          "description": "IFC GlobalIds of the elements, as a list of strings. An id of a storey, space, building or site acts on what is inside it. Send this or filter, not both."
+        },
+        "filter": {
+          "type": "object",
+          "description": "Every element this element filter matches, resolved by the viewer, so a large choice costs one call. Send this or ids, not both. For example {\"@classFullName\": \"IfcDoor\", \"@storey\": \"Level 3\"} or {\"Pset_DoorCommon.FireRating\": {\"$like\": \"%60%\"}}. Keys are a property key such as Element.Tag, or @label, @classFullName, @id, @storey. Operators are $eq, $ne, $in, $like, $gt, $gte, $lt, $lte, $and, $or."
+        },
+        "clear": {
+          "type": "boolean",
+          "description": "true ends the isolation instead, so the rest comes back."
+        }
+      },
+      "required": []
+    },
+    "reads": true,
+    "destructive": false
+  },
+  {
     "name": "tileset.reset_style",
     "description": "Take any colouring, fading and point size back off every 3D tileset on the globe, so the tiles draw as they came.",
     "parameters": {
@@ -1367,6 +1506,73 @@
       "required": []
     },
     "reads": false,
+    "destructive": false
+  },
+  {
+    "name": "tileset.section",
+    "description": "Cut a 3D model on the globe with one plane along an axis of the model's own frame, to see inside it.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "layer": {
+          "type": "string",
+          "description": "The 3D model layer, by id or name. Needed only when more than one model is on the globe."
+        },
+        "on": {
+          "type": "boolean",
+          "description": "true cuts the model, false puts it back whole."
+        },
+        "axis": {
+          "type": "string",
+          "description": "Axis of the model's own frame the cut is made along. z by default, which is up.",
+          "enum": [
+            "x",
+            "y",
+            "z"
+          ]
+        },
+        "position": {
+          "type": "number",
+          "description": "Metres along the axis from the origin of the model's frame. The middle of the model by default."
+        },
+        "flip": {
+          "type": "boolean",
+          "description": "false keeps the part below the position on the axis, true keeps the part above. false by default."
+        }
+      },
+      "required": [
+        "on"
+      ]
+    },
+    "reads": false,
+    "destructive": false
+  },
+  {
+    "name": "tileset.select_elements",
+    "description": "Highlight elements of an IFC model on the globe, in every tile they appear in. Replaces the current selection.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "layer": {
+          "type": "string",
+          "description": "The 3D model layer, by id or name. Needed only when more than one model is on the globe."
+        },
+        "ids": {
+          "type": "array",
+          "description": "IFC GlobalIds of the elements, as a list of strings. An id of a storey, space, building or site acts on what is inside it. Send this or filter, not both."
+        },
+        "filter": {
+          "type": "object",
+          "description": "Every element this element filter matches, resolved by the viewer, so a large choice costs one call. Send this or ids, not both. For example {\"@classFullName\": \"IfcDoor\", \"@storey\": \"Level 3\"} or {\"Pset_DoorCommon.FireRating\": {\"$like\": \"%60%\"}}. Keys are a property key such as Element.Tag, or @label, @classFullName, @id, @storey. Operators are $eq, $ne, $in, $like, $gt, $gte, $lt, $lte, $and, $or."
+        },
+        "clear": {
+          "type": "boolean",
+          "description": "true takes the highlight off everything instead."
+        }
+      },
+      "required": []
+    },
+    "reads": true,
     "destructive": false
   },
   {

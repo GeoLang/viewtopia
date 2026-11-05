@@ -175,7 +175,7 @@ export function TourOverlay() {
             {step + 1}/{TOUR_STEPS.length}
           </Badge>
         </Group>
-        <ActionIcon aria-label="Close tour" size="sm" variant="subtle" color="gray" onClick={finish}>
+        <ActionIcon title="Close tour" aria-label="Close tour" size="sm" variant="subtle" color="gray" onClick={finish}>
           <IconX size={14} />
         </ActionIcon>
       </Group>

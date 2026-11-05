@@ -241,7 +241,7 @@ export function RegionWatchPanel({ onClose }: { onClose: () => void }) {
                       size="sm"
                       variant="subtle"
                       color="red"
-                      aria-label={`Delete ${watch.name}`}
+                      title={`Delete ${watch.name}`} aria-label={`Delete ${watch.name}`}
                       data-testid={`watch-delete-${watch.id}`}
                       onClick={() => void remove(watch.id)}
                     >

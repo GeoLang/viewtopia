@@ -87,6 +87,8 @@ export function useTilesets3dCesium(viewerRef: MutableRefObject<Viewer | null>) 
       const known = drawn.tilesets.get(layer.id);
       if (known) {
         known.show = layer.visible;
+        // removeLayer drops the loaded entry, and applyProject puts a layer back under its id before this runs
+        if (useTiles3dLayerStore.getState().loaded[layer.id] !== known) setLoaded(layer.id, known);
         continue;
       }
       if (drawn.loading.has(layer.id)) continue;

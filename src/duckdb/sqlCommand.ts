@@ -9,6 +9,7 @@
 import { query } from './index';
 import { queryAsGeoJson, NoGeometryError } from './spatial';
 import { useAgentLayerStore } from '../store/agentLayers';
+import { randomUuid } from '../lib/randomUuid';
 
 export interface SqlResultSummary {
   sql: string;
@@ -60,7 +61,7 @@ export async function runSqlQuery(params: Record<string, unknown>): Promise<void
         if (fc.features.length > 0) {
           useAgentLayerStore
             .getState()
-            .addLayer({ id: crypto.randomUUID(), name: 'SQL result', color, geojson: fc }, fit);
+            .addLayer({ id: randomUuid(), name: 'SQL result', color, geojson: fc }, fit);
         }
       } catch (e) {
         // no geometry is a valid outcome, still report the summary below

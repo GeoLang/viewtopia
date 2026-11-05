@@ -55,6 +55,7 @@ import type {
   SampleFormat,
   ZonalResult,
 } from './types';
+import { randomUuid } from '../lib/randomUuid';
 
 /** a run that produced features rather than a grid: contours, polygonize */
 interface VectorResult {
@@ -427,7 +428,7 @@ export function RasterPanel({ onClose, initialUrl = '' }: RasterPanelProps) {
   const addAsLayer = () => {
     if (result && resultImage) {
       addRasterLayer({
-        id: crypto.randomUUID(),
+        id: randomUuid(),
         name: result.operation,
         url: resultImage,
         corners: cornersOfBbox(result.bbox),
@@ -436,7 +437,7 @@ export function RasterPanel({ onClose, initialUrl = '' }: RasterPanelProps) {
       });
     } else if (vector) {
       addVectorLayer({
-        id: crypto.randomUUID(),
+        id: randomUuid(),
         name: vector.name,
         color: vector.color,
         geojson: vector.geojson,

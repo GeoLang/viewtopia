@@ -2,6 +2,7 @@ import { BEARER_SUBPROTOCOL } from '../lib/apiAuth';
 import { getAuthToken } from '../features/auth/store';
 import { placeNamePrompt } from './biasing';
 import { readSegments, type TranscriptSegment } from './segments';
+import { randomUuid } from '../lib/randomUuid';
 
 /** nginx forwards this to the Aavaaz WhisperLive websocket. */
 export const SPEECH_SOCKET_PATH = '/speech/';
@@ -57,7 +58,7 @@ export function openDictationSocket(
   let closed = false;
 
   socket.onopen = () =>
-    socket.send(JSON.stringify(handshake(crypto.randomUUID(), placeNamePrompt())));
+    socket.send(JSON.stringify(handshake(randomUuid(), placeNamePrompt())));
   socket.onmessage = (event) => {
     if (typeof event.data !== 'string') return;
     const message = JSON.parse(event.data) as Record<string, unknown>;

@@ -6,10 +6,14 @@ import {
   Entity,
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
+  KeyboardEventModifier,
   Cesium3DTileFeature,
   defined,
 } from 'cesium';
-import type { Cartesian2 } from 'cesium';
+import type { Cartesian2, Cesium3DTileset } from 'cesium';
+import { useBimModeStore } from '../features/bim/store';
+import { elementIdOf, useElementStore } from '../features/elements/store';
+import { SectionCapPick } from '../features/scene/sectionCut';
 import { assetFeatureProperties, withAssetProperties } from '../live/assetFeatures';
 import { ASSET_ID_PROPERTY } from '../live/types';
 import { useAgentLayerStore } from '../store/agentLayers';
@@ -20,8 +24,10 @@ import {
   propsToRows,
   type FeatureProp,
 } from '../store/featurePicker';
+import { useTiles3dLayerStore } from '../store/tiles3dLayers';
+import { tileHighlightColor } from '../viewer/tilesetStyle';
 
-const HIGHLIGHT_COLOR = Color.YELLOW.withAlpha(0.6);
+const HIGHLIGHT_COLOR = tileHighlightColor();
 
 /**
  * The tile feature the picker painted. One Cesium picker runs at a time, so it
@@ -35,6 +41,11 @@ export function repaintPickedTileFeature(): void {
   if (highlighted) highlighted.color = HIGHLIGHT_COLOR;
 }
 
+function withPtolemyAssetRows(rows: FeatureProp[], assetId: string): FeatureProp[] {
+  const layers = useAgentLayerStore.getState().layers;
+  return withAssetProperties(rows, assetFeatureProperties(assetId, layers));
+}
+
 /**
  * The rows one picked tile feature shows: its own properties, and under them the
  * attributes of the ptolemy asset with the same asset id.
@@ -43,8 +54,41 @@ function tileFeatureRows(feature: Cesium3DTileFeature): FeatureProp[] {
   const rows = feature.getPropertyIds().map((id) => toRow(id, feature.getProperty(id)));
   const assetId = feature.getProperty(ASSET_ID_PROPERTY);
   if (typeof assetId !== 'string') return rows;
-  const layers = useAgentLayerStore.getState().layers;
-  return withAssetProperties(rows, assetFeatureProperties(assetId, layers));
+  return withPtolemyAssetRows(rows, assetId);
+}
+
+function layerDrawing(tileset: Cesium3DTileset) {
+  const { layers, loaded } = useTiles3dLayerStore.getState();
+  return layers.find((layer) => loaded[layer.id] === tileset);
+}
+
+function pickTileFeature(picked: Cesium3DTileFeature, additive: boolean): void {
+  const elementId = elementIdOf(picked);
+  const layer = layerDrawing(picked.tileset);
+  if (elementId !== undefined && layer) {
+    const elements = useElementStore.getState();
+    elements.openModel(layer);
+    elements.selectElement(elementId, { additive, fromScene: true });
+  } else {
+    colorBeforeHighlight = picked.color ? Color.clone(picked.color) : null;
+    picked.color = HIGHLIGHT_COLOR;
+    highlighted = picked;
+  }
+  // setSelected opens Feature Info, which replaces the panel showing this element
+  if (useAppStore.getState().activePanel === 'modelElements' && elementId !== undefined) return;
+  useFeaturePickerStore.getState().setSelected(tileFeatureRows(picked));
+}
+
+function pickSectionCap({ tileset, elementId }: SectionCapPick, additive: boolean): void {
+  const layer = layerDrawing(tileset);
+  if (!layer) throw new Error(`A section cap of element ${elementId} is drawn on a tileset no layer draws.`);
+  const elements = useElementStore.getState();
+  elements.openModel(layer);
+  elements.selectElement(elementId, { additive, fromScene: true });
+  if (useAppStore.getState().activePanel === 'modelElements') return;
+  useFeaturePickerStore
+    .getState()
+    .setSelected(withPtolemyAssetRows([toRow(ASSET_ID_PROPERTY, elementId)], elementId));
 }
 
 /**
@@ -79,15 +123,21 @@ export function useFeaturePickerCesium(
     const enable = (v: Viewer) => {
       if (handlerRef.current) return;
       const handler = new ScreenSpaceEventHandler(v.scene.canvas);
-      handler.setInputAction((click: { position: Cartesian2 }) => {
+      const onClick = (position: Cartesian2, additive: boolean) => {
+        // walking takes every left click as a floor to stand on
+        if (useBimModeStore.getState().navigation === 'walk') return;
         clearHighlight();
-        const picked = v.scene.pick(click.position);
+        const picked = v.scene.pick(position);
         if (defined(picked) && picked instanceof Cesium3DTileFeature) {
-          useFeaturePickerStore.getState().setSelected(tileFeatureRows(picked));
-          colorBeforeHighlight = picked.color ? Color.clone(picked.color) : null;
-          picked.color = HIGHLIGHT_COLOR;
-          highlighted = picked;
-        } else if (defined(picked) && picked.id instanceof Entity) {
+          pickTileFeature(picked, additive);
+          return;
+        }
+        if (defined(picked) && picked.id instanceof SectionCapPick) {
+          pickSectionCap(picked.id, additive);
+          return;
+        }
+        if (!additive) useElementStore.getState().clearSelection();
+        if (defined(picked) && picked.id instanceof Entity) {
           const entity: Entity = picked.id;
           const bag = entity.properties?.getValue(v.clock.currentTime) ?? {};
           const rows: FeatureProp[] = propsToRows(bag);
@@ -102,7 +152,19 @@ export function useFeaturePickerCesium(
         } else {
           useFeaturePickerStore.getState().setSelected(null);
         }
+      };
+      handler.setInputAction((click: { position: Cartesian2 }) => {
+        onClick(click.position, false);
       }, ScreenSpaceEventType.LEFT_CLICK);
+      for (const modifier of [KeyboardEventModifier.SHIFT, KeyboardEventModifier.CTRL]) {
+        handler.setInputAction(
+          (click: { position: Cartesian2 }) => {
+            onClick(click.position, true);
+          },
+          ScreenSpaceEventType.LEFT_CLICK,
+          modifier,
+        );
+      }
 
       // Hover affordance — Cesium has no picking cursor of its own.
       handler.setInputAction((movement: { endPosition: Cartesian2 }) => {
@@ -117,6 +179,7 @@ export function useFeaturePickerCesium(
       if (handlerRef.current) {
         handlerRef.current.destroy();
         handlerRef.current = null;
+        useElementStore.getState().clearSelection();
       }
       const v = viewerRef.current;
       if (v && !v.isDestroyed()) v.scene.canvas.style.cursor = '';

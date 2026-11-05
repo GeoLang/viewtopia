@@ -7,6 +7,7 @@ import { importFiles, type ImportStatus } from '../../lib/importFiles';
 import { useAgentLayerStore } from '../../store/agentLayers';
 import { featuresBounds, type LayerBounds } from '../../hooks/agentLayerBounds';
 import { getViewBounds } from '../../lib/viewBounds';
+import { randomUuid } from '../../lib/randomUuid';
 
 const IMPORTED_LAYER_COLOR = '#38bdf8';
 
@@ -22,7 +23,7 @@ export function addImportedLayer(name: string, geojson: GeoJSON.FeatureCollectio
   const fit = bounds !== null && !insideCurrentView(bounds);
   useAgentLayerStore
     .getState()
-    .addLayer({ id: crypto.randomUUID(), name, color: IMPORTED_LAYER_COLOR, geojson }, fit);
+    .addLayer({ id: randomUuid(), name, color: IMPORTED_LAYER_COLOR, geojson }, fit);
 }
 
 /**

@@ -332,7 +332,7 @@ export function LiveShareDialog({
                   size="sm"
                   variant="subtle"
                   color="red"
-                  aria-label={`Remove ${member.userId}`}
+                  title={`Remove ${member.userId}`} aria-label={`Remove ${member.userId}`}
                   disabled={busyMember === member.userId}
                   onClick={() => void removeMember(member.userId)}
                 >
@@ -404,7 +404,7 @@ export function LiveShareDialog({
                   size="sm"
                   variant="subtle"
                   color="red"
-                  aria-label={`Delete ${feed.name}`}
+                  title={`Delete ${feed.name}`} aria-label={`Delete ${feed.name}`}
                   data-testid={`feed-delete-${feed.id}`}
                   onClick={() => void removeFeed(feed.id)}
                 >

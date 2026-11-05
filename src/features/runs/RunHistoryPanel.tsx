@@ -191,7 +191,7 @@ export function RunHistoryPanel({ onClose }: { onClose: () => void }) {
             variant="subtle"
             color="gray"
             onClick={() => void load()}
-            aria-label="Refresh run history"
+            title="Refresh run history" aria-label="Refresh run history"
           >
             <IconRefresh size={14} />
           </ActionIcon>

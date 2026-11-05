@@ -18,10 +18,12 @@ import {
   sampleTerrainProfile,
   type TerrainProfile,
 } from '../features/terrain/profile';
+import { setTerrainBundle } from '../features/terrain/bundles';
 import { currentBbox } from '../lib/terrainAnalysis';
 import { useAgentLayerStore } from '../store/agentLayers';
 import { readBbox } from './bbox';
 import { checkOnTheGlobe, place } from './coordinates';
+import { cesiumViewer } from './globe';
 import { listViewerLayers } from './layerIndex';
 import { ActionError, registerAction, type ActionArguments } from './registry';
 import { resolveOne } from './resolve';
@@ -183,5 +185,27 @@ registerAction({
     const sampled = await profile(args);
     drawProfileLine(sampled.coordinates, CROSS_SECTION_LINE_STYLE);
     return { text: profileText(sampled) };
+  },
+});
+
+const ASSET_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+registerAction({
+  name: 'terrain.set_asset',
+  description: 'Draw the Cesium globe on the terrain of an uploaded DEM asset whose tiling is done.',
+  parameters: {
+    asset_id: {
+      type: 'string',
+      description: 'The id of a terrain asset in the platform tile server, a uuid.',
+      required: true,
+    },
+  },
+  run: async (args) => {
+    const assetId = args.asset_id as string;
+    if (!ASSET_ID_PATTERN.test(assetId)) {
+      throw new ActionError(`${assetId} is not an asset id, which is a uuid`);
+    }
+    await setTerrainBundle(cesiumViewer(), assetId);
+    return { text: `The globe's terrain is asset ${assetId}.` };
   },
 });

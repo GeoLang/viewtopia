@@ -43,6 +43,7 @@ import {
   type StacCollection,
   type StacItem,
 } from './client';
+import { randomUuid } from '../../lib/randomUuid';
 
 const ACTION_LABEL: Record<NonNullable<AssetAction>, string> = {
   geojson: 'Add layer',
@@ -170,7 +171,7 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
     }
     addVectorLayer(
       {
-        id: crypto.randomUUID(),
+        id: randomUuid(),
         name: `${collection?.id ?? 'stac'} footprints`,
         color: '#a78bfa',
         geojson,
@@ -273,7 +274,7 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
                 size="xs"
                 variant="subtle"
                 color="red"
-                aria-label={`Forget ${favorite.title}`}
+                title={`Forget ${favorite.title}`} aria-label={`Forget ${favorite.title}`}
                 onClick={() =>
                   removeFavorite(favoriteKey(favorite.catalogUrl, favorite.collectionId))
                 }
@@ -292,7 +293,7 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
               size="sm"
               variant="subtle"
               color="gray"
-              aria-label="Back to collections"
+              title="Back to collections" aria-label="Back to collections"
               onClick={() => {
                 setCollection(null);
                 setItems([]);
@@ -309,7 +310,7 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
             size="sm"
             variant="subtle"
             color="yellow"
-            aria-label={collection ? 'Save collection' : 'Save catalog'}
+            title={collection ? 'Save collection' : 'Save catalog'} aria-label={collection ? 'Save collection' : 'Save catalog'}
             onClick={() => toggleFavorite(currentFavorite)}
           >
             {saved.has(favoriteKey(catalog.url, collection?.id ?? null)) ? (
@@ -425,7 +426,7 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
                   size="xs"
                   variant="subtle"
                   color="yellow"
-                  aria-label={`Save ${c.id}`}
+                  title={`Save ${c.id}`} aria-label={`Save ${c.id}`}
                   onClick={() =>
                     toggleFavorite({
                       catalogUrl: catalog.url,
@@ -444,7 +445,7 @@ export function StacBrowserPanel({ onClose }: { onClose: () => void }) {
                   size="xs"
                   variant="subtle"
                   color="violet"
-                  aria-label={`Browse ${c.id}`}
+                  title={`Browse ${c.id}`} aria-label={`Browse ${c.id}`}
                   onClick={() => void openCollection(c, catalog)}
                 >
                   <IconChevronRight size={12} />

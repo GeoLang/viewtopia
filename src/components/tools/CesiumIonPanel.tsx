@@ -14,14 +14,17 @@ import { IconSatellite, IconPlus, IconTrash } from '@tabler/icons-react';
 import {
   Cesium3DTileset,
   CesiumTerrainProvider,
+  CzmlDataSource,
   EllipsoidTerrainProvider,
   Ion,
   IonImageryProvider,
+  IonResource,
 } from 'cesium';
 import type { ImageryLayer, Viewer } from 'cesium';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { useAppStore } from '../../store/app';
+import { flyToTileset } from '../../viewer/flyToTileset';
 
 const ION_ASSETS_URL = 'https://api.cesium.com/v1/assets';
 
@@ -31,13 +34,14 @@ interface IonAsset {
   type: string;
 }
 
-// the three ion asset types cesium can attach straight to a scene
-const ADDABLE = new Set(['3DTILES', 'IMAGERY', 'TERRAIN']);
+// the ion asset types cesium can attach straight to a scene
+const ADDABLE = new Set(['3DTILES', 'IMAGERY', 'TERRAIN', 'CZML']);
 
 type Added =
   | { kind: '3DTILES'; tileset: Cesium3DTileset }
   | { kind: 'IMAGERY'; layer: ImageryLayer }
-  | { kind: 'TERRAIN' };
+  | { kind: 'TERRAIN' }
+  | { kind: 'CZML'; dataSource: CzmlDataSource };
 
 function firstLine(e: unknown): string {
   return (e instanceof Error ? e.message : String(e)).split('\n')[0];
@@ -127,13 +131,20 @@ export function CesiumIonPanel({ onClose }: { onClose: () => void }) {
         const tileset = await Cesium3DTileset.fromIonAssetId(asset.id);
         viewer.scene.primitives.add(tileset);
         added.current.set(asset.id, { kind: '3DTILES', tileset });
-        await viewer.flyTo(tileset);
+        await flyToTileset(viewer, tileset);
       } else if (asset.type === 'IMAGERY') {
         const provider = await IonImageryProvider.fromAssetId(asset.id);
         added.current.set(asset.id, {
           kind: 'IMAGERY',
           layer: viewer.imageryLayers.addImageryProvider(provider),
         });
+      } else if (asset.type === 'CZML') {
+        // CzmlDataSource.load parses the value of a promise as CZML packets
+        const resource = await IonResource.fromAssetId(asset.id);
+        const dataSource = await new CzmlDataSource(asset.name).load(resource);
+        await viewer.dataSources.add(dataSource);
+        added.current.set(asset.id, { kind: 'CZML', dataSource });
+        await viewer.flyTo(dataSource);
       } else {
         viewer.terrainProvider = await CesiumTerrainProvider.fromIonAssetId(asset.id);
         added.current.set(asset.id, { kind: 'TERRAIN' });
@@ -152,7 +163,8 @@ export function CesiumIonPanel({ onClose }: { onClose: () => void }) {
       if (viewer.imageryLayers.contains(entry.layer)) {
         viewer.imageryLayers.remove(entry.layer, true);
       }
-    } else viewer.terrainProvider = new EllipsoidTerrainProvider();
+    } else if (entry.kind === 'CZML') viewer.dataSources.remove(entry.dataSource, true);
+    else viewer.terrainProvider = new EllipsoidTerrainProvider();
     added.current.delete(id);
     setAddedIds([...added.current.keys()]);
   };
@@ -241,7 +253,7 @@ export function CesiumIonPanel({ onClose }: { onClose: () => void }) {
                     size="sm"
                     variant="subtle"
                     color="red"
-                    aria-label={`Remove ${asset.name}`}
+                    title={`Remove ${asset.name}`} aria-label={`Remove ${asset.name}`}
                     onClick={() => removeAsset(asset.id)}
                   >
                     <IconTrash size={14} />
@@ -251,7 +263,7 @@ export function CesiumIonPanel({ onClose }: { onClose: () => void }) {
                     size="sm"
                     variant="subtle"
                     color="violet"
-                    aria-label={`Add ${asset.name} to scene`}
+                    title={`Add ${asset.name} to scene`} aria-label={`Add ${asset.name} to scene`}
                     disabled={!ADDABLE.has(asset.type)}
                     onClick={() => void addAsset(asset)}
                   >

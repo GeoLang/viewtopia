@@ -1,0 +1,66 @@
+name: Platform stack up
+description: Build, start and wait for docker-compose.platform.yml services from a viewtopia checkout at ./viewtopia. The calling job's env must set TILETOPIA_ION_BASE_URL
+
+inputs:
+  build-services:
+    description: Space-separated services to build
+    required: true
+  start-services:
+    description: Space-separated services to start
+    required: true
+  health-services:
+    description: Space-separated services that must report healthy
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Download OSM extract
+      shell: bash
+      working-directory: viewtopia
+      run: |
+        scripts/fetch-osm-extract.sh \
+          https://download.geofabrik.de/europe/monaco-260101.osm.pbf \
+          data/region.osm.pbf
+
+    - name: Build platform images
+      shell: bash
+      working-directory: viewtopia
+      env:
+        SERVICES: ${{ inputs.build-services }}
+      run: docker compose -f docker-compose.platform.yml build $SERVICES
+
+    # itinera's entrypoint builds data/graph.bin from the extract on first start,
+    # so there is no separate graph-build step.
+    - name: Start the stack
+      shell: bash
+      working-directory: viewtopia
+      env:
+        SERVICES: ${{ inputs.start-services }}
+      run: |
+        # geodukt runs as this uid so its sinks can write the bind-mounted
+        # checkout, which the runner owns rather than the compose default 1000
+        export DOCKER_UID="$(id -u)" DOCKER_GID="$(id -g)"
+        docker compose -f docker-compose.platform.yml down --remove-orphans
+        docker compose -f docker-compose.platform.yml up -d $SERVICES
+
+    - name: Wait for all services healthy
+      shell: bash
+      working-directory: viewtopia
+      env:
+        SERVICES: ${{ inputs.health-services }}
+      run: |
+        deadline=$(( $(date +%s) + 600 ))   # itinera builds its routing graph on first boot
+        while :; do
+          pending=""
+          for s in $SERVICES; do
+            cid=$(docker compose -f docker-compose.platform.yml ps -q "$s")
+            st=$(docker inspect --format '{{.State.Health.Status}}' "$cid" 2>/dev/null || echo none)
+            [ "$st" = "healthy" ] || pending="$pending $s($st)"
+          done
+          # viewtopia has no healthcheck, so probe its port directly
+          curl -sf -o /dev/null http://localhost:5174/ || pending="$pending viewtopia(down)"
+          [ -z "$pending" ] && { echo "all healthy"; break; }
+          [ "$(date +%s)" -ge "$deadline" ] && { echo "TIMEOUT waiting for:$pending"; exit 1; }
+          echo "waiting for:$pending"; sleep 5
+        done

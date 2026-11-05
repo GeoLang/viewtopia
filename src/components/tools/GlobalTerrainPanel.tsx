@@ -17,7 +17,14 @@ import {
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer, getActiveMapLibre } from '../../viewer/registry';
 import { useAppStore, type Renderer } from '../../store/app';
+import { authHeaders, noticeRefusal } from '../../lib/apiAuth';
 import { addMapTerrain, TERRAIN_RGB_URL, type MapTerrain } from '../../lib/mapTerrain';
+import {
+  TERRAIN_BUNDLE_LIST_URL,
+  terrainBundleProvider,
+  terrainBundleUrl,
+  terrainProviderFromLayerJson,
+} from '../../features/terrain/bundles';
 
 /**
  * The stack's own quantized-mesh terrain, served by tiletopia through the viewer's
@@ -25,12 +32,9 @@ import { addMapTerrain, TERRAIN_RGB_URL, type MapTerrain } from '../../lib/mapTe
  */
 const STACK_TERRAIN_URL = '/tiles/v1/terrain/';
 
-const BUNDLE_LIST_URL = '/tiles/v1/terrain/bundles';
+const GLOBAL_TERRAIN_URL = '/tiles/v1/terrain/global/';
 
 const BUNDLE_PREFIX = 'bundle:';
-
-// fromUrl appends layer.json, so the trailing slash is what keeps it inside the bundle
-const bundleUrl = (name: string) => `${BUNDLE_LIST_URL}/${name}/`;
 
 const bundleName = (value: string | null) =>
   value?.startsWith(BUNDLE_PREFIX) ? value.slice(BUNDLE_PREFIX.length) : null;
@@ -63,7 +67,8 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
     let cancelled = false;
     const loadBundles = async () => {
       try {
-        const response = await fetch(BUNDLE_LIST_URL);
+        const response = await fetch(TERRAIN_BUNDLE_LIST_URL, { headers: authHeaders() });
+        noticeRefusal(response.status);
         if (!response.ok) return;
         const names: unknown = await response.json();
         if (cancelled || !Array.isArray(names)) return;
@@ -100,6 +105,7 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
   const enabledStatus = () => {
     if (selectedBundle) return `Terrain bundle ${selectedBundle} enabled`;
     if (provider === 'stack') return 'Platform terrain enabled';
+    if (provider === 'global') return 'Global terrain enabled';
     if (provider === 'custom') return 'Custom terrain enabled';
     return 'Cesium World Terrain enabled';
   };
@@ -135,8 +141,9 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
     setLoading(true);
     try {
       let tp: TerrainProvider;
-      if (selectedBundle) tp = await CesiumTerrainProvider.fromUrl(bundleUrl(selectedBundle));
-      else if (provider === 'stack') tp = await CesiumTerrainProvider.fromUrl(STACK_TERRAIN_URL);
+      if (selectedBundle) tp = await terrainBundleProvider(selectedBundle);
+      else if (provider === 'stack') tp = await terrainProviderFromLayerJson(STACK_TERRAIN_URL);
+      else if (provider === 'global') tp = await terrainProviderFromLayerJson(GLOBAL_TERRAIN_URL);
       else if (provider === 'custom') tp = await CesiumTerrainProvider.fromUrl(url);
       else tp = await createWorldTerrainAsync();
       viewer.terrainProvider = tp;
@@ -205,6 +212,7 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
               label="Provider"
               data={[
                 { value: 'stack', label: 'Platform terrain' },
+                { value: 'global', label: 'Global terrain' },
                 { value: 'cesium', label: 'Cesium World Terrain' },
                 { value: 'custom', label: 'Custom URL' },
                 ...(bundles.length
@@ -229,9 +237,21 @@ export function GlobalTerrainPanel({ onClose }: { onClose: () => void }) {
               </Text>
             )}
 
+            {provider === 'global' && (
+              <>
+                <Text size="xs" c="dimmed">
+                  {GLOBAL_TERRAIN_URL}
+                </Text>
+                <Text size="xs" c="dimmed">
+                  Levels 7 to 14 have relief from Copernicus GLO-30. Levels 0 to 6 are the geoid
+                  surface, with no relief.
+                </Text>
+              </>
+            )}
+
             {selectedBundle && (
               <Text size="xs" c="dimmed">
-                {bundleUrl(selectedBundle)}
+                {terrainBundleUrl(selectedBundle)}
               </Text>
             )}
 

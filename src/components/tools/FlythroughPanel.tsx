@@ -37,6 +37,7 @@ import {
   startCanvasRecording,
   type CanvasRecording,
 } from '../../lib/canvasRecorder';
+import { randomUuid } from '../../lib/randomUuid';
 
 interface Waypoint extends PathPoint {
   id: string;
@@ -115,7 +116,7 @@ export function FlythroughPanel({ onClose }: { onClose: () => void }) {
     editWaypoints([
       ...waypoints,
       {
-        id: crypto.randomUUID(),
+        id: randomUuid(),
         longitude: CesiumMath.toDegrees(carto.longitude),
         latitude: CesiumMath.toDegrees(carto.latitude),
         height: carto.height,
@@ -213,7 +214,7 @@ export function FlythroughPanel({ onClose }: { onClose: () => void }) {
                 size="sm"
                 variant="subtle"
                 color="red"
-                aria-label={`Remove waypoint ${i + 1}`}
+                title={`Remove waypoint ${i + 1}`} aria-label={`Remove waypoint ${i + 1}`}
                 onClick={() => removeWaypoint(w.id)}
               >
                 <IconTrash size={14} />

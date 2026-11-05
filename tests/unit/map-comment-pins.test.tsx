@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { MantineProvider } from '@mantine/core';
-import type { MutableRefObject, ReactNode } from 'react';
+import { cleanup, fireEvent, screen } from '@testing-library/react';
+import type { MutableRefObject } from 'react';
 import type { Viewer } from 'cesium';
 import type { Map as LeafletMap } from 'leaflet';
 import type { Map as MapLibreMap } from 'maplibre-gl';
@@ -18,11 +17,15 @@ import { setSharedCamera } from '../../src/hooks/sharedCamera';
 import { useLiveStore } from '../../src/live/liveStore';
 import { MapCommentsOverlay } from '../../src/live/MapCommentsOverlay';
 import { useMapCommentsStore } from '../../src/live/mapCommentsStore';
-import { emptyLiveDocument, type LiveComment, type LiveRole } from '../../src/live/types';
+import type { LiveComment } from '../../src/live/types';
 import { useAppStore } from '../../src/store/app';
 import { FakeAgoraServer } from './stubs/fakeAgoraServer';
-
-const OWN_ACTOR = 'ada';
+import {
+  comment as unplacedComment,
+  draw,
+  joinWith,
+  stubMantineBrowserGlobals,
+} from './stubs/liveTestHelpers';
 
 /** a maplibre stand-in that projects a point per degree, so pins land apart */
 const maplibreRef = {
@@ -47,53 +50,16 @@ function overlay() {
 }
 
 function comment(overrides: Partial<LiveComment> = {}): LiveComment {
-  return {
-    id: 'root-1',
-    actor: OWN_ACTOR,
-    authorName: 'Ada Lovelace',
-    text: 'is this the right coastline',
-    createdAt: 10,
-    resolved: false,
+  return unplacedComment({
     anchor: { lng: 7.4, lat: 43.7, zoom: 11, placed: true },
     ...overrides,
-  };
-}
-
-function draw(ui: ReactNode) {
-  return render(<MantineProvider>{ui}</MantineProvider>);
+  });
 }
 
 let server: FakeAgoraServer;
 
-function joinWith(comments: LiveComment[], role: LiveRole = 'edit') {
-  server.document = {
-    ...emptyLiveDocument('coastline'),
-    comments: Object.fromEntries(comments.map((entry) => [entry.id, entry])),
-  };
-  useLiveStore.getState().connect({ documentId: 'doc-1', token: 'jwt-token', role });
-  const connection = server.connection;
-  connection.acceptHandshake();
-  connection.deliver({ type: 'snapshot', seq: 0, state: server.document, actor: OWN_ACTOR, role });
-  server.sendPeers([{ actor: OWN_ACTOR, name: 'Ada Lovelace', role }]);
-  return connection;
-}
-
 beforeEach(() => {
-  vi.stubGlobal(
-    'matchMedia',
-    vi.fn().mockReturnValue({
-      matches: false,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-    }),
-  );
-  globalThis.ResizeObserver = class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  };
+  stubMantineBrowserGlobals();
   server = new FakeAgoraServer();
   server.install();
   useAuthStore.setState({ user: null, token: 'jwt-token' });
@@ -115,7 +81,7 @@ afterEach(() => {
 
 describe('map comment pins', () => {
   it('draws a pin for every unresolved placed thread and nothing else', () => {
-    joinWith([
+    joinWith(server, [
       comment(),
       comment({ id: 'root-2', createdAt: 20, anchor: { lng: 8, lat: 44, zoom: 11, placed: true } }),
       comment({ id: 'resolved', createdAt: 30, resolved: true }),
@@ -133,7 +99,7 @@ describe('map comment pins', () => {
   });
 
   it('posts a placed comment at the point the context menu was opened on', () => {
-    const connection = joinWith([]);
+    const connection = joinWith(server, []);
     useAppStore.getState().showContextMenu({ x: 40, y: 60, lat: 43.7, lng: 7.4 });
     draw(
       <>
@@ -157,7 +123,7 @@ describe('map comment pins', () => {
   });
 
   it('opens the thread on a pin click and replies into it', () => {
-    const connection = joinWith([comment()]);
+    const connection = joinWith(server, [comment()]);
     draw(overlay());
 
     expect(screen.queryByText('is this the right coastline')).not.toBeInTheDocument();
@@ -177,7 +143,7 @@ describe('map comment pins', () => {
   });
 
   it('closes the thread box on its close button', () => {
-    joinWith([comment()]);
+    joinWith(server, [comment()]);
     draw(overlay());
 
     fireEvent.click(screen.getByTestId('comment-pin'));
@@ -192,13 +158,13 @@ describe('comment here context menu action', () => {
   });
 
   it('is offered in a live edit session', () => {
-    joinWith([]);
+    joinWith(server, []);
     draw(<ContextMenu />);
     expect(screen.getByText('Comment here')).toBeInTheDocument();
   });
 
   it('is withheld from a view role', () => {
-    joinWith([], 'view');
+    joinWith(server, [], 'view');
     draw(<ContextMenu />);
     expect(screen.queryByText('Comment here')).not.toBeInTheDocument();
   });

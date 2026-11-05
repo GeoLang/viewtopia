@@ -19,6 +19,7 @@ import {
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { parseTrack, type ParsedTrack } from '../../lib/trackParsers';
+import { randomUuid } from '../../lib/randomUuid';
 
 interface ImportedTrack extends ParsedTrack {
   id: string;
@@ -70,7 +71,7 @@ export function TrackImportPanel({ onClose }: { onClose: () => void }) {
           notifications.show({ title: 'No points', message: file.name, color: 'yellow' });
           continue;
         }
-        const track: ImportedTrack = { ...parsed, id: crypto.randomUUID() };
+        const track: ImportedTrack = { ...parsed, id: randomUuid() };
         setTracks((prev) => [...prev, track]);
         renderTrack(track);
         const viewer = getActiveCesiumViewer();
@@ -139,7 +140,7 @@ export function TrackImportPanel({ onClose }: { onClose: () => void }) {
                 <Badge size="xs" variant="light" color="orange">
                   {t.points.length} pts
                 </Badge>
-                <ActionIcon aria-label="Remove track" size="xs" variant="subtle" color="red" onClick={() => removeTrack(t.id)}>
+                <ActionIcon title="Remove track" aria-label="Remove track" size="xs" variant="subtle" color="red" onClick={() => removeTrack(t.id)}>
                   <IconTrash size={12} />
                 </ActionIcon>
               </Group>

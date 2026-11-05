@@ -133,7 +133,7 @@ export function FieldPanel({ onHighlightField, onShowNdvi, onClose }: FieldPanel
             <IconPlant size={18} />
             <Text fw={600} size="sm">Fields</Text>
           </Group>
-          <ActionIcon aria-label="Close fields" size="sm" variant="subtle" onClick={onClose}><IconX size={14} /></ActionIcon>
+          <ActionIcon title="Close fields" aria-label="Close fields" size="sm" variant="subtle" onClick={onClose}><IconX size={14} /></ActionIcon>
         </Group>
 
         <Button size="xs" onClick={handleLoad} loading={loading}>Load Fields</Button>

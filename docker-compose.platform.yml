@@ -14,6 +14,7 @@
 #   - ptolemy:    Enterprise geodatabase + geoprocessing API (port 3000)
 #   - fenestra:   OGC WMS/WFS/WMTS gateway with server-side rendering (:5174/ogc/, port 3003)
 #   - tiletopia:  3D Tiles / terrain / asset server (port 3100)
+#   - ids-check:  IfcOpenShell ifctester for tiletopia's IDS checks (internal port 8000)
 #   - geokode:    Geocoding service (port 3001)
 #   - itinera:    Routing + isochrones (port 3002)
 #   - interiora:  Indoor venue maps + indoor routing (internal port 3000)
@@ -94,8 +95,32 @@ services:
       TILETOPIA_PORT: "3000"
       RUST_LOG: info
       TILETOPIA_JWT_SECRET: ${PLATFORM_JWT_SECRET:-}
+      # tiletopia's WMTS, TMS and Ion urls start with this origin
+      TILETOPIA_ION_BASE_URL: ${TILETOPIA_ION_BASE_URL:?set it to the origin clients open the viewer at}
+      # tiletopia reads an empty value as unset, and its global terrain route answers 503 naming the first three
+      TILETOPIA_GLOBAL_TERRAIN_DEM_URL: ${TILETOPIA_GLOBAL_TERRAIN_DEM_URL:-}
+      TILETOPIA_GLOBAL_TERRAIN_GEOID_URL: ${TILETOPIA_GLOBAL_TERRAIN_GEOID_URL:-}
+      TILETOPIA_GLOBAL_TERRAIN_CACHE_DIR: ${TILETOPIA_GLOBAL_TERRAIN_CACHE_DIR:-}
+      TILETOPIA_GLOBAL_TERRAIN_CACHE_MB: ${TILETOPIA_GLOBAL_TERRAIN_CACHE_MB:-}
+      TILETOPIA_GLOBAL_TERRAIN_ION_ASSET_ID: ${TILETOPIA_GLOBAL_TERRAIN_ION_ASSET_ID:-}
+      TILETOPIA_IDS_CHECK_URL: http://ids-check:8000
+      # tiletopia refuses to start with the url set and no token, and the sidecar refuses checks without it
+      TILETOPIA_IDS_CHECK_TOKEN: ${TILETOPIA_IDS_CHECK_TOKEN:-}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  ids-check:
+    build:
+      context: ../tiletopia/sidecars/ids-check
+    volumes:
+      - tiletopia-data:/data:ro
+    environment:
+      IDS_CHECK_TOKEN: ${TILETOPIA_IDS_CHECK_TOKEN:-}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=4)"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -344,8 +369,8 @@ services:
       - user_data
 
   # Tool code runs here rather than in geolang-api, which holds
-  # PLATFORM_JWT_SECRET: a tool hands caller-written arguments to geopandas,
-  # QGIS and DuckDB, and that secret signs a token for any user on any service.
+  # PLATFORM_JWT_SECRET: a tool hands caller-written arguments to geopandas
+  # and QGIS, and that secret signs a token for any user on any service.
   # So no signing secret, no service account, no model key (hence no env_file)
   # and no published port. Natural Earth reference data is shared with the API.
   geolang-executor:

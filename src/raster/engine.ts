@@ -3,6 +3,7 @@
  * initialized wasm module for the whole session, calls resolve in request
  * order per op but interleave freely across ops.
  */
+import { createWorkerCall } from '../lib/workerCall';
 import type {
   ContourResult,
   FocalStat,
@@ -13,35 +14,9 @@ import type {
   ZonalResult,
 } from './types';
 
-let worker: Worker | null = null;
-let seq = 0;
-const pending = new Map<
-  number,
-  { resolve: (value: unknown) => void; reject: (reason: Error) => void }
->();
-
-function getWorker(): Worker {
-  if (!worker) {
-    worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
-    worker.onmessage = (e: MessageEvent) => {
-      const { id, ok, result, error } = e.data;
-      const p = pending.get(id);
-      if (!p) return;
-      pending.delete(id);
-      if (ok) p.resolve(result);
-      else p.reject(new Error(error));
-    };
-  }
-  return worker;
-}
-
-function call<T>(op: string, args: unknown[]): Promise<T> {
-  const id = ++seq;
-  return new Promise<T>((resolve, reject) => {
-    pending.set(id, { resolve: resolve as (value: unknown) => void, reject });
-    getWorker().postMessage({ id, op, args });
-  });
-}
+const call = createWorkerCall(
+  () => new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' }),
+);
 
 export function normalizedDifference(
   a: Float32Array,

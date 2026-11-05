@@ -540,7 +540,7 @@ export function ProjectSwitcher() {
                   disabled={shareLoading}
                   w={110}
                 />
-                <ActionIcon aria-label={`Remove ${member.userId}`} color="red" variant="subtle" disabled={shareLoading} onClick={() => void handleRemoveMember(member.userId)}>
+                <ActionIcon title={`Remove ${member.userId}`} aria-label={`Remove ${member.userId}`} color="red" variant="subtle" disabled={shareLoading} onClick={() => void handleRemoveMember(member.userId)}>
                   <IconTrash size={14} />
                 </ActionIcon>
               </Group>
@@ -550,7 +550,7 @@ export function ProjectSwitcher() {
           {invitations.map((invitation) => (
             <Group key={invitation.id} justify="space-between" wrap="nowrap">
               <Text size="sm">{invitation.role} until {new Date(invitation.expiresAt).toLocaleString()}</Text>
-              <ActionIcon aria-label={`Revoke invite ${invitation.id}`} color="red" variant="subtle" disabled={shareLoading} onClick={() => void handleRevokeInvite(invitation.id)}>
+              <ActionIcon title={`Revoke invite ${invitation.id}`} aria-label={`Revoke invite ${invitation.id}`} color="red" variant="subtle" disabled={shareLoading} onClick={() => void handleRevokeInvite(invitation.id)}>
                 <IconTrash size={14} />
               </ActionIcon>
             </Group>
