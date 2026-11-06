@@ -56,7 +56,7 @@ async function openViewer(page) {
 
 async function openPanel(page, label) {
   await page.getByRole('button', { name: 'Analysis' }).click();
-  await page.locator(MENU_ITEM).filter({ hasText: label }).first().click();
+  await page.locator(MENU_ITEM).getByText(label, { exact: true }).click();
   // the dropdown overlays the canvas, so a map click can land on a menu item
   // instead of the globe until it unmounts
   await expect(page.locator('[class*="mantine-Menu-dropdown"]')).toHaveCount(0);
