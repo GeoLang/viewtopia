@@ -313,7 +313,8 @@ test.describe('digital twin on the globe — live platform stack', () => {
 
     // the click selected the watched asset as a model element, whose highlight
     // replaces its readings colour until picking is switched off
-    await page.getByLabel('Click a feature to inspect').uncheck();
+    // mantine hides the real <input>, so the visible label toggles it
+    await page.getByText('Click a feature to inspect').click();
     await expect(page.getByLabel('Click a feature to inspect')).not.toBeChecked();
 
     producer.stop();
