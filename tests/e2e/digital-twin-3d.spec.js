@@ -311,6 +311,11 @@ test.describe('digital twin on the globe — live platform stack', () => {
     );
     await expect(page.getByTestId('asset-online')).toHaveText('online');
 
+    // the click selected the watched asset as a model element, whose highlight
+    // replaces its readings colour until picking is switched off
+    await page.getByLabel('Click a feature to inspect').uncheck();
+    await expect(page.getByLabel('Click a feature to inspect')).not.toBeChecked();
+
     producer.stop();
     producer = null;
     await expectAssetColor(page, watched, OFFLINE_COLOR, OFFLINE_TIMEOUT_MS);

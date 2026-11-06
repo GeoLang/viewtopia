@@ -257,7 +257,7 @@ test('a .jp2 row adds imagery, its WMTS url serves a layer, and delete takes bot
   await expect(addLayer).toBeDisabled();
 
   await asset.row.getByRole('button', { name: `Service URLs of ${asset.name}` }).click();
-  const capabilitiesUrl = await asset.row.getByLabel('WMTS capabilities').inputValue();
+  const capabilitiesUrl = await asset.row.getByLabel('WMTS capabilities', { exact: true }).inputValue();
   const capabilities = await page.request.get(capabilitiesUrl);
   expect(capabilities.status()).toBe(200);
   const template = /<ResourceURL[^>]*template="([^"]+)"/.exec(await capabilities.text())?.[1];
