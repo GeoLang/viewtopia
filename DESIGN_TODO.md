@@ -891,10 +891,18 @@ first.
 Not promised: Revit, DWG, DGN or iModel parity. DGN V8 and iModel have no open route,
 ODA SDKs and the iModel native addon are proprietary. Customers export IFC.
 
-- [ ] Set `maximumScreenSpaceError` and cache sizes for BIM tilesets in the viewer,
-  which runs on Cesium's defaults. The first view of `balconies-a2` fetches all 452
-  tileset files, 622 MB, and `restage-demonstrator` fetches 311 of its 359 MB, so
-  check whether the tiler writes coarse parent tiles as well.
+- [ ] Give mesh tiles a geometric error that measures their content. The first view
+  of `balconies-a2` fetches all 452 tileset files, 622 MB, and `restage-demonstrator`
+  fetches 311 of its 359 MB. The tiler does write coarse parents: `parent_content_parts`
+  keeps the largest parts, simplified, up to 65,536 triangles. But `geometric_error_for`
+  in `mesh_tiler.rs` gives a parent half its box diagonal, the size of the tile, not
+  the size of what it leaves out. At the benchmark camera, 294 m away at 1280 by 800,
+  Cesium's default `maximumScreenSpaceError` of 16 accepts a tile only below about
+  4.2 m of error, and the smallest interior error in `balconies-a2` is 6.7 m, so every
+  branch refines to its leaves and the base traversal loads every ancestor on the way.
+  A parent's error has to be the largest half diagonal among the parts it drops, plus
+  the simplification error of the parts it keeps. Tune `maximumScreenSpaceError` and
+  cache sizes after that, then rerun `benchmark.sh`.
 - [ ] Test `TiletopiaElementService` against a running tiletopia. Its unit tests use a
   fake XHR server.
 - [ ] Walk, orbit and storey views on a real IFC interior, by hand, in a headed
@@ -916,25 +924,53 @@ ODA SDKs and the iModel native addon are proprietary. Customers export IFC.
   bytes a vertex. Both large proof models pass that estimate partway through the
   read, `balconies-a2` at element #2378552 and `restage-demonstrator` at
   #2076200, and fail ingest. With `TASK_MEMORY_BYTES` raised to 48 GiB the server
-  peaks at 2.44 GB and 1.71 GB resident, so neither fits a 1 GiB task. The
-  benchmark records no vertex count, which bytes a vertex needs.
-- [ ] Load the same two IFC files in That Open Engine (`@thatopen/components` 3.5 with
-  Fragments) and record the same numbers. If the CesiumJS viewer keeps up, build
-  model snapping and property editing in it. If it does not, open large models in a That
-  Open view beside the globe. The CesiumJS side, from `benchmark.sh` on hercules
-  (RTX 2080 Ti, headless Chromium on ANGLE OpenGL ES) with tiletopia 6bea7f7 and
-  `TASK_MEMORY_BYTES` raised to 48 GiB:
+  peaks at 2.44 GB and 1.71 GB resident, so neither fits a 1 GiB task. A program that
+  runs `read_elements` and `tile_meshes` alone on tiletopia 6bea7f7 measured this:
+
+  | | balconies-a2 | restage-demonstrator |
+  | - | - | - |
+  | meshes | 26,545 | 3,827 |
+  | vertices | 17.9 M | 4.5 M |
+  | peak after read | 1.59 GB | 1.70 GB |
+  | peak after tiling | 2.42 GB | 1.85 GB |
+  | peak bytes a vertex | 135 | 410 |
+  | peak over IFC size | 9.2 | 9.7 |
+
+  A vertex charge cannot size the budget: `restage-demonstrator` holds more during the
+  read with a quarter of the vertices, so most of the read peak is ifc-lite's decoding,
+  not the meshes `bytes_held_by_mesh` charges. The peak over the IFC size is close on
+  both, so charge about ten bytes a source byte before the read starts, which refuses
+  an IFC over about 36 MB at today's `JOB_BUDGET_BYTES`. Two models are too few to fix
+  the factor, measure the proof models in `models.tsv` first.
+- [ ] Decide between CesiumJS and That Open for large models. If the CesiumJS viewer
+  keeps up, build model snapping and property editing in it. If it does not, open
+  large models in a That Open view beside the globe. Rerun the CesiumJS side once
+  the geometric error above is fixed, today it draws every leaf. Both sides ran on
+  hercules (RTX 2080 Ti, headless Chromium on ANGLE OpenGL ES, 1280 by 800, the camera
+  at 2.2 bounding radii). CesiumJS from `benchmark.sh` with tiletopia 6bea7f7 and
+  `TASK_MEMORY_BYTES` raised to 48 GiB, That Open from `@thatopen/fragments` 3.6.0
+  `IfcImporter` in node and `FragmentsModels` with three.js 0.187 in the page:
 
   | | balconies-a2 | restage-demonstrator |
   | - | - | - |
   | IFC size | 262 MB | 190 MB |
-  | tiling job | 51.7 s | 19.8 s |
-  | server peak resident | 2.44 GB | 1.71 GB |
-  | elements without geometry | 110, failed opening cuts | 14, no triangles |
-  | tileset | 452 files, 622 MB | 142 files, 359 MB |
-  | first visible tile | 1.1 s | 1.2 s |
-  | first view | 9.9 s, 622 MB, 4.9 M triangles | 3.7 s, 311 MB, 1.6 M triangles |
-  | frame rate | 76 fps, 95th percentile 15.1 ms | 247 fps, 95th percentile 5.3 ms |
+  | CesiumJS tiling job | 51.7 s | 19.8 s |
+  | That Open conversion | 34.4 s | 20.6 s |
+  | CesiumJS server peak resident | 2.44 GB | 1.71 GB |
+  | That Open conversion peak resident | 1.36 GB | 1.61 GB |
+  | elements without geometry, CesiumJS | 110, failed opening cuts | 14, no triangles |
+  | CesiumJS tileset | 452 files, 622 MB | 142 files, 359 MB |
+  | That Open fragments file | 18.9 MB | 15.0 MB |
+  | CesiumJS first visible tile | 1.1 s | 1.2 s |
+  | That Open first visible tile | 5.7 s | 4.4 s |
+  | CesiumJS first view | 9.9 s, 622 MB, 4.9 M triangles | 3.7 s, 311 MB, 1.6 M triangles |
+  | That Open first view | 6.2 s, 18.9 MB, 2.4 M triangles | 4.9 s, 15.0 MB, 0.76 M triangles |
+  | CesiumJS frame rate | 76 fps, 95th percentile 15.1 ms | 247 fps, 95th percentile 5.3 ms |
+  | That Open frame rate | 256 fps, 95th percentile 5.1 ms | 1,864 fps, 95th percentile 0.7 ms |
+
+  That Open fetches the whole fragments file before it draws, so its first visible
+  tile waits for the worker to build meshes from it. The scripts are
+  `~/tmp/geolang-fix/bim/thatopen-bench/{convert.mjs,bench.mjs,page.js}`.
 - [!] Compare placement and properties against Ion with the BIM proof's
   `ion-compare.sh`. Needs a `CESIUM_ION_TOKEN`.
 - [!] CAD edges on instanced elements. CesiumJS 1.147 draws none on
