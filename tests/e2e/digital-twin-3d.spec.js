@@ -311,15 +311,17 @@ test.describe('digital twin on the globe — live platform stack', () => {
     );
     await expect(page.getByTestId('asset-online')).toHaveText('online');
 
+    producer.stop();
+    producer = null;
+    await expect(page.getByTestId('asset-online')).toHaveText('offline', {
+      timeout: OFFLINE_TIMEOUT_MS,
+    });
+
     // the click selected the watched asset as a model element, whose highlight
     // replaces its readings colour until picking is switched off
     // mantine hides the real <input>, so the visible label toggles it
     await page.getByText('Click a feature to inspect').click();
     await expect(page.getByLabel('Click a feature to inspect')).not.toBeChecked();
-
-    producer.stop();
-    producer = null;
     await expectAssetColor(page, watched, OFFLINE_COLOR, OFFLINE_TIMEOUT_MS);
-    await expect(page.getByTestId('asset-online')).toHaveText('offline');
   });
 });
