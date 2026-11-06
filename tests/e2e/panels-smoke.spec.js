@@ -134,7 +134,7 @@ test.describe('tool panels', () => {
     await page.goto(REACT_URL);
     await page.getByRole('button', { name: 'Data' }).click();
     await page.getByRole('menuitem', { name: 'Terrain' }).click();
-    await expect(page.getByText('Global Terrain')).toBeVisible();
+    await expect(page.getByText('Global Terrain', { exact: true })).toBeVisible();
 
     // The viewer boots on the flat ellipsoid provider. Comparing against that
     // class is minification-safe, unlike reading constructor.name, which is one
@@ -220,7 +220,7 @@ test.describe('tool panels', () => {
     await mockOpenElevation(page);
     await page.goto(REACT_URL);
     await page.getByRole('button', { name: 'Analysis' }).click();
-    await page.getByRole('menuitem', { name: 'Section' }).click();
+    await page.getByRole('menuitem', { name: 'Section', exact: true }).click();
     await expect(page.getByText('Cross Section')).toBeVisible();
 
     await page.getByLabel('Sample Points').fill(String(CROSS_SECTION_SAMPLES));
@@ -264,7 +264,7 @@ test.describe('tool panels', () => {
 
     await page.goto(REACT_URL);
     await page.getByRole('button', { name: 'Analysis' }).click();
-    await page.getByRole('menuitem', { name: 'Section' }).click();
+    await page.getByRole('menuitem', { name: 'Section', exact: true }).click();
     await expect(page.getByText('Cross Section')).toBeVisible();
 
     await page.getByRole('button', { name: 'Generate Profile' }).click();

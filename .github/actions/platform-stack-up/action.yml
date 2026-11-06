@@ -41,6 +41,8 @@ runs:
         # geodukt runs as this uid so its sinks can write the bind-mounted
         # checkout, which the runner owns rather than the compose default 1000
         export DOCKER_UID="$(id -u)" DOCKER_GID="$(id -g)"
+        # tiletopia refuses to start with TILETOPIA_IDS_CHECK_URL set and no token
+        export TILETOPIA_IDS_CHECK_TOKEN="$(openssl rand -hex 24)"
         docker compose -f docker-compose.platform.yml down --remove-orphans
         docker compose -f docker-compose.platform.yml up -d $SERVICES
 
