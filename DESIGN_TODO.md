@@ -891,6 +891,26 @@ first.
 Not promised: Revit, DWG, DGN or iModel parity. DGN V8 and iModel have no open route,
 ODA SDKs and the iModel native addon are proprietary. Customers export IFC.
 
+- [ ] IFC glazing. Check glass close up, then split glass from frame inside one window
+  through ifc-lite's per-submesh producer. Tiles carry one colour per element today.
+  The target look is That Open's "beautiful house" screenshot, glazing first.
+- [ ] Match or beat That Open on the rows of the benchmark table below where CesiumJS
+  still loses: frame rate on `restage-demonstrator`, served tileset size and tiling time
+  on `balconies-a2`, and server peak resident on both. Repeated geometry is shared
+  within a tile, not across tiles. On `restage-demonstrator` the CesiumJS scene costs
+  more per frame than the tiles. `probe-frame-rate.mjs` measured an empty scene at
+  1,377 fps with the globe and 2,892 fps without it. With the tiles, hiding globe, sky,
+  sun and moon gives 1,437 fps, adding `orderIndependentTranslucency: false` gives
+  1,645, and adding fog off gives 1,753, all at MSAA 4 like That Open's
+  `antialias: true`. The face-shading shader costs 5% and FXAA is already off. Turning
+  off order-independent translucency changes how glazing blends. That Open's methods, from engine_fragment v3.6.0:
+  geometry deduplicated by a content hash, coplanar triangles stored as polygons and
+  triangulated with earcut on load, no stored normals, pako deflate on the whole file,
+  and a per-element drop under about 4 pixels on screen. Source in
+  `~/tmp/geolang-fix/bim/thatopen-src/`.
+- [ ] Check in a headed Chromium that `Cesium3DTileStyle` selection, hiding and
+  isolation still work on tiles drawn with `FACE_SHADING_GLSL`. Cesium documents a
+  `CustomShader` combined with a tile style as possibly undefined behaviour.
 - [ ] Test `TiletopiaElementService` against a running tiletopia. Its unit tests use a
   fake XHR server.
 - [ ] Walk, orbit and storey views on a real IFC interior, by hand, in a headed
@@ -934,34 +954,32 @@ ODA SDKs and the iModel native addon are proprietary. Customers export IFC.
   keeps up, build model snapping and property editing in it. If it does not, open
   large models in a That Open view beside the globe. Both sides ran on hercules (RTX
   2080 Ti, headless Chromium on ANGLE OpenGL ES, 1280 by 800, the camera at 2.2
-  bounding radii). CesiumJS from `benchmark.sh` with `TASK_MEMORY_BYTES` raised to
-  48 GiB: tiling and server memory from tiletopia 6bea7f7 on a quiet machine, the
-  browser rows from the parent geometric error fix on top of b8919e0. That Open from
-  `@thatopen/fragments` 3.6.0 `IfcImporter` in node and `FragmentsModels` with
-  three.js 0.187 in the page:
+  bounding radii). CesiumJS from `benchmark.sh` run `welded-identity-sse24-quiet` on
+  2026-11-06, with `TASK_MEMORY_BYTES` raised to 48 GiB, `maximumScreenSpaceError` 24
+  and a load average under 3. The served tileset is the mirrored files compressed with
+  brotli -q 5, the server's setting. That Open from `@thatopen/fragments` 3.6.0
+  `IfcImporter` in node and `FragmentsModels` with three.js 0.187 in the page:
 
   | | balconies-a2 | restage-demonstrator |
   | - | - | - |
   | IFC size | 262 MB | 190 MB |
-  | CesiumJS tiling job | 51.7 s | 19.8 s |
+  | CesiumJS tiling job | 37.7 s | 12.6 s |
   | That Open conversion | 34.4 s | 20.6 s |
-  | CesiumJS server peak resident | 2.44 GB | 1.71 GB |
+  | CesiumJS server peak resident | 2.11 GB | 1.71 GB |
   | That Open conversion peak resident | 1.36 GB | 1.61 GB |
   | elements without geometry, CesiumJS | 110, failed opening cuts | 14, no triangles |
-  | CesiumJS tileset | 452 files, 622 MB | 142 files, 359 MB |
+  | CesiumJS tileset, served | 208 files, 31.2 MB | 59 files, 6.9 MB |
   | That Open fragments file | 18.9 MB | 15.0 MB |
-  | CesiumJS first visible tile | 0.7 s | 1.4 s |
+  | CesiumJS first visible tile | 0.31 s | 0.31 s |
   | That Open first visible tile | 5.7 s | 4.4 s |
-  | CesiumJS first view | 1.6 s, 78 MB, 1.1 M triangles | 2.5 s, 199 MB, 1.1 M triangles |
+  | CesiumJS first view | 0.57 s, 2.3 MB, 0.69 M triangles | 0.55 s, 3.0 MB, 0.70 M triangles |
   | That Open first view | 6.2 s, 18.9 MB, 2.4 M triangles | 4.9 s, 15.0 MB, 0.76 M triangles |
-  | CesiumJS geometry held at first view | 188 MB | 341 MB |
-  | CesiumJS frame rate | 378 fps, 95th percentile 4.3 ms | 598 fps, 95th percentile 3.0 ms |
+  | CesiumJS geometry held at first view | 18 MB | 17 MB |
+  | CesiumJS frame rate | 916 fps, 95th percentile 1.4 ms | 975 fps, 95th percentile 1.3 ms |
   | That Open frame rate | 256 fps, 95th percentile 5.1 ms | 1,864 fps, 95th percentile 0.7 ms |
 
   That Open fetches the whole fragments file before it draws, so its first visible
-  tile waits for the worker to build meshes from it. The CesiumJS tileset is 33 times
-  the fragments file on `balconies-a2`, and a job's `mesh_compression` is `none`
-  unless the upload names one, so measure a `meshopt` upload next. The scripts are
+  tile waits for the worker to build meshes from it. The scripts are
   `~/tmp/geolang-fix/bim/thatopen-bench/{convert.mjs,bench.mjs,page.js}`.
 - [!] Compare placement and properties against Ion with the BIM proof's
   `ion-compare.sh`. Needs a `CESIUM_ION_TOKEN`.

@@ -292,6 +292,10 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- 2026-11-06: 3D Tiles layers load with `maximumScreenSpaceError` 24 instead of
+  CesiumJS's 16. Untextured primitives without normals are lit from face normals
+  taken from screen-space derivatives of the eye position, which draws tiletopia's
+  welded IFC tiles shaded instead of flat.
 - 2026-11-05: **`TILETOPIA_ION_BASE_URL` is the viewer's origin on every compose
   stack that runs tiletopia.** nginx sends `/api/v1/assets`, `/api/v1/terrain/`,
   `/v1/assets` and `/tiletopia_ion_uploads/` to tiletopia with the path unchanged,

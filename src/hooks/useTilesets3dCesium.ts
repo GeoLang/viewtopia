@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
-import { Cesium3DTileset, type Viewer } from 'cesium';
+import { Cesium3DTileset, CustomShader, type Viewer } from 'cesium';
 import { useLayerLoadErrorStore } from '../store/layerLoadErrors';
 import { useTiles3dLayerStore, type Tiles3dLayer } from '../store/tiles3dLayers';
 
@@ -17,6 +17,24 @@ interface DrawnTilesets {
 function firstLine(failure: unknown): string {
   return (failure instanceof Error ? failure.message : String(failure)).split('\n')[0];
 }
+
+// cesium's default of 16 held 145 MB of geometry at first view on balconies-a2, 24 held 81 MB with no element missing
+const MAXIMUM_SCREEN_SPACE_ERROR = 24;
+
+// gltf has clients shade a primitive without normals by its faces, and cesium 1.147 draws it unlit
+const FACE_SHADING_GLSL = `
+void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) {
+// photogrammetry textures carry their own lighting
+#if !defined(HAS_NORMALS) && !defined(HAS_BASE_COLOR_TEXTURE)
+  vec3 positionEC = fsInput.attributes.positionEC;
+  vec3 faceNormal = cross(dFdx(positionEC), dFdy(positionEC));
+  // points and lines have no face
+  if (dot(faceNormal, faceNormal) > 0.0) {
+    float facingTheLight = max(dot(normalize(faceNormal), czm_lightDirectionEC), 0.0);
+    material.diffuse *= 0.45 + 0.55 * facingTheLight;
+  }
+#endif
+}`;
 
 /**
  * Draws the 3D tilesets the layer store holds on a Cesium viewer. Loading is
@@ -64,12 +82,15 @@ export function useTilesets3dCesium(viewerRef: MutableRefObject<Viewer | null>) 
     const load = async (layer: Tiles3dLayer) => {
       drawn.loading.add(layer.id);
       try {
-        const tileset = await Cesium3DTileset.fromUrl(layer.url);
+        const tileset = await Cesium3DTileset.fromUrl(layer.url, {
+          maximumScreenSpaceError: MAXIMUM_SCREEN_SPACE_ERROR,
+        });
         // the scene this was loaded for may be gone, and so may the layer
         if (drawnRef.current !== drawn || viewer.isDestroyed()) {
           tileset.destroy();
           return;
         }
+        tileset.customShader = new CustomShader({ fragmentShaderText: FACE_SHADING_GLSL });
         tileset.show = layer.visible;
         viewer.scene.primitives.add(tileset);
         drawn.tilesets.set(layer.id, tileset);

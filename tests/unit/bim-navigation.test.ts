@@ -47,7 +47,6 @@ import {
   ScreenSpaceEventType,
   Transforms,
   type Cartesian2,
-  type Cesium3DTileFeature,
 } from 'cesium';
 import { enterBimMode, leaveBimMode, setBimNavigation } from '../../src/features/bim/bimMode';
 import { setEdgesShown } from '../../src/features/bim/edges';
