@@ -142,7 +142,7 @@ async function openViewer(page, token) {
 
 async function openPanel(page, label, title) {
   await page.getByRole('button', { name: 'Data' }).click();
-  await page.locator(MENU_ITEM).filter({ hasText: label }).first().click();
+  await page.locator(MENU_ITEM).getByText(label, { exact: true }).click();
   // the dropdown overlays the viewer, so wait for it to unmount before driving
   // anything underneath it
   await expect(page.locator('[class*="mantine-Menu-dropdown"]')).toHaveCount(0);

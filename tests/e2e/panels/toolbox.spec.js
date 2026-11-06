@@ -65,7 +65,7 @@ function geojsonFile(name, features) {
 /** Import a GeoJSON file, which lands as a layer every panel can read. */
 async function importLayer(page, name, features) {
   await page.getByRole('button', { name: 'Data' }).click();
-  await page.locator(MENU_ITEM).filter({ hasText: 'Data Sources' }).first().click();
+  await page.locator(MENU_ITEM).getByText('Data Sources', { exact: true }).click();
   const panel = page.locator(PANEL).filter({ hasText: 'Data Sources' });
   await panel.getByRole('tab', { name: 'Files' }).click();
   await panel.locator('input[type="file"]').setInputFiles(geojsonFile(name, features));
@@ -79,7 +79,7 @@ async function importLayer(page, name, features) {
 
 async function openToolbox(page) {
   await page.getByRole('button', { name: 'Data' }).click();
-  await page.locator(MENU_ITEM).filter({ hasText: 'Geoprocessing' }).first().click();
+  await page.locator(MENU_ITEM).getByText('Geoprocessing', { exact: true }).click();
   await expect(page.locator('[class*="mantine-Menu-dropdown"]')).toHaveCount(0);
   const panel = page.locator(PANEL).filter({ hasText: 'Geoprocessing' });
   await expect(panel).toHaveCount(1);

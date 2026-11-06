@@ -101,7 +101,7 @@ const CHAT = {
 
 async function openPanel(page, label) {
   await page.getByRole('button', { name: 'Tools' }).click();
-  await page.locator(MENU_ITEM).filter({ hasText: label }).first().click();
+  await page.locator(MENU_ITEM).getByText(label, { exact: true }).click();
 }
 
 /** Great-circle km, to compare the camera against a feature's coordinates. */

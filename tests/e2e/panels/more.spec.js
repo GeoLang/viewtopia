@@ -104,7 +104,7 @@ const persistedSettings = (page) =>
 
 async function openPanel(page, label, match) {
   await page.getByRole('button', { name: 'More' }).click();
-  await page.locator(MENU_ITEM).filter({ hasText: label }).first().click();
+  await page.locator(MENU_ITEM).getByText(label, { exact: true }).click();
   // the dropdown overlays the panel, so a click can land on a menu item instead
   await expect(page.locator('[class*="mantine-Menu-dropdown"]')).toHaveCount(0);
   const panel = page.locator(PANEL).filter({ hasText: match });

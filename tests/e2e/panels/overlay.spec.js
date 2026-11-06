@@ -41,7 +41,7 @@ function minimalPdf() {
 async function openOverlayPanel(page) {
   await openApp(page);
   await page.getByRole('button', { name: 'Data' }).click();
-  await page.locator(MENU_ITEM).filter({ hasText: 'Image Overlay' }).first().click();
+  await page.locator(MENU_ITEM).getByText('Image Overlay', { exact: true }).click();
   const panel = page.locator(PANEL).filter({ hasText: 'Image Overlay' });
   await expect(panel).toHaveCount(1);
   return panel;

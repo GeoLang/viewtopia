@@ -53,7 +53,7 @@ function haversineKm([lng1, lat1], [lng2, lat2]) {
 
 async function openPanel(page, label) {
   await page.getByRole('button', { name: 'Analysis' }).click();
-  await page.locator(MENU_ITEM).filter({ hasText: label }).first().click();
+  await page.locator(MENU_ITEM).getByText(label, { exact: true }).click();
 }
 
 test.describe('Analysis panels (batch 2)', () => {

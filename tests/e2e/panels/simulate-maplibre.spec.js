@@ -29,7 +29,7 @@ async function seedAuth(page) {
 
 async function openPanel(page, label, title) {
   await page.getByRole('button', { name: 'Simulate' }).click();
-  await page.locator(MENU_ITEM).filter({ hasText: label }).first().click();
+  await page.locator(MENU_ITEM).getByText(label, { exact: true }).click();
   const panel = page.locator(PANEL).filter({ hasText: title });
   await expect(panel).toHaveCount(1);
   return panel;

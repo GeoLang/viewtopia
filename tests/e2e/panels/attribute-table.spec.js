@@ -52,7 +52,7 @@ function geojsonFile(name, features) {
 /** Both layers on the globe, through the Import panel, which every renderer draws. */
 async function importLayers(page) {
   await page.getByRole('button', { name: 'Data' }).click();
-  await page.locator(MENU_ITEM).filter({ hasText: 'Data Sources' }).first().click();
+  await page.locator(MENU_ITEM).getByText('Data Sources', { exact: true }).click();
   const panel = page.locator(PANEL).filter({ hasText: 'Data Sources' });
   await panel.getByRole('tab', { name: 'Files' }).click();
   const input = panel.locator('input[type="file"]');
@@ -69,7 +69,7 @@ async function importLayers(page) {
 
 async function openTable(page) {
   await page.getByRole('button', { name: 'Tools' }).click();
-  await page.locator(MENU_ITEM).filter({ hasText: 'Data Table' }).first().click();
+  await page.locator(MENU_ITEM).getByText('Data Table', { exact: true }).click();
   await expect(page.locator('[class*="mantine-Menu-dropdown"]')).toHaveCount(0);
   const panel = page.locator(PANEL).filter({ hasText: 'Attribute Table' });
   await expect(panel).toHaveCount(1);

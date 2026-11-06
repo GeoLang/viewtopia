@@ -71,7 +71,7 @@ const cameraHeight = (zoom) => 4e7 / 2 ** zoom;
 
 async function openPanel(page, label, title) {
   await page.getByRole('button', { name: 'Tools' }).click();
-  await page.locator(MENU_ITEM).filter({ hasText: label }).first().click();
+  await page.locator(MENU_ITEM).getByText(label, { exact: true }).click();
   // the dropdown overlays the panel, so a click can land on a menu item instead
   await expect(page.locator('[class*="mantine-Menu-dropdown"]')).toHaveCount(0);
   const panel = page.locator(PANEL).filter({ hasText: title });
@@ -273,7 +273,7 @@ const OFF_RANGE = {
 /** Import TIMED_PINGS through Data ▸ Data Sources ▸ Files, the way a user brings time in. */
 async function importTimedPings(page) {
   await page.getByRole('button', { name: 'Data' }).click();
-  await page.locator(MENU_ITEM).filter({ hasText: 'Data Sources' }).first().click();
+  await page.locator(MENU_ITEM).getByText('Data Sources', { exact: true }).click();
   await expect(page.locator('[class*="mantine-Menu-dropdown"]')).toHaveCount(0);
   const panel = page.locator(PANEL).filter({ hasText: 'Data Sources' });
   await expect(panel).toHaveCount(1);

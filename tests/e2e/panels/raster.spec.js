@@ -50,7 +50,7 @@ async function twoBandTif() {
 test('raster panel runs terrano wasm ops on an uploaded dem', async ({ page }) => {
   await openApp(page);
   await page.getByRole('button', { name: 'Data' }).click();
-  await page.locator(MENU_ITEM).filter({ hasText: 'Raster Analysis' }).first().click();
+  await page.locator(MENU_ITEM).getByText('Raster Analysis', { exact: true }).click();
   await expect(page.locator('[class*="mantine-Menu-dropdown"]')).toHaveCount(0);
   const panel = page.locator(PANEL).filter({ hasText: 'Raster Analysis' });
   await expect(panel).toHaveCount(1);
@@ -124,7 +124,7 @@ test('raster panel runs terrano wasm ops on an uploaded dem', async ({ page }) =
 test('a raster result becomes a layer that stacks and can be removed', async ({ page }) => {
   await openApp(page);
   await page.getByRole('button', { name: 'Data' }).click();
-  await page.locator(MENU_ITEM).filter({ hasText: 'Raster Analysis' }).first().click();
+  await page.locator(MENU_ITEM).getByText('Raster Analysis', { exact: true }).click();
   const panel = page.locator(PANEL).filter({ hasText: 'Raster Analysis' });
 
   await panel.locator('input[type="file"]').setInputFiles({
@@ -156,7 +156,7 @@ test('a raster result becomes a layer that stacks and can be removed', async ({ 
 test('spectral index presets pick their own bands', async ({ page }) => {
   await openApp(page);
   await page.getByRole('button', { name: 'Data' }).click();
-  await page.locator(MENU_ITEM).filter({ hasText: 'Raster Analysis' }).first().click();
+  await page.locator(MENU_ITEM).getByText('Raster Analysis', { exact: true }).click();
   const panel = page.locator(PANEL).filter({ hasText: 'Raster Analysis' });
 
   await panel.locator('input[type="file"]').setInputFiles({

@@ -31,7 +31,7 @@ test('annotate: place on map drops a labelled marker on MapLibre', async ({ page
   await useMapLibre(page);
 
   await page.getByRole('button', { name: 'Actions' }).click();
-  await page.locator(MENU_ITEM).filter({ hasText: 'Annotate' }).first().click();
+  await page.locator(MENU_ITEM).getByText('Annotate', { exact: true }).click();
   await page.getByPlaceholder('Annotation label…').fill('Site A');
   await page.getByRole('button', { name: 'Place on map' }).click();
 
