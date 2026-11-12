@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-11-12: **IDS check at upload.** An IFC upload can include an `.ids` file, and the check starts when tiling finishes. A new version with no IDS file is checked against the newest earlier version's stored IDS file. The IDS tab still posts a different file.
 - 2026-11-12: **Annotation height.** A click on the Cesium globe, and Add at center, stores metres above the ellipsoid from the depth buffer and falls back to the ground point. The pin is drawn at that height. A pin placed on the 2D map has no height and still sits on the ellipsoid. An annotation has no element id. A BCF viewpoint includes the selected element ids.
 - 2026-11-05: section caps follow the cut wherever it was made: the `tileset.section` chat action, a BCF
   viewpoint, a project file and the BIM storey cut get caps with the Model Section panel closed. The

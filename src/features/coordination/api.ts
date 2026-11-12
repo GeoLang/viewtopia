@@ -318,11 +318,16 @@ export async function listModelVersions(assetId: string): Promise<ModelVersion[]
   return page.items;
 }
 
-export function uploadModelVersion(baseAssetId: string, file: File): Promise<{ id: string; name: string }> {
+export function uploadModelVersion(
+  baseAssetId: string,
+  file: File,
+  idsFile?: File | null,
+): Promise<{ id: string; name: string }> {
   const form = new FormData();
   form.append('name', file.name);
   form.append('base_asset_id', baseAssetId);
   form.append('file', file);
+  if (idsFile) form.append('ids', idsFile);
   // nginx rewrites /tiles/ to tiletopia's /api/, where POST /api/v1/assets takes base_asset_id
   return tiletopiaJson('/tiles/v1/assets', { method: 'POST', body: form });
 }

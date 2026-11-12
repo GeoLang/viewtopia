@@ -225,6 +225,7 @@ export function ModelVersions({ assetId, canShowInScene }: { assetId: string; ca
   const [toId, setToId] = useState<string | null>(null);
   const [report, setReport] = useState<ChangeReport | null>(null);
   const [uploading, setUploading] = useState<string | null>(null);
+  const [idsFile, setIdsFile] = useState<File | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const resetFileInput = useRef<() => void>(null);
@@ -261,7 +262,7 @@ export function ModelVersions({ assetId, canShowInScene }: { assetId: string; ca
     setNotice(null);
     setUploading(file.name);
     try {
-      const uploaded = await uploadModelVersion(assetId, file);
+      const uploaded = await uploadModelVersion(assetId, file, idsFile);
       setNotice(`${uploaded.name} is the next version of this model and is being tiled.`);
       setListReads((reads) => reads + 1);
     } catch (failure) {
@@ -303,10 +304,20 @@ export function ModelVersions({ assetId, canShowInScene }: { assetId: string; ca
             </Button>
           )}
         </FileButton>
+        <FileButton onChange={setIdsFile} accept=".ids">
+          {(props) => (
+            <Button {...props} size="compact-xs" variant="default" data-testid="version-ids-file">
+              {idsFile ? idsFile.name : 'IDS file'}
+            </Button>
+          )}
+        </FileButton>
         <Button size="compact-xs" variant="subtle" color="gray" onClick={() => setListReads((reads) => reads + 1)}>
           Refresh
         </Button>
       </Group>
+      <Text size="xs" c="dimmed">
+        A new version with no IDS file is checked against the newest earlier version's IDS file when tiling finishes.
+      </Text>
       {uploading && (
         <Text size="xs" c="dimmed" data-testid="version-uploading">
           Uploading {uploading}.

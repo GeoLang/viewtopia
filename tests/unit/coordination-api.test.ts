@@ -103,6 +103,19 @@ describe('coordination api', () => {
     expect(form.get('base_asset_id')).toBe('a1b2');
     expect(form.get('name')).toBe('tower-v2.ifc');
     expect((form.get('file') as File).name).toBe('tower-v2.ifc');
+    expect(form.get('ids')).toBeNull();
+  });
+
+  it('appends an ids file when one is given', async () => {
+    fetchMock.mockResolvedValue(json({ id: 'v2', name: 'tower-v2.ifc' }));
+    const file = new File(['ifc'], 'tower-v2.ifc');
+    const idsFile = new File(['<ids/>'], 'walls.ids');
+
+    await uploadModelVersion('a1b2', file, idsFile);
+
+    const form = sent(0).init.body as FormData;
+    expect((form.get('ids') as File).name).toBe('walls.ids');
+    expect(form.get('base_asset_id')).toBe('a1b2');
   });
 
   it('finds the existing report when the pair was compared before', async () => {

@@ -303,10 +303,11 @@ function PlacementForm({
 }: {
   file: File;
   step: PlacementStep;
-  onUpload: (fields: Record<string, string>) => void;
+  onUpload: (fields: Record<string, string>, idsFile?: File | null) => void;
   onCancel: () => void;
 }) {
   const [text, setText] = useState(EMPTY_PLACEMENT);
+  const [idsFile, setIdsFile] = useState<File | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const inputProps = (name: keyof PlacementText) => ({
     size: 'xs',
@@ -317,7 +318,7 @@ function PlacementForm({
   const submit = () => {
     const readFields = step.kind === 'model' ? modelPlacementFields : imagePlacementFields;
     try {
-      onUpload(readFields(text, step.required));
+      onUpload(readFields(text, step.required), idsFile);
     } catch (failure) {
       if (!(failure instanceof PlacementError)) throw failure;
       setProblem(failure.message);
@@ -343,6 +344,15 @@ function PlacementForm({
           <Textarea label="World file" rows={3} {...inputProps('worldFile')} />
           <TextInput label="CRS" placeholder="EPSG:32632" {...inputProps('crs')} />
         </>
+      )}
+      {step.kind === 'model' && (
+        <FileButton onChange={setIdsFile} accept=".ids">
+          {(props) => (
+            <Button {...props} size="compact-xs" variant="default" data-testid="assets-ids-file">
+              {idsFile ? idsFile.name : 'IDS file'}
+            </Button>
+          )}
+        </FileButton>
       )}
       {problem && (
         <Text size="xs" c="red" data-testid="assets-placement-error">
@@ -522,12 +532,13 @@ export function AssetsPanel({ onClose }: { onClose: () => void }) {
     };
   }, []);
 
-  const upload = (file: File, uploadFields: Record<string, string> = {}) => {
+  const upload = (file: File, uploadFields: Record<string, string> = {}, idsFile?: File | null) => {
     setError(null);
     setUploadPct(0);
     const form = new FormData();
     form.append('name', file.name);
     for (const [name, value] of Object.entries(uploadFields)) form.append(name, value);
+    if (idsFile) form.append('ids', idsFile);
     form.append('file', file);
 
     const xhr = new XMLHttpRequest();
@@ -863,8 +874,8 @@ export function AssetsPanel({ onClose }: { onClose: () => void }) {
               key={`${pendingPlacement.file.name}-${pendingPlacement.file.lastModified}`}
               file={pendingPlacement.file}
               step={pendingPlacement.step}
-              onUpload={(fields) => {
-                upload(pendingPlacement.file, fields);
+              onUpload={(fields, idsFile) => {
+                upload(pendingPlacement.file, fields, idsFile);
                 setPendingPlacement(null);
               }}
               onCancel={() => setPendingPlacement(null)}

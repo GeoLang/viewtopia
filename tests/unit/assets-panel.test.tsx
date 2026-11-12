@@ -524,7 +524,22 @@ describe('AssetsPanel', () => {
       uploadFile();
 
       expect(sentFields()).toEqual({});
+      expect(FakeXHR.last?.body?.get('ids')).toBeNull();
       expect(FakeXHR.last?.body?.get('file')).toHaveProperty('name', 'plant.ifc');
+    });
+
+    it('sends an attached IDS file as ids', async () => {
+      await renderPanel();
+      selectFile('plant.ifc');
+
+      const idsInput = document.querySelector('input[type="file"][accept=".ids"]');
+      if (!(idsInput instanceof HTMLInputElement)) throw new Error('no IDS file input');
+      fireEvent.change(idsInput, { target: { files: [new File(['<ids/>'], 'walls.ids')] } });
+      uploadFile();
+
+      expect(FakeXHR.last?.body?.get('ids')).toHaveProperty('name', 'walls.ids');
+      expect(FakeXHR.last?.body?.get('file')).toHaveProperty('name', 'plant.ifc');
+      expect(FakeXHR.last?.body?.get('longitude')).toBeNull();
     });
 
     it('sends the longitude and latitude given for an .ifc', async () => {

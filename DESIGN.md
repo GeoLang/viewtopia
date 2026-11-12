@@ -242,7 +242,7 @@ request sends no `Authorization` header. A change report row resolves its Global
 with `resolveElementIds`, selects the result and flies to it. An element the open version lacks, such as
 one removed in it, gets a note instead.
 
-The IDS tab posts an `.ids` file to `POST /v1/assets/{id}/ids` and polls `GET /v1/assets/{id}/ids` every
+An IFC upload can include an `.ids` file in the multipart field `ids`, and the check starts when the asset is ready. A new version with no file is checked against the newest earlier version's stored IDS file. The IDS tab still posts a different file to `POST /v1/assets/{id}/ids` and polls `GET /v1/assets/{id}/ids` every
 two seconds while its status is `running`. The `report` field is the output of IfcOpenShell ifctester's
 JSON reporter, and the tab reads only fields that `reporter.Json` writes on both the `v0.8.0` and the
 `master` branch of IfcOpenShell: the totals, and per specification and requirement the status, counts,

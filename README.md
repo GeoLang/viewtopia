@@ -569,11 +569,14 @@ Terrain panel shows the message until `.env.platform` sets these three:
 `TILETOPIA_GLOBAL_TERRAIN_ION_ASSET_ID` names an Ion asset id that resolves to this layer.
 
 The IDS tab of the Model Elements panel checks an IFC model against an `.ids`
-file. tiletopia runs the check in the `ids-check` service, built from
+file. An IFC upload can include an `.ids` file, and the check starts when tiling
+finishes. A new version with no IDS file is checked against the newest earlier
+version's stored IDS file. tiletopia runs the check in the `ids-check` service, built from
 `../tiletopia/sidecars/ids-check`, which reads the stored models from the
 `tiletopia-data` volume. The compose file sets
 `TILETOPIA_IDS_CHECK_URL=http://ids-check:8000` on tiletopia. Without that
-variable, an IDS check answers 503 and the tab shows the message.
+variable, posting an IDS file from the tab answers 503, and a check started
+from an upload is stored failed with the same message. The tab shows it.
 
 **Data by hand.** `platform-up.sh` does all of this. To change the region
 yourself:
