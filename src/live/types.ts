@@ -99,6 +99,7 @@ export interface LiveAnnotation {
   color: string;
   lat: number;
   lng: number;
+  height?: number;
   createdAt: number;
 }
 

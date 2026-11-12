@@ -6,7 +6,15 @@ import { MantineProvider } from '@mantine/core';
 // the panel only reads the viewer to find the screen centre, so the WebGL
 // bundle stays out
 vi.mock('cesium', () => ({
-  Cartesian2: class {},
+  Cartesian2: class {
+    constructor(
+      public x: number,
+      public y: number,
+    ) {}
+  },
+  Cartographic: {
+    fromCartesian: (position: { longitude: number; latitude: number; height: number }) => position,
+  },
   Math: { toDegrees: (radians: number) => radians },
 }));
 
@@ -17,6 +25,7 @@ vi.mock('../../src/viewer/registry', () => ({
 import { AnnotatePanel } from '../../src/components/tools/AnnotatePanel';
 import { useAnnotationStore } from '../../src/store/annotations';
 import { useAppStore } from '../../src/store/app';
+import { getActiveCesiumViewer } from '../../src/viewer/registry';
 
 window.matchMedia = vi.fn().mockReturnValue({
   matches: false,
@@ -43,6 +52,7 @@ describe('AnnotatePanel', () => {
   beforeEach(() => {
     useAnnotationStore.setState({ annotations: [], pendingPlacement: null });
     useAppStore.setState({ renderer: 'maplibre', activeTab: 'globe' });
+    vi.mocked(getActiveCesiumViewer).mockReturnValue(null);
   });
 
   afterEach(cleanup);
@@ -104,6 +114,31 @@ describe('AnnotatePanel', () => {
 
     expect(useAnnotationStore.getState().annotations).toHaveLength(1);
     expect(useAnnotationStore.getState().annotations[0].label).toBe('Site A');
+    expect(useAnnotationStore.getState().annotations[0].height).toBeUndefined();
     expect(screen.getByTestId('annotate-status')).toHaveTextContent(/^Placed at /);
+  });
+
+  it('adds at the centre of the Cesium view and keeps that point’s height', () => {
+    vi.mocked(getActiveCesiumViewer).mockReturnValue({
+      scene: {
+        canvas: { clientWidth: 200, clientHeight: 100 },
+        pickPositionSupported: true,
+        pickPosition: () => ({ longitude: 7.26, latitude: 46.75, height: 8.5 }),
+        globe: { ellipsoid: {} },
+      },
+      camera: { pickEllipsoid: () => null },
+    } as never);
+    renderPanel();
+    label('Window');
+    fireEvent.click(screen.getByRole('button', { name: 'Add at center' }));
+
+    expect(useAnnotationStore.getState().annotations[0]).toMatchObject({
+      label: 'Window',
+      lng: 7.26,
+      lat: 46.75,
+      height: 8.5,
+    });
+    expect(screen.getByTestId('annotate-status')).toHaveTextContent('Placed at 46.750, 7.260, 8.5 m');
+    expect(screen.getByText('46.750, 7.260 · 8.5 m')).toBeInTheDocument();
   });
 });

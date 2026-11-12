@@ -11,15 +11,20 @@ import {
   Badge,
 } from '@mantine/core';
 import { IconMapPin, IconTrash } from '@tabler/icons-react';
-import { Cartesian2, Math as CesiumMath } from 'cesium';
+import { Cartesian2 } from 'cesium';
 import { PanelCard, PanelHeader } from '../PanelCard';
 import { getActiveCesiumViewer } from '../../viewer/registry';
+import { readAnnotationPoint } from '../../viewer/annotationPoint';
 import { getSharedCamera } from '../../hooks/sharedCamera';
-import { useAnnotationStore } from '../../store/annotations';
+import { finiteHeight, useAnnotationStore } from '../../store/annotations';
 import { randomUuid } from '../../lib/randomUuid';
 
-function placedMessage(lat: number, lng: number): string {
-  return `Placed at ${lat.toFixed(3)}, ${lng.toFixed(3)}`;
+function placedMessage(lat: number, lng: number, height?: number): string {
+  const where = `${lat.toFixed(3)}, ${lng.toFixed(3)}`;
+  const heightMetres = finiteHeight(height);
+  return heightMetres === undefined
+    ? `Placed at ${where}`
+    : `Placed at ${where}, ${heightMetres.toFixed(1)} m`;
 }
 
 export function AnnotatePanel({ onClose }: { onClose: () => void }) {
@@ -46,23 +51,25 @@ export function AnnotatePanel({ onClose }: { onClose: () => void }) {
         if (!consumed || state.annotations.length <= previous.annotations.length) return;
         const placed = state.annotations[state.annotations.length - 1];
         setLabel('');
-        setStatus(placedMessage(placed.lat, placed.lng));
+        setStatus(placedMessage(placed.lat, placed.lng, placed.height));
       }),
     [],
   );
 
-  const addAt = (lng: number, lat: number) => {
+  const addAt = (lng: number, lat: number, height?: number) => {
+    const heightMetres = finiteHeight(height);
     addAnnotation({
       id: randomUuid(),
       label: label.trim(),
       color,
       lat,
       lng,
+      ...(heightMetres === undefined ? {} : { height: heightMetres }),
       createdAt: Date.now(),
     });
     cancelPlacement();
     setLabel('');
-    setStatus(placedMessage(lat, lng));
+    setStatus(placedMessage(lat, lng, heightMetres));
   };
 
   const handlePlaceOnMap = () => {
@@ -80,10 +87,9 @@ export function AnnotatePanel({ onClose }: { onClose: () => void }) {
     if (viewer) {
       const canvas = viewer.scene.canvas;
       const center = new Cartesian2(canvas.clientWidth / 2, canvas.clientHeight / 2);
-      const cartesian = viewer.camera.pickEllipsoid(center, viewer.scene.globe.ellipsoid);
-      if (cartesian) {
-        const carto = viewer.scene.globe.ellipsoid.cartesianToCartographic(cartesian);
-        addAt(CesiumMath.toDegrees(carto.longitude), CesiumMath.toDegrees(carto.latitude));
+      const point = readAnnotationPoint(viewer, center);
+      if (point) {
+        addAt(point.lng, point.lat, point.height);
         return;
       }
     }
@@ -145,30 +151,43 @@ export function AnnotatePanel({ onClose }: { onClose: () => void }) {
 
       <ScrollArea flex={1} mt="xs">
         <Stack gap={4}>
-          {annotations.map((a) => (
-            <Group
-              key={a.id}
-              p="xs"
-              style={{ background: 'var(--mantine-color-dark-6)', borderRadius: 4 }}
-              justify="space-between"
-              wrap="nowrap"
-            >
-              <Group gap={6} wrap="nowrap">
-                <div style={{ width: 10, height: 10, borderRadius: 2, background: a.color }} />
-                <Stack gap={0}>
-                  <Text size="xs" c="white" fw={500}>
-                    {a.label}
-                  </Text>
-                  <Text size="xs" c="dimmed">
-                    {a.lat.toFixed(3)}, {a.lng.toFixed(3)}
-                  </Text>
-                </Stack>
+          {annotations.map((annotation) => {
+            const heightMetres = finiteHeight(annotation.height);
+            return (
+              <Group
+                key={annotation.id}
+                p="xs"
+                style={{ background: 'var(--mantine-color-dark-6)', borderRadius: 4 }}
+                justify="space-between"
+                wrap="nowrap"
+              >
+                <Group gap={6} wrap="nowrap">
+                  <div
+                    style={{ width: 10, height: 10, borderRadius: 2, background: annotation.color }}
+                  />
+                  <Stack gap={0}>
+                    <Text size="xs" c="white" fw={500}>
+                      {annotation.label}
+                    </Text>
+                    <Text size="xs" c="dimmed">
+                      {annotation.lat.toFixed(3)}, {annotation.lng.toFixed(3)}
+                      {heightMetres === undefined ? '' : ` · ${heightMetres.toFixed(1)} m`}
+                    </Text>
+                  </Stack>
+                </Group>
+                <ActionIcon
+                  title="Delete annotation"
+                  aria-label="Delete annotation"
+                  size="xs"
+                  variant="subtle"
+                  color="red"
+                  onClick={() => handleRemove(annotation.id)}
+                >
+                  <IconTrash size={10} />
+                </ActionIcon>
               </Group>
-              <ActionIcon title="Delete annotation" aria-label="Delete annotation" size="xs" variant="subtle" color="red" onClick={() => handleRemove(a.id)}>
-                <IconTrash size={10} />
-              </ActionIcon>
-            </Group>
-          ))}
+            );
+          })}
         </Stack>
       </ScrollArea>
     </PanelCard>

@@ -99,7 +99,19 @@ describe('annotation store placement', () => {
       lng: 7.4,
       lat: 43.7,
     });
+    expect(annotations[0].height).toBeUndefined();
     expect(pendingPlacement).toBeNull();
+  });
+
+  it('keeps a finite height and drops one that is not', () => {
+    const { startPlacement, placePendingAnnotation } = useAnnotationStore.getState();
+    startPlacement('Site A', '#ff0000');
+    placePendingAnnotation(7.4, 43.7, 12.5);
+    expect(useAnnotationStore.getState().annotations[0].height).toBe(12.5);
+
+    startPlacement('Site B', '#ff0000');
+    placePendingAnnotation(7.4, 43.7, Number.NaN);
+    expect(useAnnotationStore.getState().annotations[1].height).toBeUndefined();
   });
 
   it('places nothing when no placement is pending', () => {

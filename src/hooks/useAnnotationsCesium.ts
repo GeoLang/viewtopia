@@ -4,16 +4,15 @@ import {
   type Viewer,
   Cartesian2,
   Cartesian3,
-  Cartographic,
   Color,
-  Math as CesiumMath,
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
   VerticalOrigin,
   LabelStyle,
 } from 'cesium';
-import { useAnnotationStore, type PendingPlacement } from '../store/annotations';
+import { finiteHeight, useAnnotationStore, type PendingPlacement } from '../store/annotations';
 import { useAppStore } from '../store/app';
+import { readAnnotationPoint } from '../viewer/annotationPoint';
 
 const ENTITY_PREFIX = 'annot-';
 
@@ -35,12 +34,17 @@ export function useAnnotationsCesium(viewerRef: MutableRefObject<Viewer | null>)
         if (viewer.entities.getById(entityId)) continue;
         viewer.entities.add({
           id: entityId,
-          position: Cartesian3.fromDegrees(annotation.lng, annotation.lat),
+          position: Cartesian3.fromDegrees(
+            annotation.lng,
+            annotation.lat,
+            finiteHeight(annotation.height) ?? 0,
+          ),
           point: {
             pixelSize: 8,
             color: Color.fromCssColorString(annotation.color),
             outlineColor: Color.WHITE,
             outlineWidth: 1,
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
           },
           label: {
             text: annotation.label,
@@ -51,6 +55,7 @@ export function useAnnotationsCesium(viewerRef: MutableRefObject<Viewer | null>)
             style: LabelStyle.FILL_AND_OUTLINE,
             verticalOrigin: VerticalOrigin.BOTTOM,
             pixelOffset: new Cartesian2(0, -14),
+            disableDepthTestDistance: Number.POSITIVE_INFINITY,
           },
         });
       }
@@ -76,15 +81,11 @@ export function useAnnotationsCesium(viewerRef: MutableRefObject<Viewer | null>)
       if (state.pendingPlacement && !handlerRef.current) {
         const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
         handler.setInputAction((click: { position: Cartesian2 }) => {
-          const picked = viewer.camera.pickEllipsoid(click.position, viewer.scene.globe.ellipsoid);
-          if (!picked) return;
-          const carto = Cartographic.fromCartesian(picked);
+          const point = readAnnotationPoint(viewer, click.position);
+          if (!point) return;
           useAnnotationStore
             .getState()
-            .placePendingAnnotation(
-              CesiumMath.toDegrees(carto.longitude),
-              CesiumMath.toDegrees(carto.latitude),
-            );
+            .placePendingAnnotation(point.lng, point.lat, point.height);
         }, ScreenSpaceEventType.LEFT_CLICK);
         handlerRef.current = handler;
         viewer.scene.canvas.style.cursor = 'crosshair';

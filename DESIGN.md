@@ -224,7 +224,7 @@ same ones. `restoreViewpoint` in `src/features/coordination/viewpoint.ts` maps B
 checks the selection and visibility exceptions with `resolveElementIds` and puts them in the element
 store, and turns one clipping plane square to an axis of the section frame into the model section. The
 section is turned off for a viewpoint with no plane, several planes or a slanted one. Agora holds the
-viewer's annotations, and BCF topics stay in tiletopia. A change report is polled every two seconds
+viewer's annotations. A pin placed on the Cesium globe has a height in metres above the ellipsoid, and a pin placed on a 2D map has none. An annotation has no element id. A BCF viewpoint includes the selected element ids. BCF topics stay in tiletopia. A change report is polled every two seconds
 until it is complete or has failed. Uploading a version posts to `/tiles/v1/assets` with
 `base_asset_id`, and the panel shows no upload progress. The role is not known in the viewer, so writes
 are offered to everyone and a 403 is shown as a role refusal.

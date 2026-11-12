@@ -8,7 +8,12 @@ export interface Annotation {
   color: string;
   lat: number;
   lng: number;
+  height?: number;
   createdAt: number;
+}
+
+export function finiteHeight(height: number | undefined): number | undefined {
+  return typeof height === 'number' && Number.isFinite(height) ? height : undefined;
 }
 
 const STORAGE_KEY = 'viewtopia-annotations';
@@ -36,7 +41,7 @@ interface AnnotationState {
   setAnnotations: (annotations: Annotation[]) => void;
   startPlacement: (label: string, color: string) => void;
   cancelPlacement: () => void;
-  placePendingAnnotation: (lng: number, lat: number) => void;
+  placePendingAnnotation: (lng: number, lat: number, height?: number) => void;
 }
 
 export const useAnnotationStore = create<AnnotationState>((set) => ({
@@ -49,7 +54,7 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
   setAnnotations: (annotations) => set({ annotations }),
   startPlacement: (label, color) => set({ pendingPlacement: { label, color } }),
   cancelPlacement: () => set({ pendingPlacement: null }),
-  placePendingAnnotation: (lng, lat) =>
+  placePendingAnnotation: (lng, lat, height) =>
     set((s) => {
       if (!s.pendingPlacement) return s;
       const annotation: Annotation = {
@@ -60,6 +65,8 @@ export const useAnnotationStore = create<AnnotationState>((set) => ({
         lng,
         createdAt: Date.now(),
       };
+      const heightMetres = finiteHeight(height);
+      if (heightMetres !== undefined) annotation.height = heightMetres;
       return { annotations: [...s.annotations, annotation], pendingPlacement: null };
     }),
 }));
