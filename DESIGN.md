@@ -226,7 +226,10 @@ store, and turns one clipping plane square to an axis of the section frame into 
 section is turned off for a viewpoint with no plane, several planes or a slanted one. Agora holds the
 viewer's annotations. A pin placed on the Cesium globe has a height in metres above the ellipsoid, and a pin placed on a 2D map has none. An annotation has no element id. A BCF viewpoint includes the selected element ids. BCF topics stay in tiletopia. A change report is polled every two seconds
 until it is complete or has failed. Uploading a version posts to `/tiles/v1/assets` with
-`base_asset_id`, and the panel shows no upload progress. The role is not known in the viewer, so writes
+`base_asset_id`, and the panel shows no upload progress. The Versions tab exports the open version as
+DXF. With a cut height, the request includes `cutHeight` and the file is 3D faces at or below that height.
+With a section position, the request includes `axis` and `position` and no `cutHeight`, and the file is the
+cut's closed outlines as 2D polylines in the plane. The role is not known in the viewer, so writes
 are offered to everyone and a 403 is shown as a role refusal.
 
 Topic writes go through `PUT /v1/assets/{id}/bcf/topics/{guid}`, which replaces the whole topic. An edit

@@ -604,6 +604,29 @@ describe('model versions', () => {
     expect(new URL(path, 'http://viewer.test').searchParams.get('cutHeight')).toBe('3.5');
     click.mockRestore();
   });
+
+  it('exports a section as polylines and leaves the cut height out', async () => {
+    const saved: string[] = [];
+    URL.createObjectURL = vi.fn(() => 'blob:dxf');
+    URL.revokeObjectURL = vi.fn();
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      saved.push(this.download);
+    });
+    await openTab('Versions');
+
+    fireEvent.change(screen.getByLabelText(/Cut height/), { target: { value: '3.5' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'x' }));
+    fireEvent.change(screen.getByLabelText(/Section position/), { target: { value: '1.25' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Export DXF' }));
+
+    await waitFor(() => expect(saved).toEqual(['model-11.dxf']));
+    const [[path]] = requestsTo('GET', `/v1/assets/${ASSET}/dxf`);
+    const parameters = new URL(path, 'http://viewer.test').searchParams;
+    expect(parameters.get('axis')).toBe('x');
+    expect(parameters.get('position')).toBe('1.25');
+    expect(parameters.get('cutHeight')).toBeNull();
+    click.mockRestore();
+  });
 });
 
 describe('model IDS check', () => {

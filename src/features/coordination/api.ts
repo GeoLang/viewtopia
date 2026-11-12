@@ -416,6 +416,18 @@ export async function exportDxf(assetId: string, cutHeight?: number): Promise<Do
   return downloaded(response, `model-${assetId}.dxf`);
 }
 
+export type SectionAxis = 'x' | 'y' | 'z';
+
+export async function exportSectionDxf(
+  assetId: string,
+  section: { axis: SectionAxis; position: number },
+): Promise<DownloadedFile> {
+  const response = await tiletopiaFetch(
+    withQuery(assetPath(assetId, 'dxf'), { axis: section.axis, position: section.position }),
+  );
+  return downloaded(response, `model-${assetId}.dxf`);
+}
+
 export function saveDownloadedFile({ name, blob }: DownloadedFile): void {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');

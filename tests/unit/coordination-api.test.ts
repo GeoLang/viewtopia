@@ -3,6 +3,7 @@ import { useAuthStore } from '../../src/features/auth/store';
 import {
   compareVersions,
   exportDxf,
+  exportSectionDxf,
   importBcf,
   listElementChanges,
   pollChangeReport,
@@ -171,6 +172,17 @@ describe('coordination api', () => {
     expect(file.name).toBe('model-12.dxf');
     expect(await file.blob.text()).toBe('0\nSECTION');
     expect(sent(0).path).toBe('/v1/assets/a1b2/dxf?cutHeight=3.5');
+  });
+
+  it('exports a section as polylines and leaves the cut height out', async () => {
+    fetchMock.mockResolvedValue(
+      new Response('0\nLWPOLYLINE', { headers: { 'Content-Disposition': 'attachment; filename="model-12.dxf"' } }),
+    );
+
+    const file = await exportSectionDxf('a1b2', { axis: 'y', position: 1.25 });
+
+    expect(file.name).toBe('model-12.dxf');
+    expect(sent(0).path).toBe('/v1/assets/a1b2/dxf?axis=y&position=1.25');
   });
 
   it('refuses before any request when nobody is signed in', async () => {

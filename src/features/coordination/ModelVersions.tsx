@@ -16,6 +16,7 @@ import {
 import {
   compareVersions,
   exportDxf,
+  exportSectionDxf,
   listElementChanges,
   listModelVersions,
   pollChangeReport,
@@ -25,6 +26,7 @@ import {
   type ChangeReport,
   type ElementChange,
   type ModelVersion,
+  type SectionAxis,
 } from './api';
 import { failureText, useShowElementInScene } from './showElementInScene';
 
@@ -175,6 +177,8 @@ function ChangeList({
 
 function DxfExport({ assetId }: { assetId: string }) {
   const [cutHeight, setCutHeight] = useState<string | number>('');
+  const [sectionAxis, setSectionAxis] = useState<SectionAxis>('z');
+  const [sectionPosition, setSectionPosition] = useState<string | number>('');
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -182,7 +186,12 @@ function DxfExport({ assetId }: { assetId: string }) {
     setError(null);
     setExporting(true);
     try {
-      saveDownloadedFile(await exportDxf(assetId, typeof cutHeight === 'number' ? cutHeight : undefined));
+      const position = typeof sectionPosition === 'number' ? sectionPosition : undefined;
+      const file =
+        position === undefined
+          ? await exportDxf(assetId, typeof cutHeight === 'number' ? cutHeight : undefined)
+          : await exportSectionDxf(assetId, { axis: sectionAxis, position });
+      saveDownloadedFile(file);
     } catch (failure) {
       setError(failureText(failure));
     } finally {
@@ -205,9 +214,32 @@ function DxfExport({ assetId }: { assetId: string }) {
           Export DXF
         </Button>
       </Group>
+      <Group gap={4} wrap="nowrap" align="flex-end">
+        <SegmentedControl
+          size="xs"
+          aria-label="Section axis"
+          value={sectionAxis}
+          onChange={(value) => {
+            if (value === 'x' || value === 'y' || value === 'z') setSectionAxis(value);
+          }}
+          data={[
+            { value: 'x', label: 'x' },
+            { value: 'y', label: 'y' },
+            { value: 'z', label: 'z' },
+          ]}
+        />
+        <NumberInput
+          size="xs"
+          flex={1}
+          label="Section position in metres"
+          value={sectionPosition}
+          onChange={setSectionPosition}
+        />
+      </Group>
       <Text size="xs" c="dimmed">
-        3D faces in the model's own metres with Z up, not georeferenced. A cut keeps what lies at or below the
-        height, with no 2D section lines.
+        3D faces in the model's own metres with Z up, not georeferenced. Faces at or below a cut height stay in
+        the file. A section position is closed outlines as 2D polylines in the plane, XY for z, YZ for x and ZX
+        for y, and the cut height is not sent.
       </Text>
       {error && (
         <Text size="xs" c="red" data-testid="dxf-error">
