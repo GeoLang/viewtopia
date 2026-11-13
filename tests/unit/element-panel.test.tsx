@@ -134,19 +134,9 @@ const renderPanel = async () => {
   await act(async () => {});
 };
 
-const expand = (label: string) =>
-  act(async () => {
-    const button = screen.queryByRole('button', { name: `Expand ${label}` });
-    if (button) fireEvent.click(button);
-  });
-
 async function openTreeToStoreyContents() {
   useElementStore.getState().openModel(MODEL_LAYER);
   await renderPanel();
-  await screen.findByTestId('element-row-project');
-  await expand('Tower');
-  await screen.findByTestId('element-row-storey');
-  await expand('Level 1');
   await screen.findByTestId('element-row-wall');
 }
 
@@ -289,6 +279,68 @@ describe('ElementPanel', () => {
     expect(await screen.findByTestId('property-edit-error')).toHaveTextContent(
       'Your role cannot make this change. It needs the editor or admin role.',
     );
+  });
+
+  it('drops unsaved property text when the next element has the same property and value', async () => {
+    useAuthStore.setState({ token: sessionToken('editor'), loggedIn: true });
+    server.answer = (request) =>
+      request.path === `${ASSET_PATH}/elements/door`
+        ? { body: { ...WALL, ...listRow('door'), label: 'Door 1' } }
+        : answerModel(request);
+    await openTreeToStoreyContents();
+    fireEvent.click(screen.getByTestId('element-row-wall'));
+    fireEvent.change(await screen.findByRole('textbox', { name: 'FireRating' }), { target: { value: 'REI120' } });
+
+    fireEvent.click(screen.getByTestId('element-row-door'));
+    await waitFor(() => expect(screen.getByTestId('element-properties')).toHaveTextContent('Door 1'));
+    const input = screen.getByRole('textbox', { name: 'FireRating' });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    await act(async () => {});
+
+    expect(input).toHaveValue('REI60');
+    expect(jobsFetch.mock.calls.filter(([url]) => String(url).includes('/properties'))).toEqual([]);
+  });
+
+  function holdFetch(pathEnd: string, body: unknown): () => void {
+    let release = () => {};
+    jobsFetch.mockImplementation(async (url: RequestInfo | URL) => {
+      if (!String(url).endsWith(pathEnd)) {
+        return { ok: true, status: 200, json: async () => [{ id: 'job-1', error: null }] };
+      }
+      return new Promise((resolve) => {
+        release = () => resolve({ ok: true, status: 200, json: async () => body });
+      });
+    });
+    return () => release();
+  }
+
+  it.each([
+    ['Volume from mesh', '/elements/wall/volume', { volume: 2.5 }, 'element-volume'],
+    ['Move', '/edits', { elementId: 'wall', drawn: true }, 'element-geometry-notice'],
+  ])('drops the %s answer when another element is chosen before it arrives', async (label, pathEnd, body, testId) => {
+    useAuthStore.setState({ token: sessionToken('editor'), loggedIn: true });
+    const answer = holdFetch(pathEnd, body);
+    await openTreeToStoreyContents();
+    fireEvent.click(screen.getByTestId('element-row-wall'));
+    fireEvent.click(await screen.findByRole('button', { name: label }));
+
+    fireEvent.click(screen.getByTestId('element-row-door'));
+    await waitFor(() => expect(screen.getByTestId('element-properties')).toHaveTextContent('door'));
+    await act(async () => answer());
+
+    await waitFor(() => expect(screen.getByRole('button', { name: label })).toBeEnabled());
+    expect(screen.queryByTestId(testId)).not.toBeInTheDocument();
+  });
+
+  it('keeps the relation button off until an express id is typed', async () => {
+    useAuthStore.setState({ token: sessionToken('editor'), loggedIn: true });
+    await openTreeToStoreyContents();
+    fireEvent.click(screen.getByTestId('element-row-wall'));
+
+    const button = await screen.findByRole('button', { name: 'Add to relation' });
+    expect(button).toBeDisabled();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Relation express id' }), { target: { value: '12' } });
+    expect(button).toBeEnabled();
   });
 
   it('adds to the selection with a modifier key', async () => {

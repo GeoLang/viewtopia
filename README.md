@@ -565,8 +565,21 @@ Terrain panel shows the message until `.env.platform` sets these three:
 - `TILETOPIA_GLOBAL_TERRAIN_CACHE_DIR`: where tiles are written, `/data/global-terrain` to
   keep them on the `tiletopia-data` volume.
 
+`TILETOPIA_GLOBAL_TERRAIN_COARSE_URL` names one global DEM for levels 0 to 6.
 `TILETOPIA_GLOBAL_TERRAIN_CACHE_MB` caps that directory, 1024 by default.
 `TILETOPIA_GLOBAL_TERRAIN_ION_ASSET_ID` names an Ion asset id that resolves to this layer.
+
+Global buildings are optional too. `/tiles/v1/buildings/osm/tileset.json` answers
+503 until `.env.platform` sets these two:
+
+- `TILETOPIA_OSM_BUILDINGS_OVERPASS_URL`: an Overpass interpreter,
+  `https://overpass-api.de/api/interpreter` for the public one.
+- `TILETOPIA_OSM_BUILDINGS_CACHE_DIR`: where tiles are written, `/data/osm-buildings`
+  to keep them on the `tiletopia-data` volume.
+
+`TILETOPIA_OSM_BUILDINGS_CACHE_MB` caps that directory, 1024 by default.
+`TILETOPIA_OSM_BUILDINGS_ION_ASSET_ID` names an Ion asset id that resolves to the tileset,
+96188 for `Cesium.createOsmBuildingsAsync()`.
 
 The IDS tab of the Model Elements panel checks an IFC model against an `.ids`
 file. An IFC upload can include an `.ids` file, and the check starts when tiling

@@ -90,6 +90,7 @@ function ModelSectionCaps({
   const position = plane.section?.position;
   const faceNormal = plane.face?.normal;
   const faceOffset = plane.face?.offset;
+  const clippersJson = JSON.stringify(clippers);
 
   useEffect(() => () => dropCapRequest(requestKey), [requestKey]);
 
@@ -129,7 +130,7 @@ function ModelSectionCaps({
       cut: answer.cut,
       flip,
       selected,
-      clippers,
+      clippers: JSON.parse(clippersJson),
     });
     for (const primitive of primitives) viewer.scene.primitives.add(primitive);
     viewer.scene.requestRender();
@@ -139,7 +140,7 @@ function ModelSectionCaps({
       for (const primitive of primitives) viewer.scene.primitives.remove(primitive);
       viewer.scene.requestRender();
     };
-  }, [answer, flip, visible, selected, clippers]);
+  }, [answer, flip, visible, selected, clippersJson]);
 
   return null;
 }

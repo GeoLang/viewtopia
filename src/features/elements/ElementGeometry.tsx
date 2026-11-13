@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button, Divider, Group, Stack, Switch, Text, TextInput } from '@mantine/core';
 import { noteElementEditsChanged } from '../scene/ElementEditPreviews';
 import {
@@ -43,39 +43,51 @@ export function ElementGeometry({
     setNotice(null);
     setConfirmingDelete(false);
   }
+  const latestElement = useRef(elementId);
+  useEffect(() => {
+    latestElement.current = elementId;
+  }, [elementId]);
 
   if (!signedIn) return null;
 
   const run = async (edit: ElementEditRequest) => {
+    const askedFor = elementId;
     setBusy(true);
     setFailure(null);
     setNotice(null);
     try {
       const result = await postElementEdit(assetId, edit);
       noteElementEditsChanged();
+      if (latestElement.current !== askedFor) return;
       setNotice(editResultMessage(edit.kind, result.drawn, result.elementId));
       setConfirmingDelete(false);
     } catch (reason) {
-      setFailure(reason instanceof Error ? reason.message : String(reason));
+      if (latestElement.current === askedFor) setFailure(reason instanceof Error ? reason.message : String(reason));
     } finally {
       setBusy(false);
     }
   };
 
   const readVolume = async () => {
+    const askedFor = elementId;
     setBusy(true);
     setFailure(null);
     try {
-      setVolume(await fetchElementVolume(assetId, elementId));
+      const volumeOfElement = await fetchElementVolume(assetId, askedFor);
+      if (latestElement.current === askedFor) setVolume(volumeOfElement);
     } catch (reason) {
-      setFailure(reason instanceof Error ? reason.message : String(reason));
+      if (latestElement.current === askedFor) setFailure(reason instanceof Error ? reason.message : String(reason));
     } finally {
       setBusy(false);
     }
   };
 
   const yaw = parseNumbers(radians);
-  const relation = Number(relationId);
+  const relationNumbers = parseNumbers(relationId);
+  const relation =
+    relationNumbers?.length === 1 && Number.isInteger(relationNumbers[0]) && relationNumbers[0] >= 0
+      ? relationNumbers[0]
+      : null;
 
   return (
     <Stack gap={4} data-testid="element-geometry">
@@ -213,8 +225,10 @@ export function ElementGeometry({
             size="compact-xs"
             variant="light"
             color="violet"
-            disabled={busy || !Number.isInteger(relation) || relation < 0}
-            onClick={() => void run({ kind: 'relation', elementId, relationId: relation, add: addToRelation })}
+            disabled={busy || relation === null}
+            onClick={() => {
+              if (relation !== null) void run({ kind: 'relation', elementId, relationId: relation, add: addToRelation });
+            }}
           >
             {addToRelation ? 'Add to relation' : 'Remove from relation'}
           </Button>

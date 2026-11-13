@@ -14,6 +14,7 @@ import {
 import { type MeasurePoint, measureToolClicks, pointHasHeight, useMeasureStore } from '../store/measure';
 import { useAppStore } from '../store/app';
 import { useToolClicksCesium } from './useToolClicksCesium';
+import { depthTestOffUntilHorizon } from '../viewer/horizonDepthTest';
 import { MEASURE_SNAP_HOVER_ID, locateMeasurePoint, snapUnderPointer } from '../viewer/modelSnap';
 
 function measurePositions(points: MeasurePoint[]) {
@@ -137,7 +138,6 @@ export function useMeasureCesium(
       if (existing) {
         existing.position = new ConstantPositionProperty(position);
         if (existing.point) existing.point.color = new ConstantProperty(color);
-        existing.show = true;
         return;
       }
       v.entities.add({
@@ -148,7 +148,7 @@ export function useMeasureCesium(
           color,
           outlineColor: Color.WHITE,
           outlineWidth: 2,
-          disableDepthTestDistance: Number.POSITIVE_INFINITY,
+          disableDepthTestDistance: depthTestOffUntilHorizon(v),
         },
       });
     }, ScreenSpaceEventType.MOUSE_MOVE);

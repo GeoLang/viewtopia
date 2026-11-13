@@ -583,8 +583,27 @@ describe('model versions', () => {
 
     expect(await screen.findByTestId('version-notice')).toHaveTextContent('tower-v3.ifc is the next version');
     const [[, uploadInit]] = requestsTo('POST', '/tiles/v1/assets');
-    expect((uploadInit?.body as FormData).get('base_asset_id')).toBe(ASSET);
+    expect((uploadInit?.body as FormData | undefined)?.get('base_asset_id')).toBe(ASSET);
     await waitFor(() => expect(requestsTo('GET', `/v1/assets/${ASSET}/tileset-revisions`)).toHaveLength(2));
+  });
+
+  it('sends a chosen IDS file with the next version only', async () => {
+    await openTab('Versions');
+    await screen.findByTestId(`version-${VERSION_2}`);
+    const idsInput = document.querySelector('input[type="file"][accept=".ids"]');
+    if (!(idsInput instanceof HTMLInputElement)) throw new Error('no IDS file input');
+    fireEvent.change(idsInput, { target: { files: [new File(['<ids/>'], 'walls.ids')] } });
+
+    chooseFile(new File(['ifc'], 'tower-v3.ifc'));
+    await screen.findByTestId('version-notice');
+    chooseFile(new File(['ifc'], 'tower-v4.ifc'));
+    await waitFor(() => expect(requestsTo('POST', '/tiles/v1/assets')).toHaveLength(2));
+
+    const [first, second] = requestsTo('POST', '/tiles/v1/assets').map(([, init]) => init?.body);
+    if (!(first instanceof FormData) || !(second instanceof FormData)) throw new Error('an upload sent no form');
+    expect((first.get('ids') as File).name).toBe('walls.ids');
+    expect(second.get('ids')).toBeNull();
+    expect(screen.getByTestId('version-ids-file')).toHaveTextContent('IDS file');
   });
 
   it('exports the open version as DXF at a cut height', async () => {
@@ -640,7 +659,7 @@ describe('model IDS check', () => {
       'Fire safety: 1 of 2 specifications pass, 2 of 4 checks pass.',
     );
     const [[, uploadInit]] = requestsTo('POST', `/v1/assets/${ASSET}/ids`);
-    expect(((uploadInit?.body as FormData).get('file') as File).name).toBe('rules.ids');
+    expect(((uploadInit?.body as FormData | undefined)?.get('file') as File | undefined)?.name).toBe('rules.ids');
     expect(new Headers(uploadInit?.headers).get('Authorization')).toBe('Bearer jwt-token');
     const failing = screen.getByTestId('ids-specification-0');
     expect(within(failing).getAllByText('fail')).toHaveLength(2);
@@ -660,6 +679,53 @@ describe('model IDS check', () => {
       'Door 4 is not in the element store of this model.',
     );
     expect([...useElementStore.getState().selected]).toEqual(['wall']);
+  });
+
+  it('paints the meshed parts of a failed aggregate, as show in scene selects them', async () => {
+    const stairNode = { kind: 'element', key: 'key-stair', label: 'Stair 1', hasChildren: true, id: 'stair', ifcClass: 'IfcStair' };
+    const flightNode = { kind: 'element', key: 'key-flight', label: 'Flight 1', hasChildren: false, id: 'flight', ifcClass: 'IfcStairFlight' };
+    server.answer = (request) => {
+      const { url, path } = request;
+      if (path === `/v1/assets/${ASSET}/tree/parents`) return { body: { path: [{ kind: 'element', id: 'stair' }] } };
+      if (path === `/v1/assets/${ASSET}/tree/children`) {
+        return { body: { nodes: url.searchParams.get('nodeKey') === 'key-stair' ? [flightNode] : [stairNode] } };
+      }
+      if (path === `/v1/assets/${ASSET}/elements`) {
+        const wanted: string[] = JSON.parse(url.searchParams.get('filter') ?? '{}')['@id']?.$in ?? [];
+        const items = wanted.map((id) => ({
+          id,
+          label: id,
+          ifcClass: 'IfcStair',
+          storey: 'Level 1',
+          ...(id === 'flight' ? { location: LOCATION } : {}),
+        }));
+        return { body: { items, total: items.length } };
+      }
+      return answerElements(request);
+    };
+    idsCheck = {
+      idsFileName: 'rules.ids',
+      status: 'done',
+      checkedAt: '2026-11-05T12:10:00+00:00',
+      error: null,
+      report: {
+        ...IDS_REPORT,
+        specifications: [
+          ifcTesterSpecification(
+            'Stairs have a fire rating',
+            ifcTesterRequirement(
+              'Pset_StairCommon.FireRating data shall be provided',
+              [ifcTesterFailure('stair', 'Stair 1', 'IfcStair', 77)],
+              1,
+            ),
+          ),
+        ],
+      },
+    };
+
+    await openTab('IDS');
+
+    await waitFor(() => expect([...useElementStore.getState().failed]).toEqual(['flight']));
   });
 
   it("shows tiletopia's 503 text as a configuration hint", async () => {

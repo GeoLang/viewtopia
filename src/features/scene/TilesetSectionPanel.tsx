@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Button, Group, SegmentedControl, Select, Slider, Stack, Switch, Text } from '@mantine/core';
 import { IconSlice } from '@tabler/icons-react';
 import type { Cesium3DTileset } from 'cesium';
@@ -7,7 +7,7 @@ import { useAppStore } from '../../store/app';
 import { useTiles3dLayerStore, type Tiles3dLayer } from '../../store/tiles3dLayers';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { DEFAULT_CLIP_AXIS, type ClipAxis } from './clipping';
-import { tiletopiaAssetId } from '../elements/store';
+import { isIfcFileName, tiletopiaAssetId } from '../elements/store';
 import { AlignmentScrub } from './AlignmentScrub';
 import { DrawingView } from './DrawingView';
 import { SectionCapNote } from './SectionCaps';
@@ -51,6 +51,13 @@ function ModelSectionControls({ layer, tileset }: { layer: Tiles3dLayer; tileset
   const cut = (changes: Partial<TilesetSection>): void => {
     applyTilesetSection(tileset, { ...shown, ...changes }, requestRender);
   };
+
+  useEffect(
+    () => () => {
+      if (faceClipArmed(tileset)) armFaceClip(null, requestRender);
+    },
+    [tileset],
+  );
 
   return (
     <>
@@ -148,7 +155,7 @@ function ModelSectionControls({ layer, tileset }: { layer: Tiles3dLayer; tileset
           flip={shown.flip}
         />
       )}
-      {assetId && <AlignmentScrub assetId={assetId} tileset={tileset} />}
+      {assetId && isIfcFileName(layer.name) && <AlignmentScrub assetId={assetId} tileset={tileset} />}
     </>
   );
 }

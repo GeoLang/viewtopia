@@ -42,6 +42,8 @@ import {
   Cesium3DTileFeature,
   EdgeDisplayMode,
   Matrix4,
+  OrthographicFrustum,
+  PerspectiveFrustum,
   Ray,
   SceneMode,
   ScreenSpaceEventType,
@@ -50,6 +52,7 @@ import {
 } from 'cesium';
 import { enterBimMode, leaveBimMode, setBimNavigation } from '../../src/features/bim/bimMode';
 import { setEdgesShown } from '../../src/features/bim/edges';
+import { planViewIsOn, showElevation, showFloorPlan } from '../../src/features/bim/planView';
 import { BIM_MODE_OFF, useBimModeStore, type BimNavigation } from '../../src/features/bim/store';
 import { useBimNavigationCesium } from '../../src/features/bim/useBimNavigationCesium';
 import { useElementStore } from '../../src/features/elements/store';
@@ -289,6 +292,47 @@ describe('viewer settings', () => {
     act(() => leaveBimMode());
 
     expect(viewerSettings(viewer, tileset)).toEqual(before);
+  });
+});
+
+// cesium's Camera.switchToPerspectiveFrustum builds a new frustum with a 60 degree fov and a one metre near plane
+function allowFrustumSwitching() {
+  const camera = Object.assign(viewer.camera, {
+    frustum: new PerspectiveFrustum({ fov: 1, aspectRatio: 1, near: 2, far: 100 }),
+    switchToOrthographicFrustum() {
+      if (!(camera.frustum instanceof OrthographicFrustum)) camera.frustum = new OrthographicFrustum({ width: 1, aspectRatio: 1 });
+    },
+    switchToPerspectiveFrustum() {
+      if (!(camera.frustum instanceof PerspectiveFrustum)) camera.frustum = new PerspectiveFrustum({ fov: Math.PI / 3, aspectRatio: 1 });
+    },
+  });
+  Object.assign(tileset, { boundingSphere: { center: FLOOR_POINT, radius: 10 } });
+}
+
+describe('plan views', () => {
+  it('end with BIM mode, which brings back the perspective camera it found', () => {
+    allowFrustumSwitching();
+    enter();
+    act(() => showElevation(asViewer(viewer), asTileset(tileset), 'north'));
+    expect(viewer.camera.frustum).toBeInstanceOf(OrthographicFrustum);
+
+    act(() => leaveBimMode());
+
+    expect(viewer.camera.frustum).toBeInstanceOf(PerspectiveFrustum);
+    expect(viewer.camera.frustum).toMatchObject({ fov: 1, near: 2 });
+    expect(planViewIsOn(asViewer(viewer))).toBe(false);
+  });
+
+  it('end on switching to walk', () => {
+    allowFrustumSwitching();
+    enter();
+    act(() => showFloorPlan(asViewer(viewer), asTileset(tileset)));
+
+    act(() => setBimNavigation('walk'));
+
+    expect(viewer.camera.frustum).toBeInstanceOf(PerspectiveFrustum);
+    expect(viewer.camera.frustum).toMatchObject({ fov: 1, near: 0.1 });
+    expect(planViewIsOn(asViewer(viewer))).toBe(false);
   });
 });
 

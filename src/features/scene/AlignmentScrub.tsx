@@ -4,6 +4,7 @@ import { Cartesian3, Color, Matrix4 } from 'cesium';
 import type { Cesium3DTileset } from 'cesium';
 import { authHeaders, noticeRefusal } from '../../lib/apiAuth';
 import { randomUuid } from '../../lib/randomUuid';
+import { depthTestOffUntilHorizon } from '../../viewer/horizonDepthTest';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { getAuthToken } from '../auth/store';
 import { ElementApiError, errorBodyOf } from '../elements/elementService';
@@ -15,13 +16,12 @@ function requestRender(): void {
 }
 
 async function fetchAlignments(assetId: string, signal: AbortSignal): Promise<AlignmentCurve[]> {
-  if (!getAuthToken()) return [];
+  if (!getAuthToken()) throw new ElementApiError('Sign in to read the alignments of this model.', 401, null);
   const response = await fetch(`/v1/assets/${encodeURIComponent(assetId)}/alignments`, {
     headers: authHeaders(),
     signal,
   });
   noticeRefusal(response.status);
-  if (response.status === 400) return [];
   if (!response.ok) {
     const body = errorBodyOf(await response.text());
     throw new ElementApiError(
@@ -77,7 +77,7 @@ export function AlignmentScrub({ assetId, tileset }: { assetId: string; tileset:
         color: Color.VIOLET,
         outlineColor: Color.WHITE,
         outlineWidth: 2,
-        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        disableDepthTestDistance: depthTestOffUntilHorizon(viewer),
       },
     });
     viewer.scene.requestRender();

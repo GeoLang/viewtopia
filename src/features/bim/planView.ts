@@ -18,7 +18,7 @@ const ELEVATION_HEADING: Record<Elevation, number> = {
   west: Math.PI / 2,
 };
 
-const savedPerspective = new WeakMap<Viewer, number | null>();
+const savedPerspective = new WeakMap<Viewer, Pick<PerspectiveFrustum, 'fov' | 'near'> | null>();
 let planRevision = 0;
 const planListeners = new Set<() => void>();
 
@@ -43,7 +43,7 @@ export function elevationHeading(elevation: Elevation): number {
 function rememberPerspective(viewer: Viewer): void {
   if (savedPerspective.has(viewer)) return;
   const { frustum } = viewer.camera;
-  savedPerspective.set(viewer, frustum instanceof PerspectiveFrustum ? (frustum.fov ?? null) : null);
+  savedPerspective.set(viewer, frustum instanceof PerspectiveFrustum ? { fov: frustum.fov, near: frustum.near } : null);
 }
 
 export function showPlanView(
@@ -77,12 +77,15 @@ export function planViewIsOn(viewer: Viewer): boolean {
 }
 
 export function leavePlanView(viewer: Viewer): void {
-  const fov = savedPerspective.get(viewer);
+  const perspective = savedPerspective.get(viewer);
   savedPerspective.delete(viewer);
   viewer.camera.lookAtTransform(Matrix4.IDENTITY);
   viewer.camera.switchToPerspectiveFrustum();
   const { frustum } = viewer.camera;
-  if (fov !== undefined && fov !== null && frustum instanceof PerspectiveFrustum) frustum.fov = fov;
+  if (perspective && frustum instanceof PerspectiveFrustum) {
+    frustum.fov = perspective.fov;
+    frustum.near = perspective.near;
+  }
   viewer.scene.requestRender();
   bumpPlanView();
 }

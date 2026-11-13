@@ -345,7 +345,7 @@ function PlacementForm({
           <TextInput label="CRS" placeholder="EPSG:32632" {...inputProps('crs')} />
         </>
       )}
-      {step.kind === 'model' && (
+      {isIfcFileName(file.name) && (
         <FileButton onChange={setIdsFile} accept=".ids">
           {(props) => (
             <Button {...props} size="compact-xs" variant="default" data-testid="assets-ids-file">

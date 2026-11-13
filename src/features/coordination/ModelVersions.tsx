@@ -261,6 +261,7 @@ export function ModelVersions({ assetId, canShowInScene }: { assetId: string; ca
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const resetFileInput = useRef<() => void>(null);
+  const resetIdsInput = useRef<() => void>(null);
   const comparison = useRef<{ running: AbortController | null }>({ running: null });
 
   useEffect(() => {
@@ -295,6 +296,8 @@ export function ModelVersions({ assetId, canShowInScene }: { assetId: string; ca
     setUploading(file.name);
     try {
       const uploaded = await uploadModelVersion(assetId, file, idsFile);
+      setIdsFile(null);
+      resetIdsInput.current?.();
       setNotice(`${uploaded.name} is the next version of this model and is being tiled.`);
       setListReads((reads) => reads + 1);
     } catch (failure) {
@@ -336,7 +339,7 @@ export function ModelVersions({ assetId, canShowInScene }: { assetId: string; ca
             </Button>
           )}
         </FileButton>
-        <FileButton onChange={setIdsFile} accept=".ids">
+        <FileButton onChange={setIdsFile} accept=".ids" resetRef={resetIdsInput}>
           {(props) => (
             <Button {...props} size="compact-xs" variant="default" data-testid="version-ids-file">
               {idsFile ? idsFile.name : 'IDS file'}

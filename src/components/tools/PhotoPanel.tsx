@@ -23,6 +23,7 @@ import {
 } from 'cesium';
 import type { Cartesian2, Entity, Viewer } from 'cesium';
 import { PanelCard, PanelHeader } from '../PanelCard';
+import { depthTestOffUntilHorizon } from '../../viewer/horizonDepthTest';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { useAppStore } from '../../store/app';
 import { SOURCE_COLOR, searchPhotos, type PhotoResult } from '../../lib/photoSearch';
@@ -107,7 +108,7 @@ export function PhotoPanel({ onClose }: { onClose: () => void }) {
           color: Color.fromCssColorString(SOURCE_COLOR[p.source]),
           outlineColor: Color.WHITE,
           outlineWidth: 1,
-          disableDepthTestDistance: Number.POSITIVE_INFINITY,
+          disableDepthTestDistance: depthTestOffUntilHorizon(viewer),
         },
       }),
     );

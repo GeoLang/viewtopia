@@ -13,6 +13,7 @@ import {
 import { finiteHeight, useAnnotationStore, type PendingPlacement } from '../store/annotations';
 import { useAppStore } from '../store/app';
 import { readAnnotationPoint } from '../viewer/annotationPoint';
+import { depthTestOffUntilHorizon } from '../viewer/horizonDepthTest';
 
 const ENTITY_PREFIX = 'annot-';
 
@@ -29,6 +30,7 @@ export function useAnnotationsCesium(viewerRef: MutableRefObject<Viewer | null>)
       if (!viewer || viewer.isDestroyed()) return;
       const { annotations } = useAnnotationStore.getState();
       const wanted = new Set(annotations.map((a) => `${ENTITY_PREFIX}${a.id}`));
+      const horizonDistance = depthTestOffUntilHorizon(viewer);
       for (const annotation of annotations) {
         const entityId = `${ENTITY_PREFIX}${annotation.id}`;
         if (viewer.entities.getById(entityId)) continue;
@@ -44,7 +46,7 @@ export function useAnnotationsCesium(viewerRef: MutableRefObject<Viewer | null>)
             color: Color.fromCssColorString(annotation.color),
             outlineColor: Color.WHITE,
             outlineWidth: 1,
-            disableDepthTestDistance: Number.POSITIVE_INFINITY,
+            disableDepthTestDistance: horizonDistance,
           },
           label: {
             text: annotation.label,
@@ -55,7 +57,7 @@ export function useAnnotationsCesium(viewerRef: MutableRefObject<Viewer | null>)
             style: LabelStyle.FILL_AND_OUTLINE,
             verticalOrigin: VerticalOrigin.BOTTOM,
             pixelOffset: new Cartesian2(0, -14),
-            disableDepthTestDistance: Number.POSITIVE_INFINITY,
+            disableDepthTestDistance: horizonDistance,
           },
         });
       }

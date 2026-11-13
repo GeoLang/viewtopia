@@ -1,14 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // the WebGL bundle stays out, so the scene is a list of these stand-in classes
-vi.mock('cesium', () => {
+vi.mock('cesium', async (importOriginal) => {
+  const real = await importOriginal<typeof import('cesium')>();
   class Cesium3DTileset {
     style: unknown;
   }
   class Cesium3DTileStyle {
     constructor(readonly definition: unknown) {}
   }
-  return { Cesium3DTileset, Cesium3DTileStyle };
+  return { ...real, Cesium3DTileset, Cesium3DTileStyle };
 });
 
 import { Cesium3DTileset, type Viewer } from 'cesium';

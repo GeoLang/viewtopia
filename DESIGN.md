@@ -324,12 +324,13 @@ and has no public way to drop it. Repeated elements are in that primitive too: t
 ordinary triangles when the tile carries edges, because CesiumJS 1.147 draws instanced edges without the
 instance transforms.
 
-A measurement click on the Cesium globe snaps to a model edge in the default 25 pixel region, then to the
-surface under the pointer, and otherwise to the ground. The point keeps its height in metres above the
-ellipsoid. Distance is the straight line between the points, and area is the area of that polygon. A point
-with no height, including every point placed on the 2D map, keeps the ground distance and the geodesic area.
+A measurement click on the Cesium globe snaps to a model edge in the default 25 pixel region, then to a
+model surface in that region. A snapped point keeps its height in metres above the ellipsoid. A click with no
+model in the region lands on the ellipsoid with no height. Distance is the straight line between the points,
+and area is the area of that polygon. When no point has a height, including every point placed on the 2D map,
+the measurement keeps the ground distance, the geodesic area and a ground-clamped line.
 While a measurement is armed, a marker follows the snap under the pointer, cyan on an edge and yellow on a
-surface. The marker is hidden during the snap so it cannot cover the model.
+surface. The marker is removed from the scene during the snap so it cannot cover the model.
 
 A document also carries region watches, which are agora's own schedule rather
 than anything a producer sends. An editor draws a polygon, names a geoplumb

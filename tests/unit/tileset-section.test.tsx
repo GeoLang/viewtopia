@@ -8,6 +8,7 @@ import {
   Color,
   ColorGeometryInstanceAttribute,
   CoplanarPolygonGeometry,
+  Intersect,
   Matrix4,
   Transforms,
   type Cesium3DTileset,
@@ -26,6 +27,8 @@ import { TilesetSectionPanel } from '../../src/features/scene/TilesetSectionPane
 import {
   addFacePlane,
   applyTilesetSection,
+  armedFaceClipTileset,
+  armFaceClip,
   disableTilesetSection,
   facePlaneFromWorld,
   readFacePlanes,
@@ -179,6 +182,22 @@ describe('face planes', () => {
     expect(readTilesetSection(tileset)?.position).toBe(1);
   });
 
+  it('keeps clipping with the face planes when the axis section turns off', () => {
+    const faceOnly = transformedTileset();
+    addFacePlane(faceOnly, { id: 'face', normal: [1, 0, 0], offset: 2 }, vi.fn());
+    disableTilesetSection(faceOnly, vi.fn());
+    expect(faceOnly.clippingPlanes.enabled).toBe(true);
+    expect(readFacePlanes(faceOnly)).toHaveLength(1);
+
+    const both = transformedTileset();
+    applyTilesetSection(both, { axis: 'z', position: 4, flip: false, enabled: true }, vi.fn());
+    addFacePlane(both, { id: 'face', normal: [1, 0, 0], offset: 2 }, vi.fn());
+    disableTilesetSection(both, vi.fn());
+    expect(both.clippingPlanes.enabled).toBe(true);
+    expect(both.clippingPlanes.length).toBe(1);
+    expect(readTilesetSection(both)).toMatchObject({ position: 4, enabled: false });
+  });
+
   it('turns a world click into a plane in the section frame and refuses a zero normal', () => {
     const tileset = transformedTileset();
     const point = Matrix4.multiplyByPoint(PLACEMENT, new Cartesian3(1, 2, 3), new Cartesian3());
@@ -319,6 +338,38 @@ describe('TilesetSectionPanel', () => {
     expect(readTilesetSection(tileset)).toEqual({ axis: 'x', position: 3, flip: true, enabled: true });
   });
 
+  it('stops waiting for a face click when the panel closes or the model goes away', async () => {
+    const tileset = transformedTileset();
+    const showModel = () =>
+      useTiles3dLayerStore.setState({
+        layers: [{ id: 'model', name: 'model.ifc', url: '/m/tileset.json', visible: true }],
+        loaded: { model: tileset },
+      });
+    const armFromPanel = async () => {
+      const view = render(
+        <MantineProvider env="test">
+          <TilesetSectionPanel onClose={() => {}} />
+        </MantineProvider>,
+      );
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Add a plane from a face' }));
+      });
+      expect(armedFaceClipTileset()).toBe(tileset);
+      return view;
+    };
+
+    showModel();
+    const closed = await armFromPanel();
+    act(() => closed.unmount());
+    expect(armedFaceClipTileset()).toBeNull();
+
+    await armFromPanel();
+    await act(async () => {
+      useTiles3dLayerStore.getState().removeLayer('model');
+    });
+    expect(armedFaceClipTileset()).toBeNull();
+  });
+
   it('follows a cut made outside it while it is open', async () => {
     const tileset = transformedTileset();
     useTiles3dLayerStore.setState({
@@ -389,6 +440,31 @@ describe('TilesetSectionPanel', () => {
         authorization: new Headers(init?.headers).get('Authorization'),
         signal: init?.signal,
       };
+    }
+
+    function wallCut(at: number): SectionCut {
+      const ring: SectionPoint[] = [
+        [at, 0, 0],
+        [at, 4, 0],
+        [at, 4, 4],
+        [at, 0, 4],
+      ];
+      return {
+        axis: 'z',
+        position: 0,
+        normal: [1, 0, 0],
+        offset: at,
+        openChainsDropped: 0,
+        polygons: [{ elementId: 'wall', rings: [ring] }],
+      };
+    }
+
+    function answerWithSlabAndWall(wallAt: number) {
+      answerFetch(async (url) => {
+        const query = new URL(url, window.location.origin).searchParams;
+        if (query.has('nx')) return json(wallCut(wallAt));
+        return json(slabCut(Number(query.get('position')), { elementId: 'slab', openChainsDropped: 0 }));
+      });
     }
 
     function answerWithSlab({ elementId = 'slab', openChainsDropped = 0 } = {}) {
@@ -651,6 +727,83 @@ describe('TilesetSectionPanel', () => {
       expect(primitivesRemove).toHaveBeenCalledWith(drawn);
     });
 
+    it('takes the face planes and their caps off when the chat makes the model whole', async () => {
+      const tileset = transformedTileset();
+      showModel(tileset);
+      answerWithSlabAndWall(LOCAL_CENTRE.x);
+      await renderCapsWithPanelClosed();
+      act(() => {
+        addFacePlane(tileset, { id: 'wall', normal: [1, 0, 0], offset: LOCAL_CENTRE.x }, requestRender);
+      });
+      await afterTheDelay();
+      const drawn = primitivesAdd.mock.lastCall?.[0];
+      expect(drawnCaps()[0].id).toMatchObject({ elementId: 'wall' });
+
+      await act(async () => {
+        await runAction('tileset.section', { on: false });
+      });
+
+      expect(readFacePlanes(tileset)).toEqual([]);
+      expect(tileset.clippingPlanes.enabled).toBe(false);
+      expect(primitivesRemove).toHaveBeenCalledWith(drawn);
+    });
+
+    it('clips what either plane removes and fills each cut only where the other plane keeps the model', async () => {
+      const tileset = transformedTileset();
+      const wallAt = LOCAL_CENTRE.x + 1.5;
+      const slabAt = 12;
+      showModel(tileset);
+      answerWithSlabAndWall(wallAt);
+      await renderCapsWithPanelClosed();
+      act(() => {
+        applyTilesetSection(tileset, { axis: 'z', position: slabAt, flip: false, enabled: true }, requestRender);
+        addFacePlane(tileset, { id: 'wall', normal: [1, 0, 0], offset: wallAt }, requestRender);
+      });
+      await afterTheDelay();
+
+      const clipped = (x: number, z: number): boolean =>
+        tileset.clippingPlanes.computeIntersectionWithBoundingVolume(
+          new BoundingSphere(new Cartesian3(x, LOCAL_CENTRE.y, z), 0.5),
+        ) === Intersect.OUTSIDE;
+      expect(clipped(wallAt - 2, slabAt - 2)).toBe(false);
+      expect(clipped(wallAt - 2, slabAt + 2)).toBe(true);
+      expect(clipped(wallAt + 2, slabAt - 2)).toBe(true);
+      expect(clipped(wallAt + 2, slabAt + 2)).toBe(true);
+
+      const caps = new Map(
+        primitivesAdd.mock.calls
+          .flatMap(([primitive]) => primitive.geometryInstances as GeometryInstance[])
+          .filter((instance) => instance.geometry instanceof CoplanarPolygonGeometry)
+          .map((instance) => [(instance.id as SectionCapPick).elementId, instance]),
+      );
+      const slab = caps.get('slab');
+      const wall = caps.get('wall');
+      if (!slab || !wall) throw new Error('both cuts should be filled');
+      expect(capShape(slab).area).toBeCloseTo((wallAt - (LOCAL_CENTRE.x - 2)) * 4 - 2 * 2, 5);
+      const slabCorners = CoplanarPolygonGeometry.createGeometry(slab.geometry as unknown as CoplanarPolygonGeometry);
+      const slabX = Array.from(slabCorners?.attributes.position?.values ?? []).filter((_, index) => index % 3 === 0);
+      expect(Math.max(...slabX)).toBeLessThanOrEqual(wallAt + 1e-6);
+      expect(capShape(wall).area).toBeCloseTo(4 * 4, 5);
+    });
+
+    it('keeps the drawn caps when a section change leaves their planes alone', async () => {
+      const tileset = transformedTileset();
+      showModel(tileset);
+      answerWithSlab();
+      await renderCapsWithPanelClosed();
+      act(() => {
+        applyTilesetSection(tileset, { axis: 'z', position: 12, flip: false, enabled: true }, requestRender);
+      });
+      await afterTheDelay();
+      expect(fillDraws()).toBe(1);
+
+      act(() => armFaceClip(tileset, requestRender));
+      act(() => armFaceClip(null, requestRender));
+
+      expect(primitivesRemove).not.toHaveBeenCalled();
+      expect(fillDraws()).toBe(1);
+    });
+
     it('fills the cut a project restores with the panel closed', async () => {
       const tileset = transformedTileset();
       showModel(tileset);
@@ -719,6 +872,60 @@ describe('TilesetSectionPanel', () => {
 
       expect(drawnCaps().map(capColor)).toEqual([greySlab, greySlab]);
       expect(sectionCalls()).toHaveLength(1);
+    });
+  });
+
+  describe('alignments', () => {
+    const IFC_MODEL = { id: 'model', name: 'bridge.ifc', url: '/v1/assets/7/tileset.json', visible: true };
+    const GLB_MODEL = { id: 'model', name: 'bridge.glb', url: '/v1/assets/7/tileset.json', visible: true };
+    const fetchMock = vi.fn<(input: string, init?: RequestInit) => Promise<Response>>();
+
+    function alignmentCalls(): number {
+      return fetchMock.mock.calls.filter(([url]) => String(url).includes('/alignments')).length;
+    }
+
+    beforeEach(() => {
+      fetchMock.mockReset();
+      fetchMock.mockResolvedValue(new Response('[]', { status: 200 }));
+      vi.stubGlobal('fetch', fetchMock);
+      useAuthStore.setState({ token: 'jwt-token', loggedIn: true });
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('are read for an IFC model and never for a model from another format', async () => {
+      useTiles3dLayerStore.setState({ layers: [GLB_MODEL], loaded: { model: transformedTileset() } });
+      await renderPanel();
+      expect(alignmentCalls()).toBe(0);
+
+      act(() => {
+        useTiles3dLayerStore.setState({ layers: [IFC_MODEL], loaded: { model: transformedTileset() } });
+      });
+      await act(async () => {});
+      expect(alignmentCalls()).toBe(1);
+    });
+
+    it("show tiletopia's refusal of the request", async () => {
+      fetchMock.mockResolvedValue(
+        new Response(JSON.stringify({ code: 'INVALID_PARAMETER', message: 'the alignment request was refused' }), {
+          status: 400,
+        }),
+      );
+      useTiles3dLayerStore.setState({ layers: [IFC_MODEL], loaded: { model: transformedTileset() } });
+      await renderPanel();
+
+      expect(screen.getByTestId('alignment-error')).toHaveTextContent('the alignment request was refused');
+    });
+
+    it('ask a signed-out user to sign in, without a request', async () => {
+      useAuthStore.setState({ token: null, loggedIn: false });
+      useTiles3dLayerStore.setState({ layers: [IFC_MODEL], loaded: { model: transformedTileset() } });
+      await renderPanel();
+
+      expect(alignmentCalls()).toBe(0);
+      expect(screen.getByTestId('alignment-error')).toHaveTextContent('Sign in to read the alignments of this model.');
     });
   });
 });

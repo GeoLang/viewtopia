@@ -538,6 +538,7 @@ function ModelElements({
       {detail && (
         <ScrollArea.Autosize mah={240}>
           <ElementProperties
+            key={detail.id}
             detail={detail}
             canEdit={canEdit}
             onSave={async (key, value) => {

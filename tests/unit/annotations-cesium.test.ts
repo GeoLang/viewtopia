@@ -18,7 +18,8 @@ interface FakeHandler {
 
 const createdHandlers = vi.hoisted((): FakeHandler[] => []);
 
-vi.mock('cesium', () => ({
+vi.mock('cesium', async (importOriginal) => ({
+  CallbackProperty: (await importOriginal<typeof import('cesium')>()).CallbackProperty,
   Cartesian2: class {
     x: number;
     y: number;

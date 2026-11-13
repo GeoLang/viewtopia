@@ -315,18 +315,20 @@ describe('useElementStyleCesium', () => {
     expect(shown(tileset, 'wall')).toBe(true);
   });
 
-  it('caps a failure list and clears it when another model opens', () => {
+  it('refuses a failure or suppressed list over the limit, and clears both when another model opens', () => {
     const tileset = fakeTileset();
     useTiles3dLayerStore.setState({ layers: [MODEL_LAYER], loaded: { model: tileset } });
     useElementStore.getState().openModel(MODEL_LAYER);
+    useElementStore.getState().setFailed(['wall']);
+    useElementStore.getState().setSuppressed(['window']);
     const tooMany = Array.from({ length: ELEMENT_ID_LIMIT + 5 }, (_, index) => `element-${index}`);
-    expect(() => useElementStore.getState().setFailed(tooMany)).not.toThrow();
-    expect(useElementStore.getState().failed.size).toBe(ELEMENT_ID_LIMIT);
-    expect(useElementStore.getState().failed.has('element-0')).toBe(true);
-    expect(useElementStore.getState().failed.has(`element-${ELEMENT_ID_LIMIT}`)).toBe(false);
+    expect(() => useElementStore.getState().setFailed(tooMany)).toThrow(/over the limit/);
+    expect(() => useElementStore.getState().setSuppressed(tooMany)).toThrow(/over the limit/);
+    expect([...useElementStore.getState().failed]).toEqual(['wall']);
+    expect([...useElementStore.getState().suppressed]).toEqual(['window']);
 
     useElementStore.getState().openModel(MODEL_LAYER);
-    expect(useElementStore.getState().failed.size).toBe(ELEMENT_ID_LIMIT);
+    expect(useElementStore.getState().failed.size).toBe(1);
 
     const other = { ...MODEL_LAYER, id: 'other', url: '/tiles/v1/assets/other/tileset.json' };
     useElementStore.getState().openModel(other);

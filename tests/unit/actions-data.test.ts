@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// the WebGL bundle stays out, so the view bbox comes from the shared camera
-vi.mock('cesium', () => ({
+vi.mock('cesium', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('cesium')>()),
   Math: {
     toDegrees: (radians: number) => radians,
     toRadians: (degrees: number) => degrees,

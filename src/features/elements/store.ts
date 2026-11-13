@@ -67,15 +67,6 @@ export function requireWithinElementLimit(count: number): void {
   }
 }
 
-function cappedIdSet(ids: Iterable<string>): ReadonlySet<string> {
-  const set = new Set<string>();
-  for (const id of ids) {
-    set.add(id);
-    if (set.size >= ELEMENT_ID_LIMIT) break;
-  }
-  return set;
-}
-
 function idSetWithinLimit(ids: Iterable<string>): ReadonlySet<string> {
   const set = new Set(ids);
   requireWithinElementLimit(set.size);
@@ -128,7 +119,7 @@ export const useElementStore = create<ElementState>((set, get) => ({
 
   endIsolation: () => set({ isolated: null }),
 
-  setFailed: (ids) => set({ failed: cappedIdSet(ids) }),
+  setFailed: (ids) => set({ failed: idSetWithinLimit(ids) }),
 
-  setSuppressed: (ids) => set({ suppressed: cappedIdSet(ids) }),
+  setSuppressed: (ids) => set({ suppressed: idSetWithinLimit(ids) }),
 }));

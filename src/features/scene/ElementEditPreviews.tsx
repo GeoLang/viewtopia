@@ -14,7 +14,9 @@ import {
 } from 'cesium';
 import type { Cesium3DTileset } from 'cesium';
 import { fetchElementEdits, type StoredElementEdit } from '../elements/elementEdits';
+import { ElementApiError } from '../elements/elementService';
 import { tiletopiaAssetId, useElementStore } from '../elements/store';
+import { reportFailure } from '../../projects/requestFeedback';
 import { useTiles3dLayerStore } from '../../store/tiles3dLayers';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { previewTriangles } from './elementEditMesh';
@@ -91,39 +93,40 @@ export function ElementEditPreviews() {
         const assetId = tiletopiaAssetId(layer.url);
         const tileset = useTiles3dLayerStore.getState().loaded[layer.id];
         if (!assetId || !tileset || !layer.visible) return [];
-        return [{ assetId, tileset }];
+        return [{ assetId, tileset, name: layer.name }];
       });
 
     void (async () => {
-      try {
-        const fetched = await Promise.all(
-          targets.map(async (target) => ({
-            target,
-            edits: await fetchElementEdits(target.assetId, controller.signal),
-          })),
-        );
-        if (cancelled || viewer.isDestroyed()) return;
-        const next: Primitive[] = [];
-        const hidden: string[] = [];
-        for (const { target, edits } of fetched) {
-          if (target.assetId === openAssetId) {
-            for (const edit of edits) {
-              if (edit.hideOriginal) hidden.push(edit.elementId);
-            }
-          }
+      const fetched = await Promise.allSettled(
+        targets.map((target) => fetchElementEdits(target.assetId, controller.signal)),
+      );
+      if (cancelled || viewer.isDestroyed()) return;
+      const next: Primitive[] = [];
+      const hidden: string[] = [];
+      for (const [index, outcome] of fetched.entries()) {
+        const target = targets[index];
+        if (outcome.status === 'rejected') {
+          // fetch rejects with a TypeError when the network fails
+          if (!(outcome.reason instanceof ElementApiError || outcome.reason instanceof TypeError)) throw outcome.reason;
+          reportFailure(`Could not read the element edits of ${target.name}`, outcome.reason);
+          continue;
+        }
+        const edits = outcome.value;
+        if (target.assetId === openAssetId) {
           for (const edit of edits) {
-            const primitive = previewPrimitive(target.tileset, edit);
-            if (primitive) next.push(primitive);
+            if (edit.hideOriginal) hidden.push(edit.elementId);
           }
         }
-        for (const primitive of drawn.current) viewer.scene.primitives.remove(primitive);
-        for (const primitive of next) viewer.scene.primitives.add(primitive);
-        drawn.current = next;
-        useElementStore.getState().setSuppressed(hidden);
-        viewer.scene.requestRender();
-      } catch (reason) {
-        if (reason instanceof DOMException && reason.name === 'AbortError') return;
+        for (const edit of edits) {
+          const primitive = previewPrimitive(target.tileset, edit);
+          if (primitive) next.push(primitive);
+        }
       }
+      for (const primitive of drawn.current) viewer.scene.primitives.remove(primitive);
+      for (const primitive of next) viewer.scene.primitives.add(primitive);
+      drawn.current = next;
+      useElementStore.getState().setSuppressed(hidden);
+      viewer.scene.requestRender();
     })();
 
     return () => {

@@ -56,7 +56,7 @@ vi.mock('cesium', () => ({
 
 import { ScreenSpaceEventType } from 'cesium';
 import { useToolClicksCesium } from '../../src/hooks/useToolClicksCesium';
-import { locateMeasurePoint } from '../../src/viewer/modelSnap';
+import { MEASURE_SNAP_HOVER_ID, locateMeasurePoint, snapUnderPointer } from '../../src/viewer/modelSnap';
 import { useAppStore } from '../../src/store/app';
 import { drawToolClicks, useDrawStore } from '../../src/store/draw';
 import { measureToolClicks, useMeasureStore } from '../../src/store/measure';
@@ -260,13 +260,37 @@ describe('useToolClicksCesium', () => {
   });
 });
 
-describe('locateMeasurePoint', () => {
+describe('measure snapping', () => {
+  beforeEach(() => {
+    resetStores();
+    useAppStore.setState({ renderer: 'cesium', activeTab: 'globe' });
+    createdHandlers.length = 0;
+  });
+
+  afterEach(() => {
+    resetStores();
+  });
+
+  function fakeEntities() {
+    const byId = new Map<string, { id: string; show: boolean }>();
+    return {
+      getById: (id: string) => byId.get(id),
+      add: (entity: { id: string; show: boolean }) => {
+        byId.set(entity.id, entity);
+        return entity;
+      },
+      remove: (entity: { id: string; show: boolean }) => byId.delete(entity.id),
+    };
+  }
+
   function viewerWith(options: {
     snap?: FakeCartesian & { edge: boolean };
-    surface?: FakeCartesian;
-    ground?: FakeCartesian;
+    globe: FakeCartesian;
+    ellipsoid: FakeCartesian;
   }) {
+    const picks = { globe: options.globe, ellipsoid: options.ellipsoid };
     return {
+      picks,
       scene: {
         canvas: { style: { cursor: '' } },
         snap: vi.fn(() => (
@@ -274,12 +298,13 @@ describe('locateMeasurePoint', () => {
             ? { position: options.snap, isEdge: options.snap.edge }
             : undefined
         )),
+        // cesium pickPosition reads the depth buffer, which includes the globe
         pickPositionSupported: true,
-        pickPosition: vi.fn(() => options.surface),
+        pickPosition: vi.fn(() => picks.globe),
         globe: { ellipsoid: {} },
       },
-      camera: { pickEllipsoid: vi.fn(() => options.ground) },
-      entities: { getById: () => undefined },
+      camera: { pickEllipsoid: vi.fn(() => picks.ellipsoid) },
+      entities: fakeEntities(),
       isDestroyed: () => false,
     };
   }
@@ -287,34 +312,61 @@ describe('locateMeasurePoint', () => {
   it('snaps a measurement to the model edge and keeps its height', () => {
     const viewer = viewerWith({
       snap: { lon: 7.25, lat: 46.75, height: 12.5, edge: true },
-      surface: { lon: 1, lat: 2, height: 30 },
-      ground: { lon: 9, lat: 8 },
+      globe: { lon: 1, lat: 2, height: 30 },
+      ellipsoid: { lon: 9, lat: 8 },
     });
 
     const point = locateMeasurePoint(viewer as unknown as Viewer, 10, 20);
 
     expect(point).toEqual([expect.closeTo(7.25), expect.closeTo(46.75), 12.5]);
-    expect(viewer.scene.pickPosition).not.toHaveBeenCalled();
     expect(viewer.camera.pickEllipsoid).not.toHaveBeenCalled();
   });
 
-  it('uses the surface under the pointer when the snap region misses', () => {
+  it('measures along the ground when the clicks miss every model', () => {
     const viewer = viewerWith({
-      surface: { lon: 7, lat: 43, height: 4 },
-      ground: { lon: 9, lat: 8 },
+      globe: { lon: 0, lat: 0, height: 120 },
+      ellipsoid: { lon: 0, lat: 0 },
+    });
+    renderHook(() => useToolClicksCesium(
+      { current: viewer as unknown as Viewer },
+      useMeasureStore,
+      measureToolClicks,
+      locateMeasurePoint,
+    ));
+
+    act(() => useMeasureStore.getState().setMode('distance'));
+    clickCanvas();
+    viewer.picks.globe = { lon: 0, lat: 1, height: 340 };
+    viewer.picks.ellipsoid = { lon: 0, lat: 1 };
+    clickCanvas();
+    act(() => useMeasureStore.getState().finishMeasure());
+
+    const result = useMeasureStore.getState().results[0];
+    expect(result.points).toEqual([
+      [expect.closeTo(0), expect.closeTo(0)],
+      [expect.closeTo(0), expect.closeTo(1)],
+    ]);
+    expect(result.unit).toBe('km');
+    expect(result.value).toBeCloseTo(111.195, 0);
+  });
+
+  it('takes the hover marker out of the scene while the snap renders', () => {
+    const viewer = viewerWith({
+      snap: { lon: 7, lat: 43, height: 4, edge: false },
+      globe: { lon: 7, lat: 43, height: 4 },
+      ellipsoid: { lon: 7, lat: 43 },
+    });
+    const marker = viewer.entities.add({ id: MEASURE_SNAP_HOVER_ID, show: true });
+    const markerDuringSnap: unknown[] = [];
+    viewer.scene.snap.mockImplementation(() => {
+      markerDuringSnap.push(viewer.entities.getById(MEASURE_SNAP_HOVER_ID));
+      return { position: { lon: 7, lat: 43, height: 4 }, isEdge: false };
     });
 
-    const point = locateMeasurePoint(viewer as unknown as Viewer, 10, 20);
+    const hit = snapUnderPointer(viewer as unknown as Viewer, 10, 20);
 
-    expect(point).toEqual([expect.closeTo(7), expect.closeTo(43), 4]);
-    expect(viewer.camera.pickEllipsoid).not.toHaveBeenCalled();
-  });
-
-  it('drops the height when the click misses the model and hits the ground', () => {
-    const viewer = viewerWith({ ground: { lon: 8, lat: 44, height: 0 } });
-
-    const point = locateMeasurePoint(viewer as unknown as Viewer, 10, 20);
-
-    expect(point).toEqual([expect.closeTo(8), expect.closeTo(44)]);
+    expect(hit).toEqual({ point: [expect.closeTo(7), expect.closeTo(43), 4], edge: false });
+    expect(markerDuringSnap).toEqual([undefined]);
+    expect(viewer.entities.getById(MEASURE_SNAP_HOVER_ID)).toBe(marker);
   });
 });

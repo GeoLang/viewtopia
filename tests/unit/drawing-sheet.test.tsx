@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { MantineProvider } from '@mantine/core';
+import { useAuthStore } from '../../src/features/auth/store';
 import { angleDegrees, drawingDxf, linearLength, sheetBounds } from '../../src/features/scene/drawingSheet';
-import { DrawingSheet } from '../../src/features/scene/DrawingView';
+import { DrawingSheet, DrawingView } from '../../src/features/scene/DrawingView';
 import type { PaperLine } from '../../src/features/scene/drawingSheet';
 
 const line = (hidden: boolean, start: [number, number], end: [number, number]): PaperLine => ({
@@ -77,5 +79,55 @@ describe('DrawingSheet', () => {
     const angle = screen.getByTestId('drawing-angle');
     expect(angle.getAttribute('y')).toBe('-2');
     expect(angle.textContent).toBe('90.0°');
+  });
+});
+
+// jsdom has no layout, so the screen transform of a 50 by 10 m sheet in a 300 by 180 px svg is given here
+const SHEET_RECT = { left: 0, top: 0, width: 300, height: 180 };
+// xMidYMid meet scales by min(300 / 50, 180 / 10) = 6 and centres the 60 px tall drawing, 60 px from the top
+const SCREEN_TO_SHEET = { a: 1 / 6, b: 0, c: 0, d: 1 / 6, e: 0, f: -20 };
+
+class FakeDomPoint {
+  constructor(
+    readonly x: number,
+    readonly y: number,
+  ) {}
+  matrixTransform({ a, b, c, d, e, f }: typeof SCREEN_TO_SHEET) {
+    return new FakeDomPoint(a * this.x + c * this.y + e, b * this.x + d * this.y + f);
+  }
+}
+
+describe('DrawingView', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('measures clicks on a letterboxed sheet in drawing metres', async () => {
+    const lines = [line(false, [0, 0], [50, 0]), line(false, [50, 0], [50, 10]), line(false, [0, 10], [0, 0])];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ lines }) })),
+    );
+    vi.stubGlobal('DOMPoint', FakeDomPoint);
+    vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
+    useAuthStore.setState({ token: 'jwt-token', loggedIn: true });
+    render(
+      <MantineProvider env="test">
+        <DrawingView assetId="a1b2" axis="z" position={null} flip={false} />
+      </MantineProvider>,
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Project the model' }));
+    });
+    const sheet = screen.getByTestId('drawing-sheet');
+    Object.assign(sheet, {
+      getBoundingClientRect: () => SHEET_RECT,
+      getScreenCTM: () => ({ inverse: () => SCREEN_TO_SHEET }),
+    });
+
+    fireEvent.click(sheet, { clientX: 0, clientY: 120 });
+    fireEvent.click(sheet, { clientX: 0, clientY: 60 });
+
+    expect(screen.getByTestId('drawing-dimension').textContent).toBe('10.00 m');
   });
 });

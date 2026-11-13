@@ -18,6 +18,45 @@
 
 ---
 
+## In flight: fixes from the 2026-11-13 review of Grok's commits
+
+The review of tiletopia 5957c73 and viewtopia dfc49778 and the eight commits
+before it is `/home/aaron/tmp/geolang-fix/grok-review-2026-11-13.md`. Numbers
+below are its finding numbers. Nothing is committed. Viewer fixes are written
+in detached worktrees under `/home/aaron/src/GeoLang/.worktrees/review-*`, then
+applied to the main tree and gated once with typecheck, Biome and vitest.
+
+viewtopia: every finding except 7 and 19 is fixed in the main tree,
+uncommitted. Typecheck and Biome are clean, and vitest passed 250 files and
+3035 tests.
+
+tiletopia: every finding is fixed in the working tree, uncommitted, together
+with global buildings and the Overpass retry. On hercules the CI fmt and clippy
+commands are clean, and `cargo test --all` with CI's features passed 1473 tests
+in 45 binaries. Run that gate with `-j 6`, since default jobs ran this machine
+and hercules out of memory. The gate script is
+`/home/aaron/tmp/geolang-fix/hercules-gate/review-gate.sh`, its log is
+`/home/aaron/tmp/geolang-fix/osm-buildings-proof/test-gate-3.log`.
+
+Items 4 to 29 were fixed in four tracks, each in a worktree under
+`/home/aaron/src/GeoLang/.worktrees/tt-review-*`, and the patches are in
+`/home/aaron/tmp/geolang-fix/tt-review-*.patch`:
+
+- `split`: 4, 5, 11, 19, and 29's temp dir.
+- `edits`: 6, 7, 10, 16, 17, 18, 27, and 29's key numbering and escapes. Merged
+  by hand over the `ifc` track in `ifc_edit.rs` and `edits.rs`.
+- `ifc`: 12, 13, 15, 25.
+- `misc`: 8, 9, 14, 20, 22, 23, 26, 28, and the drawing route and README section
+  shape from the facade list.
+- 24: section DXF polylines carry elevation and extrusion, and y sections and
+  drawings are drawn with height up.
+
+Closed after the tracks: edits re-read the asset under the write lock that
+`run_job` holds while it marks the asset tiling, and a moved element gets its
+own copy of an `IfcLocalPlacement` another product uses, taking its openings,
+fillings and parts along. The unused `axum-extra`, core `memmap2` and store
+`tiletopia-core` dependencies are removed.
+
 ## In flight: audit fixes and Ion tiling gaps
 
 Stale as of 2026-11-13. This is the 2026-11-04 worktree list. Splats, DXF, CZML,
@@ -920,8 +959,8 @@ ODA SDKs and the iModel native addon are proprietary. Customers export IFC.
   both, so charge about ten bytes a source byte before the read starts, which refuses
   an IFC over about 36 MB at today's `JOB_BUDGET_BYTES`. Two models are too few to fix
   the factor, measure the proof models in `models.tsv` first.
-CesiumJS is the BIM viewer. Property editing and measurement snapping are in it.
-The parity list below is the remaining That Open viewer behavior. Both sides ran on hercules (RTX
+- CesiumJS is the BIM viewer. Property editing and measurement snapping are in it.
+  Both sides ran on hercules (RTX
   2080 Ti, headless Chromium on ANGLE OpenGL ES, 1280 by 800, the camera at 2.2
   bounding radii). CesiumJS from `benchmark.sh` run `welded-identity-sse24-quiet` on
   2026-11-06, with `TASK_MEMORY_BYTES` raised to 48 GiB, `maximumScreenSpaceError` 24
@@ -953,10 +992,37 @@ The parity list below is the remaining That Open viewer behavior. Both sides ran
 - [!] Compare placement and properties against Ion with the BIM proof's
   `ion-compare.sh`. Needs a `CESIUM_ION_TOKEN`.
 
-That Open feature parity in the Cesium viewer is in: several clipping planes, floor plans
-and elevations, projected drawings, alignment cross-sections, and geometry edits with IDS
-paint and mesh volume. 4D schedules, clash detection, bSDD, and the parametric rebar, steel
-and building samples stay out. That Open Platform is still the 2026-11-23 read above.
+- [ ] IFC glazing. Check glass close up, then split glass from frame inside one window
+  through ifc-lite's per-submesh producer. Tiles carry one colour per element today.
+  The target look is That Open's "beautiful house" screenshot, glazing first.
+- [ ] Match or beat That Open on the rows of the benchmark table above where CesiumJS
+  still loses: frame rate on `restage-demonstrator`, served tileset size and tiling time
+  on `balconies-a2`, and server peak resident on both. Repeated geometry is shared
+  within a tile, not across tiles. On `restage-demonstrator` the CesiumJS scene costs
+  more per frame than the tiles. `probe-frame-rate.mjs` measured an empty scene at
+  1,377 fps with the globe and 2,892 fps without it. With the tiles, hiding globe, sky,
+  sun and moon gives 1,437 fps, adding `orderIndependentTranslucency: false` gives
+  1,645, and adding fog off gives 1,753, all at MSAA 4 like That Open's
+  `antialias: true`. The face-shading shader costs 5% and FXAA is already off. Turning
+  off order-independent translucency changes how glazing blends. That Open's methods, from engine_fragment v3.6.0:
+  geometry deduplicated by a content hash, coplanar triangles stored as polygons and
+  triangulated with earcut on load, no stored normals, pako deflate on the whole file,
+  and a per-element drop under about 4 pixels on screen. Source in
+  `~/tmp/geolang-fix/bim/thatopen-src/`.
+- [ ] Check in a headed Chromium that `Cesium3DTileStyle` selection, hiding and
+  isolation still work on tiles drawn with `FACE_SHADING_GLSL`. Cesium documents a
+  `CustomShader` combined with a tile style as possibly undefined behaviour.
+- [ ] Test `TiletopiaElementService` against a running tiletopia. Its unit tests use a
+  fake XHR server.
+- [ ] Walk, orbit and storey views on a real IFC interior, by hand, in a headed
+  Chromium with a GPU.
+- [ ] Run geolang viewer eval tasks 86, 87 and 88 (`query_elements`) at `--repeat 3`.
+- [ ] Prove the That Open viewer tools in a headed Chromium on a real IFC: several
+  clipping planes, floor plans and elevations, projected drawings, alignment
+  cross-sections, and geometry edits with IDS paint and mesh volume. They have unit
+  tests only, and the 2026-11-13 review found the multi-plane clipping wrong.
+  4D schedules, clash detection, bSDD, and the parametric rebar, steel and building
+  samples stay out. That Open Platform is still the 2026-11-23 read above.
 
 Wait for demand: 4D schedules, clash detection, bSDD, and `rvt-rs` as a Revit preview
 (bounding boxes outside 2024 and 2025 files, no built-in parameter names).
@@ -973,7 +1039,30 @@ which needs `CESIUM_ION_TOKEN`.
   No vertex normals and no water mask. Roadmap 2.2.
 - [ ] **Global buildings.** The comparison table's Global buildings row is none.
   Cesium OSM Buildings is the Ion side. The `gui/` globe extrudes OpenStreetMap
-  footprints in the browser and does not use the server.
+  footprints in the browser and does not use the server. In progress
+  2026-11-13 in tiletopia's uncommitted `osm_buildings.rs`, plan by owner call:
+  - One global implicit quadtree tileset, region root over the globe, heights
+    -500 to 6000 m. Leaf level 15 holds the only content, about 1.2 by 0.6 km.
+    Subtrees of 4 levels, binary `.subtree`, the same bytes for every subtree
+    at one root level.
+  - Each leaf GLB is one Overpass query to `TILETOPIA_OSM_BUILDINGS_OVERPASS_URL`,
+    at most 2 at once, cached on disk under `TILETOPIA_OSM_BUILDINGS_CACHE_DIR`.
+    The disk cache moves out of `global_terrain.rs` into a shared module.
+  - Each building's base is the lowest ground height under its corners, sampled
+    from the global terrain DEM and geoid. Without global terrain, the base is
+    ellipsoid height 0 and the tileset `extras` says so.
+  - Per-building feature ids and a property table with `cesium#color`, so
+    `createOsmBuildingsAsync`'s default style colours them.
+  - `TILETOPIA_OSM_BUILDINGS_ION_ASSET_ID` resolves an Ion id to the tileset,
+    anonymous like global terrain. Reserved ion ids become a table, so two ids
+    are skipped by new assets.
+  - Proof, done 2026-11-13: a headed CesiumJS page over Bern drew 706 buildings
+    in 26 tiles through `createOsmBuildingsAsync` and ion id 96188 on global
+    terrain, bases within 1.4 m of the lowest sampled corner. CI's full test
+    command passed, 1423 tests. Scripts in
+    `/home/aaron/tmp/geolang-fix/osm-buildings-proof/`.
+  - Open: two tiles answered 503 because overpass-api.de answered 502, and
+    CesiumJS never refetches a failed tile.
 - [ ] **Gaussian splats still short of Ion.** No CesiumJS run has drawn a tiled
   splat. `POST /api/v1/assets/{id}/tile` on a splat drops the upload's longitude
   and latitude, and the job fails naming them. `tiletopia tile` reads a splat

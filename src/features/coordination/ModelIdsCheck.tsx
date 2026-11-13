@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Badge, Button, Divider, FileButton, Group, ScrollArea, Stack, Text, UnstyledButton } from '@mantine/core';
-import { ElementApiError } from '../elements/elementService';
+import { ElementApiError, TiletopiaElementService, resolveElementIds } from '../elements/elementService';
 import { useElementStore } from '../elements/store';
 import {
   pollIdsCheck,
@@ -211,6 +211,7 @@ export function ModelIdsCheck({ assetId, canShowInScene }: { assetId: string; ca
   const [unavailable, setUnavailable] = useState<string | null>(null);
   const resetFileInput = useRef<() => void>(null);
   const polling = useRef<{ running: AbortController | null }>({ running: null });
+  const service = useMemo(() => new TiletopiaElementService(assetId), [assetId]);
 
   const followCheck = useCallback(async () => {
     polling.current.running?.abort();
@@ -270,9 +271,19 @@ export function ModelIdsCheck({ assetId, canShowInScene }: { assetId: string; ca
   };
 
   useEffect(() => {
-    useElementStore.getState().setFailed(failedGlobalIds(check?.report));
-    return () => useElementStore.getState().setFailed([]);
-  }, [check]);
+    let cancelled = false;
+    resolveElementIds(service, failedGlobalIds(check?.report))
+      .then(({ located }) => {
+        if (!cancelled) useElementStore.getState().setFailed(located.map((row) => row.id));
+      })
+      .catch((failure: unknown) => {
+        if (!cancelled) setError(failureText(failure));
+      });
+    return () => {
+      cancelled = true;
+      useElementStore.getState().setFailed([]);
+    };
+  }, [service, check]);
 
   const running = check?.status === 'running';
 

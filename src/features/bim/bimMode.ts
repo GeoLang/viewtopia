@@ -13,6 +13,7 @@ import {
 } from 'cesium';
 import type { Camera, Cesium3DTileset, Viewer } from 'cesium';
 import { useElementStore, type ElementModel } from '../elements/store';
+import { leavePlanView, planViewIsOn } from './planView';
 import {
   BIM_MODE_OFF,
   requireBimSession,
@@ -73,6 +74,7 @@ function applyNavigationInputs({ viewer, settingsBefore }: BimSession, navigatio
 
 export function setBimNavigation(navigation: BimNavigation): void {
   const session = requireBimSession();
+  if (planViewIsOn(session.viewer)) leavePlanView(session.viewer);
   releaseOrbitPoint(session);
   applyNavigationInputs(session, navigation);
   useBimModeStore.setState({ navigation, floorHeight: null, notice: null });
@@ -157,6 +159,7 @@ export function leaveBimMode(): void {
   if (!viewer.isDestroyed()) {
     const { scene, camera } = viewer;
     const controller = scene.screenSpaceCameraController;
+    if (planViewIsOn(viewer)) leavePlanView(viewer);
     releaseOrbitPoint(session);
     camera.frustum.near = settingsBefore.near;
     scene.logarithmicDepthBuffer = settingsBefore.logarithmicDepthBuffer;

@@ -528,6 +528,21 @@ describe('AssetsPanel', () => {
       expect(FakeXHR.last?.body?.get('file')).toHaveProperty('name', 'plant.ifc');
     });
 
+    it.each(['gltf', 'glb', 'obj', 'fbx', 'dae'])('offers no IDS file for a .%s, which tiletopia never checks', async (extension) => {
+      await renderPanel();
+      selectFile(`city.${extension}`);
+
+      expect(screen.getByTestId('assets-placement')).toBeInTheDocument();
+      expect(screen.queryByTestId('assets-ids-file')).not.toBeInTheDocument();
+    });
+
+    it.each(['ifc', 'ifczip'])('offers an IDS file for an .%s', async (extension) => {
+      await renderPanel();
+      selectFile(`plant.${extension}`);
+
+      expect(screen.getByTestId('assets-ids-file')).toBeInTheDocument();
+    });
+
     it('sends an attached IDS file as ids', async () => {
       await renderPanel();
       selectFile('plant.ifc');

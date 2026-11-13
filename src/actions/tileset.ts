@@ -11,6 +11,7 @@ import { CLIP_AXES, DEFAULT_CLIP_AXIS, type ClipAxis } from '../features/scene/c
 import {
   applyTilesetSection,
   disableTilesetSection,
+  replaceFacePlanes,
   tilesetSectionRange,
 } from '../features/scene/tilesetSection';
 import { ASSET_ID_PROPERTY } from '../live/types';
@@ -330,6 +331,7 @@ registerAction({
     const requestRender = () => viewer.scene.requestRender();
     if (!args.on) {
       disableTilesetSection(tileset, requestRender);
+      replaceFacePlanes(tileset, [], requestRender);
       return { text: `${layer.name} is whole again.` };
     }
     const axis = (args.axis as ClipAxis | undefined) ?? DEFAULT_CLIP_AXIS;

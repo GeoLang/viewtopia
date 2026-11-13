@@ -150,6 +150,8 @@ function writeClipping(tileset: Cesium3DTileset, state: HeldSection): void {
     enabled,
     edgeWidth,
     edgeColor: Color.RED,
+    // cesium by default clips a fragment only when it lies outside every plane
+    unionClippingRegions: true,
   });
 }
 
@@ -186,13 +188,13 @@ export function applyTilesetSection(
 
 export function disableTilesetSection(tileset: Cesium3DTileset, requestRender: () => void): void {
   const state = heldSections.get(tileset);
-  if (!state?.axis) {
+  if (!state) {
     const collection: ClippingPlaneCollection | undefined = tileset.clippingPlanes;
     if (collection) collection.enabled = false;
     sectionChanged(requestRender);
     return;
   }
-  state.axis = { ...state.axis, enabled: false };
+  if (state.axis) state.axis = { ...state.axis, enabled: false };
   writeClipping(tileset, state);
   sectionChanged(requestRender);
 }

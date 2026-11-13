@@ -173,13 +173,10 @@ export function DrawingView({
 
   const onSheetClick = (event: MouseEvent<SVGSVGElement>) => {
     if (!bounds) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    const width = bounds.max[0] - bounds.min[0] || 1;
-    const height = bounds.max[1] - bounds.min[1] || 1;
-    const point: [number, number] = [
-      bounds.min[0] + ((event.clientX - rect.left) / rect.width) * width,
-      bounds.max[1] - ((event.clientY - rect.top) / rect.height) * height,
-    ];
+    const sheetToScreen = event.currentTarget.getScreenCTM();
+    if (!sheetToScreen) throw new Error('The drawing sheet is not rendered, so a click has no sheet position.');
+    const clicked = new DOMPoint(event.clientX, event.clientY).matrixTransform(sheetToScreen.inverse());
+    const point: [number, number] = [clicked.x, -clicked.y];
     const next = [...pending, point];
     const needed = mode === 'linear' ? 2 : 3;
     if (next.length < needed) {
