@@ -20,6 +20,10 @@
 
 ## In flight: audit fixes and Ion tiling gaps
 
+Stale as of 2026-11-13. This is the 2026-11-04 worktree list. Splats, DXF, CZML,
+JPEG 2000, the Ion upload route and global terrain are on master. The open Ion
+work is **Cesium Ion, what is left** under Plans.
+
 Started 2026-11-04. Nothing here is committed. Each repo's `git status` is the
 recovery path, and worktree patches are in `/home/aaron/tmp/geolang-fix/patches`.
 Every repo had an independent re-review on 2026-11-05 and its fixes are in the
@@ -956,6 +960,33 @@ and building samples stay out. That Open Platform is still the 2026-11-23 read a
 
 Wait for demand: 4D schedules, clash detection, bSDD, and `rvt-rs` as a Revit preview
 (bounding boxes outside 2024 and 2025 files, no built-in parameter names).
+
+### Cesium Ion, what is left
+
+Owner call 2026-11-13. RVT, DWG and DGN stay out.
+4D schedules, clash detection, bSDD and the IFC ingest-budget rewrite stay out.
+Placement against a real Ion asset is the blocked `ion-compare.sh` item above,
+which needs `CESIUM_ION_TOKEN`.
+
+- [ ] **Coarse DEM for global terrain levels 0 to 6.** The route samples
+  `TILETOPIA_GLOBAL_TERRAIN_COARSE_URL` there. The worldwide file is not built.
+  No vertex normals and no water mask. Roadmap 2.2.
+- [ ] **Global buildings.** The comparison table's Global buildings row is none.
+  Cesium OSM Buildings is the Ion side. The `gui/` globe extrudes OpenStreetMap
+  footprints in the browser and does not use the server.
+- [ ] **Gaussian splats still short of Ion.** No CesiumJS run has drawn a tiled
+  splat. `POST /api/v1/assets/{id}/tile` on a splat drops the upload's longitude
+  and latitude, and the job fails naming them. `tiletopia tile` reads a splat
+  PLY as a point cloud and writes the centres as black points. Roadmap 2.6,
+  and the README rows Splat re-tile and Splat CLI.
+- [ ] **Catalog add.** `POST /api/v1/catalog/{id}/add` queues a job whose input
+  is the dataset URL. The job queue reads local files, so the job fails. A
+  re-tile of that asset answers 404 naming the missing input.
+- [ ] **Ion upload leftovers.** A source is one zip, or the single file whose
+  extension the source type takes, so several models in one asset are refused
+  where Ion merges them. Object keys with subdirectories answer 403.
+  `DATA_ERROR` is never reported. `access_token` on the query string stays
+  unread. Roadmap section 2's Need line for the Ion contract.
 
 ### Chat-only viewer mode
 
