@@ -891,40 +891,6 @@ first.
 Not promised: Revit, DWG, DGN or iModel parity. DGN V8 and iModel have no open route,
 ODA SDKs and the iModel native addon are proprietary. Customers export IFC.
 
-- [ ] IFC glazing. Check glass close up, then split glass from frame inside one window
-  through ifc-lite's per-submesh producer. Tiles carry one colour per element today.
-  The target look is That Open's "beautiful house" screenshot, glazing first.
-- [ ] Match or beat That Open on the rows of the benchmark table below where CesiumJS
-  still loses: frame rate on `restage-demonstrator`, served tileset size and tiling time
-  on `balconies-a2`, and server peak resident on both. Repeated geometry is shared
-  within a tile, not across tiles. On `restage-demonstrator` the CesiumJS scene costs
-  more per frame than the tiles. `probe-frame-rate.mjs` measured an empty scene at
-  1,377 fps with the globe and 2,892 fps without it. With the tiles, hiding globe, sky,
-  sun and moon gives 1,437 fps, adding `orderIndependentTranslucency: false` gives
-  1,645, and adding fog off gives 1,753, all at MSAA 4 like That Open's
-  `antialias: true`. The face-shading shader costs 5% and FXAA is already off. Turning
-  off order-independent translucency changes how glazing blends. That Open's methods, from engine_fragment v3.6.0:
-  geometry deduplicated by a content hash, coplanar triangles stored as polygons and
-  triangulated with earcut on load, no stored normals, pako deflate on the whole file,
-  and a per-element drop under about 4 pixels on screen. Source in
-  `~/tmp/geolang-fix/bim/thatopen-src/`.
-- [ ] Check in a headed Chromium that `Cesium3DTileStyle` selection, hiding and
-  isolation still work on tiles drawn with `FACE_SHADING_GLSL`. Cesium documents a
-  `CustomShader` combined with a tile style as possibly undefined behaviour.
-- [ ] Test `TiletopiaElementService` against a running tiletopia. Its unit tests use a
-  fake XHR server.
-- [ ] Walk, orbit and storey views on a real IFC interior, by hand, in a headed
-  Chromium with a GPU.
-- [ ] Run geolang viewer eval tasks 86, 87 and 88 (`query_elements`) at `--repeat 3`.
-- [ ] Annotations with height and element id. They have lat and lng only, and three
-  stores overlap: tiletopia, viewtopia and agora. BCF topics already carry element ids
-  and viewpoints, so check first whether annotations still need them.
-- [ ] Run the IDS check at upload. It runs only when a user starts it.
-- [ ] DXF export of a section as 2D cut linework from the section route. `cutHeight`
-  only clips the model's faces.
-- [ ] Edit an element's property values and write them back to IFC. Read
-  `@ifc-lite/mutations` first, which is known only from its README. Decide where edits
-  live, how they survive a re-tile, and who may make them. Geometry editing stays out.
 - [ ] After That Open Platform launches on 2026-11-23: read its docs and platform and
   write a feature comparison against what the viewer and tiletopia do.
 - [ ] Size the IFC ingest budget from a measurement. `JOB_BUDGET_BYTES` in

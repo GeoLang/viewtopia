@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-11-12: **Property edit.** An editor can change a property value in the Model Elements panel. The save writes it into the IFC. A re-tile reads the new value from that file.
 - 2026-11-12: **Section DXF.** The Versions tab can export a section as closed 2D polylines. A section position is sent as `axis` and `position`, with no cut height. A cut height still exports 3D faces.
 - 2026-11-12: **IDS check at upload.** An IFC upload can include an `.ids` file, and the check starts when tiling finishes. A new version with no IDS file is checked against the newest earlier version's stored IDS file. The IDS tab still posts a different file.
 - 2026-11-12: **Annotation height.** A click on the Cesium globe, and Add at center, stores metres above the ellipsoid from the depth buffer and falls back to the ground point. The pin is drawn at that height. A pin placed on the 2D map has no height and still sits on the ellipsoid. An annotation has no element id. A BCF viewpoint includes the selected element ids.

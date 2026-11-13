@@ -236,6 +236,65 @@ describe('ElementPanel', () => {
     expect(quantities.getByText('3000 mm')).toBeInTheDocument();
     expect(within(screen.getByTestId('element-property-set-Element')).getByText('W-101')).toBeInTheDocument();
     expect(within(screen.getByTestId('element-property-set-Material[0]')).getByText('Concrete')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'FireRating' })).not.toBeInTheDocument();
+  });
+
+  function sessionToken(role: string): string {
+    const segment = (value: object) =>
+      btoa(JSON.stringify(value)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    return `${segment({ alg: 'HS256', typ: 'JWT' })}.${segment({ sub: 'element-owner', role })}.signature`;
+  }
+
+  it('saves a property edit when the token says editor', async () => {
+    useAuthStore.setState({ token: sessionToken('editor'), loggedIn: true });
+    jobsFetch.mockImplementation(async (url: RequestInfo | URL) => {
+      if (String(url).includes('/properties')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ displayValue: 'REI90', value: 'REI90', units: null }),
+          text: async () => JSON.stringify({ displayValue: 'REI90', value: 'REI90', units: null }),
+        };
+      }
+      return { ok: true, status: 200, json: async () => [{ id: 'job-1', error: null }], text: async () => '[]' };
+    });
+    await openTreeToStoreyContents();
+    fireEvent.click(screen.getByTestId('element-row-wall'));
+
+    const input = await screen.findByRole('textbox', { name: 'FireRating' });
+    fireEvent.change(input, { target: { value: 'REI90' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    await waitFor(() =>
+      expect(jobsFetch).toHaveBeenCalledWith(
+        '/v1/assets/a1b2/elements/wall/properties',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({ key: 'Pset_WallCommon.FireRating', value: 'REI90' }),
+        }),
+      ),
+    );
+    expect(input).toHaveValue('REI90');
+  });
+
+  it('shows the role refusal when a save is forbidden', async () => {
+    useAuthStore.setState({ token: sessionToken('editor'), loggedIn: true });
+    jobsFetch.mockImplementation(async (url: RequestInfo | URL) => {
+      if (String(url).includes('/properties')) {
+        return { ok: false, status: 403, json: async () => null, text: async () => '' };
+      }
+      return { ok: true, status: 200, json: async () => [{ id: 'job-1', error: null }], text: async () => '[]' };
+    });
+    await openTreeToStoreyContents();
+    fireEvent.click(screen.getByTestId('element-row-wall'));
+
+    const input = await screen.findByRole('textbox', { name: 'FireRating' });
+    fireEvent.change(input, { target: { value: 'REI90' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(await screen.findByTestId('property-edit-error')).toHaveTextContent(
+      'Your role cannot make this change. It needs the editor or admin role.',
+    );
   });
 
   it('adds to the selection with a modifier key', async () => {

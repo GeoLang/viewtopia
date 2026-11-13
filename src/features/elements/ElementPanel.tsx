@@ -6,6 +6,7 @@ import { useAppStore } from '../../store/app';
 import { useFeaturePickerStore } from '../../store/featurePicker';
 import { useTiles3dLayerStore } from '../../store/tiles3dLayers';
 import { elementIdColumn } from '../../viewer/tilesetStyle';
+import { jwtClaims } from '../../lib/jwt';
 import { useAuthStore } from '../auth/store';
 import { BimModeControls } from '../bim/BimModeControls';
 import { BcfIssues } from '../coordination/BcfIssues';
@@ -21,6 +22,7 @@ import {
   resolveElementIds,
   searchElements,
   searchMatchingElements,
+  updateElementProperty,
   withMesh,
   type ElementDetail,
   type ElementGroups,
@@ -39,18 +41,104 @@ function groupNames({ groups }: ElementGroups): string[] {
   return groups.flatMap((group) => (typeof group.value === 'string' ? [group.value] : []));
 }
 
-function propertySets(properties: Record<string, ElementProperty>): [string, [string, ElementProperty][]][] {
-  const sets = new Map<string, [string, ElementProperty][]>();
+function propertySets(
+  properties: Record<string, ElementProperty>,
+): [string, [string, string, ElementProperty][]][] {
+  const sets = new Map<string, [string, string, ElementProperty][]>();
   for (const [key, property] of Object.entries(properties)) {
     const dot = key.indexOf('.');
     const setName = dot === -1 ? 'Other' : key.slice(0, dot);
     const propertyName = dot === -1 ? key : key.slice(dot + 1);
-    sets.set(setName, [...(sets.get(setName) ?? []), [propertyName, property]]);
+    sets.set(setName, [...(sets.get(setName) ?? []), [key, propertyName, property]]);
   }
   return [...sets.entries()];
 }
 
-function ElementProperties({ detail }: { detail: ElementDetail }) {
+function canEditProperties(token: string | null): boolean {
+  const role = token ? jwtClaims(token)?.role : null;
+  return role === 'editor' || role === 'admin';
+}
+
+function shownValue(value: ElementProperty['value']): string {
+  return String(value);
+}
+
+function draftLiteral(draft: string, current: ElementProperty['value']): string | number | boolean {
+  if (typeof current === 'boolean') {
+    if (draft === 'true' || draft === 'false') return draft === 'true';
+    return draft;
+  }
+  if (typeof current === 'number') {
+    const trimmed = draft.trim();
+    if (trimmed !== '' && Number.isFinite(Number(trimmed))) return Number(trimmed);
+    return draft;
+  }
+  return draft;
+}
+
+function PropertyValueEditor({
+  name,
+  propertyKey,
+  property,
+  onSave,
+}: {
+  name: string;
+  propertyKey: string;
+  property: ElementProperty;
+  onSave: (key: string, value: string | number | boolean) => Promise<void>;
+}) {
+  const [draft, setDraft] = useState(shownValue(property.value));
+  const [savedValue, setSavedValue] = useState(property.value);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  if (savedValue !== property.value) {
+    setSavedValue(property.value);
+    setDraft(shownValue(property.value));
+    setError(null);
+  }
+
+  const save = () => {
+    const next = draftLiteral(draft, property.value);
+    if (next === property.value || saving) return;
+    setSaving(true);
+    setError(null);
+    onSave(propertyKey, next)
+      .catch((failure: unknown) => {
+        setError(failure instanceof Error ? failure.message : 'The property could not be saved.');
+      })
+      .finally(() => setSaving(false));
+  };
+
+  return (
+    <>
+      <TextInput
+        aria-label={name}
+        size="xs"
+        value={draft}
+        disabled={saving}
+        onChange={(event) => setDraft(event.currentTarget.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') save();
+        }}
+      />
+      {error && (
+        <Text size="xs" c="red" data-testid="property-edit-error">
+          {error}
+        </Text>
+      )}
+    </>
+  );
+}
+
+function ElementProperties({
+  detail,
+  canEdit,
+  onSave,
+}: {
+  detail: ElementDetail;
+  canEdit: boolean;
+  onSave: (key: string, value: string | number | boolean) => Promise<void>;
+}) {
   return (
     <Stack gap={4} data-testid="element-properties">
       <Text size="xs" c="white" fw={600}>
@@ -64,11 +152,15 @@ function ElementProperties({ detail }: { detail: ElementDetail }) {
         <Stack gap={2} key={setName} data-testid={`element-property-set-${setName}`}>
           <Divider label={setName} labelPosition="left" />
           <dl style={{ margin: 0, fontSize: 'var(--mantine-font-size-xs)' }}>
-            {entries.map(([name, property]) => (
-              <div key={name} style={{ marginBottom: 4 }}>
+            {entries.map(([key, name, property]) => (
+              <div key={key} style={{ marginBottom: 4 }}>
                 <dt style={{ color: 'var(--mantine-color-violet-4)' }}>{name}</dt>
                 <dd style={{ margin: 0, color: 'var(--mantine-color-dark-0)', overflowWrap: 'anywhere' }}>
-                  {property.displayValue}
+                  {canEdit ? (
+                    <PropertyValueEditor name={name} propertyKey={key} property={property} onSave={onSave} />
+                  ) : (
+                    property.displayValue
+                  )}
                 </dd>
               </div>
             ))}
@@ -95,6 +187,8 @@ function ModelElements({
   const hidden = useElementStore((s) => s.hidden);
   const isolated = useElementStore((s) => s.isolated);
   const focused = useElementStore((s) => s.focused);
+  const token = useAuthStore((s) => s.token);
+  const canEdit = canEditProperties(token);
 
   const [classNames, setClassNames] = useState<string[]>([]);
   const [storeyNames, setStoreyNames] = useState<string[]>([]);
@@ -442,7 +536,18 @@ function ModelElements({
 
       {detail && (
         <ScrollArea.Autosize mah={240}>
-          <ElementProperties detail={detail} />
+          <ElementProperties
+            detail={detail}
+            canEdit={canEdit}
+            onSave={async (key, value) => {
+              const saved = await updateElementProperty(assetId, detail.id, key, value);
+              setDetail((current) =>
+                current?.id === detail.id
+                  ? { ...current, properties: { ...current.properties, [key]: saved } }
+                  : current,
+              );
+            }}
+          />
         </ScrollArea.Autosize>
       )}
     </Stack>

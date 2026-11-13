@@ -155,7 +155,7 @@ CesiumJS's experimental `ElementService` over a Cesium `Resource` that sends the
 filter resolution are plain functions beside it. The Model Elements panel loads the spatial tree
 through `tree/children` one node at a time, draws 200 children of a node and offers the rest behind
 Show more, and reads properties through `getElement`, grouped by the text before the first dot of each
-key. A pick in the scene opens the tree to that element through `tree/parents`. Tiletopia's `/jobs`
+key. An editor sends `PUT elements/{elementId}/properties` with a key and a value, and a re-tile reads that value from the IFC. A pick in the scene opens the tree to that element through `tree/parents`. Tiletopia's `/jobs`
 is read for a tiling warning only when the panel opens a model or a row's Tiling report is pressed.
 Elements live in one SQLite file with FTS5 per asset in tiletopia, not in ptolemy, because ptolemy
 needs geometry on every insert, caps imports at 50,000 features and has no index on properties.

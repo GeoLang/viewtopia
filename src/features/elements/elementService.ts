@@ -1,12 +1,13 @@
 import { ElementService, RequestErrorEvent, Resource } from 'cesium';
 import { getAuthToken } from '../auth/store';
-import { authHeaders, noticeRefusal } from '../../lib/apiAuth';
+import { apiHeaders, authHeaders, noticeRefusal } from '../../lib/apiAuth';
 import { isUnreachableStatus, unreachableMessage } from '../../offline/backends';
 import { ELEMENT_ID_LIMIT, requireWithinElementLimit } from './store';
 
 const UNAUTHORIZED = 401;
 const NO_RESPONSE = 0;
 const SIGN_IN_MESSAGE = 'Sign in to browse the elements of this model.';
+const ROLE_REFUSAL_MESSAGE = 'Your role cannot make this change. It needs the editor or admin role.';
 // tiletopia refuses a larger page
 const LARGEST_PAGE = 1000;
 // search has no total across pages, and at 50 results a page this is 20 requests
@@ -203,6 +204,37 @@ export class TiletopiaElementService extends ElementService {
   getElementTreeParents(elementId: string): Promise<{ path: ElementTreePathEntry[] }> {
     return readElementJson(this.assetId, 'tree/parents', { elementId });
   }
+}
+
+export async function updateElementProperty(
+  assetId: string,
+  elementId: string,
+  key: string,
+  value: string | number | boolean,
+): Promise<ElementProperty> {
+  if (!getAuthToken()) throw new ElementApiError(SIGN_IN_MESSAGE, UNAUTHORIZED, null);
+  const response = await fetch(
+    `/v1/assets/${encodeURIComponent(assetId)}/elements/${encodeURIComponent(elementId)}/properties`,
+    {
+      method: 'PUT',
+      headers: apiHeaders(),
+      body: JSON.stringify({ key, value }),
+    },
+  );
+  noticeRefusal(response.status);
+  if (!response.ok) {
+    const text = await response.text();
+    const body = errorBodyOf(text);
+    if (response.status === 403 && body === null) {
+      throw new ElementApiError(ROLE_REFUSAL_MESSAGE, response.status, null);
+    }
+    throw new ElementApiError(
+      body?.message ?? `The element service answered HTTP ${response.status}.`,
+      response.status,
+      body?.code ?? null,
+    );
+  }
+  return (await response.json()) as ElementProperty;
 }
 
 export async function searchElements(
