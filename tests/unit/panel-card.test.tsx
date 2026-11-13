@@ -123,6 +123,29 @@ describe('PanelCard minimize', () => {
     expect(placements()).toEqual([]);
   });
 
+  it('scrolls inside a max height instead of painting past the card', () => {
+    render(
+      <MantineProvider>
+        <PanelCard width={280} anchor="left" maxHeight="80vh" testId="test-panel">
+          <PanelHeader icon={<IconRuler size={16} />} title="Measure" onClose={vi.fn()} />
+          <div>{BODY}</div>
+        </PanelCard>
+      </MantineProvider>,
+    );
+
+    const openStyle = card().getAttribute('style') ?? '';
+    expect(openStyle).toContain('max-height: 80vh');
+    expect(openStyle).toContain('overflow-y: auto');
+    expect(openStyle).toContain('min-height: 0');
+
+    fireEvent.click(minimizeButton());
+
+    const minimizedStyle = card().getAttribute('style') ?? '';
+    expect(minimizedStyle).not.toContain('overflow-y');
+    expect(minimizedStyle).not.toContain('max-height');
+    expect(screen.getByText(BODY)).not.toBeVisible();
+  });
+
   it('offers no minimize button to a header outside a card', () => {
     render(
       <MantineProvider>

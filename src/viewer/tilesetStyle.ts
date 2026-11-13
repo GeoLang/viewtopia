@@ -18,6 +18,8 @@ export interface ElementStyle {
   selected: ReadonlySet<string>;
   hidden: ReadonlySet<string>;
   isolated: ReadonlySet<string> | null;
+  failed?: ReadonlySet<string>;
+  suppressed?: ReadonlySet<string>;
 }
 
 export interface TilesetStyleInputs {
@@ -60,7 +62,9 @@ function definitionWithAssetColors({
   return { ...base, color: { conditions: assetColorConditions(fallbackColor) } };
 }
 
-function styleElements(style: Cesium3DTileStyle, { selected, hidden, isolated }: ElementStyle): void {
+const IDS_FAILURE = Color.RED.withAlpha(TILE_HIGHLIGHT_ALPHA);
+
+function styleElements(style: Cesium3DTileStyle, { selected, hidden, isolated, failed, suppressed }: ElementStyle): void {
   const baseShow: StyleExpression | undefined = style.show;
   const baseColor: StyleExpression | undefined = style.color;
   const highlight = tileHighlightColor();
@@ -68,13 +72,14 @@ function styleElements(style: Cesium3DTileStyle, { selected, hidden, isolated }:
   // cesium's Model.applyColorAndShow evaluates the style with no feature for a tile without a feature table
   const isShown = (feature: Cesium3DTileFeature | undefined): boolean => {
     const id = feature ? elementIdOf(feature) : undefined;
-    if (id !== undefined && hidden.has(id)) return false;
+    if (id !== undefined && (hidden.has(id) || suppressed?.has(id))) return false;
     if (isolated && (id === undefined || !isolated.has(id))) return false;
     return baseShow && feature ? Boolean(baseShow.evaluate(feature)) : true;
   };
   const colorOf = (feature: Cesium3DTileFeature | undefined, result?: Color): Color => {
     const id = feature ? elementIdOf(feature) : undefined;
     if (id !== undefined && selected.has(id)) return Color.clone(highlight, result);
+    if (id !== undefined && failed?.has(id)) return Color.clone(IDS_FAILURE, result);
     return baseColor && feature
       ? baseColor.evaluateColor(feature, result)
       : Color.clone(Color.WHITE, result);

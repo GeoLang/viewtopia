@@ -13,7 +13,9 @@ import { bimStoreys, findStorey, showStorey } from '../../src/features/bim/store
 import { useAuthStore } from '../../src/features/auth/store';
 import { useElementStore } from '../../src/features/elements/store';
 import {
+  addFacePlane,
   applyTilesetSection,
+  readFacePlanes,
   readTilesetSection,
   setTilesetSectionOutline,
   subscribeTilesetSections,
@@ -188,6 +190,18 @@ describe('saving a project', () => {
     expect(sorted(useElementStore.getState().isolated)).toEqual(GROUND_IDS);
     expect(saved.modelStatesByAsset).toEqual({ a1b2: SAVED });
   });
+
+  it('saves a face plane and leaves the key out when there is none', () => {
+    useTiles3dLayerStore.setState({ layers: [LAYER], loaded: { [LAYER.id]: asTileset(tileset) } });
+    const model = asTileset(tileset);
+    expect(serializeProject('tower').modelStatesByAsset?.a1b2?.facePlanes).toBeUndefined();
+
+    addFacePlane(model, { id: 'slope', normal: [0, 1, 0], offset: 2.5 }, () => undefined);
+
+    expect(serializeProject('tower').modelStatesByAsset?.a1b2?.facePlanes).toEqual([
+      { id: 'slope', normal: [0, 1, 0], offset: 2.5 },
+    ]);
+  });
 });
 
 describe('opening a project', () => {
@@ -265,6 +279,33 @@ describe('opening a project', () => {
     expect(await message).toBe('The saved state of tower.ifc was not restored: section.axis is not one of x, y, z');
     expect(readTilesetSection(asTileset(tileset))).toBeNull();
     expect(useElementStore.getState().model).toBeNull();
+  });
+
+  it('restores a face plane on the loaded model', async () => {
+    const plane = { id: 'slope', normal: [0, 1, 0] as [number, number, number], offset: 2.5 };
+    applyProject(projectWith({ a1b2: { ...SAVED_SETS, facePlanes: [plane] } }));
+    const sectionChanged = untilSectionChanged();
+    finishLoadingTileset();
+    await sectionChanged;
+
+    expect(readFacePlanes(asTileset(tileset))).toEqual([plane]);
+    expect(tileset.clippingPlanes.enabled).toBe(true);
+  });
+
+  it('refuses a face plane whose normal is not three finite numbers', async () => {
+    const message = nextNotificationMessage();
+
+    applyProject(
+      projectWith({
+        a1b2: { ...SAVED_SETS, facePlanes: [{ id: 'bad', normal: [0, 1], offset: Number.NaN }] },
+      }),
+    );
+    finishLoadingTileset();
+
+    expect(await message).toBe(
+      'The saved state of tower.ifc was not restored: facePlanes[0].normal is not a direction',
+    );
+    expect(readFacePlanes(asTileset(tileset))).toEqual([]);
   });
 
   it('shows a server project map whose model states are not keyed by asset id in a notification', async () => {

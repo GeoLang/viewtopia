@@ -5,12 +5,14 @@ import { create } from 'zustand';
 import { tiletopiaAssetId, useElementStore } from '../elements/store';
 import { useTiles3dLayerStore, type Tiles3dLayer } from '../../store/tiles3dLayers';
 import { getActiveCesiumViewer } from '../../viewer/registry';
-import { fetchSectionCut, sectionCapPrimitive, type SectionCut } from './sectionCut';
+import { fetchSectionCut, sectionCapPrimitives, type CutHalfSpace, type SectionCut } from './sectionCut';
 import {
+  readFacePlanes,
   readTilesetSection,
   sectionFrameIsRootFrame,
   subscribeTilesetSections,
   tilesetSectionChangeCount,
+  type FacePlane,
   type TilesetSection,
 } from './tilesetSection';
 
@@ -23,22 +25,43 @@ type CapRequest =
 
 const WAITING: CapRequest = { kind: 'waiting' };
 
-const useCapRequestStore = create<{ requestsByLayer: Record<string, CapRequest> }>(() => ({
-  requestsByLayer: {},
+const useCapRequestStore = create<{ requestsByKey: Record<string, CapRequest> }>(() => ({
+  requestsByKey: {},
 }));
 
-function setCapRequest(layerId: string, request: CapRequest): void {
-  useCapRequestStore.setState(({ requestsByLayer }) => ({
-    requestsByLayer: { ...requestsByLayer, [layerId]: request },
+function setCapRequest(key: string, request: CapRequest): void {
+  useCapRequestStore.setState(({ requestsByKey }) => ({
+    requestsByKey: { ...requestsByKey, [key]: request },
   }));
 }
 
-function dropCapRequest(layerId: string): void {
-  useCapRequestStore.setState(({ requestsByLayer }) => {
-    const rest = { ...requestsByLayer };
-    delete rest[layerId];
-    return { requestsByLayer: rest };
+function dropCapRequest(key: string): void {
+  useCapRequestStore.setState(({ requestsByKey }) => {
+    const rest = { ...requestsByKey };
+    delete rest[key];
+    return { requestsByKey: rest };
   });
+}
+
+function requestsForLayer(requestsByKey: Record<string, CapRequest>, layerId: string): CapRequest[] {
+  const prefix = `${layerId}:`;
+  return Object.entries(requestsByKey).flatMap(([key, request]) => (key.startsWith(prefix) ? [request] : []));
+}
+
+interface CapPlane {
+  id: string;
+  section: TilesetSection | null;
+  face: FacePlane | null;
+}
+
+function removedSide(plane: CapPlane): CutHalfSpace {
+  if (plane.face) return { normal: plane.face.normal, offset: plane.face.offset };
+  const section = plane.section;
+  if (!section) return { normal: [0, 0, 1], offset: 0 };
+  const index = section.axis === 'x' ? 0 : section.axis === 'y' ? 1 : 2;
+  const normal: [number, number, number] = [0, 0, 0];
+  normal[index] = section.flip ? -1 : 1;
+  return { normal, offset: section.flip ? -section.position : section.position };
 }
 
 const NO_ELEMENTS: ReadonlySet<string> = new Set();
@@ -47,33 +70,44 @@ function ModelSectionCaps({
   layer,
   tileset,
   assetId,
-  section,
+  plane,
+  clippers,
 }: {
   layer: Tiles3dLayer;
   tileset: Cesium3DTileset;
   assetId: string;
-  section: TilesetSection;
+  plane: CapPlane;
+  clippers: readonly CutHalfSpace[];
 }) {
   const { id: layerId, visible } = layer;
-  const { axis, position, flip } = section;
-  const request = useCapRequestStore((state) => state.requestsByLayer[layerId]);
+  const requestKey = `${layerId}:${plane.id}`;
+  const request = useCapRequestStore((state) => state.requestsByKey[requestKey]);
   const selected = useElementStore((state) =>
     state.model?.layerId === layerId ? state.selected : NO_ELEMENTS,
   );
+  const flip = plane.section?.flip ?? false;
+  const axis = plane.section?.axis;
+  const position = plane.section?.position;
+  const faceNormal = plane.face?.normal;
+  const faceOffset = plane.face?.offset;
 
-  useEffect(() => () => dropCapRequest(layerId), [layerId]);
+  useEffect(() => () => dropCapRequest(requestKey), [requestKey]);
 
   useEffect(() => {
-    setCapRequest(layerId, WAITING);
+    setCapRequest(requestKey, WAITING);
     const abort = new AbortController();
     const timer = setTimeout(() => {
-      fetchSectionCut(assetId, { axis, position }, abort.signal)
+      const query =
+        faceNormal && faceOffset !== undefined
+          ? { normal: faceNormal, offset: faceOffset }
+          : { axis: axis ?? 'z', position: position ?? 0 };
+      fetchSectionCut(assetId, query, abort.signal)
         .then((cut) => {
-          if (!abort.signal.aborted) setCapRequest(layerId, { kind: 'answered', tileset, cut });
+          if (!abort.signal.aborted) setCapRequest(requestKey, { kind: 'answered', tileset, cut });
         })
         .catch((failure: unknown) => {
           if (abort.signal.aborted) return;
-          setCapRequest(layerId, {
+          setCapRequest(requestKey, {
             kind: 'failed',
             message: failure instanceof Error ? failure.message : String(failure),
           });
@@ -83,24 +117,29 @@ function ModelSectionCaps({
       clearTimeout(timer);
       abort.abort();
     };
-  }, [layerId, tileset, assetId, axis, position]);
+  }, [requestKey, tileset, assetId, axis, position, faceNormal, faceOffset]);
 
   const answer = request?.kind === 'answered' ? request : null;
 
   useEffect(() => {
     const viewer = getActiveCesiumViewer();
     if (!answer || !viewer || !visible) return;
-    const primitive = viewer.scene.primitives.add(
-      sectionCapPrimitive({ tileset: answer.tileset, cut: answer.cut, flip, selected }),
-    );
+    const primitives = sectionCapPrimitives({
+      tileset: answer.tileset,
+      cut: answer.cut,
+      flip,
+      selected,
+      clippers,
+    });
+    for (const primitive of primitives) viewer.scene.primitives.add(primitive);
     viewer.scene.requestRender();
     return () => {
       // a renderer switch destroys the viewer and every primitive in it
       if (viewer.isDestroyed()) return;
-      viewer.scene.primitives.remove(primitive);
+      for (const primitive of primitives) viewer.scene.primitives.remove(primitive);
       viewer.scene.requestRender();
     };
-  }, [answer, flip, visible, selected]);
+  }, [answer, flip, visible, selected, clippers]);
 
   return null;
 }
@@ -116,10 +155,22 @@ export function SectionCapsOnGlobe() {
         if (!tileset) return null;
         const section = readTilesetSection(tileset);
         const assetId = tiletopiaAssetId(layer.url);
-        if (!section?.enabled || assetId === null || !sectionFrameIsRootFrame(tileset)) return null;
-        return (
-          <ModelSectionCaps key={layer.id} layer={layer} tileset={tileset} assetId={assetId} section={section} />
-        );
+        if (assetId === null || !sectionFrameIsRootFrame(tileset)) return null;
+        const planes: CapPlane[] = [
+          ...(section?.enabled ? [{ id: 'axis', section, face: null }] : []),
+          ...readFacePlanes(tileset).map((face) => ({ id: face.id, section: null, face })),
+        ];
+        if (planes.length === 0) return null;
+        return planes.map((plane) => (
+          <ModelSectionCaps
+            key={`${layer.id}:${plane.id}`}
+            layer={layer}
+            tileset={tileset}
+            assetId={assetId}
+            plane={plane}
+            clippers={planes.filter((other) => other.id !== plane.id).map(removedSide)}
+          />
+        ));
       })}
     </>
   );
@@ -134,7 +185,12 @@ export function SectionCapNote({
   tileset: Cesium3DTileset;
   enabled: boolean;
 }) {
-  const request = useCapRequestStore((state) => state.requestsByLayer[layer.id]) ?? WAITING;
+  const requestsByKey = useCapRequestStore((state) => state.requestsByKey);
+  const requests = requestsForLayer(requestsByKey, layer.id);
+  const request = requests.find((known) => known.kind === 'failed')
+    ?? requests.find((known) => known.kind === 'waiting')
+    ?? requests.find((known) => known.kind === 'answered')
+    ?? WAITING;
 
   if (tiletopiaAssetId(layer.url) === null) {
     return (

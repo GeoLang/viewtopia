@@ -97,7 +97,26 @@ export function ElementTree({
   );
 
   useEffect(() => {
-    load(ROOT_NODE_KEY).catch(onError);
+    let cancelled = false;
+    const openSingleChain = async () => {
+      let key = ROOT_NODE_KEY;
+      const open = new Set<string>();
+      for (let depth = 0; depth < 6; depth += 1) {
+        const nodes = await load(key);
+        if (cancelled) return;
+        const containers = nodes.filter(
+          (node) => node.hasChildren && (node.kind === 'subject' || node.kind === 'model'),
+        );
+        if (containers.length !== 1) break;
+        open.add(containers[0].key);
+        key = containers[0].key;
+      }
+      if (!cancelled && open.size > 0) setExpanded(open);
+    };
+    openSingleChain().catch(onError);
+    return () => {
+      cancelled = true;
+    };
   }, [load, onError]);
 
   useEffect(() => {
@@ -142,6 +161,12 @@ export function ElementTree({
     setExpanded(open);
   };
 
+  const openIfClosed = (node: ElementTreeNode) => {
+    if (!node.hasChildren || expanded.has(node.key)) return;
+    setExpanded(new Set(expanded).add(node.key));
+    load(node.key).catch(onError);
+  };
+
   const renderChildren = (parentKey: string, depth: number) => {
     const children = loadedChildren.current.get(parentKey);
     if (!children) return null;
@@ -176,7 +201,10 @@ export function ElementTree({
                 selected={selected.has(node.id) || focusedId === node.id}
                 hidden={hidden.has(node.id)}
                 revealed={revealedId === node.id}
-                onSelect={(_id, additive) => onSelectNode(node, additive)}
+                onSelect={(_id, additive) => {
+                  openIfClosed(node);
+                  onSelectNode(node, additive);
+                }}
               />
             </Group>
             {expanded.has(node.key) && renderChildren(node.key, depth + 1)}

@@ -179,13 +179,15 @@ size and every tile an element appears in is covered. A feature with no `asset_i
 `picked.color`. `src/features/elements/store.ts` refuses a set over 100,000 ids and a filter matching
 more, with a message and without truncating. A search chooses at most 1,000 elements.
 
-The Model Section panel and `tileset.section` cut one tileset with one plane through its
-`clippingPlanes`, and that collection is the only state, so a cut stays when the panel closes. Cesium
+The Model Section panel and `tileset.section` cut one tileset with one axis plane through its
+`clippingPlanes`. Extra planes, from a click on a face or an alignment cross-section, are kept beside
+that axis plane, and each can be deleted. The held section is the state the collection is written from,
+so a cut stays when the panel closes. Cesium
 measures the plane in `root.computedTransform`, multiplied by an east-north-up frame at the root's
 centre when the root's untransformed centre is above -100 km, so the axes are the model's own.
 Project files and project maps, at schema version 2, save the 3D model layers as `tiles3dLayers`, and
 `modelStatesByAsset` holds, per tiletopia asset id, the selected, hidden and isolated element GlobalIds,
-the model section with its outline, and BIM mode with its navigation and the GlobalId and scope of the
+the model section with its outline, any extra face planes, and BIM mode with its navigation and the GlobalId and scope of the
 shown storey. Only the model open in the element store has element sets. A storey view saves the
 isolation from before it, since showing the storey again isolates its elements. `restoreModelStates`
 checks the shape of every saved entry, since a project map from the server reaches `applyProject`
@@ -201,9 +203,12 @@ saved model state. The panel's controls show what `readTilesetSection` answers a
 `applyTilesetSection`, and re-render on `subscribeTilesetSections`, so a cut made elsewhere moves them. The
 panel's outline switch sets `edgeWidth`, which paints fragments next to the plane.
 `ClippingPlaneCollection` has no cap fill, so `SectionCapsOnGlobe`, mounted by `ViewerArea` on the Cesium
-globe, re-renders on `subscribeTilesetSections` and, for each tiletopia model with an enabled cut, reads
-the cut polygons from `GET /v1/assets/{id}/section?axis=&position=` 300 ms after the plane stops moving and draws them in one `Primitive` of `CoplanarPolygonGeometry`
-instances, each with the tileset's `root.computedTransform` as its `modelMatrix` and moved 1 cm towards the
+globe, re-renders on `subscribeTilesetSections` and, for each enabled axis plane and each face plane of a
+tiletopia model, reads the cut polygons from `GET /v1/assets/{id}/section` 300 ms after the plane stops
+moving. An axis cut sends `axis` and `position`. A face plane sends `nx`, `ny`, `nz` and `offset`. Each
+plane is drawn as one `Primitive` of `CoplanarPolygonGeometry` fills and one `Primitive` of
+`PolylineGeometry` outlines, and a ring is clipped against the removed side of every other plane. The fill and the outline width come from the element's IFC class on that response: curtain, plate and member, window, door, column, slab, roof, wall, and grey for any other class.
+Each instance uses the tileset's `root.computedTransform` as its `modelMatrix` and is moved 1 cm towards the
 removed side. The panel's axis and position go to tiletopia unchanged, because with the root's
 untransformed centre below -100 km, as for tiletopia's models in local metres, the section frame is
 `root.computedTransform` itself, the frame `root.transform` maps to ECEF. An earth-fixed model's section
@@ -222,8 +227,9 @@ platform token as an `Authorization` header. BCF topics belong to the model, so 
 same ones. `restoreViewpoint` in `src/features/coordination/viewpoint.ts` maps BCF coordinates through
 `tileset.root.computedTransform`, sets the camera with `camera.setView` and an identity `endTransform`,
 checks the selection and visibility exceptions with `resolveElementIds` and puts them in the element
-store, and turns one clipping plane square to an axis of the section frame into the model section. The
-section is turned off for a viewpoint with no plane, several planes or a slanted one. Agora holds the
+store, and turns one clipping plane square to an axis of the section frame into the model section. Several
+planes, or one plane that is not square to an axis, are kept as face planes. A plane with no direction is
+dropped, and a viewpoint with no plane turns the section off. Agora holds the
 viewer's annotations. A pin placed on the Cesium globe has a height in metres above the ellipsoid, and a pin placed on a 2D map has none. An annotation has no element id. A BCF viewpoint includes the selected element ids. BCF topics stay in tiletopia. A change report is polled every two seconds
 until it is complete or has failed. Uploading a version posts to `/tiles/v1/assets` with
 `base_asset_id`, and the panel shows no upload progress. The Versions tab exports the open version as
@@ -238,7 +244,7 @@ another user added in between stays, and the last writer still wins a race betwe
 write. The topic's author is the signed-in user's email, or their name when there is none. Saving a topic
 can add a viewpoint from `captureViewpoint`, the reverse of `restoreViewpoint`: the camera through the
 inverse of `root.computedTransform` with the vertical field of view, the selected set, the hidden set or
-the isolated set as visibility exceptions, and the enabled model section as one clipping plane. A
+the isolated set as visibility exceptions, the enabled model section, and each face plane. A
 captured viewpoint has no snapshot, since tiletopia has no snapshot upload. Snapshots of imported
 viewpoints are read with `fetch` and the bearer header and shown from an object URL, because an `img`
 request sends no `Authorization` header. A change report row resolves its GlobalId in the open version
@@ -251,6 +257,8 @@ JSON reporter, and the tab reads only fields that `reporter.Json` writes on both
 `master` branch of IfcOpenShell: the totals, and per specification and requirement the status, counts,
 `description` and `failed_entities`. A failed element is selected by its `global_id` the same way as a
 change report row, through `useShowElementInScene` in `src/features/coordination/showElementInScene.ts`.
+The same ids are painted red on the model. A selection stays the yellow highlight, and opening another
+model clears the paint.
 A 503 from tiletopia with a JSON message is shown with a hint about `TILETOPIA_IDS_CHECK_URL`, and a 503
 with no JSON message is shown as tiletopia being unreachable, because nginx answers that one. Only a 409
 with the code `IDS_CHECK_RUNNING` shows the running check. A 409 `ASSET_NOT_READY` or `ASSET_NOT_IFC`
@@ -290,7 +298,24 @@ median of their elements' `location.center.height`. A storey's top is the `baseH
 higher storey under the same parent, which tiletopia derives from the storey's placement, or from its IFC
 Elevation when it has no placement, as metres above the ellipsoid. The cut at the top is a z section of the model section frame at that height
 above the frame's origin, and is offered only when the frame's z axis is within about 0.1 degrees of
-vertical. With no elevation on the storey or none above it, the panel says why and offers no cut.
+vertical. With no elevation on the storey or none above it, the panel says why and offers no cut. A floor
+plan looks straight down in an orthographic view and, when the storey top is known, cuts there. An
+elevation looks north, east, south or west and leaves the section as it is. Back to 3D restores the
+perspective field of view. The 3D storey view still isolates that storey.
+
+The Model Section panel projects a tiletopia model to visible and hidden lines. A cut that is on adds
+the section as visible lines. Length and angle dimensions are measured on that sheet, and the sheet
+downloads as DXF in metres. The Versions tab still exports the section cut alone.
+
+An IFC alignment is read from `GET /v1/assets/{id}/alignments`. The panel scrubs a station along it and
+can cut a plane across the tangent. A line and a circular arc are sampled. Any other curve is drawn
+straight and marked approximate.
+
+An editor can move or yaw an element in its parent placement, replace its mesh, or add and delete an
+element or a containment or aggregate relation. The write goes into the IFC through
+`POST /v1/assets/{id}/edits` and this view draws the new mesh until a re-tile. Deleting an element hides
+its tile copy. A relation does not change the mesh. Volume, from
+`GET /v1/assets/{id}/elements/{elementId}/volume`, is the absolute volume of that element's mesh.
 
 CAD edges set `tileset.edgeDisplayMode` to `SURFACES_AND_EDGES`. The switch shows only when the glb of one
 loaded tile has `EXT_mesh_primitive_edge_visibility` on a primitive, since tile content has no public way

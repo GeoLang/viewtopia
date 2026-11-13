@@ -15,7 +15,14 @@ import type { BcfViewpoint } from '../../src/features/coordination/api';
 import { captureViewpoint, restoreViewpoint } from '../../src/features/coordination/viewpoint';
 import { TiletopiaElementService } from '../../src/features/elements/elementService';
 import { useElementStore } from '../../src/features/elements/store';
-import { applyTilesetSection, readTilesetSection } from '../../src/features/scene/tilesetSection';
+import {
+  addFacePlane,
+  applyTilesetSection,
+  disableTilesetSection,
+  readFacePlanes,
+  readTilesetSection,
+  replaceFacePlanes,
+} from '../../src/features/scene/tilesetSection';
 import { FakeElementServer } from './stubs/fakeElementServer';
 
 const ASSET = 'a1b2';
@@ -147,7 +154,7 @@ describe('restoreViewpoint', () => {
     expect(restored.notApplied).toContain('1 components named with no IFC GlobalId');
   });
 
-  it('turns an earlier section off and says so when the plane is not along an axis', async () => {
+  it('keeps a slanted clipping plane on the model', async () => {
     const tileset = modelTileset();
     tileset.clippingPlanes = new ClippingPlaneCollection({
       planes: [new ClippingPlane(Cartesian3.UNIT_X, 4)],
@@ -161,8 +168,34 @@ describe('restoreViewpoint', () => {
       viewpoint: viewpoint({ clippingPlanes: [{ location: [0, 0, 0], direction: [1, 1, 0] }] }),
     });
 
-    expect(tileset.clippingPlanes.enabled).toBe(false);
-    expect(restored.notApplied).toContain('a clipping plane that is not square to an axis of the model');
+    expect(tileset.clippingPlanes.enabled).toBe(true);
+    expect(tileset.clippingPlanes.length).toBe(1);
+    expect(restored.notApplied).not.toContain('a clipping plane that is not square to an axis of the model');
+  });
+
+  it('keeps several axis-aligned planes, and drops a plane with no direction', async () => {
+    const tileset = modelTileset();
+    await restoreViewpoint({
+      viewer,
+      tileset,
+      service,
+      viewpoint: viewpoint({
+        clippingPlanes: [
+          { location: [0, 0, 2], direction: [0, 0, 1] },
+          { location: [3, 0, 0], direction: [1, 0, 0] },
+          { location: [0, 0, 0], direction: [0, 0, 0] },
+        ],
+      }),
+    });
+
+    expect(readTilesetSection(tileset)?.enabled).not.toBe(true);
+    const faces = readFacePlanes(tileset);
+    expect(faces[0].offset).toBeCloseTo(2, 5);
+    expect(faces[1].offset).toBeCloseTo(3, 5);
+    expect(faces[0].normal[2]).toBeCloseTo(1);
+    expect(faces[1].normal[0]).toBeCloseTo(1);
+    expect(tileset.clippingPlanes.length).toBe(2);
+    expect(tileset.clippingPlanes.enabled).toBe(true);
   });
 
   it('refuses a snapshot-only viewpoint and leaves the scene alone', async () => {
@@ -216,6 +249,34 @@ describe('captureViewpoint', () => {
     expect(section).toMatchObject({ axis: 'z', flip: true, enabled: true });
     expect(section?.position).toBeCloseTo(2.5, 9);
     expect(restored.notApplied).toEqual([`the ${CesiumMath.toDegrees(0.8)} degree field of view`]);
+    expect(readFacePlanes(tileset)).toEqual([]);
+  });
+
+  it('brings a slanted face plane back, and stores one square face as the axis section', async () => {
+    const tileset = modelTileset();
+    const viewer = cameraViewer({ fovy: 0.8, aspectRatio: 1.5 });
+    addFacePlane(tileset, { id: 'slope', normal: [0, 0.6, 0.8], offset: 4 }, requestRender);
+
+    const captured = captureViewpoint({ viewer, tileset });
+    expect(captured.clippingPlanes).toHaveLength(1);
+    replaceFacePlanes(tileset, [], requestRender);
+    await restoreViewpoint({ viewer, tileset, service, viewpoint: captured });
+
+    const [face] = readFacePlanes(tileset);
+    expect(face.normal[1]).toBeCloseTo(0.6, 5);
+    expect(face.normal[2]).toBeCloseTo(0.8, 5);
+    expect(face.offset).toBeCloseTo(4, 5);
+    expect(readTilesetSection(tileset)?.enabled).not.toBe(true);
+
+    replaceFacePlanes(tileset, [], requestRender);
+    addFacePlane(tileset, { id: 'floor', normal: [0, 0, 1], offset: 2 }, requestRender);
+    const square = captureViewpoint({ viewer, tileset });
+    replaceFacePlanes(tileset, [], requestRender);
+    disableTilesetSection(tileset, requestRender);
+    await restoreViewpoint({ viewer, tileset, service, viewpoint: square });
+
+    expect(readFacePlanes(tileset)).toEqual([]);
+    expect(readTilesetSection(tileset)).toMatchObject({ axis: 'z', position: 2, flip: false, enabled: true });
   });
 
   it('saves an isolation as hidden by default with the shown elements as exceptions', () => {

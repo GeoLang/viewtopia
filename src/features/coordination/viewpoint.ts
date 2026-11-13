@@ -6,8 +6,11 @@ import type { ClipAxis } from '../scene/clipping';
 import {
   applyTilesetSection,
   disableTilesetSection,
+  readFacePlanes,
   readTilesetSection,
+  replaceFacePlanes,
   sectionFrame,
+  type FacePlane,
   type TilesetSection,
 } from '../scene/tilesetSection';
 import type {
@@ -41,7 +44,10 @@ function ifcGuidsOf(components: BcfComponent[]): string[] {
   return components.flatMap((component) => (component.ifcGuid === null ? [] : [component.ifcGuid]));
 }
 
-function sectionFromPlane(tileset: Cesium3DTileset, plane: BcfClippingPlane): TilesetSection | null {
+function planeInSection(
+  tileset: Cesium3DTileset,
+  plane: BcfClippingPlane,
+): { location: Cartesian3; direction: Cartesian3 } | null {
   // tiletopia's bcf coordinates are in the frame of tileset.root.computedTransform
   const toSection = Matrix4.multiply(
     Matrix4.inverse(sectionFrame(tileset), new Matrix4()),
@@ -49,14 +55,32 @@ function sectionFromPlane(tileset: Cesium3DTileset, plane: BcfClippingPlane): Ti
     new Matrix4(),
   );
   const location = Matrix4.multiplyByPoint(toSection, vectorOf(plane.location), new Cartesian3());
-  const direction = Cartesian3.normalize(
-    Matrix4.multiplyByPointAsVector(toSection, vectorOf(plane.direction), new Cartesian3()),
-    new Cartesian3(),
-  );
+  const raw = Matrix4.multiplyByPointAsVector(toSection, vectorOf(plane.direction), new Cartesian3());
+  if (!Number.isFinite(raw.x) || !Number.isFinite(raw.y) || !Number.isFinite(raw.z)) return null;
+  if (Cartesian3.magnitudeSquared(raw) === 0) return null;
+  return { location, direction: Cartesian3.normalize(raw, new Cartesian3()) };
+}
+
+function sectionFromPlane(tileset: Cesium3DTileset, plane: BcfClippingPlane): TilesetSection | null {
+  // tiletopia's bcf coordinates are in the frame of tileset.root.computedTransform
+  const placed = planeInSection(tileset, plane);
+  if (!placed) return null;
+  const { location, direction } = placed;
   const axis = SECTION_AXES.find((candidate) => Math.abs(Math.abs(direction[candidate]) - 1) < AXIS_TOLERANCE);
   if (!axis) return null;
   // bcf direction points at the clipped side, and an unflipped tileset section clips above its position
   return { axis, position: location[axis], flip: direction[axis] < 0, enabled: true };
+}
+
+function faceFromPlane(tileset: Cesium3DTileset, plane: BcfClippingPlane, id: string): FacePlane | null {
+  const placed = planeInSection(tileset, plane);
+  if (!placed) return null;
+  const { location, direction } = placed;
+  return {
+    id,
+    normal: [direction.x, direction.y, direction.z],
+    offset: Cartesian3.dot(direction, location),
+  };
 }
 
 function setCamera(viewer: Viewer, tileset: Cesium3DTileset, camera: BcfCamera): void {
@@ -112,13 +136,18 @@ export async function restoreViewpoint({
     ? await resolveElementIds(service, ifcGuidsOf(visibility.exceptions))
     : null;
   const notApplied = unappliedParts(viewpoint);
-  let section: TilesetSection | null = null;
-  if (clippingPlanes.length > 1) {
-    notApplied.push(`${clippingPlanes.length} clipping planes, where a model section takes one`);
-  } else if (clippingPlanes.length === 1) {
-    section = sectionFromPlane(tileset, clippingPlanes[0]);
-    if (!section) notApplied.push('a clipping plane that is not square to an axis of the model');
-  }
+  const axisPlanes = clippingPlanes.flatMap((plane) => {
+    const section = sectionFromPlane(tileset, plane);
+    return section ? [section] : [];
+  });
+  const section = axisPlanes.length === 1 && clippingPlanes.length === 1 ? axisPlanes[0] : null;
+  const faces =
+    section === null
+      ? clippingPlanes.flatMap((plane, index) => {
+          const face = faceFromPlane(tileset, plane, `bcf-${index}`);
+          return face ? [face] : [];
+        })
+      : [];
 
   setCamera(viewer, tileset, camera);
 
@@ -136,6 +165,7 @@ export async function restoreViewpoint({
   const requestRender = () => viewer.scene.requestRender();
   if (section) applyTilesetSection(tileset, section, requestRender);
   else disableTilesetSection(tileset, requestRender);
+  replaceFacePlanes(tileset, faces, requestRender);
 
   return {
     selected: selectedIds.length,
@@ -216,6 +246,7 @@ export function captureViewpoint({
   const toModel = Matrix4.inverse(tileset.root.computedTransform, new Matrix4());
   const { selected, hidden, isolated } = useElementStore.getState();
   const section = readTilesetSection(tileset);
+  const faces = readFacePlanes(tileset).map((face) => planeFromFace(tileset, face));
   return {
     guid: randomUuid(),
     index: null,
@@ -225,6 +256,19 @@ export function captureViewpoint({
     visibility: visibilityOf(hidden, isolated),
     coloring: [],
     lines: [],
-    clippingPlanes: section?.enabled ? [planeFromSection(tileset, section)] : [],
+    clippingPlanes: [...(section?.enabled ? [planeFromSection(tileset, section)] : []), ...faces],
+  };
+}
+
+function planeFromFace(tileset: Cesium3DTileset, face: FacePlane): BcfClippingPlane {
+  const toModel = Matrix4.multiply(
+    Matrix4.inverse(tileset.root.computedTransform, new Matrix4()),
+    sectionFrame(tileset),
+    new Matrix4(),
+  );
+  const location = Cartesian3.multiplyByScalar(Cartesian3.fromArray(face.normal), face.offset, new Cartesian3());
+  return {
+    location: bcfVector(Matrix4.multiplyByPoint(toModel, location, new Cartesian3())),
+    direction: bcfDirection(toModel, Cartesian3.fromArray(face.normal)),
   };
 }

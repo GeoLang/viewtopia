@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
-import { Button, Divider, SegmentedControl, Select, Stack, Switch, Text } from '@mantine/core';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import { Button, Divider, Group, SegmentedControl, Select, Stack, Switch, Text } from '@mantine/core';
 import type { Cesium3DTileset } from 'cesium';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { useElementStore, type ElementModel } from '../elements/store';
 import { endStoreyView, enterBimMode, leaveBimMode, setBimNavigation } from './bimMode';
 import { readEdgeData, setEdgesShown, type EdgeData } from './edges';
 import { bimStoreys, removeSection, sectionAtHeight, showStorey, storeyTop, type Storey } from './storeys';
+import { ELEVATIONS, leavePlanView, planViewIsOn, planViewRevision, showElevation, showFloorPlan, subscribePlanView } from './planView';
 import {
   storeyViewShowing,
   useBimModeStore,
@@ -88,6 +89,7 @@ function StoreyViews({ session }: { session: BimSession }) {
   const [reading, setReading] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [cut, setCut] = useState<string | null>(null);
+  useSyncExternalStore(subscribePlanView, planViewRevision);
   const showing = storeyViewShowing(storeyView, isolated);
   const shownStorey = showing ? storeys?.find((known) => known.node.key === showing.storeyKey) : undefined;
   const top = shownStorey && storeys ? storeyTop(storeys, shownStorey) : null;
@@ -101,7 +103,7 @@ function StoreyViews({ session }: { session: BimSession }) {
     try {
       sectionAtHeight(height);
       setCut(
-        `${storey.label} is cut at the base of ${above.label}, ${height.toFixed(2)} m above the ellipsoid. The cut stays open, because Cesium cannot fill it.`,
+        `${storey.label} is cut at the base of ${above.label}, ${height.toFixed(2)} m above the ellipsoid.`,
       );
     } catch (reason) {
       setFailure(failureText(reason));
@@ -181,6 +183,37 @@ function StoreyViews({ session }: { session: BimSession }) {
             Remove the section
           </Button>
         </Stack>
+      )}
+      {shownStorey && session.tileset && (
+        <Button
+          size="xs"
+          variant="light"
+          color="violet"
+          onClick={() => {
+            if (top?.kind === 'known') cutAtTop(shownStorey, top);
+            showFloorPlan(session.viewer, session.tileset);
+          }}
+        >
+          Floor plan of {shownStorey.label}
+        </Button>
+      )}
+      <Group grow gap={4}>
+        {ELEVATIONS.map((elevation) => (
+          <Button
+            key={elevation}
+            size="compact-xs"
+            variant="light"
+            color="violet"
+            onClick={() => showElevation(session.viewer, session.tileset, elevation)}
+          >
+            {elevation.slice(0, 1).toUpperCase() + elevation.slice(1)}
+          </Button>
+        ))}
+      </Group>
+      {planViewIsOn(session.viewer) && (
+        <Button size="xs" variant="subtle" color="gray" onClick={() => leavePlanView(session.viewer)}>
+          Back to 3D
+        </Button>
       )}
       {reading && (
         <Text size="xs" c="dimmed" data-testid="bim-storey-reading">

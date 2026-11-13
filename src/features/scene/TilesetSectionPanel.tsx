@@ -1,5 +1,5 @@
 import { useState, useSyncExternalStore } from 'react';
-import { Button, SegmentedControl, Select, Slider, Stack, Switch, Text } from '@mantine/core';
+import { Button, Group, SegmentedControl, Select, Slider, Stack, Switch, Text } from '@mantine/core';
 import { IconSlice } from '@tabler/icons-react';
 import type { Cesium3DTileset } from 'cesium';
 import { PanelCard, PanelHeader } from '../../components/PanelCard';
@@ -7,11 +7,18 @@ import { useAppStore } from '../../store/app';
 import { useTiles3dLayerStore, type Tiles3dLayer } from '../../store/tiles3dLayers';
 import { getActiveCesiumViewer } from '../../viewer/registry';
 import { DEFAULT_CLIP_AXIS, type ClipAxis } from './clipping';
+import { tiletopiaAssetId } from '../elements/store';
+import { AlignmentScrub } from './AlignmentScrub';
+import { DrawingView } from './DrawingView';
 import { SectionCapNote } from './SectionCaps';
 import {
   applyTilesetSection,
+  armFaceClip,
   disableTilesetSection,
+  faceClipArmed,
+  readFacePlanes,
   readTilesetSection,
+  removeFacePlane,
   setTilesetSectionOutline,
   subscribeTilesetSections,
   tilesetSectionChangeCount,
@@ -39,6 +46,7 @@ function ModelSectionControls({ layer, tileset }: { layer: Tiles3dLayer; tileset
     flip: false,
     enabled: false,
   };
+  const assetId = tiletopiaAssetId(layer.url);
   const range = tilesetSectionRange(tileset, shown.axis);
   const cut = (changes: Partial<TilesetSection>): void => {
     applyTilesetSection(tileset, { ...shown, ...changes }, requestRender);
@@ -95,7 +103,31 @@ function ModelSectionControls({ layer, tileset }: { layer: Tiles3dLayer; tileset
         }}
         label="Red outline along the cut"
       />
-      <SectionCapNote layer={layer} tileset={tileset} enabled={shown.enabled} />
+      <SectionCapNote layer={layer} tileset={tileset} enabled={shown.enabled || readFacePlanes(tileset).length > 0} />
+      {readFacePlanes(tileset).map((plane, index) => (
+        <Group key={plane.id} justify="space-between" gap="xs" wrap="nowrap">
+          <Text size="xs">
+            Plane {index + 1} at {plane.offset.toFixed(1)} m
+          </Text>
+          <Button
+            size="compact-xs"
+            variant="subtle"
+            color="gray"
+            onClick={() => removeFacePlane(tileset, plane.id, requestRender)}
+          >
+            Delete
+          </Button>
+        </Group>
+      ))}
+      <Button
+        size="xs"
+        variant={faceClipArmed(tileset) ? 'filled' : 'light'}
+        color="violet"
+        onClick={() => armFaceClip(faceClipArmed(tileset) ? null : tileset, requestRender)}
+        fullWidth
+      >
+        {faceClipArmed(tileset) ? 'Click a face to add a plane' : 'Add a plane from a face'}
+      </Button>
       <Button
         size="xs"
         color="violet"
@@ -108,6 +140,15 @@ function ModelSectionControls({ layer, tileset }: { layer: Tiles3dLayer; tileset
       >
         {shown.enabled ? 'Remove Section' : 'Apply Section'}
       </Button>
+      {assetId && (
+        <DrawingView
+          assetId={assetId}
+          axis={shown.axis}
+          position={shown.enabled ? shown.position : null}
+          flip={shown.flip}
+        />
+      )}
+      {assetId && <AlignmentScrub assetId={assetId} tileset={tileset} />}
     </>
   );
 }

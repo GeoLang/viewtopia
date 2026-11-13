@@ -12,7 +12,6 @@ import {
   Transforms,
   type Cesium3DTileset,
   type GeometryInstance,
-  type PerInstanceColorAppearance,
   type Primitive,
   type Viewer,
 } from 'cesium';
@@ -25,9 +24,14 @@ import { SECTION_REQUEST_DELAY_MILLISECONDS, SectionCapsOnGlobe } from '../../sr
 import { SectionCapPick, type SectionCut, type SectionPoint } from '../../src/features/scene/sectionCut';
 import { TilesetSectionPanel } from '../../src/features/scene/TilesetSectionPanel';
 import {
+  addFacePlane,
   applyTilesetSection,
   disableTilesetSection,
+  facePlaneFromWorld,
+  readFacePlanes,
   readTilesetSection,
+  removeFacePlane,
+  replaceFacePlanes,
   setTilesetSectionOutline,
   tilesetSectionOutlined,
   tilesetSectionRange,
@@ -133,6 +137,60 @@ describe('applyTilesetSection', () => {
 
     expect(tileset.clippingPlanes.enabled).toBe(false);
     expect(readTilesetSection(tileset)?.position).toBe(1);
+  });
+});
+
+describe('face planes', () => {
+  it('keeps the axis cut and clips the removed side of each extra plane', () => {
+    const tileset = transformedTileset();
+    const requestRender = vi.fn();
+    applyTilesetSection(tileset, { axis: 'z', position: 4, flip: false, enabled: true }, requestRender);
+    addFacePlane(tileset, { id: 'roof', normal: [0, 0, 1], offset: 8 }, requestRender);
+    addFacePlane(tileset, { id: 'wall', normal: [1, 0, 0], offset: 2 }, requestRender);
+
+    expect(tileset.clippingPlanes.length).toBe(3);
+    expect(tileset.clippingPlanes.enabled).toBe(true);
+    expect(tileset.clippingPlanes.get(1).normal.z).toBeCloseTo(-1);
+    expect(tileset.clippingPlanes.get(1).distance).toBeCloseTo(8);
+    expect(readFacePlanes(tileset).map((plane) => plane.id)).toEqual(['roof', 'wall']);
+    expect(readTilesetSection(tileset)).toMatchObject({ axis: 'z', position: 4, enabled: true });
+
+    removeFacePlane(tileset, 'missing', requestRender);
+    expect(readFacePlanes(tileset)).toHaveLength(2);
+    removeFacePlane(tileset, 'roof', requestRender);
+    expect(readFacePlanes(tileset).map((plane) => plane.id)).toEqual(['wall']);
+    expect(tileset.clippingPlanes.length).toBe(2);
+    expect(tileset.clippingPlanes.get(1).normal.x).toBeCloseTo(-1);
+    expect(requestRender).toHaveBeenCalledTimes(5);
+  });
+
+  it('clips with a face plane while the axis section stays off, and clears both', () => {
+    const tileset = transformedTileset();
+    applyTilesetSection(tileset, { axis: 'y', position: 1, flip: true, enabled: false }, vi.fn());
+    addFacePlane(tileset, { id: 'face', normal: [0, 1, 0], offset: 3 }, vi.fn());
+
+    expect(tileset.clippingPlanes.enabled).toBe(true);
+    expect(tileset.clippingPlanes.length).toBe(1);
+    expect(readTilesetSection(tileset)).toMatchObject({ enabled: false, position: 1 });
+
+    replaceFacePlanes(tileset, [], vi.fn());
+    expect(readFacePlanes(tileset)).toEqual([]);
+    expect(tileset.clippingPlanes.enabled).toBe(false);
+    expect(readTilesetSection(tileset)?.position).toBe(1);
+  });
+
+  it('turns a world click into a plane in the section frame and refuses a zero normal', () => {
+    const tileset = transformedTileset();
+    const point = Matrix4.multiplyByPoint(PLACEMENT, new Cartesian3(1, 2, 3), new Cartesian3());
+    const normal = Matrix4.multiplyByPointAsVector(PLACEMENT, new Cartesian3(0, 0, 2), new Cartesian3());
+
+    const plane = facePlaneFromWorld(tileset, point, normal);
+
+    expect(plane?.normal[0]).toBeCloseTo(0, 5);
+    expect(plane?.normal[1]).toBeCloseTo(0, 5);
+    expect(plane?.normal[2]).toBeCloseTo(1, 5);
+    expect(plane?.offset).toBeCloseTo(3, 5);
+    expect(facePlaneFromWorld(tileset, point, new Cartesian3())).toBeNull();
   });
 });
 
@@ -305,8 +363,24 @@ describe('TilesetSectionPanel', () => {
       return { axis: 'z', position, openChainsDropped, polygons: [{ elementId, rings: [ring(2), ring(1)] }] };
     }
 
+    function sectionCalls(): [string, RequestInit | undefined][] {
+      return fetchMock.mock.calls.filter(([url]) => String(url).includes('/section')) as [
+        string,
+        RequestInit | undefined,
+      ][];
+    }
+
+    function answerFetch(section: (url: string, init?: RequestInit) => Promise<Response>): void {
+      fetchMock.mockImplementation(async (url, init) => {
+        if (String(url).includes('/alignments')) return json([]);
+        return section(String(url), init);
+      });
+    }
+
     function request(index: number) {
-      const [url, init] = fetchMock.mock.calls[index];
+      const call = sectionCalls()[index];
+      if (!call) throw new Error(`no section request ${index}`);
+      const [url, init] = call;
       const parsed = new URL(url, window.location.origin);
       return {
         path: parsed.pathname,
@@ -318,7 +392,7 @@ describe('TilesetSectionPanel', () => {
     }
 
     function answerWithSlab({ elementId = 'slab', openChainsDropped = 0 } = {}) {
-      fetchMock.mockImplementation(async (url) => {
+      answerFetch(async (url) => {
         const position = Number(new URL(url, window.location.origin).searchParams.get('position'));
         return json(slabCut(position, { elementId, openChainsDropped }));
       });
@@ -346,10 +420,21 @@ describe('TilesetSectionPanel', () => {
       await settle();
     }
 
+    function fillDraws(): number {
+      return primitivesAdd.mock.calls.filter(([primitive]) => {
+        const instances = primitive.geometryInstances as GeometryInstance[];
+        return instances[0]?.geometry instanceof CoplanarPolygonGeometry;
+      }).length;
+    }
+
     function drawnCaps(): GeometryInstance[] {
-      const primitive = primitivesAdd.mock.lastCall?.[0];
-      if (!primitive) throw new Error('no caps were drawn');
-      return primitive.geometryInstances as GeometryInstance[];
+      const calls = primitivesAdd.mock.calls;
+      for (let index = calls.length - 1; index >= 0; index -= 1) {
+        const primitive = calls[index][0];
+        const instances = primitive.geometryInstances as GeometryInstance[];
+        if (instances[0]?.geometry instanceof CoplanarPolygonGeometry) return instances;
+      }
+      throw new Error('no caps were drawn');
     }
 
     function capShape(instance: GeometryInstance): { area: number; heights: number[] } {
@@ -408,10 +493,10 @@ describe('TilesetSectionPanel', () => {
       await applySection();
       fireEvent.keyDown(screen.getByRole('slider'), { key: 'ArrowRight' });
       fireEvent.keyDown(screen.getByRole('slider'), { key: 'ArrowRight' });
-      expect(fetchMock).not.toHaveBeenCalled();
+      expect(sectionCalls()).toHaveLength(0);
       await afterTheDelay();
 
-      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(sectionCalls()).toHaveLength(1);
       const plane = readTilesetSection(tileset);
       if (!plane) throw new Error('no section was applied');
       expect(request(0)).toMatchObject({
@@ -450,9 +535,9 @@ describe('TilesetSectionPanel', () => {
         fireEvent.click(screen.getByRole('switch', { name: 'Flip the side that stays' }));
       });
 
-      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(sectionCalls()).toHaveLength(1);
       expect(primitivesRemove).toHaveBeenCalledWith(first);
-      expect(primitivesAdd).toHaveBeenCalledTimes(2);
+      expect(fillDraws()).toBe(2);
       const plane = readTilesetSection(tileset);
       if (!plane) throw new Error('no section was applied');
       expect(plane.flip).toBe(true);
@@ -466,14 +551,19 @@ describe('TilesetSectionPanel', () => {
       showModel(transformedTileset());
       const older = deferredAnswer();
       const newer = deferredAnswer();
-      fetchMock.mockReturnValueOnce(older.promise).mockReturnValueOnce(newer.promise);
+      const pending = [older.promise, newer.promise];
+      answerFetch(async () => {
+        const next = pending.shift();
+        if (!next) throw new Error('unexpected section fetch');
+        return next;
+      });
       await renderPanel();
       await applySection();
       await afterTheDelay();
 
       fireEvent.keyDown(screen.getByRole('slider'), { key: 'ArrowRight' });
       await afterTheDelay();
-      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(sectionCalls()).toHaveLength(2);
       expect(request(0).signal?.aborted).toBe(true);
       expect(request(1).signal?.aborted).toBe(false);
 
@@ -482,7 +572,7 @@ describe('TilesetSectionPanel', () => {
       older.resolve(json(slabCut(request(0).position, { elementId: 'older', openChainsDropped: 0 })));
       await settle();
 
-      expect(primitivesAdd).toHaveBeenCalledTimes(1);
+      expect(fillDraws()).toBe(1);
       expect(drawnCaps()[0].id).toMatchObject({ elementId: 'newer' });
     });
 
@@ -508,13 +598,16 @@ describe('TilesetSectionPanel', () => {
         useTiles3dLayerStore.getState().removeLayer('model');
       });
       expect(primitivesRemove).toHaveBeenCalledWith(second);
-      expect(primitivesAdd).toHaveBeenCalledTimes(2);
+      expect(fillDraws()).toBe(2);
     });
 
     it("shows tiletopia's refusal and draws nothing", async () => {
       showModel(transformedTileset());
-      fetchMock.mockResolvedValue(
-        json({ code: 'ASSET_HAS_NO_MESH_SOURCE', message: "asset 7's source is a .las, which no mesh reader takes" }, 404),
+      answerFetch(async () =>
+        json(
+          { code: 'ASSET_HAS_NO_MESH_SOURCE', message: "asset 7's source is a .las, which no mesh reader takes" },
+          404,
+        ),
       );
       await renderPanel();
       await applySection();
@@ -532,7 +625,7 @@ describe('TilesetSectionPanel', () => {
       await applySection();
       await afterTheDelay();
 
-      expect(fetchMock).not.toHaveBeenCalled();
+      expect(sectionCalls()).toHaveLength(0);
       expect(screen.getByTestId('model-section-cap-note')).toHaveTextContent("This model's coordinates are earth-fixed");
     });
 
@@ -544,10 +637,10 @@ describe('TilesetSectionPanel', () => {
       await act(async () => {
         await runAction('tileset.section', { on: true, position: 12 });
       });
-      expect(fetchMock).not.toHaveBeenCalled();
+      expect(sectionCalls()).toHaveLength(0);
       await afterTheDelay();
 
-      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(sectionCalls()).toHaveLength(1);
       expect(request(0)).toMatchObject({ path: '/v1/assets/7/section', axis: 'z', position: 12 });
       const drawn = primitivesAdd.mock.lastCall?.[0];
       expect(drawnCaps()[0].id).toMatchObject({ elementId: 'slab' });
@@ -577,7 +670,7 @@ describe('TilesetSectionPanel', () => {
       });
       await afterTheDelay();
 
-      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(sectionCalls()).toHaveLength(1);
       expect(request(0)).toMatchObject({ path: '/v1/assets/7/section', axis: 'z', position: 4 });
       const [cap] = drawnCaps();
       expect(cap.id).toMatchObject({ tileset, elementId: 'slab' });
@@ -587,7 +680,7 @@ describe('TilesetSectionPanel', () => {
     it('paints the caps of selected elements in the tile highlight colour without asking again', async () => {
       const tileset = transformedTileset();
       showModel(tileset);
-      fetchMock.mockImplementation(async (url) => {
+      answerFetch(async (url) => {
         const position = Number(new URL(url, window.location.origin).searchParams.get('position'));
         const slab = slabCut(position, { elementId: 'slab', openChainsDropped: 0 });
         const wall = slabCut(position, { elementId: 'wall', openChainsDropped: 0 });
@@ -610,21 +703,22 @@ describe('TilesetSectionPanel', () => {
         elements.selectElements(['wall']);
       });
 
-      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(sectionCalls()).toHaveLength(1);
       expect(primitivesRemove).toHaveBeenCalledWith(unselected);
       const [slab, wall] = drawnCaps();
       expect(slab.id).toMatchObject({ elementId: 'slab' });
       expect(capColor(slab)).toEqual(greySlab);
       expect(capColor(wall)).toEqual(highlight);
       const selectedPrimitive = primitivesAdd.mock.lastCall?.[0];
-      expect((selectedPrimitive?.appearance as PerInstanceColorAppearance).translucent).toBe(true);
+      if (!selectedPrimitive) throw new Error('no caps were drawn');
+      expect(selectedPrimitive.appearance).toMatchObject({ translucent: true });
 
       act(() => {
         useElementStore.getState().clearSelection();
       });
 
       expect(drawnCaps().map(capColor)).toEqual([greySlab, greySlab]);
-      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(sectionCalls()).toHaveLength(1);
     });
   });
 });

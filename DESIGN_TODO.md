@@ -916,9 +916,8 @@ ODA SDKs and the iModel native addon are proprietary. Customers export IFC.
   both, so charge about ten bytes a source byte before the read starts, which refuses
   an IFC over about 36 MB at today's `JOB_BUDGET_BYTES`. Two models are too few to fix
   the factor, measure the proof models in `models.tsv` first.
-- [ ] Decide between CesiumJS and That Open for large models. Property editing and
-  measurement snapping are in the CesiumJS viewer. If that viewer does not keep up, open
-  large models in a That Open view beside the globe. Both sides ran on hercules (RTX
+CesiumJS is the BIM viewer. Property editing and measurement snapping are in it.
+The parity list below is the remaining That Open viewer behavior. Both sides ran on hercules (RTX
   2080 Ti, headless Chromium on ANGLE OpenGL ES, 1280 by 800, the camera at 2.2
   bounding radii). CesiumJS from `benchmark.sh` run `welded-identity-sse24-quiet` on
   2026-11-06, with `TASK_MEMORY_BYTES` raised to 48 GiB, `maximumScreenSpaceError` 24
@@ -949,6 +948,11 @@ ODA SDKs and the iModel native addon are proprietary. Customers export IFC.
   `~/tmp/geolang-fix/bim/thatopen-bench/{convert.mjs,bench.mjs,page.js}`.
 - [!] Compare placement and properties against Ion with the BIM proof's
   `ion-compare.sh`. Needs a `CESIUM_ION_TOKEN`.
+
+That Open feature parity in the Cesium viewer is in: several clipping planes, floor plans
+and elevations, projected drawings, alignment cross-sections, and geometry edits with IDS
+paint and mesh volume. 4D schedules, clash detection, bSDD, and the parametric rebar, steel
+and building samples stay out. That Open Platform is still the 2026-11-23 read above.
 
 Wait for demand: 4D schedules, clash detection, bSDD, and `rvt-rs` as a Revit preview
 (bounding boxes outside 2024 and 2025 files, no built-in parameter names).

@@ -70,6 +70,7 @@ export function PanelCard({ width, anchor = 'right', maxHeight, testId, children
   // rule the store's reset follows
   useEffect(() => () => forgetPlacement(cardId), [cardId, forgetPlacement]);
   const placement = placementStyle({ position, docked, anchor, width });
+  const bounded = Boolean(maxHeight) && !minimized;
 
   const card = (
     <Paper
@@ -79,7 +80,14 @@ export function PanelCard({ width, anchor = 'right', maxHeight, testId, children
       className={minimized ? 'panel-card-enter panel-card-minimized' : 'panel-card-enter'}
       data-panel-card=""
       data-testid={testId}
-      style={{ ...CARD_STYLE, maxHeight: minimized ? undefined : maxHeight, ...placement }}
+      style={{
+        ...CARD_STYLE,
+        maxHeight: minimized ? undefined : maxHeight,
+        minHeight: bounded ? 0 : undefined,
+        overflowY: bounded ? 'auto' : undefined,
+        overscrollBehavior: bounded ? 'contain' : undefined,
+        ...placement,
+      }}
     >
       <PanelCardId.Provider value={cardId}>{children}</PanelCardId.Provider>
     </Paper>

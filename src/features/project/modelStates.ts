@@ -16,9 +16,12 @@ import { CLIP_AXES } from '../scene/clipping';
 import {
   applyTilesetSection,
   disableTilesetSection,
+  readFacePlanes,
   readTilesetSection,
+  replaceFacePlanes,
   setTilesetSectionOutline,
   tilesetSectionOutlined,
+  type FacePlane,
   type TilesetSection,
 } from '../scene/tilesetSection';
 
@@ -41,6 +44,7 @@ export interface SavedModelState {
   hidden: string[];
   isolated: string[] | null;
   section: SavedModelSection | null;
+  facePlanes?: FacePlane[];
   bimMode: SavedBimMode | null;
 }
 
@@ -66,11 +70,13 @@ function liveModelState(layer: Tiles3dLayer, tileset: Cesium3DTileset | undefine
   // showStorey replaces the isolated set, and restoring the storey view isolates it again
   const isolated = showing ? showing.isolatedBefore : elements.isolated;
   const section = tileset ? readTilesetSection(tileset) : null;
+  const facePlanes = tileset ? readFacePlanes(tileset) : [];
   return {
     selected: open ? [...elements.selected] : [],
     hidden: open ? [...elements.hidden] : [],
     isolated: open && isolated ? [...isolated] : null,
     section: tileset && section ? { ...section, outlined: tilesetSectionOutlined(tileset) } : null,
+    ...(facePlanes.length > 0 ? { facePlanes: facePlanes.map((plane) => ({ ...plane })) } : {}),
     bimMode: inBimMode
       ? {
           navigation: bim.navigation,
@@ -161,13 +167,38 @@ function readSavedBimMode(value: unknown): SavedBimMode | null {
   };
 }
 
+function readSavedFacePlanes(value: unknown): FacePlane[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) throw new Error('facePlanes is not a list');
+  return value.map((plane, index) => {
+    const face = requireObject(plane, `facePlanes[${index}]`);
+    const normal = face.normal;
+    if (
+      !Array.isArray(normal) ||
+      normal.length !== 3 ||
+      !normal.every((coordinate) => typeof coordinate === 'number' && Number.isFinite(coordinate))
+    ) {
+      throw new Error(`facePlanes[${index}].normal is not a direction`);
+    }
+    if (typeof face.offset !== 'number' || !Number.isFinite(face.offset)) {
+      throw new Error(`facePlanes[${index}].offset is not a number`);
+    }
+    if (typeof face.id !== 'string' || face.id.length === 0) {
+      throw new Error(`facePlanes[${index}].id is not a string`);
+    }
+    return { id: face.id, normal: [normal[0], normal[1], normal[2]], offset: face.offset };
+  });
+}
+
 function readSavedModelState(value: unknown): SavedModelState {
   const saved = requireObject(value, 'the saved state');
+  const facePlanes = readSavedFacePlanes(saved.facePlanes);
   return {
     selected: requireElementIds(saved.selected, 'selected'),
     hidden: requireElementIds(saved.hidden, 'hidden'),
     isolated: saved.isolated === null ? null : requireElementIds(saved.isolated, 'isolated'),
     section: readSavedSection(saved.section),
+    ...(facePlanes ? { facePlanes } : {}),
     bimMode: readSavedBimMode(saved.bimMode),
   };
 }
@@ -290,6 +321,7 @@ async function restoreModelState(
   } else {
     disableTilesetSection(tileset, requestRender);
   }
+  replaceFacePlanes(tileset, saved.facePlanes ?? [], requestRender);
   if (saved.bimMode) notes.push(...(await restoreBimMode(layer, tileset, saved.bimMode, isLatest)));
   return notes;
 }

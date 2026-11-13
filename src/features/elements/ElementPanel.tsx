@@ -30,6 +30,7 @@ import {
   type ElementRow,
   type ElementTreeNode,
 } from './elementService';
+import { ElementGeometry } from './ElementGeometry';
 import { ElementRowButton, ElementTree } from './ElementTree';
 import { flyToElements } from './flyToElements';
 import { isIfcFileName, tiletopiaAssetId, useElementStore } from './store';
@@ -548,6 +549,11 @@ function ModelElements({
               );
             }}
           />
+        </ScrollArea.Autosize>
+      )}
+      {detail && (
+        <ScrollArea.Autosize mah={220}>
+          <ElementGeometry assetId={assetId} elementId={detail.id} canEdit={canEdit} signedIn={token !== null} />
         </ScrollArea.Autosize>
       )}
     </Stack>

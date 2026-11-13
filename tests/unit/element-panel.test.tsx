@@ -136,7 +136,8 @@ const renderPanel = async () => {
 
 const expand = (label: string) =>
   act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: `Expand ${label}` }));
+    const button = screen.queryByRole('button', { name: `Expand ${label}` });
+    if (button) fireEvent.click(button);
   });
 
 async function openTreeToStoreyContents() {
@@ -198,19 +199,12 @@ describe('ElementPanel', () => {
     expect(useFeaturePickerStore.getState().enabled).toBe(false);
   });
 
-  it('loads the tree one node at a time', async () => {
+  it('opens a single chain of containers down to the storey elements', async () => {
     await renderPanel();
 
-    expect(await screen.findByTestId('element-row-project')).toHaveTextContent('Tower');
-    expect(screen.queryByTestId('element-row-storey')).not.toBeInTheDocument();
-    expect(server.requestsTo(`${ASSET_PATH}/tree/children`)).toHaveLength(1);
-
-    await expand('Tower');
-    expect(await screen.findByTestId('element-row-storey')).toHaveTextContent('IfcBuildingStorey');
-    expect(screen.queryByTestId('element-row-wall')).not.toBeInTheDocument();
-
-    await expand('Level 1');
     expect(await screen.findByTestId('element-row-wall')).toBeInTheDocument();
+    expect(screen.getByTestId('element-row-project')).toHaveTextContent('Tower');
+    expect(screen.queryByTestId('element-row-chair')).not.toBeInTheDocument();
     expect(server.requestsTo(`${ASSET_PATH}/tree/children`).map(({ url }) => url.searchParams.get('nodeKey'))).toEqual([
       'root',
       'key-project',
@@ -396,6 +390,19 @@ describe('ElementPanel', () => {
   });
 
   describe('a spatial container in the tree', () => {
+    it('opens a container from its row, not only from the chevron', async () => {
+      useElementStore.getState().openModel(MODEL_LAYER);
+      await renderPanel();
+      await screen.findByTestId('element-row-storey');
+      fireEvent.click(screen.getByRole('button', { name: 'Collapse Tower' }));
+      expect(screen.queryByTestId('element-row-storey')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId('element-row-project'));
+
+      expect(await screen.findByTestId('element-row-storey')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Collapse Tower' })).toHaveAttribute('aria-expanded', 'true');
+    });
+
     it('selects and hides the contents of a storey through @storey, not the storey', async () => {
       await openTreeToStoreyContents();
 

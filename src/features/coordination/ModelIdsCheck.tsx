@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Badge, Button, Divider, FileButton, Group, ScrollArea, Stack, Text, UnstyledButton } from '@mantine/core';
 import { ElementApiError } from '../elements/elementService';
+import { useElementStore } from '../elements/store';
 import {
   pollIdsCheck,
   readLatestIdsCheck,
@@ -12,6 +13,18 @@ import {
   type IdsSpecificationResult,
 } from './api';
 import { failureText, useShowElementInScene } from './showElementInScene';
+
+export function failedGlobalIds(report: IdsReport | null | undefined): string[] {
+  const failed: string[] = [];
+  for (const specification of report?.specifications ?? []) {
+    for (const requirement of specification.requirements) {
+      for (const element of requirement.failed_entities) {
+        if (element.global_id) failed.push(element.global_id);
+      }
+    }
+  }
+  return failed;
+}
 
 const IDS_FILES = '.ids';
 const SERVICE_UNAVAILABLE = 503;
@@ -255,6 +268,11 @@ export function ModelIdsCheck({ assetId, canShowInScene }: { assetId: string; ca
     }
     await followCheck();
   };
+
+  useEffect(() => {
+    useElementStore.getState().setFailed(failedGlobalIds(check?.report));
+    return () => useElementStore.getState().setFailed([]);
+  }, [check]);
 
   const running = check?.status === 'running';
 

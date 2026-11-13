@@ -8,6 +8,7 @@ import {
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
 } from 'cesium';
+import { armedFaceClipTileset } from '../features/scene/tilesetSection';
 import { useAppStore } from '../store/app';
 import type { ToolClickHandlers, ToolModeStore } from './useToolClicksMapLibre';
 
@@ -41,6 +42,7 @@ export function useToolClicksCesium(
         const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
 
         handler.setInputAction((click: { position: Cartesian2 }) => {
+          if (armedFaceClipTileset()) return;
           const point = locate(viewer, click.position.x, click.position.y);
           if (point) clickHandlers.onClick(point[0], point[1], point[2]);
         }, ScreenSpaceEventType.LEFT_CLICK);

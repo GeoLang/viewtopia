@@ -10,6 +10,8 @@ export function useElementStyleCesium() {
   const selected = useElementStore((state) => state.selected);
   const hidden = useElementStore((state) => state.hidden);
   const isolated = useElementStore((state) => state.isolated);
+  const failed = useElementStore((state) => state.failed);
+  const suppressed = useElementStore((state) => state.suppressed);
   const loaded = useTiles3dLayerStore((state) => state.loaded);
   const styledRef = useRef<Cesium3DTileset | null>(null);
 
@@ -21,11 +23,12 @@ export function useElementStyleCesium() {
     }
     styledRef.current = tileset ?? null;
     if (!tileset || tileset.isDestroyed()) return;
-    const nothingToStyle = selected.size === 0 && hidden.size === 0 && isolated === null;
+    const nothingToStyle =
+      selected.size === 0 && hidden.size === 0 && isolated === null && failed.size === 0 && suppressed.size === 0;
     setTilesetStyleInputs(tileset, {
-      elements: nothingToStyle ? undefined : { selected, hidden, isolated },
+      elements: nothingToStyle ? undefined : { selected, hidden, isolated, failed, suppressed },
     });
     // Cesium re-evaluates every feature's colour for a new style, which takes off a colour set on one feature
     repaintPickedTileFeature();
-  }, [layerId, selected, hidden, isolated, loaded]);
+  }, [layerId, selected, hidden, isolated, failed, suppressed, loaded]);
 }

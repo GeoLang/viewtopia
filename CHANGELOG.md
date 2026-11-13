@@ -6,6 +6,12 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- 2026-11-13: **Several clipping planes.** A click on a face adds a plane at that angle. More than one can be on, and each can be deleted. The model section stays the one axis plane. Each plane is filled on its own, and a cap is clipped against the other planes. A slanted BCF plane, and several planes, stay on the model. A project file stores the extra planes when there are any.
+- 2026-11-13: **Floor plans and elevations.** BIM controls open an orthographic floor plan or a north, east, south or west elevation. A floor plan also cuts at the storey top when that height is known. The 3D storey view still isolates the storey.
+- 2026-11-13: **Drawings.** The Model Section panel projects the model to visible and hidden lines, and adds the section cut as visible lines when a cut is on. Length and angle dimensions sit on the sheet, and the sheet downloads as DXF.
+- 2026-11-13: **Alignment cross-section.** An IFC alignment can be scrubbed. The marker follows the station, and a button cuts a plane across the tangent.
+- 2026-11-13: **Element geometry edits.** An editor can move or yaw an element, replace its mesh, or add and delete an element or a relation. The change is written into the IFC. This view draws the new mesh until a re-tile. An IDS failure is painted red on the model, and a selection stays yellow. Volume is the mesh volume.
+- 2026-11-13: **Styled section fills.** A model section cap is filled and outlined from the element's IFC class. Curtain, plate and member, window, door, column, slab, roof and wall each have a fill and an outline width. Any other class stays grey. A selected element stays the yellow highlight.
 - 2026-11-13: **Model snap.** A measurement click on the Cesium globe snaps to a model edge, then to the surface under the pointer, and falls back to the ground. The point keeps its height. Distance is the straight line and area is the polygon's area when a point has a height. A click on the 2D map is unchanged. While measuring, a marker follows the snap under the pointer.
 - 2026-11-12: **Property edit.** An editor can change a property value in the Model Elements panel. The save writes it into the IFC. A re-tile reads the new value from that file.
 - 2026-11-12: **Section DXF.** The Versions tab can export a section as closed 2D polylines. A section position is sent as `axis` and `position`, with no cut height. A cut height still exports 3D faces.

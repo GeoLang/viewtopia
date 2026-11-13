@@ -44,6 +44,8 @@ beforeEach(() => {
     selected: new Set(),
     hidden: new Set(),
     isolated: null,
+    failed: new Set(),
+    suppressed: new Set(),
     focused: null,
   });
   useTiles3dLayerStore.setState({ layers: [], loaded: {} });
@@ -178,6 +180,37 @@ describe('element inputs', () => {
     expect(applyStyle(tileset.style).show).toBe(false);
   });
 
+  it('paints an IDS failure red, and a selection stays yellow', () => {
+    const tileset = fakeTileset();
+    setTilesetStyleInputs(tileset, {
+      elements: {
+        selected: new Set(['door']),
+        hidden: new Set(),
+        isolated: null,
+        failed: new Set(['wall', 'door']),
+      },
+    });
+
+    expect(Color.equals(colorOf(tileset, 'wall'), Color.RED.withAlpha(tileHighlightColor().alpha))).toBe(true);
+    expect(Color.equals(colorOf(tileset, 'door'), tileHighlightColor())).toBe(true);
+    expect(Color.equals(colorOf(tileset, 'window'), Color.WHITE)).toBe(true);
+  });
+
+  it('hides a suppressed element and leaves the others shown', () => {
+    const tileset = fakeTileset();
+    setTilesetStyleInputs(tileset, {
+      elements: {
+        selected: new Set(),
+        hidden: new Set(),
+        isolated: null,
+        suppressed: new Set(['wall']),
+      },
+    });
+
+    expect(shown(tileset, 'wall')).toBe(false);
+    expect(shown(tileset, 'door')).toBe(true);
+  });
+
   it('answers on a set of the largest size with no condition per element', () => {
     const tileset = fakeTileset();
     const ids = Array.from({ length: ELEMENT_ID_LIMIT }, (_, index) => `element-${index}`);
@@ -264,6 +297,41 @@ describe('useElementStyleCesium', () => {
     act(() => useTiles3dLayerStore.getState().setLoaded('model', tileset));
 
     expect(shown(tileset, 'wall')).toBe(false);
+  });
+
+  it('paints failures from the store and hides a suppressed mesh', () => {
+    const tileset = fakeTileset();
+    useTiles3dLayerStore.setState({ layers: [MODEL_LAYER], loaded: { model: tileset } });
+    useElementStore.getState().openModel(MODEL_LAYER);
+    renderHook(() => useElementStyleCesium());
+
+    act(() => useElementStore.getState().setFailed(['wall', 'door']));
+    act(() => useElementStore.getState().selectElements(['door']));
+    expect(Color.equals(colorOf(tileset, 'wall'), Color.RED.withAlpha(tileHighlightColor().alpha))).toBe(true);
+    expect(Color.equals(colorOf(tileset, 'door'), tileHighlightColor())).toBe(true);
+
+    act(() => useElementStore.getState().setSuppressed(['window']));
+    expect(shown(tileset, 'window')).toBe(false);
+    expect(shown(tileset, 'wall')).toBe(true);
+  });
+
+  it('caps a failure list and clears it when another model opens', () => {
+    const tileset = fakeTileset();
+    useTiles3dLayerStore.setState({ layers: [MODEL_LAYER], loaded: { model: tileset } });
+    useElementStore.getState().openModel(MODEL_LAYER);
+    const tooMany = Array.from({ length: ELEMENT_ID_LIMIT + 5 }, (_, index) => `element-${index}`);
+    expect(() => useElementStore.getState().setFailed(tooMany)).not.toThrow();
+    expect(useElementStore.getState().failed.size).toBe(ELEMENT_ID_LIMIT);
+    expect(useElementStore.getState().failed.has('element-0')).toBe(true);
+    expect(useElementStore.getState().failed.has(`element-${ELEMENT_ID_LIMIT}`)).toBe(false);
+
+    useElementStore.getState().openModel(MODEL_LAYER);
+    expect(useElementStore.getState().failed.size).toBe(ELEMENT_ID_LIMIT);
+
+    const other = { ...MODEL_LAYER, id: 'other', url: '/tiles/v1/assets/other/tileset.json' };
+    useElementStore.getState().openModel(other);
+    expect(useElementStore.getState().failed.size).toBe(0);
+    expect(useElementStore.getState().suppressed.size).toBe(0);
   });
 
   it('clears the previous model when another one opens', () => {

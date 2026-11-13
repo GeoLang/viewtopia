@@ -40,6 +40,8 @@ interface ElementState {
   selected: ReadonlySet<string>;
   hidden: ReadonlySet<string>;
   isolated: ReadonlySet<string> | null;
+  failed: ReadonlySet<string>;
+  suppressed: ReadonlySet<string>;
   focused: FocusedElement | null;
   openModel: (layer: Tiles3dLayer) => ElementModel;
   selectElement: (
@@ -53,6 +55,8 @@ interface ElementState {
   showHidden: () => void;
   isolateElements: (ids: Iterable<string>) => void;
   endIsolation: () => void;
+  setFailed: (ids: Iterable<string>) => void;
+  setSuppressed: (ids: Iterable<string>) => void;
 }
 
 export function requireWithinElementLimit(count: number): void {
@@ -61,6 +65,15 @@ export function requireWithinElementLimit(count: number): void {
       `${count} elements is over the limit of ${ELEMENT_ID_LIMIT}. Narrow the choice by class or storey.`,
     );
   }
+}
+
+function cappedIdSet(ids: Iterable<string>): ReadonlySet<string> {
+  const set = new Set<string>();
+  for (const id of ids) {
+    set.add(id);
+    if (set.size >= ELEMENT_ID_LIMIT) break;
+  }
+  return set;
 }
 
 function idSetWithinLimit(ids: Iterable<string>): ReadonlySet<string> {
@@ -74,13 +87,15 @@ export const useElementStore = create<ElementState>((set, get) => ({
   selected: new Set(),
   hidden: new Set(),
   isolated: null,
+  failed: new Set(),
+  suppressed: new Set(),
   focused: null,
 
   openModel: (layer) => {
     const open = get().model;
     if (open?.layerId === layer.id) return open;
     const model = { layerId: layer.id, name: layer.name, assetId: tiletopiaAssetId(layer.url) };
-    set({ model, selected: new Set(), hidden: new Set(), isolated: null, focused: null });
+    set({ model, selected: new Set(), hidden: new Set(), isolated: null, failed: new Set(), suppressed: new Set(), focused: null });
     return model;
   },
 
@@ -112,4 +127,8 @@ export const useElementStore = create<ElementState>((set, get) => ({
   isolateElements: (ids) => set({ isolated: idSetWithinLimit(ids) }),
 
   endIsolation: () => set({ isolated: null }),
+
+  setFailed: (ids) => set({ failed: cappedIdSet(ids) }),
+
+  setSuppressed: (ids) => set({ suppressed: cappedIdSet(ids) }),
 }));

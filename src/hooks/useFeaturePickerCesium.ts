@@ -14,6 +14,7 @@ import type { Cartesian2, Cesium3DTileset } from 'cesium';
 import { useBimModeStore } from '../features/bim/store';
 import { elementIdOf, useElementStore } from '../features/elements/store';
 import { SectionCapPick } from '../features/scene/sectionCut';
+import { armedFaceClipTileset } from '../features/scene/tilesetSection';
 import { assetFeatureProperties, withAssetProperties } from '../live/assetFeatures';
 import { ASSET_ID_PROPERTY } from '../live/types';
 import { useAgentLayerStore } from '../store/agentLayers';
@@ -124,6 +125,7 @@ export function useFeaturePickerCesium(
       if (handlerRef.current) return;
       const handler = new ScreenSpaceEventHandler(v.scene.canvas);
       const onClick = (position: Cartesian2, additive: boolean) => {
+        if (armedFaceClipTileset()) return;
         // walking takes every left click as a floor to stand on
         if (useBimModeStore.getState().navigation === 'walk') return;
         clearHighlight();

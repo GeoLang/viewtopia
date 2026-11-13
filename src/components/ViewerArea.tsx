@@ -24,6 +24,7 @@ import { useAssetColorsCesium } from '../hooks/useAssetColorsCesium';
 import { BimModeBadge } from '../features/bim/BimModeBadge';
 import { useBimNavigationCesium } from '../features/bim/useBimNavigationCesium';
 import { useElementStyleCesium } from '../features/elements/useElementStyleCesium';
+import { ElementEditPreviews } from '../features/scene/ElementEditPreviews';
 import { SectionCapsOnGlobe } from '../features/scene/SectionCaps';
 import { useAssetColorsMapLibre } from '../hooks/useAssetColorsMapLibre';
 import { useAgentLayersLeaflet } from '../hooks/useAgentLayersLeaflet';
@@ -36,6 +37,7 @@ import { useWatchRegionsMapLibre } from '../hooks/useWatchRegionsMapLibre';
 import { useAnnotationsCesium } from '../hooks/useAnnotationsCesium';
 import { useAnnotationsMapLibre } from '../hooks/useAnnotationsMapLibre';
 import { useAnnotationsLeaflet } from '../hooks/useAnnotationsLeaflet';
+import { useFaceClipCesium } from '../features/scene/useFaceClipCesium';
 import { useMeasureCesium } from '../hooks/useMeasureCesium';
 import { useFeaturePickerCesium } from '../hooks/useFeaturePickerCesium';
 import { useFeaturePickerMapLibre } from '../hooks/useFeaturePickerMapLibre';
@@ -176,6 +178,7 @@ export function ViewerArea() {
 
   // Measurement tools (Cesium + MapLibre)
   useMeasureCesium(cesiumRef);
+  useFaceClipCesium(cesiumRef);
   useMeasureMapLibre(maplibreRef);
 
   // Feature picker — inspect clicked features (the MapLibre binding also picks
@@ -331,6 +334,7 @@ export function ViewerArea() {
         {activeTab === 'globe' && renderer === 'cesium' && <CesiumNavControl />}
         {activeTab === 'globe' && renderer === 'cesium' && <BimModeBadge />}
         {activeTab === 'globe' && renderer === 'cesium' && <SectionCapsOnGlobe />}
+        {activeTab === 'globe' && renderer === 'cesium' && <ElementEditPreviews />}
 
         {/* MapLibre GL, with the deck.gl layers interleaved into it */}
         <div
