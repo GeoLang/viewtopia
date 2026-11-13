@@ -9,7 +9,7 @@ export interface ToolModeStore {
 }
 
 export interface ToolClickHandlers {
-  onClick: (lng: number, lat: number) => void;
+  onClick: (lng: number, lat: number, height?: number) => void;
   onDoubleClick: () => void;
 }
 

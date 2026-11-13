@@ -916,8 +916,8 @@ ODA SDKs and the iModel native addon are proprietary. Customers export IFC.
   both, so charge about ten bytes a source byte before the read starts, which refuses
   an IFC over about 36 MB at today's `JOB_BUDGET_BYTES`. Two models are too few to fix
   the factor, measure the proof models in `models.tsv` first.
-- [ ] Decide between CesiumJS and That Open for large models. If the CesiumJS viewer
-  keeps up, build model snapping and property editing in it. If it does not, open
+- [ ] Decide between CesiumJS and That Open for large models. Property editing and
+  measurement snapping are in the CesiumJS viewer. If that viewer does not keep up, open
   large models in a That Open view beside the globe. Both sides ran on hercules (RTX
   2080 Ti, headless Chromium on ANGLE OpenGL ES, 1280 by 800, the camera at 2.2
   bounding radii). CesiumJS from `benchmark.sh` run `welded-identity-sse24-quiet` on
@@ -949,8 +949,6 @@ ODA SDKs and the iModel native addon are proprietary. Customers export IFC.
   `~/tmp/geolang-fix/bim/thatopen-bench/{convert.mjs,bench.mjs,page.js}`.
 - [!] Compare placement and properties against Ion with the BIM proof's
   `ion-compare.sh`. Needs a `CESIUM_ION_TOKEN`.
-- [!] CAD edges on instanced elements. CesiumJS 1.147 draws none on
-  `EXT_mesh_gpu_instancing`.
 
 Wait for demand: 4D schedules, clash detection, bSDD, and `rvt-rs` as a Revit preview
 (bounding boxes outside 2024 and 2025 files, no built-in parameter names).

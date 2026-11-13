@@ -3,12 +3,14 @@ import { randomUuid } from '../lib/randomUuid';
 
 export type MeasureMode = 'distance' | 'area' | 'elevation' | null;
 
+export type MeasurePoint = [number, number] | [number, number, number];
+
 export interface MeasureResult {
   id: string;
   mode: 'distance' | 'area' | 'elevation';
   value: number;
   unit: string;
-  points: [number, number][];
+  points: MeasurePoint[];
 }
 
 function haversineM(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -41,12 +43,62 @@ export function geodesicAreaSquareMeters(points: [number, number][]): number {
   return Math.abs((total * R * R) / 2);
 }
 
-function computeDistance(points: [number, number][]): number {
+const WGS84_A = 6_378_137;
+const WGS84_E2 = 6.69437999014e-3;
+
+function toEcef(lng: number, lat: number, height: number): [number, number, number] {
+  const lon = (lng * Math.PI) / 180;
+  const latRad = (lat * Math.PI) / 180;
+  const sinLat = Math.sin(latRad);
+  const cosLat = Math.cos(latRad);
+  const radius = WGS84_A / Math.sqrt(1 - WGS84_E2 * sinLat * sinLat);
+  return [
+    (radius + height) * cosLat * Math.cos(lon),
+    (radius + height) * cosLat * Math.sin(lon),
+    (radius * (1 - WGS84_E2) + height) * sinLat,
+  ];
+}
+
+function chordM(from: MeasurePoint, to: MeasurePoint): number {
+  const start = toEcef(from[0], from[1], from[2] ?? 0);
+  const end = toEcef(to[0], to[1], to[2] ?? 0);
+  return Math.hypot(end[0] - start[0], end[1] - start[1], end[2] - start[2]);
+}
+
+export function pointHasHeight(point: MeasurePoint): boolean {
+  return point.length === 3 && Number.isFinite(point[2]);
+}
+
+function anyHeight(points: MeasurePoint[]): boolean {
+  return points.some(pointHasHeight);
+}
+
+function computeDistance(points: MeasurePoint[]): number {
   let total = 0;
+  const throughSpace = anyHeight(points);
   for (let i = 1; i < points.length; i++) {
-    total += haversineM(points[i - 1][1], points[i - 1][0], points[i][1], points[i][0]);
+    const from = points[i - 1];
+    const to = points[i];
+    total += throughSpace
+      ? chordM(from, to)
+      : haversineM(from[1], from[0], to[1], to[0]);
   }
   return total;
+}
+
+function spaceAreaSquareMeters(points: MeasurePoint[]): number {
+  const ecef = points.map((point) => toEcef(point[0], point[1], point[2] ?? 0));
+  let nx = 0;
+  let ny = 0;
+  let nz = 0;
+  for (let i = 0; i < ecef.length; i++) {
+    const start = ecef[i];
+    const end = ecef[(i + 1) % ecef.length];
+    nx += (start[1] - end[1]) * (start[2] + end[2]);
+    ny += (start[2] - end[2]) * (start[0] + end[0]);
+    nz += (start[0] - end[0]) * (start[1] + end[1]);
+  }
+  return Math.hypot(nx, ny, nz) / 2;
 }
 
 function formatDistance(m: number): { value: number; unit: string } {
@@ -62,11 +114,11 @@ function formatArea(m2: number): { value: number; unit: string } {
 
 interface MeasureState {
   mode: MeasureMode;
-  pending: [number, number][];
+  pending: MeasurePoint[];
   liveDistance: number; // meters, updates as points are added
   results: MeasureResult[];
   setMode: (m: MeasureMode) => void;
-  addPoint: (lng: number, lat: number) => void;
+  addPoint: (lng: number, lat: number, height?: number) => void;
   finishMeasure: () => void;
   cancelPending: () => void;
   clearAll: () => void;
@@ -81,9 +133,10 @@ export const useMeasureStore = create<MeasureState>((set, get) => ({
 
   setMode: (mode) => set({ mode, pending: [], liveDistance: 0 }),
 
-  addPoint: (lng, lat) => {
+  addPoint: (lng, lat, height) => {
     const { pending } = get();
-    const newPending: [number, number][] = [...pending, [lng, lat]];
+    const point: MeasurePoint = height === undefined ? [lng, lat] : [lng, lat, height];
+    const newPending = [...pending, point];
     const live = computeDistance(newPending);
     set({ pending: newPending, liveDistance: live });
   },
@@ -97,7 +150,9 @@ export const useMeasureStore = create<MeasureState>((set, get) => ({
 
     if (mode === 'area') {
       if (pending.length < 3) return;
-      const a = geodesicAreaSquareMeters(pending);
+      const a = anyHeight(pending)
+        ? spaceAreaSquareMeters(pending)
+        : geodesicAreaSquareMeters(pending.map((point): [number, number] => [point[0], point[1]]));
       const fmt = formatArea(a);
       value = fmt.value;
       unit = fmt.unit;
@@ -129,9 +184,9 @@ export const useMeasureStore = create<MeasureState>((set, get) => ({
 }));
 
 export const measureToolClicks = {
-  onClick: (lng: number, lat: number) => {
+  onClick: (lng: number, lat: number, height?: number) => {
     const { mode, addPoint } = useMeasureStore.getState();
-    if (mode) addPoint(lng, lat);
+    if (mode) addPoint(lng, lat, height);
   },
   onDoubleClick: () => {
     const { mode, finishMeasure } = useMeasureStore.getState();

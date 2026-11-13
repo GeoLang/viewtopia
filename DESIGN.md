@@ -295,7 +295,16 @@ vertical. With no elevation on the storey or none above it, the panel says why a
 CAD edges set `tileset.edgeDisplayMode` to `SURFACES_AND_EDGES`. The switch shows only when the glb of one
 loaded tile has `EXT_mesh_primitive_edge_visibility` on a primitive, since tile content has no public way
 to the `Model` that records this. Cesium's scene keeps its edge framebuffer once a frame has requested it,
-and has no public way to drop it.
+and has no public way to drop it. Repeated elements are in that primitive too: tiletopia writes them as
+ordinary triangles when the tile carries edges, because CesiumJS 1.147 draws instanced edges without the
+instance transforms.
+
+A measurement click on the Cesium globe snaps to a model edge in the default 25 pixel region, then to the
+surface under the pointer, and otherwise to the ground. The point keeps its height in metres above the
+ellipsoid. Distance is the straight line between the points, and area is the area of that polygon. A point
+with no height, including every point placed on the 2D map, keeps the ground distance and the geodesic area.
+While a measurement is armed, a marker follows the snap under the pointer, cyan on an edge and yellow on a
+surface. The marker is hidden during the snap so it cannot cover the model.
 
 A document also carries region watches, which are agora's own schedule rather
 than anything a producer sends. An editor draws a polygon, names a geoplumb

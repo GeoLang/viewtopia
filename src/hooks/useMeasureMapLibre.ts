@@ -1,10 +1,14 @@
 import { useEffect } from 'react';
 import type { MutableRefObject } from 'react';
 import type * as maplibregl from 'maplibre-gl';
-import { measureToolClicks, useMeasureStore } from '../store/measure';
+import { type MeasurePoint, measureToolClicks, useMeasureStore } from '../store/measure';
 import { useAppStore } from '../store/app';
 import { lineWithVertexFeatures, setToolGeoJson } from './toolLayersMapLibre';
 import { useToolClicksMapLibre } from './useToolClicksMapLibre';
+
+function groundPoints(points: MeasurePoint[]): [number, number][] {
+  return points.map((point) => [point[0], point[1]]);
+}
 
 const SRC = 'measure-features';
 const SRC_PENDING = 'measure-pending';
@@ -34,7 +38,7 @@ export function useMeasureMapLibre(
         SRC,
         {
           type: 'FeatureCollection',
-          features: results.flatMap((result) => lineWithVertexFeatures(result.points)),
+          features: results.flatMap((result) => lineWithVertexFeatures(groundPoints(result.points))),
         },
         [
           {
@@ -62,7 +66,7 @@ export function useMeasureMapLibre(
       setToolGeoJson(
         map,
         SRC_PENDING,
-        { type: 'FeatureCollection', features: lineWithVertexFeatures(pending) },
+        { type: 'FeatureCollection', features: lineWithVertexFeatures(groundPoints(pending)) },
         [
           {
             id: PENDING_LINE,

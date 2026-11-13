@@ -22,6 +22,7 @@ export function useToolClicksCesium(
   viewerRef: MutableRefObject<Viewer | null>,
   toolStore: ToolModeStore,
   clickHandlers: ToolClickHandlers,
+  locate: (viewer: Viewer, screenX: number, screenY: number) => [number, number] | [number, number, number] | null = cartToLngLat,
 ) {
   const handlerRef = useRef<ScreenSpaceEventHandler | null>(null);
   // renderer switches destroy and rebuild the viewer, which kills handlers on the old canvas
@@ -40,8 +41,8 @@ export function useToolClicksCesium(
         const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
 
         handler.setInputAction((click: { position: Cartesian2 }) => {
-          const lngLat = cartToLngLat(viewer, click.position.x, click.position.y);
-          if (lngLat) clickHandlers.onClick(lngLat[0], lngLat[1]);
+          const point = locate(viewer, click.position.x, click.position.y);
+          if (point) clickHandlers.onClick(point[0], point[1], point[2]);
         }, ScreenSpaceEventType.LEFT_CLICK);
 
         handler.setInputAction(clickHandlers.onDoubleClick, ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
@@ -68,5 +69,5 @@ export function useToolClicksCesium(
         handlerRef.current = null;
       }
     };
-  }, [viewerRef, toolStore, clickHandlers, renderer, activeTab]);
+  }, [viewerRef, toolStore, clickHandlers, locate, renderer, activeTab]);
 }

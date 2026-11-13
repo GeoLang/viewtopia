@@ -85,8 +85,8 @@ export function MeasurementPanel({
 
       {mode && (
         <Text size="xs" c="green" ta="center" mb="xs">
-          {mode === 'distance' && `Click points (${pending.length}). Double-click to finish.`}
-          {mode === 'area' && `Click polygon vertices (${pending.length}). Double-click to finish.`}
+          {mode === 'distance' && `Click points (${pending.length}). On a model, the point snaps to an edge. Double-click to finish.`}
+          {mode === 'area' && `Click polygon vertices (${pending.length}). On a model, each vertex snaps to an edge. Double-click to finish.`}
         </Text>
       )}
 
