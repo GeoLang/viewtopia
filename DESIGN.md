@@ -334,7 +334,7 @@ surface. The marker is removed from the scene during the snap so it cannot cover
 
 A document also carries region watches, which are agora's own schedule rather
 than anything a producer sends. An editor draws a polygon, names a geoplumb
-layer, a reducer and an interval, and optionally a threshold and a webhook
+raster layer, a reducer and an interval, and optionally a threshold and a webhook
 (`POST /agora/documents/{id}/watches`); agora reduces that region over the layer
 on its interval and relays each run as a `watchReading` frame, after sending
 every watch as a `watches` frame on join. The frames carry no webhook url and no

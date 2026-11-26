@@ -1298,25 +1298,40 @@ Metal/Vulkan is unstarted.
 
 ### geoplumb against GDAL
 
-[~] Section 8 of `geoplumb/docs/gdal-gap-plan.md` is in flight. Wave 1
-(8.0 to 8.3: COG overview fix, categorical rasters, the MVT encoder in
-jung-mvt, NetCDF and GRIB sources) is on master in terrano b4176c4, jung
-6b996a4, fenestra bd97a66 and geoplumb 1a775c3. Wave 2 sits uncommitted in
-worktrees under `/home/aaron/src/GeoLang/.worktrees/`:
-`geoplumb-vector-layers` (8.5), `geoplumb-export` (8.4) and
-`geoplumb-raster-vector` (8.6). The last two carry 8.0 and 8.1 staged, and
-all three predate geoplumb 1a775c3, so each is rebased onto it before its
-gate.
-Proofs and the gate scripts are in `/home/aaron/tmp/geolang-fix/gdal-gaps/`,
-verdicts in `/home/aaron/tmp/geolang-fix/proof-ledger.tsv`. tiletopia's
-export and terrain analysis routes are cut over to geoplumb once 8.4 and
-8.7 land, together with the four tiletopia call sites 8.1 breaks
-(`imagery.rs` 1661 and 1989, `analysis_tiles.rs` 644 and 809).
+Open items of section 8 in `geoplumb/docs/gdal-gap-plan.md`. Tracks run as
+code-only agents under `/home/aaron/tmp/geolang-fix/AGENT_RULES.md` in
+worktrees under `/home/aaron/src/GeoLang/.worktrees/`, then gate, proof script
+in `/home/aaron/tmp/geolang-fix/gdal-gaps/proofs/` and a row in
+`/home/aaron/tmp/geolang-fix/proof-ledger.tsv`.
 
-Sections 1 to 6 have no open boxes. Section 7 answers whether
-GDAL can go to nothing: yes for the stack's own paths over two to three
-years, driven by what the gated source opens in production, never for every
-file a public user brings.
+- [~] `tiletopia-geoplumb-cutover`: tiletopia's export route on
+  `geoplumb::export::write_cog` with its grid and encode code deleted, the
+  call sites in `imagery.rs` and `analysis_tiles.rs` fixed for `value_kind`,
+  `contours_geojson` on `cell_position()`, unused `tiletopia-terrain`
+  `contours` deleted, geoplumb, terrano and topoi locks bumped.
+- [ ] tiletopia's terrain and viewshed analysis routes on geoplumb, after 8.7.
+- [~] `geoplumb-band-value-kind`: 8.1b.
+- [ ] geoplumb `stac` source over assets of different pixel sizes: read a
+  coarser asset onto the finest asset's grid, nearest for categorical bands,
+  bilinear for continuous ones. Earth Search serves `red` at 10 m and `scl` at
+  20 m, so the `s2-red-clear` example and the README's masked `ndvi` advice fail
+  at startup today.
+- [ ] tiletopia: delete `tiletopia_terrain`'s `hillshade`, `slope`, `aspect`
+  and `to_terrano_raster`, which have no callers.
+- [~] 8.7 global operations: design in
+  `/home/aaron/tmp/geolang-fix/gdal-gaps/design-8.7.md`, owner approval before
+  building.
+- [~] 8.9 native dtype: design in
+  `/home/aaron/tmp/geolang-fix/gdal-gaps/design-8.9.md`, owner approval before
+  building.
+- [ ] Section 9, routine use over GDAL: 9.1 to 9.7, a `geoplumb` command
+  first.
+- [ ] 8.8 Zarr source.
+- [ ] 8.10 colour ramps on png tiles, CRS input beyond EPSG codes.
+- [ ] topoi `validate` reports 41 HoleOutsideShell on the WorldCover class 60
+  union where GEOS finds 2.
+- [ ] iOverlay#104: when fixed upstream, bump i_overlay in topoi and delete the
+  hole re-binding (TODO in topoi `overlay.rs`).
 
 ### verne, the next adapter
 

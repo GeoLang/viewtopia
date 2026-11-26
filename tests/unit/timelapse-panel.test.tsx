@@ -23,6 +23,7 @@ Element.prototype.scrollIntoView = vi.fn();
 const LAYER = {
   name: 'sentinel-ndvi',
   source: 'stac',
+  kind: 'raster' as const,
   collection: 'sentinel-2-l2a',
   defaultDatetime: null,
   temporalExtent: { start: '2024-01-01T00:00:00Z', end: '2024-04-01T00:00:00Z' },

@@ -20,6 +20,7 @@ export interface PlumbLayer {
   name: string;
   /** `stac` or `cog` */
   source: string;
+  kind: 'raster' | 'vector';
   collection: string | null;
   /** the interval the server's own pulls take when a request names none */
   defaultDatetime: string | null;
@@ -52,10 +53,17 @@ export function parseLayers(body: unknown): PlumbLayer[] {
   return body.flatMap((raw) => {
     const l = raw as Record<string, unknown> | null;
     if (!l || typeof l.name !== 'string' || !l.name) return [];
+    const kind = l.kind;
+    if (kind !== 'raster' && kind !== 'vector') {
+      throw new Error(
+        `geoplumb layer ${l.name} has kind ${JSON.stringify(kind)}, not raster or vector`,
+      );
+    }
     return [
       {
         name: l.name,
         source: str(l.source) ?? 'unknown',
+        kind,
         collection: str(l.collection),
         defaultDatetime: str(l.default_datetime),
         temporalExtent: parseExtent(l.temporal_extent),

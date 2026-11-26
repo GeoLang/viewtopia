@@ -38,7 +38,7 @@ exercises it.
 - IndexedDB stores, an offline operation queue, and offline basemap areas.
 - Live maps on agora: shared layers, peer cursors, camera-follow, undo of your
   own edits, comment threads with mentions, sensor feeds and asset rules.
-- Region watches: agora reduces a drawn region over a geoplumb layer on a
+- Region watches: agora reduces a drawn region over a geoplumb raster layer on a
   schedule, notifies on a threshold crossing, and posts a webhook.
 - Workspace and project names, descriptions, memberships, owner/editor/viewer
   roles, and expiring invitation records stored by Ptolemy.

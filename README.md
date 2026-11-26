@@ -274,10 +274,10 @@ inputs.
 | **Live maps** | The share button starts a live map on agora. Every member loads the same layers and tilesets, sees peer cursors, and can follow a peer's camera by clicking their avatar in the header. A share link carries view or edit access |
 | **Undo** | In a live map an editor's `Ctrl+Z` and `Ctrl+Shift+Z` take back or restore their own last edit |
 | **Comments** | Comment threads pinned to a point on a live map, with `@` mentions, resolving, and CSV or GeoJSON export. A bell in the header lists mentions of you |
-| **Region watch** | Watch a drawn region over a geoplumb layer on a schedule, with an optional threshold that notifies the map's members and posts a webhook |
+| **Region watch** | Watch a drawn region over a geoplumb raster layer on a schedule, with an optional threshold that notifies the map's members and posts a webhook |
 
 The Region Watch panel watches part of the map over time. Draw a polygon, pick
-a geoplumb layer and a reducer, say how often to run and optionally a threshold
+a geoplumb raster layer and a reducer, say how often to run and optionally a threshold
 and a webhook, and agora reduces that region on its own schedule. The panel
 lists each watch with its last value, the time it ran and whatever failed last,
 marks the run that crossed the threshold, and shows a watch's recent readings

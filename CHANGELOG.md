@@ -150,6 +150,9 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 2026-11-26: the Region Watch panel lists only geoplumb's raster layers, read from the `kind` of each
+  `/layers` entry. A vector layer has no pixel values to reduce. A `/layers` entry with no `kind` fails
+  the layer list.
 - 2026-11-05: the IDS tab follows a running check only on tiletopia's 409 `IDS_CHECK_RUNNING`. A 409
   `ASSET_NOT_READY` or `ASSET_NOT_IFC` shows tiletopia's message as an error. The tab shows only for a
   model whose name is an `.ifc` or `.ifczip` file, as the Assets panel decides.

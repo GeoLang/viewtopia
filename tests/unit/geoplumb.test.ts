@@ -16,6 +16,7 @@ const LAYERS = [
   {
     name: 'cop-dem-hillshade',
     source: 'stac',
+    kind: 'raster',
     collection: 'cop-dem-glo-30',
     default_datetime: null,
     // the DEM collection advertises no interval, so nothing to step through
@@ -24,6 +25,7 @@ const LAYERS = [
   {
     name: 'ndvi',
     source: 'stac',
+    kind: 'raster',
     collection: 'sentinel-2-l2a',
     default_datetime: '2025-06-01T00:00:00Z/2025-09-01T00:00:00Z',
     temporal_extent: { start: '2015-06-27T10:25:31Z', end: null },
@@ -31,6 +33,7 @@ const LAYERS = [
   {
     name: 'local-dem',
     source: 'cog',
+    kind: 'raster',
     collection: null,
     default_datetime: null,
     temporal_extent: null,
@@ -174,6 +177,7 @@ describe('the layer list', () => {
     expect(parsed[1]).toEqual({
       name: 'ndvi',
       source: 'stac',
+      kind: 'raster',
       collection: 'sentinel-2-l2a',
       defaultDatetime: '2025-06-01T00:00:00Z/2025-09-01T00:00:00Z',
       temporalExtent: { start: '2015-06-27T10:25:31Z', end: null },
@@ -185,6 +189,13 @@ describe('the layer list', () => {
     expect(parseLayers({ layers: [] })).toEqual([]);
   });
 
+  it('reads a vector layer kind and fails on a layer with no kind', () => {
+    expect(parseLayers([{ name: 'parcels', source: 'gpkg', kind: 'vector' }])[0].kind).toBe(
+      'vector',
+    );
+    expect(() => parseLayers([{ name: 'parcels', source: 'gpkg' }])).toThrow('parcels');
+  });
+
   it('offers only the layers with a time axis', () => {
     const timed = timedLayers(parseLayers(LAYERS));
     expect(timed.map((l) => l.name)).toEqual(['ndvi']);
@@ -193,7 +204,12 @@ describe('the layer list', () => {
   it('rejects an extent whose start will not parse', () => {
     const timed = timedLayers(
       parseLayers([
-        { name: 'broken', source: 'stac', temporal_extent: { start: 'whenever', end: null } },
+        {
+          name: 'broken',
+          source: 'stac',
+          kind: 'raster',
+          temporal_extent: { start: 'whenever', end: null },
+        },
       ]),
     );
     expect(timed).toEqual([]);

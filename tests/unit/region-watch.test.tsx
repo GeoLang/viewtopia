@@ -208,8 +208,9 @@ describe('the watches api', () => {
 });
 
 const LAYERS = [
-  { name: 'ndvi', source: 'stac', collection: 'sentinel-2', default_datetime: null },
-  { name: 'hillshade', source: 'cog', collection: null, default_datetime: null },
+  { name: 'ndvi', source: 'stac', kind: 'raster', collection: 'sentinel-2', default_datetime: null },
+  { name: 'hillshade', source: 'cog', kind: 'raster', collection: null, default_datetime: null },
+  { name: 'parcels', source: 'gpkg', kind: 'vector', collection: null, default_datetime: null },
 ];
 
 function renderPanel() {
@@ -308,6 +309,20 @@ describe('the region watch panel', () => {
     expect(screen.getByTestId('watch-blocked')).toHaveTextContent(
       'Only an editor of this map can add a watch.',
     );
+  });
+
+  it('offers the raster layers and leaves out a vector layer', async () => {
+    useLiveStore.setState({ documentId: 'doc-1', role: 'edit', guest: false });
+    drawPolygon();
+    await act(async () => {
+      renderPanel();
+    });
+
+    fireEvent.click(screen.getByRole('textbox', { name: 'Layer' }));
+    const options = within(screen.getByRole('listbox', { name: 'Layer' }));
+    expect(options.getByText('ndvi')).toBeInTheDocument();
+    expect(options.getByText('hillshade')).toBeInTheDocument();
+    expect(options.queryByText('parcels')).toBeNull();
   });
 
   it('creates a watch over the drawn polygon and lists what came back', async () => {

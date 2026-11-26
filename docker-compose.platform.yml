@@ -279,6 +279,7 @@ services:
       # the two layers below come to 256 MiB resident and 2 GiB spilled
       GEOPLUMB_CACHE_BYTES: 134217728
       GEOPLUMB_DISK_CACHE: /cache
+      GEOPLUMB_EXPORT_DIR: /exports
       RUST_LOG: info
     volumes:
       - ./deploy/geoplumb-layers.toml:/etc/geoplumb/layers.toml:ro

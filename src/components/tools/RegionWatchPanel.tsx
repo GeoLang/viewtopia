@@ -116,7 +116,10 @@ export function RegionWatchPanel({ onClose }: { onClose: () => void }) {
   }, [refresh]);
 
   useEffect(() => {
-    listLayers().then(setLayers, () => setLayers([]));
+    listLayers().then(
+      (listed) => setLayers(listed.filter((entry) => entry.kind === 'raster')),
+      () => setLayers([]),
+    );
   }, []);
 
   const region = polygons.find((polygon) => polygon.id === polygonId) ?? polygons.at(-1);
@@ -306,7 +309,7 @@ export function RegionWatchPanel({ onClose }: { onClose: () => void }) {
               <Select
                 size="xs"
                 label="Layer"
-                placeholder={layers.length === 0 ? 'No geoplumb layers' : 'Pick a layer'}
+                placeholder={layers.length === 0 ? 'No geoplumb raster layers' : 'Pick a layer'}
                 data={layers.map((entry) => entry.name)}
                 value={layer || null}
                 onChange={(picked) => setLayer(picked ?? '')}
