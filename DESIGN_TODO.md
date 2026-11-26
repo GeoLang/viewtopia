@@ -1327,10 +1327,11 @@ in `/home/aaron/tmp/geolang-fix/gdal-gaps/proofs/` and a row in
     geoplumb graphs, a `stream_order` op, `item_mask` in `ndvi_search`,
     `palette: None` in `CogParams` literals. Needs its lock bumped to geoplumb
     c3d734e and terrano f791f7d at gate time.
-  - `geoplumb-stale-write` (geoplumb): a compute running when its node is
-    invalidated still writes its old result into the cache. Check that the
-    entry is still the compute's own pending one before writing, for tiles
-    and regions alike.
+  - geoplumb disk tier: a spill file write still in flight when its node is
+    invalidated and recomputed can overwrite the newer entry's file and then
+    delete it. Stale data reaches a pull only if that entry is evicted and
+    reloaded inside the window. Spill file names are keyed by chunk, which
+    restore depends on.
 - [~] 8.9 native dtype: design in
   `/home/aaron/tmp/geolang-fix/gdal-gaps/design-8.9.md`, decisions at its end.
   terrano f791f7d has the typed band, `read_window_typed` and palettes.
