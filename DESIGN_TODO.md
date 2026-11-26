@@ -1314,9 +1314,10 @@ in `/home/aaron/tmp/geolang-fix/gdal-gaps/proofs/` and a row in
 - [~] `tiletopia-lock-bump`: bump geoplumb and terrano. geoplumb's `resample_to_grid`
   takes `&BandKinds`, and terrano's hydrology changes what the terrain route
   draws for flow direction, accumulation and watershed on lakes and coasts.
-- [~] `geoplumb-stac-item-mask`: apply a quality mask per item before the
-  composite, so a masked `median` fills a pixel cloudy in one item from the
-  others. The `ndvi` example uses `latest` until then, and 9.7 needs it.
+- [ ] geoplumb `stac` source: an `item_mask` asset also listed in `assets` is
+  read twice per item.
+- [ ] tiletopia `ndvi_search` takes a median with no per-item mask, at its next
+  geoplumb lock bump it can take `item_mask` on `scl`.
 - [ ] geoplumb `stac` source: same-resolution assets and items whose origin is
   off the anchor grid go through `read_chunk`'s rounding and can sit up to
   half a pixel off.
