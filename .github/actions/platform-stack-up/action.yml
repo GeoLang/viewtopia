@@ -15,7 +15,16 @@ inputs:
 runs:
   using: composite
   steps:
+    # geofabrik is unreachable from runners at times, and a dated extract never changes
+    - name: Restore OSM extract
+      id: osm-extract
+      uses: actions/cache@v6
+      with:
+        path: viewtopia/data/region.osm.pbf
+        key: osm-extract-monaco-260101
+
     - name: Download OSM extract
+      if: steps.osm-extract.outputs.cache-hit != 'true'
       shell: bash
       working-directory: viewtopia
       run: |
