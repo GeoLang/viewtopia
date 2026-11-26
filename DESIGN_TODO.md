@@ -1311,7 +1311,15 @@ in `/home/aaron/tmp/geolang-fix/gdal-gaps/proofs/` and a row in
 `/home/aaron/tmp/geolang-fix/proof-ledger.tsv`.
 
 - [ ] tiletopia's terrain and viewshed analysis routes on geoplumb, after 8.7.
-- [~] `geoplumb-band-value-kind`: 8.1b.
+- [ ] tiletopia: bump geoplumb and terrano. geoplumb's `resample_to_grid`
+  takes `&BandKinds`, and terrano's hydrology changes what the terrain route
+  draws for flow direction, accumulation and watershed on lakes and coasts.
+- [ ] geoplumb `stac` source: apply a quality mask per item before the
+  composite, so a masked `median` fills a pixel cloudy in one item from the
+  others. The `ndvi` example uses `latest` until then, and 9.7 needs it.
+- [ ] geoplumb `stac` source: same-resolution assets and items whose origin is
+  off the anchor grid go through `read_chunk`'s rounding and can sit up to
+  half a pixel off.
 - [~] `geoplumb-stac-mixed-res`: geoplumb `stac` source over assets of different pixel sizes, read a
   coarser asset onto the finest asset's grid, nearest for categorical bands,
   bilinear for continuous ones. Earth Search serves `red` at 10 m and `scl` at
@@ -1326,9 +1334,9 @@ in `/home/aaron/tmp/geolang-fix/gdal-gaps/proofs/` and a row in
 - [~] `geoplumb-cli` (with `terrano-cog-info`): 9.1, a `geoplumb` command
   with `run` and `info`.
 - [ ] Section 9, routine use over GDAL: 9.2 to 9.7.
-- [~] `terrano-hydrology`: `fill_sinks` leaves filled depressions flat so flow
-  stops at lakes, `flow_accumulation` takes cells times path length,
-  `stream_order` is not Strahler. tiletopia's terrain route ships all three.
+- [ ] `geoplumb run` to `.gpkg`: geodukt-core depends on geoplumb and
+  geodukt-io takes rusqlite 0.40 against geoplumb's 0.39, so a GeoPackage
+  writer needs its own home (topoi already holds the WKB code) or geodukt split.
 - [ ] 8.8 Zarr source.
 - [ ] 8.10 colour ramps on png tiles, CRS input beyond EPSG codes.
 - [ ] topoi `validate` reports 41 HoleOutsideShell on the WorldCover class 60
