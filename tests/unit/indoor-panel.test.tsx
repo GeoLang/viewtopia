@@ -74,7 +74,7 @@ function clickMap(lng: number, lat: number) {
 
 async function panel() {
   const view = render(
-    <MantineProvider>
+    <MantineProvider env="test">
       <IndoorPanel onClose={() => {}} />
     </MantineProvider>,
   );
