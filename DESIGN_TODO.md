@@ -1318,12 +1318,25 @@ in `/home/aaron/tmp/geolang-fix/gdal-gaps/proofs/` and a row in
 - [ ] geoplumb `stac` source: same-resolution assets and items whose origin is
   off the anchor grid go through `read_chunk`'s rounding and can sit up to
   half a pixel off.
-- [ ] 8.7 global operations: design in
-  `/home/aaron/tmp/geolang-fix/gdal-gaps/design-8.7.md`, decisions at its end,
-  ready to build.
-- [ ] 8.9 native dtype: design in
-  `/home/aaron/tmp/geolang-fix/gdal-gaps/design-8.9.md`, decisions at its end,
-  ready to build.
+- [~] 8.7 global operations: design in
+  `/home/aaron/tmp/geolang-fix/gdal-gaps/design-8.7.md`, decisions at its end.
+  In flight as code-only agents, uncommitted work in each worktree, patches in
+  `/home/aaron/tmp/geolang-fix/patches/`:
+  - `geoplumb-region-engine` (geoplumb): `Transform::region()`, region pulls,
+    peak-memory cap, `Error::RegionTooLarge`, invalidation, compute that
+    survives a cancel, `Viewshed` onto it, `output_without_input` deleted.
+  - `geoplumb-hydrology-elements` (geoplumb): `FlowDirection`,
+    `FlowAccumulation`, `Watershed`, `StreamOrder`, their layer ops, 400 for
+    `RegionTooLarge`. Lands with the engine worktree, gated together.
+  - `gdal-gaps/proofs/hydrology.sh`: against pysheds 0.5, thresholds fixed
+    before the first run.
+  - Next: tiletopia routes on geoplumb graphs plus a `stream_order` op.
+- [~] 8.9 native dtype: design in
+  `/home/aaron/tmp/geolang-fix/gdal-gaps/design-8.9.md`, decisions at its end.
+  - `terrano-typed-band` (terrano): typed band, `CogLevel::format()` and
+    `nodata()`, `CogReader::read_window_typed`, ColorMap read and write.
+  - Next, after 8.7 lands in geoplumb: caps `Dtype` per band, typed
+    `RasterChunk`, data movement, sources with proofs, `cast` op.
 - [ ] Section 9, routine use over GDAL: `geoplumb pyramid`, then 9.2 to 9.7.
 - [ ] `geoplumb run` to `.gpkg`: geodukt-core depends on geoplumb and
   geodukt-io takes rusqlite 0.40 against geoplumb's 0.39, so a GeoPackage
