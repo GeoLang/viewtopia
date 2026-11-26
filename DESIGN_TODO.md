@@ -1331,6 +1331,9 @@ in `/home/aaron/tmp/geolang-fix/gdal-gaps/proofs/` and a row in
   - `gdal-gaps/proofs/hydrology.sh`: against pysheds 0.5, thresholds fixed
     before the first run.
   - Next: tiletopia routes on geoplumb graphs plus a `stream_order` op.
+  - After it lands: a compute running when its node is invalidated still
+    writes its old result into the cache. Check that the entry is still the
+    compute's own pending one before writing, for tiles and regions alike.
 - [~] 8.9 native dtype: design in
   `/home/aaron/tmp/geolang-fix/gdal-gaps/design-8.9.md`, decisions at its end.
   - `terrano-typed-band` (terrano): typed band, `CogLevel::format()` and
