@@ -556,6 +556,12 @@ last commit that still has the file.
   coordination patch because agora holds annotations.
   `crates/tiletopia-server/src/annotations.rs` at 34f844e.
 
+### Modules removed 2026-11-26, rebuild from history if wanted
+
+- [ ] tiletopia-terrain `contours`, `hillshade`, `slope`, `aspect` and
+  `to_terrano_raster`, which had no callers, the analysis routes call terrano
+  and geoplumb. `crates/tiletopia-terrain/src/lib.rs` at ebaa886.
+
 ## Self-host preview release, follow-ups
 
 The 0.x preview shipped 2026-09-16: every platform repo publishes
@@ -1304,28 +1310,25 @@ worktrees under `/home/aaron/src/GeoLang/.worktrees/`, then gate, proof script
 in `/home/aaron/tmp/geolang-fix/gdal-gaps/proofs/` and a row in
 `/home/aaron/tmp/geolang-fix/proof-ledger.tsv`.
 
-- [~] `tiletopia-geoplumb-cutover`: tiletopia's export route on
-  `geoplumb::export::write_cog` with its grid and encode code deleted, the
-  call sites in `imagery.rs` and `analysis_tiles.rs` fixed for `value_kind`,
-  `contours_geojson` on `cell_position()`, unused `tiletopia-terrain`
-  `contours` deleted, geoplumb, terrano and topoi locks bumped.
 - [ ] tiletopia's terrain and viewshed analysis routes on geoplumb, after 8.7.
 - [~] `geoplumb-band-value-kind`: 8.1b.
-- [ ] geoplumb `stac` source over assets of different pixel sizes: read a
+- [~] `geoplumb-stac-mixed-res`: geoplumb `stac` source over assets of different pixel sizes, read a
   coarser asset onto the finest asset's grid, nearest for categorical bands,
   bilinear for continuous ones. Earth Search serves `red` at 10 m and `scl` at
   20 m, so the `s2-red-clear` example and the README's masked `ndvi` advice fail
   at startup today.
-- [ ] tiletopia: delete `tiletopia_terrain`'s `hillshade`, `slope`, `aspect`
-  and `to_terrano_raster`, which have no callers.
 - [~] 8.7 global operations: design in
   `/home/aaron/tmp/geolang-fix/gdal-gaps/design-8.7.md`, owner approval before
   building.
 - [~] 8.9 native dtype: design in
   `/home/aaron/tmp/geolang-fix/gdal-gaps/design-8.9.md`, owner approval before
   building.
-- [ ] Section 9, routine use over GDAL: 9.1 to 9.7, a `geoplumb` command
-  first.
+- [~] `geoplumb-cli` (with `terrano-cog-info`): 9.1, a `geoplumb` command
+  with `run` and `info`.
+- [ ] Section 9, routine use over GDAL: 9.2 to 9.7.
+- [~] `terrano-hydrology`: `fill_sinks` leaves filled depressions flat so flow
+  stops at lakes, `flow_accumulation` takes cells times path length,
+  `stream_order` is not Strahler. tiletopia's terrain route ships all three.
 - [ ] 8.8 Zarr source.
 - [ ] 8.10 colour ramps on png tiles, CRS input beyond EPSG codes.
 - [ ] topoi `validate` reports 41 HoleOutsideShell on the WorldCover class 60
