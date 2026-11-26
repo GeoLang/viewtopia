@@ -1298,7 +1298,22 @@ Metal/Vulkan is unstarted.
 
 ### geoplumb against GDAL
 
-See `geoplumb/docs/gdal-gap-plan.md`, which has no open boxes. Its last section answers whether
+[~] Section 8 of `geoplumb/docs/gdal-gap-plan.md` is in flight. Wave 1
+(8.0 to 8.3: COG overview fix, categorical rasters, the MVT encoder in
+jung-mvt, NetCDF and GRIB sources) is on master in terrano b4176c4, jung
+6b996a4, fenestra bd97a66 and geoplumb 1a775c3. Wave 2 sits uncommitted in
+worktrees under `/home/aaron/src/GeoLang/.worktrees/`:
+`geoplumb-vector-layers` (8.5), `geoplumb-export` (8.4) and
+`geoplumb-raster-vector` (8.6). The last two carry 8.0 and 8.1 staged, and
+all three predate geoplumb 1a775c3, so each is rebased onto it before its
+gate.
+Proofs and the gate scripts are in `/home/aaron/tmp/geolang-fix/gdal-gaps/`,
+verdicts in `/home/aaron/tmp/geolang-fix/proof-ledger.tsv`. tiletopia's
+export and terrain analysis routes are cut over to geoplumb once 8.4 and
+8.7 land, together with the four tiletopia call sites 8.1 breaks
+(`imagery.rs` 1661 and 1989, `analysis_tiles.rs` 644 and 809).
+
+Sections 1 to 6 have no open boxes. Section 7 answers whether
 GDAL can go to nothing: yes for the stack's own paths over two to three
 years, driven by what the gated source opens in production, never for every
 file a public user brings.
