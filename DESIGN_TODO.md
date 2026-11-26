@@ -1311,10 +1311,10 @@ in `/home/aaron/tmp/geolang-fix/gdal-gaps/proofs/` and a row in
 `/home/aaron/tmp/geolang-fix/proof-ledger.tsv`.
 
 - [ ] tiletopia's terrain and viewshed analysis routes on geoplumb, after 8.7.
-- [ ] tiletopia: bump geoplumb and terrano. geoplumb's `resample_to_grid`
+- [~] `tiletopia-lock-bump`: bump geoplumb and terrano. geoplumb's `resample_to_grid`
   takes `&BandKinds`, and terrano's hydrology changes what the terrain route
   draws for flow direction, accumulation and watershed on lakes and coasts.
-- [ ] geoplumb `stac` source: apply a quality mask per item before the
+- [~] `geoplumb-stac-item-mask`: apply a quality mask per item before the
   composite, so a masked `median` fills a pixel cloudy in one item from the
   others. The `ndvi` example uses `latest` until then, and 9.7 needs it.
 - [ ] geoplumb `stac` source: same-resolution assets and items whose origin is
