@@ -1324,9 +1324,11 @@ in `/home/aaron/tmp/geolang-fix/gdal-gaps/proofs/` and a row in
   against pysheds (`gdal-gaps/proofs/hydrology.sh`). In flight, uncommitted
   work in each worktree, patches in `/home/aaron/tmp/geolang-fix/patches/`:
   - `tiletopia-region-routes` (tiletopia): `/terrain` and `/viewshed` on
-    geoplumb graphs, a `stream_order` op, `item_mask` in `ndvi_search`,
-    `palette: None` in `CogParams` literals. Needs its lock bumped to geoplumb
-    c3d734e and terrano f791f7d at gate time.
+    geoplumb graphs, a `stream_order` op, `item_mask` in `ndvi_search`. Lock
+    on geoplumb e42fb9a with terrano held at f21d72d, the terrano geoplumb
+    builds against. When geoplumb moves to terrano f791f7d (8.9 core),
+    tiletopia's five `CogParams` literals need `palette: None`, saved in
+    `patches/tiletopia-region-routes-with-palette.patch`.
   - geoplumb disk tier: a spill file write still in flight when its node is
     invalidated and recomputed can overwrite the newer entry's file and then
     delete it. Stale data reaches a pull only if that entry is evicted and
