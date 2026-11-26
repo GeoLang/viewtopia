@@ -1337,11 +1337,15 @@ in `/home/aaron/tmp/geolang-fix/gdal-gaps/proofs/` and a row in
 - [~] 8.9 native dtype: design in
   `/home/aaron/tmp/geolang-fix/gdal-gaps/design-8.9.md`, decisions at its end.
   terrano f791f7d has the typed band, `read_window_typed` and palettes.
-  - `geoplumb-dtype-core` (geoplumb): terrano lock to f791f7d, caps `Dtype`
-    per band, typed `RasterChunk`, dtype-generic data movement (steps 2 to 4,
-    no output changes).
-  - Next: sources with proofs and the palette on export (step 5), `cast` op
-    (step 6).
+  geoplumb 703038d has dtype per band, typed chunks and native data movement
+  (steps 2 to 4, no output change). In flight:
+  - `geoplumb-dtype-sources` (geoplumb): `CogSrc`, `StacSrc`, `GdalSrc` serve
+    their native dtype, `Viewshed`, reclassify and `ToRaster` narrow, export
+    carries the source palette, the `cast` layer op (steps 5 and 6).
+  - `gdal-gaps/proofs/native-dtype.sh`: the design's five checks plus the
+    palette, thresholds fixed before the first run.
+  - Then: tiletopia moves to geoplumb 703038d or later and terrano f791f7d,
+    with the saved `palette: None` lines.
 - [ ] Section 9, routine use over GDAL: `geoplumb pyramid`, then 9.2 to 9.7.
 - [ ] `geoplumb run` to `.gpkg`: geodukt-core depends on geoplumb and
   geodukt-io takes rusqlite 0.40 against geoplumb's 0.39, so a GeoPackage
