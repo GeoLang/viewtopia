@@ -1346,6 +1346,14 @@ in `/home/aaron/tmp/geolang-fix/gdal-gaps/proofs/` and a row in
     palette, thresholds fixed before the first run.
   - Then: tiletopia moves to geoplumb 703038d or later and terrano f791f7d,
     with the saved `palette: None` lines.
+- [~] geoplumb `peak` value kind (worktree `geoplumb-peak-value-kind`):
+  nearest when sampling up, maximum when sampling down, used by
+  `FlowAccumulation`. Bilinear blending halves a one-cell river, so
+  tiletopia's Lake Thun outlet read 0.584 of terrano's area. The tiletopia
+  region routes (`tiletopia-region-routes`, gated, 1474 tests pass) land after
+  this and 8.9 sources, bumped to that geoplumb, and the Lake Thun proof
+  (`proofs/tiletopia-terrain-hydrology.sh`, decoder updated for the route's
+  continuous ramp, thresholds unchanged) must pass.
 - [ ] Section 9, routine use over GDAL: `geoplumb pyramid`, then 9.2 to 9.7.
 - [ ] `geoplumb run` to `.gpkg`: geodukt-core depends on geoplumb and
   geodukt-io takes rusqlite 0.40 against geoplumb's 0.39, so a GeoPackage
