@@ -1320,20 +1320,13 @@ in `/home/aaron/tmp/geolang-fix/gdal-gaps/proofs/` and a row in
 - [ ] geoplumb `stac` source: same-resolution assets and items whose origin is
   off the anchor grid go through `read_chunk`'s rounding and can sit up to
   half a pixel off.
-- [~] `geoplumb-stac-mixed-res`: geoplumb `stac` source over assets of different pixel sizes, read a
-  coarser asset onto the finest asset's grid, nearest for categorical bands,
-  bilinear for continuous ones. Earth Search serves `red` at 10 m and `scl` at
-  20 m, so the `s2-red-clear` example and the README's masked `ndvi` advice fail
-  at startup today.
 - [~] 8.7 global operations: design in
   `/home/aaron/tmp/geolang-fix/gdal-gaps/design-8.7.md`, owner approval before
   building.
 - [~] 8.9 native dtype: design in
   `/home/aaron/tmp/geolang-fix/gdal-gaps/design-8.9.md`, owner approval before
   building.
-- [~] `geoplumb-cli` (with `terrano-cog-info`): 9.1, a `geoplumb` command
-  with `run` and `info`.
-- [ ] Section 9, routine use over GDAL: 9.2 to 9.7.
+- [ ] Section 9, routine use over GDAL: `geoplumb pyramid`, then 9.2 to 9.7.
 - [ ] `geoplumb run` to `.gpkg`: geodukt-core depends on geoplumb and
   geodukt-io takes rusqlite 0.40 against geoplumb's 0.39, so a GeoPackage
   writer needs its own home (topoi already holds the WKB code) or geodukt split.
