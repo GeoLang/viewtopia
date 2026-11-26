@@ -1320,26 +1320,25 @@ in `/home/aaron/tmp/geolang-fix/gdal-gaps/proofs/` and a row in
   half a pixel off.
 - [~] 8.7 global operations: design in
   `/home/aaron/tmp/geolang-fix/gdal-gaps/design-8.7.md`, decisions at its end.
-  In flight as code-only agents, uncommitted work in each worktree, patches in
-  `/home/aaron/tmp/geolang-fix/patches/`:
-  - `geoplumb-region-engine` (geoplumb): `Transform::region()`, region pulls,
-    peak-memory cap, `Error::RegionTooLarge`, invalidation, compute that
-    survives a cancel, `Viewshed` onto it, `output_without_input` deleted.
-  - `geoplumb-hydrology-elements` (geoplumb): `FlowDirection`,
-    `FlowAccumulation`, `Watershed`, `StreamOrder`, their layer ops, 400 for
-    `RegionTooLarge`. Lands with the engine worktree, gated together.
-  - `gdal-gaps/proofs/hydrology.sh`: against pysheds 0.5, thresholds fixed
-    before the first run.
-  - Next: tiletopia routes on geoplumb graphs plus a `stream_order` op.
-  - After it lands: a compute running when its node is invalidated still
-    writes its old result into the cache. Check that the entry is still the
-    compute's own pending one before writing, for tiles and regions alike.
+  geoplumb c3d734e has region transforms and the four hydrology ops, proven
+  against pysheds (`gdal-gaps/proofs/hydrology.sh`). In flight, uncommitted
+  work in each worktree, patches in `/home/aaron/tmp/geolang-fix/patches/`:
+  - `tiletopia-region-routes` (tiletopia): `/terrain` and `/viewshed` on
+    geoplumb graphs, a `stream_order` op, `item_mask` in `ndvi_search`,
+    `palette: None` in `CogParams` literals. Needs its lock bumped to geoplumb
+    c3d734e and terrano f791f7d at gate time.
+  - `geoplumb-stale-write` (geoplumb): a compute running when its node is
+    invalidated still writes its old result into the cache. Check that the
+    entry is still the compute's own pending one before writing, for tiles
+    and regions alike.
 - [~] 8.9 native dtype: design in
   `/home/aaron/tmp/geolang-fix/gdal-gaps/design-8.9.md`, decisions at its end.
-  - `terrano-typed-band` (terrano): typed band, `CogLevel::format()` and
-    `nodata()`, `CogReader::read_window_typed`, ColorMap read and write.
-  - Next, after 8.7 lands in geoplumb: caps `Dtype` per band, typed
-    `RasterChunk`, data movement, sources with proofs, `cast` op.
+  terrano f791f7d has the typed band, `read_window_typed` and palettes.
+  - `geoplumb-dtype-core` (geoplumb): terrano lock to f791f7d, caps `Dtype`
+    per band, typed `RasterChunk`, dtype-generic data movement (steps 2 to 4,
+    no output changes).
+  - Next: sources with proofs and the palette on export (step 5), `cast` op
+    (step 6).
 - [ ] Section 9, routine use over GDAL: `geoplumb pyramid`, then 9.2 to 9.7.
 - [ ] `geoplumb run` to `.gpkg`: geodukt-core depends on geoplumb and
   geodukt-io takes rusqlite 0.40 against geoplumb's 0.39, so a GeoPackage
