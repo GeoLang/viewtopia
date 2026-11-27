@@ -1310,8 +1310,6 @@ worktrees under `/home/aaron/src/GeoLang/.worktrees/`, then gate, proof script
 in `/home/aaron/tmp/geolang-fix/gdal-gaps/proofs/` and a row in
 `/home/aaron/tmp/geolang-fix/proof-ledger.tsv`.
 
-- [ ] geoplumb `stac` source: an `item_mask` asset also listed in `assets` is
-  read twice per item.
 - [ ] Section 9, routine use over GDAL: `geoplumb pyramid`, then 9.2 to 9.7.
 - [ ] `geoplumb run` to `.gpkg`: geodukt-core depends on geoplumb and
   geodukt-io takes rusqlite 0.40 against geoplumb's 0.39, so a GeoPackage
