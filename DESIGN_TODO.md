@@ -1444,9 +1444,13 @@ proven before the next:
   CRSs round-trip projinfo's PROJJSON byte for byte. Left: LCC 1SP/2SP and
   Mercator A/B equivalence (needs `convertToOtherMethod`), implicit-CS
   relaxation for WKT1 bases, standalone transformations.
-- [ ] 1d. P-gie: a runner for PROJ's `test/gie` and `test/gigs` files (IOGP
-  GIGS, expected values independent of PROJ), copied in, with a per-file
-  report and a manifest of passing cases that must not regress. Targets:
+- [x] 1d. P-gie (projicio db92f99): a runner for PROJ's `test/gie` and
+  `test/gigs` files (IOGP GIGS, expected values independent of PROJ), copied
+  in, with a per-file report and a manifest of passing cases that must not
+  regress. Its case counts equal PROJ gie's on all 56 files. Baseline: GIGS
+  580 of 1866 pass, 322 fail, 964 skipped (646 PROJ strings, 237 grids, 81
+  heights), test/gie 4 of 6856. The `init=epsg:A inv step init=epsg:B`
+  pipelines run as `Transform::new`, the `.failing` files included. Targets:
   GIGS 5100 after P-proj, GIGS 5200 and `epsg_no_grid.gie` after P-ops,
   `builtins.gie` for every ported method once legacy PROJ strings parse.
   PROJ's C++ unit tests (`test_io.cpp`, `test_crs.cpp`,
