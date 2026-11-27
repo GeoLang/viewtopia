@@ -1315,7 +1315,10 @@ own worktree. Gates run one at a time on hercules through
 `gdal-gaps/hercules-gate.sh`, then the proof, then fast-forward and push.
 
 - [ ] H. Full custom CRS (8.10), so a CRS with no EPSG code works end to
-  end. Settled:
+  end. Paused after H2 (terrano f3d2d05) until "projicio as a PROJ
+  replacement" reaches wave 5, which replaces the PROJ-string `definition`
+  below with canonical PROJJSON and the projicio conversions with the ISO
+  19111 model. tiletopia-geokeys patch waits there. Settled:
   - geoplumb `Crs` becomes `Crs { definition: Arc<str>, epsg: Option<u32> }`.
     `definition` is a normalized PROJ string built once at input from EPSG,
     WKT, PROJJSON or a PROJ string. Normalization changes spelling only
@@ -1337,9 +1340,11 @@ own worktree. Gates run one at a time on hercules through
     GeoTIFF user-defined geokeys to and from PROJ, PROJ to WKT1, CF
     grid_mapping attributes to PROJ, and the unique EPSG match.
   - terrano reads and writes the GeoKeyDirectory, double and ascii params as
-    typed data in `GeoTiffMetadata`, keeps `epsg` as `Option<u16>`, and knows
-    no projections. tiletopia migrates to the `Option`. fenestra (terrano tag
-    v0.2.0) and panoptes (lock at 357778f) migrate at their next terrano bump.
+    typed data in `GeoTiffMetadata`, computes `epsg() -> Option<u16>` from the
+    keys so the two never disagree, and knows no projections. tiletopia
+    migrates, gated after H3 since it depends on geoplumb. fenestra (terrano
+    tag v0.2.0) and panoptes (lock at 357778f) migrate at their next terrano
+    bump.
   - Sources read a codeless CRS from the file: GeoTIFF geokeys, shapefile
     `.prj`, GeoPackage srs definition, the GDAL source, STAC `proj:wkt2` and
     `proj:projjson`, NetCDF and Zarr CF `crs_wkt` and `grid_mapping`, COPC
@@ -1360,6 +1365,92 @@ own worktree. Gates run one at a time on hercules through
        GeoPackage export. One agent, the type change cannot land in parts.
     3. H4 NetCDF and Zarr CF, H5 COPC WKT VLR, H6 STAC, in parallel.
     4. H7 geodukt: geoplumb lock bump, codeless `.prj` accepted.
+
+### projicio as a PROJ replacement
+
+Baseline from `projicio/tools/proj-agreement` on hercules (PROJ 9.8.1 with
+proj-data grids, EPSG v12.029, projicio 066626a), 5957 current EPSG geographic
+2D and projected CRSs from EPSG:4326: 49.7% within 1 cm of cs2cs, 61.6% within
+1 m, 19.5% over 1 m, 18.9% refused. 872 refusals are codes crs-definitions
+0.5.0 does not have (GSK-2011, NAD83(CSRS) v2 to v8, RGF93 v2, SRGI2013, the
+ETRS89 national realizations). Of the 1162 over 1 m, PROJ has only a ballpark
+operation for 155. The largest groups PROJ has a real operation for: NAD83
+(HARN) 354, NAD83 297, Pulkovo 1942 193, NAD83(CSRS) 69, ED50 32, Korean 1985
+12 at 393 m. NAD27 is 190 refused for want of a grid. Results in
+`/home/aaron/tmp/geolang-fix/gdal-gaps/logs/proj-agreement-projicio/`.
+
+Goal (owner, 2026-11-27): projicio stops being a PROJ.4-string clone, so
+NAD83 is never WGS 84, and reaches 80% within 1 cm of cs2cs on two scores:
+from EPSG:4326 to every current EPSG geographic 2D and projected CRS, and for
+every current EPSG operation from its source CRS to its target CRS at points in
+its area (2782 pairs, 1677 of them between two non-WGS 84 CRSs, 752 grid).
+Pure Rust with nothing to install stays, so no proj-sys. Settled:
+
+- The CRS model is ISO 19111 as PROJ 6+, WKT2 and PROJJSON have it: a
+  geographic CRS is a datum (EPSG code, ellipsoid, prime meridian), axes and
+  units, a projected CRS is a base geographic CRS, a conversion (EPSG method
+  code and parameters with units) and axes. Datum identity is the EPSG datum
+  code. EPSG codes are built from the proj.db registry, WKT1 (GDAL and ESRI),
+  WKT2 2015 and 2019 and PROJJSON parse straight into the model. A PROJ
+  string is legacy input only: `+datum=` maps to the EPSG datum, `+towgs84`
+  becomes an attached transformation to WGS 84 (PROJ's BoundCRS). The
+  canonical text form is PROJJSON.
+- Ported from PROJ (MIT, notice kept on each ported file) rather than written
+  from the specs: the object model, `io.cpp`'s readers and writers, and
+  `coordinateoperationfactory.cpp`'s candidates, pivots and `SortFunction`
+  (grids available, known accuracy, larger area of use, better accuracy).
+  Tests use projinfo and cs2cs output as the oracle. Vertical, compound,
+  derived and engineering CRSs stay out until later. Clone at
+  `/home/aaron/tmp/proj-read/PROJ`.
+- Projections are ported from PROJ's `src/projections` and keyed by EPSG
+  method code, with no PROJ string between. proj4rs, proj4wkt and
+  crs-definitions go, grids are read by projicio (GeoTIFF grids through
+  terrano, which does not depend on projicio).
+- `convert` raises when no EPSG operation covers the point, naming the pair.
+  `convert_allowing_ballpark` returns PROJ's ballpark answer (latitude and
+  longitude kept, no datum shift).
+- Time-dependent operations are candidates only with an epoch, through
+  `Transform::at_epoch(from, to, epoch)`. Without one they are left out, no
+  epoch is assumed (PROJ uses the reference epoch).
+- wasm embeds the registry, the `registry` feature and the wasm-only path go.
+- H1's stopped patch (`/home/aaron/tmp/geolang-fix/patches/projicio-custom-crs.patch`)
+  has a projection table with GeoTIFF, WKT1, CF and EPSG method and parameter
+  codes for 13 methods, with sources, worth reusing. It found proj4wkt drops
+  PRIMEM, reads LCC 1SP and polar stereographic B wrongly, and proj4rs
+  ignores `+k_0` (253 crs-definitions entries).
+
+Waves, code-only agents in worktrees, gates one at a time on hercules, each
+proven before the next:
+
+- [x] 0. proj-agreement two scores at projicio 9ad0f76: from
+  EPSG:4326 49.7% within 1 cm (5957 CRSs), operation pairs 21.3% (1658
+  operations between geographic 2D CRSs, 1124 touching 3D or geocentric CRSs
+  not measured). Pairs over 1 cm or refused: Helmert 834, grid 305,
+  concatenated 140, prime meridian rotations 26 (projicio ignores
+  non-Greenwich meridians and the grad, EPSG:4807 to 4275 comes back
+  unchanged).
+- [ ] 1a. P-reg: `gen-epsg-registry` and `projicio-epsg-format` add CRS
+  definitions (datum, ellipsoid, prime meridian, axes, units, conversion
+  method and parameters) and every EPSG operation (Helmert with time-dependent
+  parameters, other methods, concatenated steps, grid operations by grid name)
+  with area and accuracy, in the reserved sections.
+- [ ] 1b. P-proj: projection methods from PROJ keyed by EPSG method code, every
+  method EPSG's projected CRSs use, tested against cs2cs.
+- [ ] 1c. P-model: the ISO 19111 types with PROJJSON read and write.
+- [ ] 2a. P-wkt: WKT1 GDAL and ESRI, WKT2 2015 and 2019, read and write.
+- [ ] 2b. P-ops: direct, inverse, WGS 84 pivot and concatenated candidates,
+  `SortFunction` order, per-point selection, `convert`,
+  `convert_allowing_ballpark`, `Transform::at_epoch`, built from the registry.
+- [ ] 3. P-switch: `Transform::new` on the new engine, crs-definitions,
+  proj4rs and proj4wkt removed, wasm embeds the registry, comparison rerun.
+- [ ] 4. Grids: NTv2, NADCON and PROJ's GeoTIFF grids through the same
+  selection, if the pairs score needs them.
+- [ ] 5. Callers: geoplumb, geodukt, panoptes, tiletopia on the new API. Track
+  H resumes with `Crs.definition` as canonical PROJJSON in place of a PROJ
+  string.
+- [ ] Later: dynamic CRSs and plate motion, vertical and compound CRSs with
+  geoid grids, world projections outside EPSG (robin, natearth, wintri, eck4,
+  igh, ortho, gnom, sinu, eqdc, ob_tran).
 
 ### verne, the next adapter
 
