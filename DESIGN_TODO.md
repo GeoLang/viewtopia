@@ -1321,8 +1321,6 @@ in `/home/aaron/tmp/geolang-fix/gdal-gaps/proofs/` and a row in
   writer needs its own home (topoi already holds the WKB code) or geodukt split.
 - [ ] 8.8 Zarr source.
 - [ ] 8.10 colour ramps on png tiles, CRS input beyond EPSG codes.
-- [ ] topoi `validate` reports 38 HoleOutsideShell on the WorldCover class 60
-  union where GEOS finds the union valid (`gdal-gaps/scratch/union-repro-ioverlay9`).
 
 ### verne, the next adapter
 
