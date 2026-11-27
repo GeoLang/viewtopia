@@ -1323,8 +1323,6 @@ in `/home/aaron/tmp/geolang-fix/gdal-gaps/proofs/` and a row in
 - [ ] 8.10 colour ramps on png tiles, CRS input beyond EPSG codes.
 - [ ] topoi `validate` reports 41 HoleOutsideShell on the WorldCover class 60
   union where GEOS finds 2.
-- [ ] iOverlay#104: when fixed upstream, bump i_overlay in topoi and delete the
-  hole re-binding (TODO in topoi `overlay.rs`).
 
 ### verne, the next adapter
 
