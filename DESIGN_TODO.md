@@ -1314,11 +1314,6 @@ Every remaining item, as tracks. Each track is one code-only agent in its
 own worktree. Gates run one at a time on hercules through
 `gdal-gaps/hercules-gate.sh`, then the proof, then fast-forward and push.
 
-- [ ] B2. geodukt-io calls geoplumb's `elements::read_shapefile`,
-  `elements::read_csv` and `elements::write_geopackage`, its own copies
-  deleted, and geodukt's geoplumb lock moves off f89a945. Worktree
-  `geodukt-vector-io`, patch `patches/geodukt-vector-io.patch`. geodukt's
-  Dockerfile installs cmake and nasm for terrano's libjpeg-turbo.
 - [ ] H. Full custom CRS (8.10), so a CRS with no EPSG code works end to
   end. Settled:
   - geoplumb `Crs` becomes `Epsg(u32)` or `Proj(Arc<str>)`. WKT, PROJJSON
