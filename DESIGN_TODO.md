@@ -1314,39 +1314,11 @@ Every remaining item, as tracks. Each track is one code-only agent in its
 own worktree. Gates run one at a time on hercules through
 `gdal-gaps/hercules-gate.sh`, then the proof, then fast-forward and push.
 
-- [ ] A. JPEG (compression 7, JPEGTables joined to each tile, YCbCr) and WebP
-  (50001) tiles in terrano `CogReader`, through zune-jpeg 0.5 and image-webp
-  0.2, both pure Rust for terrano-wasm. Worktree `terrano-jpeg-webp`. Proof
-  `jpeg-webp-geotiff.sh` against GDAL's read, thresholds for lossy decode
-  set before the first run. Then the geoplumb lock bump.
-- [ ] B1. geoplumb takes over vector file I/O: `shapefile` and `csv` layer
-  source kinds and `geoplumb run -o out.gpkg`, moved from geodukt-io's
-  `read_shapefile`, `CsvReader` and `write_geopackage`. rusqlite 0.39 to
-  0.40. WKB writing goes beside topoi's `read_wkb`. Worktree
-  `geoplumb-vector-io` (plus `topoi-wkb-write`). Proof against `ogr2ogr`
-  and `ogrinfo`.
-- [ ] B2. geodukt-io calls geoplumb for the three, its copies deleted, and
-  geodukt's geoplumb lock moves off f89a945. After B1 lands.
-- [ ] C. tiletopia terrano bump to master after A. `serves_as_is` in
-  `imagery.rs` then accepts striped, BigTIFF, ZSTD, JPEG and WebP files.
-- [ ] D. Cutline clip (9.4): a raster element masking pixels outside the
-  polygons of a vector layer to nodata, pixel centre inside as
-  `gdalwarp -cutline` decides by default. Worktree `geoplumb-cutline`.
-  Proof against `gdalwarp -cutline` on the same grid.
-- [ ] E. Colour relief (9.4) and png ramps (8.10): a `color_relief`
-  element reading gdaldem's colour file (value r g b [a], percent stops,
-  nv), RGBA byte output, and png tiles coloured from the same stops.
-  jung-core `ColorRamp` gains value stops so both share it. Worktrees
-  `geoplumb-color-relief`, `jung-ramp-stops`. Proof against
-  `gdaldem color-relief`.
-- [ ] F. Zarr source (8.8) over zarrs 0.23 (v3 and the v2 subset it reads),
-  native only. Worktree `geoplumb-zarr`. Proof on a public Zarr array
-  against xarray's read.
-- [ ] G. 9.5 to 9.7: proof scripts into `geoplumb/proofs/` with the steps
-  that fetch their inputs, `docs/gdal-parity.md`, a bench script run on
-  hercules, and the Sentinel-2 median example beside the same job in GDAL
-  3.12.4 (hercules has it). Worktree `geoplumb-parity`. After D and E, so
-  their proofs are in the table.
+- [ ] B2. geodukt-io calls geoplumb's `elements::read_shapefile`,
+  `elements::read_csv` and `elements::write_geopackage`, its own copies
+  deleted, and geodukt's geoplumb lock moves off f89a945. Worktree
+  `geodukt-vector-io`, patch `patches/geodukt-vector-io.patch`. geodukt's
+  Dockerfile installs cmake and nasm for terrano's libjpeg-turbo.
 - [ ] H. Full custom CRS (8.10), so a CRS with no EPSG code works end to
   end. Settled:
   - geoplumb `Crs` becomes `Epsg(u32)` or `Proj(Arc<str>)`. WKT, PROJJSON
