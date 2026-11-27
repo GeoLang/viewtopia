@@ -1347,10 +1347,24 @@ own worktree. Gates run one at a time on hercules through
   hercules, and the Sentinel-2 median example beside the same job in GDAL
   3.12.4 (hercules has it). Worktree `geoplumb-parity`. After D and E, so
   their proofs are in the table.
-- [ ] H. Full custom CRS (8.10): projicio parses WKT1, WKT2 and PROJJSON
-  into its `Definition`, and geoplumb's `Crs` changes from an EPSG u32 to a
-  definition, so a CRS with no EPSG code works end to end. Last, since it
-  touches every element and caps negotiation, and grilled before it starts.
+- [ ] H. Full custom CRS (8.10), so a CRS with no EPSG code works end to
+  end. Settled:
+  - geoplumb `Crs` becomes `Epsg(u32)` or `Proj(Arc<str>)`. WKT, PROJJSON
+    and PROJ strings convert once at input. A CRS naming an EPSG code, or
+    whose parameters equal an entry of projicio's embedded proj4 table,
+    becomes `Epsg`, so two spellings of one CRS never add a reproject.
+    `authority()` gives the string `projicio_core::Transform::new` takes,
+    which already accepts codeless WKT through proj4wkt.
+  - projicio-core gains PROJJSON to PROJ string, and GeoTIFF user-defined
+    geokeys to and from a PROJ string, beside its WKT handling.
+  - terrano reads and writes the GeoKeyDirectory, double and ascii params
+    as typed data in `GeoTiffMetadata` in place of `epsg: u16`, and knows
+    no projections.
+  - `--crs`, `/export?crs=` and layer-file `crs` take any of the four
+    forms. Spill files store the CRS text. A projection with no GeoTIFF
+    coordinate transformation code is refused on export with an error
+    naming it.
+  Last, after the other tracks land, since it touches every element.
 
 ### verne, the next adapter
 
