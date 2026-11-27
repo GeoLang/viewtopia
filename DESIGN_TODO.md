@@ -1310,50 +1310,20 @@ worktrees under `/home/aaron/src/GeoLang/.worktrees/`, then gate, proof script
 in `/home/aaron/tmp/geolang-fix/gdal-gaps/proofs/` and a row in
 `/home/aaron/tmp/geolang-fix/proof-ledger.tsv`.
 
-- [ ] tiletopia's terrain and viewshed analysis routes on geoplumb, after 8.7.
 - [ ] geoplumb `stac` source: an `item_mask` asset also listed in `assets` is
   read twice per item.
-- [ ] tiletopia `ndvi_search` takes a median with no per-item mask, at its next
-  geoplumb lock bump it can take `item_mask` on `scl`.
 - [ ] geoplumb `stac` source: same-resolution assets and items whose origin is
   off the anchor grid go through `read_chunk`'s rounding and can sit up to
   half a pixel off.
-- [~] 8.7 global operations: design in
-  `/home/aaron/tmp/geolang-fix/gdal-gaps/design-8.7.md`, decisions at its end.
-  geoplumb c3d734e has region transforms and the four hydrology ops, proven
-  against pysheds (`gdal-gaps/proofs/hydrology.sh`). In flight, uncommitted
-  work in each worktree, patches in `/home/aaron/tmp/geolang-fix/patches/`:
-  - `tiletopia-region-routes` (tiletopia): `/terrain` and `/viewshed` on
-    geoplumb graphs, a `stream_order` op, `item_mask` in `ndvi_search`. Lock
-    on geoplumb e42fb9a with terrano held at f21d72d, the terrano geoplumb
-    builds against. When geoplumb moves to terrano f791f7d (8.9 core),
-    tiletopia's five `CogParams` literals need `palette: None`, saved in
-    `patches/tiletopia-region-routes-with-palette.patch`.
-  - geoplumb disk tier: a spill file write still in flight when its node is
-    invalidated and recomputed can overwrite the newer entry's file and then
-    delete it. Stale data reaches a pull only if that entry is evicted and
-    reloaded inside the window. Spill file names are keyed by chunk, which
-    restore depends on.
-- [~] 8.9 native dtype: design in
-  `/home/aaron/tmp/geolang-fix/gdal-gaps/design-8.9.md`, decisions at its end.
-  terrano f791f7d has the typed band, `read_window_typed` and palettes.
-  geoplumb 703038d has dtype per band, typed chunks and native data movement
-  (steps 2 to 4, no output change). In flight:
-  - `geoplumb-dtype-sources` (geoplumb): `CogSrc`, `StacSrc`, `GdalSrc` serve
-    their native dtype, `Viewshed`, reclassify and `ToRaster` narrow, export
-    carries the source palette, the `cast` layer op (steps 5 and 6).
-  - `gdal-gaps/proofs/native-dtype.sh`: the design's five checks plus the
-    palette, thresholds fixed before the first run.
-  - Then: tiletopia moves to geoplumb 703038d or later and terrano f791f7d,
-    with the saved `palette: None` lines.
-- [~] geoplumb `peak` value kind (worktree `geoplumb-peak-value-kind`):
-  nearest when sampling up, maximum when sampling down, used by
-  `FlowAccumulation`. Bilinear blending halves a one-cell river, so
-  tiletopia's Lake Thun outlet read 0.584 of terrano's area. The tiletopia
-  region routes (`tiletopia-region-routes`, gated, 1474 tests pass) land after
-  this and 8.9 sources, bumped to that geoplumb, and the Lake Thun proof
-  (`proofs/tiletopia-terrain-hydrology.sh`, decoder updated for the route's
-  continuous ramp, thresholds unchanged) must pass.
+- [ ] geoplumb disk tier: a spill file write still in flight when its node is
+  invalidated and recomputed can overwrite the newer entry's file and then
+  delete it. Stale data reaches a pull only if that entry is evicted and
+  reloaded inside the window. Spill file names are keyed by chunk, which
+  restore depends on.
+- [ ] geoplumb `peak` value kind: `MapAlgebra` unary ops and `Combine` pin
+  their output to `Continuous`, so `log(flow_accumulation)` blends again.
+  `Contours`, `Viewshed`, `Focal` and the hydrology DEM inputs reject a peak
+  raster at solve.
 - [ ] Section 9, routine use over GDAL: `geoplumb pyramid`, then 9.2 to 9.7.
 - [ ] `geoplumb run` to `.gpkg`: geodukt-core depends on geoplumb and
   geodukt-io takes rusqlite 0.40 against geoplumb's 0.39, so a GeoPackage
