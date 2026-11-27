@@ -1429,11 +1429,13 @@ proven before the next:
   concatenated 140, prime meridian rotations 26 (projicio ignores
   non-Greenwich meridians and the grad, EPSG:4807 to 4275 comes back
   unchanged).
-- [ ] 1a. P-reg: `gen-epsg-registry` and `projicio-epsg-format` add CRS
-  definitions (datum, ellipsoid, prime meridian, axes, units, conversion
-  method and parameters) and every EPSG operation (Helmert with time-dependent
-  parameters, other methods, concatenated steps, grid operations by grid name)
-  with area and accuracy, in the reserved sections.
+- [x] 1a. P-reg (projicio ea35c74): the registry, pinned to PROJ 9.8.1 and
+  EPSG v12.029, holds the definitions behind all 6426 current geodetic and
+  projected CRSs and the 1985 current EPSG operations between geodetic CRSs
+  with their steps. Every record equals proj.db field by field after the
+  generator's 15-digit rounding. Left for P-ops: the 798 current operations
+  touching a non-geodetic CRS, and PROJ-authority operations between EPSG
+  CRSs (64 concatenated, 24 grid), which the u32 EPSG codes cannot hold.
 - [x] 1b. P-proj (projicio 16b16df): `from_epsg_method`, 38 of 43 methods,
   the other 5 PROJ 9.8.1 refuses too. All 5346 current EPSG projected CRSs
   from proj.db's parameters: 5323 within 1 mm of cs2cs (worst 0.135 mm).
