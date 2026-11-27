@@ -1310,8 +1310,9 @@ worktrees under `/home/aaron/src/GeoLang/.worktrees/`, then gate, proof script
 in `/home/aaron/tmp/geolang-fix/gdal-gaps/proofs/` and a row in
 `/home/aaron/tmp/geolang-fix/proof-ledger.tsv`.
 
-- [ ] Section 9, routine use over GDAL: 9.2 and 9.4 to 9.7. 9.2 next is
-  band interleave in `CogReader`, then ZSTD, JPEG and WebP tiles and BigTIFF.
+- [ ] Section 9, routine use over GDAL: 9.2 and 9.4 to 9.7. 9.2 has JPEG
+  and WebP tiles in `CogReader` left, then shapefile and CSV layer sources
+  through geodukt.
 - [ ] `geoplumb run` to `.gpkg`: geodukt-core depends on geoplumb and
   geodukt-io takes rusqlite 0.40 against geoplumb's 0.39, so a GeoPackage
   writer needs its own home (topoi already holds the WKB code) or geodukt split.
