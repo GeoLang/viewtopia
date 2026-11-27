@@ -1434,9 +1434,14 @@ proven before the next:
   method and parameters) and every EPSG operation (Helmert with time-dependent
   parameters, other methods, concatenated steps, grid operations by grid name)
   with area and accuracy, in the reserved sections.
-- [ ] 1b. P-proj: projection methods from PROJ keyed by EPSG method code, every
-  method EPSG's projected CRSs use, tested against cs2cs.
-- [ ] 1c. P-model: the ISO 19111 types with PROJJSON read and write.
+- [x] 1b. P-proj (projicio 16b16df): `from_epsg_method`, 38 of 43 methods,
+  the other 5 PROJ 9.8.1 refuses too. All 5346 current EPSG projected CRSs
+  from proj.db's parameters: 5323 within 1 mm of cs2cs (worst 0.135 mm).
+- [x] 1c. P-model (projicio 72d4cf5): `iso19111` types, PROJJSON read and
+  write, `is_equivalent_to`. All 6426 current EPSG geodetic and projected
+  CRSs round-trip projinfo's PROJJSON byte for byte. Left: LCC 1SP/2SP and
+  Mercator A/B equivalence (needs `convertToOtherMethod`), implicit-CS
+  relaxation for WKT1 bases, standalone transformations.
 - [ ] 1d. P-gie: a runner for PROJ's `test/gie` and `test/gigs` files (IOGP
   GIGS, expected values independent of PROJ), copied in, with a per-file
   report and a manifest of passing cases that must not regress. Targets:
