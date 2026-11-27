@@ -1312,9 +1312,6 @@ in `/home/aaron/tmp/geolang-fix/gdal-gaps/proofs/` and a row in
 
 - [ ] geoplumb `stac` source: an `item_mask` asset also listed in `assets` is
   read twice per item.
-- [ ] geoplumb `stac` source: same-resolution assets and items whose origin is
-  off the anchor grid go through `read_chunk`'s rounding and can sit up to
-  half a pixel off.
 - [ ] Section 9, routine use over GDAL: `geoplumb pyramid`, then 9.2 to 9.7.
 - [ ] `geoplumb run` to `.gpkg`: geodukt-core depends on geoplumb and
   geodukt-io takes rusqlite 0.40 against geoplumb's 0.39, so a GeoPackage
