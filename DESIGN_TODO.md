@@ -1320,10 +1320,6 @@ in `/home/aaron/tmp/geolang-fix/gdal-gaps/proofs/` and a row in
   delete it. Stale data reaches a pull only if that entry is evicted and
   reloaded inside the window. Spill file names are keyed by chunk, which
   restore depends on.
-- [ ] geoplumb `peak` value kind: `MapAlgebra` unary ops and `Combine` pin
-  their output to `Continuous`, so `log(flow_accumulation)` blends again.
-  `Contours`, `Viewshed`, `Focal` and the hydrology DEM inputs reject a peak
-  raster at solve.
 - [ ] Section 9, routine use over GDAL: `geoplumb pyramid`, then 9.2 to 9.7.
 - [ ] `geoplumb run` to `.gpkg`: geodukt-core depends on geoplumb and
   geodukt-io takes rusqlite 0.40 against geoplumb's 0.39, so a GeoPackage
