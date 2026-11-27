@@ -1437,6 +1437,13 @@ proven before the next:
 - [ ] 1b. P-proj: projection methods from PROJ keyed by EPSG method code, every
   method EPSG's projected CRSs use, tested against cs2cs.
 - [ ] 1c. P-model: the ISO 19111 types with PROJJSON read and write.
+- [ ] 1d. P-gie: a runner for PROJ's `test/gie` and `test/gigs` files (IOGP
+  GIGS, expected values independent of PROJ), copied in, with a per-file
+  report and a manifest of passing cases that must not regress. Targets:
+  GIGS 5100 after P-proj, GIGS 5200 and `epsg_no_grid.gie` after P-ops,
+  `builtins.gie` for every ported method once legacy PROJ strings parse.
+  PROJ's C++ unit tests (`test_io.cpp`, `test_crs.cpp`,
+  `test_operationfactory.cpp`) are ported by the track porting their code.
 - [ ] 2a. P-wkt: WKT1 GDAL and ESRI, WKT2 2015 and 2019, read and write.
 - [ ] 2b. P-ops: direct, inverse, WGS 84 pivot and concatenated candidates,
   `SortFunction` order, per-point selection, `convert`,
