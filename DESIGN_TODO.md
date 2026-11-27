@@ -1318,13 +1318,19 @@ own worktree. Gates run one at a time on hercules through
   end. Settled:
   - geoplumb `Crs` becomes `Crs { definition: Arc<str>, epsg: Option<u32> }`.
     `definition` is a normalized PROJ string built once at input from EPSG,
-    WKT, PROJJSON or a PROJ string. `Eq`, `Hash` and `Ord` use `definition`
-    only, so two spellings of one CRS never add a reproject, and two codes
-    with one definition (4258 and 3823) compare equal. `epsg` is set when the
-    input names a code, or when the definition equals exactly one entry of
-    projicio's proj4 table (crs-definitions 0.5.0: 2110 of 6186 codes share
-    a definition, ETRS89 with 156 others), and is used only on output.
-    `Crs::WGS84` and `WEB_MERCATOR` become functions.
+    WKT, PROJJSON or a PROJ string. Normalization changes spelling only
+    (no-op flags, number format, parameter order) and keeps `+datum=` as
+    written. Two CRSs with codes are equal only when the codes are equal,
+    two without codes when the definitions are equal, so two spellings of
+    one codeless CRS never add a reproject. Different codes with one proj4
+    string stay different: crs-definitions 0.5.0 has 2110 of 6186 codes
+    sharing a definition, and the ETRS89 group of 157 is the datums the
+    proj4 model treats as WGS84 (NAD83, ETRS89, GDA94), while PROJ has real
+    transformations between them (53 candidates for 4269 to 4326). `epsg` is
+    set when the input names a code, or when the definition equals exactly
+    one table entry, which labels a codeless CRS on output. `Hash` must
+    agree with that equality. `Crs::WGS84` and `WEB_MERCATOR` become
+    functions.
   - projicio-core gains PROJ normalization and one projection table keyed by
     PROJ name, with the GeoTIFF coordinate transformation code, WKT1 name, CF
     `grid_mapping_name` and parameter names. From it: PROJJSON to PROJ,
