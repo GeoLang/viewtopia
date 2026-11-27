@@ -1310,7 +1310,7 @@ worktrees under `/home/aaron/src/GeoLang/.worktrees/`, then gate, proof script
 in `/home/aaron/tmp/geolang-fix/gdal-gaps/proofs/` and a row in
 `/home/aaron/tmp/geolang-fix/proof-ledger.tsv`.
 
-- [ ] Section 9, routine use over GDAL: `geoplumb pyramid`, then 9.2 to 9.7.
+- [ ] Section 9, routine use over GDAL: 9.2 and 9.4 to 9.7.
 - [ ] `geoplumb run` to `.gpkg`: geodukt-core depends on geoplumb and
   geodukt-io takes rusqlite 0.40 against geoplumb's 0.39, so a GeoPackage
   writer needs its own home (topoi already holds the WKB code) or geodukt split.
