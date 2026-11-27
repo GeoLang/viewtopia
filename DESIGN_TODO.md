@@ -1315,11 +1315,6 @@ in `/home/aaron/tmp/geolang-fix/gdal-gaps/proofs/` and a row in
 - [ ] geoplumb `stac` source: same-resolution assets and items whose origin is
   off the anchor grid go through `read_chunk`'s rounding and can sit up to
   half a pixel off.
-- [ ] geoplumb disk tier: a spill file write still in flight when its node is
-  invalidated and recomputed can overwrite the newer entry's file and then
-  delete it. Stale data reaches a pull only if that entry is evicted and
-  reloaded inside the window. Spill file names are keyed by chunk, which
-  restore depends on.
 - [ ] Section 9, routine use over GDAL: `geoplumb pyramid`, then 9.2 to 9.7.
 - [ ] `geoplumb run` to `.gpkg`: geodukt-core depends on geoplumb and
   geodukt-io takes rusqlite 0.40 against geoplumb's 0.39, so a GeoPackage
