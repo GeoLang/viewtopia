@@ -1316,22 +1316,44 @@ own worktree. Gates run one at a time on hercules through
 
 - [ ] H. Full custom CRS (8.10), so a CRS with no EPSG code works end to
   end. Settled:
-  - geoplumb `Crs` becomes `Epsg(u32)` or `Proj(Arc<str>)`. WKT, PROJJSON
-    and PROJ strings convert once at input. A CRS naming an EPSG code, or
-    whose parameters equal an entry of projicio's embedded proj4 table,
-    becomes `Epsg`, so two spellings of one CRS never add a reproject.
-    `authority()` gives the string `projicio_core::Transform::new` takes,
-    which already accepts codeless WKT through proj4wkt.
-  - projicio-core gains PROJJSON to PROJ string, and GeoTIFF user-defined
-    geokeys to and from a PROJ string, beside its WKT handling.
-  - terrano reads and writes the GeoKeyDirectory, double and ascii params
-    as typed data in `GeoTiffMetadata` in place of `epsg: u16`, and knows
-    no projections.
-  - `--crs`, `/export?crs=` and layer-file `crs` take any of the four
-    forms. Spill files store the CRS text. A projection with no GeoTIFF
-    coordinate transformation code is refused on export with an error
-    naming it.
-  Last, after the other tracks land, since it touches every element.
+  - geoplumb `Crs` becomes `Crs { definition: Arc<str>, epsg: Option<u32> }`.
+    `definition` is a normalized PROJ string built once at input from EPSG,
+    WKT, PROJJSON or a PROJ string. `Eq`, `Hash` and `Ord` use `definition`
+    only, so two spellings of one CRS never add a reproject, and two codes
+    with one definition (4258 and 3823) compare equal. `epsg` is set when the
+    input names a code, or when the definition equals exactly one entry of
+    projicio's proj4 table (crs-definitions 0.5.0: 2110 of 6186 codes share
+    a definition, ETRS89 with 156 others), and is used only on output.
+    `Crs::WGS84` and `WEB_MERCATOR` become functions.
+  - projicio-core gains PROJ normalization and one projection table keyed by
+    PROJ name, with the GeoTIFF coordinate transformation code, WKT1 name, CF
+    `grid_mapping_name` and parameter names. From it: PROJJSON to PROJ,
+    GeoTIFF user-defined geokeys to and from PROJ, PROJ to WKT1, CF
+    grid_mapping attributes to PROJ, and the unique EPSG match.
+  - terrano reads and writes the GeoKeyDirectory, double and ascii params as
+    typed data in `GeoTiffMetadata`, keeps `epsg` as `Option<u16>`, and knows
+    no projections. tiletopia migrates to the `Option`. fenestra (terrano tag
+    v0.2.0) and panoptes (lock at 357778f) migrate at their next terrano bump.
+  - Sources read a codeless CRS from the file: GeoTIFF geokeys, shapefile
+    `.prj`, GeoPackage srs definition, the GDAL source, STAC `proj:wkt2` and
+    `proj:projjson`, NetCDF and Zarr CF `crs_wkt` and `grid_mapping`, COPC
+    WKT VLR. A compound CRS keeps its horizontal part.
+  - `--crs`, `/export?crs=` and layer-file `crs` take any of the four forms.
+    Spill files store the definition. GeoTIFF export writes user-defined
+    geokeys and GeoPackage export writes WKT1 for a CRS with no `epsg`. A
+    projection missing from the table is refused on export naming it.
+  - Proofs: codeless public files where they exist (Daymet NetCDF lcc, 3DEP
+    COPC, ogr2ogr ESRI `.prj`), else real data with a CRS assigned by GDAL
+    (`gdal_translate -a_srs`, ogr2ogr `-t_srs`, Daymet to Zarr by xarray, a
+    STAC item over the custom GeoTIFF), each against GDAL 3.12 on hercules.
+  - Waves, each gated, proven and pushed before the next:
+    1. H1 projicio-core table and conversions, H2 terrano geokeys plus the
+       tiletopia migration, in parallel.
+    2. H3 geoplumb `Crs` across every element, spill, the three CRS inputs,
+       GeoTIFF, shapefile, GeoPackage and GDAL sources, GeoTIFF and
+       GeoPackage export. One agent, the type change cannot land in parts.
+    3. H4 NetCDF and Zarr CF, H5 COPC WKT VLR, H6 STAC, in parallel.
+    4. H7 geodukt: geoplumb lock bump, codeless `.prj` accepted.
 
 ### verne, the next adapter
 
