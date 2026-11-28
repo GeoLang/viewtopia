@@ -1488,16 +1488,35 @@ proven before the next:
   time-specific ones (1065, 1066) are refused, as PROJ 9.8.1 refuses them.
   The 5 velocity-grid ones (1143) wait for wave 4. For 2D CRSs, P-ops keeps
   the input height, since `forward` returns the computed one.
-- [ ] 2d. P-ops, after 2b and 2c land: direct, inverse, WGS 84 pivot and
-  concatenated candidates, `SortFunction` order, per-point selection,
-  `convert`, `convert_allowing_ballpark`, `Transform::at_epoch`.
+- [x] 2d. P-ops (projicio b06a4f2): `operation_factory::CandidateOperations`
+  with PROJ's candidate search, `SortFunction` order and per-point
+  selection, `convert`, `convert_allowing_ballpark` and an epoch
+  constructor. On the old two scores with `convert`: from EPSG:4326 73.6%
+  within 1 cm (was 49.7%), operation pairs 63.2% (was 21.3%). Left: 595
+  cases where PROJ's answer is a ballpark one, which `convert` refuses by
+  design, grids (no GeoTIFF reading yet), and about 300 Helmert and
+  concatenated cases each. Results in
+  `gdal-gaps/logs/proj-agreement-projicio-candidate-operations/`.
 - [ ] 3a. P-grid, moved up from wave 4 (owner, 2026-11-27): projicio's own
   grid store and readers for NTv2, NTv1, CTable2 and PROJ's horizontal
-  GeoTIFF grids (through terrano), ported from `grids.cpp` and
+  GeoTIFF grids, ported from `grids.cpp` and
   `apply_gridshift.cpp`, for the horizontal grid methods of registry
   operations. It lands before P-switch so viewtopia's `register_grid` and
   `missing_grids` keep working when proj4rs goes. Proof: every such
   operation against cct with the proj-data grids.
+  - [x] NTv2, NTv1, CTable2 readers and methods 9613, 9614, 9615
+    (worktree projicio-grid, gated locally, not committed): the proof
+    `gdal-gaps/proofs/projicio-grid.py` passes, 36 operations over the 16
+    proj-datumgrid-1.8 grids within 1 mm of cct in both directions.
+  - [ ] T-gridtiff: terrano-core reads every IFD with NewSubfileType,
+    tiepoint, pixel scale and GDAL_METADATA (worktree terrano-grid-tiff).
+  - [ ] geotiff-reader split: terrano's TIFF and GeoTIFF reading moves to
+    GeoLang/geotiff-reader under MPL-2.0 (owner, 2026-11-28), since
+    projicio may go permissive and takes no AGPL dependency. terrano-core
+    and projicio both depend on it. Writing and COG stay in terrano.
+  - [ ] P-grid reads proj-data's GeoTIFF grids through geotiff-reader,
+    NADCON5 (1074) and IGN 1087 included, and the proof runs over every
+    horizontal grid operation with the proj-data .tif files.
 - [ ] 3b. P-switch, after P-ops and P-grid: `Transform::new` on the new
   engine, PROJ strings as legacy input through a PROJStringParser port,
   crs-definitions, proj4rs and proj4wkt removed, wasm embeds the registry
