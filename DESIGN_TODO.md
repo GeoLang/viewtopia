@@ -1509,15 +1509,16 @@ proven before the next:
     (worktree projicio-grid, gated locally, not committed): the proof
     `gdal-gaps/proofs/projicio-grid.py` passes, 36 operations over the 16
     proj-datumgrid-1.8 grids within 1 mm of cct in both directions.
-  - [ ] T-gridtiff: terrano-core reads every IFD with NewSubfileType,
-    tiepoint, pixel scale and GDAL_METADATA (worktree terrano-grid-tiff).
-  - [ ] geotiff-reader split: terrano's TIFF and GeoTIFF reading moves to
-    GeoLang/geotiff-reader under MPL-2.0 (owner, 2026-11-28), since
-    projicio may go permissive and takes no AGPL dependency. terrano-core
-    and projicio both depend on it. Writing and COG stay in terrano.
-  - [ ] P-grid reads proj-data's GeoTIFF grids through geotiff-reader,
-    NADCON5 (1074) and IGN 1087 included, and the proof runs over every
-    horizontal grid operation with the proj-data .tif files.
+  - [x] T-gridtiff and the geotiff-reader split (geotiff-reader 743a653,
+    terrano 81d9f75): `GeoTiffDirectories` reads every IFD with
+    NewSubfileType, georeferencing and GDAL_METADATA, equal to gdalinfo on
+    all 387 proj-data GeoTIFFs. geoplumb, tiletopia and panoptes follow.
+  - [ ] P-grid part 2 (worktree projicio-grid2, brief
+    `briefs/projicio-grid2.md`): projicio reads proj-data's horizontal
+    GeoTIFF grids through geotiff-reader, adds NADCON5 2D (1074, 13
+    operations) and the IGN geocentric grid (1087, 9), and the proof runs
+    over all 305 horizontal grid operations (9615 167, 9613 113, 1074 13,
+    1087 9, 9614 3) with the proj-data .tif files.
 - [ ] 3b. P-switch, after P-ops and P-grid: `Transform::new` on the new
   engine, PROJ strings as legacy input through a PROJStringParser port,
   crs-definitions, proj4rs and proj4wkt removed, wasm embeds the registry
@@ -1529,6 +1530,15 @@ proven before the next:
 - [ ] 4b. Vertical and compound: vertical datums and CRSs, compound CRSs,
   engineering CRSs, in the registry, the model, PROJJSON and WKT, and the 798
   operations touching a non-geodetic CRS through the factory and P-ops.
+  Split in two, since one agent's context does not hold all of it.
+  - [ ] P-vertical-objects (worktree projicio-vertical, brief
+    `briefs/projicio-vertical-objects.md`), in parallel with P-grid part 2:
+    the objects and the 798 operation records in the registry, the model,
+    PROJJSON and every WKT dialect, the factory building each object. Proof:
+    PROJJSON and WKT equal projinfo for every object in scope.
+  - [ ] P-vertical-ops, after P-grid part 2: the factory builds the 798
+    operations, P-ops selects vertical, compound and 3D pairs, vertical
+    grid readers join P-grid's store. Proof against cct.
 - [ ] 4c. Remaining grids: geoid and vertical offset grids (GeoTIFF, gtx),
   velocity grids, deformation models, NADCON5 3D and the TIN methods.
 - [ ] 4d. Dynamic CRSs: point motion operations, plate motion, time-specific
@@ -1538,6 +1548,14 @@ proven before the next:
 - [ ] 5. Callers: geoplumb, geodukt, panoptes, tiletopia on the new API. Track
   H resumes with `Crs.definition` as canonical PROJJSON in place of a PROJ
   string.
+- [ ] 6. P-bench, after P-switch, on hercules only: a bench of bulk
+  transforms (a few hundred thousand points) through projicio and PROJ for a
+  Helmert pair, a grid pair, a projected pair and a WKT input, plus
+  `Transform::new` timed alone. Profile the slow cases with a sampling
+  profiler on `perf` (samply or cargo-flamegraph, current releases checked
+  first) and an allocation profiler (dhat or heaptrack), and the wasm build
+  in the browser's performance panel. Needs `perf_event_paranoid` on
+  hercules to allow perf. Fix what the profiles show, rerun the bench.
 - [ ] Out of scope: world projections without an EPSG method (robin,
   natearth, wintri, eck4, igh, ortho, gnom, sinu, eqdc, ob_tran) and PROJ
   strings as more than legacy input.
