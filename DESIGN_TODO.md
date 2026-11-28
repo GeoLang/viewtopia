@@ -1379,12 +1379,18 @@ operation for 155. The largest groups PROJ has a real operation for: NAD83
 12 at 393 m. NAD27 is 190 refused for want of a grid. Results in
 `/home/aaron/tmp/geolang-fix/gdal-gaps/logs/proj-agreement-projicio/`.
 
-Goal (owner, 2026-11-27): projicio stops being a PROJ.4-string clone, so
-NAD83 is never WGS 84, and reaches 80% within 1 cm of cs2cs on two scores:
-from EPSG:4326 to every current EPSG geographic 2D and projected CRS, and for
-every current EPSG operation from its source CRS to its target CRS at points in
-its area (2782 pairs, 1677 of them between two non-WGS 84 CRSs, 752 grid).
-Pure Rust with nothing to install stays, so no proj-sys. Settled:
+Goal (owner, 2026-11-27, raised from 80% the same day): projicio stops being
+a PROJ.4-string clone, so NAD83 is never WGS 84, and reaches 100% parity with
+PROJ 9.8.1 over everything current in proj.db's EPSG data: 1080 geodetic
+(geographic 2D and 3D, geocentric), 5346 projected, 298 vertical, 460
+compound and 15 engineering CRSs, and all 2782 operations. Parity means
+cs2cs's answer within 1 cm, height included where a CRS has one, at points in
+the area of use, or a refusal where PROJ refuses. It is measured from
+EPSG:4326 (EPSG:4979 for 3D and compound targets) to every CRS, and for every
+operation from its source CRS to its target CRS, with a coordinate epoch for
+dynamic CRSs. The first two scores (geographic 2D and projected, operations
+between geographic 2D CRSs) are the 80% goal this replaced. Pure Rust with
+nothing to install stays, so no proj-sys. Settled:
 
 - The CRS model is ISO 19111 as PROJ 6+, WKT2 and PROJJSON have it: a
   geographic CRS is a datum (EPSG code, ellipsoid, prime meridian), axes and
@@ -1455,20 +1461,66 @@ proven before the next:
   `builtins.gie` for every ported method once legacy PROJ strings parse.
   PROJ's C++ unit tests (`test_io.cpp`, `test_crs.cpp`,
   `test_operationfactory.cpp`) are ported by the track porting their code.
-- [ ] 2a. P-wkt: WKT1 GDAL and ESRI, WKT2 2015 and 2019, read and write.
-- [ ] 2b. P-ops: direct, inverse, WGS 84 pivot and concatenated candidates,
-  `SortFunction` order, per-point selection, `convert`,
-  `convert_allowing_ballpark`, `Transform::at_epoch`, built from the registry.
-- [ ] 3. P-switch: `Transform::new` on the new engine, crs-definitions,
-  proj4rs and proj4wkt removed, wasm embeds the registry, comparison rerun.
-- [ ] 4. Grids: NTv2, NADCON and PROJ's GeoTIFF grids through the same
-  selection, if the pairs score needs them.
+- After wave 1 (projicio 790652a, results in
+  `gdal-gaps/logs/proj-agreement-projicio-post-wave1/`): from EPSG:4326
+  49.7% within 1 cm, operation pairs 21.3%, both unchanged. Only two CRSs
+  moved: 4087 from 24 km off to within 1 mm, and 6932 from refused to
+  within 1 mm. Transform does not use waves 1 and 2 until P-switch.
+- [ ] 2a. P-wkt: WKT1 GDAL and ESRI, WKT2 2015 and 2019, read and write,
+  ported from `io.cpp`. Also LCC 1SP/2SP and Mercator A/B equivalence
+  (`convertToOtherMethod`) and the implicit-CS relaxation for WKT1 bases.
+  Proof: projinfo's WKT in every dialect for all 6426 CRSs, written byte for
+  byte and read back equal to the PROJJSON parse.
+- [x] 2b. P-fac (projicio 00e31f9): `iso19111::authority_factory` ported
+  from `factory.cpp`, plus standalone operation PROJJSON. Registry format 2
+  adds the 84 PROJ-authority operations between EPSG geodetic CRSs (62
+  concatenated, 22 Helmert) and datum anchor epochs. The factory's PROJJSON
+  equals projinfo 9.8.1 byte for byte for all 6426 CRSs and 2068 operations,
+  scope, area and remarks left out. The blob holds extent names, not
+  projinfo's area descriptions (about 290 KB more). Left: vertical and
+  compound steps, chains starting or ending at a projected CRS, the inverse
+  of point motion.
+- [x] 2c. P-exec (projicio 790652a): `transformation_from_epsg_method` and
+  `geocentric_transformation_from_epsg_method`, the non-grid methods of
+  current EPSG operations between geodetic CRSs, ported from PROJ
+  `helmert.cpp`, `cart.cpp` and `affine.cpp`. Of 1445 operations, 1403 are
+  within 1 mm of cct running projinfo's pipeline (worst 0.105 mm). The 42
+  time-specific ones (1065, 1066) are refused, as PROJ 9.8.1 refuses them.
+  The 5 velocity-grid ones (1143) wait for wave 4. For 2D CRSs, P-ops keeps
+  the input height, since `forward` returns the computed one.
+- [ ] 2d. P-ops, after 2b and 2c land: direct, inverse, WGS 84 pivot and
+  concatenated candidates, `SortFunction` order, per-point selection,
+  `convert`, `convert_allowing_ballpark`, `Transform::at_epoch`.
+- [ ] 3a. P-grid, moved up from wave 4 (owner, 2026-11-27): projicio's own
+  grid store and readers for NTv2, NTv1, CTable2 and PROJ's horizontal
+  GeoTIFF grids (through terrano), ported from `grids.cpp` and
+  `apply_gridshift.cpp`, for the horizontal grid methods of registry
+  operations. It lands before P-switch so viewtopia's `register_grid` and
+  `missing_grids` keep working when proj4rs goes. Proof: every such
+  operation against cct with the proj-data grids.
+- [ ] 3b. P-switch, after P-ops and P-grid: `Transform::new` on the new
+  engine, PROJ strings as legacy input through a PROJStringParser port,
+  crs-definitions, proj4rs and proj4wkt removed, wasm embeds the registry
+  and keeps its JS calls, comparison rerun.
+- [ ] 4a. P-measure: proj-agreement covers the full scope: every current
+  EPSG CRS of every kind and all 2782 operations, with heights, geocentric
+  coordinates and coordinate epochs, so every later wave has a number. Can
+  run before P-switch.
+- [ ] 4b. Vertical and compound: vertical datums and CRSs, compound CRSs,
+  engineering CRSs, in the registry, the model, PROJJSON and WKT, and the 798
+  operations touching a non-geodetic CRS through the factory and P-ops.
+- [ ] 4c. Remaining grids: geoid and vertical offset grids (GeoTIFF, gtx),
+  velocity grids, deformation models, NADCON5 3D and the TIN methods.
+- [ ] 4d. Dynamic CRSs: point motion operations, plate motion, time-specific
+  Helmert as PROJ handles it, epochs through every path.
+- [ ] 4e. Every remaining PROJ quirk the full scores show, until both reach
+  100%.
 - [ ] 5. Callers: geoplumb, geodukt, panoptes, tiletopia on the new API. Track
   H resumes with `Crs.definition` as canonical PROJJSON in place of a PROJ
   string.
-- [ ] Later: dynamic CRSs and plate motion, vertical and compound CRSs with
-  geoid grids, world projections outside EPSG (robin, natearth, wintri, eck4,
-  igh, ortho, gnom, sinu, eqdc, ob_tran).
+- [ ] Out of scope: world projections without an EPSG method (robin,
+  natearth, wintri, eck4, igh, ortho, gnom, sinu, eqdc, ob_tran) and PROJ
+  strings as more than legacy input.
 
 ### verne, the next adapter
 
