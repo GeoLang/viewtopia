@@ -1466,11 +1466,12 @@ proven before the next:
   49.7% within 1 cm, operation pairs 21.3%, both unchanged. Only two CRSs
   moved: 4087 from 24 km off to within 1 mm, and 6932 from refused to
   within 1 mm. Transform does not use waves 1 and 2 until P-switch.
-- [ ] 2a. P-wkt: WKT1 GDAL and ESRI, WKT2 2015 and 2019, read and write,
-  ported from `io.cpp`. Also LCC 1SP/2SP and Mercator A/B equivalence
-  (`convertToOtherMethod`) and the implicit-CS relaxation for WKT1 bases.
-  Proof: projinfo's WKT in every dialect for all 6426 CRSs, written byte for
-  byte and read back equal to the PROJJSON parse.
+- [x] 2a. P-wkt (projicio 4c20a57): WKT1 GDAL and ESRI, WKT2 2015 and 2019,
+  read and write, ported from `io.cpp`. Also LCC 1SP/2SP and Mercator A/B
+  equivalence (`convertToOtherMethod`) and the implicit-CS relaxation for
+  WKT1 bases. Proof passes for all 6426 CRSs in every dialect: writes equal
+  projinfo byte for byte from the same input, reads equal projinfo reading
+  the same WKT. `Transform` still reads WKT through proj4wkt until P-switch.
 - [x] 2b. P-fac (projicio 00e31f9): `iso19111::authority_factory` ported
   from `factory.cpp`, plus standalone operation PROJJSON. Registry format 2
   adds the 84 PROJ-authority operations between EPSG geodetic CRSs (62
