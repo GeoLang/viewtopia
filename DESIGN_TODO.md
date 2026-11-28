@@ -1545,6 +1545,10 @@ proven before the next:
   Helmert as PROJ handles it, epochs through every path.
 - [ ] 4e. Every remaining PROJ quirk the full scores show, until both reach
   100%.
+  - [ ] The registry holds only the geodetic datums a current CRS uses, so
+    `create_geodetic_datum(6747)` (Greenland 1996) fails where projinfo
+    succeeds. The generator selects every current vertical and engineering
+    datum, so geodetic datums should match (P-vertical-objects audit).
 - [ ] 5. Callers: geoplumb, geodukt, panoptes, tiletopia on the new API. Track
   H resumes with `Crs.definition` as canonical PROJJSON in place of a PROJ
   string.
